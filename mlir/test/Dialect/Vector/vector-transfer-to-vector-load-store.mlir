@@ -7,15 +7,13 @@ func.func @vector_transfer_ops_0d_memref(%mem: memref<f32>, %vec: vector<1x1x1xf
     %f0 = arith.constant 0.0 : f32
 
 //  CHECK-NEXT:   %[[S:.*]] = memref.load %[[MEM]][] : memref<f32>
-//  CHECK-NEXT:   %[[V:.*]] = vector.broadcast %[[S]] : f32 to vector<f32>
     %0 = vector.transfer_read %mem[], %f0 : memref<f32>, vector<f32>
 
-//  CHECK-NEXT:   %[[SS:.*]] = vector.extractelement %[[V]][] : vector<f32>
-//  CHECK-NEXT:   memref.store %[[SS]], %[[MEM]][] : memref<f32>
+//  CHECK-NEXT:   memref.store %[[S]], %[[MEM]][] : memref<f32>
     vector.transfer_write %0, %mem[] : vector<f32>, memref<f32>
 
-//  CHECK-NEXT:   %[[VV:.*]] = vector.extract %arg1[0, 0, 0] : f32 from vector<1x1x1xf32>
-//  CHECK-NEXT:   memref.store %[[VV]], %[[MEM]][] : memref<f32>
+//  CHECK-NEXT:   %[[V:.*]] = vector.extract %arg1[0, 0, 0] : f32 from vector<1x1x1xf32>
+//  CHECK-NEXT:   memref.store %[[V]], %[[MEM]][] : memref<f32>
     vector.store %vec, %mem[] : memref<f32>, vector<1x1x1xf32>
 
     return

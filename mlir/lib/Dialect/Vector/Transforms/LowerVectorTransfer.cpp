@@ -530,15 +530,9 @@ struct VectorStoreToMemrefStoreLowering
       return rewriter.notifyMatchFailure(storeOp, "not single element vector");
 
     Value extracted;
-    if (vecType.getRank() == 0) {
-      // TODO: Unifiy once ExtractOp supports 0-d vectors.
-      extracted = rewriter.create<vector::ExtractElementOp>(
-          storeOp.getLoc(), storeOp.getValueToStore());
-    } else {
-      SmallVector<int64_t> indices(vecType.getRank(), 0);
-      extracted = rewriter.create<vector::ExtractOp>(
-          storeOp.getLoc(), storeOp.getValueToStore(), indices);
-    }
+    SmallVector<int64_t> indices(vecType.getRank(), 0);
+    extracted = rewriter.create<vector::ExtractOp>(
+        storeOp.getLoc(), storeOp.getValueToStore(), indices);
 
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
         storeOp, extracted, storeOp.getBase(), storeOp.getIndices());
