@@ -2508,7 +2508,10 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     Options.LoadSizes = {4, 2, 1};
   if (IsZeroCmp && ST->hasVInstructions()) {
     unsigned VLenB = ST->getRealMinVLen() / 8;
-    for (unsigned Size = ST->getXLen() / 8 + 1;
+    // The minimum size should be the maximum bytes between `VLen * LMUL_MF8`
+    // and `XLen + 8`.
+    unsigned MinSize = std::max(VLenB / 8, ST->getXLen() / 8 + 1);
+    for (unsigned Size = MinSize;
          Size <= VLenB * ST->getMaxLMULForFixedLengthVectors(); Size++)
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
