@@ -16,12 +16,12 @@
 #include <stdint.h>
 
 #if !defined(__cplusplus)
-#pragma push_macro("bool")
+_Pragma("push_macro(\"bool\")");
 #define bool _Bool
 #endif
 
-#pragma omp begin declare target device_type(nohost)
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+_Pragma("omp begin declare target device_type(nohost)");
+_Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 
 // Type aliases to the address spaces used by the AMDGPU backend.
 #define __gpu_private __attribute__((opencl_private))
@@ -145,11 +145,11 @@ _DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {
   __builtin_amdgcn_endpgm();
 }
 
-#pragma omp end declare variant
-#pragma omp end declare target
+_Pragma("omp end declare variant");
+_Pragma("omp end declare target");
 
 #if !defined(__cplusplus)
-#pragma pop_macro("bool")
+_Pragma("pop_macro(\"bool\")");
 #endif
 
 #endif // __AMDGPUINTRIN_H

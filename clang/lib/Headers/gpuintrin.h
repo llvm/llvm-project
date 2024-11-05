@@ -34,11 +34,11 @@
 #endif
 
 #if !defined(__cplusplus)
-#pragma push_macro("bool")
+_Pragma("push_macro(\"bool\")");
 #define bool _Bool
 #endif
 
-#pragma omp begin declare target device_type(nohost)
+_Pragma("omp begin declare target device_type(nohost)");
 
 // Returns the number of blocks in the requested dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
@@ -129,10 +129,10 @@ __gpu_lane_scan_u32(uint64_t __lane_mask, uint32_t x) {
   return x;
 }
 
-#pragma omp end declare target
+_Pragma("omp end declare target");
 
 #if !defined(__cplusplus)
-#pragma pop_macro("bool")
+_Pragma("pop_macro(\"bool\")");
 #endif
 
 #undef _DEFAULT_FN_ATTRS
