@@ -110,7 +110,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) {
 
 // Copies the value from the first active thread in the warp to the rest.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
-__gpu_broadcast_u32(uint64_t __lane_mask, uint32_t __x) {
+__gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
   uint32_t __mask = (uint32_t)__lane_mask;
   uint32_t __id = __builtin_ffs(__mask) - 1;
   return __nvvm_shfl_sync_idx_i32(__mask, __x, __id, __gpu_num_lanes() - 1);

@@ -111,7 +111,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) {
 
 // Copies the value from the first active thread in the wavefront to the rest.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
-__gpu_broadcast_u32(uint64_t __lane_mask, uint32_t __x) {
+__gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
   return __builtin_amdgcn_readfirstlane(__x);
 }
 

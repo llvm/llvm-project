@@ -115,7 +115,7 @@ __gpu_lane_reduce_u32(uint64_t __lane_mask, uint32_t x) {
     uint32_t index = step + __gpu_lane_id();
     x += __gpu_shuffle_idx_u32(__lane_mask, index, x);
   }
-  return __gpu_broadcast_u32(__lane_mask, x);
+  return __gpu_read_first_lane_u32(__lane_mask, x);
 }
 
 // Gets the accumulator scan of the threads in the warp or wavefront.
