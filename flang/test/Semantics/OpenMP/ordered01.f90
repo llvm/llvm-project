@@ -54,11 +54,11 @@ program main
 
   !$omp do ordered(1)
   do i = 2, N
-    !ERROR: DEPEND(*) clauses are not allowed when ORDERED construct is a block construct with an ORDERED region
+    !ERROR: DEPEND clauses are not allowed when ORDERED construct is a block construct with an ORDERED region
     !$omp ordered depend(source)
     arrayA(i) = foo(i)
     !$omp end ordered
-    !ERROR: DEPEND(*) clauses are not allowed when ORDERED construct is a block construct with an ORDERED region
+    !ERROR: DEPEND clauses are not allowed when ORDERED construct is a block construct with an ORDERED region
     !$omp ordered depend(sink: i - 1)
     arrayB(i) = bar(arrayA(i), arrayB(i-1))
     !$omp end ordered
