@@ -72,13 +72,11 @@ define i64 @extractelt_v2i64(ptr %x) nounwind {
 define bfloat @extractelt_v8bf16(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    flh fa0, 14(sp)
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vslidedown.vi v8, v8, 7
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
   %a = load <8 x bfloat>, ptr %x
   %b = extractelement <8 x bfloat> %a, i32 7
@@ -96,13 +94,11 @@ define half @extractelt_v8f16(ptr %x) nounwind {
 ;
 ; ZVFHMIN-LABEL: extractelt_v8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi sp, sp, -16
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-NEXT:    mv a0, sp
-; ZVFHMIN-NEXT:    vse16.v v8, (a0)
-; ZVFHMIN-NEXT:    flh fa0, 14(sp)
-; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    vslidedown.vi v8, v8, 7
+; ZVFHMIN-NEXT:    vmv.x.s a0, v8
+; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret
   %a = load <8 x half>, ptr %x
   %b = extractelement <8 x half> %a, i32 7
@@ -202,41 +198,15 @@ define i64 @extractelt_v4i64(ptr %x) nounwind {
 }
 
 define bfloat @extractelt_v16bf16(ptr %x) nounwind {
-; RV32-LABEL: extractelt_v16bf16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -64
-; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32-NEXT:    addi s0, sp, 64
-; RV32-NEXT:    andi sp, sp, -32
-; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    flh fa0, 14(sp)
-; RV32-NEXT:    addi sp, s0, -64
-; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 64
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: extractelt_v16bf16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64-NEXT:    addi s0, sp, 64
-; RV64-NEXT:    andi sp, sp, -32
-; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    mv a0, sp
-; RV64-NEXT:    vse16.v v8, (a0)
-; RV64-NEXT:    flh fa0, 14(sp)
-; RV64-NEXT:    addi sp, s0, -64
-; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 64
-; RV64-NEXT:    ret
+; CHECK-LABEL: extractelt_v16bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 7
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
   %a = load <16 x bfloat>, ptr %x
   %b = extractelement <16 x bfloat> %a, i32 7
   ret bfloat %b
@@ -251,6 +221,16 @@ define half @extractelt_v16f16(ptr %x) nounwind {
 ; ZVFH-NEXT:    vslidedown.vi v8, v8, 7
 ; ZVFH-NEXT:    vfmv.f.s fa0, v8
 ; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: extractelt_v16f16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vle16.v v8, (a0)
+; ZVFHMIN-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vslidedown.vi v8, v8, 7
+; ZVFHMIN-NEXT:    vmv.x.s a0, v8
+; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
+; ZVFHMIN-NEXT:    ret
   %a = load <16 x half>, ptr %x
   %b = extractelement <16 x half> %a, i32 7
   ret half %b
@@ -470,112 +450,19 @@ define i64 @extractelt_v2i64_idx(ptr %x, i32 zeroext %idx) nounwind {
 }
 
 define bfloat @extractelt_v8bf16_idx(ptr %x, i32 zeroext %idx) nounwind {
-; RV32NOM-LABEL: extractelt_v8bf16_idx:
-; RV32NOM:       # %bb.0:
-; RV32NOM-NEXT:    addi sp, sp, -32
-; RV32NOM-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    mv s0, a0
-; RV32NOM-NEXT:    andi a0, a1, 7
-; RV32NOM-NEXT:    li a1, 2
-; RV32NOM-NEXT:    call __mulsi3
-; RV32NOM-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32NOM-NEXT:    vle16.v v8, (s0)
-; RV32NOM-NEXT:    mv a1, sp
-; RV32NOM-NEXT:    add a0, a1, a0
-; RV32NOM-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; RV32NOM-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32NOM-NEXT:    vfadd.vv v8, v10, v10
-; RV32NOM-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32NOM-NEXT:    vfncvtbf16.f.f.w v10, v8
-; RV32NOM-NEXT:    vse16.v v10, (a1)
-; RV32NOM-NEXT:    flh fa0, 0(a0)
-; RV32NOM-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32NOM-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32NOM-NEXT:    addi sp, sp, 32
-; RV32NOM-NEXT:    ret
-;
-; RV32M-LABEL: extractelt_v8bf16_idx:
-; RV32M:       # %bb.0:
-; RV32M-NEXT:    addi sp, sp, -16
-; RV32M-NEXT:    andi a1, a1, 7
-; RV32M-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32M-NEXT:    vle16.v v8, (a0)
-; RV32M-NEXT:    slli a1, a1, 1
-; RV32M-NEXT:    mv a0, sp
-; RV32M-NEXT:    or a1, a0, a1
-; RV32M-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; RV32M-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32M-NEXT:    vfadd.vv v8, v10, v10
-; RV32M-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32M-NEXT:    vfncvtbf16.f.f.w v10, v8
-; RV32M-NEXT:    vse16.v v10, (a0)
-; RV32M-NEXT:    flh fa0, 0(a1)
-; RV32M-NEXT:    addi sp, sp, 16
-; RV32M-NEXT:    ret
-;
-; RV64NOM-LABEL: extractelt_v8bf16_idx:
-; RV64NOM:       # %bb.0:
-; RV64NOM-NEXT:    addi sp, sp, -32
-; RV64NOM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64NOM-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64NOM-NEXT:    mv s0, a0
-; RV64NOM-NEXT:    andi a0, a1, 7
-; RV64NOM-NEXT:    li a1, 2
-; RV64NOM-NEXT:    call __muldi3
-; RV64NOM-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64NOM-NEXT:    vle16.v v8, (s0)
-; RV64NOM-NEXT:    mv a1, sp
-; RV64NOM-NEXT:    add a0, a1, a0
-; RV64NOM-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; RV64NOM-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64NOM-NEXT:    vfadd.vv v8, v10, v10
-; RV64NOM-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64NOM-NEXT:    vfncvtbf16.f.f.w v10, v8
-; RV64NOM-NEXT:    vse16.v v10, (a1)
-; RV64NOM-NEXT:    flh fa0, 0(a0)
-; RV64NOM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64NOM-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64NOM-NEXT:    addi sp, sp, 32
-; RV64NOM-NEXT:    ret
-;
-; RV64M-LABEL: extractelt_v8bf16_idx:
-; RV64M:       # %bb.0:
-; RV64M-NEXT:    addi sp, sp, -16
-; RV64M-NEXT:    andi a1, a1, 7
-; RV64M-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64M-NEXT:    vle16.v v8, (a0)
-; RV64M-NEXT:    slli a1, a1, 1
-; RV64M-NEXT:    mv a0, sp
-; RV64M-NEXT:    or a1, a0, a1
-; RV64M-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; RV64M-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64M-NEXT:    vfadd.vv v8, v10, v10
-; RV64M-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64M-NEXT:    vfncvtbf16.f.f.w v10, v8
-; RV64M-NEXT:    vse16.v v10, (a0)
-; RV64M-NEXT:    flh fa0, 0(a1)
-; RV64M-NEXT:    addi sp, sp, 16
-; RV64M-NEXT:    ret
-;
-; ZVFHMIN-LABEL: extractelt_v8bf16_idx:
-; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi sp, sp, -16
-; ZVFHMIN-NEXT:    andi a1, a1, 7
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-NEXT:    slli a1, a1, 1
-; ZVFHMIN-NEXT:    mv a0, sp
-; ZVFHMIN-NEXT:    or a1, a0, a1
-; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfadd.vv v8, v10, v10
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v10, v8
-; ZVFHMIN-NEXT:    vse16.v v10, (a0)
-; ZVFHMIN-NEXT:    flh fa0, 0(a1)
-; ZVFHMIN-NEXT:    addi sp, sp, 16
-; ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: extractelt_v8bf16_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v10, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vfncvtbf16.f.f.w v10, v8
+; CHECK-NEXT:    vslidedown.vx v8, v10, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
   %a = load <8 x bfloat>, ptr %x
   %b = fadd <8 x bfloat> %a, %a
   %c = extractelement <8 x bfloat> %b, i32 %idx
@@ -594,21 +481,16 @@ define half @extractelt_v8f16_idx(ptr %x, i32 zeroext %idx) nounwind {
 ;
 ; ZVFHMIN-LABEL: extractelt_v8f16_idx:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi sp, sp, -16
-; ZVFHMIN-NEXT:    andi a1, a1, 7
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-NEXT:    slli a1, a1, 1
-; ZVFHMIN-NEXT:    mv a0, sp
-; ZVFHMIN-NEXT:    or a1, a0, a1
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfadd.vv v8, v10, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v8
-; ZVFHMIN-NEXT:    vse16.v v10, (a0)
-; ZVFHMIN-NEXT:    flh fa0, 0(a1)
-; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    vslidedown.vx v8, v10, a1
+; ZVFHMIN-NEXT:    vmv.x.s a0, v8
+; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret
   %a = load <8 x half>, ptr %x
   %b = fadd <8 x half> %a, %a
@@ -717,117 +599,19 @@ define i64 @extractelt_v4i64_idx(ptr %x, i32 zeroext %idx) nounwind {
 }
 
 define bfloat @extractelt_v16bf16_idx(ptr %x, i32 zeroext %idx) nounwind {
-; RV32NOM-LABEL: extractelt_v16bf16_idx:
-; RV32NOM:       # %bb.0:
-; RV32NOM-NEXT:    addi sp, sp, -64
-; RV32NOM-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    sw s2, 52(sp) # 4-byte Folded Spill
-; RV32NOM-NEXT:    addi s0, sp, 64
-; RV32NOM-NEXT:    andi sp, sp, -32
-; RV32NOM-NEXT:    mv s2, a0
-; RV32NOM-NEXT:    andi a0, a1, 15
-; RV32NOM-NEXT:    li a1, 2
-; RV32NOM-NEXT:    call __mulsi3
-; RV32NOM-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV32NOM-NEXT:    vle16.v v8, (s2)
-; RV32NOM-NEXT:    mv a1, sp
-; RV32NOM-NEXT:    add a0, a1, a0
-; RV32NOM-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; RV32NOM-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32NOM-NEXT:    vfadd.vv v8, v12, v12
-; RV32NOM-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32NOM-NEXT:    vfncvtbf16.f.f.w v12, v8
-; RV32NOM-NEXT:    vse16.v v12, (a1)
-; RV32NOM-NEXT:    flh fa0, 0(a0)
-; RV32NOM-NEXT:    addi sp, s0, -64
-; RV32NOM-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32NOM-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32NOM-NEXT:    lw s2, 52(sp) # 4-byte Folded Reload
-; RV32NOM-NEXT:    addi sp, sp, 64
-; RV32NOM-NEXT:    ret
-;
-; RV32M-LABEL: extractelt_v16bf16_idx:
-; RV32M:       # %bb.0:
-; RV32M-NEXT:    addi sp, sp, -64
-; RV32M-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32M-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32M-NEXT:    addi s0, sp, 64
-; RV32M-NEXT:    andi sp, sp, -32
-; RV32M-NEXT:    andi a1, a1, 15
-; RV32M-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV32M-NEXT:    vle16.v v8, (a0)
-; RV32M-NEXT:    slli a1, a1, 1
-; RV32M-NEXT:    mv a0, sp
-; RV32M-NEXT:    or a1, a0, a1
-; RV32M-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; RV32M-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32M-NEXT:    vfadd.vv v8, v12, v12
-; RV32M-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32M-NEXT:    vfncvtbf16.f.f.w v12, v8
-; RV32M-NEXT:    vse16.v v12, (a0)
-; RV32M-NEXT:    flh fa0, 0(a1)
-; RV32M-NEXT:    addi sp, s0, -64
-; RV32M-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32M-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32M-NEXT:    addi sp, sp, 64
-; RV32M-NEXT:    ret
-;
-; RV64NOM-LABEL: extractelt_v16bf16_idx:
-; RV64NOM:       # %bb.0:
-; RV64NOM-NEXT:    addi sp, sp, -64
-; RV64NOM-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64NOM-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64NOM-NEXT:    sd s2, 40(sp) # 8-byte Folded Spill
-; RV64NOM-NEXT:    addi s0, sp, 64
-; RV64NOM-NEXT:    andi sp, sp, -32
-; RV64NOM-NEXT:    mv s2, a0
-; RV64NOM-NEXT:    andi a0, a1, 15
-; RV64NOM-NEXT:    li a1, 2
-; RV64NOM-NEXT:    call __muldi3
-; RV64NOM-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64NOM-NEXT:    vle16.v v8, (s2)
-; RV64NOM-NEXT:    mv a1, sp
-; RV64NOM-NEXT:    add a0, a1, a0
-; RV64NOM-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; RV64NOM-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64NOM-NEXT:    vfadd.vv v8, v12, v12
-; RV64NOM-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64NOM-NEXT:    vfncvtbf16.f.f.w v12, v8
-; RV64NOM-NEXT:    vse16.v v12, (a1)
-; RV64NOM-NEXT:    flh fa0, 0(a0)
-; RV64NOM-NEXT:    addi sp, s0, -64
-; RV64NOM-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64NOM-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64NOM-NEXT:    ld s2, 40(sp) # 8-byte Folded Reload
-; RV64NOM-NEXT:    addi sp, sp, 64
-; RV64NOM-NEXT:    ret
-;
-; RV64M-LABEL: extractelt_v16bf16_idx:
-; RV64M:       # %bb.0:
-; RV64M-NEXT:    addi sp, sp, -64
-; RV64M-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64M-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64M-NEXT:    addi s0, sp, 64
-; RV64M-NEXT:    andi sp, sp, -32
-; RV64M-NEXT:    andi a1, a1, 15
-; RV64M-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64M-NEXT:    vle16.v v8, (a0)
-; RV64M-NEXT:    slli a1, a1, 1
-; RV64M-NEXT:    mv a0, sp
-; RV64M-NEXT:    or a1, a0, a1
-; RV64M-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; RV64M-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64M-NEXT:    vfadd.vv v8, v12, v12
-; RV64M-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64M-NEXT:    vfncvtbf16.f.f.w v12, v8
-; RV64M-NEXT:    vse16.v v12, (a0)
-; RV64M-NEXT:    flh fa0, 0(a1)
-; RV64M-NEXT:    addi sp, s0, -64
-; RV64M-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64M-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64M-NEXT:    addi sp, sp, 64
-; RV64M-NEXT:    ret
+; CHECK-LABEL: extractelt_v16bf16_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v12, v12
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v8
+; CHECK-NEXT:    vslidedown.vx v8, v12, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
   %a = load <16 x bfloat>, ptr %x
   %b = fadd <16 x bfloat> %a, %a
   %c = extractelement <16 x bfloat> %b, i32 %idx
@@ -843,6 +627,20 @@ define half @extractelt_v16f16_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; ZVFH-NEXT:    vslidedown.vx v8, v8, a1
 ; ZVFH-NEXT:    vfmv.f.s fa0, v8
 ; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: extractelt_v16f16_idx:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vle16.v v8, (a0)
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfadd.vv v8, v12, v12
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v8
+; ZVFHMIN-NEXT:    vslidedown.vx v8, v12, a1
+; ZVFHMIN-NEXT:    vmv.x.s a0, v8
+; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
+; ZVFHMIN-NEXT:    ret
   %a = load <16 x half>, ptr %x
   %b = fadd <16 x half> %a, %a
   %c = extractelement <16 x half> %b, i32 %idx

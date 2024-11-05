@@ -679,13 +679,9 @@ define <8 x i64> @insertelt_c5_v8xi64_exact(<8 x i64> %vin, i64 %a) vscale_range
 define <4 x bfloat> @insertelt_v4bf16_0(<4 x bfloat> %a, bfloat %y) {
 ; CHECK-LABEL: insertelt_v4bf16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    fsh fa0, 8(sp)
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, tu, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    fmv.x.h a0, fa0
+; CHECK-NEXT:    vsetivli zero, 4, e16, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <4 x bfloat> %a, bfloat %y, i32 0
   ret <4 x bfloat> %b
@@ -694,83 +690,25 @@ define <4 x bfloat> @insertelt_v4bf16_0(<4 x bfloat> %a, bfloat %y) {
 define <4 x bfloat> @insertelt_v4bf16_3(<4 x bfloat> %a, bfloat %y) {
 ; CHECK-LABEL: insertelt_v4bf16_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    fsh fa0, 8(sp)
-; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    fmv.x.h a0, fa0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %b = insertelement <4 x bfloat> %a, bfloat %y, i32 3
   ret <4 x bfloat> %b
 }
 
 define <4 x bfloat> @insertelt_v4bf16_idx(<4 x bfloat> %a, bfloat %y, i32 zeroext %idx) {
-; RV32-LABEL: insertelt_v4bf16_idx:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -48
-; RV32-NEXT:    .cfi_def_cfa_offset 48
-; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset fs0, -16
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    sub sp, sp, a1
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
-; RV32-NEXT:    fmv.s fs0, fa0
-; RV32-NEXT:    addi a1, sp, 32
-; RV32-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    andi a0, a0, 3
-; RV32-NEXT:    li a1, 2
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    addi a1, sp, 8
-; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    addi a2, sp, 32
-; RV32-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a1)
-; RV32-NEXT:    fsh fs0, 0(a0)
-; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 48
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: insertelt_v4bf16_idx:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -48
-; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset fs0, -16
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    sub sp, sp, a1
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
-; RV64-NEXT:    fmv.s fs0, fa0
-; RV64-NEXT:    addi a1, sp, 32
-; RV64-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    andi a0, a0, 3
-; RV64-NEXT:    li a1, 2
-; RV64-NEXT:    call __muldi3
-; RV64-NEXT:    addi a1, sp, 24
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    addi a2, sp, 32
-; RV64-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vse16.v v8, (a1)
-; RV64-NEXT:    fsh fs0, 0(a0)
-; RV64-NEXT:    vle16.v v8, (a1)
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 48
-; RV64-NEXT:    ret
+; CHECK-LABEL: insertelt_v4bf16_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, 1
+; CHECK-NEXT:    fmv.x.h a2, fa0
+; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v9, a2
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %b = insertelement <4 x bfloat> %a, bfloat %y, i32 %idx
   ret <4 x bfloat> %b
 }
@@ -784,13 +722,9 @@ define <4 x half> @insertelt_v4f16_0(<4 x half> %a, half %y) {
 ;
 ; ZVFHMIN-LABEL: insertelt_v4f16_0:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi sp, sp, -16
-; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; ZVFHMIN-NEXT:    fsh fa0, 8(sp)
-; ZVFHMIN-NEXT:    addi a0, sp, 8
-; ZVFHMIN-NEXT:    vsetivli zero, 1, e16, mf2, tu, ma
-; ZVFHMIN-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    fmv.x.h a0, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, m1, tu, ma
+; ZVFHMIN-NEXT:    vmv.s.x v8, a0
 ; ZVFHMIN-NEXT:    ret
   %b = insertelement <4 x half> %a, half %y, i32 0
   ret <4 x half> %b
@@ -806,14 +740,10 @@ define <4 x half> @insertelt_v4f16_3(<4 x half> %a, half %y) {
 ;
 ; ZVFHMIN-LABEL: insertelt_v4f16_3:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    addi sp, sp, -16
-; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; ZVFHMIN-NEXT:    fsh fa0, 8(sp)
-; ZVFHMIN-NEXT:    addi a0, sp, 8
+; ZVFHMIN-NEXT:    fmv.x.h a0, fa0
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vle16.v v9, (a0)
+; ZVFHMIN-NEXT:    vmv.s.x v9, a0
 ; ZVFHMIN-NEXT:    vslideup.vi v8, v9, 3
-; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %b = insertelement <4 x half> %a, half %y, i32 3
   ret <4 x half> %b
@@ -829,69 +759,18 @@ define <4 x half> @insertelt_v4f16_idx(<4 x half> %a, half %y, i32 zeroext %idx)
 ; ZVFH-NEXT:    vslideup.vx v8, v9, a0
 ; ZVFH-NEXT:    ret
 ;
-; ZVFHMINRV32-LABEL: insertelt_v4f16_idx:
-; ZVFHMINRV32:       # %bb.0:
-; ZVFHMINRV32-NEXT:    addi sp, sp, -48
-; ZVFHMINRV32-NEXT:    .cfi_def_cfa_offset 48
-; ZVFHMINRV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; ZVFHMINRV32-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; ZVFHMINRV32-NEXT:    .cfi_offset ra, -4
-; ZVFHMINRV32-NEXT:    .cfi_offset fs0, -16
-; ZVFHMINRV32-NEXT:    csrr a1, vlenb
-; ZVFHMINRV32-NEXT:    sub sp, sp, a1
-; ZVFHMINRV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
-; ZVFHMINRV32-NEXT:    fmv.s fs0, fa0
-; ZVFHMINRV32-NEXT:    addi a1, sp, 32
-; ZVFHMINRV32-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; ZVFHMINRV32-NEXT:    andi a0, a0, 3
-; ZVFHMINRV32-NEXT:    li a1, 2
-; ZVFHMINRV32-NEXT:    call __mulsi3
-; ZVFHMINRV32-NEXT:    addi a1, sp, 8
-; ZVFHMINRV32-NEXT:    add a0, a1, a0
-; ZVFHMINRV32-NEXT:    addi a2, sp, 32
-; ZVFHMINRV32-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
-; ZVFHMINRV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMINRV32-NEXT:    vse16.v v8, (a1)
-; ZVFHMINRV32-NEXT:    fsh fs0, 0(a0)
-; ZVFHMINRV32-NEXT:    vle16.v v8, (a1)
-; ZVFHMINRV32-NEXT:    csrr a0, vlenb
-; ZVFHMINRV32-NEXT:    add sp, sp, a0
-; ZVFHMINRV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; ZVFHMINRV32-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; ZVFHMINRV32-NEXT:    addi sp, sp, 48
-; ZVFHMINRV32-NEXT:    ret
-;
-; ZVFHMINRV64-LABEL: insertelt_v4f16_idx:
-; ZVFHMINRV64:       # %bb.0:
-; ZVFHMINRV64-NEXT:    addi sp, sp, -48
-; ZVFHMINRV64-NEXT:    .cfi_def_cfa_offset 48
-; ZVFHMINRV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; ZVFHMINRV64-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; ZVFHMINRV64-NEXT:    .cfi_offset ra, -8
-; ZVFHMINRV64-NEXT:    .cfi_offset fs0, -16
-; ZVFHMINRV64-NEXT:    csrr a1, vlenb
-; ZVFHMINRV64-NEXT:    sub sp, sp, a1
-; ZVFHMINRV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
-; ZVFHMINRV64-NEXT:    fmv.s fs0, fa0
-; ZVFHMINRV64-NEXT:    addi a1, sp, 32
-; ZVFHMINRV64-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; ZVFHMINRV64-NEXT:    andi a0, a0, 3
-; ZVFHMINRV64-NEXT:    li a1, 2
-; ZVFHMINRV64-NEXT:    call __muldi3
-; ZVFHMINRV64-NEXT:    addi a1, sp, 24
-; ZVFHMINRV64-NEXT:    add a0, a1, a0
-; ZVFHMINRV64-NEXT:    addi a2, sp, 32
-; ZVFHMINRV64-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
-; ZVFHMINRV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMINRV64-NEXT:    vse16.v v8, (a1)
-; ZVFHMINRV64-NEXT:    fsh fs0, 0(a0)
-; ZVFHMINRV64-NEXT:    vle16.v v8, (a1)
-; ZVFHMINRV64-NEXT:    csrr a0, vlenb
-; ZVFHMINRV64-NEXT:    add sp, sp, a0
-; ZVFHMINRV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; ZVFHMINRV64-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; ZVFHMINRV64-NEXT:    addi sp, sp, 48
-; ZVFHMINRV64-NEXT:    ret
+; ZVFHMIN-LABEL: insertelt_v4f16_idx:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    addi a1, a0, 1
+; ZVFHMIN-NEXT:    fmv.x.h a2, fa0
+; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v9, a2
+; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
+; ZVFHMIN-NEXT:    vslideup.vx v8, v9, a0
+; ZVFHMIN-NEXT:    ret
   %b = insertelement <4 x half> %a, half %y, i32 %idx
   ret <4 x half> %b
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; ZVFHMINRV32: {{.*}}
+; ZVFHMINRV64: {{.*}}
