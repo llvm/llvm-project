@@ -118,6 +118,32 @@ static OpFoldResult foldBinaryOpChecked(
   return IntegerAttr::get(IndexType::get(lhs.getContext()), *result64);
 }
 
+/// Helper for associative and commutative binary ops that can be transformed:
+/// `x = op(v, c1); y = op(x, c2)` -> `tmp = op(c1, c2); y = op(v, tmp)`
+/// where c1 and c2 are constants. It is expected that `tmp` will be folded.
+template <typename BinaryOp>
+LogicalResult
+canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
+                                           PatternRewriter &rewriter) {
+  if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant()))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
+
+  auto lhsOp = op.getLhs().template getDefiningOp<BinaryOp>();
+  if (!lhsOp)
+    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not the same BinaryOp");
+
+  if (!mlir::matchPattern(lhsOp.getRhs(), mlir::m_Constant()))
+    return rewriter.notifyMatchFailure(op.getLoc(), "RHS of LHS op is not a constant");
+
+  Value c = rewriter.createOrFold<BinaryOp>(op->getLoc(), op.getRhs(),
+                                           lhsOp.getRhs());
+  if (c.getDefiningOp<BinaryOp>())
+    return rewriter.notifyMatchFailure(op.getLoc(), "new BinaryOp was not folded");
+
+  rewriter.replaceOpWithNewOp<BinaryOp>(op, lhsOp.getLhs(), c);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//
@@ -136,27 +162,9 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
-/// Canonicalize
-/// ` x = v + c1; y = x + c2` to `x = v + (c1 + c2)`
+
 LogicalResult AddOp::canonicalize(AddOp op, PatternRewriter &rewriter) {
-  IntegerAttr c1, c2;
-  if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant(&c1)))
-    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
-
-  auto add = op.getLhs().getDefiningOp<mlir::index::AddOp>();
-  if (!add)
-    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not a add");
-
-  if (!mlir::matchPattern(add.getRhs(), mlir::m_Constant(&c2)))
-    return rewriter.notifyMatchFailure(op.getLoc(), "RHS is not a constant");
-
-  auto c = rewriter.create<mlir::index::ConstantOp>(op->getLoc(),
-                                                    c1.getInt() + c2.getInt());
-  auto newAdd =
-      rewriter.create<mlir::index::AddOp>(op->getLoc(), add.getLhs(), c);
-
-  rewriter.replaceOp(op, newAdd);
-  return success();
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -198,6 +206,10 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+LogicalResult MulOp::canonicalize(MulOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -352,6 +364,10 @@ OpFoldResult MaxSOp::fold(FoldAdaptor adaptor) {
                              });
 }
 
+LogicalResult MaxSOp::canonicalize(MaxSOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // MaxUOp
 //===----------------------------------------------------------------------===//
@@ -361,6 +377,10 @@ OpFoldResult MaxUOp::fold(FoldAdaptor adaptor) {
                              [](const APInt &lhs, const APInt &rhs) {
                                return lhs.ugt(rhs) ? lhs : rhs;
                              });
+}
+
+LogicalResult MaxUOp::canonicalize(MaxUOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -374,6 +394,10 @@ OpFoldResult MinSOp::fold(FoldAdaptor adaptor) {
                              });
 }
 
+LogicalResult MinSOp::canonicalize(MinSOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // MinUOp
 //===----------------------------------------------------------------------===//
@@ -383,6 +407,10 @@ OpFoldResult MinUOp::fold(FoldAdaptor adaptor) {
                              [](const APInt &lhs, const APInt &rhs) {
                                return lhs.ult(rhs) ? lhs : rhs;
                              });
+}
+
+LogicalResult MinUOp::canonicalize(MinUOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -442,6 +470,10 @@ OpFoldResult AndOp::fold(FoldAdaptor adaptor) {
       [](const APInt &lhs, const APInt &rhs) { return lhs & rhs; });
 }
 
+LogicalResult AndOp::canonicalize(AndOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // OrOp
 //===----------------------------------------------------------------------===//
@@ -452,6 +484,10 @@ OpFoldResult OrOp::fold(FoldAdaptor adaptor) {
       [](const APInt &lhs, const APInt &rhs) { return lhs | rhs; });
 }
 
+LogicalResult OrOp::canonicalize(OrOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
+}
+
 //===----------------------------------------------------------------------===//
 // XOrOp
 //===----------------------------------------------------------------------===//
@@ -460,6 +496,10 @@ OpFoldResult XOrOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpUnchecked(
       adaptor.getOperands(),
       [](const APInt &lhs, const APInt &rhs) { return lhs ^ rhs; });
+}
+
+LogicalResult XOrOp::canonicalize(XOrOp op, PatternRewriter &rewriter) {
+  return canonicalizeAssociativeCommutativeBinaryOp(op, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
