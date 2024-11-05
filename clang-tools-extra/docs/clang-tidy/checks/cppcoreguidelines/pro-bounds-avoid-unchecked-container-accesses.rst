@@ -37,7 +37,7 @@ Options
 .. option:: SubscriptExcludeClasses
 
     Semicolon-delimited list of class names that should additionally be
-    excluded from this check. By default empty.
+    excluded from this check. The default is an empty string.
 
 .. option:: SubscriptFixMode
 
