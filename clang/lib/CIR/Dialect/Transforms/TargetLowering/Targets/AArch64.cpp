@@ -134,7 +134,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
           mlir::cir::ArrayType::get(LT.getMLIRContext(), baseTy, Size / 64));
     }
 
-    cir_cconv_unreachable("NYI");
+    return ABIArgInfo::getDirect(
+        IntType::get(LT.getMLIRContext(), Size, false));
   }
 
   return getNaturalAlignIndirect(RetTy);
