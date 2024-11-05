@@ -136,7 +136,9 @@ namespace __locale {
 //
 using __locale_t = locale_t;
 
+#ifndef _LIBCPP_MSVCRT_LIKE
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __uselocale(__locale_t __loc) { return uselocale(__loc); }
+#endif
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return newlocale(__category_mask, __name, __loc);
