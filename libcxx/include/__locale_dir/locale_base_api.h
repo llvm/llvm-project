@@ -252,7 +252,7 @@ _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral") // GCC doesn't support [[g
 #ifdef _LIBCPP_COMPILER_CLANG_BASED
 #  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) _LIBCPP_ATTRIBUTE_FORMAT(__VA_ARGS__)
 #else
-#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
+#  define _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(...) /* nothing */
 #endif
 
 template <class... _Args>
