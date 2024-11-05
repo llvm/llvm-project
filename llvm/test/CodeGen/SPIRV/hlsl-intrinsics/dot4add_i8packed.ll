@@ -5,8 +5,8 @@
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown -spirv-ext=+SPV_KHR_integer_dot_product %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DOT: OpCapability DotProductKHR
-; CHECK-DOT: OpCapability DotProductInput4x8BitPackedKHR
+; CHECK-DOT: OpCapability DotProduct
+; CHECK-DOT: OpCapability DotProductInput4x8BitPacked
 ; CHECK-EXT: OpExtension "SPV_KHR_integer_dot_product"
 
 ; CHECK: %[[#int_32:]] = OpTypeInt 32 0

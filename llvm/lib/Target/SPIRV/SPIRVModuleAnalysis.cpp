@@ -631,10 +631,9 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
                     Capability::Int16});
 
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-    addAvailableCaps({Capability::DotProductKHR,
-                      Capability::DotProductInputAllKHR,
-                      Capability::DotProductInput4x8BitKHR,
-                      Capability::DotProductInput4x8BitPackedKHR});
+    addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
+                      Capability::DotProductInput4x8Bit,
+                      Capability::DotProductInput4x8BitPacked});
 
   // Add capabilities enabled by extensions.
   for (auto Extension : ST.getAllAvailableExtensions()) {
@@ -1012,7 +1011,7 @@ static void AddDotProductRequirements(const MachineInstr &MI,
                                       const SPIRVSubtarget &ST) {
   if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product))
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_integer_dot_product);
-  Reqs.addCapability(SPIRV::Capability::DotProductKHR);
+  Reqs.addCapability(SPIRV::Capability::DotProduct);
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const MachineInstr *InstrPtr = &MI;
@@ -1022,13 +1021,13 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
-    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPackedKHR);
+    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
   } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
     SPIRVType *ScalarTypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
     auto Capability = ScalarTypeDef->getOperand(1).getImm() == 8
-                          ? SPIRV::Capability::DotProductInput4x8BitKHR
-                          : SPIRV::Capability::DotProductInputAllKHR;
+                          ? SPIRV::Capability::DotProductInput4x8Bit
+                          : SPIRV::Capability::DotProductInputAll;
     Reqs.addCapability(Capability);
   }
 }
