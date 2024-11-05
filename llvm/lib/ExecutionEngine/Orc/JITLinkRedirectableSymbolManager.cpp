@@ -23,8 +23,7 @@ constexpr StringRef StubSuffix = "$__stub_ptr";
 } // namespace
 
 void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
-    std::unique_ptr<MaterializationResponsibility> R,
-    SymbolAddrMap InitialDests) {
+    std::unique_ptr<MaterializationResponsibility> R, SymbolMap InitialDests) {
 
   auto &ES = ObjLinkingLayer.getExecutionSession();
   Triple TT = ES.getTargetTriple();
@@ -66,8 +65,8 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
   ObjLinkingLayer.emit(std::move(R), std::move(G));
 }
 
-Error JITLinkRedirectableSymbolManager::redirect(
-    JITDylib &JD, const SymbolAddrMap &NewDests) {
+Error JITLinkRedirectableSymbolManager::redirect(JITDylib &JD,
+                                                 const SymbolMap &NewDests) {
   auto &ES = ObjLinkingLayer.getExecutionSession();
   SymbolLookupSet LS;
   DenseMap<NonOwningSymbolStringPtr, SymbolStringPtr> PtrToStub;
