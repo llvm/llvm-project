@@ -857,9 +857,11 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     return EC;
 
   bool UseFuncOffsetList = useFuncOffsetList();
-  if (UseFuncOffsetList)
+  if (UseFuncOffsetList) {
+    if (*Size > FuncOffsetList.max_size())
+      return sampleprof_error::too_large;
     FuncOffsetList.reserve(*Size);
-  else
+  } else
     FuncOffsetTable.reserve(*Size);
 
   for (uint64_t I = 0; I < *Size; ++I) {
@@ -1112,9 +1114,13 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   bool UseMD5 = useMD5();
 
   NameTable.clear();
+  if (*Size > NameTable.max_size())
+    return sampleprof_error::too_large;
   NameTable.reserve(*Size);
   if (!ProfileIsCS) {
     MD5SampleContextTable.clear();
+    if (*Size > MD5SampleContextTable.max_size())
+      return sampleprof_error::too_large;
     if (UseMD5)
       MD5SampleContextTable.reserve(*Size);
     else
@@ -1157,6 +1163,8 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
       return sampleprof_error::truncated;
 
     NameTable.clear();
+    if (*Size > NameTable.max_size())
+      return sampleprof_error::too_large;
     NameTable.reserve(*Size);
     for (size_t I = 0; I < *Size; ++I) {
       using namespace support;
@@ -1177,6 +1185,8 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
       return EC;
 
     NameTable.clear();
+    if (*Size > NameTable.max_size())
+      return sampleprof_error::too_large;
     NameTable.reserve(*Size);
     if (!ProfileIsCS)
       MD5SampleContextTable.resize(*Size);
@@ -1206,6 +1216,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
     return EC;
 
   CSNameTable.clear();
+  if (*Size > CSNameTable.max_size())
+    return sampleprof_error::too_large;
   CSNameTable.reserve(*Size);
   if (ProfileIsCS) {
     // Delay MD5 computation of CS context until they are needed. Use 0 to
