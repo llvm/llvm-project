@@ -98,7 +98,7 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- Added `set enable-profile true/false` command for basic matcher profiling.
 
 Improvements to clang-tidy
 --------------------------
