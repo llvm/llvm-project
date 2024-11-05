@@ -2735,7 +2735,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
-      return this->visitInitializer(SubExpr);
+      return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
     }
   }
   return false;
@@ -6446,8 +6446,6 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   QualType ToType = E->getType();
   std::optional<PrimType> ToT = classify(ToType);
 
-  assert(!DiscardResult && "Implement DiscardResult mode for bitcasts.");
-
   if (ToType->isNullPtrType()) {
     if (!this->discard(SubExpr))
       return false;
@@ -6463,12 +6461,24 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   }
   assert(!ToType->isReferenceType());
 
+  // Prepare storage for the result in case we discard.
+  if (DiscardResult && !Initializing && !ToT) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
   // Get a pointer to the value-to-cast on the stack.
   if (!this->visit(SubExpr))
     return false;
 
-  if (!ToT || ToT == PT_Ptr)
-    return this->emitBitCastPtr(E);
+  if (!ToT || ToT == PT_Ptr) {
+    if (!this->emitBitCastPtr(E))
+      return false;
+    return DiscardResult ? this->emitPopPtr(E) : true;
+  }
   assert(ToT);
 
   const llvm::fltSemantics *TargetSemantics = nullptr;
