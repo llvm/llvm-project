@@ -115,6 +115,7 @@ Cost InstCostVisitor::estimateBasicBlocks(
     // These blocks are considered dead as far as the InstCostVisitor
     // is concerned. They haven't been proven dead yet by the Solver,
     // but may become if we propagate the specialization arguments.
+    assert(Solver.isBlockExecutable(BB) && "BB already found dead by IPSCCP!");
     if (!DeadBlocks.insert(BB).second)
       continue;
 
