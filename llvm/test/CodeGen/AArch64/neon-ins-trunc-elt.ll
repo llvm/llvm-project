@@ -87,9 +87,9 @@ define <2 x i32> @test_s_trunc_dsve_lane1(<2 x i32> %a, <vscale x 2 x i64> %b) {
 define <2 x i32> @test_s_trunc_dsve_lane2(<2 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_s_trunc_dsve_lane2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z1.d[2]
+; CHECK-NEXT:    mov z1.s, z1.s[4]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
@@ -125,8 +125,8 @@ define <4 x i32> @test_qs_trunc_dsve_lane1(<4 x i32> %a, <vscale x 2 x i64> %b) 
 define <4 x i32> @test_qs_trunc_dsve_lane2(<4 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_qs_trunc_dsve_lane2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z1.d[2]
-; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    mov z1.s, z1.s[4]
+; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov v0.s[3], w8
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 2 x i64> %b, i32 2

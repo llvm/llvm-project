@@ -683,16 +683,6 @@ def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
          CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 63));
   }]>;
 
-def VectorIndexStoH : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
-}]>;
-def VectorIndexStoB : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i64);
-}]>;
-def VectorIndexHtoB : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
-}]>;
-
 // Node definitions.
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
@@ -6997,24 +6987,18 @@ defm : DUPWithTruncPats<v16i8,  v4i16, v8i16, i32, DUPv16i8lane, VecIndex_x2>;
 defm : DUPWithTruncPats<v16i8,  v2i32, v4i32, i32, DUPv16i8lane, VecIndex_x4>;
 defm : DUPWithTruncPats<v8i16,  v2i32, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
 
-multiclass DUPWithTrunci64Pats<ValueType ResVT, Instruction DUP,
-                               SDNodeXForm IdxXFORM> {
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v2i64 V128:$Rn),
-                                                         imm:$idx))))),
-            (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
+class DUPWithTrunci64Pat<ValueType ResVT, Instruction DUP,
+                         SDNodeXForm IdxXFORM>
+  : Pat<(ResVT (AArch64dup (i32 (extractelt (v4i32 V128:$Rn), imm:$idx)))),
+        (DUP V128:$Rn, (IdxXFORM imm:$idx))>;
 
-  def : Pat<(ResVT (AArch64dup (i32 (trunc (extractelt (v1i64 V64:$Rn),
-                                                       imm:$idx))))),
-            (DUP (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), (IdxXFORM imm:$idx))>;
-}
+def : DUPWithTrunci64Pat<v8i8,  DUPv8i8lane,   VecIndex_x4>;
+def : DUPWithTrunci64Pat<v4i16, DUPv4i16lane,  VecIndex_x2>;
+def : DUPWithTrunci64Pat<v2i32, DUPv2i32lane,  NOOP_SDNodeXForm>;
 
-defm : DUPWithTrunci64Pats<v8i8,  DUPv8i8lane,   VecIndex_x8>;
-defm : DUPWithTrunci64Pats<v4i16, DUPv4i16lane,  VecIndex_x4>;
-defm : DUPWithTrunci64Pats<v2i32, DUPv2i32lane,  VecIndex_x2>;
-
-defm : DUPWithTrunci64Pats<v16i8, DUPv16i8lane, VecIndex_x8>;
-defm : DUPWithTrunci64Pats<v8i16, DUPv8i16lane, VecIndex_x4>;
-defm : DUPWithTrunci64Pats<v4i32, DUPv4i32lane, VecIndex_x2>;
+def : DUPWithTrunci64Pat<v16i8, DUPv16i8lane, VecIndex_x4>;
+def : DUPWithTrunci64Pat<v8i16, DUPv8i16lane, VecIndex_x2>;
+def : DUPWithTrunci64Pat<v4i32, DUPv4i32lane, NOOP_SDNodeXForm>;
 
 // SMOV and UMOV definitions, with some extra patterns for convenience
 defm SMOV : SMov;
@@ -7290,33 +7274,6 @@ defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8
 defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
 defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
 defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane>;
-
-// Rmove GPR trip when inserting extracted truncated i64 into vector of i32.
-// From another NEON vector
-def : Pat<(v4i32 (vector_insert v4i32:$src,
-                    (i32 (trunc (i64 (vector_extract v2i64:$Rn, (i64 imm:$Immn))))),
-                    (i64 imm:$Immd))),
-          (INSvi32lane V128:$src, imm:$Immd,  V128:$Rn, (VectorIndexHtoB imm:$Immn))>;
-
-def : Pat<(v2i32 (vector_insert v2i32:$src,
-                    (i32 (trunc (i64 (vector_extract v2i64:$Rn, (i64 imm:$Immn))))),
-                    (i64 imm:$Immd))),
-          (EXTRACT_SUBREG (INSvi32lane (SUBREG_TO_REG (i64 0), V64:$src, dsub),
-                                       imm:$Immd,  V128:$Rn, (VectorIndexHtoB imm:$Immn)),
-                          dsub)>;
-// From the bottom 128b of an SVE vector
-def : Pat<(v4i32 (vector_insert v4i32:$Rn,
-                    (i32 (trunc (i64 (vector_extract nxv2i64:$Rm, (i64 VectorIndexD:$Immn))))),
-                    (i64 imm:$Immd))),
-          (INSvi32lane V128:$Rn, imm:$Immd, (EXTRACT_SUBREG nxv2i64:$Rm, zsub), (VectorIndexHtoB VectorIndexD:$Immn))>;
-
-def : Pat<(v2i32 (vector_insert v2i32:$Rn,
-                    (i32 (trunc (i64 (vector_extract nxv2i64:$Rm, (i64 VectorIndexD:$Immn))))),
-                    (i64 imm:$Immd))),
-          (EXTRACT_SUBREG
-              (INSvi32lane (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immd,
-                    (EXTRACT_SUBREG nxv2i64:$Rm, zsub), (VectorIndexHtoB VectorIndexD:$Immn)),
-              dsub)>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
@@ -8736,6 +8693,16 @@ class Ld1Lane64IdxOpPat<SDPatternOperator scalar_load, Operand VecIndex,
             (LD1 (SUBREG_TO_REG (i32 0), VecListOne64:$Rd, dsub),
                 (IdxOp VecIndex:$idx), GPR64sp:$Rn),
             dsub)>;
+
+def VectorIndexStoH : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
+}]>;
+def VectorIndexStoB : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i64);
+}]>;
+def VectorIndexHtoB : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
+}]>;
 
 def : Ld1Lane128IdxOpPat<extloadi16, VectorIndexS, v4i32, i32, LD1i16, VectorIndexStoH>;
 def : Ld1Lane128IdxOpPat<extloadi8, VectorIndexS, v4i32, i32, LD1i8, VectorIndexStoB>;
