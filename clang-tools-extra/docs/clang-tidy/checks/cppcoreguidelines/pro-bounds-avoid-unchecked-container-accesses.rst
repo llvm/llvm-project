@@ -22,7 +22,7 @@ will generate a warning but
 
 will generate a warning.
 
-STL containers with well-defined behavior for `operator[] are excluded from this
+STL containers with well-defined behavior for ``operator[]`` are excluded from this
 check.
 
 This check enforces part of the `SL.con.3
