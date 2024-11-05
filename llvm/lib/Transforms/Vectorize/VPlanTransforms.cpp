@@ -1815,9 +1815,13 @@ void VPlanTransforms::handleUncountableEarlyExit(
     auto *ExitingTerm = cast<BranchInst>(Exiting->getTerminator());
     BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
     BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
-    VPIRBasicBlock *VPExitBlock;
-    VPExitBlock = VPIRBasicBlock::fromBasicBlock(
-        !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+    VPBasicBlock *VPExitBlock;
+    if (OrigLoop->getUniqueExitBlock()) {
+      VPExitBlock = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+    } else {
+      VPExitBlock = VPIRBasicBlock::fromBasicBlock(
+          !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+    }
 
     VPValue *M = RecipeBuilder.getBlockInMask(
         OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);

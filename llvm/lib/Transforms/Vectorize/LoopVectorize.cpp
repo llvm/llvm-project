@@ -8845,11 +8845,6 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
       continue;
     auto *ExitVPBB = cast<VPIRBasicBlock>(VPB);
     BasicBlock *ExitBB = ExitVPBB->getIRBasicBlock();
-    BasicBlock *ExitingBB = find_singleton<BasicBlock>(
-        to_vector(predecessors(ExitBB)),
-        [OrigLoop](BasicBlock *Pred, bool AllowRepeats) {
-          return OrigLoop->contains(Pred) ? Pred : nullptr;
-        });
     for (VPRecipeBase &R : *ExitVPBB) {
       auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
       if (!ExitIRI)
@@ -8857,23 +8852,27 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
       auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
       if (!ExitPhi)
         break;
-      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
-      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-      // Exit values for inductions are computed and updated outside of VPlan
-      // and independent of induction recipes.
-      // TODO: Compute induction exit values in VPlan.
-      if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
-           !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-          isa<VPWidenPointerInductionRecipe>(V) ||
-          (isa<Instruction>(IncomingValue) &&
-           OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
-           any_of(IncomingValue->users(), [&Inductions](User *U) {
-             auto *P = dyn_cast<PHINode>(U);
-             return P && Inductions.contains(P);
-           })))
-        continue;
-      ExitUsersToFix.insert(ExitIRI);
-      ExitIRI->addOperand(V);
+      for (BasicBlock *ExitingBB : predecessors(ExitBB)) {
+        if (!OrigLoop->contains(ExitingBB))
+          continue;
+        Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+        VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
+        // Exit values for inductions are computed and updated outside of VPlan
+        // and independent of induction recipes.
+        // TODO: Compute induction exit values in VPlan.
+        if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
+             !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
+            isa<VPWidenPointerInductionRecipe>(V) ||
+            (isa<Instruction>(IncomingValue) &&
+             OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
+             any_of(IncomingValue->users(), [&Inductions](User *U) {
+               auto *P = dyn_cast<PHINode>(U);
+               return P && Inductions.contains(P);
+             })))
+          continue;
+        ExitUsersToFix.insert(ExitIRI);
+        ExitIRI->addOperand(V);
+      }
     }
   }
   return ExitUsersToFix;
@@ -8887,23 +8886,26 @@ addUsersInExitBlocks(VPlan &Plan,
   if (ExitUsersToFix.empty())
     return;
 
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
+
     VPValue *V = ExitIRI->getOperand(0);
     // Pass live-in values used by exit phis directly through to their users in
     // the exit block.
     if (V->isLiveIn())
       continue;
 
-    LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
-    VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
-                                  {V, Plan.getOrAddLiveIn(ConstantInt::get(
-                                          IntegerType::get(Ctx, 32), 1))});
-    ExitIRI->setOperand(0, Ext);
+    for (VPBlockBase *PredVPB : ExitIRI->getParent()->getPredecessors()) {
+      auto *PredVPBB = cast<VPBasicBlock>(PredVPB);
+      VPBuilder B(PredVPBB, PredVPBB->getFirstNonPhi());
+
+      LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
+      VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
+                                    {V, Plan.getOrAddLiveIn(ConstantInt::get(
+                                            IntegerType::get(Ctx, 32), 1))});
+      ExitIRI->setOperand(0, Ext);
+    }
   }
 }
 
