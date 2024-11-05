@@ -21,6 +21,11 @@
 // RUN:   -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 // RUN:   -fopenmp-is-target-device -triple amdgcn -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENMP
+//
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -std=c89 -internal-isystem %S/../../lib/Headers/ \
+// RUN:   -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=C89
 
 #define _DEFAULT_FN_ATTRS __attribute__((always_inline))
 #include <gpuintrin.h>
@@ -55,6 +60,16 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // OPENMP-NEXT:  [[ENTRY:.*:]]
 // OPENMP-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
 // OPENMP-NEXT:    ret i32 [[TMP0]]
+//
+// C89-LABEL: define dso_local i32 @foo(
+// C89-SAME: ) #[[ATTR0:[0-9]+]] {
+// C89-NEXT:  [[ENTRY:.*:]]
+// C89-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4, addrspace(5)
+// C89-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
+// C89-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// C89-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
+// C89-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+// C89-NEXT:    ret i32 [[TMP0]]
 //
 int foo() { return __gpu_thread_id_x(); }
 #pragma omp declare target to(foo)

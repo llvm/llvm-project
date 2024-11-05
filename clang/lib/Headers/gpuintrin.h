@@ -17,6 +17,14 @@
 #ifndef __GPUINTRIN_H
 #define __GPUINTRIN_H
 
+#if !defined(_DEFAULT_FN_ATTRS)
+#if defined(__HIP__) || defined(__CUDA__)
+#define _DEFAULT_FN_ATTRS __attribute__((device))
+#else
+#define _DEFAULT_FN_ATTRS
+#endif
+#endif
+
 #if defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
@@ -25,8 +33,15 @@
 #error "This header is only meant to be used on GPU architectures."
 #endif
 
+#if !defined(__cplusplus)
+#pragma push_macro("bool")
+#define bool _Bool
+#endif
+
+#pragma omp begin declare target device_type(nohost)
+
 // Returns the number of blocks in the requested dimension.
-_DEFAULT_FN_ATTRS static inline uint32_t __gpu_num_blocks(int __dim) {
+_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
   switch (__dim) {
   case 0:
     return __gpu_num_blocks_x();
@@ -40,7 +55,7 @@ _DEFAULT_FN_ATTRS static inline uint32_t __gpu_num_blocks(int __dim) {
 }
 
 // Returns the number of block id in the requested dimension.
-_DEFAULT_FN_ATTRS static inline uint32_t __gpu_block_id(int __dim) {
+_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_block_id(int __dim) {
   switch (__dim) {
   case 0:
     return __gpu_block_id_x();
@@ -54,7 +69,7 @@ _DEFAULT_FN_ATTRS static inline uint32_t __gpu_block_id(int __dim) {
 }
 
 // Returns the number of threads in the requested dimension.
-_DEFAULT_FN_ATTRS static inline uint32_t __gpu_num_threads(int __dim) {
+_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads(int __dim) {
   switch (__dim) {
   case 0:
     return __gpu_num_threads_x();
@@ -68,7 +83,7 @@ _DEFAULT_FN_ATTRS static inline uint32_t __gpu_num_threads(int __dim) {
 }
 
 // Returns the thread id in the requested dimension.
-_DEFAULT_FN_ATTRS static inline uint32_t __gpu_thread_id(int __dim) {
+_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_thread_id(int __dim) {
   switch (__dim) {
   case 0:
     return __gpu_thread_id_x();
@@ -82,19 +97,19 @@ _DEFAULT_FN_ATTRS static inline uint32_t __gpu_thread_id(int __dim) {
 }
 
 // Get the first active thread inside the lane.
-_DEFAULT_FN_ATTRS static inline uint64_t
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_first_lane_id(uint64_t __lane_mask) {
   return __builtin_ffsll(__lane_mask) - 1;
 }
 
 // Conditional that is only true for a single thread in a lane.
-_DEFAULT_FN_ATTRS static inline bool
+_DEFAULT_FN_ATTRS static __inline__ bool
 __gpu_is_first_in_lane(uint64_t __lane_mask) {
   return __gpu_lane_id() == __gpu_first_lane_id(__lane_mask);
 }
 
 // Gets the sum of all lanes inside the warp or wavefront.
-_DEFAULT_FN_ATTRS static inline uint32_t
+_DEFAULT_FN_ATTRS static __inline__ uint32_t
 __gpu_lane_reduce_u32(uint64_t __lane_mask, uint32_t x) {
   for (uint32_t step = __gpu_num_lanes() / 2; step > 0; step /= 2) {
     uint32_t index = step + __gpu_lane_id();
@@ -104,7 +119,7 @@ __gpu_lane_reduce_u32(uint64_t __lane_mask, uint32_t x) {
 }
 
 // Gets the accumulator scan of the threads in the warp or wavefront.
-_DEFAULT_FN_ATTRS static inline uint32_t
+_DEFAULT_FN_ATTRS static __inline__ uint32_t
 __gpu_lane_scan_u32(uint64_t __lane_mask, uint32_t x) {
   for (uint32_t step = 1; step < __gpu_num_lanes(); step *= 2) {
     uint32_t index = __gpu_lane_id() - step;
@@ -113,6 +128,12 @@ __gpu_lane_scan_u32(uint64_t __lane_mask, uint32_t x) {
   }
   return x;
 }
+
+#pragma omp end declare target
+
+#if !defined(__cplusplus)
+#pragma pop_macro("bool")
+#endif
 
 #undef _DEFAULT_FN_ATTRS
 

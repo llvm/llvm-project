@@ -10,7 +10,6 @@
 // RUN:   -triple nvptx64-nvidia-cuda -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=NVPTX
 
-#define _DEFAULT_ATTRS __attribute__((always_inline))
 #include <gpuintrin.h>
 
 // AMDGPU-LABEL: define protected amdgpu_kernel void @foo(
