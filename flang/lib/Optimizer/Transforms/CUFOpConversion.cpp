@@ -429,6 +429,16 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   }
 };
 
+static bool isDstGlobal(cuf::DataTransferOp op) {
+  if (auto declareOp = op.getDst().getDefiningOp<fir::DeclareOp>())
+    if (declareOp.getMemref().getDefiningOp<fir::AddrOfOp>())
+      return true;
+  if (auto declareOp = op.getDst().getDefiningOp<hlfir::DeclareOp>())
+    if (declareOp.getMemref().getDefiningOp<fir::AddrOfOp>())
+      return true;
+  return false;
+}
+
 struct CUFDataTransferOpConversion
     : public mlir::OpRewritePattern<cuf::DataTransferOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -522,15 +532,18 @@ struct CUFDataTransferOpConversion
         mlir::isa<fir::BaseBoxType>(dstTy)) {
       // Transfer between two descriptor.
       mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
-              loc, builder);
+          isDstGlobal(op)
+              ? fir::runtime::getRuntimeFunc<mkRTKey(
+                    CUFDataTransferGlobalDescDesc)>(loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
+                    loc, builder);
 
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-      mlir::Value dst = builder.loadIfRef(loc, op.getDst());
-      mlir::Value src = builder.loadIfRef(loc, op.getSrc());
+      mlir::Value dst = op.getDst();
+      mlir::Value src = op.getSrc();
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
@@ -552,9 +565,8 @@ struct CUFDataTransferOpConversion
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
-      mlir::Value dst = builder.loadIfRef(loc, op.getDst());
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-          builder, loc, fTy, dst, val, sourceFile, sourceLine)};
+          builder, loc, fTy, op.getDst(), val, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
     } else {
@@ -603,11 +615,8 @@ struct CUFDataTransferOpConversion
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
-      mlir::Value dst =
-          dstIsDesc ? builder.loadIfRef(loc, op.getDst()) : op.getDst();
-      mlir::Value src = mlir::isa<fir::BaseBoxType>(srcTy)
-                            ? builder.loadIfRef(loc, op.getSrc())
-                            : op.getSrc();
+      mlir::Value dst = op.getDst();
+      mlir::Value src = op.getSrc();
       llvm::SmallVector<mlir::Value> args{
           fir::runtime::createArguments(builder, loc, fTy, dst, src, bytes,
                                         modeValue, sourceFile, sourceLine)};

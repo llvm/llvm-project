@@ -831,6 +831,15 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   return CanonTTP;
 }
 
+/// Check if a type can have its sanitizer instrumentation elided based on its
+/// presence within an ignorelist.
+bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
+                                          const QualType &Ty) const {
+  std::string TyName = Ty.getUnqualifiedType().getAsString(getPrintingPolicy());
+  return NoSanitizeL->containsType(Mask, TyName) &&
+         !NoSanitizeL->containsType(Mask, TyName, "sanitize");
+}
+
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
   auto Kind = getTargetInfo().getCXXABI().getKind();
   return getLangOpts().CXXABI.value_or(Kind);
@@ -3552,7 +3561,8 @@ ASTContext::adjustType(QualType Orig,
     const auto *AT = dyn_cast<AttributedType>(Orig);
     return getAttributedType(AT->getAttrKind(),
                              adjustType(AT->getModifiedType(), Adjust),
-                             adjustType(AT->getEquivalentType(), Adjust));
+                             adjustType(AT->getEquivalentType(), Adjust),
+                             AT->getAttr());
   }
 
   case Type::BTFTagAttributed: {
@@ -5197,22 +5207,52 @@ QualType ASTContext::getUnresolvedUsingType(
 
 QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType modifiedType,
-                                       QualType equivalentType) const {
+                                       QualType equivalentType,
+                                       const Attr *attr) const {
   llvm::FoldingSetNodeID id;
-  AttributedType::Profile(id, attrKind, modifiedType, equivalentType);
+  AttributedType::Profile(id, attrKind, modifiedType, equivalentType, attr);
 
   void *insertPos = nullptr;
   AttributedType *type = AttributedTypes.FindNodeOrInsertPos(id, insertPos);
   if (type) return QualType(type, 0);
 
+  assert(!attr || attr->getKind() == attrKind);
+
   QualType canon = getCanonicalType(equivalentType);
-  type = new (*this, alignof(AttributedType))
-      AttributedType(canon, attrKind, modifiedType, equivalentType);
+	type = new (*this, alignof(AttributedType))
+      AttributedType(canon, attrKind, attr, modifiedType, equivalentType);
 
   Types.push_back(type);
   AttributedTypes.InsertNode(type, insertPos);
 
   return QualType(type, 0);
+}
+
+QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
+                                       QualType equivalentType) const {
+  return getAttributedType(attr->getKind(), modifiedType, equivalentType, attr);
+}
+
+QualType ASTContext::getAttributedType(NullabilityKind nullability,
+                                       QualType modifiedType,
+                                       QualType equivalentType) {
+  switch (nullability) {
+  case NullabilityKind::NonNull:
+    return getAttributedType(attr::TypeNonNull, modifiedType, equivalentType);
+
+  case NullabilityKind::Nullable:
+    return getAttributedType(attr::TypeNullable, modifiedType, equivalentType);
+
+  case NullabilityKind::NullableResult:
+    return getAttributedType(attr::TypeNullableResult, modifiedType,
+                             equivalentType);
+
+  case NullabilityKind::Unspecified:
+    return getAttributedType(attr::TypeNullUnspecified, modifiedType,
+                             equivalentType);
+  }
+
+  llvm_unreachable("Unknown nullability kind");
 }
 
 QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
@@ -7537,8 +7577,8 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
 
   // int x[_Nullable] -> int * _Nullable
   if (auto Nullability = Ty->getNullability()) {
-    Result = const_cast<ASTContext *>(this)->getAttributedType(
-        AttributedType::getNullabilityAttrKind(*Nullability), Result, Result);
+    Result = const_cast<ASTContext *>(this)->getAttributedType(*Nullability,
+                                                               Result, Result);
   }
   return Result;
 }
@@ -13773,7 +13813,8 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     // FIXME: It's inefficient to have to unify the modified types.
     return Ctx.getAttributedType(Kind, Ctx.getCommonSugaredType(MX, MY),
-                                 Ctx.getQualifiedType(Underlying));
+                                 Ctx.getQualifiedType(Underlying),
+                                 AX->getAttr());
   }
   case Type::BTFTagAttributed: {
     const auto *BX = cast<BTFTagAttributedType>(X);

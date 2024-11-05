@@ -69,7 +69,8 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
 
 MDNode *llvm::memprof::buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
                                               LLVMContext &Ctx) {
-  std::vector<Metadata *> StackVals;
+  SmallVector<Metadata *, 8> StackVals;
+  StackVals.reserve(CallStack.size());
   for (auto Id : CallStack) {
     auto *StackValMD =
         ValueAsMetadata::get(ConstantInt::get(Type::getInt64Ty(Ctx), Id));

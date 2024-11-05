@@ -7927,10 +7927,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                 APInt(Ptr.getValueSizeInBits().getFixedValue(), PartSize), DL,
                 Ptr.getValueType());
           }
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
           Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                            BytesIncrement, Flags);
+                            BytesIncrement, SDNodeFlags::NoUnsignedWrap);
           ExtraArgLocs++;
           i++;
         }
@@ -8986,12 +8984,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                 APInt(Ptr.getValueSizeInBits().getFixedValue(), PartSize), DL,
                 Ptr.getValueType());
           }
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
-
           MPI = MachinePointerInfo(MPI.getAddrSpace());
           Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                            BytesIncrement, Flags);
+                            BytesIncrement, SDNodeFlags::NoUnsignedWrap);
           ExtraArgLocs++;
           i++;
         }
@@ -9604,6 +9599,11 @@ SDValue AArch64TargetLowering::getGOT(NodeTy *N, SelectionDAG &DAG,
   SDValue GotAddr = getTargetNode(N, Ty, DAG, AArch64II::MO_GOT | Flags);
   // FIXME: Once remat is capable of dealing with instructions with register
   // operands, expand this into two nodes instead of using a wrapper node.
+  if (DAG.getMachineFunction()
+          .getInfo<AArch64FunctionInfo>()
+          ->hasELFSignedGOT())
+    return SDValue(DAG.getMachineNode(AArch64::LOADgotAUTH, DL, Ty, GotAddr),
+                   0);
   return DAG.getNode(AArch64ISD::LOADgot, DL, Ty, GotAddr);
 }
 
@@ -11777,8 +11777,7 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags;
-      Flags.setAllowReassociation(true);
+      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
 
       // Newton reciprocal square root iteration: E * 0.5 * (3 - X * E^2)
       // AArch64 reciprocal square root iteration instruction: 0.5 * (3 - M * N)
@@ -11807,8 +11806,7 @@ SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags;
-      Flags.setAllowReassociation(true);
+      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
 
       // Newton reciprocal iteration: E * (2 - X * E)
       // AArch64 reciprocal iteration instruction: (2 - M * N)

@@ -108,7 +108,8 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
 }
 
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
-  return isSmartPtrCompatible(R, "incrementPtrCount", "decrementPtrCount");
+  return isSmartPtrCompatible(R, "incrementCheckedPtrCount",
+                              "decrementCheckedPtrCount");
 }
 
 bool isRefType(const std::string &Name) {
@@ -196,6 +197,14 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl())
       return isUncounted(CXXRD);
+  }
+  return false;
+}
+
+std::optional<bool> isUncheckedPtr(const QualType T) {
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl())
+      return isUnchecked(CXXRD);
   }
   return false;
 }

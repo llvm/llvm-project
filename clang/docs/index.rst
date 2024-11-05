@@ -93,12 +93,12 @@ Using Clang Tools
    ClangCheck
    ClangFormat
    ClangFormatStyleOptions
-   ClangFormattedStatus
    ClangLinkerWrapper
    ClangNVLinkWrapper
    ClangOffloadBundler
    ClangOffloadPackager
    ClangRepl
+   ClangSYCLLinker
 
 Design Documents
 ================
