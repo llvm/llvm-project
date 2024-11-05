@@ -266,6 +266,7 @@ public:
 
   const TargetRegisterInfo &TRI;
   const BitVector &CalleeSavedRegs;
+  unsigned NumRegs = 0;
 
   TransferTracker(const TargetInstrInfo *TII, MLocTracker *MTracker,
                   MachineFunction &MF, const DebugVariableMap &DVMap,
@@ -276,13 +277,15 @@ public:
     TLI = MF.getSubtarget().getTargetLowering();
     auto &TM = TPC.getTM<TargetMachine>();
     ShouldEmitDebugEntryValues = TM.Options.ShouldEmitDebugEntryValues();
+    NumRegs = TRI.getNumSupportedRegs(MF);
   }
 
   bool isCalleeSaved(LocIdx L) const {
     unsigned Reg = MTracker->LocIdxToLocID[L];
     if (Reg >= MTracker->NumRegs)
       return false;
-    for (MCRegAliasIterator RAI(Reg, &TRI, true); RAI.isValid(); ++RAI)
+    for (MCRegAliasIterator RAI(Reg, &TRI, true);
+         RAI.isValid() && *RAI < NumRegs; ++RAI)
       if (CalleeSavedRegs.test(*RAI))
         return true;
     return false;
@@ -1022,7 +1025,7 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
                          const TargetLowering &TLI)
     : MF(MF), TII(TII), TRI(TRI), TLI(TLI),
       LocIdxToIDNum(ValueIDNum::EmptyValue), LocIdxToLocID(0) {
-  NumRegs = TRI.getNumRegs();
+  NumRegs = TRI.getNumSupportedRegs(MF);
   reset();
   LocIDToLocIdx.resize(NumRegs, LocIdx::MakeIllegalLoc());
   assert(NumRegs < (1u << NUM_LOC_BITS)); // Detect bit packing failure
@@ -1035,7 +1038,8 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
     unsigned ID = getLocID(SP);
     (void)lookupOrTrackRegister(ID);
 
-    for (MCRegAliasIterator RAI(SP, &TRI, true); RAI.isValid(); ++RAI)
+    for (MCRegAliasIterator RAI(SP, &TRI, true);
+         RAI.isValid() && *RAI < NumRegs; ++RAI)
       SPAliases.insert(*RAI);
   }
 
@@ -1344,7 +1348,8 @@ bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
   return isCalleeSavedReg(Reg);
 }
 bool InstrRefBasedLDV::isCalleeSavedReg(Register R) const {
-  for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI)
+  for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid() && *RAI < NumRegs;
+       ++RAI)
     if (CalleeSavedRegs.test(*RAI))
       return true;
   return false;
@@ -1787,7 +1792,8 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     DebugPHINumToValue.push_back(PHIRec);
 
     // Ensure this register is tracked.
-    for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
+    for (MCRegAliasIterator RAI(MO.getReg(), TRI, true);
+         RAI.isValid() && *RAI < NumRegs; ++RAI)
       MTracker->lookupOrTrackRegister(*RAI);
   } else if (MO.isFI()) {
     // The value is whatever's in this stack slot.
@@ -1878,7 +1884,8 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
     if (MO.isReg() && MO.isDef() && MO.getReg() && MO.getReg().isPhysical() &&
         !IgnoreSPAlias(MO.getReg())) {
       // Remove ranges of all aliased registers.
-      for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
+      for (MCRegAliasIterator RAI(MO.getReg(), TRI, true);
+           RAI.isValid() && *RAI < NumRegs; ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
         DeadRegs.insert(*RAI);
     } else if (MO.isRegMask()) {
@@ -1952,7 +1959,8 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
 void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
   // In all circumstances, re-def all aliases. It's definitely a new value now.
-  for (MCRegAliasIterator RAI(DstRegNum, TRI, true); RAI.isValid(); ++RAI)
+  for (MCRegAliasIterator RAI(DstRegNum, TRI, true);
+       RAI.isValid() && *RAI < NumRegs; ++RAI)
     MTracker->defReg(*RAI, CurBB, CurInst);
 
   ValueIDNum SrcValue = MTracker->readReg(SrcRegNum);
@@ -2117,7 +2125,8 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     // stack slot.
 
     // Def all registers that alias the destination.
-    for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
+    for (MCRegAliasIterator RAI(Reg, TRI, true);
+         RAI.isValid() && *RAI < NumRegs; ++RAI)
       MTracker->defReg(*RAI, CurBB, CurInst);
 
     // Now find subregisters within the destination register, and load values
@@ -2178,7 +2187,8 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
   // potentially clobbered variables.
   DenseMap<LocIdx, ValueIDNum> ClobberedLocs;
   if (TTracker) {
-    for (MCRegAliasIterator RAI(DestReg, TRI, true); RAI.isValid(); ++RAI) {
+    for (MCRegAliasIterator RAI(DestReg, TRI, true);
+         RAI.isValid() && *RAI < NumRegs; ++RAI) {
       LocIdx ClobberedLoc = MTracker->getRegMLoc(*RAI);
       auto MLocIt = TTracker->ActiveMLocs.find(ClobberedLoc);
       // If ActiveMLocs isn't tracking this location or there are no variables
@@ -2302,11 +2312,12 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
   // appropriate clobbers.
   SmallVector<BitVector, 32> BlockMasks;
   BlockMasks.resize(MaxNumBlocks);
+  NumRegs = TRI->getNumSupportedRegs(MF);
 
   // Reserve one bit per register for the masks described above.
-  unsigned BVWords = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+  unsigned BVWords = MachineOperand::getRegMaskSize(NumRegs);
   for (auto &BV : BlockMasks)
-    BV.resize(TRI->getNumRegs(), true);
+    BV.resize(NumRegs, true);
 
   // Step through all instructions and inhale the transfer function.
   for (auto &MBB : MF) {
@@ -2370,11 +2381,11 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
   }
 
   // Compute a bitvector of all the registers that are tracked in this block.
-  BitVector UsedRegs(TRI->getNumRegs());
+  BitVector UsedRegs(NumRegs);
   for (auto Location : MTracker->locations()) {
     unsigned ID = MTracker->LocIdxToLocID[Location.Idx];
     // Ignore stack slots, and aliases of the stack pointer.
-    if (ID >= TRI->getNumRegs() || MTracker->SPAliases.count(ID))
+    if (ID >= NumRegs || MTracker->SPAliases.count(ID))
       continue;
     UsedRegs.set(ID);
   }
@@ -2635,7 +2646,8 @@ void InstrRefBasedLDV::placeMLocPHIs(
     InstallPHIsAtLoc(L);
 
     // Now find aliases and install PHIs for those.
-    for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI) {
+    for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid() && *RAI < NumRegs;
+         ++RAI) {
       // Super-registers that are "above" the largest register read/written by
       // the function will alias, but will not be tracked.
       if (!MTracker->isRegisterTracked(*RAI))
