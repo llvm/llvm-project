@@ -1115,7 +1115,7 @@ bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
   if (Val == OtherOp)
     OtherOp = Inst->getOperand(OpIdx1);
 
-  if (isa<ConstantPointerNull>(OtherOp) || isa<ConstantAggregateZero>(OtherOp))
+  if (isa<ConstantPointerNull, ConstantAggregateZero>(OtherOp))
     return true;
 
   // TODO: getUnderlyingObject will not work on a vector getelementptr
