@@ -23,6 +23,7 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
+#include <clc/shared/clc_max.h>
 
 #include "config.h"
 #include "math.h"
@@ -98,7 +99,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 
   struct fp st_fma;
   st_fma.sign = st_mul.sign;
-  st_fma.exponent = max(st_mul.exponent, st_c.exponent);
+  st_fma.exponent = __clc_max(st_mul.exponent, st_c.exponent);
   if (st_c.sign == st_mul.sign) {
     st_fma.mantissa = st_mul.mantissa + st_c.mantissa;
   } else {
