@@ -2,8 +2,8 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpMemoryModel Logical GLSL450
-; CHECK: [[Z:%.*]] = OpConstant %[[#]] 0
-; CHECK: [[X:%.*]] = OpConstant %[[#]] 1
+; CHECK-DAG: [[Z:%.*]] = OpConstant %[[#]] 0
+; CHECK-DAG: [[X:%.*]] = OpConstant %[[#]] 1
 
 define noundef i32 @firstbituhigh_i32(i32 noundef %a) {
 entry:
