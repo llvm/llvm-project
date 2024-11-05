@@ -9,16 +9,16 @@
 #ifndef _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
 #define _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
 
-#include <__config>
-#include <cmath>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/cmath>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

@@ -1,4 +1,4 @@
-//===- BufferizationOps.td - Bufferization op definitions ----------*- tablegen -*-===//
+//===- BufferizationOps.td - Bufferization op definitions --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -602,7 +602,7 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     ```
     Deallocation will be called on `%a0` if `%cond0` is 'true' and neither
     `%r0`, `%r1`, or `%r2` are aliases of `%a0`. `%a1` will be deallocated when
-    `%cond1` is set to 'true' and none of `%r0`, %r1`, `%r2`, and `%a0` are
+    `%cond1` is set to 'true' and none of `%r0`, `%r1`, `%r2`, and `%a0` are
     aliases.
 
     Note that this can be an expensive operation if there are many operands that

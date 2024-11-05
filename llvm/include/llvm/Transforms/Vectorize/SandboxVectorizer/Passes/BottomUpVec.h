@@ -24,7 +24,7 @@ namespace llvm::sandboxir {
 
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
-  LegalityAnalysis Legality;
+  std::unique_ptr<LegalityAnalysis> Legality;
   void vectorizeRec(ArrayRef<Value *> Bndl);
   void tryVectorize(ArrayRef<Value *> Seeds);
 
@@ -33,7 +33,7 @@ class BottomUpVec final : public FunctionPass {
 
 public:
   BottomUpVec(StringRef Pipeline);
-  bool runOnFunction(Function &F) final;
+  bool runOnFunction(Function &F, const Analyses &A) final;
   void printPipeline(raw_ostream &OS) const final {
     OS << getName() << "\n";
     RPM.printPipeline(OS);

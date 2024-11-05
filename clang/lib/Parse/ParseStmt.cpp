@@ -1243,6 +1243,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       ParsedStmtContext::Compound |
       (isStmtExpr ? ParsedStmtContext::InStmtExpr : ParsedStmtContext());
 
+  bool LastIsError = false;
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -1299,7 +1300,15 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
     if (R.isUsable())
       Stmts.push_back(R.get());
+    LastIsError = R.isInvalid();
   }
+  // StmtExpr needs to do copy initialization for last statement.
+  // If last statement is invalid, the last statement in `Stmts` will be
+  // incorrect. Then the whole compound statement should also be marked as
+  // invalid to prevent subsequent errors.
+  if (isStmtExpr && LastIsError && !Stmts.empty())
+    return StmtError();
+
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using
   // `pragma clang fp eval_method=source` and feature `sse` disabled, is not

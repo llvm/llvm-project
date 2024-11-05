@@ -14,7 +14,6 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
-#include <cstddef>
 #include <cstdlib>
 #include <new>
 #include <typeinfo>

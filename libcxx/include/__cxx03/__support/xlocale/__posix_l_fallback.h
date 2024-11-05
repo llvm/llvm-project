@@ -15,14 +15,14 @@
 #ifndef _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
 #define _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
 
-#include <__config>
-#include <ctype.h>
-#include <string.h>
-#include <time.h>
+#include <__cxx03/__config>
+#include <__cxx03/ctype.h>
+#include <__cxx03/string.h>
+#include <__cxx03/time.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  include <wchar.h>
-#  include <wctype.h>
+#  include <__cxx03/wchar.h>
+#  include <__cxx03/wctype.h>
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI int isalnum_l(int __c, locale_t) { return ::isalnum(__c); }

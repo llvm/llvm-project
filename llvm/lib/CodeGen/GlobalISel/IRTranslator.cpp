@@ -340,20 +340,17 @@ bool IRTranslator::translateCompare(const User &U,
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
   Register Res = getOrCreateVReg(U);
   CmpInst::Predicate Pred = CI->getPredicate();
+  uint32_t Flags = MachineInstr::copyFlagsFromInstruction(*CI);
   if (CmpInst::isIntPredicate(Pred))
-    MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
+    MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
   else if (Pred == CmpInst::FCMP_FALSE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
-  else {
-    uint32_t Flags = 0;
-    if (CI)
-      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
+  else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
-  }
 
   return true;
 }
@@ -2341,6 +2338,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildFFrexp(VRegs[0], VRegs[1],
                            getOrCreateVReg(*CI.getArgOperand(0)),
                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
+  case Intrinsic::sincos: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildFSincos(VRegs[0], VRegs[1],
+                            getOrCreateVReg(*CI.getArgOperand(0)),
+                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
   case Intrinsic::fptosi_sat:

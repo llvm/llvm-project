@@ -1207,7 +1207,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     Defined *sym = reinterpret_cast<Defined *>(make<SymbolUnion>());
 
     // Initialize symbol fields.
-    memset(sym, 0, sizeof(Symbol));
+    memset(static_cast<void *>(sym), 0, sizeof(Symbol));
     sym->setName(CHECK(eSyms[i].getName(stringTable), this));
     sym->value = eSym.st_value;
     sym->size = eSym.st_size;

@@ -31,7 +31,7 @@ Types:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 // <stdarg.h> is not provided by libc++
 #if __has_include(<stdarg.h>)

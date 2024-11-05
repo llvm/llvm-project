@@ -24,11 +24,12 @@ add_libc_unittest(
   SRCS
     chdir_test.cpp
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.src.errno.errno
-    libc.src.fcntl.open
     libc.src.unistd.chdir
     libc.src.unistd.close
+    libc.src.fcntl.open 
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -223,7 +224,7 @@ add_libc_unittest(
   SRCS
     rmdir_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir
@@ -262,7 +263,7 @@ add_libc_unittest(
   SRCS
     readlinkat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.unistd.readlinkat
@@ -410,7 +411,7 @@ add_libc_unittest(
     syscall_test.cpp
   DEPENDS
     libc.include.unistd
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_syscall
     libc.src.errno.errno 
     libc.src.unistd.__llvm_libc_syscall

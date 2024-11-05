@@ -64,6 +64,13 @@
 // - Perhaps a post-inlining function specialization pass could be more
 //   aggressive on literal constants.
 //
+// Limitations:
+// ------------
+// - We are unable to consider specializations of functions called from indirect
+//   callsites whose pointer operand has a lattice value that is known to be
+//   constant, either from IPSCCP or previous iterations of FuncSpec. This is
+//   because SCCP has not yet replaced the uses of the known constant.
+//
 // References:
 // -----------
 // 2021 LLVM Dev Mtg “Introducing function specialisation, and can we enable
@@ -131,13 +138,16 @@ struct Spec {
   // Profitability of the specialization.
   unsigned Score;
 
+  // Number of instructions in the specialization.
+  unsigned CodeSize;
+
   // List of call sites, matching this specialization.
   SmallVector<CallBase *> CallSites;
 
-  Spec(Function *F, const SpecSig &S, unsigned Score)
-      : F(F), Sig(S), Score(Score) {}
-  Spec(Function *F, const SpecSig &&S, unsigned Score)
-      : F(F), Sig(S), Score(Score) {}
+  Spec(Function *F, const SpecSig &S, unsigned Score, unsigned CodeSize)
+      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
+  Spec(Function *F, const SpecSig &&S, unsigned Score, unsigned CodeSize)
+      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
@@ -145,7 +155,7 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   Function *F;
   const DataLayout &DL;
   TargetTransformInfo &TTI;
-  SCCPSolver &Solver;
+  const SCCPSolver &Solver;
 
   ConstMap KnownConstants;
   // Basic blocks known to be unreachable after constant propagation.

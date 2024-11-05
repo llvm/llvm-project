@@ -148,6 +148,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
+                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -199,6 +200,32 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+  }
+}
+
+void Flang::AddPPCTargetArgs(const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  bool VecExtabi = false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "vec-extabi")
+      VecExtabi = true;
+    else if (V == "vec-default")
+      VecExtabi = false;
+    else
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << V;
+  }
+
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (VecExtabi) {
+    if (!T.isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-mabi=vec-extabi" << T.str();
+    }
+    CmdArgs.push_back("-mabi=vec-extabi");
   }
 }
 
@@ -381,6 +408,11 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddX86_64TargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    AddPPCTargetArgs(Args, CmdArgs);
     break;
   }
 

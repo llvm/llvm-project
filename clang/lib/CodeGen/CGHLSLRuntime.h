@@ -89,6 +89,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(FDot, fdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddI8Packed, dot4add_i8packed)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
 
@@ -143,6 +144,7 @@ public:
 
   bool needsResourceBindingInitFn();
   llvm::Function *createResourceBindingInitFn();
+  llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___ATOMIC_IS_ALWAYS_LOCK_FREE_H
 #define _LIBCPP___ATOMIC_IS_ALWAYS_LOCK_FREE_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

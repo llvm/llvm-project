@@ -813,8 +813,8 @@ void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) const {
 
 void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
                                 const TypeSetByHwMode::SetType &Legal) const {
-  if (Out.count(MVT::iPTRAny)) {
-    Out.erase(MVT::iPTRAny);
+  if (Out.count(MVT::pAny)) {
+    Out.erase(MVT::pAny);
     Out.insert(MVT::iPTR);
   } else if (Out.count(MVT::iAny)) {
     Out.erase(MVT::iAny);
@@ -2461,7 +2461,8 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
       for (auto &P : VVT) {
         MVT::SimpleValueType VT = P.second.SimpleTy;
-        if (VT == MVT::iPTR || VT == MVT::iPTRAny)
+        // Can only check for types of a known size
+        if (VT == MVT::iPTR)
           continue;
         unsigned Size = MVT(VT).getFixedSizeInBits();
         // Make sure that the value is representable for this type.

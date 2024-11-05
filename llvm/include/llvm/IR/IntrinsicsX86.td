@@ -5917,6 +5917,41 @@ let TargetPrefix = "x86" in {
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
                          ImmArg<ArgIndex<2>>]>;
 
+  // AMX-FP8
+  def int_x86_tdpbf8ps : ClangBuiltin<"__builtin_ia32_tdpbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_x86_tdpbhf8ps : ClangBuiltin<"__builtin_ia32_tdpbhf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_x86_tdphbf8ps : ClangBuiltin<"__builtin_ia32_tdphbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+  def int_x86_tdphf8ps : ClangBuiltin<"__builtin_ia32_tdphf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>,
+                        ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+  // AMX-TRANSPOSE
+  def int_x86_t2rpntlvwz0 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz0">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_t2rpntlvwz0t1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz0t1">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_t2rpntlvwz1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz1">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_t2rpntlvwz1t1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz1t1">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_ttransposed : ClangBuiltin<"__builtin_ia32_ttransposed">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+
   // AMX - internal intrinsics
   def int_x86_ldtilecfg_internal :
               ClangBuiltin<"__builtin_ia32_tile_loadconfig_internal">,
@@ -5994,6 +6029,27 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
                          llvm_x86amx_ty, llvm_x86amx_ty,
                          llvm_x86amx_ty], []>;
+
+  def int_x86_t2rpntlvwz0_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_t2rpntlvwz0t1_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_t2rpntlvwz1_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_t2rpntlvwz1t1_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_ttransposed_internal :
+              ClangBuiltin<"__builtin_ia32_ttransposed_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty], []>;
 }
 
 //===----------------------------------------------------------------------===//

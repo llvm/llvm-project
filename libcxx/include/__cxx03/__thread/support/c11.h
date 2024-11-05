@@ -10,12 +10,12 @@
 #ifndef _LIBCPP___THREAD_SUPPORT_C11_H
 #define _LIBCPP___THREAD_SUPPORT_C11_H
 
-#include <__chrono/convert_to_timespec.h>
-#include <__chrono/duration.h>
-#include <__config>
-#include <ctime>
-#include <errno.h>
-#include <threads.h>
+#include <__cxx03/__chrono/convert_to_timespec.h>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/ctime>
+#include <__cxx03/errno.h>
+#include <__cxx03/threads.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
