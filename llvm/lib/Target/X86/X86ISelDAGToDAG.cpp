@@ -338,6 +338,10 @@ namespace {
       case X86::PT2RPNTLVWZ0T1V:
       case X86::PT2RPNTLVWZ1V:
       case X86::PT2RPNTLVWZ1T1V:
+      case X86::PT2RPNTLVWZ0RSV:
+      case X86::PT2RPNTLVWZ0RST1V:
+      case X86::PT2RPNTLVWZ1RSV:
+      case X86::PT2RPNTLVWZ1RST1V:
         return true;
       }
       for (unsigned Idx = 0, E = N->getNumValues(); Idx != E; ++Idx) {
@@ -5189,6 +5193,33 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
+    case Intrinsic::x86_tileloaddrs64_internal:
+    case Intrinsic::x86_tileloaddrst164_internal: {
+      if (!Subtarget->hasAMXMOVRS())
+        break;
+      unsigned Opc = IntNo == Intrinsic::x86_tileloaddrs64_internal
+                         ? X86::PTILELOADDRSV
+                         : X86::PTILELOADDRST1V;
+      // _tile_loadd_internal(row, col, buf, STRIDE)
+      SDValue Base = Node->getOperand(4);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(5);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue Chain = Node->getOperand(0);
+      MachineSDNode *CNode;
+      SDValue Ops[] = {Node->getOperand(2),
+                       Node->getOperand(3),
+                       Base,
+                       Scale,
+                       Index,
+                       Disp,
+                       Segment,
+                       Chain};
+      CNode = CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
+      ReplaceNode(Node, CNode);
+      return;
+    }
     }
     break;
   }
@@ -5307,6 +5338,44 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
+    case Intrinsic::x86_tileloaddrs64:
+    case Intrinsic::x86_tileloaddrst164: {
+      if (!Subtarget->hasAMXMOVRS())
+        break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+      unsigned Opc;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unexpected intrinsic!");
+      case Intrinsic::x86_tileloaddrs64:
+        Opc = X86::PTILELOADDRS;
+        break;
+      case Intrinsic::x86_tileloaddrst164:
+        Opc = X86::PTILELOADDRST1;
+        break;
+      }
+      // FIXME: Match displacement and scale.
+      unsigned TIndex = Node->getConstantOperandVal(2);
+      SDValue TReg = getI8Imm(TIndex, dl);
+      SDValue Base = Node->getOperand(3);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(4);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue Chain = Node->getOperand(0);
+      MachineSDNode *CNode;
+      if (Opc == X86::PTILESTORED) {
+        SDValue Ops[] = {Base, Scale, Index, Disp, Segment, TReg, Chain};
+        CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      } else {
+        SDValue Ops[] = {TReg, Base, Scale, Index, Disp, Segment, Chain};
+        CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      }
+      ReplaceNode(Node, CNode);
+      return;
+    }
     case Intrinsic::x86_t2rpntlvwz0:
     case Intrinsic::x86_t2rpntlvwz0t1:
     case Intrinsic::x86_t2rpntlvwz1:
@@ -5342,9 +5411,45 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
       SDValue Segment = CurDAG->getRegister(0, MVT::i16);
       SDValue Chain = Node->getOperand(0);
-      MachineSDNode *CNode;
       SDValue Ops[] = {TReg, Base, Scale, Index, Disp, Segment, Chain};
-      CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      MachineSDNode *CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      ReplaceNode(Node, CNode);
+      return;
+    }
+    case Intrinsic::x86_t2rpntlvwz0rs:
+    case Intrinsic::x86_t2rpntlvwz0rst1:
+    case Intrinsic::x86_t2rpntlvwz1rs:
+    case Intrinsic::x86_t2rpntlvwz1rst1: {
+      if (!Subtarget->hasAMXTRANSPOSE() || !Subtarget->hasAMXMOVRS())
+        break;
+      unsigned Opc;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unexpected intrinsic!");
+      case Intrinsic::x86_t2rpntlvwz0rs:
+        Opc = X86::PT2RPNTLVWZ0RS;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0rst1:
+        Opc = X86::PT2RPNTLVWZ0RST1;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1rs:
+        Opc = X86::PT2RPNTLVWZ1RS;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1rst1:
+        Opc = X86::PT2RPNTLVWZ1RST1;
+        break;
+      }
+      // FIXME: Match displacement and scale.
+      unsigned TIndex = Node->getConstantOperandVal(2);
+      SDValue TReg = getI8Imm(TIndex, dl);
+      SDValue Base = Node->getOperand(3);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(4);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue Chain = Node->getOperand(0);
+      SDValue Ops[] = {TReg, Base, Scale, Index, Disp, Segment, Chain};
+      MachineSDNode *CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
       ReplaceNode(Node, CNode);
       return;
     }

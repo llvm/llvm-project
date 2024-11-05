@@ -1078,7 +1078,9 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPFP16PSV:
   case X86::PTCMMIMFP16PSV:
   case X86::PTCMMRLFP16PSV:
-  case X86::PTTRANSPOSEDV: {
+  case X86::PTTRANSPOSEDV:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V: {
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);
@@ -1088,7 +1090,11 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PT2RPNTLVWZ0V:
   case X86::PT2RPNTLVWZ0T1V:
   case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V: {
+  case X86::PT2RPNTLVWZ1T1V:
+  case X86::PT2RPNTLVWZ0RSV:
+  case X86::PT2RPNTLVWZ0RST1V:
+  case X86::PT2RPNTLVWZ1RSV:
+  case X86::PT2RPNTLVWZ1RST1V: {
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     MachineOperand &MO3 = MI->getOperand(3);

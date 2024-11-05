@@ -369,3 +369,94 @@ let Predicates = [HasAMXTRANSPOSE, In64BitMode] in {
     }
   }
 } // HasAMXTILE, HasAMXTRANSPOSE
+
+let Predicates = [HasAMXMOVRS, HasAMXTRANSPOSE, In64BitMode], SchedRW = [WriteSystem] in {
+  def T2RPNTLVWZ0RS   : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz0rs\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5;
+  def T2RPNTLVWZ0RST1 : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz0rst1\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5;
+  def T2RPNTLVWZ1RS   : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz1rs\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5, PD;
+  def T2RPNTLVWZ1RST1 : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                        (ins sibmem:$src1),
+                        "t2rpntlvwz1rst1\t{$src1, $dst|$dst, $src1}",
+                        []>, VEX, T_MAP5, PD;
+  let isPseudo = true in {
+    def PT2RPNTLVWZ0RSV   : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+    def PT2RPNTLVWZ0RST1V : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+    def PT2RPNTLVWZ1RSV   : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+    def PT2RPNTLVWZ1RST1V : PseudoI<(outs TILEPair:$dst),
+                              (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
+                              []>;
+  }
+  let  usesCustomInserter = 1 in {
+    def PT2RPNTLVWZ0RS   : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+    def PT2RPNTLVWZ0RST1 : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+    def PT2RPNTLVWZ1RS   : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+    def PT2RPNTLVWZ1RST1 : PseudoI<(outs), (ins u8imm:$dst, sibmem:$src1), []>;
+  }
+} // HasAMXMOVRS, HasAMXTRANSPOSE
+
+let Predicates = [HasAMXMOVRS, In64BitMode], SchedRW = [WriteSystem] in {
+  def TILELOADDRS : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                    (ins sibmem:$src1),
+                    "tileloaddrs\t{$src1, $dst|$dst, $src1}",
+                    []>, VEX, T8, XD;
+  def TILELOADDRST1 : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                    (ins sibmem:$src1),
+                    "tileloaddrst1\t{$src1, $dst|$dst, $src1}",
+                    []>, VEX, T8, PD;
+
+  let isPseudo = true, mayLoad = 1 in
+  def PTILELOADDRSV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                                GR16:$src2,
+                                                opaquemem:$src3), []>;
+  let isPseudo = true, mayLoad = 1 in
+  def PTILELOADDRST1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                                  GR16:$src2,
+                                                  opaquemem:$src3), []>;
+  let  usesCustomInserter = 1 in {
+    let mayLoad = 1 in
+    def PTILELOADDRS : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
+    let mayLoad = 1 in
+    def PTILELOADDRST1 : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
+  }
+
+  def TILELOADDRSrm_EVEX : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                             (ins sibmem:$src1),
+                             "tileloaddrs\t{$src1, $dst|$dst, $src1}",
+                             []>, EVEX, NoCD8, T8, XD;
+  def TILELOADDRST1rm_EVEX : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                               (ins sibmem:$src1),
+                               "tileloaddrst1\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T8, PD;
+
+  def T2RPNTLVWZ0RS_EVEX : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                             (ins sibmem:$src1),
+                             "t2rpntlvwz0rs\t{$src1, $dst|$dst, $src1}",
+                             []>, EVEX, NoCD8, T_MAP5;
+  def T2RPNTLVWZ0RST1_EVEX : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1),
+                    "t2rpntlvwz0rst1\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5;
+  def T2RPNTLVWZ1RS_EVEX : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1),
+                               "t2rpntlvwz1rs\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5, PD;
+  def T2RPNTLVWZ1RST1_EVEX : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1),
+                               "t2rpntlvwz1rst1\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5, PD;
+} // HasAMXMOVRS, In64BitMode
