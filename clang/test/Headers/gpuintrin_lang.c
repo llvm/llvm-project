@@ -22,7 +22,7 @@
 // RUN:   -fopenmp-is-target-device -triple amdgcn -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENMP
 
-#define _DEFAULT_ATTRS __attribute__((always_inline))
+#define _DEFAULT_FN_ATTRS __attribute__((always_inline))
 #include <gpuintrin.h>
 
 #ifdef __device__
