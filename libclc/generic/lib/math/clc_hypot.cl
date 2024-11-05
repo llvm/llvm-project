@@ -21,12 +21,12 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 #include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
 
 #include "config.h"
 #include "math.h"
-#include "../clcmacro.h"
 
 // Returns sqrt(x*x + y*y) with no overflow or underflow unless the result
 // warrants it

@@ -572,7 +572,6 @@ void Writer::finalizeSections() {
 
 void Writer::populateTargetFeatures() {
   StringMap<std::string> used;
-  StringMap<std::string> required;
   StringMap<std::string> disallowed;
   SmallSet<std::string, 8> &allowed = out.targetFeaturesSec->features;
   bool tlsUsed = false;
@@ -599,17 +598,13 @@ void Writer::populateTargetFeatures() {
       goto done;
   }
 
-  // Find the sets of used, required, and disallowed features
+  // Find the sets of used and disallowed features
   for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     for (auto &feature : file->getWasmObj()->getTargetFeatures()) {
       switch (feature.Prefix) {
       case WASM_FEATURE_PREFIX_USED:
         used.insert({feature.Name, std::string(fileName)});
-        break;
-      case WASM_FEATURE_PREFIX_REQUIRED:
-        used.insert({feature.Name, std::string(fileName)});
-        required.insert({feature.Name, std::string(fileName)});
         break;
       case WASM_FEATURE_PREFIX_DISALLOWED:
         disallowed.insert({feature.Name, std::string(fileName)});
@@ -662,7 +657,7 @@ void Writer::populateTargetFeatures() {
     }
   }
 
-  // Validate the required and disallowed constraints for each file
+  // Validate the disallowed constraints for each file
   for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     SmallSet<std::string, 8> objectFeatures;
@@ -673,12 +668,6 @@ void Writer::populateTargetFeatures() {
       if (disallowed.count(feature.Name))
         error(Twine("Target feature '") + feature.Name + "' used in " +
               fileName + " is disallowed by " + disallowed[feature.Name] +
-              ". Use --no-check-features to suppress.");
-    }
-    for (const auto &feature : required.keys()) {
-      if (!objectFeatures.count(std::string(feature)))
-        error(Twine("Missing target feature '") + feature + "' in " + fileName +
-              ", required by " + required[feature] +
               ". Use --no-check-features to suppress.");
     }
   }

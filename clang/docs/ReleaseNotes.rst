@@ -716,6 +716,7 @@ CUDA Support
 ^^^^^^^^^^^^
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
+- Added support for `__grid_constant__` attribute.
 
 AIX Support
 ^^^^^^^^^^^
@@ -872,10 +873,9 @@ Sanitizers
   This new flag should allow those projects to enable integer sanitizers with
   less noise.
 
-- Arithmetic overflow sanitizers ``-fsanitize=signed-integer-overflow`` and
-  ``-fsanitize=unsigned-integer-overflow`` as well as the implicit integer
-  truncation sanitizers ``-fsanitize=implicit-signed-integer-truncation`` and
-  ``-fsanitize=implicit-unsigned-integer-truncation`` now properly support the
+- ``-fsanitize=signed-integer-overflow``, ``-fsanitize=unsigned-integer-overflow``,
+  ``-fsanitize=implicit-signed-integer-truncation``, ``-fsanitize=implicit-unsigned-integer-truncation``,
+  ``-fsanitize=enum`` now properly support the
   "type" prefix within `Sanitizer Special Case Lists (SSCL)
   <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
   for examples.
