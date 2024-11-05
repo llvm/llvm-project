@@ -159,11 +159,14 @@ private:
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<COFFPlatform>> COFFPlatform::Create(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD, std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
-    LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
-    const char *VCRuntimePath, std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<COFFPlatform>>
+COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+                     std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
+                     LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
+                     const char *VCRuntimePath,
+                     std::optional<SymbolAliasMap> RuntimeAliases) {
+
+  auto &ES = ObjLinkingLayer.getExecutionSession();
 
   // If the target is not supported then bail out immediately.
   if (!supportedTarget(ES.getTargetTriple()))
@@ -214,7 +217,7 @@ Expected<std::unique_ptr<COFFPlatform>> COFFPlatform::Create(
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<COFFPlatform>(new COFFPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(*OrcRuntimeArchiveGenerator),
+      ObjLinkingLayer, PlatformJD, std::move(*OrcRuntimeArchiveGenerator),
       std::move(OrcRuntimeArchiveBuffer), std::move(RuntimeArchive),
       std::move(LoadDynLibrary), StaticVCRuntime, VCRuntimePath, Err));
   if (Err)
@@ -223,8 +226,8 @@ Expected<std::unique_ptr<COFFPlatform>> COFFPlatform::Create(
 }
 
 Expected<std::unique_ptr<COFFPlatform>>
-COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                     JITDylib &PlatformJD, const char *OrcRuntimePath,
+COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+                     const char *OrcRuntimePath,
                      LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
                      const char *VCRuntimePath,
                      std::optional<SymbolAliasMap> RuntimeAliases) {
@@ -233,7 +236,7 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   if (!ArchiveBuffer)
     return createFileError(OrcRuntimePath, ArchiveBuffer.getError());
 
-  return Create(ES, ObjLinkingLayer, PlatformJD, std::move(*ArchiveBuffer),
+  return Create(ObjLinkingLayer, PlatformJD, std::move(*ArchiveBuffer),
                 std::move(LoadDynLibrary), StaticVCRuntime, VCRuntimePath,
                 std::move(RuntimeAliases));
 }
@@ -382,14 +385,14 @@ bool COFFPlatform::supportedTarget(const Triple &TT) {
 }
 
 COFFPlatform::COFFPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
     std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
     std::unique_ptr<object::Archive> OrcRuntimeArchive,
     LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
     const char *VCRuntimePath, Error &Err)
-    : ES(ES), ObjLinkingLayer(ObjLinkingLayer),
+    : ES(ObjLinkingLayer.getExecutionSession()),
+      ObjLinkingLayer(ObjLinkingLayer),
       LoadDynLibrary(std::move(LoadDynLibrary)),
       OrcRuntimeArchiveBuffer(std::move(OrcRuntimeArchiveBuffer)),
       OrcRuntimeArchive(std::move(OrcRuntimeArchive)),
@@ -521,10 +524,8 @@ void COFFPlatform::pushInitializersLoop(PushInitializersSendResultFn SendResult,
       }
 
       for (auto *DepJD : JDDepMap[CurJD])
-        if (!Visited.count(DepJD)) {
+        if (Visited.insert(DepJD).second)
           Worklist.push_back(DepJD);
-          Visited.insert(DepJD);
-        }
     }
   });
 
@@ -786,20 +787,6 @@ void COFFPlatform::COFFPlatformPlugin::modifyPassConfig(
         });
 }
 
-ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
-COFFPlatform::COFFPlatformPlugin::getSyntheticSymbolDependencies(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  auto I = InitSymbolDeps.find(&MR);
-  if (I != InitSymbolDeps.end()) {
-    SyntheticSymbolDependenciesMap Result;
-    Result[MR.getInitializerSymbol()] = std::move(I->second);
-    InitSymbolDeps.erase(&MR);
-    return Result;
-  }
-  return SyntheticSymbolDependenciesMap();
-}
-
 Error COFFPlatform::COFFPlatformPlugin::associateJITDylibHeaderSymbol(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR,
     bool IsBootstraping) {
@@ -859,16 +846,37 @@ Error COFFPlatform::COFFPlatformPlugin::registerObjectPlatformSections(
 
 Error COFFPlatform::COFFPlatformPlugin::preserveInitializerSections(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
-  JITLinkSymbolSet InitSectionSymbols;
-  for (auto &Sec : G.sections())
-    if (isCOFFInitializerSection(Sec.getName()))
-      for (auto *B : Sec.blocks())
-        if (!B->edges_empty())
-          InitSectionSymbols.insert(
-              &G.addAnonymousSymbol(*B, 0, 0, false, true));
 
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  InitSymbolDeps[&MR] = InitSectionSymbols;
+  if (const auto &InitSymName = MR.getInitializerSymbol()) {
+
+    jitlink::Symbol *InitSym = nullptr;
+
+    for (auto &InitSection : G.sections()) {
+      // Skip non-init sections.
+      if (!isCOFFInitializerSection(InitSection.getName()) ||
+          InitSection.empty())
+        continue;
+
+      // Create the init symbol if it has not been created already and attach it
+      // to the first block.
+      if (!InitSym) {
+        auto &B = **InitSection.blocks().begin();
+        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
+                                      jitlink::Linkage::Strong,
+                                      jitlink::Scope::Default, false, true);
+      }
+
+      // Add keep-alive edges to anonymous symbols in all other init blocks.
+      for (auto *B : InitSection.blocks()) {
+        if (B == &InitSym->getBlock())
+          continue;
+
+        auto &S = G.addAnonymousSymbol(*B, 0, B->getSize(), false, true);
+        InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
+      }
+    }
+  }
+
   return Error::success();
 }
 

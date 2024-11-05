@@ -206,7 +206,7 @@ define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[ADD2:.*]] = fadd fast <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[ADD:.*]] = fadd fast <vscale x 8 x float> %[[ADD2]], %[[ADD1]]
-; CHECK-NEXT: call fast float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> %[[ADD]])
+; CHECK-NEXT: call fast float @llvm.vector.reduce.fadd.nxv8f32(float 0.000000e+00, <vscale x 8 x float> %[[ADD]])
 entry:
   br label %for.body
 
@@ -235,7 +235,7 @@ define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[FADD2:.*]] = fadd fast <16 x bfloat> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = fadd fast <16 x bfloat> %[[FADD2]], %[[FADD1]]
-; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0xR8000, <16 x bfloat> %[[RDX]])
+; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0xR0000, <16 x bfloat> %[[RDX]])
 entry:
   br label %for.body
 

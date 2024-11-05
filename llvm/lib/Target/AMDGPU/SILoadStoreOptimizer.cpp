@@ -2014,7 +2014,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   MachineOperand OffsetHi =
     createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
 
-  const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  const auto *CarryRC = TRI->getWaveMaskRegClass();
   Register CarryReg = MRI->createVirtualRegister(CarryRC);
   Register DeadCarryReg = MRI->createVirtualRegister(CarryRC);
 
@@ -2056,7 +2056,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
                                                Register NewBase,
                                                int32_t NewOffset) const {
-  auto Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  auto *Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   Base->setReg(NewBase);
   Base->setIsKill(false);
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);

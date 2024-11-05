@@ -376,6 +376,15 @@ SDValue DAGTypeLegalizer::ExpandOp_BUILD_VECTOR(SDNode *N) {
   assert(OldVT == VecVT.getVectorElementType() &&
          "BUILD_VECTOR operand type doesn't match vector element type!");
 
+  if (VecVT.isInteger() && TLI.isOperationLegal(ISD::SPLAT_VECTOR, VecVT) &&
+      TLI.isOperationLegalOrCustom(ISD::SPLAT_VECTOR_PARTS, VecVT)) {
+    if (SDValue V = cast<BuildVectorSDNode>(N)->getSplatValue()) {
+      SDValue Lo, Hi;
+      GetExpandedOp(V, Lo, Hi);
+      return DAG.getNode(ISD::SPLAT_VECTOR_PARTS, dl, VecVT, Lo, Hi);
+    }
+  }
+
   // Build a vector of twice the length out of the expanded elements.
   // For example <3 x i64> -> <6 x i32>.
   SmallVector<SDValue, 16> NewElts;

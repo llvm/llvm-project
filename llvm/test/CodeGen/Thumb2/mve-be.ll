@@ -232,7 +232,6 @@ define arm_aapcs_vfpcc <16 x i8> @and_v16i8_le(<4 x i32> %src) {
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x1
-; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    vand q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr
@@ -254,7 +253,6 @@ define arm_aapcs_vfpcc <16 x i8> @and_v16i8_be(<4 x i32> %src) {
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x1000000
-; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    vand q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr

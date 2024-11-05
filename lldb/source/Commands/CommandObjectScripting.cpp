@@ -254,7 +254,7 @@ CommandObjectMultiwordScripting::CommandObjectMultiwordScripting(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "scripting",
-          "Commands for operating on the scripting functionnalities.",
+          "Commands for operating on the scripting functionalities.",
           "scripting <subcommand> [<subcommand-options>]") {
   LoadSubCommand("run",
                  CommandObjectSP(new CommandObjectScriptingRun(interpreter)));

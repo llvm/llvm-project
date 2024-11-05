@@ -56,7 +56,7 @@ entry:
 
 define internal i1 @test1_g(ptr %h, i32 %i) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@test1_g
-; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]]) {
+; CHECK-SAME: (ptr [[H:%.*]], i32 range(i32 0, 2) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -221,7 +221,7 @@ exit:
 
 define internal i1 @test3_g(ptr %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test3_g
-; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]]) {
+; CHECK-SAME: (ptr [[H:%.*]], i32 range(i32 0, 2) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]

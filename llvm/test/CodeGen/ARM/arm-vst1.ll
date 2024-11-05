@@ -92,7 +92,7 @@ declare void @llvm.arm.neon.vst1x4.p0.v16i8(ptr nocapture, <16 x i8>, <16 x i8>,
 
 define arm_aapcs_vfpcc void @test_vst1_u16_x2(ptr %a, %struct.uint16x4x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x2:
-; CHECK:         vst1.16 {d0, d1}, [r0:64]
+; CHECK:         vst1.16 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
@@ -101,9 +101,42 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc void @test_vst1_u16_x2_align8(ptr %a, %struct.uint16x4x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u16_x2_align8:
+; CHECK:         vst1.16 {d0, d1}, [r0:64]
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0.v4i16(ptr align 8 %a, <4 x i16> %b0, <4 x i16> %b1)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @test_vst1_u16_x2_align16(ptr %a, %struct.uint16x4x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u16_x2_align16:
+; CHECK:         vst1.16 {d0, d1}, [r0:128]
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0.v4i16(ptr align 16 %a, <4 x i16> %b0, <4 x i16> %b1)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @test_vst1_u16_x2_align32(ptr %a, %struct.uint16x4x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u16_x2_align32:
+; CHECK:         vst1.16 {d0, d1}, [r0:128]
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0.v4i16(ptr align 32 %a, <4 x i16> %b0, <4 x i16> %b1)
+  ret void
+}
+
 define arm_aapcs_vfpcc void @test_vst1_u16_x3(ptr %a, %struct.uint16x4x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x3:
-; CHECK:         vst1.16 {d0, d1, d2}, [r0:64]
+; CHECK:         vst1.16 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x4x3_t %b, 0, 0
@@ -115,7 +148,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u16_x4(ptr %a, %struct.uint16x4x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x4:
-; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x4x4_t %b, 0, 0
@@ -128,7 +161,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u32_x2(ptr %a, %struct.uint32x2x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x2:
-; CHECK:         vst1.32 {d0, d1}, [r0:64]
+; CHECK:         vst1.32 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x2_t %b, 0, 0
@@ -139,7 +172,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u32_x3(ptr %a, %struct.uint32x2x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x3:
-; CHECK:         vst1.32 {d0, d1, d2}, [r0:64]
+; CHECK:         vst1.32 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x3_t %b, 0, 0
@@ -151,7 +184,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u32_x4(ptr %a, %struct.uint32x2x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x4:
-; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x4_t %b, 0, 0
@@ -164,7 +197,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u64_x2(ptr %a, %struct.uint64x1x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x2:
-; CHECK:         vst1.64 {d0, d1}, [r0:64]
+; CHECK:         vst1.64 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x2_t %b, 0, 0
@@ -175,7 +208,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u64_x3(ptr %a, %struct.uint64x1x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x3:
-; CHECK:         vst1.64 {d0, d1, d2}, [r0:64]
+; CHECK:         vst1.64 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x3_t %b, 0, 0
@@ -187,7 +220,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u64_x4(ptr %a, %struct.uint64x1x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x4:
-; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x4_t %b, 0, 0
@@ -200,7 +233,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u8_x2(ptr %a, %struct.uint8x8x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x2:
-; CHECK:         vst1.8 {d0, d1}, [r0:64]
+; CHECK:         vst1.8 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x2_t %b, 0, 0
@@ -211,7 +244,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u8_x3(ptr %a, %struct.uint8x8x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x3:
-; CHECK:         vst1.8 {d0, d1, d2}, [r0:64]
+; CHECK:         vst1.8 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x3_t %b, 0, 0
@@ -223,7 +256,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1_u8_x4(ptr %a, %struct.uint8x8x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x4:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x4_t %b, 0, 0
@@ -236,7 +269,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u16_x2(ptr %a, %struct.uint16x8x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x2:
-; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x2_t %b, 0, 0
@@ -247,8 +280,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u16_x3(ptr %a, %struct.uint16x8x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x3:
-; CHECK:         vst1.16 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0:64]
+; CHECK:         vst1.16 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x3_t %b, 0, 0
@@ -260,8 +293,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u16_x4(ptr %a, %struct.uint16x8x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x4:
-; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0:256]
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x4_t %b, 0, 0
@@ -274,7 +307,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u32_x2(ptr %a, %struct.uint32x4x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x2:
-; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x2_t %b, 0, 0
@@ -285,8 +318,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u32_x3(ptr %a, %struct.uint32x4x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x3:
-; CHECK:         vst1.32 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.32 {d3, d4, d5}, [r0:64]
+; CHECK:         vst1.32 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.32 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x3_t %b, 0, 0
@@ -298,8 +331,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u32_x4(ptr %a, %struct.uint32x4x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x4:
-; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.32 {d4, d5, d6, d7}, [r0:256]
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.32 {d4, d5, d6, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x4_t %b, 0, 0
@@ -312,7 +345,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u64_x2(ptr %a, %struct.uint64x2x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x2:
-; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x2_t %b, 0, 0
@@ -323,8 +356,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u64_x3(ptr %a, %struct.uint64x2x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x3:
-; CHECK:         vst1.64 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.64 {d3, d4, d5}, [r0:64]
+; CHECK:         vst1.64 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.64 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x3_t %b, 0, 0
@@ -336,8 +369,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u64_x4(ptr %a, %struct.uint64x2x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x4:
-; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.64 {d4, d5, d6, d7}, [r0:256]
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.64 {d4, d5, d6, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x4_t %b, 0, 0
@@ -350,7 +383,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u8_x2(ptr %a, %struct.uint8x16x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x2:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x2_t %b, 0, 0
@@ -361,8 +394,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u8_x3(ptr %a, %struct.uint8x16x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x3:
-; CHECK:         vst1.8 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.8 {d3, d4, d5}, [r0:64]
+; CHECK:         vst1.8 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.8 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x3_t %b, 0, 0
@@ -374,8 +407,8 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vst1q_u8_x4(ptr %a, %struct.uint8x16x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x4:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.8 {d4, d5, d6, d7}, [r0:256]
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.8 {d4, d5, d6, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x4_t %b, 0, 0
@@ -390,7 +423,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u8_x2_post_imm(ptr %a, %struct.uint8x8x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x2_post_imm:
-; CHECK:         vst1.8 {d0, d1}, [r0:64]!
+; CHECK:         vst1.8 {d0, d1}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x2_t %b, 0, 0
@@ -402,7 +435,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u8_x2_post_reg(ptr %a, %struct.uint8x8x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x2_post_reg:
-; CHECK:         vst1.8 {d0, d1}, [r0:64], r1
+; CHECK:         vst1.8 {d0, d1}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x2_t %b, 0, 0
@@ -414,7 +447,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u16_x2_post_imm(ptr %a, %struct.uint16x4x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x2_post_imm:
-; CHECK:         vst1.16 {d0, d1}, [r0:64]!
+; CHECK:         vst1.16 {d0, d1}, [r0]!
 ; CHECK-NEXT:    bx lr
   %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
   %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
@@ -426,7 +459,7 @@ define arm_aapcs_vfpcc ptr @test_vst1_u16_x2_post_imm(ptr %a, %struct.uint16x4x2
 define arm_aapcs_vfpcc ptr @test_vst1_u16_x2_post_reg(ptr %a, %struct.uint16x4x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x2_post_reg:
 ; CHECK:         lsl r1, r1, #1
-; CHECK-NEXT:    vst1.16 {d0, d1}, [r0:64], r1
+; CHECK-NEXT:    vst1.16 {d0, d1}, [r0], r1
 ; CHECK-NEXT:    bx lr
   %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
   %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
@@ -437,7 +470,7 @@ define arm_aapcs_vfpcc ptr @test_vst1_u16_x2_post_reg(ptr %a, %struct.uint16x4x2
 
 define arm_aapcs_vfpcc ptr @test_vst1_u32_x2_post_imm(ptr %a, %struct.uint32x2x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x2_post_imm:
-; CHECK:         vst1.32 {d0, d1}, [r0:64]!
+; CHECK:         vst1.32 {d0, d1}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x2_t %b, 0, 0
@@ -450,7 +483,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1_u32_x2_post_reg(ptr %a, %struct.uint32x2x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x2_post_reg:
 ; CHECK:         lsl r1, r1, #2
-; CHECK-NEXT:    vst1.32 {d0, d1}, [r0:64], r1
+; CHECK-NEXT:    vst1.32 {d0, d1}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x2_t %b, 0, 0
@@ -462,7 +495,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u64_x2_post_imm(ptr %a, %struct.uint64x1x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x2_post_imm:
-; CHECK:         vst1.64 {d0, d1}, [r0:64]!
+; CHECK:         vst1.64 {d0, d1}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x2_t %b, 0, 0
@@ -475,7 +508,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1_u64_x2_post_reg(ptr %a, %struct.uint64x1x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x2_post_reg:
 ; CHECK:         lsl r1, r1, #3
-; CHECK-NEXT:    vst1.64 {d0, d1}, [r0:64], r1
+; CHECK-NEXT:    vst1.64 {d0, d1}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x2_t %b, 0, 0
@@ -487,7 +520,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u8_x2_post_imm(ptr %a, %struct.uint8x16x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x2_post_imm:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x2_t %b, 0, 0
@@ -499,7 +532,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u8_x2_post_reg(ptr %a, %struct.uint8x16x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x2_post_reg:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x2_t %b, 0, 0
@@ -511,7 +544,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u16_x2_post_imm(ptr %a, %struct.uint16x8x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x2_post_imm:
-; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x2_t %b, 0, 0
@@ -524,7 +557,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1q_u16_x2_post_reg(ptr %a, %struct.uint16x8x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x2_post_reg:
 ; CHECK:         lsl r1, r1, #1
-; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x2_t %b, 0, 0
@@ -536,7 +569,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u32_x2_post_imm(ptr %a, %struct.uint32x4x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x2_post_imm:
-; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x2_t %b, 0, 0
@@ -549,7 +582,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1q_u32_x2_post_reg(ptr %a, %struct.uint32x4x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x2_post_reg:
 ; CHECK:         lsl r1, r1, #2
-; CHECK-NEXT:    vst1.32 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    vst1.32 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x2_t %b, 0, 0
@@ -561,7 +594,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u64_x2_post_imm(ptr %a, %struct.uint64x2x2_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x2_post_imm:
-; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x2_t %b, 0, 0
@@ -574,7 +607,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1q_u64_x2_post_reg(ptr %a, %struct.uint64x2x2_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x2_post_reg:
 ; CHECK:         lsl r1, r1, #3
-; CHECK-NEXT:    vst1.64 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    vst1.64 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x2_t %b, 0, 0
@@ -587,7 +620,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u8_x3_post_imm(ptr %a, %struct.uint8x8x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x3_post_imm:
-; CHECK:         vst1.8 {d0, d1, d2}, [r0:64]!
+; CHECK:         vst1.8 {d0, d1, d2}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x3_t %b, 0, 0
@@ -600,7 +633,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u8_x3_post_reg(ptr %a, %struct.uint8x8x3_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x3_post_reg:
-; CHECK:         vst1.8 {d0, d1, d2}, [r0:64], r1
+; CHECK:         vst1.8 {d0, d1, d2}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x3_t %b, 0, 0
@@ -613,7 +646,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u16_x3_post_imm(ptr %a, %struct.uint16x4x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x3_post_imm:
-; CHECK:         vst1.16 {d0, d1, d2}, [r0:64]!
+; CHECK:         vst1.16 {d0, d1, d2}, [r0]!
 ; CHECK-NEXT:    bx lr
   %b0 = extractvalue %struct.uint16x4x3_t %b, 0, 0
   %b1 = extractvalue %struct.uint16x4x3_t %b, 0, 1
@@ -626,7 +659,7 @@ define arm_aapcs_vfpcc ptr @test_vst1_u16_x3_post_imm(ptr %a, %struct.uint16x4x3
 define arm_aapcs_vfpcc ptr @test_vst1_u16_x3_post_reg(ptr %a, %struct.uint16x4x3_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x3_post_reg:
 ; CHECK:         lsl r1, r1, #1
-; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0], r1
 ; CHECK-NEXT:    bx lr
   %b0 = extractvalue %struct.uint16x4x3_t %b, 0, 0
   %b1 = extractvalue %struct.uint16x4x3_t %b, 0, 1
@@ -638,7 +671,7 @@ define arm_aapcs_vfpcc ptr @test_vst1_u16_x3_post_reg(ptr %a, %struct.uint16x4x3
 
 define arm_aapcs_vfpcc ptr @test_vst1_u32_x3_post_imm(ptr %a, %struct.uint32x2x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x3_post_imm:
-; CHECK:         vst1.32 {d0, d1, d2}, [r0:64]!
+; CHECK:         vst1.32 {d0, d1, d2}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x3_t %b, 0, 0
@@ -652,7 +685,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1_u32_x3_post_reg(ptr %a, %struct.uint32x2x3_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x3_post_reg:
 ; CHECK:         lsl r1, r1, #2
-; CHECK-NEXT:    vst1.32 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    vst1.32 {d0, d1, d2}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x3_t %b, 0, 0
@@ -665,7 +698,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u64_x3_post_imm(ptr %a, %struct.uint64x1x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x3_post_imm:
-; CHECK:         vst1.64 {d0, d1, d2}, [r0:64]!
+; CHECK:         vst1.64 {d0, d1, d2}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x3_t %b, 0, 0
@@ -679,7 +712,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1_u64_x3_post_reg(ptr %a, %struct.uint64x1x3_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x3_post_reg:
 ; CHECK:         lsl r1, r1, #3
-; CHECK-NEXT:    vst1.64 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    vst1.64 {d0, d1, d2}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x3_t %b, 0, 0
@@ -692,8 +725,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u8_x3_post_imm(ptr %a, %struct.uint8x16x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x3_post_imm:
-; CHECK:         vst1.8 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.8 {d3, d4, d5}, [r0:64]!
+; CHECK:         vst1.8 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.8 {d3, d4, d5}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x3_t %b, 0, 0
@@ -706,8 +739,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u16_x3_post_imm(ptr %a, %struct.uint16x8x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x3_post_imm:
-; CHECK:         vst1.16 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0:64]!
+; CHECK:         vst1.16 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x3_t %b, 0, 0
@@ -720,8 +753,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u32_x3_post_imm(ptr %a, %struct.uint32x4x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x3_post_imm:
-; CHECK:         vst1.32 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.32 {d3, d4, d5}, [r0:64]!
+; CHECK:         vst1.32 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.32 {d3, d4, d5}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x3_t %b, 0, 0
@@ -734,8 +767,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u64_x3_post_imm(ptr %a, %struct.uint64x2x3_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x3_post_imm:
-; CHECK:         vst1.64 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.64 {d3, d4, d5}, [r0:64]!
+; CHECK:         vst1.64 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.64 {d3, d4, d5}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x3_t %b, 0, 0
@@ -748,7 +781,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u8_x4_post_imm(ptr %a, %struct.uint8x8x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x4_post_imm:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x4_t %b, 0, 0
@@ -762,7 +795,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u8_x4_post_reg(ptr %a, %struct.uint8x8x4_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u8_x4_post_reg:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x8x4_t %b, 0, 0
@@ -776,7 +809,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u16_x4_post_imm(ptr %a, %struct.uint16x4x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x4_post_imm:
-; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
   %b0 = extractvalue %struct.uint16x4x4_t %b, 0, 0
   %b1 = extractvalue %struct.uint16x4x4_t %b, 0, 1
@@ -790,7 +823,7 @@ define arm_aapcs_vfpcc ptr @test_vst1_u16_x4_post_imm(ptr %a, %struct.uint16x4x4
 define arm_aapcs_vfpcc ptr @test_vst1_u16_x4_post_reg(ptr %a, %struct.uint16x4x4_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u16_x4_post_reg:
 ; CHECK:         lsl r1, r1, #1
-; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
   %b0 = extractvalue %struct.uint16x4x4_t %b, 0, 0
   %b1 = extractvalue %struct.uint16x4x4_t %b, 0, 1
@@ -803,7 +836,7 @@ define arm_aapcs_vfpcc ptr @test_vst1_u16_x4_post_reg(ptr %a, %struct.uint16x4x4
 
 define arm_aapcs_vfpcc ptr @test_vst1_u32_x4_post_imm(ptr %a, %struct.uint32x2x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x4_post_imm:
-; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x4_t %b, 0, 0
@@ -818,7 +851,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1_u32_x4_post_reg(ptr %a, %struct.uint32x2x4_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u32_x4_post_reg:
 ; CHECK:         lsl r1, r1, #2
-; CHECK-NEXT:    vst1.32 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    vst1.32 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x2x4_t %b, 0, 0
@@ -832,7 +865,7 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1_u64_x4_post_imm(ptr %a, %struct.uint64x1x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x4_post_imm:
-; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x4_t %b, 0, 0
@@ -847,7 +880,7 @@ entry:
 define arm_aapcs_vfpcc ptr @test_vst1_u64_x4_post_reg(ptr %a, %struct.uint64x1x4_t %b, i32 %inc) nounwind {
 ; CHECK-LABEL: test_vst1_u64_x4_post_reg:
 ; CHECK:         lsl r1, r1, #3
-; CHECK-NEXT:    vst1.64 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    vst1.64 {d0, d1, d2, d3}, [r0], r1
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x1x4_t %b, 0, 0
@@ -861,8 +894,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u8_x4_post_imm(ptr %a, %struct.uint8x16x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u8_x4_post_imm:
-; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.8 {d4, d5, d6, d7}, [r0:256]!
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.8 {d4, d5, d6, d7}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint8x16x4_t %b, 0, 0
@@ -876,8 +909,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u16_x4_post_imm(ptr %a, %struct.uint16x8x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u16_x4_post_imm:
-; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0:256]!
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint16x8x4_t %b, 0, 0
@@ -891,8 +924,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u32_x4_post_imm(ptr %a, %struct.uint32x4x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u32_x4_post_imm:
-; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.32 {d4, d5, d6, d7}, [r0:256]!
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.32 {d4, d5, d6, d7}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint32x4x4_t %b, 0, 0
@@ -906,8 +939,8 @@ entry:
 
 define arm_aapcs_vfpcc ptr @test_vst1q_u64_x4_post_imm(ptr %a, %struct.uint64x2x4_t %b) nounwind {
 ; CHECK-LABEL: test_vst1q_u64_x4_post_imm:
-; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.64 {d4, d5, d6, d7}, [r0:256]!
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.64 {d4, d5, d6, d7}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %b0 = extractvalue %struct.uint64x2x4_t %b, 0, 0

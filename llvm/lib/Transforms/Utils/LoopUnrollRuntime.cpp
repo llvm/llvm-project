@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
-#include <algorithm>
 
 using namespace llvm;
 
@@ -146,7 +145,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
-      SE.forgetValue(&PN);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PN);
     }
   }
 

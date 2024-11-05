@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVISELLOWERING_H
 
 #include "RISCV.h"
+#include "RISCVCallingConv.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -33,6 +34,7 @@ enum NodeType : unsigned {
   SRET_GLUE,
   MRET_GLUE,
   CALL,
+  TAIL,
   /// Select with condition operator - This selects between a true value and
   /// a false value (ops #3 and #4) based on the boolean result of comparing
   /// the lhs and rhs (ops #0 and #1) of a conditional expression with the
@@ -41,9 +43,18 @@ enum NodeType : unsigned {
   /// integer or floating point.
   SELECT_CC,
   BR_CC,
+
+  /// Turns a pair of `i32`s into an `f64`. Needed for rv32d/ilp32.
+  /// - Output: `f64`.
+  /// - Input 0: low-order bits (31-0) (as `i32`), for even register.
+  /// - Input 1: high-order bits (63-32) (as `i32`), for odd register.
   BuildPairF64,
+
+  /// Turns a `f64` into a pair of `i32`s. Needed for rv32d/ilp32.
+  /// - Output 0: low-order bits (31-0) (as `i32`), from even register.
+  /// - Output 1: high-order bits (63-32) (as `i32`), from odd register.
+  /// - Input 0: `f64`.
   SplitF64,
-  TAIL,
 
   // Add the Lo 12 bits from an address. Selected to ADDI.
   ADD_LO,
@@ -116,9 +127,6 @@ enum NodeType : unsigned {
   FCVT_W_RV64,
   FCVT_WU_RV64,
 
-  FP_ROUND_BF16,
-  FP_EXTEND_BF16,
-
   // Rounds an FP value to its corresponding integer in the same FP format.
   // First operand is the value to round, the second operand is the largest
   // integer that can be represented exactly in the FP format. This will be
@@ -131,6 +139,9 @@ enum NodeType : unsigned {
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
+
+  // Zfa fli instruction for constant materialization.
+  FLI,
 
   // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
   // It takes a chain operand and another two target constant operands (the
@@ -296,8 +307,6 @@ enum NodeType : unsigned {
   FCOPYSIGN_VL, // Has a passthru operand
   VFCVT_RTZ_X_F_VL,
   VFCVT_RTZ_XU_F_VL,
-  VFCVT_X_F_VL,
-  VFCVT_XU_F_VL,
   VFROUND_NOEXCEPT_VL,
   VFCVT_RM_X_F_VL,  // Has a rounding mode operand.
   VFCVT_RM_XU_F_VL, // Has a rounding mode operand.
@@ -410,9 +419,12 @@ enum NodeType : unsigned {
   CZERO_EQZ, // vt.maskc for XVentanaCondOps.
   CZERO_NEZ, // vt.maskcn for XVentanaCondOps.
 
-  /// Software guarded BRIND node. Operand 0 is the chain operand and
-  /// operand 1 is the target address.
+  // Software guarded BRIND node. Operand 0 is the chain operand and
+  // operand 1 is the target address.
   SW_GUARDED_BRIND,
+  // Software guarded calls for large code model
+  SW_GUARDED_CALL,
+  SW_GUARDED_TAIL,
 
   SF_VC_XV_SE,
   SF_VC_IV_SE,
@@ -516,17 +528,9 @@ public:
       SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
       unsigned OldShiftOpcode, unsigned NewShiftOpcode,
       SelectionDAG &DAG) const override;
-  /// Return true if the (vector) instruction I will be lowered to an instruction
-  /// with a scalar splat operand for the given Operand number.
-  bool canSplatOperand(Instruction *I, int Operand) const;
-  /// Return true if a vector instruction will lower to a target instruction
-  /// able to splat the given operand.
-  bool canSplatOperand(unsigned Opcode, int Operand) const;
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  std::pair<int, bool> getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
+  int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
@@ -683,6 +687,9 @@ public:
 
   bool preferZeroCompareBranch() const override { return true; }
 
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
+  // than this hook due to limitations in the interface here.
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }
@@ -899,17 +906,6 @@ public:
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
 
-  /// RISCVCCAssignFn - This target-specific function extends the default
-  /// CCValAssign with additional information used to lower RISC-V calling
-  /// conventions.
-  typedef bool RISCVCCAssignFn(const DataLayout &DL, RISCVABI::ABI,
-                               unsigned ValNo, MVT ValVT, MVT LocVT,
-                               CCValAssign::LocInfo LocInfo,
-                               ISD::ArgFlagsTy ArgFlags, CCState &State,
-                               bool IsFixed, bool IsRet, Type *OrigTy,
-                               const RISCVTargetLowering &TLI,
-                               std::optional<unsigned> FirstMaskArgument);
-
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -927,6 +923,7 @@ private:
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
   SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
@@ -966,6 +963,7 @@ private:
   SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
                                                SelectionDAG &DAG) const;
   SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
@@ -1002,6 +1000,9 @@ private:
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
@@ -1051,28 +1052,6 @@ private:
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
 };
-
-namespace RISCV {
-
-bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-              MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-              ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-              bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-              std::optional<unsigned> FirstMaskArgument);
-
-bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
-                     MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
-                     ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
-                     bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     std::optional<unsigned> FirstMaskArgument);
-
-bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                  CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                  CCState &State);
-
-ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
-
-} // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 

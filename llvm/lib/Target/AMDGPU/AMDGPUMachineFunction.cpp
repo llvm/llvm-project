@@ -31,7 +31,7 @@ getKernelDynLDSGlobalFromFunction(const Function &F) {
 static bool hasLDSKernelArgument(const Function &F) {
   for (const Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
-    if (auto PtrTy = dyn_cast<PointerType>(ArgTy)) {
+    if (auto *PtrTy = dyn_cast<PointerType>(ArgTy)) {
       if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
         return true;
     }

@@ -25,26 +25,49 @@ class Context;
 // Forward declare friend classes for MSVC.
 class PointerType;
 class VectorType;
+class FixedVectorType;
+class ScalableVectorType;
+class IntegerType;
 class FunctionType;
+class ArrayType;
+class StructType;
+class TargetExtType;
+class Module;
+class FPMathOperator;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 
-/// Just like llvm::Type these are immutable, unique, never get freed and can
-/// only be created via static factory methods.
+/// Just like llvm::Type these are immutable, unique, never get freed and
+/// can only be created via static factory methods.
 class Type {
 protected:
   llvm::Type *LLVMTy;
-  friend class VectorType;   // For LLVMTy.
-  friend class PointerType;  // For LLVMTy.
-  friend class FunctionType; // For LLVMTy.
-  friend class Function;     // For LLVMTy.
-  friend class CallBase;     // For LLVMTy.
-  friend class ConstantInt;  // For LLVMTy.
+  friend class ArrayType;          // For LLVMTy.
+  friend class StructType;         // For LLVMTy.
+  friend class VectorType;         // For LLVMTy.
+  friend class FixedVectorType;    // For LLVMTy.
+  friend class ScalableVectorType; // For LLVMTy.
+  friend class PointerType;        // For LLVMTy.
+  friend class FunctionType;       // For LLVMTy.
+  friend class IntegerType;        // For LLVMTy.
+  friend class Function;           // For LLVMTy.
+  friend class CallBase;           // For LLVMTy.
+  friend class ConstantInt;        // For LLVMTy.
+  friend class ConstantArray;      // For LLVMTy.
+  friend class ConstantStruct;     // For LLVMTy.
+  friend class ConstantVector;     // For LLVMTy.
+  friend class CmpInst;            // For LLVMTy. TODO: Cleanup after
+                                   // sandboxir::VectorType is more complete.
+  friend class Utils;              // for LLVMTy
+  friend class TargetExtType;      // For LLVMTy.
+  friend class Module;             // For LLVMTy.
+  friend class FPMathOperator;     // For LLVMTy.
+
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   Context &Ctx;
 
   Type(llvm::Type *LLVMTy, Context &Ctx) : LLVMTy(LLVMTy), Ctx(Ctx) {}
@@ -279,11 +302,151 @@ public:
   }
 };
 
-class VectorType : public Type {
+class ArrayType : public Type {
 public:
+  static ArrayType *get(Type *ElementType, uint64_t NumElements);
   // TODO: add missing functions
   static bool classof(const Type *From) {
+    return isa<llvm::ArrayType>(From->LLVMTy);
+  }
+};
+
+class StructType : public Type {
+public:
+  /// This static method is the primary way to create a literal StructType.
+  static StructType *get(Context &Ctx, ArrayRef<Type *> Elements,
+                         bool IsPacked = false);
+
+  bool isPacked() const { return cast<llvm::StructType>(LLVMTy)->isPacked(); }
+
+  // TODO: add missing functions
+  static bool classof(const Type *From) {
+    return isa<llvm::StructType>(From->LLVMTy);
+  }
+};
+
+class VectorType : public Type {
+public:
+  static VectorType *get(Type *ElementType, ElementCount EC);
+  static VectorType *get(Type *ElementType, unsigned NumElements,
+                         bool Scalable) {
+    return VectorType::get(ElementType,
+                           ElementCount::get(NumElements, Scalable));
+  }
+  Type *getElementType() const;
+
+  static VectorType *get(Type *ElementType, const VectorType *Other) {
+    return VectorType::get(ElementType, Other->getElementCount());
+  }
+
+  inline ElementCount getElementCount() const {
+    return cast<llvm::VectorType>(LLVMTy)->getElementCount();
+  }
+  static VectorType *getInteger(VectorType *VTy);
+  static VectorType *getExtendedElementVectorType(VectorType *VTy);
+  static VectorType *getTruncatedElementVectorType(VectorType *VTy);
+  static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs);
+  static VectorType *getHalfElementsVectorType(VectorType *VTy);
+  static VectorType *getDoubleElementsVectorType(VectorType *VTy);
+  static bool isValidElementType(Type *ElemTy);
+
+  static bool classof(const Type *From) {
     return isa<llvm::VectorType>(From->LLVMTy);
+  }
+};
+
+class FixedVectorType : public VectorType {
+public:
+  static FixedVectorType *get(Type *ElementType, unsigned NumElts);
+
+  static FixedVectorType *get(Type *ElementType, const FixedVectorType *FVTy) {
+    return get(ElementType, FVTy->getNumElements());
+  }
+
+  static FixedVectorType *getInteger(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getInteger(VTy));
+  }
+
+  static FixedVectorType *getExtendedElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getExtendedElementVectorType(VTy));
+  }
+
+  static FixedVectorType *getTruncatedElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(
+        VectorType::getTruncatedElementVectorType(VTy));
+  }
+
+  static FixedVectorType *getSubdividedVectorType(FixedVectorType *VTy,
+                                                  int NumSubdivs) {
+    return cast<FixedVectorType>(
+        VectorType::getSubdividedVectorType(VTy, NumSubdivs));
+  }
+
+  static FixedVectorType *getHalfElementsVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getHalfElementsVectorType(VTy));
+  }
+
+  static FixedVectorType *getDoubleElementsVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getDoubleElementsVectorType(VTy));
+  }
+
+  static bool classof(const Type *T) {
+    return isa<llvm::FixedVectorType>(T->LLVMTy);
+  }
+
+  unsigned getNumElements() const {
+    return cast<llvm::FixedVectorType>(LLVMTy)->getNumElements();
+  }
+};
+
+class ScalableVectorType : public VectorType {
+public:
+  static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+
+  static ScalableVectorType *get(Type *ElementType,
+                                 const ScalableVectorType *SVTy) {
+    return get(ElementType, SVTy->getMinNumElements());
+  }
+
+  static ScalableVectorType *getInteger(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(VectorType::getInteger(VTy));
+  }
+
+  static ScalableVectorType *
+  getExtendedElementVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getExtendedElementVectorType(VTy));
+  }
+
+  static ScalableVectorType *
+  getTruncatedElementVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getTruncatedElementVectorType(VTy));
+  }
+
+  static ScalableVectorType *getSubdividedVectorType(ScalableVectorType *VTy,
+                                                     int NumSubdivs) {
+    return cast<ScalableVectorType>(
+        VectorType::getSubdividedVectorType(VTy, NumSubdivs));
+  }
+
+  static ScalableVectorType *
+  getHalfElementsVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(VectorType::getHalfElementsVectorType(VTy));
+  }
+
+  static ScalableVectorType *
+  getDoubleElementsVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getDoubleElementsVectorType(VTy));
+  }
+
+  unsigned getMinNumElements() const {
+    return cast<llvm::ScalableVectorType>(LLVMTy)->getMinNumElements();
+  }
+
+  static bool classof(const Type *T) {
+    return isa<llvm::ScalableVectorType>(T->LLVMTy);
   }
 };
 
@@ -292,6 +455,22 @@ public:
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::FunctionType>(From->LLVMTy);
+  }
+};
+
+/// Class to represent integer types. Note that this class is also used to
+/// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
+/// Int64Ty.
+/// Integer representation type
+class IntegerType : public Type {
+public:
+  static IntegerType *get(Context &C, unsigned NumBits);
+  // TODO: add missing functions
+  static bool classof(const Type *From) {
+    return isa<llvm::IntegerType>(From->LLVMTy);
+  }
+  operator llvm::IntegerType &() const {
+    return *cast<llvm::IntegerType>(LLVMTy);
   }
 };
 

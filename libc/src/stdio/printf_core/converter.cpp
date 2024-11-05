@@ -11,6 +11,7 @@
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
+#include "src/stdio/printf_core/strerror_converter.h"
 #include "src/stdio/printf_core/writer.h"
 
 // This option allows for replacing all of the conversion functions with custom
@@ -84,6 +85,10 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'K':
     return convert_fixed(writer, to_conv);
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+  case 'm':
+    return convert_strerror(writer, to_conv);
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
   case 'n':
     return convert_write_int(writer, to_conv);

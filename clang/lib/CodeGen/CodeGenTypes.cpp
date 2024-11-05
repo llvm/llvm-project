@@ -60,7 +60,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // example, we should probably enable PrintCanonicalTypes and
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
-  Policy.SuppressInlineNamespace = false;
+  Policy.SuppressInlineNamespace =
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -500,63 +501,32 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-    case BuiltinType::SveInt8:
-    case BuiltinType::SveUint8:
-    case BuiltinType::SveInt8x2:
-    case BuiltinType::SveUint8x2:
-    case BuiltinType::SveInt8x3:
-    case BuiltinType::SveUint8x3:
-    case BuiltinType::SveInt8x4:
-    case BuiltinType::SveUint8x4:
-    case BuiltinType::SveInt16:
-    case BuiltinType::SveUint16:
-    case BuiltinType::SveInt16x2:
-    case BuiltinType::SveUint16x2:
-    case BuiltinType::SveInt16x3:
-    case BuiltinType::SveUint16x3:
-    case BuiltinType::SveInt16x4:
-    case BuiltinType::SveUint16x4:
-    case BuiltinType::SveInt32:
-    case BuiltinType::SveUint32:
-    case BuiltinType::SveInt32x2:
-    case BuiltinType::SveUint32x2:
-    case BuiltinType::SveInt32x3:
-    case BuiltinType::SveUint32x3:
-    case BuiltinType::SveInt32x4:
-    case BuiltinType::SveUint32x4:
-    case BuiltinType::SveInt64:
-    case BuiltinType::SveUint64:
-    case BuiltinType::SveInt64x2:
-    case BuiltinType::SveUint64x2:
-    case BuiltinType::SveInt64x3:
-    case BuiltinType::SveUint64x3:
-    case BuiltinType::SveInt64x4:
-    case BuiltinType::SveUint64x4:
-    case BuiltinType::SveBool:
-    case BuiltinType::SveBoolx2:
-    case BuiltinType::SveBoolx4:
-    case BuiltinType::SveFloat16:
-    case BuiltinType::SveFloat16x2:
-    case BuiltinType::SveFloat16x3:
-    case BuiltinType::SveFloat16x4:
-    case BuiltinType::SveFloat32:
-    case BuiltinType::SveFloat32x2:
-    case BuiltinType::SveFloat32x3:
-    case BuiltinType::SveFloat32x4:
-    case BuiltinType::SveFloat64:
-    case BuiltinType::SveFloat64x2:
-    case BuiltinType::SveFloat64x3:
-    case BuiltinType::SveFloat64x4:
-    case BuiltinType::SveBFloat16:
-    case BuiltinType::SveBFloat16x2:
-    case BuiltinType::SveBFloat16x3:
-    case BuiltinType::SveBFloat16x4: {
-      ASTContext::BuiltinVectorTypeInfo Info =
-          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-      return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue() *
-                                               Info.NumVectors);
-    }
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+      {
+        ASTContext::BuiltinVectorTypeInfo Info =
+            Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+        auto VTy =
+            llvm::VectorType::get(ConvertType(Info.ElementType), Info.EC);
+        switch (Info.NumVectors) {
+        default:
+          llvm_unreachable("Expected 1, 2, 3 or 4 vectors!");
+        case 1:
+          return VTy;
+        case 2:
+          return llvm::StructType::get(VTy, VTy);
+        case 3:
+          return llvm::StructType::get(VTy, VTy, VTy);
+        case 4:
+          return llvm::StructType::get(VTy, VTy, VTy, VTy);
+        }
+      }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
@@ -591,10 +561,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id:                                                        \
     return llvm::PointerType::get(getLLVMContext(), AS);
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id:                                                        \
+    return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
+                                    {}, {Scope});
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -776,6 +749,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
     break;
   }
+  case Type::HLSLAttributedResource:
+    ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
   }
 
   assert(ResultType && "Didn't convert a type?");

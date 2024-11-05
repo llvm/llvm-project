@@ -1739,13 +1739,6 @@ define <4 x i8> @test_vzip1_v4i8(<8 x i8> %p) {
 ;
 ; CHECK-GI-LABEL: test_vzip1_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[2], v2.b[0]
-; CHECK-GI-NEXT:    mov v0.b[3], v3.b[0]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

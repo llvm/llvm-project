@@ -32,10 +32,9 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x ptr> [[TMP9]], ptr [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr ptr, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x ptr> zeroinitializer, <2 x ptr> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x ptr> [[TMP12]], <4 x ptr> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x ptr> [[INTERLEAVED_VEC]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store <4 x ptr> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

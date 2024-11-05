@@ -37,6 +37,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lcg"
 
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const LazyCallGraph::SCC *>;
+
 void LazyCallGraph::EdgeSequence::insertEdgeInternal(Node &TargetN,
                                                      Edge::Kind EK) {
   EdgeIndexMap.try_emplace(&TargetN, Edges.size());

@@ -90,6 +90,7 @@ namespace std {
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -126,8 +127,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST void __throw_bad_any_cast() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST void __throw_bad_any_cast() {
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw bad_any_cast();
 #  else
   _LIBCPP_VERBOSE_ABORT("bad_any_cast was thrown in -fno-exceptions mode");
@@ -175,7 +176,7 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr const void* __get_fallback_typeid() {
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool __compare_typeid(type_info const* __id, const void* __fallback_id) {
-#  if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if _LIBCPP_HAS_RTTI
   if (__id && *__id == typeid(_Tp))
     return true;
 #  endif
@@ -265,7 +266,7 @@ public:
   // 6.3.4 any observers
   _LIBCPP_HIDE_FROM_ABI bool has_value() const _NOEXCEPT { return __h_ != nullptr; }
 
-#  if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI const type_info& type() const _NOEXCEPT {
     if (__h_) {
       return *static_cast<type_info const*>(this->__call(_Action::_TypeInfo));
@@ -371,7 +372,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static void* __type_info() {
-#  if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if _LIBCPP_HAS_RTTI
     return const_cast<void*>(static_cast<void const*>(&typeid(_Tp)));
 #  else
     return nullptr;
@@ -443,7 +444,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static void* __type_info() {
-#  if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if _LIBCPP_HAS_RTTI
     return const_cast<void*>(static_cast<void const*>(&typeid(_Tp)));
 #  else
     return nullptr;
@@ -578,7 +579,7 @@ _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any* __any) _NOEXCEPT {
     void* __p = __any->__call(
         _Action::_Get,
         nullptr,
-#  if !defined(_LIBCPP_HAS_NO_RTTI)
+#  if _LIBCPP_HAS_RTTI
         &typeid(_ValueType),
 #  else
         nullptr,

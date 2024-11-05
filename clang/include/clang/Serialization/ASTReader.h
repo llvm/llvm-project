@@ -19,6 +19,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -49,6 +50,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -445,7 +447,7 @@ private:
   DiagnosticsEngine &Diags;
   // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
   // has its own version.
-  bool WarnedStackExhausted = false;
+  StackExhaustionHandler StackHandler;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -531,6 +533,18 @@ private:
   /// reading. So we need to apply the offset immediately after we read the
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
+
+  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
+  ///
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// It is required to have canonical declaration for lambda class from the
+  /// same module as enclosing function. This is required to correctly resolve
+  /// captured variables in the lambda. Without this, due to lazy
+  /// deserialization, canonical declarations for the function and lambdas can
+  /// be selected from different modules and DeclRefExprs may refer to the AST
+  /// nodes that don't exist in the function.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
+      FunctionToLambdasMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -972,6 +986,9 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<GlobalDeclID, 4> DeclsToCheckForDeferredDiags;
 
+  /// The IDs of all decls with function effects to be checked.
+  SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -1325,9 +1342,48 @@ private:
   serialization::InputFile getInputFile(ModuleFile &F, unsigned ID,
                                         bool Complain = true);
 
+  /// The buffer used as the temporary backing storage for resolved paths.
+  SmallString<0> PathBuf;
+
+  /// A wrapper around StringRef that temporarily borrows the underlying buffer.
+  class TemporarilyOwnedStringRef {
+    StringRef String;
+    llvm::SaveAndRestore<SmallString<0>> UnderlyingBuffer;
+
+  public:
+    TemporarilyOwnedStringRef(StringRef S, SmallString<0> &UnderlyingBuffer)
+        : String(S), UnderlyingBuffer(UnderlyingBuffer, {}) {}
+
+    /// Return the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef *operator->() const & { return &String; }
+    const StringRef &operator*() const & { return String; }
+
+    /// Make it harder to get a \c StringRef that outlives \c this.
+    const StringRef *operator->() && = delete;
+    const StringRef &operator*() && = delete;
+  };
+
 public:
-  void ResolveImportedPath(ModuleFile &M, std::string &Filename);
-  static void ResolveImportedPath(std::string &Filename, StringRef Prefix);
+  /// Get the buffer for resolving paths.
+  SmallString<0> &getPathBuf() { return PathBuf; }
+
+  /// Resolve \c Path in the context of module file \c M. The return value
+  /// must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory. The return
+  /// value must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix);
+
+  /// Resolve \c Path in the context of module file \c M.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    StringRef Prefix);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
@@ -2165,7 +2221,8 @@ public:
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
 
-  void warnStackExhausted(SourceLocation Loc);
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 
@@ -2318,6 +2375,8 @@ public:
   /// Translate a FileID from another module file's FileID space into ours.
   FileID TranslateFileID(ModuleFile &F, FileID FID) const {
     assert(FID.ID >= 0 && "Reading non-local FileID.");
+    if (FID.isInvalid())
+      return FID;
     return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 
@@ -2512,7 +2571,7 @@ private:
 
 inline bool shouldSkipCheckingODR(const Decl *D) {
   return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         D->isFromGlobalModule();
+         (D->isFromGlobalModule() || D->isFromHeaderUnit());
 }
 
 } // namespace clang

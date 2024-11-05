@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK-LABEL: test_load_add_32
 ; CHECK: c3 21

@@ -59,11 +59,11 @@ public:
     for (const LambdaCapture &C : L->captures()) {
       if (C.capturesVariable()) {
         ValueDecl *CapturedVar = C.getCapturedVar();
-        if (auto *CapturedVarType = CapturedVar->getType().getTypePtrOrNull()) {
-            std::optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
-            if (IsUncountedPtr && *IsUncountedPtr) {
-                reportBug(C, CapturedVar, CapturedVarType);
-            }
+        QualType CapturedVarQualType = CapturedVar->getType();
+        if (auto *CapturedVarType = CapturedVarQualType.getTypePtrOrNull()) {
+          auto IsUncountedPtr = isUncountedPtr(CapturedVarQualType);
+          if (IsUncountedPtr && *IsUncountedPtr)
+            reportBug(C, CapturedVar, CapturedVarType);
         }
       }
     }

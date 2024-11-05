@@ -19,8 +19,8 @@ define void @test(ptr nocapture readonly %arg, ptr nocapture readonly %arg1, ptr
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <8 x double> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x double>, ptr [[ARG1]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <8 x double> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP5]])
 ; CHECK-NEXT:    [[I142:%.*]] = insertelement <2 x double> poison, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[I143:%.*]] = insertelement <2 x double> [[I142]], double [[TMP9]], i64 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds double, ptr [[ARG2:%.*]], <2 x i64> <i64 0, i64 16>

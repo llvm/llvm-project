@@ -41,9 +41,6 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectList.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -63,6 +60,9 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectList.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -662,15 +662,14 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
                             lldb::SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, buf, size, error);
 
-  SBError sb_error;
   size_t bytes_read = 0;
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     bytes_read =
-        target_sp->ReadMemory(addr.ref(), buf, size, sb_error.ref(), true);
+        target_sp->ReadMemory(addr.ref(), buf, size, error.ref(), true);
   } else {
-    sb_error.SetErrorString("invalid target");
+    error.SetErrorString("invalid target");
   }
 
   return bytes_read;
@@ -1369,7 +1368,7 @@ SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
     CompilerType *type = nullptr;
     watchpoint_sp =
         target_sp->CreateWatchpoint(addr, size, type, watch_type, cw_error);
-    error.SetError(cw_error);
+    error.SetError(std::move(cw_error));
     sb_watchpoint.SetSP(watchpoint_sp);
   }
 
@@ -1658,7 +1657,7 @@ SBError SBTarget::SetLabel(const char *label) {
   if (!target_sp)
     return Status::FromErrorString("Couldn't get internal target object.");
 
-  return Status(target_sp->SetLabel(label));
+  return Status::FromError(target_sp->SetLabel(label));
 }
 
 uint32_t SBTarget::GetDataByteSize() {
@@ -2326,7 +2325,8 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           Status error;
           error = Status::FromErrorString("can't evaluate expressions when the "
                                           "process is running.");
-          expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+          expr_value_sp =
+              ValueObjectConstResult::Create(nullptr, std::move(error));
         }
       } else {
         target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());

@@ -25,6 +25,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 #include <string>
@@ -49,7 +50,7 @@ struct RVVIntrinsicDef {
 
 struct RVVOverloadIntrinsicDef {
   // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
-  SmallVector<uint16_t, 8> Indexes;
+  SmallVector<uint32_t, 8> Indexes;
 };
 
 } // namespace
@@ -168,7 +169,7 @@ private:
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
   // Mapping function name to index of IntrinsicList.
-  StringMap<uint16_t> Intrinsics;
+  StringMap<uint32_t> Intrinsics;
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
@@ -398,7 +399,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  uint16_t Index = IntrinsicList.size();
+  uint32_t Index = IntrinsicList.size();
   assert(IntrinsicList.size() == (size_t)Index &&
          "Intrinsics indices overflow.");
   IntrinsicList.push_back({BuiltinName, Signature});
@@ -622,7 +623,12 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(
         TheCall->getType()->castAs<BuiltinType>());
 
-    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v"))
+    const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+    llvm::StringMap<bool> FunctionFeatureMap;
+    Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+
+    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v") &&
+        !FunctionFeatureMap.lookup("v"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "v";
@@ -733,7 +739,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknb";
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type,
                                    ElemSize * 4) ||
@@ -1490,6 +1496,16 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {
   return BuiltinID >= RISCV::FirstRVVBuiltin &&
          BuiltinID <= RISCV::LastRVVBuiltin;
+}
+
+bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
+  if (Ext.empty())
+    return false;
+
+  if (!Ext.consume_front("+"))
+    return false;
+
+  return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
 
 SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}

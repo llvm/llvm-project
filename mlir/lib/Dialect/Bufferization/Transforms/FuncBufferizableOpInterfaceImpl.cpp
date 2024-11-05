@@ -82,7 +82,8 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp) {
-  SymbolRefAttr sym = llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
+  SymbolRefAttr sym =
+      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<FuncOp>(
@@ -206,11 +207,18 @@ struct CallOpInterface
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
 
-    // The callee was already bufferized, so we can directly take the type from
+    // If the callee was already bufferized, we can directly take the type from
     // its signature.
     FunctionType funcType = funcOp.getFunctionType();
-    return cast<BaseMemRefType>(
-        funcType.getResult(cast<OpResult>(value).getResultNumber()));
+    Type resultType =
+        funcType.getResult(cast<OpResult>(value).getResultNumber());
+    if (auto bufferizedType = dyn_cast<BaseMemRefType>(resultType))
+      return bufferizedType;
+
+    // Otherwise, call the type converter to compute the bufferized type.
+    auto tensorType = cast<TensorType>(resultType);
+    return options.functionArgTypeConverterFn(
+        tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
   }
 
   /// All function arguments are writable. It is the responsibility of the
@@ -260,6 +268,18 @@ struct CallOpInterface
 
       // Caller / callee type mismatch is handled with castOrReallocMemRefValue.
       auto memRefType = funcType.getInput(opOperand.getOperandNumber());
+      if (!isa<BaseMemRefType>(memRefType)) {
+        // The called function was not bufferized yet. This can happen when
+        // there cycles in the function call graph. Compute the bufferized
+        // result type.
+        FailureOr<BaseMemRefType> maybeMemRefType =
+            bufferization::getBufferType(
+                funcOp.getArgument(opOperand.getOperandNumber()), options);
+        if (failed(maybeMemRefType))
+          return failure();
+        memRefType = *maybeMemRefType;
+      }
+
       // Since we don't yet have a clear layout story, to_memref may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast
@@ -392,11 +412,11 @@ struct FuncOpInterface
     auto funcOp = cast<FuncOp>(op);
     FunctionType funcType = funcOp.getFunctionType();
 
-    // Construct the bufferized function type.
+    // Compute the argument types.
     SmallVector<Type> argTypes;
     for (const auto &it : llvm::enumerate(funcType.getInputs())) {
       Type argType = it.value();
-      if (dyn_cast<TensorType>(argType)) {
+      if (isa<TensorType>(argType)) {
         argTypes.push_back(
             getBufferizedFunctionArgType(funcOp, it.index(), options));
         continue;
@@ -404,24 +424,33 @@ struct FuncOpInterface
       argTypes.push_back(argType);
     }
 
-    // Bodiless functions are assumed opaque and we cannot know the
-    // bufferization contract they want to enforce. As a consequence, only
-    // support functions that don't return any tensors atm.
-    if (funcOp.isExternal()) {
-      SmallVector<Type> retTypes;
-      for (Type resultType : funcType.getResults()) {
-        if (isa<TensorType>(resultType))
-          return funcOp->emitError() << "cannot bufferize bodiless function "
-                                     << "that returns a tensor";
+    // Compute the result types.
+    SmallVector<Type> retTypes;
+    for (Type resultType : funcType.getResults()) {
+      if (auto tensorType = dyn_cast<TensorType>(resultType)) {
+        BaseMemRefType resultType = options.functionArgTypeConverterFn(
+            tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp,
+            options);
         retTypes.push_back(resultType);
+        continue;
       }
-      funcOp.setType(FunctionType::get(op->getContext(), argTypes, retTypes));
+      retTypes.push_back(resultType);
+    }
+
+    // Compute the new function type.
+    auto newFuncType = FunctionType::get(op->getContext(), argTypes, retTypes);
+
+    // If the function has no body, set the new function type and we are done.
+    if (funcOp.isExternal()) {
+      funcOp.setType(newFuncType);
       return success();
     }
 
     // TODO: Support functions with multiple returns.
     func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
     assert(returnOp && "expected func with single return op");
+    assert(returnOp->getNumOperands() == retTypes.size() &&
+           "incorrect number of return values");
     Location loc = returnOp.getLoc();
 
     // 1. Bufferize every block.
@@ -430,10 +459,10 @@ struct FuncOpInterface
                                                         options)))
         return failure();
 
-    // 2. For each result, keep track of which inplace argument it reuses.
+    // 2. Bufferize all operands of the return op.
     SmallVector<Value> returnValues;
-    for (OpOperand &returnOperand : returnOp->getOpOperands()) {
-      Value returnVal = returnOperand.get();
+    for (auto [returnVal, bufferizedType] :
+         llvm::zip_equal(returnOp->getOperands(), retTypes)) {
       auto tensorType = dyn_cast<TensorType>(returnVal.getType());
       rewriter.setInsertionPoint(returnOp);
 
@@ -443,23 +472,17 @@ struct FuncOpInterface
         continue;
       }
 
-      // Note: If `inferFunctionResultLayout = true`, cast are later folded
+      // Note: If `inferFunctionResultLayout = true`, casts are later folded
       // away.
-      BaseMemRefType resultType = options.functionArgTypeConverterFn(
-          tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp,
-          options);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-          loc, resultType, returnVal);
+          loc, bufferizedType, returnVal);
       returnValues.push_back(toMemrefOp);
     }
 
-    // 3. Rewrite the terminator without the in-place bufferizable values.
     returnOp.getOperandsMutable().assign(returnValues);
 
-    // 4. Rewrite the FuncOp type to buffer form.
-    funcOp.setType(FunctionType::get(op->getContext(), argTypes,
-                                     ValueRange(returnValues).getTypes()));
-
+    // 3. Set the new function type.
+    funcOp.setType(newFuncType);
     return success();
   }
 

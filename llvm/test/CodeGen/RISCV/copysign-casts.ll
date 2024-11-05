@@ -503,54 +503,38 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ;
 ; RV32IFZFHMIN-LABEL: fold_demote_h_s:
 ; RV32IFZFHMIN:       # %bb.0:
-; RV32IFZFHMIN-NEXT:    fmv.x.h a0, fa0
-; RV32IFZFHMIN-NEXT:    slli a0, a0, 17
-; RV32IFZFHMIN-NEXT:    fmv.x.w a1, fa1
-; RV32IFZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IFZFHMIN-NEXT:    bgez a1, .LBB4_2
-; RV32IFZFHMIN-NEXT:  # %bb.1:
-; RV32IFZFHMIN-NEXT:    lui a1, 1048568
-; RV32IFZFHMIN-NEXT:    or a0, a0, a1
-; RV32IFZFHMIN-NEXT:  .LBB4_2:
-; RV32IFZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IFZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; RV32IFZFHMIN-NEXT:    fmv.x.w a0, fa1
+; RV32IFZFHMIN-NEXT:    srli a0, a0, 31
+; RV32IFZFHMIN-NEXT:    slli a0, a0, 15
+; RV32IFZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IFZFHMIN-NEXT:    slli a1, a1, 17
+; RV32IFZFHMIN-NEXT:    srli a1, a1, 17
+; RV32IFZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IFZFHMIN-NEXT:    ret
 ;
 ; RV32IFDZFHMIN-LABEL: fold_demote_h_s:
 ; RV32IFDZFHMIN:       # %bb.0:
-; RV32IFDZFHMIN-NEXT:    fmv.x.h a0, fa0
-; RV32IFDZFHMIN-NEXT:    slli a0, a0, 17
-; RV32IFDZFHMIN-NEXT:    fmv.x.w a1, fa1
-; RV32IFDZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IFDZFHMIN-NEXT:    bgez a1, .LBB4_2
-; RV32IFDZFHMIN-NEXT:  # %bb.1:
-; RV32IFDZFHMIN-NEXT:    lui a1, 1048568
-; RV32IFDZFHMIN-NEXT:    or a0, a0, a1
-; RV32IFDZFHMIN-NEXT:  .LBB4_2:
-; RV32IFDZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IFDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IFDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; RV32IFDZFHMIN-NEXT:    fmv.x.w a0, fa1
+; RV32IFDZFHMIN-NEXT:    srli a0, a0, 31
+; RV32IFDZFHMIN-NEXT:    slli a0, a0, 15
+; RV32IFDZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IFDZFHMIN-NEXT:    slli a1, a1, 17
+; RV32IFDZFHMIN-NEXT:    srli a1, a1, 17
+; RV32IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IFDZFHMIN-NEXT:    ret
 ;
 ; RV64IFDZFHMIN-LABEL: fold_demote_h_s:
 ; RV64IFDZFHMIN:       # %bb.0:
-; RV64IFDZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IFDZFHMIN-NEXT:    fsw fa1, 8(sp)
-; RV64IFDZFHMIN-NEXT:    lbu a0, 11(sp)
+; RV64IFDZFHMIN-NEXT:    fmv.x.w a0, fa1
+; RV64IFDZFHMIN-NEXT:    srli a0, a0, 31
+; RV64IFDZFHMIN-NEXT:    slli a0, a0, 15
 ; RV64IFDZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IFDZFHMIN-NEXT:    slli a1, a1, 49
-; RV64IFDZFHMIN-NEXT:    andi a2, a0, 128
-; RV64IFDZFHMIN-NEXT:    srli a0, a1, 49
-; RV64IFDZFHMIN-NEXT:    beqz a2, .LBB4_2
-; RV64IFDZFHMIN-NEXT:  # %bb.1:
-; RV64IFDZFHMIN-NEXT:    lui a1, 1048568
-; RV64IFDZFHMIN-NEXT:    or a0, a0, a1
-; RV64IFDZFHMIN-NEXT:  .LBB4_2:
-; RV64IFDZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IFDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IFDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IFDZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IFDZFHMIN-NEXT:    srli a1, a1, 49
+; RV64IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV64IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IFDZFHMIN-NEXT:    ret
   %c = fptrunc float %b to half
   %t = call half @llvm.copysign.f16(half %a, half %c)
@@ -646,60 +630,40 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ;
 ; RV32IFZFHMIN-LABEL: fold_demote_h_d:
 ; RV32IFZFHMIN:       # %bb.0:
-; RV32IFZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IFZFHMIN-NEXT:    srli a1, a1, 16
-; RV32IFZFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV32IFZFHMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IFZFHMIN-NEXT:    lbu a0, 13(sp)
-; RV32IFZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV32IFZFHMIN-NEXT:    slli a1, a1, 17
-; RV32IFZFHMIN-NEXT:    andi a2, a0, 128
-; RV32IFZFHMIN-NEXT:    srli a0, a1, 17
-; RV32IFZFHMIN-NEXT:    beqz a2, .LBB5_2
-; RV32IFZFHMIN-NEXT:  # %bb.1:
-; RV32IFZFHMIN-NEXT:    lui a1, 1048568
+; RV32IFZFHMIN-NEXT:    srli a1, a1, 31
+; RV32IFZFHMIN-NEXT:    slli a1, a1, 15
+; RV32IFZFHMIN-NEXT:    fmv.x.h a0, fa0
+; RV32IFZFHMIN-NEXT:    slli a0, a0, 17
+; RV32IFZFHMIN-NEXT:    srli a0, a0, 17
 ; RV32IFZFHMIN-NEXT:    or a0, a0, a1
-; RV32IFZFHMIN-NEXT:  .LBB5_2:
-; RV32IFZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IFZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IFZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IFZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IFZFHMIN-NEXT:    ret
 ;
 ; RV32IFDZFHMIN-LABEL: fold_demote_h_d:
 ; RV32IFDZFHMIN:       # %bb.0:
 ; RV32IFDZFHMIN-NEXT:    addi sp, sp, -16
 ; RV32IFDZFHMIN-NEXT:    fsd fa1, 8(sp)
-; RV32IFDZFHMIN-NEXT:    lbu a0, 15(sp)
+; RV32IFDZFHMIN-NEXT:    lw a0, 12(sp)
+; RV32IFDZFHMIN-NEXT:    srli a0, a0, 31
+; RV32IFDZFHMIN-NEXT:    slli a0, a0, 15
 ; RV32IFDZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IFDZFHMIN-NEXT:    slli a1, a1, 17
-; RV32IFDZFHMIN-NEXT:    andi a2, a0, 128
-; RV32IFDZFHMIN-NEXT:    srli a0, a1, 17
-; RV32IFDZFHMIN-NEXT:    beqz a2, .LBB5_2
-; RV32IFDZFHMIN-NEXT:  # %bb.1:
-; RV32IFDZFHMIN-NEXT:    lui a1, 1048568
-; RV32IFDZFHMIN-NEXT:    or a0, a0, a1
-; RV32IFDZFHMIN-NEXT:  .LBB5_2:
-; RV32IFDZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IFDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IFDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; RV32IFDZFHMIN-NEXT:    srli a1, a1, 17
+; RV32IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IFDZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IFDZFHMIN-NEXT:    ret
 ;
 ; RV64IFDZFHMIN-LABEL: fold_demote_h_d:
 ; RV64IFDZFHMIN:       # %bb.0:
-; RV64IFDZFHMIN-NEXT:    fmv.x.h a0, fa0
-; RV64IFDZFHMIN-NEXT:    slli a0, a0, 49
-; RV64IFDZFHMIN-NEXT:    fmv.x.d a1, fa1
-; RV64IFDZFHMIN-NEXT:    srli a0, a0, 49
-; RV64IFDZFHMIN-NEXT:    bgez a1, .LBB5_2
-; RV64IFDZFHMIN-NEXT:  # %bb.1:
-; RV64IFDZFHMIN-NEXT:    lui a1, 1048568
-; RV64IFDZFHMIN-NEXT:    or a0, a0, a1
-; RV64IFDZFHMIN-NEXT:  .LBB5_2:
-; RV64IFDZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IFDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IFDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; RV64IFDZFHMIN-NEXT:    fmv.x.d a0, fa1
+; RV64IFDZFHMIN-NEXT:    srli a0, a0, 63
+; RV64IFDZFHMIN-NEXT:    slli a0, a0, 15
+; RV64IFDZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV64IFDZFHMIN-NEXT:    slli a1, a1, 49
+; RV64IFDZFHMIN-NEXT:    srli a1, a1, 49
+; RV64IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV64IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IFDZFHMIN-NEXT:    ret
   %c = fptrunc double %b to half
   %t = call half @llvm.copysign.f16(half %a, half %c)

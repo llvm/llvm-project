@@ -41,7 +41,7 @@ static cl::opt<unsigned> IndirectCallSpecializationThreshold(
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
 enum ImplicitArgumentPositions {
-  #include "AMDGPUAttributes.def"
+#include "AMDGPUAttributes.def"
   LAST_ARG_POS
 };
 
@@ -49,14 +49,14 @@ enum ImplicitArgumentPositions {
 
 enum ImplicitArgumentMask {
   NOT_IMPLICIT_INPUT = 0,
-  #include "AMDGPUAttributes.def"
+#include "AMDGPUAttributes.def"
   ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
-static constexpr std::pair<ImplicitArgumentMask,
-                           StringLiteral> ImplicitAttrs[] = {
- #include "AMDGPUAttributes.def"
+static constexpr std::pair<ImplicitArgumentMask, StringLiteral>
+    ImplicitAttrs[] = {
+#include "AMDGPUAttributes.def"
 };
 
 // We do not need to note the x workitem or workgroup id because they are always
@@ -107,12 +107,12 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     // Under V5, we need implicitarg_ptr + offsets to access private_base or
     // shared_base. For pre-V5, however, need to access them through queue_ptr +
     // offsets.
-    return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR :
-                                                      QUEUE_PTR;
+    return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
+                                                    : QUEUE_PTR;
   case Intrinsic::trap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
-      return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT :
-                                                        QUEUE_PTR;
+      return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
+                                                      : QUEUE_PTR;
     NeedsImplicit = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5);
     return QUEUE_PTR;
   default:
@@ -180,9 +180,7 @@ public:
   }
 
   /// Get code object version.
-  unsigned getCodeObjectVersion() const {
-    return CodeObjectVersion;
-  }
+  unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
   /// Get the effective value of "amdgpu-waves-per-eu" for the function,
   /// accounting for the interaction with the passed value to use for
@@ -358,7 +356,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
       const auto *CallerInfo = A.getAAFor<AAUniformWorkGroupSize>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      if (!CallerInfo)
+      if (!CallerInfo || !CallerInfo->isValidState())
         return false;
 
       Change = Change | clampStateAndIndicateChange(this->getState(),
@@ -449,7 +447,8 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     // Check for Intrinsics and propagate attributes.
     const AACallEdges *AAEdges = A.getAAFor<AACallEdges>(
         *this, this->getIRPosition(), DepClassTy::REQUIRED);
-    if (!AAEdges || AAEdges->hasNonAsmUnknownCallee())
+    if (!AAEdges || !AAEdges->isValidState() ||
+        AAEdges->hasNonAsmUnknownCallee())
       return indicatePessimisticFixpoint();
 
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
@@ -465,7 +464,7 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       if (IID == Intrinsic::not_intrinsic) {
         const AAAMDAttributes *AAAMD = A.getAAFor<AAAMDAttributes>(
             *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-        if (!AAAMD)
+        if (!AAAMD || !AAAMD->isValidState())
           return indicatePessimisticFixpoint();
         *this &= *AAAMD;
         continue;
@@ -660,7 +659,7 @@ private:
 
       const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
           *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
-      if (!PointerInfoAA)
+      if (!PointerInfoAA || !PointerInfoAA->getState().isValidState())
         return false;
 
       return PointerInfoAA->forallInterferingAccesses(
@@ -706,8 +705,7 @@ struct AAAMDSizeRangeAttribute
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
-  template <class AttributeImpl>
-  ChangeStatus updateImplImpl(Attributor &A) {
+  template <class AttributeImpl> ChangeStatus updateImplImpl(Attributor &A) {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
     auto CheckCallSite = [&](AbstractCallSite CS) {
@@ -717,7 +715,7 @@ struct AAAMDSizeRangeAttribute
 
       const auto *CallerInfo = A.getAAFor<AttributeImpl>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      if (!CallerInfo)
+      if (!CallerInfo || !CallerInfo->isValidState())
         return false;
 
       Change |=
@@ -727,7 +725,9 @@ struct AAAMDSizeRangeAttribute
     };
 
     bool AllCallSitesKnown = true;
-    if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                AllCallSitesKnown))
       return indicatePessimisticFixpoint();
 
     return Change;
@@ -746,7 +746,7 @@ struct AAAMDSizeRangeAttribute
     OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
     return A.manifestAttrs(getIRPosition(),
                            {Attribute::get(Ctx, AttrName, OS.str())},
-                           /* ForceReplace */ true);
+                           /*ForceReplace=*/true);
   }
 
   const std::string getAsStr(Attributor *) const override {
@@ -835,7 +835,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
     if (const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-            *this, IRPosition::function(*F), DepClassTy::REQUIRED)) {
+            *this, IRPosition::function(*F), DepClassTy::REQUIRED);
+        AssumedGroupSize->isValidState()) {
 
       unsigned Min, Max;
       std::tie(Min, Max) = InfoCache.getWavesPerEU(
@@ -864,7 +865,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
       const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
           *this, IRPosition::function(*Func), DepClassTy::REQUIRED);
-      if (!CallerInfo || !AssumedGroupSize)
+      if (!CallerInfo || !AssumedGroupSize || !CallerInfo->isValidState() ||
+          !AssumedGroupSize->isValidState())
         return false;
 
       unsigned Min, Max;
@@ -982,7 +984,8 @@ struct AAAMDGPUNoAGPR
       // TODO: Handle callsite attributes
       const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoAGPR>(
           *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-      return CalleeInfo && CalleeInfo->getAssumed();
+      return CalleeInfo && CalleeInfo->isValidState() &&
+             CalleeInfo->getAssumed();
     };
 
     bool UsedAssumedInformation = false;
@@ -1065,29 +1068,31 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  for (Function &F : M) {
-    if (F.isIntrinsic())
-      continue;
-
-    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(F));
-    CallingConv::ID CC = F.getCallingConv();
+  for (auto *F : Functions) {
+    A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
+    CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
-      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
+      A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     } else if (CC == CallingConv::AMDGPU_KERNEL) {
-      addPreloadKernArgHint(F, TM);
+      addPreloadKernArgHint(*F, TM);
     }
 
     for (auto &I : instructions(F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*LI->getPointerOperand()));
-      }
-      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*SI->getPointerOperand()));
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*RMW->getPointerOperand()));
+      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+        A.getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*CmpX->getPointerOperand()));
       }
     }
   }

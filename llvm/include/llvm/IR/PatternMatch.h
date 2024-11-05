@@ -792,6 +792,16 @@ inline cstfp_pred_ty<is_non_zero_fp> m_NonZeroFP() {
   return cstfp_pred_ty<is_non_zero_fp>();
 }
 
+struct is_non_zero_not_denormal_fp {
+  bool isValue(const APFloat &C) { return !C.isDenormal() && C.isNonZero(); }
+};
+
+/// Match a floating-point non-zero that is not a denormal.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
+  return cstfp_pred_ty<is_non_zero_not_denormal_fp>();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Class> struct bind_ty {
@@ -2385,6 +2395,32 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>
 m_UnordFMin(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
+}
+
+/// Match an 'ordered' or 'unordered' floating point maximum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+}
+
+/// Match an 'ordered' or 'unordered' floating point minimum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.

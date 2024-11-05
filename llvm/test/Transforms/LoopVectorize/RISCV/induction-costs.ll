@@ -22,47 +22,9 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.umax.i64(i64 288, i64 [[TMP7]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.umax.i64(i64 128, i64 [[TMP7]])
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[X_I64]], i64 99)
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[SMAX]], [[X_I64]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP9]], i64 1)
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[SMAX]], [[UMIN]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP10]], [[X_I64]]
-; CHECK-NEXT:    [[TMP12:%.*]] = udiv i64 [[TMP11]], 3
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[UMIN]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw i64 [[X_I64]], 1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP14]]
-; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 6, i64 [[TMP13]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult ptr [[TMP16]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP19:%.*]] = shl nsw i64 [[X_I64]], 3
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP19]]
-; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 24, i64 [[TMP13]])
-; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp ult ptr [[TMP21]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP23:%.*]] = or i1 [[TMP22]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP24:%.*]] = add nsw i64 [[TMP19]], -8
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP24]]
-; CHECK-NEXT:    [[MUL6:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 24, i64 [[TMP13]])
-; CHECK-NEXT:    [[MUL_RESULT7:%.*]] = extractvalue { i64, i1 } [[MUL6]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW8:%.*]] = extractvalue { i64, i1 } [[MUL6]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 0, [[MUL_RESULT7]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 [[MUL_RESULT7]]
-; CHECK-NEXT:    [[TMP27:%.*]] = icmp ult ptr [[TMP26]], [[SCEVGEP5]]
-; CHECK-NEXT:    [[TMP28:%.*]] = or i1 [[TMP27]], [[MUL_OVERFLOW8]]
-; CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP18]], [[TMP23]]
-; CHECK-NEXT:    [[TMP30:%.*]] = or i1 [[TMP29]], [[TMP28]]
-; CHECK-NEXT:    br i1 [[TMP30]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = shl nsw i64 [[X_I64]], 1
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP31]]
@@ -114,9 +76,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP54:%.*]] = add <vscale x 8 x i64> [[TMP53]], zeroinitializer
 ; CHECK-NEXT:    [[TMP55:%.*]] = mul <vscale x 8 x i64> [[TMP54]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 3, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[DOTSPLAT]], [[TMP55]]
-; CHECK-NEXT:    [[TMP56:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP57:%.*]] = mul i64 [[TMP56]], 8
-; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP57]]
+; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP52]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT24:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP58]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT25:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT24]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -132,12 +92,12 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[X_I64]], %[[ENTRY]] ], [ [[X_I64]], %[[VECTOR_SCEVCHECK]] ], [ [[X_I64]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL23:%.*]] = phi i32 [ [[IND_END22]], %[[MIDDLE_BLOCK]] ], [ [[X_I32]], %[[ENTRY]] ], [ [[X_I32]], %[[VECTOR_SCEVCHECK]] ], [ [[X_I32]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[X_I64]], %[[ENTRY]] ], [ [[X_I64]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i32 [ [[IND_END22]], %[[MIDDLE_BLOCK]] ], [ [[X_I32]], %[[ENTRY]] ], [ [[X_I32]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_CONV:%.*]] = phi i32 [ [[BC_RESUME_VAL23]], %[[SCALAR_PH]] ], [ [[TMP64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_CONV:%.*]] = phi i32 [ [[BC_RESUME_VAL12]], %[[SCALAR_PH]] ], [ [[TMP64:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_I64:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = load i64, ptr [[GEP_I64]], align 8
 ; CHECK-NEXT:    [[TMP62:%.*]] = sext i32 [[IV_CONV]] to i64

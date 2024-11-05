@@ -223,7 +223,7 @@ def SiFive7VS          : ProcResource<1>; // Store sequencer
 // The VCQ accepts instructions from the the A Pipe and holds them until the
 // vector unit is ready to dequeue them. The unit dequeues up to one instruction
 // per cycle, in order, as soon as the sequencer for that type of instruction is
-// avaliable. This resource is meant to be used for 1 cycle by all vector
+// available. This resource is meant to be used for 1 cycle by all vector
 // instructions, to model that only one vector instruction may be dequed at a
 // time. The actual dequeueing into the sequencer is modeled by the VA, VL, and
 // VS sequencer resources below. Each of them will only accept a single
@@ -631,6 +631,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUV",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUX",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUI",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMV",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMI",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftV",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftX",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftI",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
@@ -961,15 +964,18 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 
 // VCIX
 //
-// In principle we don't know the latency of any VCIX instructions. But instead
-// of taking the default of 1, which can lead to issues [1], we assume that they
-// have a fairly high latency.
+// In principle we don't know the latency of any VCIX instructions (they
+// depends on a particular coprocessor implementation). However, the default
+// latency of 1 can lead to issues [1]. So instead we set the latency to the
+// default provided by `SiFive7GetCyclesDefault`. This is still not accurate
+// and can lead to suboptimal codegen, but should hopefully be a better
+// starting point.
 //
 // [1] https://github.com/llvm/llvm-project/issues/83391
 foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !mul(Cycles, 10),
+  let Latency = Cycles,
       AcquireAtCycles = [0, 1],
       ReleaseAtCycles = [1, !add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVC_V_I",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;

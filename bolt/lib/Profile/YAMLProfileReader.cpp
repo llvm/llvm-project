@@ -49,11 +49,6 @@ llvm::cl::opt<bool>
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
-
-llvm::cl::opt<bool> ProfileUsePseudoProbes(
-    "profile-use-pseudo-probes",
-    cl::desc("Use pseudo probes for profile generation and matching"),
-    cl::Hidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -373,6 +368,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
     return errorCodeToError(EC);
   }
   yaml::Input YamlInput(MB.get()->getBuffer());
+  YamlInput.setAllowUnknownKeys(true);
 
   // Consume YAML file.
   YamlInput >> YamlBP;
@@ -647,11 +643,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     // equal number of blocks.
     if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
       continue;
-    auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
-    if (NamespaceToBFsIt == NamespaceToBFs.end())
-      NamespaceToBFs[Namespace] = {BF};
-    else
-      NamespaceToBFsIt->second.push_back(BF);
+    NamespaceToBFs[Namespace].push_back(BF);
   }
 
   // Iterates through all profiled functions and binary functions belonging to

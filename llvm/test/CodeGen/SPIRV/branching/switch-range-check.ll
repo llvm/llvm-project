@@ -3,14 +3,17 @@
 
 ; CHECK: OpFunction
 ; CHECK: OpBranchConditional %[[#]] %[[#if_then:]] %[[#if_end:]]
+; CHECK: %[[#if_then]] = OpLabel
+; CHECK: OpBranch %[[#if_end]]
 ; CHECK: %[[#if_end]] = OpLabel
 ; CHECK: %[[#Var:]] = OpPhi
 ; CHECK: OpSwitch %[[#Var]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]]
-; CHECK-COUNT-11: OpLabel
-; CHECK-NOT: OpBranch
-; CHECK: OpReturn
-; CHECK: %[[#if_then]] = OpLabel
-; CHECK: OpBranch %[[#if_end]]
+; CHECK-COUNT-10: OpLabel
+; CHECK: %[[#epilog:]] = OpLabel
+; CHECK:                 OpBranch %[[#exit:]]
+; CHECK:    %[[#exit]] = OpLabel
+; CHECK:                 OpReturn
+; CHECK-NOT: OpLabel
 ; CHECK-NEXT: OpFunctionEnd
 
 define spir_func void @foo(i64 noundef %addr, i64 noundef %as) {

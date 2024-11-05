@@ -605,9 +605,8 @@ LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
     worklist.push_back(v);
     while (!worklist.empty()) {
       Value next = worklist.pop_back_val();
-      if (visited.contains(next))
+      if (!visited.insert(next).second)
         continue;
-      visited.insert(next);
       if (llvm::is_contained(independencies, next))
         return false;
       // TODO: DominanceInfo could be used to stop the traversal early.

@@ -112,8 +112,9 @@ class CLoadB_ri<bits<6> funct6, string OpcodeStr>
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr>
-    : RVInst16CLH<funct6, funct1, 0b00, (outs GPRC:$rd),
+class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
+                DAGOperand rty = GPRC>
+    : RVInst16CLH<funct6, funct1, 0b00, (outs rty:$rd),
                   (ins GPRCMem:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
@@ -132,9 +133,10 @@ class CStoreB_rri<bits<6> funct6, string OpcodeStr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr>
+class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr,
+                  DAGOperand rty = GPRC>
     : RVInst16CSH<funct6, funct1, 0b00, (outs),
-                  (ins GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (ins rty:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -202,7 +204,15 @@ def C_SB : CStoreB_rri<0b100010, "c.sb">,
            Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
 def C_SH : CStoreH_rri<0b100011, 0b0, "c.sh">,
            Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+
+// Compressed versions of Zhinx load/store.
+let isCodeGenOnly = 1 in {
+def C_LH_INX : CLoadH_ri<0b100001, 0b1, "c.lh", GPRF16C>,
+               Sched<[WriteLDH, ReadMemBase]>;
+def C_SH_INX : CStoreH_rri<0b100011, 0b0, "c.sh", GPRF16C>,
+               Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 }
+} // Predicates = [HasStdExtZcb]
 
 // Zcmp
 let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp],
@@ -318,6 +328,13 @@ def : CompressPat<(SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
                   (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
 def : CompressPat<(SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
                   (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+
+let isCompressOnly = true in {
+def : CompressPat<(LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+}
 }// Predicates = [HasStdExtZcb]
 
 

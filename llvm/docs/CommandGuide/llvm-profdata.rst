@@ -210,6 +210,25 @@ OPTIONS
  the raw profile. When ``-profile-correlate=binary`` was used for
  instrumentation, use this option to correlate the raw profile.
 
+.. option:: --debuginfod
+
+ Use debuginfod to find the associated executables that contain profile data and
+ name sections for the raw profiles to correlate them.
+ When -profile-correlate=binary was used for instrumentation, this option can be
+ used for correlation.
+
+.. option:: --debug-file-directory=<dir>
+
+ Use provided local directories to search for executables that contain profile
+ data and name sections for the raw profiles to correlate them.
+ When -profile-correlate=binary was used for instrumentation, this option can be
+ used for correlation.
+
+.. option:: --correlate=<kind>
+
+ Specify the correlation kind (debug_info or binary) to use when -debuginfod or
+ -debug-file-directory=<dir> option is provided.
+
 .. option:: --temporal-profile-trace-reservoir-size
 
  The maximum number of temporal profile traces to be stored in the output

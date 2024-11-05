@@ -74,7 +74,7 @@ module assumed_array_routines
 !HOST: %[[C4_1:.*]] = arith.subi %c4, %c1{{.*}} : index
 !HOST: %[[EXT:.*]] = arith.addi %[[C4_1]], %c1{{.*}} : index
 !HOST: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%c1{{.*}} : index) upper_bound(%c4{{.*}} : index) extent(%[[EXT]] : index) stride(%[[DIMS0]]#2 : index) start_idx(%c1{{.*}} : index) {stride_in_bytes = true}
-!HOST: %[[MAP:.*]] = omp.map.info var_ptr(%[[ARG0_DECL]]#1 : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
+!HOST: %[[MAP:.*]] = omp.map.info var_ptr(%[[ARG0_DECL]]#1 : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !HOST: omp.target map_entries(%[[MAP]] -> %{{.*}}, {{.*}} -> {{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
     subroutine assumed_size_array(arr_read_write)
         integer, intent(inout) :: arr_read_write(*)

@@ -42,6 +42,13 @@ r0 = add(r1,##bar@GOT)
 { r0 = add(r0,##bar@GOT)
   memw(r0) = r2 }
 
+# R_HEX_GOT_16_X, pred add
+if (p0) r0 = add(r0,##bar@GOT)
+if (!p0) r0 = add(r0,##bar@GOT)
+{ p0 = cmp.gtu(r0, r1)
+  if (p0.new) r0 = add(r0,##bar@GOT) }
+{ p0 = cmp.gtu(r0, r1)
+  if (!p0.new) r0 = add(r0,##bar@GOT) }
 
 # foo is local so no plt will be generated
 foo:
@@ -78,12 +85,16 @@ pvar:
 # PLT-NEXT: r28 = memw(r14+#0) }
 # PLT-NEXT: jumpr r28 }
 
-# TEXT:  8c 00 01 00 0001008c
-# TEXT: { 	call 0x102d0 }
-# TEXT: if (p0) jump:nt 0x102d0
-# TEXT: r0 = #0 ; jump 0x102d0
+# TEXT:  bc 00 01 00 000100bc
+# TEXT: { 	call 0x10300 }
+# TEXT: if (p0) jump:nt 0x10300
+# TEXT: r0 = #0 ; jump 0x10300
 # TEXT: r0 = add(r1,##-65548)
 # TEXT: r0 = add(r0,##-65548); memw(r0+#0) = r2 }
+# TEXT: if (p0) r0 = add(r0,##-65548)
+# TEXT: if (!p0) r0 = add(r0,##-65548)
+# TEXT: if (p0.new) r0 = add(r0,##-65548)
+# TEXT: if (!p0.new) r0 = add(r0,##-65548)
 
 # GOT: .got:
 # GOT:  00 00 00 00 00000000 <unknown>

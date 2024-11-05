@@ -170,8 +170,6 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1024
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1040
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: long_store_chain:
@@ -255,8 +253,6 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1024
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1040
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   store <4 x i32> zeroinitializer, ptr addrspace(1) %p
   %ptr1 = getelementptr <4 x i32>, ptr addrspace(1) %p, i64 1

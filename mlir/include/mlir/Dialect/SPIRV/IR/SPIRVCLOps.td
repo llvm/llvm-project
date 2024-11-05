@@ -875,7 +875,7 @@ def SPIRV_CLPrintfOp : SPIRV_CLOp<"printf", 184, []> {
     #### Example:
 
     ```mlir
-    %0 = spirv.CL.printf %0 %1 %2 : (!spirv.ptr<i8, UniformConstant>, (i32, i32)) -> i32
+    %0 = spirv.CL.printf %fmt %1, %2  : !spirv.ptr<i8, UniformConstant>, i32, i32 -> i32
     ```
   }];
 
@@ -889,7 +889,7 @@ def SPIRV_CLPrintfOp : SPIRV_CLOp<"printf", 184, []> {
   );
 
   let assemblyFormat = [{
-  $format `,` $arguments  attr-dict `:`  `(` type($format) `,` `(` type($arguments) `)` `)` `->` type($result)
+   $format ( $arguments^ )? attr-dict `:`  type($format) ( `,` type($arguments)^ )? `->` type($result)
   }];
 
   let hasVerifier = 0;

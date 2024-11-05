@@ -823,17 +823,22 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
 
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
+  std::vector<std::tuple<unsigned, Value *>> NumberedInputs;
+  std::vector<std::tuple<unsigned, Value *>> NumberedOutputs;
   ValueSet StructValues;
   const DataLayout &DL = M->getDataLayout();
 
   // Add the types of the input values to the function's argument list
+  unsigned ArgNum = 0;
   for (Value *value : inputs) {
     LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
     if (AggregateArgs && !ExcludeArgsFromAggregate.contains(value)) {
       AggParamTy.push_back(value->getType());
       StructValues.insert(value);
-    } else
+    } else {
       ParamTy.push_back(value->getType());
+      NumberedInputs.emplace_back(ArgNum++, value);
+    }
   }
 
   // Add the types of the output values to the function's argument list.
@@ -842,9 +847,11 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     if (AggregateArgs && !ExcludeArgsFromAggregate.contains(output)) {
       AggParamTy.push_back(output->getType());
       StructValues.insert(output);
-    } else
+    } else {
       ParamTy.push_back(
           PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
+      NumberedOutputs.emplace_back(ArgNum++, output);
+    }
   }
 
   assert(
@@ -916,6 +923,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::Memory:
       case Attribute::NoFPClass:
       case Attribute::CoroDestroyOnlyWhenComplete:
+      case Attribute::CoroElideSafe:
+      case Attribute::NoDivergenceSource:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -951,6 +960,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
+      case Attribute::SanitizeRealtimeBlocking:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:
@@ -995,6 +1005,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::DeadOnUnwind:
       case Attribute::Range:
       case Attribute::Initializes:
+      case Attribute::NoExt:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1049,15 +1060,10 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   }
 
   // Set names for input and output arguments.
-  if (NumScalarParams) {
-    ScalarAI = newFunction->arg_begin();
-    for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++ScalarAI)
-      if (!StructValues.contains(inputs[i]))
-        ScalarAI->setName(inputs[i]->getName());
-    for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++ScalarAI)
-      if (!StructValues.contains(outputs[i]))
-        ScalarAI->setName(outputs[i]->getName() + ".out");
-  }
+  for (auto [i, argVal] : NumberedInputs)
+    newFunction->getArg(i)->setName(argVal->getName());
+  for (auto [i, argVal] : NumberedOutputs)
+    newFunction->getArg(i)->setName(argVal->getName() + ".out");
 
   // Rewrite branches to basic blocks outside of the loop to new dummy blocks
   // within the new function. This must be done before we lose track of which
@@ -1121,7 +1127,8 @@ static void insertLifetimeMarkersSurroundingCall(
                                             TheCall->getFunction()) &&
              "Input memory not defined in original function");
 
-      Function *Func = Intrinsic::getDeclaration(M, MarkerFunc, Mem->getType());
+      Function *Func =
+          Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
         Marker->insertBefore(TheCall);
@@ -1552,8 +1559,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   assert(OldSP->getUnit() && "Missing compile unit for subprogram");
   DIBuilder DIB(*OldFunc.getParent(), /*AllowUnresolved=*/false,
                 OldSP->getUnit());
-  auto SPType =
-      DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
                                     DISubprogram::SPFlagOptimized |
                                     DISubprogram::SPFlagLocalToUnit;

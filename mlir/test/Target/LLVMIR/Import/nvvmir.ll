@@ -58,6 +58,9 @@ define i32 @nvvm_special_regs() {
   %27 = call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
   ; CHECK: = nvvm.read.ptx.sreg.cluster.nctarank : i32
   %28 = call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
+
+  ; CHECK = nvvm.read.ptx.sreg.tid.x range <0 : i32, 64 : i32> : i32
+  %29 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   ret i32 %1
 }
 

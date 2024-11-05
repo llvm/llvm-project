@@ -21,6 +21,34 @@
 namespace clang {
 namespace targets {
 
+enum AArch64AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
+
+static const unsigned ARM64AddrSpaceMap[] = {
+    0, // Default
+    0, // opencl_global
+    0, // opencl_local
+    0, // opencl_constant
+    0, // opencl_private
+    0, // opencl_generic
+    0, // opencl_global_device
+    0, // opencl_global_host
+    0, // cuda_device
+    0, // cuda_constant
+    0, // cuda_shared
+    0, // sycl_global
+    0, // sycl_global_device
+    0, // sycl_global_host
+    0, // sycl_local
+    0, // sycl_private
+    static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr),
+    static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
+    static_cast<unsigned>(AArch64AddrSpace::ptr64),
+    0, // hlsl_groupshared
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
+};
+
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
@@ -148,6 +176,8 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV95A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV96A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -205,6 +235,18 @@ public:
 
   bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
                                       bool &HasSizeMismatch) const override;
+
+  uint64_t getPointerWidthV(LangAS AddrSpace) const override {
+    if (AddrSpace == LangAS::ptr32_sptr || AddrSpace == LangAS::ptr32_uptr)
+      return 32;
+    if (AddrSpace == LangAS::ptr64)
+      return 64;
+    return PointerWidth;
+  }
+
+  uint64_t getPointerAlignV(LangAS AddrSpace) const override {
+    return getPointerWidthV(AddrSpace);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {
@@ -275,17 +317,6 @@ public:
  protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override;
-};
-
-// 64-bit RenderScript is aarch64
-class LLVM_LIBRARY_VISIBILITY RenderScript64TargetInfo
-    : public AArch64leTargetInfo {
-public:
-  RenderScript64TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

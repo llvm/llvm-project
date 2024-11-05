@@ -309,6 +309,17 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
     OS << "sh\t";
     break;
+  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
+  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
+  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
+  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
+  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
+  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
+  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
+  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
+  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
+    OS << "pbf16\t";
+    break;
   }
 }
 
@@ -448,6 +459,25 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
     return;
   case X86::K6_K7:
     printRegName(OS, X86::K6);
+    return;
+  }
+  llvm_unreachable("Unknown mask pair register name");
+}
+
+void X86InstPrinterCommon::printTILEPair(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &OS) {
+  switch (MI->getOperand(OpNo).getReg()) {
+  case X86::TMM0_TMM1:
+    printRegName(OS, X86::TMM0);
+    return;
+  case X86::TMM2_TMM3:
+    printRegName(OS, X86::TMM2);
+    return;
+  case X86::TMM4_TMM5:
+    printRegName(OS, X86::TMM4);
+    return;
+  case X86::TMM6_TMM7:
+    printRegName(OS, X86::TMM6);
     return;
   }
   llvm_unreachable("Unknown mask pair register name");

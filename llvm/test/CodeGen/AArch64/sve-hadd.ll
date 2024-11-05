@@ -1301,3 +1301,43 @@ entry:
   %result = trunc <vscale x 16 x i16> %s to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %result
 }
+
+define <vscale x 2 x i64> @haddu_v2i64_add(<vscale x 2 x i64> %s0, <vscale x 2 x i64> %s1) {
+; SVE-LABEL: haddu_v2i64_add:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    eor z2.d, z0.d, z1.d
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.d, z2.d, #1
+; SVE-NEXT:    add z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: haddu_v2i64_add:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    uhadd z0.d, p0/m, z0.d, z1.d
+; SVE2-NEXT:    ret
+entry:
+  %add = add nuw nsw <vscale x 2 x i64> %s0, %s1
+  %avg = lshr <vscale x 2 x i64> %add, splat (i64 1)
+  ret <vscale x 2 x i64> %avg
+}
+
+define <vscale x 2 x i64> @hadds_v2i64_add(<vscale x 2 x i64> %s0, <vscale x 2 x i64> %s1) {
+; SVE-LABEL: hadds_v2i64_add:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    eor z2.d, z0.d, z1.d
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    asr z1.d, z2.d, #1
+; SVE-NEXT:    add z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: hadds_v2i64_add:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    shadd z0.d, p0/m, z0.d, z1.d
+; SVE2-NEXT:    ret
+entry:
+  %add = add nuw nsw <vscale x 2 x i64> %s0, %s1
+  %avg = ashr <vscale x 2 x i64> %add, splat (i64 1)
+  ret <vscale x 2 x i64> %avg
+}

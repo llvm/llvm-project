@@ -1466,3 +1466,67 @@ func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
   }
   return
 }
+
+// -----
+
+func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : index) ->
+    (index, index, index, index, index, index) {
+  %c1 = arith.constant 1 : index
+  %0:6 = affine.delinearize_index %arg0 into (1, %arg1, 1, 1, %arg2, %c1)
+      : index, index, index, index, index, index
+  return %0#0, %0#1, %0#2, %0#3, %0#4, %0#5 : index, index, index, index, index, index
+}
+// CHECK-LABEL: func @drop_unit_basis_in_delinearize(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[ARG0]] into (%[[ARG1]], %[[ARG2]])
+//       CHECK:   return %[[C0]], %[[DELINEARIZE]]#0, %[[C0]], %[[C0]], %[[DELINEARIZE]]#1, %[[C0]]
+
+// -----
+
+func.func @drop_all_unit_bases(%arg0 : index) -> (index, index) {
+  %0:2 = affine.delinearize_index %arg0 into (1, 1) : index, index
+  return %0#0, %0#1 : index, index
+}
+// CHECK-LABEL: func @drop_all_unit_bases(
+//  CHECK-SAME:     %[[ARG0:.+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-NOT:   affine.delinearize_index
+//       CHECK:   return %[[C0]], %[[C0]]
+
+// -----
+
+func.func @drop_single_loop_delinearize(%arg0 : index, %arg1 : index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %2 = scf.for %iv = %c0 to %arg1 step %c1 iter_args(%arg2 = %c0) -> index {
+    %0 = affine.delinearize_index %iv into (%arg1) : index
+    %1 = "some_use"(%arg2, %0) : (index, index) -> (index)
+    scf.yield %1 : index
+  }
+  return %2 : index
+}
+// CHECK-LABEL: func @drop_single_loop_delinearize(
+//  CHECK-SAME:     %[[ARG0:.+]]: index)
+//       CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
+//   CHECK-NOT:     affine.delinearize_index
+//       CHECK:     "some_use"(%{{.+}}, %[[IV]])
+
+// -----
+
+// CHECK-LABEL: func @delinearize_non_induction_variable
+func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, %t0 : index, %t1 : index, %t2 : index) -> index {
+  %1 = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + s0 + s1 * 64 + s2 * 128)>(%i)[%t0, %t1, %t2]
+  %2 = affine.delinearize_index %1 into (1024) : index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @delinearize_non_loop_like
+func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
+  %2 = affine.delinearize_index %i into (1024) : index
+  return %2 : index
+}

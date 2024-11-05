@@ -198,3 +198,12 @@ define void @extv8f16_generic_a4(ptr noalias readonly align 16 %dst, ptr noalias
 
 
 !1 = !{i32 0, i32 64}
+
+; CHECK-LABEL: bf16_v4_align_load_store
+define dso_local void @bf16_v4_align_load_store(ptr noundef %0, ptr noundef %1) #0 {
+  ; CHECK: ld.v4.b16
+  ; CHECK: st.v4.b16
+  %3 = load <4 x bfloat>, ptr %1, align 8
+  store <4 x bfloat> %3, ptr %0, align 8
+  ret void
+}
