@@ -45,13 +45,12 @@ struct VectorShape {
   ArrayRef<bool> scalableFlags;
 };
 
-// Returns vector shape if the type is a vector. Returns an empty shape if it is
-// not a vector.
+// Returns vector shape if the type is a vector, otherwise return nullopt.
 static std::optional<VectorShape> vectorShape(Type type) {
-  auto vectorType = dyn_cast<VectorType>(type);
-  return vectorType ? std::optional(VectorShape{vectorType.getShape(),
-                                                vectorType.getScalableDims()})
-                    : std::nullopt;
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    return VectorShape{vectorType.getShape(), vectorType.getScalableDims()};
+  }
+  return std::nullopt;
 }
 
 static std::optional<VectorShape> vectorShape(Value value) {
