@@ -62,7 +62,6 @@ define i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 %2) {
 define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pack_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    or a0, zero, a0
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:    ret
   %shl = and i64 %a, 4294967295
@@ -74,7 +73,6 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 define i64 @pack_i64_2(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: pack_i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    or a0, zero, a0
 ; CHECK-NEXT:    ret
   %zexta = zext i32 %a to i64
   %zextb = zext i32 %b to i64
@@ -86,9 +84,9 @@ define i64 @pack_i64_2(i32 %a, i32 %b) nounwind {
 define i64 @pack_i64_3(ptr %0, ptr %1) {
 ; CHECK-LABEL: pack_i64_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a2, 0(a1)
-; CHECK-NEXT:    lw a1, 0(a0)
-; CHECK-NEXT:    or a0, zero, a2
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    lw a0, 0(a1)
+; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:    ret
   %3 = load i32, ptr %0, align 4
   %4 = zext i32 %3 to i64
