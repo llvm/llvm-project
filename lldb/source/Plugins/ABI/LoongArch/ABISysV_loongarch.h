@@ -48,17 +48,17 @@ public:
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // The CFA must be 128 bit aligned.
+    // The CFA must be 16 byte aligned.
     return (cfa & 0xfull) == 0;
   }
 
   void SetIsLA64(bool is_la64) { m_is_la64 = is_la64; }
 
   bool CodeAddressIsValid(lldb::addr_t pc) override {
+    // Code address must be 4 byte aligned.
     if (pc & (4ull - 1ull))
-      return false; // Not 4 byte aligned
+      return false;
 
-    // Anything else if fair game..
     return true;
   }
 

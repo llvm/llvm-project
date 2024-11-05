@@ -30,10 +30,10 @@
 // The ABI is not a source of such information as size, offset, encoding, etc.
 // of a register. Just provides correct dwarf and eh_frame numbers.
 
-#define DEFINE_GENERIC_REGISTER_STUB(dwarf_num, str_name, generic_num)         \
+#define DEFINE_GENERIC_REGISTER_STUB(dwarf_num, generic_num)                   \
   {                                                                            \
       DEFINE_REG_NAME(dwarf_num),                                              \
-      DEFINE_REG_NAME_STR(str_name),                                           \
+      DEFINE_REG_NAME_STR(nullptr),                                            \
       0,                                                                       \
       0,                                                                       \
       eEncodingInvalid,                                                        \
@@ -44,8 +44,8 @@
       nullptr,                                                                 \
   }
 
-#define DEFINE_REGISTER_STUB(dwarf_num, str_name)                              \
-  DEFINE_GENERIC_REGISTER_STUB(dwarf_num, str_name, LLDB_INVALID_REGNUM)
+#define DEFINE_REGISTER_STUB(dwarf_num)                                        \
+  DEFINE_GENERIC_REGISTER_STUB(dwarf_num, LLDB_INVALID_REGNUM)
 
 using namespace lldb;
 using namespace lldb_private;
@@ -94,39 +94,39 @@ enum regnums {
 };
 
 static const std::array<RegisterInfo, 33> g_register_infos = {
-    {DEFINE_REGISTER_STUB(r0, nullptr),
-     DEFINE_GENERIC_REGISTER_STUB(r1, nullptr, LLDB_REGNUM_GENERIC_RA),
-     DEFINE_REGISTER_STUB(r2, nullptr),
-     DEFINE_GENERIC_REGISTER_STUB(r3, nullptr, LLDB_REGNUM_GENERIC_SP),
-     DEFINE_GENERIC_REGISTER_STUB(r4, nullptr, LLDB_REGNUM_GENERIC_ARG1),
-     DEFINE_GENERIC_REGISTER_STUB(r5, nullptr, LLDB_REGNUM_GENERIC_ARG2),
-     DEFINE_GENERIC_REGISTER_STUB(r6, nullptr, LLDB_REGNUM_GENERIC_ARG3),
-     DEFINE_GENERIC_REGISTER_STUB(r7, nullptr, LLDB_REGNUM_GENERIC_ARG4),
-     DEFINE_GENERIC_REGISTER_STUB(r8, nullptr, LLDB_REGNUM_GENERIC_ARG5),
-     DEFINE_GENERIC_REGISTER_STUB(r9, nullptr, LLDB_REGNUM_GENERIC_ARG6),
-     DEFINE_GENERIC_REGISTER_STUB(r10, nullptr, LLDB_REGNUM_GENERIC_ARG7),
-     DEFINE_GENERIC_REGISTER_STUB(r11, nullptr, LLDB_REGNUM_GENERIC_ARG8),
-     DEFINE_REGISTER_STUB(r12, nullptr),
-     DEFINE_REGISTER_STUB(r13, nullptr),
-     DEFINE_REGISTER_STUB(r14, nullptr),
-     DEFINE_REGISTER_STUB(r15, nullptr),
-     DEFINE_REGISTER_STUB(r16, nullptr),
-     DEFINE_REGISTER_STUB(r17, nullptr),
-     DEFINE_REGISTER_STUB(r18, nullptr),
-     DEFINE_REGISTER_STUB(r19, nullptr),
-     DEFINE_REGISTER_STUB(r20, nullptr),
-     DEFINE_REGISTER_STUB(r21, nullptr),
-     DEFINE_GENERIC_REGISTER_STUB(r22, nullptr, LLDB_REGNUM_GENERIC_FP),
-     DEFINE_REGISTER_STUB(r23, nullptr),
-     DEFINE_REGISTER_STUB(r24, nullptr),
-     DEFINE_REGISTER_STUB(r25, nullptr),
-     DEFINE_REGISTER_STUB(r26, nullptr),
-     DEFINE_REGISTER_STUB(r27, nullptr),
-     DEFINE_REGISTER_STUB(r28, nullptr),
-     DEFINE_REGISTER_STUB(r29, nullptr),
-     DEFINE_REGISTER_STUB(r30, nullptr),
-     DEFINE_REGISTER_STUB(r31, nullptr),
-     DEFINE_GENERIC_REGISTER_STUB(pc, nullptr, LLDB_REGNUM_GENERIC_PC)}};
+    {DEFINE_REGISTER_STUB(r0),
+     DEFINE_GENERIC_REGISTER_STUB(r1, LLDB_REGNUM_GENERIC_RA),
+     DEFINE_REGISTER_STUB(r2),
+     DEFINE_GENERIC_REGISTER_STUB(r3, LLDB_REGNUM_GENERIC_SP),
+     DEFINE_GENERIC_REGISTER_STUB(r4, LLDB_REGNUM_GENERIC_ARG1),
+     DEFINE_GENERIC_REGISTER_STUB(r5, LLDB_REGNUM_GENERIC_ARG2),
+     DEFINE_GENERIC_REGISTER_STUB(r6, LLDB_REGNUM_GENERIC_ARG3),
+     DEFINE_GENERIC_REGISTER_STUB(r7, LLDB_REGNUM_GENERIC_ARG4),
+     DEFINE_GENERIC_REGISTER_STUB(r8, LLDB_REGNUM_GENERIC_ARG5),
+     DEFINE_GENERIC_REGISTER_STUB(r9, LLDB_REGNUM_GENERIC_ARG6),
+     DEFINE_GENERIC_REGISTER_STUB(r10, LLDB_REGNUM_GENERIC_ARG7),
+     DEFINE_GENERIC_REGISTER_STUB(r11, LLDB_REGNUM_GENERIC_ARG8),
+     DEFINE_REGISTER_STUB(r12),
+     DEFINE_REGISTER_STUB(r13),
+     DEFINE_REGISTER_STUB(r14),
+     DEFINE_REGISTER_STUB(r15),
+     DEFINE_REGISTER_STUB(r16),
+     DEFINE_REGISTER_STUB(r17),
+     DEFINE_REGISTER_STUB(r18),
+     DEFINE_REGISTER_STUB(r19),
+     DEFINE_REGISTER_STUB(r20),
+     DEFINE_REGISTER_STUB(r21),
+     DEFINE_GENERIC_REGISTER_STUB(r22, LLDB_REGNUM_GENERIC_FP),
+     DEFINE_REGISTER_STUB(r23),
+     DEFINE_REGISTER_STUB(r24),
+     DEFINE_REGISTER_STUB(r25),
+     DEFINE_REGISTER_STUB(r26),
+     DEFINE_REGISTER_STUB(r27),
+     DEFINE_REGISTER_STUB(r28),
+     DEFINE_REGISTER_STUB(r29),
+     DEFINE_REGISTER_STUB(r30),
+     DEFINE_REGISTER_STUB(r31),
+     DEFINE_GENERIC_REGISTER_STUB(pc, LLDB_REGNUM_GENERIC_PC)}};
 } // namespace dwarf
 } // namespace
 
@@ -275,44 +275,49 @@ Status ABISysV_loongarch::SetReturnValueObject(StackFrameSP &frame_sp,
   }
 
   size_t reg_size = m_is_la64 ? 8 : 4;
-  if (num_bytes <= 2 * reg_size) {
-    offset_t offset = 0;
-    uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
-
-    auto reg_info =
-        reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-    if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result = Status::FromErrorStringWithFormat(
-          "Couldn't write value to register %s", reg_info->name);
-      return result;
-    }
-
-    if (num_bytes <= reg_size)
-      return result; // Successfully written.
-
-    // for loongarch32, get the upper 32 bits from raw_value and write them
-    // for loongarch64, get the next 64 bits from data and write them
-    if (4 == reg_size)
-      raw_value >>= 32;
-    else
-      raw_value = data.GetMaxU64(&offset, num_bytes - reg_size);
-    reg_info =
-        reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
-    if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result = Status::FromErrorStringWithFormat(
-          "Couldn't write value to register %s", reg_info->name);
-    }
-
+  // Currently, we only support sizeof(data) <= 2 * reg_size.
+  // 1. If the (`size` <= reg_size), the `data` will be returned through `ARG1`.
+  // 2. If the (`size` > reg_size && `size` <= 2 * reg_size), the `data` will be
+  // returned through a pair of registers (ARG1 and ARG2), and the lower-ordered
+  // bits in the `ARG1`.
+  if (num_bytes > 2 * reg_size) {
+    result = Status::FromErrorString(
+        "We don't support returning large integer values at present.");
     return result;
   }
 
-  result = Status::FromErrorString(
-      "We don't support returning large integer values at present.");
+  offset_t offset = 0;
+  uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
+  auto reg_info =
+      reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
+  if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
+    result = Status::FromErrorStringWithFormat(
+        "Couldn't write value to register %s", reg_info->name);
+    return result;
+  }
+
+  if (num_bytes <= reg_size)
+    return result; // Successfully written.
+
+  // For loongarch32, get the upper 32 bits from raw_value and write them.
+  // For loongarch64, get the next 64 bits from data and write them.
+  if (4 == reg_size)
+    raw_value >>= 32;
+  else
+    raw_value = data.GetMaxU64(&offset, num_bytes - reg_size);
+
+  reg_info =
+      reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+  if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value))
+    result = Status::FromErrorStringWithFormat(
+        "Couldn't write value to register %s", reg_info->name);
+
   return result;
 }
 
 template <typename T>
 static void SetInteger(Scalar &scalar, uint64_t raw_value, bool is_signed) {
+  static_assert(std::is_unsigned<T>::value, "T must be an unsigned type.");
   raw_value &= std::numeric_limits<T>::max();
   if (is_signed)
     scalar = static_cast<typename std::make_signed<T>::type>(raw_value);
@@ -371,11 +376,11 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
                                           uint32_t byte_size) {
   Value value;
   ValueObjectSP return_valobj_sp;
-  auto reg_info_a0 =
+  auto *reg_info_a0 =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  auto reg_info_a1 =
+  auto *reg_info_a1 =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
-  uint64_t raw_value;
+  uint64_t raw_value = 0;
 
   switch (byte_size) {
   case sizeof(uint32_t):
@@ -383,9 +388,21 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
     raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0) & UINT32_MAX;
     break;
   case sizeof(uint64_t):
-    raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0);
+    // Read a0 to get the arg on loongarch64, a0 and a1 on loongarch32
+    if (llvm::Triple::loongarch32 == machine) {
+      raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0) & UINT32_MAX;
+      raw_value |=
+          (reg_ctx->ReadRegisterAsUnsigned(reg_info_a1, 0) & UINT32_MAX) << 32U;
+    } else {
+      raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0);
+    }
     break;
   case 16: {
+    // Read a0 and a1 to get the arg on loongarch64, not supported on
+    // loongarch32
+    if (llvm::Triple::loongarch32 == machine)
+      return return_valobj_sp;
+
     // Create the ValueObjectSP here and return
     std::unique_ptr<DataBufferHeap> heap_data_up(
         new DataBufferHeap(byte_size, 0));
@@ -412,8 +429,8 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
   }
 
   if (type_flags & eTypeIsInteger) {
-    const bool is_signed = (type_flags & eTypeIsSigned) != 0;
-    if (!SetSizedInteger(value.GetScalar(), raw_value, byte_size, is_signed))
+    if (!SetSizedInteger(value.GetScalar(), raw_value, byte_size,
+                         type_flags & eTypeIsSigned))
       return return_valobj_sp;
   } else if (type_flags & eTypeIsFloat) {
     if (!SetSizedFloat(value.GetScalar(), raw_value, byte_size))
@@ -432,7 +449,7 @@ static ValueObjectSP GetValObjFromFPRegs(Thread &thread,
                                          llvm::Triple::ArchType machine,
                                          uint32_t type_flags,
                                          uint32_t byte_size) {
-  auto reg_info_fa0 = reg_ctx->GetRegisterInfoByName("f0");
+  auto *reg_info_fa0 = reg_ctx->GetRegisterInfoByName("f0");
   bool use_fp_regs = false;
   ValueObjectSP return_valobj_sp;
 
@@ -472,13 +489,11 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
   const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
   const llvm::Triple::ArchType machine = arch.GetMachine();
 
-  // Integer return type.
   if (type_flags & eTypeIsInteger) {
     return_valobj_sp =
         GetValObjFromIntRegs(thread, reg_ctx, machine, type_flags, byte_size);
     return return_valobj_sp;
   }
-  // Pointer return type.
   if (type_flags & eTypeIsPointer) {
     const auto *reg_info_a0 = reg_ctx->GetRegisterInfo(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
@@ -487,7 +502,6 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
     return ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),
                                           value, ConstString(""));
   }
-  // Floating point return type.
   if (type_flags & eTypeIsFloat) {
     uint32_t float_count = 0;
     bool is_complex = false;
@@ -576,28 +590,22 @@ bool ABISysV_loongarch::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   const char *name = reg_info->name;
   ArchSpec arch = GetProcessSP()->GetTarget().GetArchitecture();
   uint32_t arch_flags = arch.GetFlags();
-  // floating point registers are only callee saved when using
-  // F or D hardware floating point ABIs
+  // Floating point registers are only callee saved when using
+  // F or D hardware floating point ABIs.
   bool is_hw_fp = (arch_flags & ArchSpec::eLoongArch_abi_mask) != 0;
 
-  bool is_callee_saved = llvm::StringSwitch<bool>(name)
-                             // integer ABI names
-                             .Cases("ra", "sp", "fp", true)
-                             .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6",
-                                    "s7", "s8", "s9", true)
-                             // integer hardware names
-                             .Cases("r1", "r3", "r22", true)
-                             .Cases("r23", "r24", "r25", "r26", "r27", "r28",
-                                    "r29", "r30", "31", true)
-                             // floating point ABI names
-                             .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5",
-                                    "fs6", "fs7", is_hw_fp)
-                             // floating point hardware names
-                             .Cases("f24", "f25", "f26", "f27", "f28", "f29",
-                                    "f30", "f31", is_hw_fp)
-                             .Default(false);
-
-  return is_callee_saved;
+  return llvm::StringSwitch<bool>(name)
+      // integer ABI names
+      .Cases("ra", "sp", "fp", true)
+      .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", true)
+      // integer hardware names
+      .Cases("r1", "r3", "r22", true)
+      .Cases("r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31", true)
+      // floating point ABI names
+      .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", is_hw_fp)
+      // floating point hardware names
+      .Cases("f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31", is_hw_fp)
+      .Default(false);
 }
 
 void ABISysV_loongarch::Initialize() {
