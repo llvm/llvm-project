@@ -674,12 +674,12 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  ConceptDecl *TypeBufferConcept =
+  ConceptDecl *TypedBufferConcept =
       constructTypedBufferConceptDecl(*SemaPtr, HLSLNamespace);
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams(*SemaPtr, {"element_type"},
-                                      TypeBufferConcept)
+                                      TypedBufferConcept)
              .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
