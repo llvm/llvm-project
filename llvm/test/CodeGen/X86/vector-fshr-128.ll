@@ -485,11 +485,11 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) 
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    pand %xmm5, %xmm4
+; SSE41-NEXT:    psllw $4, %xmm4
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    pand %xmm5, %xmm0
-; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    psllw $12, %xmm4
-; SSE41-NEXT:    psllw $4, %xmm0
+; SSE41-NEXT:    psllw $12, %xmm0
 ; SSE41-NEXT:    por %xmm4, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    paddw %xmm0, %xmm4
@@ -531,8 +531,8 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) 
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
-; AVX1-NEXT:    vpsllw $12, %xmm4, %xmm5
 ; AVX1-NEXT:    vpsllw $4, %xmm4, %xmm4
+; AVX1-NEXT:    vpsllw $12, %xmm2, %xmm5
 ; AVX1-NEXT:    vpor %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpaddw %xmm4, %xmm4, %xmm5
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm6
