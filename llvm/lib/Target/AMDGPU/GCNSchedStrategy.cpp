@@ -63,6 +63,10 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> UseAMDGPUScheduleHeuristic(
+    "amdgpu-use-amdgpu-schedule-heuristic", cl::Hidden,
+    cl::desc("Use AMDGPU specific schedule heuristic "), cl::init(false));
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -309,6 +313,136 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
       Cand.RPDelta.CriticalMax.setUnitInc(VGPRDelta);
     }
   }
+}
+
+/// AMDGPU specific implementation, which is largely copy-pasted from the
+/// generic version, with some modifications to better hide memory latency.
+//  Major differences from the generic version:
+//  1. Prioritize clustered operations before stall latency heuristic.
+//  2. Prioritize long-latency-load before stall latency heuristic.
+///
+/// \param Cand provides the policy and current best candidate.
+/// \param TryCand refers to the next SUnit candidate, otherwise uninitialized.
+/// \param Zone describes the scheduled zone that we are extending, or nullptr
+///             if Cand is from a different zone than TryCand.
+/// \return \c true if TryCand is better than Cand (Reason is NOT NoCand)
+bool GCNSchedStrategy::tryCandidate(SchedCandidate &Cand,
+                                    SchedCandidate &TryCand,
+                                    SchedBoundary *Zone) const {
+  if (!UseAMDGPUScheduleHeuristic)
+    return GenericScheduler::tryCandidate(Cand, TryCand, Zone);
+
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = NodeOrder;
+    return true;
+  }
+
+  // Bias PhysReg Defs and copies to their uses and defined respectively.
+  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
+                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+    return TryCand.Reason != NoCand;
+
+  // Avoid exceeding the target's limit.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                  RegExcess, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  // Avoid increasing the max critical pressure in the scheduled region.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                  TryCand, Cand, RegCritical, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  // AMDGPU-specific: We prioritize clustered instructions as we would get more
+  // benefit from clausing these memory instructions.
+  const SUnit *CandNextClusterSU =
+      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
+  const SUnit *TryCandNextClusterSU =
+      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
+  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
+                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+    return TryCand.Reason != NoCand;
+
+  // We only compare a subset of features when comparing nodes between
+  // Top and Bottom boundary. Some properties are simply incomparable, in many
+  // other instances we should only override the other boundary if something
+  // is a clear good pick on one boundary. Skip heuristics that are more
+  // "tie-breaking" in nature.
+  bool SameBoundary = Zone != nullptr;
+  if (SameBoundary) {
+    // For loops that are acyclic path limited, aggressively schedule for
+    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
+    // heuristics to take precedence.
+    if (Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
+        tryLatency(TryCand, Cand, *Zone))
+      return TryCand.Reason != NoCand;
+
+    // AMDGPU-specific: Prioritize long latency memory load instructions in
+    // top-bottom order to hide more latency. The mayLoad check is used
+    // to exclude store-like instructions, which we do not want to scheduler
+    // them too early.
+    bool TryMayLoad =
+        TryCand.SU->isInstr() && TryCand.SU->getInstr()->mayLoad();
+    bool CandMayLoad = Cand.SU->isInstr() && Cand.SU->getInstr()->mayLoad();
+
+    if (TryMayLoad || CandMayLoad) {
+      bool TryLongLatency =
+          TryCand.SU->Latency > 10 * Cand.SU->Latency && TryMayLoad;
+      bool CandLongLatency =
+          10 * TryCand.SU->Latency < Cand.SU->Latency && CandMayLoad;
+
+      if (tryGreater(Zone->isTop() ? TryLongLatency : CandLongLatency,
+                     Zone->isTop() ? CandLongLatency : TryLongLatency, TryCand,
+                     Cand, Stall))
+        return TryCand.Reason != NoCand;
+    }
+    // Prioritize instructions that read unbuffered resources by stall cycles.
+    if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
+                Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
+      return TryCand.Reason != NoCand;
+  }
+
+  if (SameBoundary) {
+    // Weak edges are for clustering and other constraints.
+    if (tryLess(getWeakLeft(TryCand.SU, TryCand.AtTop),
+                getWeakLeft(Cand.SU, Cand.AtTop), TryCand, Cand, Weak))
+      return TryCand.Reason != NoCand;
+  }
+
+  // Avoid increasing the max pressure of the entire region.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CurrentMax, Cand.RPDelta.CurrentMax, TryCand,
+                  Cand, RegMax, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  if (SameBoundary) {
+    // Avoid critical resource consumption and balance the schedule.
+    TryCand.initResourceDelta(DAG, SchedModel);
+    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
+                TryCand, Cand, ResourceReduce))
+      return TryCand.Reason != NoCand;
+    if (tryGreater(TryCand.ResDelta.DemandedResources,
+                   Cand.ResDelta.DemandedResources, TryCand, Cand,
+                   ResourceDemand))
+      return TryCand.Reason != NoCand;
+
+    // Avoid serializing long latency dependence chains.
+    // For acyclic path limited loops, latency was already checked above.
+    if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
+        !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, *Zone))
+      return TryCand.Reason != NoCand;
+
+    // Fall through to original instruction order.
+    if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
+        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+      TryCand.Reason = NodeOrder;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // This function is mostly cut and pasted from

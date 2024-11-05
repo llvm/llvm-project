@@ -41,6 +41,9 @@ raw_ostream &operator<<(raw_ostream &OS, const GCNSchedStageID &StageID);
 /// heuristics to determine excess/critical pressure sets.
 class GCNSchedStrategy : public GenericScheduler {
 protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
   SUnit *pickNodeBidirectional(bool &IsTopNode);
 
   void pickNodeFromQueue(SchedBoundary &Zone, const CandPolicy &ZonePolicy,
