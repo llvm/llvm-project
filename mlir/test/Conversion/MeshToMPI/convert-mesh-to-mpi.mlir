@@ -53,7 +53,7 @@ func.func @update_halo_1d_first(
 // CHECK-LABEL: func @update_halo_1d_second
 func.func @update_halo_1d_second(
   // CHECK-SAME: [[varg0:%.*]]: memref<12x12xi8>
-  %arg0 : memref<12x12xi8>) {
+  %arg0 : memref<12x12xi8>) -> memref<12x12xi8> {
   //CHECK-NEXT: [[vc7:%.*]] = arith.constant 7 : index
   //CHECK-NEXT: [[vc9:%.*]] = arith.constant 9 : index
   //CHECK-NEXT: [[vc2:%.*]] = arith.constant 2 : index
@@ -91,16 +91,16 @@ func.func @update_halo_1d_second(
   //CHECK-NEXT:   memref.copy [[valloc_0]], [[vsubview]] : memref<12x3xi8> to memref<12x3xi8, strided<[12, 1], offset: ?>>
   //CHECK-NEXT: }
   //CHECK-NEXT: memref.dealloc [[valloc_0]] : memref<12x3xi8>
-  mesh.update_halo %arg0 on @mesh0 split_axes = [[], [3]]
+  %res = mesh.update_halo %arg0 on @mesh0 split_axes = [[], [3]]
     halo_sizes = [2, 3] : memref<12x12xi8>
-  //CHECK-NEXT: return
-  return
+  //CHECK-NEXT: return [[varg0]] : memref<12x12xi8>
+  return %res : memref<12x12xi8>
 }
 
 // CHECK-LABEL: func @update_halo_2d
 func.func @update_halo_2d(
     // CHECK-SAME: [[varg0:%.*]]: memref<12x12xi8>
-    %arg0 : memref<12x12xi8>) {
+    %arg0 : memref<12x12xi8>) -> memref<12x12xi8> {
   // CHECK-NEXT: [[vc10:%.*]] = arith.constant 10 : index
   // CHECK-NEXT: [[vc1:%.*]] = arith.constant 1 : index
   // CHECK-NEXT: [[vc5:%.*]] = arith.constant 5 : index
@@ -172,9 +172,58 @@ func.func @update_halo_2d(
   // CHECK-NEXT:   memref.copy [[valloc_4]], [[vsubview]] : memref<2x12xi8> to memref<2x12xi8, strided<[12, 1], offset: ?>>
   // CHECK-NEXT: }
   // CHECK-NEXT: memref.dealloc [[valloc_4]] : memref<2x12xi8>
-  mesh.update_halo %arg0 on @mesh0 split_axes = [[0], [1]]
+  %res = mesh.update_halo %arg0 on @mesh0 split_axes = [[0], [1]]
       halo_sizes = [1, 2, 3, 4]
       : memref<12x12xi8>
-  // CHECK-NEXT: return
-  return
+  // CHECK-NEXT: return [[varg0]] : memref<12x12xi8>
+  return %res : memref<12x12xi8>
+}
+
+// CHECK-LABEL: func @update_halo_1d_tnsr
+func.func @update_halo_1d_tnsr(
+  // CHECK-SAME: [[varg0:%.*]]: tensor<12x12xi8>
+  %arg0 : tensor<12x12xi8>) -> tensor<12x12xi8> {
+  // CHECK-NEXT: [[vc7:%.*]] = arith.constant 7 : index
+  // CHECK-NEXT: [[vc9:%.*]] = arith.constant 9 : index
+  // CHECK-NEXT: [[vc2:%.*]] = arith.constant 2 : index
+  // CHECK-NEXT: [[vc0_i32:%.*]] = arith.constant 0 : i32
+  // CHECK-NEXT: [[vc91_i32:%.*]] = arith.constant 91 : i32
+  // CHECK-NEXT: [[mref:%.*]] = bufferization.to_memref %arg0 : memref<12x12xi8>
+  // CHECK-NEXT: [[vproc_linear_idx:%.*]]:3 = mesh.process_multi_index on @mesh0 : index, index, index
+  // CHECK-NEXT: [[vdown_linear_idx:%.*]], [[vup_linear_idx:%.*]] = mesh.neighbors_linear_indices on @mesh0[[[vproc_linear_idx]]#0, [[vproc_linear_idx]]#1, [[vproc_linear_idx]]#2] split_axes = [0] : index, index
+  // CHECK-NEXT: [[v0:%.*]] = arith.index_cast [[vdown_linear_idx]] : index to i32
+  // CHECK-NEXT: [[v1:%.*]] = arith.index_cast [[vup_linear_idx]] : index to i32
+  // CHECK-NEXT: [[v2:%.*]] = arith.cmpi sge, [[v1]], [[vc0_i32]] : i32
+  // CHECK-NEXT: [[v3:%.*]] = arith.cmpi sge, [[v0]], [[vc0_i32]] : i32
+  // CHECK-NEXT: [[valloc:%.*]] = memref.alloc() : memref<2x12xi8>
+  // CHECK-NEXT: scf.if [[v3]] {
+  // CHECK-NEXT:   [[vsubview:%.*]] = memref.subview [[mref]][[[vc7]], 0] [2, 12] [1, 1] : memref<12x12xi8> to memref<2x12xi8, strided<[12, 1], offset: ?>>
+  // CHECK-NEXT:   memref.copy [[vsubview]], [[valloc]] : memref<2x12xi8, strided<[12, 1], offset: ?>> to memref<2x12xi8>
+  // CHECK-NEXT:   mpi.send([[valloc]], [[vc91_i32]], [[v0]]) : memref<2x12xi8>, i32, i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: scf.if [[v2]] {
+  // CHECK-NEXT:   mpi.recv([[valloc]], [[vc91_i32]], [[v1]]) : memref<2x12xi8>, i32, i32
+  // CHECK-NEXT:   [[vsubview:%.*]] = memref.subview [[mref]][0, 0] [2, 12] [1, 1] : memref<12x12xi8> to memref<2x12xi8, strided<[12, 1]>>
+  // CHECK-NEXT:   memref.copy [[valloc]], [[vsubview]] : memref<2x12xi8> to memref<2x12xi8, strided<[12, 1]>>
+  // CHECK-NEXT: }
+  // CHECK-NEXT: memref.dealloc [[valloc]] : memref<2x12xi8>
+  // CHECK-NEXT: [[v4:%.*]] = arith.cmpi sge, [[v0]], [[vc0_i32]] : i32
+  // CHECK-NEXT: [[v5:%.*]] = arith.cmpi sge, [[v1]], [[vc0_i32]] : i32
+  // CHECK-NEXT: [[valloc_0:%.*]] = memref.alloc() : memref<3x12xi8>
+  // CHECK-NEXT: scf.if [[v5]] {
+  // CHECK-NEXT:   [[vsubview:%.*]] = memref.subview [[mref]][[[vc2]], 0] [3, 12] [1, 1] : memref<12x12xi8> to memref<3x12xi8, strided<[12, 1], offset: ?>>
+  // CHECK-NEXT:   memref.copy [[vsubview]], [[valloc_0]] : memref<3x12xi8, strided<[12, 1], offset: ?>> to memref<3x12xi8>
+  // CHECK-NEXT:   mpi.send([[valloc_0]], [[vc91_i32]], [[v1]]) : memref<3x12xi8>, i32, i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: scf.if [[v4]] {
+  // CHECK-NEXT:   mpi.recv([[valloc_0]], [[vc91_i32]], [[v0]]) : memref<3x12xi8>, i32, i32
+  // CHECK-NEXT:   [[vsubview:%.*]] = memref.subview [[mref]][[[vc9]], 0] [3, 12] [1, 1] : memref<12x12xi8> to memref<3x12xi8, strided<[12, 1], offset: ?>>
+  // CHECK-NEXT:   memref.copy [[valloc_0]], [[vsubview]] : memref<3x12xi8> to memref<3x12xi8, strided<[12, 1], offset: ?>>
+  // CHECK-NEXT: }
+  // CHECK-NEXT: memref.dealloc [[valloc_0]] : memref<3x12xi8>
+  // CHECK-NEXT: [[res:%.*]] = bufferization.to_tensor [[mref]] : memref<12x12xi8>
+  %res = mesh.update_halo %arg0 on @mesh0 split_axes = [[0]]
+    halo_sizes = [2, 3] : tensor<12x12xi8>
+  // CHECK-NEXT: return [[res]]
+  return %res : tensor<12x12xi8>
 }

@@ -891,7 +891,8 @@ def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
   let dependentDialects = [
     "memref::MemRefDialect",
     "mpi::MPIDialect",
-    "scf::SCFDialect"
+    "scf::SCFDialect",
+    "bufferization::BufferizationDialect"
   ];
 }
 

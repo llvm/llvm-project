@@ -13,6 +13,7 @@
 #include "mlir/Conversion/MeshToMPI/MeshToMPI.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
@@ -70,7 +71,16 @@ struct ConvertUpdateHaloOp
                            cast<IntegerAttr>(v.get<Attribute>()).getInt()));
     };
 
-    auto array = op.getDestination();
+    auto dest = op.getDestination();
+    auto dstShape = cast<ShapedType>(dest.getType()).getShape();
+    Value array = dest;
+    if (isa<RankedTensorType>(array.getType())) {
+      // If the destination is a memref, we need to cast it to a tensor
+      auto tensorType = MemRefType::get(
+          dstShape, cast<ShapedType>(array.getType()).getElementType());
+      array = rewriter.create<bufferization::ToMemrefOp>(loc, tensorType, array)
+                  .getResult();
+    }
     auto rank = cast<ShapedType>(array.getType()).getRank();
     auto opSplitAxes = op.getSplitAxes().getAxes();
     auto mesh = op.getMesh();
@@ -94,7 +104,7 @@ struct ConvertUpdateHaloOp
     auto currHaloDim = -1; // halo sizes are provided for split dimensions only
     // we need the actual shape to compute offsets and sizes
     for (auto i = 0; i < rank; ++i) {
-      auto s = cast<ShapedType>(array.getType()).getShape()[i];
+      auto s = dstShape[i];
       if (ShapedType::isDynamic(s)) {
         shape[i] = rewriter.create<memref::DimOp>(loc, array, s).getResult();
       } else {
@@ -213,7 +223,14 @@ struct ConvertUpdateHaloOp
       // on to next halo
       --currHaloDim;
     }
-    rewriter.eraseOp(op);
+
+    if (isa<MemRefType>(op.getResult().getType())) {
+      rewriter.replaceOp(op, array);
+    } else {
+      assert(isa<RankedTensorType>(op.getResult().getType()));
+      rewriter.replaceOp(op, rewriter.create<bufferization::ToTensorOp>(
+                                 loc, op.getResult().getType(), array));
+    }
     return mlir::success();
   }
 };
