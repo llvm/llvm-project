@@ -2495,9 +2495,11 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  // FIXME: Vector haven't been tested.
+  // Here we assume that if a core implements unaligned vector access should
+  // also implement scalar vector access.
   Options.AllowOverlappingLoads =
-      (ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem());
+      (ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem()) &&
+      (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp);
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   if (ST->is64Bit())
