@@ -7668,8 +7668,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // TODO: Rebase to fhahn's implementation.
   VPlanTransforms::prepareExecute(BestVPlan);
-  dbgs() << "\n\n print plan\n";
-  BestVPlan.print(dbgs());
   BestVPlan.execute(&State);
 
   // 2.5 Collect reduction resume values.
@@ -9387,11 +9385,34 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
-      // VPWidenCastRecipes can folded into VPReductionRecipe
-      VPValue *A;
+      VPValue *A, *B;
       VPSingleDefRecipe *RedRecipe;
-      if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
-          !VecOp->hasMoreThanOneUniqueUser()) {
+      // reduce.add(mul(ext, ext)) can folded into VPMulAccRecipe
+      if (RdxDesc.getOpcode() == Instruction::Add &&
+          match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+        VPRecipeBase *RecipeA = A->getDefiningRecipe();
+        VPRecipeBase *RecipeB = B->getDefiningRecipe();
+        if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+            match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
+            cast<VPWidenCastRecipe>(RecipeA)->getOpcode() ==
+                cast<VPWidenCastRecipe>(RecipeB)->getOpcode() &&
+            !A->hasMoreThanOneUniqueUser() && !B->hasMoreThanOneUniqueUser()) {
+          RedRecipe = new VPMulAccRecipe(
+              RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+              CM.useOrderedReductions(RdxDesc),
+              cast<VPWidenRecipe>(VecOp->getDefiningRecipe()),
+              cast<VPWidenCastRecipe>(RecipeA),
+              cast<VPWidenCastRecipe>(RecipeB));
+        } else {
+          RedRecipe = new VPMulAccRecipe(
+              RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+              CM.useOrderedReductions(RdxDesc),
+              cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
+        }
+      }
+      // VPWidenCastRecipes can folded into VPReductionRecipe
+      else if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+               !VecOp->hasMoreThanOneUniqueUser()) {
         RedRecipe = new VPExtendedReductionRecipe(
             RdxDesc, CurrentLinkI,
             cast<CastInst>(

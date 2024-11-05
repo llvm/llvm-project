@@ -520,25 +520,53 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 }
 
 void VPlanTransforms::prepareExecute(VPlan &Plan) {
-  errs() << "\n\n\n!!Prepare to execute\n";
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPExtendedReductionRecipe>(&R))
-        continue;
-      auto *ExtRed = cast<VPExtendedReductionRecipe>(&R);
-      auto *Ext = new VPWidenCastRecipe(
-          ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
-          *ExtRed->getExtInstr());
-      auto *Red = new VPReductionRecipe(
-          ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
-          ExtRed->getChainOp(), Ext, ExtRed->getCondOp(), ExtRed->isOrdered());
-      Ext->insertBefore(ExtRed);
-      Red->insertBefore(ExtRed);
-      ExtRed->replaceAllUsesWith(Red);
-      ExtRed->eraseFromParent();
+      if (isa<VPExtendedReductionRecipe>(&R)) {
+        auto *ExtRed = cast<VPExtendedReductionRecipe>(&R);
+        auto *Ext = new VPWidenCastRecipe(
+            ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
+            *ExtRed->getExtInstr());
+        auto *Red = new VPReductionRecipe(
+            ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
+            ExtRed->getChainOp(), Ext, ExtRed->getCondOp(),
+            ExtRed->isOrdered());
+        Ext->insertBefore(ExtRed);
+        Red->insertBefore(ExtRed);
+        ExtRed->replaceAllUsesWith(Red);
+        ExtRed->eraseFromParent();
+      } else if (isa<VPMulAccRecipe>(&R)) {
+        auto *MulAcc = cast<VPMulAccRecipe>(&R);
+        VPValue *Op0, *Op1;
+        if (MulAcc->isExtended()) {
+          Op0 = new VPWidenCastRecipe(
+              MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+              MulAcc->getResultType(), *MulAcc->getExt0Instr());
+          Op1 = new VPWidenCastRecipe(
+              MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+              MulAcc->getResultType(), *MulAcc->getExt1Instr());
+          Op0->getDefiningRecipe()->insertBefore(MulAcc);
+          Op1->getDefiningRecipe()->insertBefore(MulAcc);
+        } else {
+          Op0 = MulAcc->getVecOp0();
+          Op1 = MulAcc->getVecOp1();
+        }
+        Instruction *MulInstr = MulAcc->getMulInstr();
+        SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
+        auto *Mul = new VPWidenRecipe(*MulInstr,
+                                      make_range(MulOps.begin(), MulOps.end()));
+        auto *Red = new VPReductionRecipe(
+            MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),
+            MulAcc->getChainOp(), Mul, MulAcc->getCondOp(),
+            MulAcc->isOrdered());
+        Mul->insertBefore(MulAcc);
+        Red->insertBefore(MulAcc);
+        MulAcc->replaceAllUsesWith(Red);
+        MulAcc->eraseFromParent();
+      }
     }
   }
 }
