@@ -20,8 +20,7 @@ class AArch64Reg<bits<16> enc, string n, list<Register> subregs = [],
 
 let Namespace = "AArch64" in {
   // SubRegIndexes for GPR registers
-  def sub_32   : SubRegIndex<32,  0>;
-  def sub_32_hi: SubRegIndex<32, 32>;
+  def sub_32   : SubRegIndex<32>;
   def sube64   : SubRegIndex<64>;
   def subo64   : SubRegIndex<64>;
   def sube32   : SubRegIndex<32>;
@@ -29,15 +28,26 @@ let Namespace = "AArch64" in {
 
   // SubRegIndexes for FPR/Vector registers
   def bsub    : SubRegIndex<8, 0>;
-  def bsub_hi : SubRegIndex<8, 8>;
   def hsub    : SubRegIndex<16, 0>;
-  def hsub_hi : SubRegIndex<16, 16>;
   def ssub    : SubRegIndex<32, 0>;
-  def ssub_hi : SubRegIndex<32, 32>;
   def dsub    : SubRegIndex<64, 0>;
-  def dsub_hi : SubRegIndex<64, 64>;
   def zsub    : SubRegIndex<128, 0>;
-  def zsub_hi : SubRegIndex<-1, 128>;
+
+  // The _hi SubRegIndexes describe the high bits of a register which are not
+  // separately addressable. They need to be described so that partially
+  // overlapping registers end up with a different lane mask. This is required
+  // to enable subreg liveness tracking.
+  //
+  // For example: 8-bit B0 is a sub-register of 16-bit H0.
+  // * B0 is described with 'bsub'.
+  // * H0 is described with 'bsub + bsub_hi' == 'hsub'.
+  def bsub_hi   : SubRegIndex<8, 8>;
+  def hsub_hi   : SubRegIndex<16, 16>;
+  def ssub_hi   : SubRegIndex<32, 32>;
+  def dsub_hi   : SubRegIndex<64, 64>;
+  def zsub_hi   : SubRegIndex<-1, 128>;
+  // sub_32_hi describes the top 32 bits in e.g. X0
+  def sub_32_hi : SubRegIndex<32, 32>;
   // Note: Code depends on these having consecutive numbers
   def zsub0 : SubRegIndex<-1>;
   def zsub1 : SubRegIndex<-1>;
