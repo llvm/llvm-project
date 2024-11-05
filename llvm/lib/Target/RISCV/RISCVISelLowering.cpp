@@ -21608,11 +21608,12 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
     Value *VL = Builder.getInt32(VTy->getNumElements());
 
-    CallInst *CI = Builder.CreateIntrinsic(
-        Intrinsic::experimental_vp_strided_load,
-        {VTy, BasePtr->getType(), Stride->getType()},
-        {BasePtr, Stride, Mask, VL});
-    CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), LI->getAlign()));
+    CallInst *CI =
+        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                {VTy, BasePtr->getType(), Stride->getType()},
+                                {BasePtr, Stride, Mask, VL});
+    CI->addParamAttr(
+        0, Attribute::getWithAlignment(CI->getContext(), LI->getAlign()));
     Shuffles[0]->replaceAllUsesWith(CI);
     return true;
   };
