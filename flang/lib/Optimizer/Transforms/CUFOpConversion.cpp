@@ -429,6 +429,16 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   }
 };
 
+static bool isDstGlobal(cuf::DataTransferOp op) {
+  if (auto declareOp = op.getDst().getDefiningOp<fir::DeclareOp>())
+    if (declareOp.getMemref().getDefiningOp<fir::AddrOfOp>())
+      return true;
+  if (auto declareOp = op.getDst().getDefiningOp<hlfir::DeclareOp>())
+    if (declareOp.getMemref().getDefiningOp<fir::AddrOfOp>())
+      return true;
+  return false;
+}
+
 struct CUFDataTransferOpConversion
     : public mlir::OpRewritePattern<cuf::DataTransferOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -522,8 +532,11 @@ struct CUFDataTransferOpConversion
         mlir::isa<fir::BaseBoxType>(dstTy)) {
       // Transfer between two descriptor.
       mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
-              loc, builder);
+          isDstGlobal(op)
+              ? fir::runtime::getRuntimeFunc<mkRTKey(
+                    CUFDataTransferGlobalDescDesc)>(loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
+                    loc, builder);
 
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
