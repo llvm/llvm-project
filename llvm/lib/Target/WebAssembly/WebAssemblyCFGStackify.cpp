@@ -2000,7 +2000,7 @@ static MachineBasicBlock *getSingleUnwindDest(const MachineInstr *TryTable) {
   case wasm::WASM_OPCODE_CATCH_ALL_REF:
     return TryTable->getOperand(3).getMBB();
   default:
-    assert(false);
+    llvm_unreachable("try_table: Invalid catch clause\n");
   }
 }
 
