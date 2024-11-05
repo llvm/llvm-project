@@ -92,6 +92,13 @@ set(hexagon_SOURCES
   xray_trampoline_hexagon.S
   )
 
+set(s390x_SOURCES
+  xray_s390x.cpp
+  xray_trampoline_s390x.S
+  )
+# Enable vector instructions in the assembly file.
+set_source_files_properties(xray_trampoline_s390x.S PROPERTIES COMPILE_FLAGS -mvx)
+
 set(XRAY_SOURCE_ARCHS
   arm
   armhf
@@ -102,6 +109,7 @@ set(XRAY_SOURCE_ARCHS
   mips64
   mips64el
   powerpc64le
+  s390x
   x86_64
   )
 
@@ -152,6 +160,7 @@ set(XRAY_ALL_SOURCE_FILES
   ${mips64_SOURCES}
   ${mips64el_SOURCES}
   ${powerpc64le_SOURCES}
+  ${s390x_SOURCES}
   ${XRAY_IMPL_HEADERS}
   )
 list(REMOVE_DUPLICATES XRAY_ALL_SOURCE_FILES)
