@@ -219,14 +219,14 @@ __extension__ typedef __int128 a128;
 
 // Part of ABI, do not change.
 // https://github.com/llvm/llvm-project/blob/main/libcxx/include/atomic
-enum class morder : int {
-  relaxed,
-  consume,
-  acquire,
-  release,
-  acq_rel,
-  seq_cst
-};
+typedef enum {
+  mo_relaxed,
+  mo_consume,
+  mo_acquire,
+  mo_release,
+  mo_acq_rel,
+  mo_seq_cst
+} morder;
 
 struct ThreadState;
 
