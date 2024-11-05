@@ -3,7 +3,7 @@
 cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 ===============================================================
 
-Flags calls to operator[] in STL containers and suggests replacing it with
+Flags calls to ``operator[]`` in STL containers and suggests replacing it with
 safe alternatives.
 
 For example the code
