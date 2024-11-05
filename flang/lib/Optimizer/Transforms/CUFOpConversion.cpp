@@ -580,27 +580,6 @@ struct CUFDataTransferOpConversion
           builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
-    } else if (mlir::isa<fir::BaseBoxType>(dstTy) && fir::isa_trivial(srcTy)) {
-      // Scalar to descriptor transfer.
-      mlir::Value val = op.getSrc();
-      if (op.getSrc().getDefiningOp() &&
-          mlir::isa<mlir::arith::ConstantOp>(op.getSrc().getDefiningOp())) {
-        mlir::Value alloc = builder.createTemporary(loc, srcTy);
-        builder.create<fir::StoreOp>(loc, op.getSrc(), alloc);
-        val = alloc;
-      }
-
-      mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFMemsetDescriptor)>(loc,
-                                                                     builder);
-      auto fTy = func.getFunctionType();
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
-          fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
-      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-          builder, loc, fTy, op.getDst(), val, sourceFile, sourceLine)};
-      builder.create<fir::CallOp>(loc, func, args);
-      rewriter.eraseOp(op);
     } else {
       // Type used to compute the width.
       mlir::Type computeType = dstTy;
