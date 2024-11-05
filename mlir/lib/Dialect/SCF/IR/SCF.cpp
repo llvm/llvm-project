@@ -1084,13 +1084,12 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
         continue;
 
       // Create a new ForOp with that iter operand replaced.
-      ValueTypeCastFnTy castFn = [](OpBuilder &b, Location loc, Type type,
-                                    Value source) {
-        return b.create<tensor::CastOp>(loc, type, source);
-      };
       rewriter.replaceOp(
-          op, replaceAndCastForOpIterArg(rewriter, op, iterOpOperand,
-                                         incomingCast.getSource(), castFn));
+          op, replaceAndCastForOpIterArg(
+                  rewriter, op, iterOpOperand, incomingCast.getSource(),
+                  [](OpBuilder &b, Location loc, Type type, Value source) {
+                    return b.create<tensor::CastOp>(loc, type, source);
+                  }));
       return success();
     }
     return failure();
