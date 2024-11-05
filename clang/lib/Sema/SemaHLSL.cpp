@@ -1894,15 +1894,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckUnsignedIntRepresentation(&SemaRef, TheCall))
       return true;
 
-    // Set the return type to be a scalar or vector of same length of double
-    ASTContext &Ctx = SemaRef.getASTContext();
-    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
-
-    QualType ResultType =
-        VTy ? Ctx.getVectorType(Ctx.DoubleTy, VTy->getNumElements(),
-                                VTy->getVectorKind())
-            : Ctx.DoubleTy;
-    TheCall->setType(ResultType);
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().DoubleTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
