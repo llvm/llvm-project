@@ -12,7 +12,9 @@ define void @dwarf() {
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    call foo
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: dwarf:
@@ -24,7 +26,9 @@ define void @dwarf() {
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    call foo
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 entry:
   %0 = call ptr @llvm.eh.dwarf.cfa(i32 0)
