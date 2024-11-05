@@ -39,12 +39,14 @@ int main() {
   // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
   // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
   // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
+  // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
   return tmain(a);
   // CHECK: call {{.*}} [[TMAIN:@.+]](
   // CHECK: ret
 }
 
 // CHECK: [[TMAIN]]
+// CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
 // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
 // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
 // CHECK: call {{.*}}void @__kmpc_flush(ptr {{(@|%).+}})
