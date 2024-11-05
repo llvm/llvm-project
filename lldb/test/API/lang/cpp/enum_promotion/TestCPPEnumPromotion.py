@@ -7,8 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCPPEnumPromotion(TestBase):
 
+class TestCPPEnumPromotion(TestBase):
     @skipIf(debug_info=no_match(["dwarf", "dwo"]))
     def test(self):
         self.build()

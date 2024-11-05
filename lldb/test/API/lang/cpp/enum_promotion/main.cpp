@@ -4,7 +4,7 @@ enum EnumUInt { UInt = 0x10001 };
 enum EnumSLong { SLong = 0x100000001 };
 enum EnumULong { ULong = 0xFFFFFFFFFFFFFFF0 };
 enum EnumNChar { NChar = -1 };
-enum EnumNShort { NShort= -0x101 };
+enum EnumNShort { NShort = -0x101 };
 enum EnumNInt { NInt = -0x10001 };
 enum EnumNLong { NLong = -0x100000001 };
 
