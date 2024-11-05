@@ -6162,11 +6162,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                        IID == Intrinsic::amdgcn_set_inactive_chain_arg;
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
-  const GCNSubtarget &ST =
-      DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
+  const GCNSubtarget *ST = TLI.getSubtarget();
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
-      ST.hasDPALU_DPP() &&
+      ST->hasDPALU_DPP() &&
       AMDGPU::isLegalDPALU_DPPControl(N->getConstantOperandVal(3)))
     SplitSize = 64;
 
