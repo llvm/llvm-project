@@ -696,10 +696,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
 
   // Core in Vulkan 1.1 and earlier.
-  addAvailableCaps({Capability::Int64, Capability::Float16,
-                    Capability::Float64, Capability::GroupNonUniform,
-                    Capability::Image1D, Capability::SampledBuffer,
-                    Capability::ImageBuffer,
+  addAvailableCaps({Capability::Int64, Capability::Float16, Capability::Float64,
+                    Capability::GroupNonUniform, Capability::Image1D,
+                    Capability::SampledBuffer, Capability::ImageBuffer,
                     Capability::UniformBufferArrayDynamicIndexing,
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
