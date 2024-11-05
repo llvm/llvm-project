@@ -91,12 +91,12 @@ define void @caller(ptr addrspace(7) noundef nonnull %arg) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 [[V_INT_RSRC]], 32
 ; CHECK-NEXT:    [[V_INT_OFF:%.*]] = zext i32 [[V_OFF]] to i160
 ; CHECK-NEXT:    [[V_INT:%.*]] = or i160 [[TMP1]], [[V_INT_OFF]]
-; CHECK-NEXT:    [[V_INT_CAST:%.*]] = bitcast i160 [[V_INT]] to <5 x i32>
-; CHECK-NEXT:    [[V_INT_CAST_SLICE_0:%.*]] = shufflevector <5 x i32> [[V_INT_CAST]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[V_INT_CAST_SLICE_0]], ptr addrspace(8) align 32 [[ARG_RSRC]], i32 [[ARG_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[ARG_PART_4:%.*]] = add nuw i32 [[ARG_OFF]], 16
-; CHECK-NEXT:    [[V_INT_CAST_SLICE_4:%.*]] = extractelement <5 x i32> [[V_INT_CAST]], i64 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[V_INT_CAST_SLICE_4]], ptr addrspace(8) align 16 [[ARG_RSRC]], i32 [[ARG_PART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[V_INT_LEGAL:%.*]] = bitcast i160 [[V_INT]] to <5 x i32>
+; CHECK-NEXT:    [[V_INT_SLICE_0:%.*]] = shufflevector <5 x i32> [[V_INT_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[V_INT_SLICE_0]], ptr addrspace(8) align 32 [[ARG_RSRC]], i32 [[ARG_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_PART_4:%.*]] = add i32 [[ARG_OFF]], 16
+; CHECK-NEXT:    [[V_INT_SLICE_4:%.*]] = extractelement <5 x i32> [[V_INT_LEGAL]], i64 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[V_INT_SLICE_4]], ptr addrspace(8) align 16 [[ARG_RSRC]], i32 [[ARG_PART_4]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
   %v = call ptr addrspace(7) @extern(ptr addrspace(7) %arg)
@@ -109,7 +109,7 @@ define internal noalias noundef nonnull ptr addrspace(7) @foo(ptr addrspace(7) n
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } noundef [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ARG_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[ARG]], 0
 ; CHECK-NEXT:    [[ARG_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[ARG]], 1
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[ARG_OFF]], 4
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[ARG_OFF]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[ARG_RSRC]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]

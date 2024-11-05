@@ -728,10 +728,11 @@ Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
   if (!DL.typeSizeEqualsStoreSize(T))
     T = IRB.getIntNTy(Size.getFixedValue());
   Type *ElemTy = T->getScalarType();
-  if (isa<PointerType, ScalableVectorType>(ElemTy))
+  if (isa<PointerType, ScalableVectorType>(ElemTy)) {
     // Pointers are always big enough, and we'll let scalable vectors through to
     // fail in codegen.
     return T;
+  }
   unsigned ElemSize = DL.getTypeSizeInBits(ElemTy).getFixedValue();
   if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= 128) {
     // [vectors of] anything that's 16/32/64/128 bits can be cast and split into
@@ -1809,7 +1810,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
   const DataLayout &DL = GEP.getDataLayout();
-  bool IsNUW = GEP.hasNoUnsignedWrap();
+  bool InBounds = GEP.isInBounds();
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
   // we need the GEP result to have ptr addrspace(7) type.
@@ -1824,12 +1825,16 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return {Rsrc, Off};
   }
 
+  bool HasNonNegativeOff = false;
+  if (auto *CI = dyn_cast<ConstantInt>(OffAccum)) {
+    HasNonNegativeOff = !CI->isNegative();
+  }
   Value *NewOff;
   if (match(Off, m_Zero())) {
     NewOff = OffAccum;
   } else {
     NewOff = IRB.CreateAdd(Off, OffAccum, "",
-                           /*hasNUW=*/IsNUW,
+                           /*hasNUW=*/InBounds && HasNonNegativeOff,
                            /*hasNSW=*/false);
   }
   copyMetadata(NewOff, &GEP);
