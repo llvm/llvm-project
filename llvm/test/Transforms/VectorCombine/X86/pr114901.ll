@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mattr=sse2 | FileCheck %s --check-prefixes=SSE
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mattr=avx2 | FileCheck %s --check-prefixes=AVX
 
-; FIXME: PR114901 - ensure that the ASHR node doesn't commute the operands.
+; PR114901 - ensure that the ASHR node doesn't commute the operands.
 define i1 @PR114901(<4 x i32> %a) {
 ; SSE-LABEL: define i1 @PR114901(
 ; SSE-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -15,10 +15,11 @@ define i1 @PR114901(<4 x i32> %a) {
 ;
 ; AVX-LABEL: define i1 @PR114901(
 ; AVX-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; AVX-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = ashr <4 x i1> [[TMP1]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
+; AVX-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; AVX-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[A]], i32 3
+; AVX-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[E1]], -8
+; AVX-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[E3]], 42
+; AVX-NEXT:    [[R:%.*]] = ashr i1 [[CMP3]], [[CMP1]]
 ; AVX-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <4 x i32> %a, i32 1
