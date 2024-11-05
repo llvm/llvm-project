@@ -22,6 +22,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -413,8 +414,8 @@ bool CGObjCRuntime::canMessageReceiverBeNull(CodeGenFunction &CGF,
     }
   }
 
-  // Otherwise, assume it can be null.
-  return true;
+  // Otherwise, try to prove if it can be null.
+  return !llvm::isKnownNonZero(receiver, CGM.getDataLayout());
 }
 
 bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
