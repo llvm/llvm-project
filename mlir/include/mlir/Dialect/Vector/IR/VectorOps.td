@@ -13,20 +13,21 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 #define MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 
-include "mlir/Dialect/Vector/IR/Vector.td"
-include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
 include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
-include "mlir/IR/EnumAttr.td"
+include "mlir/Dialect/Vector/IR/Vector.td"
+include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/EnumAttr.td"
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -346,6 +347,7 @@ def Vector_MultiDimReductionOp :
 
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
@@ -627,6 +629,7 @@ def Vector_DeinterleaveOp :
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "::llvm::cast<VectorType>($_self).getElementType()">]>,
@@ -673,6 +676,7 @@ def Vector_ExtractElementOp :
 
 def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      InferTypeOpAdaptorWithIsCompatible]> {
@@ -810,6 +814,7 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
 
 def Vector_InsertElementOp :
   Vector_Op<"insertelement", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      TypesMatchWith<"source operand type matches element type of result",
                     "result", "source",
                     "::llvm::cast<VectorType>($_self).getElementType()">,
@@ -858,6 +863,7 @@ def Vector_InsertElementOp :
 
 def Vector_InsertOp :
   Vector_Op<"insert", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      AllTypesMatch<["dest", "result"]>]> {
@@ -2204,7 +2210,9 @@ def Vector_CompressStoreOp :
 }
 
 def Vector_ShapeCastOp :
-  Vector_Op<"shape_cast", [Pure]>,
+  Vector_Op<"shape_cast", [Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
+  ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "shape_cast casts between vector shapes";
@@ -2801,6 +2809,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
 
 def Vector_SplatOp : Vector_Op<"splat", [
     Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",
                    "::llvm::cast<VectorType>($_self).getElementType()">
@@ -2946,7 +2955,6 @@ def Vector_StepOp : Vector_Op<"step", [Pure]> {
     %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
     ```
   }];
-  let hasFolder = 1;
   let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
 }

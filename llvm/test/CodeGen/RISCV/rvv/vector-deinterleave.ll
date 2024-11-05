@@ -84,6 +84,22 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv
 ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %retval
 }
 
+define {<vscale x 4 x i64>, <vscale x 4 x i64>} @vector_deinterleave_nxv4i64_nxv8i64(<vscale x 8 x i64> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv4i64_nxv8i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vadd.vv v24, v16, v16
+; CHECK-NEXT:    vrgather.vv v16, v8, v24
+; CHECK-NEXT:    vadd.vi v24, v24, 1
+; CHECK-NEXT:    vrgather.vv v0, v8, v24
+; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vmv4r.v v12, v0
+; CHECK-NEXT:    ret
+%retval = call {<vscale x 4 x i64>, <vscale x 4 x i64>} @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %vec)
+ret {<vscale x 4 x i64>, <vscale x 4 x i64>} %retval
+}
+
 declare {<vscale x 16 x i1>, <vscale x 16 x i1>} @llvm.vector.deinterleave2.nxv32i1(<vscale x 32 x i1>)
 declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8>)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16>)

@@ -510,6 +510,7 @@ public:
   NODE_ENUM(OmpDefaultmapClause, ImplicitBehavior)
   NODE_ENUM(OmpDefaultmapClause, VariableCategory)
   NODE(parser, OmpDependClause)
+  NODE(parser, OmpDetachClause)
   NODE(OmpDependClause, InOut)
   NODE(OmpDependClause, Sink)
   NODE(OmpDependClause, Source)

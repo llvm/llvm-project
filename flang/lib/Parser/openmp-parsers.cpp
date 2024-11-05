@@ -398,6 +398,9 @@ TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
         construct<OmpLinearClause>(construct<OmpLinearClause::WithoutModifier>(
             nonemptyList(name), maybe(":" >> scalarIntConstantExpr)))))
 
+// OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
+TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
+
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(
     Parser<OmpObjectList>{}, maybe(":" >> scalarIntConstantExpr)))
@@ -529,6 +532,8 @@ TYPE_PARSER(
                        parenthesized(Parser<OmpReductionClause>{}))) ||
     "IN_REDUCTION" >> construct<OmpClause>(construct<OmpClause::InReduction>(
                           parenthesized(Parser<OmpInReductionClause>{}))) ||
+    "DETACH" >> construct<OmpClause>(construct<OmpClause::Detach>(
+                    parenthesized(Parser<OmpDetachClause>{}))) ||
     "TASK_REDUCTION" >>
         construct<OmpClause>(construct<OmpClause::TaskReduction>(
             parenthesized(Parser<OmpReductionClause>{}))) ||

@@ -6190,7 +6190,8 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
                                           ClassTemplateSpecializationDecl *D) {
   ClassTemplateDecl *ClassTemplate;
-  if (Error Err = importInto(ClassTemplate, D->getSpecializedTemplate()))
+  if (Error Err = importInto(ClassTemplate,
+                             D->getSpecializedTemplate()->getCanonicalDecl()))
     return std::move(Err);
 
   // Import the context of this declaration.

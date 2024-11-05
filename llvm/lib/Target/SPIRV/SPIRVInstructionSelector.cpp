@@ -990,13 +990,13 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
     GR.add(GV, GR.CurMF, VarReg);
 
-    buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(VarReg)
         .addUse(GR.getSPIRVTypeID(VarTy))
         .addImm(SPIRV::StorageClass::UniformConstant)
         .addUse(Const)
         .constrainAllUses(TII, TRI, RBI);
+    buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
     SPIRVType *SourceTy = GR.getOrCreateSPIRVPointerType(
         ValTy, I, TII, SPIRV::StorageClass::UniformConstant);
     SrcReg = MRI->createGenericVirtualRegister(LLT::scalar(64));

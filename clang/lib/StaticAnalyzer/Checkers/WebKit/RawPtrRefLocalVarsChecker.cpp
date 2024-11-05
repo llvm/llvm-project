@@ -165,15 +165,18 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   return false;
 }
 
-class UncountedLocalVarsChecker
+class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
-  BugType Bug{this,
-              "Uncounted raw pointer or reference not provably backed by "
-              "ref-counted variable",
-              "WebKit coding guidelines"};
+  BugType Bug;
   mutable BugReporter *BR;
 
 public:
+  RawPtrRefLocalVarsChecker(const char *description)
+      : Bug(this, description, "WebKit coding guidelines") {}
+
+  virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
+  virtual const char *ptrKind() const = 0;
+
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
     BR = &BRArg;
@@ -182,14 +185,14 @@ public:
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
-      const UncountedLocalVarsChecker *Checker;
+      const RawPtrRefLocalVarsChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
       TrivialFunctionAnalysis TFA;
 
       using Base = RecursiveASTVisitor<LocalVisitor>;
 
-      explicit LocalVisitor(const UncountedLocalVarsChecker *Checker)
+      explicit LocalVisitor(const RawPtrRefLocalVarsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
       }
@@ -261,7 +264,7 @@ public:
     if (shouldSkipVarDecl(V))
       return;
 
-    std::optional<bool> IsUncountedPtr = isUncountedPtr(V->getType());
+    std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
@@ -324,7 +327,7 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     if (dyn_cast<ParmVarDecl>(V)) {
-      Os << "Assignment to an uncounted parameter ";
+      Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";
 
@@ -342,7 +345,7 @@ public:
       else
         Os << "Variable ";
       printQuotedQualifiedName(Os, V);
-      Os << " is uncounted and unsafe.";
+      Os << " is " << ptrKind() << " and unsafe.";
 
       PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -352,6 +355,29 @@ public:
     }
   }
 };
+
+class UncountedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
+public:
+  UncountedLocalVarsChecker()
+      : RawPtrRefLocalVarsChecker("Uncounted raw pointer or reference not "
+                                  "provably backed by ref-counted variable") {}
+  std::optional<bool> isUnsafePtr(const QualType T) const final {
+    return isUncountedPtr(T);
+  }
+  const char *ptrKind() const final { return "uncounted"; }
+};
+
+class UncheckedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
+public:
+  UncheckedLocalVarsChecker()
+      : RawPtrRefLocalVarsChecker("Unchecked raw pointer or reference not "
+                                  "provably backed by checked variable") {}
+  std::optional<bool> isUnsafePtr(const QualType T) const final {
+    return isUncheckedPtr(T);
+  }
+  const char *ptrKind() const final { return "unchecked"; }
+};
+
 } // namespace
 
 void ento::registerUncountedLocalVarsChecker(CheckerManager &Mgr) {
@@ -359,5 +385,13 @@ void ento::registerUncountedLocalVarsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncountedLocalVarsChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerUncheckedLocalVarsChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UncheckedLocalVarsChecker>();
+}
+
+bool ento::shouldRegisterUncheckedLocalVarsChecker(const CheckerManager &) {
   return true;
 }

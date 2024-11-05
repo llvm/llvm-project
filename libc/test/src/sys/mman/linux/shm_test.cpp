@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/fcntl/fcntl.h"
 #include "src/sys/mman/mmap.h"
@@ -16,7 +17,6 @@
 #include "src/unistd/ftruncate.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/LibcTest.h"
-#include <asm-generic/fcntl.h>
 #include <sys/syscall.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;

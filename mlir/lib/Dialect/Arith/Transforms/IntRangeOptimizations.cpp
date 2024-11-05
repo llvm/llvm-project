@@ -51,21 +51,27 @@ static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
   if (!maybeConstValue.has_value())
     return failure();
 
+  Type type = value.getType();
+  Location loc = value.getLoc();
   Operation *maybeDefiningOp = value.getDefiningOp();
   Dialect *valueDialect =
       maybeDefiningOp ? maybeDefiningOp->getDialect()
                       : value.getParentRegion()->getParentOp()->getDialect();
-  Attribute constAttr =
-      rewriter.getIntegerAttr(value.getType(), *maybeConstValue);
-  Operation *constOp = valueDialect->materializeConstant(
-      rewriter, constAttr, value.getType(), value.getLoc());
+
+  Attribute constAttr;
+  if (auto shaped = dyn_cast<ShapedType>(type)) {
+    constAttr = mlir::DenseIntElementsAttr::get(shaped, *maybeConstValue);
+  } else {
+    constAttr = rewriter.getIntegerAttr(type, *maybeConstValue);
+  }
+  Operation *constOp =
+      valueDialect->materializeConstant(rewriter, constAttr, type, loc);
   // Fall back to arith.constant if the dialect materializer doesn't know what
   // to do with an integer constant.
   if (!constOp)
     constOp = rewriter.getContext()
                   ->getLoadedDialect<ArithDialect>()
-                  ->materializeConstant(rewriter, constAttr, value.getType(),
-                                        value.getLoc());
+                  ->materializeConstant(rewriter, constAttr, type, loc);
   if (!constOp)
     return failure();
 
