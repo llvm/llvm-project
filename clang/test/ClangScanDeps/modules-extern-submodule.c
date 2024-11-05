@@ -43,7 +43,7 @@ module third {}
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1",
 // CHECK:              "-fmodule-map-file=[[PREFIX]]/second/second/module.modulemap"
-// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/second/second/sub.modulemap"
+// CHECK-NOT:          "-fmodule-map-file=[[PREFIX]]/second/second/sub.modulemap"
 // CHECK-NOT:          "-fmodule-map-file=[[PREFIX]]/third/module.modulemap"
 // CHECK:              "-fmodule-file=second=[[PREFIX]]/cache/{{.*}}/second-{{.*}}.pcm"
 // CHECK:            ],

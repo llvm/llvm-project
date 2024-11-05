@@ -1797,7 +1797,10 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsSystemFile = isSystem(File.getFileCharacteristic());
     Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
-    Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
+
+    FileID IncludeFileID = SourceMgr.getFileID(File.getIncludeLoc());
+    Entry.IsTopLevel = IncludeFileID.isInvalid() || IncludeFileID.ID < 0 ||
+                       !IsSLocFileEntryAffecting[IncludeFileID.ID];
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     uint64_t ContentHash = 0;
