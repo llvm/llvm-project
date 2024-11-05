@@ -1942,8 +1942,15 @@ let Predicates = [HasPAuth] in {
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
-    let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
-    let Defs = [X16,X17];
+    let Size = 68; // 12 fixed + 56 variable, for pointer offset, discriminator and
+                   // ELF signed GOT signed pointer authentication (if no FPAC)
+    let Defs = [X16,X17,NZCV];
+  }
+
+  def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
+               Sched<[WriteI, ReadI]> {
+    let Defs = [X16,X17,NZCV];
+    let Size = 44;
   }
 
   // Load a signed global address from a special $auth_ptr$ stub slot.

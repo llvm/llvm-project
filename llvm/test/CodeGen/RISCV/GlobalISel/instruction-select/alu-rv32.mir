@@ -200,8 +200,9 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY]], 1234
-    ; RV32I-NEXT: $x10 = COPY [[ADDI]]
+    ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1234
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY]], [[ADDI]]
+    ; RV32I-NEXT: $x10 = COPY [[SUB]]
     ; RV32I-NEXT: PseudoRET implicit $x10
     %0:gprb(s32) = COPY $x10
     %1:gprb(s32) = G_CONSTANT i32 -1234

@@ -494,15 +494,14 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
     return false;
 
   const unsigned Size = Ty.getSizeInBits();
+  if (Ty.isPointerVector())
+    return true;
   if (Size <= 64)
     return false;
   // Address space 8 pointers get their own workaround.
   if (hasBufferRsrcWorkaround(Ty))
     return false;
   if (!Ty.isVector())
-    return true;
-
-  if (Ty.isPointerVector())
     return true;
 
   unsigned EltSize = Ty.getScalarSizeInBits();
@@ -5820,8 +5819,9 @@ Register AMDGPULegalizerInfo::handleD16VData(MachineIRBuilder &B,
   return Reg;
 }
 
-Register AMDGPULegalizerInfo::fixStoreSourceType(
-  MachineIRBuilder &B, Register VData, bool IsFormat) const {
+Register AMDGPULegalizerInfo::fixStoreSourceType(MachineIRBuilder &B,
+                                                 Register VData, LLT MemTy,
+                                                 bool IsFormat) const {
   MachineRegisterInfo *MRI = B.getMRI();
   LLT Ty = MRI->getType(VData);
 
@@ -5831,6 +5831,10 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(
   if (hasBufferRsrcWorkaround(Ty))
     return castBufferRsrcToV4I32(VData, B);
 
+  if (shouldBitcastLoadStoreType(ST, Ty, MemTy)) {
+    Ty = getBitcastRegisterType(Ty);
+    VData = B.buildBitcast(Ty, VData).getReg(0);
+  }
   // Fixup illegal register types for i8 stores.
   if (Ty == LLT::scalar(8) || Ty == S16) {
     Register AnyExt = B.buildAnyExt(LLT::scalar(32), VData).getReg(0);
@@ -5848,22 +5852,26 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(
 }
 
 bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B,
+                                              LegalizerHelper &Helper,
                                               bool IsTyped,
                                               bool IsFormat) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+
   Register VData = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(VData);
   LLT EltTy = Ty.getScalarType();
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const LLT S32 = LLT::scalar(32);
 
-  VData = fixStoreSourceType(B, VData, IsFormat);
-  castBufferRsrcArgToV4I32(MI, B, 2);
-  Register RSrc = MI.getOperand(2).getReg();
-
   MachineMemOperand *MMO = *MI.memoperands_begin();
   const int MemSize = MMO->getSize().getValue();
+  LLT MemTy = MMO->getMemoryType();
+
+  VData = fixStoreSourceType(B, VData, MemTy, IsFormat);
+
+  castBufferRsrcArgToV4I32(MI, B, 2);
+  Register RSrc = MI.getOperand(2).getReg();
 
   unsigned ImmOffset;
 
@@ -5956,10 +5964,13 @@ static void buildBufferLoad(unsigned Opc, Register LoadDstReg, Register RSrc,
 }
 
 bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
-                                             MachineRegisterInfo &MRI,
-                                             MachineIRBuilder &B,
+                                             LegalizerHelper &Helper,
                                              bool IsFormat,
                                              bool IsTyped) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  GISelChangeObserver &Observer = Helper.Observer;
+
   // FIXME: Verifier should enforce 1 MMO for these intrinsics.
   MachineMemOperand *MMO = *MI.memoperands_begin();
   const LLT MemTy = MMO->getMemoryType();
@@ -6008,9 +6019,21 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   // Make addrspace 8 pointers loads into 4xs32 loads here, so the rest of the
   // logic doesn't have to handle that case.
   if (hasBufferRsrcWorkaround(Ty)) {
+    Observer.changingInstr(MI);
     Ty = castBufferRsrcFromV4I32(MI, B, MRI, 0);
+    Observer.changedInstr(MI);
     Dst = MI.getOperand(0).getReg();
+    B.setInsertPt(B.getMBB(), MI);
   }
+  if (shouldBitcastLoadStoreType(ST, Ty, MemTy)) {
+    Ty = getBitcastRegisterType(Ty);
+    Observer.changingInstr(MI);
+    Helper.bitcastDst(MI, Ty, 0);
+    Observer.changedInstr(MI);
+    Dst = MI.getOperand(0).getReg();
+    B.setInsertPt(B.getMBB(), MI);
+  }
+
   LLT EltTy = Ty.getScalarType();
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
@@ -7390,17 +7413,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_store:
   case Intrinsic::amdgcn_struct_buffer_store:
   case Intrinsic::amdgcn_struct_ptr_buffer_store:
-    return legalizeBufferStore(MI, MRI, B, false, false);
+    return legalizeBufferStore(MI, Helper, false, false);
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
   case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
-    return legalizeBufferStore(MI, MRI, B, false, true);
+    return legalizeBufferStore(MI, Helper, false, true);
   case Intrinsic::amdgcn_raw_tbuffer_store:
   case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_store:
-    return legalizeBufferStore(MI, MRI, B, true, true);
+    return legalizeBufferStore(MI, Helper, true, true);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_atomic_buffer_load:
@@ -7409,17 +7432,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_ptr_buffer_load:
   case Intrinsic::amdgcn_struct_atomic_buffer_load:
   case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load:
-    return legalizeBufferLoad(MI, MRI, B, false, false);
+    return legalizeBufferLoad(MI, Helper, false, false);
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_buffer_load_format:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
-    return legalizeBufferLoad(MI, MRI, B, true, false);
+    return legalizeBufferLoad(MI, Helper, true, false);
   case Intrinsic::amdgcn_raw_tbuffer_load:
   case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    return legalizeBufferLoad(MI, MRI, B, true, true);
+    return legalizeBufferLoad(MI, Helper, true, true);
   case Intrinsic::amdgcn_raw_buffer_atomic_swap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_swap:
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:

@@ -164,45 +164,33 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
-// Deletes the specified signal from newset, if it is not present in oldset
-// Equivalently: newset[signum] = newset[signum] & oldset[signum]
-static void KeepUnblocked(__sanitizer_sigset_t &newset,
-                          __sanitizer_sigset_t &oldset, int signum) {
-  if (!internal_sigismember(&oldset, signum))
-    internal_sigdelset(&newset, signum);
-}
-
 // Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
-  __sanitizer_sigset_t currentset;
-  SetSigProcMask(NULL, &currentset);
-
-  __sanitizer_sigset_t newset;
-  internal_sigfillset(&newset);
+  __sanitizer_sigset_t set;
+  internal_sigfillset(&set);
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs.
   // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  KeepUnblocked(newset, currentset, 33);
+  internal_sigdelset(&set, 33);
 #  endif
 #  if SANITIZER_LINUX
   // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
-  KeepUnblocked(newset, currentset, 31);
+  internal_sigdelset(&set, 31);
 
   // Don't block synchronous signals
-  // but also don't unblock signals that the user had deliberately blocked.
-  KeepUnblocked(newset, currentset, SIGSEGV);
-  KeepUnblocked(newset, currentset, SIGBUS);
-  KeepUnblocked(newset, currentset, SIGILL);
-  KeepUnblocked(newset, currentset, SIGTRAP);
-  KeepUnblocked(newset, currentset, SIGABRT);
-  KeepUnblocked(newset, currentset, SIGFPE);
-  KeepUnblocked(newset, currentset, SIGPIPE);
+  internal_sigdelset(&set, SIGSEGV);
+  internal_sigdelset(&set, SIGBUS);
+  internal_sigdelset(&set, SIGILL);
+  internal_sigdelset(&set, SIGTRAP);
+  internal_sigdelset(&set, SIGABRT);
+  internal_sigdelset(&set, SIGFPE);
+  internal_sigdelset(&set, SIGPIPE);
 #  endif
 
-  SetSigProcMask(&newset, oldset);
+  SetSigProcMask(&set, oldset);
 }
 
 ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
@@ -268,6 +256,11 @@ int internal_madvise(uptr addr, uptr length, int advice) {
   return internal_syscall(SYSCALL(madvise), addr, length, advice);
 }
 
+#    if SANITIZER_FREEBSD
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return internal_syscall(SYSCALL(close_range), lowfd, highfd, flags);
+}
+#    endif
 uptr internal_close(fd_t fd) { return internal_syscall(SYSCALL(close), fd); }
 
 uptr internal_open(const char *filename, int flags) {

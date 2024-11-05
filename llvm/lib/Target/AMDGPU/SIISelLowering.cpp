@@ -3331,11 +3331,9 @@ void SITargetLowering::passSpecialInputs(
    };
   // clang-format on
 
-  for (auto Attr : ImplicitAttrs) {
-    AMDGPUFunctionArgInfo::PreloadedValue InputID = Attr.first;
-
+  for (auto [InputID, Attr] : ImplicitAttrs) {
     // If the callee does not use the attribute value, skip copying the value.
-    if (CLI.CB->hasFnAttr(Attr.second))
+    if (CLI.CB->hasFnAttr(Attr))
       continue;
 
     const auto [OutgoingArg, ArgRC, ArgTy] =
@@ -3927,10 +3925,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (auto &RegToPass : RegsToPass) {
-    Ops.push_back(
-        DAG.getRegister(RegToPass.first, RegToPass.second.getValueType()));
-  }
+  for (auto &[Reg, Val] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, Val.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
@@ -8863,16 +8859,16 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
 
   SDValue VData = Op.getOperand(2);
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-  auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+  auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
   auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
   SDValue Ops[] = {
       Op.getOperand(0),                      // Chain
       VData,                                 // vdata
       Rsrc,                                  // rsrc
       DAG.getConstant(0, DL, MVT::i32),      // vindex
-      Offsets.first,                         // voffset
+      VOffset,                               // voffset
       SOffset,                               // soffset
-      Offsets.second,                        // offset
+      Offset,                                // offset
       Op.getOperand(6),                      // cachepolicy
       DAG.getTargetConstant(0, DL, MVT::i1), // idxen
   };
@@ -8891,16 +8887,16 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
 
   SDValue VData = Op.getOperand(2);
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-  auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+  auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
   auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
   SDValue Ops[] = {
       Op.getOperand(0),                      // Chain
       VData,                                 // vdata
       Rsrc,                                  // rsrc
       Op.getOperand(4),                      // vindex
-      Offsets.first,                         // voffset
+      VOffset,                               // voffset
       SOffset,                               // soffset
-      Offsets.second,                        // offset
+      Offset,                                // offset
       Op.getOperand(7),                      // cachepolicy
       DAG.getTargetConstant(1, DL, MVT::i1), // idxen
   };
@@ -8981,15 +8977,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntrID == Intrinsic::amdgcn_raw_ptr_buffer_load_format;
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(3), DAG);
     auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(5),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
@@ -9008,15 +9004,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntrID == Intrinsic::amdgcn_struct_ptr_buffer_load_format;
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         Op.getOperand(3),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
@@ -9028,16 +9024,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(3), DAG);
     auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
 
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(5),                      // format
         Op.getOperand(6),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
@@ -9055,16 +9051,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
 
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         Op.getOperand(3),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // format
         Op.getOperand(7),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
@@ -9185,7 +9181,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
@@ -9193,9 +9189,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         Op.getOperand(3),                      // cmp
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(7),                      // cachepolicy
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
@@ -9209,7 +9205,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op->getOperand(4), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(6), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(6), DAG);
     auto SOffset = selectSOffset(Op.getOperand(7), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
@@ -9217,9 +9213,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         Op.getOperand(3),                      // cmp
         Rsrc,                                  // rsrc
         Op.getOperand(5),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(8),                      // cachepolicy
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
@@ -9623,16 +9619,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,                                 // vdata
         Rsrc,                                  // rsrc
         Op.getOperand(4),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(7),                      // format
         Op.getOperand(8),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
@@ -9651,16 +9647,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,                                 // vdata
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // format
         Op.getOperand(7),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
@@ -9696,16 +9692,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,
         Rsrc,
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
@@ -9747,16 +9743,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     auto Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,
         Rsrc,
         Op.getOperand(4),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(7),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
@@ -16322,15 +16318,14 @@ static bool flatInstrMayAccessPrivate(const Instruction *I) {
        ++I) {
     auto *Low = mdconst::extract<ConstantInt>(
         NoaliasAddrSpaceMD->getOperand(2 * I + 0));
-    auto *High = mdconst::extract<ConstantInt>(
-        NoaliasAddrSpaceMD->getOperand(2 * I + 1));
-
-    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS) &&
-        High->getValue().ult(AMDGPUAS::PRIVATE_ADDRESS))
-      return true;
+    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS)) {
+      auto *High = mdconst::extract<ConstantInt>(
+          NoaliasAddrSpaceMD->getOperand(2 * I + 1));
+      return High->getValue().ule(AMDGPUAS::PRIVATE_ADDRESS);
+    }
   }
 
-  return false;
+  return true;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -16577,9 +16572,21 @@ SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
-  return CmpX->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
-             : AtomicExpansionKind::None;
+  unsigned AddrSpace = CmpX->getPointerAddressSpace();
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
+    return AtomicExpansionKind::NotAtomic;
+
+  if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
+    return AtomicExpansionKind::None;
+
+  const DataLayout &DL = CmpX->getDataLayout();
+
+  Type *ValTy = CmpX->getNewValOperand()->getType();
+
+  // If a 64-bit flat atomic may alias private, we need to avoid using the
+  // atomic in the private case.
+  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::Expand
+                                           : AtomicExpansionKind::None;
 }
 
 const TargetRegisterClass *
@@ -16745,40 +16752,8 @@ bool SITargetLowering::checkForPhysRegDependency(
   return false;
 }
 
-void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
-  AtomicRMWInst::BinOp Op = AI->getOperation();
-
-  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
-      Op == AtomicRMWInst::Xor) {
-    if (auto *ConstVal = dyn_cast<Constant>(AI->getValOperand());
-        ConstVal && ConstVal->isNullValue()) {
-      // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
-      AI->setOperation(AtomicRMWInst::Add);
-
-      // TODO: Turn the below private handling into a no-op for idempotent
-      // cases.
-    }
-  }
-
-  // The non-flat expansions should only perform the de-canonicalization of
-  // identity values.
-  if (AI->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
-    return;
-
-  // FullFlatEmulation is true if we need to issue the private, shared, and
-  // global cases.
-  //
-  // If this is false, we are only dealing with the flat-targeting-private case,
-  // where we only insert a check for private and still use the flat instruction
-  // for global and shared.
-
-  // TODO: Avoid the private check for the fadd case depending on
-  // noalias.addrspace.
-
-  bool FullFlatEmulation = Op == AtomicRMWInst::FAdd &&
-                           Subtarget->hasAtomicFaddInsts() &&
-                           AI->getType()->isFloatTy();
-
+void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
+    Instruction *AI) const {
   // Given: atomicrmw fadd ptr %addr, float %val ordering
   //
   // With this expansion we produce the following code:
@@ -16825,6 +16800,34 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
 
+  auto *RMW = dyn_cast<AtomicRMWInst>(AI);
+  const unsigned PtrOpIdx = RMW ? AtomicRMWInst::getPointerOperandIndex()
+                                : AtomicCmpXchgInst::getPointerOperandIndex();
+  Value *Addr = AI->getOperand(PtrOpIdx);
+
+  /// TODO: Only need to check private, then emit flat-known-not private (no
+  /// need for shared block, or cast to global).
+  AtomicCmpXchgInst *CX = dyn_cast<AtomicCmpXchgInst>(AI);
+
+  Align Alignment;
+  if (RMW)
+    Alignment = RMW->getAlign();
+  else if (CX)
+    Alignment = CX->getAlign();
+  else
+    llvm_unreachable("unhandled atomic operation");
+
+  // FullFlatEmulation is true if we need to issue the private, shared, and
+  // global cases.
+  //
+  // If this is false, we are only dealing with the flat-targeting-private case,
+  // where we only insert a check for private and still use the flat instruction
+  // for global and shared.
+
+  bool FullFlatEmulation = RMW && RMW->getOperation() == AtomicRMWInst::FAdd &&
+                           Subtarget->hasAtomicFaddInsts() &&
+                           RMW->getType()->isFloatTy();
+
   // If the return value isn't used, do not introduce a false use in the phi.
   bool ReturnValueIsUsed = !AI->use_empty();
 
@@ -16846,11 +16849,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   BasicBlock *GlobalBB = BasicBlock::Create(Ctx, "atomicrmw.global", F, ExitBB);
   BasicBlock *PhiBB = BasicBlock::Create(Ctx, "atomicrmw.phi", F, ExitBB);
 
-  Value *Val = AI->getValOperand();
-  Type *ValTy = Val->getType();
-  Value *Addr = AI->getPointerOperand();
-  Align Alignment = AI->getAlign();
-
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
 
@@ -16865,8 +16863,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
     Instruction *Clone = AI->clone();
     Clone->insertInto(SharedBB, SharedBB->end());
-    Clone->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
-        .set(CastToLocal);
+    Clone->getOperandUse(PtrOpIdx).set(CastToLocal);
     LoadedShared = Clone;
 
     Builder.CreateBr(PhiBB);
@@ -16878,14 +16875,29 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateCondBr(IsPrivate, PrivateBB, GlobalBB);
 
   Builder.SetInsertPoint(PrivateBB);
+
   Value *CastToPrivate = Builder.CreateAddrSpaceCast(
       Addr, PointerType::get(Ctx, AMDGPUAS::PRIVATE_ADDRESS));
-  Value *LoadedPrivate = Builder.CreateAlignedLoad(ValTy, CastToPrivate,
-                                                   Alignment, "loaded.private");
 
-  Value *NewVal = buildAtomicRMWValue(Op, Builder, LoadedPrivate, Val);
+  Value *LoadedPrivate;
+  if (RMW) {
+    LoadedPrivate = Builder.CreateAlignedLoad(
+        RMW->getType(), CastToPrivate, RMW->getAlign(), "loaded.private");
 
-  Builder.CreateAlignedStore(NewVal, CastToPrivate, Alignment);
+    Value *NewVal = buildAtomicRMWValue(RMW->getOperation(), Builder,
+                                        LoadedPrivate, RMW->getValOperand());
+
+    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign());
+  } else {
+    auto [ResultLoad, Equal] =
+        buildCmpXchgValue(Builder, CastToPrivate, CX->getCompareOperand(),
+                          CX->getNewValOperand(), CX->getAlign());
+
+    Value *Insert = Builder.CreateInsertValue(PoisonValue::get(CX->getType()),
+                                              ResultLoad, 0);
+    LoadedPrivate = Builder.CreateInsertValue(Insert, Equal, 1);
+  }
+
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(GlobalBB);
@@ -16895,8 +16907,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   if (FullFlatEmulation) {
     Value *CastToGlobal = Builder.CreateAddrSpaceCast(
         Addr, PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS));
-    AI->getOperandUse(AtomicRMWInst::getPointerOperandIndex())
-        .set(CastToGlobal);
+    AI->getOperandUse(PtrOpIdx).set(CastToGlobal);
   }
 
   AI->removeFromParent();
@@ -16920,7 +16931,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.SetInsertPoint(PhiBB);
 
   if (ReturnValueIsUsed) {
-    PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    PHINode *Loaded = Builder.CreatePHI(AI->getType(), 3);
     AI->replaceAllUsesWith(Loaded);
     if (FullFlatEmulation)
       Loaded->addIncoming(LoadedShared, SharedBB);
@@ -16930,6 +16941,34 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   }
 
   Builder.CreateBr(ExitBB);
+}
+
+void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+      Op == AtomicRMWInst::Xor) {
+    if (const auto *ConstVal = dyn_cast<Constant>(AI->getValOperand());
+        ConstVal && ConstVal->isNullValue()) {
+      // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
+      AI->setOperation(AtomicRMWInst::Add);
+
+      // We may still need the private-alias-flat handling below.
+
+      // TODO: Skip this for cases where we cannot access remote memory.
+    }
+  }
+
+  // The non-flat expansions should only perform the de-canonicalization of
+  // identity values.
+  if (AI->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
+    return;
+
+  emitExpandAtomicAddrSpacePredicate(AI);
+}
+
+void SITargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+  emitExpandAtomicAddrSpacePredicate(CI);
 }
 
 LoadInst *

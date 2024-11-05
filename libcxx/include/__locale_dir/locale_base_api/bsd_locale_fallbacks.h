@@ -13,9 +13,11 @@
 #ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 
+#include <locale.h>
+
 #include <__locale_dir/locale_guard.h>
-#include <cstdio>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -78,7 +80,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __libcpp_mbrlen_l(const char* __s, size_t __
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t __l) {
+inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t& __l) {
   __locale_guard __current(__l);
   return localeconv();
 }
