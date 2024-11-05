@@ -7444,14 +7444,10 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 /// especially since the same BasicBlock may be passed as an argument multiple
 /// times. To do this, we can precompute a map, PhiPredIVs, of PHINode -> Pred
 /// BasicBlock -> IncomingValue and add it in the Wrapper so isEqual can do O(1)
-/// checking of the incoming values. We also want to use the incoming Phi
-/// values of a getCaseSuccessor to calculate the hash value. In order to avoid
-/// iterating all of the successor Phis on evry call to getHashValue, we
-/// precompute a list of incoming values from getCaseSucessor, PhiVals.
+/// checking of the incoming values.
 struct CaseHandleWrapper {
   const SwitchInst::CaseHandle Case;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> *PhiPredIVs;
-  SmallVector<Value *> *PhiVals;
 };
 
 namespace llvm {
@@ -7472,18 +7468,8 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     assert(BI->getNumSuccessors() == 1 &&
            "Expected unconditional branches to have one successor");
     assert(Succ->size() == 1 && "Expected just a single branch in the BB");
-
-    // Since we assume the BB is just a single BranchInst with a single
-    // succsessor, we hash as the BB and the incoming Values of its sucessor
-    // Phis. Initially, we tried to just use the sucessor BB as the hash, but
-    // this had poor performance. If the BB has no sucessor Phis, then just use
-    // BB to compute the hash.
     BasicBlock *BB = BI->getSuccessor(0);
-    if (CHW->PhiVals->begin() == CHW->PhiVals->end())
-      return hash_value(BB);
-    return hash_combine(
-        hash_value(BB),
-        hash_combine_range(CHW->PhiVals->begin(), CHW->PhiVals->end()));
+    return hash_value(BB);
   }
   static bool isEqual(const CaseHandleWrapper *LHS,
                       const CaseHandleWrapper *RHS) {
@@ -7533,7 +7519,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
-  DenseMap<BasicBlock *, SmallVector<Value *>> PhiVals;
   std::vector<CaseHandleWrapper> Cases;
   Cases.reserve(SI->getNumCases());
   for (auto &Case : SI->cases()) {
@@ -7560,28 +7545,23 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (!BI || BI->isConditional())
       continue;
 
-    if (Seen.insert(BB).second) {
-      // Keep track of which PHIs we need as keys in PhiPredIVs and whose values
-      // we need to get for PhiVals below.
+    if (Seen.insert(BB).second)
+      // Keep track of which PHIs we need as keys in PhiPredIVs.
       for (BasicBlock *Succ : BI->successors())
         for (PHINode &Phi : Succ->phis())
           Phis.insert(&Phi);
-    }
-    PhiVals[BB] = SmallVector<Value *>();
-    Cases.emplace_back(CaseHandleWrapper{Case, &PhiPredIVs, &PhiVals[BB]});
+
+    Cases.emplace_back(CaseHandleWrapper{Case, &PhiPredIVs});
   }
 
-  // Precompute the data structures to improve performance of isEqual and
-  // getHashValue for CaseHandleWrapper.
+  // Precompute the data structures to improve performance of isEqual for
+  // CaseHandleWrapper.
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
     PhiPredIVs[Phi] =
         DenseMap<BasicBlock *, Value *>(Phi->getNumIncomingValues());
-    for (auto &IV : Phi->incoming_values()) {
-      BasicBlock *BB = Phi->getIncomingBlock(IV);
-      PhiPredIVs[Phi].insert({BB, IV.get()});
-      PhiVals[BB].emplace_back(IV.get());
-    }
+    for (Use &IV : Phi->incoming_values())
+      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
   // Build a set such that if the CaseHandleWrapper exists in the set and
