@@ -14474,16 +14474,73 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   return true;
 }
 
+/// Try to map an integer comparison with size > XLEN to vector instructions
+/// before type legalization splits it up into chunks.
+static SDValue
+combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
+                                const SDLoc &DL, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  assert(ISD::isIntEqualitySetCC(CC) && "Bad comparison predicate");
+
+  if (!Subtarget.hasVInstructions())
+    return SDValue();
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  EVT OpVT = X.getValueType();
+  // We're looking for an oversized integer equality comparison.
+  if (OpVT.isScalableVT() || !OpVT.isScalarInteger())
+    return SDValue();
+
+  unsigned OpSize = OpVT.getSizeInBits();
+  // The size should be larger than XLen and smaller than the maximum vector
+  // size.
+  if (OpSize <= Subtarget.getXLen() ||
+      OpSize > Subtarget.getRealMinVLen() *
+                   Subtarget.getMaxLMULForFixedLengthVectors())
+    return SDValue();
+
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
+           X.getOpcode() == ISD::LOAD;
+  };
+  if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
+    return SDValue();
+
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  unsigned VecSize = OpSize / 8;
+  EVT VecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, VecSize);
+  EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, VecSize);
+
+  SDValue VecX = DAG.getBitcast(VecVT, X);
+  SDValue VecY = DAG.getBitcast(VecVT, Y);
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETNE);
+  return DAG.getSetCC(DL, VT, DAG.getNode(ISD::VECREDUCE_OR, DL, XLenVT, Cmp),
+                      DAG.getConstant(0, DL, XLenVT), CC);
+}
+
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
 // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
 // bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
 // can become a sext.w instead of a shift pair.
 static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
+  SDLoc dl(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+
+  // Looking for an equality compare.
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (ISD::isIntEqualitySetCC(Cond))
+    if (SDValue V = combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG,
+                                                    Subtarget))
+      return V;
 
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
@@ -14499,8 +14556,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       N0.getConstantOperandVal(1) != UINT64_C(0xffffffff))
     return SDValue();
 
-  // Looking for an equality compare.
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (!isIntEqualitySetCC(Cond))
     return SDValue();
 
@@ -14512,7 +14567,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 
   const APInt &C1 = N1C->getAPIntValue();
 
-  SDLoc dl(N);
   // If the constant is larger than 2^32 - 1 it is impossible for both sides
   // to be equal.
   if (C1.getActiveBits() > 32)
