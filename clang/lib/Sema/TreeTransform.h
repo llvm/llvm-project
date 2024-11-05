@@ -7435,7 +7435,8 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
 
     result = SemaRef.Context.getAttributedType(TL.getAttrKind(),
                                                modifiedType,
-                                               equivalentType);
+                                               equivalentType,
+                                               TL.getAttr());
   }
 
   AttributedTypeLoc newTL = TLB.push<AttributedTypeLoc>(result);
@@ -11934,15 +11935,16 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
   SmallVector<Expr *> ValidVars;
 
   for (Expr *Var : TransformedVars) {
-    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(Var);
+    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(
+        ParsedClause.getDirectiveKind(), C.getReductionOp(), Var);
     if (Res.isUsable())
       ValidVars.push_back(Res.get());
   }
 
-  NewClause = OpenACCReductionClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), C.getReductionOp(), ValidVars,
-      ParsedClause.getEndLoc());
+  NewClause = Self.getSema().OpenACC().CheckReductionClause(
+      ExistingClauses, ParsedClause.getDirectiveKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      C.getReductionOp(), ValidVars, ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -12017,10 +12019,9 @@ void OpenACCClauseTransform<Derived>::VisitGangClause(
     TransformedIntExprs.push_back(ER.get());
   }
 
-  NewClause = OpenACCGangClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), TransformedGangKinds, TransformedIntExprs,
-      ParsedClause.getEndLoc());
+  NewClause = Self.getSema().OpenACC().CheckGangClause(
+      ExistingClauses, ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
 }
 } // namespace
 template <typename Derived>

@@ -931,53 +931,48 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 ///////////////////////////////////////////////////////////////////////
 
 func.func @test_dilinearize_index(%linear_index: index) -> (index, index, index) {
-  %b0 = arith.constant 16 : index
-  %b1 = arith.constant 224 : index
-  %b2 = arith.constant 224 : index
-  %1:3 = affine.delinearize_index %linear_index into (%b0, %b1, %b2) : index, index, index
+  %1:3 = affine.delinearize_index %linear_index into (16, 224, 224) : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
 }
 // CHECK-LABEL:   func.func @test_dilinearize_index(
 // CHECK-SAME:                                      %[[VAL_0:.*]]: index) -> (index, index, index) {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 16 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 224 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 224 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 50176 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 50176 : index
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = arith.constant -1 : index
-// CHECK:           %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_0]], %[[VAL_6]] : index
-// CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_7]], %[[VAL_0]] : index
-// CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_8]], %[[VAL_9]], %[[VAL_0]] : index
-// CHECK:           %[[VAL_11:.*]] = arith.divsi %[[VAL_10]], %[[VAL_5]] : index
-// CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_7]], %[[VAL_11]] : index
-// CHECK:           %[[VAL_13:.*]] = arith.select %[[VAL_8]], %[[VAL_12]], %[[VAL_11]] : index
-// CHECK:           %[[VAL_14:.*]] = arith.constant 50176 : index
-// CHECK:           %[[VAL_15:.*]] = arith.remsi %[[VAL_0]], %[[VAL_14]] : index
-// CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_17:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_16]] : index
-// CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] : index
-// CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_18]], %[[VAL_15]] : index
-// CHECK:           %[[VAL_20:.*]] = arith.constant 50176 : index
-// CHECK:           %[[VAL_21:.*]] = arith.remsi %[[VAL_0]], %[[VAL_20]] : index
-// CHECK:           %[[VAL_22:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_23:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_22]] : index
-// CHECK:           %[[VAL_24:.*]] = arith.addi %[[VAL_21]], %[[VAL_20]] : index
-// CHECK:           %[[VAL_25:.*]] = arith.select %[[VAL_23]], %[[VAL_24]], %[[VAL_21]] : index
-// CHECK:           %[[VAL_26:.*]] = arith.constant 224 : index
-// CHECK:           %[[VAL_27:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_28:.*]] = arith.constant -1 : index
-// CHECK:           %[[VAL_29:.*]] = arith.cmpi slt, %[[VAL_25]], %[[VAL_27]] : index
-// CHECK:           %[[VAL_30:.*]] = arith.subi %[[VAL_28]], %[[VAL_25]] : index
-// CHECK:           %[[VAL_31:.*]] = arith.select %[[VAL_29]], %[[VAL_30]], %[[VAL_25]] : index
-// CHECK:           %[[VAL_32:.*]] = arith.divsi %[[VAL_31]], %[[VAL_26]] : index
-// CHECK:           %[[VAL_33:.*]] = arith.subi %[[VAL_28]], %[[VAL_32]] : index
-// CHECK:           %[[VAL_34:.*]] = arith.select %[[VAL_29]], %[[VAL_33]], %[[VAL_32]] : index
-// CHECK:           %[[VAL_35:.*]] = arith.constant 224 : index
-// CHECK:           %[[VAL_36:.*]] = arith.remsi %[[VAL_0]], %[[VAL_35]] : index
-// CHECK:           %[[VAL_37:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_38:.*]] = arith.cmpi slt, %[[VAL_36]], %[[VAL_37]] : index
-// CHECK:           %[[VAL_39:.*]] = arith.addi %[[VAL_36]], %[[VAL_35]] : index
-// CHECK:           %[[VAL_40:.*]] = arith.select %[[VAL_38]], %[[VAL_39]], %[[VAL_36]] : index
-// CHECK:           return %[[VAL_13]], %[[VAL_34]], %[[VAL_40]] : index, index, index
+// CHECK:           %[[VAL_1:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant -1 : index
+// CHECK:           %[[VAL_6:.*]] = arith.cmpi slt, %[[VAL_0]], %[[VAL_4]] : index
+// CHECK:           %[[VAL_7:.*]] = arith.subi %[[VAL_5]], %[[VAL_0]] : index
+// CHECK:           %[[VAL_8:.*]] = arith.select %[[VAL_6]], %[[VAL_7]], %[[VAL_0]] : index
+// CHECK:           %[[VAL_9:.*]] = arith.divsi %[[VAL_8]], %[[VAL_3]] : index
+// CHECK:           %[[VAL_10:.*]] = arith.subi %[[VAL_5]], %[[VAL_9]] : index
+// CHECK:           %[[VAL_11:.*]] = arith.select %[[VAL_6]], %[[VAL_10]], %[[VAL_9]] : index
+// CHECK:           %[[VAL_12:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_13:.*]] = arith.remsi %[[VAL_0]], %[[VAL_12]] : index
+// CHECK:           %[[VAL_14:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_15:.*]] = arith.cmpi slt, %[[VAL_13]], %[[VAL_14]] : index
+// CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
+// CHECK:           %[[VAL_17:.*]] = arith.select %[[VAL_15]], %[[VAL_16]], %[[VAL_13]] : index
+// CHECK:           %[[VAL_18:.*]] = arith.constant 50176 : index
+// CHECK:           %[[VAL_19:.*]] = arith.remsi %[[VAL_0]], %[[VAL_18]] : index
+// CHECK:           %[[VAL_20:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_21:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_20]] : index
+// CHECK:           %[[VAL_22:.*]] = arith.addi %[[VAL_19]], %[[VAL_18]] : index
+// CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_21]], %[[VAL_22]], %[[VAL_19]] : index
+// CHECK:           %[[VAL_24:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_25:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_26:.*]] = arith.constant -1 : index
+// CHECK:           %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_23]], %[[VAL_25]] : index
+// CHECK:           %[[VAL_28:.*]] = arith.subi %[[VAL_26]], %[[VAL_23]] : index
+// CHECK:           %[[VAL_29:.*]] = arith.select %[[VAL_27]], %[[VAL_28]], %[[VAL_23]] : index
+// CHECK:           %[[VAL_30:.*]] = arith.divsi %[[VAL_29]], %[[VAL_24]] : index
+// CHECK:           %[[VAL_31:.*]] = arith.subi %[[VAL_26]], %[[VAL_30]] : index
+// CHECK:           %[[VAL_32:.*]] = arith.select %[[VAL_27]], %[[VAL_31]], %[[VAL_30]] : index
+// CHECK:           %[[VAL_33:.*]] = arith.constant 224 : index
+// CHECK:           %[[VAL_34:.*]] = arith.remsi %[[VAL_0]], %[[VAL_33]] : index
+// CHECK:           %[[VAL_35:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_36:.*]] = arith.cmpi slt, %[[VAL_34]], %[[VAL_35]] : index
+// CHECK:           %[[VAL_37:.*]] = arith.addi %[[VAL_34]], %[[VAL_33]] : index
+// CHECK:           %[[VAL_38:.*]] = arith.select %[[VAL_36]], %[[VAL_37]], %[[VAL_34]] : index
+// CHECK:           return %[[VAL_11]], %[[VAL_32]], %[[VAL_38]] : index, index, index
 // CHECK:         }

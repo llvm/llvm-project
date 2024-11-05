@@ -2457,11 +2457,11 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
     }
   }
 
-  InFlightDiagnostic diag = op->emitError()
-                            << "failed to legalize unresolved materialization "
-                               "from ("
-                            << inputOperands.getTypes() << ") to " << outputType
-                            << " that remained live after conversion";
+  InFlightDiagnostic diag =
+      op->emitError() << "failed to legalize unresolved materialization "
+                         "from ("
+                      << inputOperands.getTypes() << ") to (" << outputType
+                      << ") that remained live after conversion";
   diag.attachNote(op->getUsers().begin()->getLoc())
       << "see existing live user here: " << *op->getUsers().begin();
   return failure();

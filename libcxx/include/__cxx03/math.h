@@ -291,7 +291,7 @@ long double    truncl(long double x);
 
 */
 
-#  include <__config>
+#  include <__cxx03/__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -355,29 +355,29 @@ extern "C++" {
 #      undef isunordered
 #    endif
 
-#    include <__math/abs.h>
-#    include <__math/copysign.h>
-#    include <__math/error_functions.h>
-#    include <__math/exponential_functions.h>
-#    include <__math/fdim.h>
-#    include <__math/fma.h>
-#    include <__math/gamma.h>
-#    include <__math/hyperbolic_functions.h>
-#    include <__math/hypot.h>
-#    include <__math/inverse_hyperbolic_functions.h>
-#    include <__math/inverse_trigonometric_functions.h>
-#    include <__math/logarithms.h>
-#    include <__math/min_max.h>
-#    include <__math/modulo.h>
-#    include <__math/remainder.h>
-#    include <__math/roots.h>
-#    include <__math/rounding_functions.h>
-#    include <__math/traits.h>
-#    include <__math/trigonometric_functions.h>
-#    include <__type_traits/enable_if.h>
-#    include <__type_traits/is_floating_point.h>
-#    include <__type_traits/is_integral.h>
-#    include <stdlib.h>
+#    include <__cxx03/__math/abs.h>
+#    include <__cxx03/__math/copysign.h>
+#    include <__cxx03/__math/error_functions.h>
+#    include <__cxx03/__math/exponential_functions.h>
+#    include <__cxx03/__math/fdim.h>
+#    include <__cxx03/__math/fma.h>
+#    include <__cxx03/__math/gamma.h>
+#    include <__cxx03/__math/hyperbolic_functions.h>
+#    include <__cxx03/__math/hypot.h>
+#    include <__cxx03/__math/inverse_hyperbolic_functions.h>
+#    include <__cxx03/__math/inverse_trigonometric_functions.h>
+#    include <__cxx03/__math/logarithms.h>
+#    include <__cxx03/__math/min_max.h>
+#    include <__cxx03/__math/modulo.h>
+#    include <__cxx03/__math/remainder.h>
+#    include <__cxx03/__math/roots.h>
+#    include <__cxx03/__math/rounding_functions.h>
+#    include <__cxx03/__math/traits.h>
+#    include <__cxx03/__math/trigonometric_functions.h>
+#    include <__cxx03/__type_traits/enable_if.h>
+#    include <__cxx03/__type_traits/is_floating_point.h>
+#    include <__cxx03/__type_traits/is_integral.h>
+#    include <__cxx03/stdlib.h>
 
 // fpclassify relies on implementation-defined constants, so we can't move it to a detail header
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -509,7 +509,7 @@ using std::__math::trunc;
 // extension which allows users to do:
 //
 // #define _USE_MATH_DEFINES
-// #include <math.h>
+// #include <__cxx03/math.h>
 //
 // and receive the definitions of mathematical constants, even if <math.h>
 // has previously been included.
