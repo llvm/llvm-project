@@ -2312,27 +2312,15 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   return PrologEndLoc;
 }
 
-// Gather pre-function debug information.  Assumes being called immediately
-// after the function entry point has been emitted.
-void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
-  CurFn = MF;
+/// For the function \p MF, finds the set of instructions which may represent a
+/// change in line number from one or more of the preceding MBBs. Stores the
+/// resulting set of instructions, which should have is_stmt set, in
+/// ForceIsStmtInstrs.
+void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
+  ForceIsStmtInstrs.clear();
 
-  auto *SP = MF->getFunction().getSubprogram();
-  assert(LScopes.empty() || SP == LScopes.getCurrentFunctionScope()->getScopeNode());
-  if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
-    return;
-
-  DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
-
-  Asm->OutStreamer->getContext().setDwarfCompileUnitID(
-      getDwarfCompileUnitIDForLineTable(CU));
-
-  // Record beginning of function.
-  PrologEndLoc = emitInitialLocDirective(
-      *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
-
-  // For each MBB we try to determine whether and what source line is *always*
-  // the last stepped-on line before entering MBB. Such a line exists if every
+  // Here we try to find MBBs where the last line stepped on before entering
+  // it is always the same, and which line that is. Such a line exists if every
   // predecessor has an instruction with source line N, which is the last valid
   // source line to be seen before entering MBB, and if N is the same for all
   // predecessors. If this is true, and the first instruction with a valid
@@ -2340,8 +2328,6 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   // *not* use is_stmt. Otherwise, the first instruction with a valid source
   // line in MBB should always use is_stmt, since we may step to it from a
   // different line.
-  ForceIsStmtInstrs.clear();
-
   // First, collect the last stepped line for each MBB.
   SmallDenseMap<std::pair<const MachineBasicBlock *, const MachineBasicBlock *>,
                 unsigned>
@@ -2351,7 +2337,7 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   // We only need to examine MBBs that could have is_stmt set by this logic.
   // We use const_cast even though we won't actually modify MF, because some
   // methods we need take a non-const MBB.
-  SetVector<MachineBasicBlock *> PredMBBsToExamine;
+  SmallSetVector<MachineBasicBlock *, 4> PredMBBsToExamine;
   SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
   for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
     if (MBB.empty() || MBB.pred_empty())
@@ -2381,9 +2367,19 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
       PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
       ForceIsStmtInstrs.insert(MI);
     };
-    // If this block is empty, it technically has a fall through but we should
-    // assume it is irrelevant for the purposes of calculating is_stmt.
-    if (MBB->empty())
+    // If this block is empty, we conservatively assume that its fallthrough
+    // successor needs is_stmt; we could check MBB's predecessors to see if it
+    // has a consistent entry line, but this seems unlikely to be worthwhile.
+    if (MBB->empty()) {
+      for (auto *Succ : MBB->successors())
+        CheckMBBEdge(Succ, 0);
+      continue;
+    }
+    // If MBB has no successors that are in the "potential" set, due to one or
+    // more of them having confirmed is_stmt, we can skip this check early.
+    if (none_of(MBB->successors(), [&](auto *SuccMBB) {
+          return PotentialIsStmtMBBInstrs.contains(SuccMBB);
+        }))
       continue;
     // If we can't determine what DLs this branch's successors use, just treat
     // all the successors as coming from the last DebugLoc.
@@ -2436,6 +2432,29 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
     for (auto *Succ : SuccessorBBs)
       CheckMBBEdge(Succ, LastLine);
   }
+}
+
+// Gather pre-function debug information.  Assumes being called immediately
+// after the function entry point has been emitted.
+void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
+  CurFn = MF;
+
+  auto *SP = MF->getFunction().getSubprogram();
+  assert(LScopes.empty() ||
+         SP == LScopes.getCurrentFunctionScope()->getScopeNode());
+  if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
+    return;
+
+  DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+
+  Asm->OutStreamer->getContext().setDwarfCompileUnitID(
+      getDwarfCompileUnitIDForLineTable(CU));
+
+  // Record beginning of function.
+  PrologEndLoc = emitInitialLocDirective(
+      *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
+
+  findForceIsStmtInstrs(MF);
 }
 
 unsigned
