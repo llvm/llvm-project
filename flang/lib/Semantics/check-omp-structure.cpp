@@ -2652,15 +2652,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
     if (x.v) {
       if (version < argSince) {
         context_.Say(GetContext().clauseSource,
-            "The object parameter in DESTROY clause on DEPOPJ construct "
-            "is not allowed in %s, %s"_warn_en_US,
+            "The object parameter in DESTROY clause on DEPOPJ construct is not allowed in %s, %s"_warn_en_US,
             ThisVersion(version), TryVersion(argSince));
       }
     } else {
       if (version >= noargDeprecatedIn) {
         context_.Say(GetContext().clauseSource,
-            "The DESTROY clause without argument on DEPOBJ construct "
-            "is deprecated in %s"_warn_en_US,
+            "The DESTROY clause without argument on DEPOBJ construct is deprecated in %s"_warn_en_US,
             ThisVersion(noargDeprecatedIn));
       }
     }
