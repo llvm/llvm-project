@@ -23,6 +23,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RawCommentList.h"
+#include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -1238,6 +1239,11 @@ public:
   /// Keep track of CUDA/HIP implicit host device functions used on device side
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
+  /// Map of SYCL kernels indexed by the unique type used to name the kernel.
+  /// Entries are not serialized but are recreated on deserialization of a
+  /// sycl_kernel_entry_point attributed function declaration.
+  llvm::DenseMap<CanQualType, SYCLKernelInfo> SYCLKernels;
 
   /// For capturing lambdas with an explicit object parameter whose type is
   /// derived from the lambda type, we need to perform derived-to-base
@@ -3339,6 +3345,14 @@ public:
                              const FunctionDecl *) const;
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              GlobalDecl GD) const;
+
+  /// Generates and stores SYCL kernel metadata for the provided
+  /// SYCL kernel entry point function. The provided function must have
+  /// an attached sycl_kernel_entry_point attribute that specifies a unique
+  /// type for the name of a SYCL kernel. Callers are required to detect
+  /// conflicting SYCL kernel names and issue a diagnostic prior to calling
+  /// this function.
+  void registerSYCLEntryPointFunction(FunctionDecl *FD);
 
   //===--------------------------------------------------------------------===//
   //                    Statistics
