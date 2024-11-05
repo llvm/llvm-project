@@ -179,6 +179,74 @@ Here are the steps you can follow to do so:
    buildbot.tac file to change the port number from 9994 to 9990 and start it
    again.
 
+Testing a Builder Config Locally
+================================
+
+It's possible to test a builder running against a local version of LLVM's
+buildmaster configuration. This can be helpful to allow quickly identifying
+and iterating over fixes to any issues in either the changes that introduce
+the new builder, or the machine configuration for your worker (preinstalled
+packages etc). A buildmaster launched in this "local testing" mode will bind
+only to local interfaces, use SQLite as the database, use a fixed password for
+workers, and disable things like GitHub authentication.
+
+* Within a checkout of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_,
+  create and activate a Python `venv
+  <https://docs.python.org/3/library/venv.html>`_ and install the necessary
+  dependencies.
+
+    .. code-block:: bash
+
+       python -m venv bbenv
+       source bbenv/bin/activate
+       pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
+
+* Initialise the necessary buildmaster files, link to the configuration in
+  ``llvm-zorg`` and run a litmus check (run in the directory of your choice):
+
+    .. code-block:: bash
+
+       buildbot create-master llvm-testbbmaster
+       cd llvm-testbbmaster
+       ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/master.cfg .
+       ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/config/ .
+       ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
+       BUILDMASTER_TEST=1 buildbot checkconfig
+
+* Start the buildmaster using the command below. After a few seconds to
+  startup, you should be able to open the web UI at ``http://localhost:8011``.
+  If there are any errors or this isn't working, be sure to check
+  ``twistd.log`` for more information.
+
+    .. code-block:: bash
+
+       BUILDMASTER_TEST=1 buildbot start --nodaemon .
+
+* With the above in place, you can now create and start a buildbot worker.
+  Ensure you pick the correct name for the worker attached to the build
+  configuration you want to test in
+  ``buildbot/osuosl/master/config/builders.py``. After doing the below, either
+  wait until the poller sets off a build, or you can force a build to start in
+  the web UI (which is also the best place to review the build results).
+
+    .. code-block:: bash
+
+       buildbot-worker create-worker <buildbot-worker-root-directory> \
+                       localhost:9990 \
+                       <buildbot-worker-name> \
+                       test
+       buildbot-worker start --nodaemon <buildbot-worker-root-directory>
+
+This local testing configuration defaults to binding only to the loopback
+interface for security reasons. If you want to run the test worker on a
+different machine, or to run the buildmaster on a remote server, ssh port
+forwarding can be used to make connection possible. For instance, if running
+the buildmaster on a remote server the following command will suffice to make
+the web UI accessible via ``http://localhost:8011`` and make it possible for a
+local worker to connect to the remote buildmaster by connecting to
+``localhost:9900``: ``ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990
+username@server_address``.
+
 Best Practices for Configuring a Fast Builder
 =============================================
 
