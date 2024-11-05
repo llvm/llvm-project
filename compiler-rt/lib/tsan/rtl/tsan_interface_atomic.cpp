@@ -515,7 +515,9 @@ static morder to_morder(int mo) {
   // since we use __sync_ atomics for actual atomic operations,
   // we can safely ignore it as well. It also subtly affects semantics,
   // but we don't model the difference.
-  return static_cast<morder>(mo & 0x7fff);
+  morder res = static_cast<morder>(static_cast<u8>(mo));
+  DCHECK_LE(res, mo_seq_cst);
+  return res;
 }
 
 #  define ATOMIC_IMPL(func, mo, ...)                                  \
