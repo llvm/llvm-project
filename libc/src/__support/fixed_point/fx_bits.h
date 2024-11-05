@@ -160,7 +160,7 @@ countls(T x) {
   using FXRep = FXRep<T>;
   using BitType = typename FXRep::StorageType;
   constexpr int CONTAIN_LEN = cpp::numeric_limits<BitType>::digits;
-  constexpr int PADDING_LEN = CONTAIN_LEN - FXRep::VALUE_LEN;
+  constexpr int PADDING_LEN = CONTAIN_LEN - get_value_len<FXRep>();
 
   if constexpr (FXRep::SIGN_LEN != 0) {
     if (x < 0)
