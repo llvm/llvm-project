@@ -108,4 +108,13 @@ struct TypeDefTest {
 
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(TypeDefTest), "");
 
+struct EmptyStruct {};
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(EmptyStruct), "");
 
+struct EmptyDerived : EmptyStruct {};
+_Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(EmptyDerived), "");
+
+struct EmptyBase : EmptyStruct {
+  int4 V;
+};
+_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(EmptyBase), ""); 

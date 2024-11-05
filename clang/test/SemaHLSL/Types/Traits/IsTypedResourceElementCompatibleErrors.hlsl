@@ -7,4 +7,3 @@ _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(__hlsl_resour
 struct notComplete;
 // expected-error@+1{{incomplete type 'notComplete' where a complete type is required}}
 _Static_assert(!__builtin_hlsl_is_typed_resource_element_compatible(notComplete), "");
- 

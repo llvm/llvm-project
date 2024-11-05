@@ -2210,8 +2210,10 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
   llvm::SmallVector<QualType, 4> QTTypes;
   BuildFlattenedTypeList(QT, QTTypes);
 
-  assert(QTTypes.size() > 0 &&
-         "expected at least one constituent type from non-null type");
+  // empty structs are not typed resource element compatible
+  if (QTTypes.size() == 0)
+    return false;
+
   QualType FirstQT = SemaRef.Context.getCanonicalType(QTTypes[0]);
 
   // element count cannot exceed 4
