@@ -38,6 +38,13 @@ constexpr Init round_trip(const Init &init) {
   return bit_cast<Init>(bit_cast<Intermediate>(init));
 }
 
+
+namespace Discarding {
+  struct S { int a; };
+  constexpr int f = (__builtin_bit_cast(int, 2), 0);
+  constexpr int f2 = (__builtin_bit_cast(S, 2), 0);
+}
+
 namespace std {
 enum byte : unsigned char {};
 } // namespace std
