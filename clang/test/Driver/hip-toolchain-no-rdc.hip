@@ -36,6 +36,11 @@
 // RUN:   %t/a.o %t/b.o \
 // RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 \
+// RUN:   %s -nogpuinc -nogpulib \
+// RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV %s
+
 //
 // Compile device code in a.cu to code object for gfx803.
 //
@@ -177,3 +182,16 @@
 // LKONLY-NOT: {{".*/llc"}}
 // LKONLY: [[LD:".*ld.*"]] {{.*}} "{{.*/a.o}}" "{{.*/b.o}}"
 // LKONLY-NOT: "-T" "{{.*}}.lk"
+
+//
+// Check mixed AMDGCNSPIRV and concrete GPU arch.
+//
+
+// AMDGCNSPIRV: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-obj" {{.*}} "-o" "[[AMDGCNSPV_OBJ:.*o]]"
+// AMDGCNSPIRV: {{".*llvm-link.*"}} "-o" "[[AMDGCNSPV_TMP:.*out]]" "[[AMDGCNSPV_OBJ]]"
+// AMDGCNSPIRV: {{".*llvm-spirv.*"}} "--spirv-max-version=1.6" "--spirv-ext=+all" {{.*}} "[[AMDGCNSPV_TMP]]" {{.*}}"-o" "[[AMDGCNSPV_CO:.*out]]"
+// AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-obj" {{.*}}"-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_OBJ:.*o]]"
+// AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_OBJ]]"
+// AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
+// AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-spirv64-amd-amdhsa--amdgcnspirv,hipv4-amdgcn-amd-amdhsa--gfx900"
+// AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
