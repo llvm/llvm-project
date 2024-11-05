@@ -24,8 +24,9 @@ class DataLayoutEntryAttrStorage;
 } // namespace mlir
 namespace mlir {
 namespace dlti {
-/// Perform a DLTI-query at `op`, recursively querying each key of `keys` on
-/// query interface-implementing attrs, starting from attr obtained from `op`.
+/// Perform a DLTI-query at `op`, by recursively querying each key of `keys` on
+/// `DLTIQueryInterface`-implementing attributes of an op, attempting this query
+/// procedure for all ancestors of `op` in turn, starting with `op` itself.
 FailureOr<Attribute> query(Operation *op, ArrayRef<DataLayoutEntryKey> keys,
                            bool emitError = false);
 } // namespace dlti
