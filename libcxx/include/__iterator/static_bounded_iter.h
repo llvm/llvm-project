@@ -70,8 +70,11 @@ private:
 // it can be computed from the start of the range.
 //
 // The operations on which this iterator wrapper traps are the same as `__bounded_iter`.
-template <class _Iterator, size_t _Size, class = __enable_if_t<__libcpp_is_contiguous_iterator<_Iterator>::value> >
+template <class _Iterator, size_t _Size>
 struct __static_bounded_iter {
+  static_assert(__libcpp_is_contiguous_iterator<_Iterator>::value,
+                "__static_bounded_iter<It> requires It to be a contiguous iterator.");
+
   using value_type        = typename iterator_traits<_Iterator>::value_type;
   using difference_type   = typename iterator_traits<_Iterator>::difference_type;
   using pointer           = typename iterator_traits<_Iterator>::pointer;

@@ -47,8 +47,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //    pointer, it is undefined at the language level (see [expr.add]). If
 //    bounded iterators exhibited this undefined behavior, we risk compiler
 //    optimizations deleting non-redundant bounds checks.
-template <class _Iterator, class = __enable_if_t< __libcpp_is_contiguous_iterator<_Iterator>::value > >
+template <class _Iterator>
 struct __bounded_iter {
+  static_assert(__libcpp_is_contiguous_iterator<_Iterator>::value,
+                "__bounded_iter<It> requires It to be a contiguous iterator.");
+
   using value_type        = typename iterator_traits<_Iterator>::value_type;
   using difference_type   = typename iterator_traits<_Iterator>::difference_type;
   using pointer           = typename iterator_traits<_Iterator>::pointer;
@@ -67,7 +70,7 @@ struct __bounded_iter {
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter const&) = default;
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter&&)      = default;
 
-  template <class _OtherIterator, __enable_if_t< is_convertible<_OtherIterator, _Iterator>::value, int> = 0>
+  template <class _OtherIterator, __enable_if_t<is_convertible<_OtherIterator, _Iterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter(__bounded_iter<_OtherIterator> const& __other) _NOEXCEPT
       : __current_(__other.__current_),
         __begin_(__other.__begin_),
