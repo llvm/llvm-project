@@ -1833,9 +1833,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     CGSCCPassManager CGPM;
     CGPM.addPass(PostOrderFunctionAttrsPass());
     CGPM.addPass(ArgumentPromotionPass());
+    CGPM.addPass(
+        createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
