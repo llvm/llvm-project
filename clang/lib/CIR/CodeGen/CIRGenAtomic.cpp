@@ -1462,7 +1462,7 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
       MO = mlir::cir::MemOrder::Release;
     // Initializations don't need to be atomic.
     if (!isInit)
-      store.setMemOrder(MO);
+      store.setAtomic(MO);
 
     // Other decoration.
     if (IsVolatile)
