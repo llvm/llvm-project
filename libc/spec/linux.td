@@ -122,7 +122,7 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<SizeTType>,
             ArgSpec<SizeTType>,
             ArgSpec<IntType>,
-            ArgSpec<VoidPtr>,
+            ArgSpec<VarArgType>,
           ]
         >,
       ]  // Functions

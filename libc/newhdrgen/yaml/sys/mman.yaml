@@ -64,8 +64,7 @@ functions:
       - type: size_t
       - type: size_t
       - type: int
-      - type: void *
-        description: "This argument is optional."
+      - type: '...'
   - name: mprotect
     standards:
       - POSIX
