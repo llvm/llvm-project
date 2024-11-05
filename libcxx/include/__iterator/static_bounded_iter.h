@@ -265,10 +265,16 @@ private:
   friend struct __static_bounded_iter;
   __static_bounded_iter_storage<_Iterator, _Size> __storage_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator& __current() _NOEXCEPT { return __storage_.__current(); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __current() const _NOEXCEPT { return __storage_.__current(); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __begin() const _NOEXCEPT { return __storage_.__begin(); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iterator __end() const _NOEXCEPT { return __storage_.__end(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator& __current() _NOEXCEPT {
+    return __storage_.__current();
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __current() const _NOEXCEPT {
+    return __storage_.__current();
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __begin() const _NOEXCEPT {
+    return __storage_.__begin();
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __end() const _NOEXCEPT { return __storage_.__end(); }
 };
 
 template <size_t _Size, class _It>
