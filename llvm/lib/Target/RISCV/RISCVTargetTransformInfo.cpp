@@ -716,28 +716,6 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
-static bool hasOptimizedSegmentLoadStore(unsigned NF,
-                                         const RISCVSubtarget *ST) {
-  switch (NF) {
-  case 2:
-    return ST->hasOptimizedNF2SegmentLoadStore();
-  case 3:
-    return ST->hasOptimizedNF3SegmentLoadStore();
-  case 4:
-    return ST->hasOptimizedNF4SegmentLoadStore();
-  case 5:
-    return ST->hasOptimizedNF5SegmentLoadStore();
-  case 6:
-    return ST->hasOptimizedNF6SegmentLoadStore();
-  case 7:
-    return ST->hasOptimizedNF7SegmentLoadStore();
-  case 8:
-    return ST->hasOptimizedNF8SegmentLoadStore();
-  default:
-    llvm_unreachable("Unexpected NF");
-  }
-}
-
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -761,7 +739,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
         // Some processors optimize segment loads/stores as one wide memory op +
         // Factor * LMUL shuffle ops.
-        if (hasOptimizedSegmentLoadStore(Factor, ST)) {
+        if (ST->hasOptimizedSegmentLoadStore(Factor)) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
