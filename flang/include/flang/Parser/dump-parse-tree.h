@@ -510,6 +510,7 @@ public:
   NODE_ENUM(OmpDefaultmapClause, ImplicitBehavior)
   NODE_ENUM(OmpDefaultmapClause, VariableCategory)
   NODE(parser, OmpDependClause)
+  NODE(parser, OmpDetachClause)
   NODE(OmpDependClause, InOut)
   NODE(OmpDependClause, Sink)
   NODE(OmpDependClause, Source)
@@ -524,6 +525,8 @@ public:
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
+  NODE(parser, OmpFromClause)
+  NODE_ENUM(OmpFromClause, Expectation)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
   NODE_ENUM(OmpLastprivateClause, LastprivateModifier)
@@ -581,6 +584,9 @@ public:
   NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
   NODE(parser, OmpSimpleStandaloneDirective)
+  NODE(parser, OmpToClause)
+  // No NODE_ENUM for OmpToClause::Expectation, because it's an alias
+  // for OmpFromClause::Expectation.
   NODE(parser, Only)
   NODE(parser, OpenACCAtomicConstruct)
   NODE(parser, OpenACCBlockConstruct)
