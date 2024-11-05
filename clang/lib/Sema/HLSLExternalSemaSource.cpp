@@ -624,19 +624,20 @@ Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
 
   // first get the "sizeof(T) <= 16" expression, as a binary operator
   BinaryOperator *SizeOfLEQ16 = constructSizeOfLEQ16Expr(Context, NameLoc, T);
-  // TODO: add the '__builtin_hlsl_is_line_vector_layout_compatible' builtin
+  // TODO: add the 'builtin_hlsl_is_typed_resource_element_compatible' builtin
   // and return a binary operator that evaluates the builtin on the given
-  // template type parameter 'T'
+  // template type parameter 'T'.
+  // Defined in issue https://github.com/llvm/llvm-project/issues/113223
   return SizeOfLEQ16;
 }
 
-ConceptDecl *constructTypedBufferConceptDecl(Sema &S) {
-  DeclContext *DC = S.CurContext;
+ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
   ASTContext &Context = S.getASTContext();
+  DeclContext *DC = NSD->getDeclContext();
   SourceLocation DeclLoc = SourceLocation();
 
-  IdentifierInfo &IsValidLineVectorII =
-      Context.Idents.get("is_valid_line_vector");
+  IdentifierInfo &IsTypedResourceElementCompatibleII =
+      Context.Idents.get("__is_typed_resource_element_compatible");
   IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
   TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
       Context, Context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
@@ -653,7 +654,8 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S) {
   TemplateParameterList *ConceptParams = TemplateParameterList::Create(
       Context, DeclLoc, DeclLoc, {T}, DeclLoc, nullptr);
 
-  DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
+  DeclarationName DeclName =
+      DeclarationName(&IsTypedResourceElementCompatibleII);
   Expr *ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
 
   // Create a ConceptDecl
@@ -672,7 +674,8 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S) {
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  ConceptDecl *TypeBufferConcept = constructTypedBufferConceptDecl(*SemaPtr);
+  ConceptDecl *TypeBufferConcept =
+      constructTypedBufferConceptDecl(*SemaPtr, HLSLNamespace);
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams(*SemaPtr, {"element_type"},
