@@ -10557,8 +10557,7 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vmnot.m v8, v8
+; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-ALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
 ; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
@@ -10568,8 +10567,7 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v9, (a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vmnot.m v8, v8
+; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-ALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
 ; CHECK-ALIGNED-RV64-V-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
@@ -10675,8 +10673,7 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmnot.m v8, v8
+; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
 ; CHECK-UNALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
@@ -10686,8 +10683,7 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmnot.m v8, v8
+; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
 ; CHECK-UNALIGNED-RV64-V-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
@@ -27062,8 +27058,7 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vmnot.m v8, v8
+; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-ALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
 ; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
@@ -27073,8 +27068,7 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v9, (a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vmnot.m v8, v8
+; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-ALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
 ; CHECK-ALIGNED-RV64-V-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
@@ -27180,8 +27174,7 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmnot.m v8, v8
+; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
 ; CHECK-UNALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
@@ -27191,8 +27184,7 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmnot.m v8, v8
+; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v8, v8, v9
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
 ; CHECK-UNALIGNED-RV64-V-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret

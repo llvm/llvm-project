@@ -14512,22 +14512,19 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
     return SDValue();
 
-  if (!DAG.getMachineFunction().getFunction().hasFnAttribute(
-          Attribute::NoImplicitFloat)) {
-    unsigned VecSize = OpSize / 8;
-    EVT VecVT = MVT::getVectorVT(MVT::i8, VecSize);
-    EVT CmpVT = MVT::getVectorVT(MVT::i1, VecSize);
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
 
-    SDValue VecX = DAG.getBitcast(VecVT, X);
-    SDValue VecY = DAG.getBitcast(VecVT, Y);
-    SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, CC);
-    unsigned ReductionOpc =
-        CC == ISD::SETEQ ? ISD::VECREDUCE_AND : ISD::VECREDUCE_OR;
-    return DAG.getSetCC(DL, VT, DAG.getNode(ReductionOpc, DL, XLenVT, Cmp),
-                        DAG.getConstant(0, DL, XLenVT), ISD::SETNE);
-  }
+  unsigned VecSize = OpSize / 8;
+  EVT VecVT = MVT::getVectorVT(MVT::i8, VecSize);
+  EVT CmpVT = MVT::getVectorVT(MVT::i1, VecSize);
 
-  return SDValue();
+  SDValue VecX = DAG.getBitcast(VecVT, X);
+  SDValue VecY = DAG.getBitcast(VecVT, Y);
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETNE);
+  return DAG.getSetCC(DL, VT, DAG.getNode(ISD::VECREDUCE_OR, DL, XLenVT, Cmp),
+                      DAG.getConstant(0, DL, XLenVT), CC);
 }
 
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
