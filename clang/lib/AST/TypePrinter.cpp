@@ -855,21 +855,20 @@ void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
   if (Policy.UseHLSLTypes)
     OS << "matrix<";
   printBefore(T->getElementType(), OS);
-  if (!Policy.UseHLSLTypes) {
+  if (!Policy.UseHLSLTypes)
     OS << " __attribute__((matrix_type(";
-    OS << T->getNumRows() << ", " << T->getNumColumns();
+  else
+    OS << ", ";
+  OS << T->getNumRows() << ", " << T->getNumColumns();
+  if (!Policy.UseHLSLTypes)
     OS << ")))";
-  }
+  else
+    OS << ">";
 }
 
 void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
                                            raw_ostream &OS) {
   printAfter(T->getElementType(), OS);
-  if (Policy.UseHLSLTypes) {
-    OS << ", ";
-    OS << T->getNumRows() << ", " << T->getNumColumns();
-    OS << ">";
-  }
 }
 
 void TypePrinter::printDependentSizedMatrixBefore(
@@ -877,15 +876,10 @@ void TypePrinter::printDependentSizedMatrixBefore(
   if (Policy.UseHLSLTypes)
     OS << "matrix<";
   printBefore(T->getElementType(), OS);
-}
-
-void TypePrinter::printDependentSizedMatrixAfter(
-    const DependentSizedMatrixType *T, raw_ostream &OS) {
-  printAfter(T->getElementType(), OS);
-  if (Policy.UseHLSLTypes)
-    OS << ", ";
-  else
+  if (!Policy.UseHLSLTypes)
     OS << " __attribute__((matrix_type(";
+  else
+    OS << ", ";
 
   if (Expr *E = T->getRowExpr())
     E->printPretty(OS, nullptr, Policy);
@@ -893,10 +887,16 @@ void TypePrinter::printDependentSizedMatrixAfter(
   if (Expr *E = T->getColumnExpr())
     E->printPretty(OS, nullptr, Policy);
 
-  if (Policy.UseHLSLTypes)
-    OS << ">";
-  else
+  OS << ", ";
+  if (!Policy.UseHLSLTypes)
     OS << ")))";
+  else
+    OS << ">";
+}
+
+void TypePrinter::printDependentSizedMatrixAfter(
+    const DependentSizedMatrixType *T, raw_ostream &OS) {
+  printAfter(T->getElementType(), OS);
 }
 
 void

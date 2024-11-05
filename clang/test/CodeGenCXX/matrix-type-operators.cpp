@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -O0 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck --check-prefixes=CHECK,NOOPT %s
 // RUN: %clang_cc1 -O1 -fenable-matrix -triple x86_64-apple-darwin %s -emit-llvm -disable-llvm-passes -o - -std=c++11 | FileCheck --check-prefixes=CHECK,OPT %s
+typedef double dx5x5_t __attribute__((matrix_type(5, 5)));
+using fx2x3_t = float __attribute__((matrix_type(2, 3)));
 
 template <typename EltTy, unsigned Rows, unsigned Columns>
 struct MyMatrix {
@@ -138,7 +140,7 @@ void test_IntWrapper_Add(MyMatrix<double, 10, 9> &m) {
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR:%.*]] = call noundef i32 @_ZN10IntWrappercviEv(ptr {{[^,]*}} %w3)
-  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 [[SCALAR]] to double
+  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
@@ -152,7 +154,7 @@ void test_IntWrapper_Add(MyMatrix<double, 10, 9> &m) {
 void test_IntWrapper_Sub(MyMatrix<double, 10, 9> &m) {
   // CHECK-LABEL: define{{.*}} void @_Z19test_IntWrapper_SubR8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[SCALAR:%.*]] = call noundef i32 @_ZN10IntWrappercviEv(ptr {{[^,]*}} %w3)
-  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 [[SCALAR]] to double
+  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i64 0
@@ -195,7 +197,7 @@ MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 5> Mat1,
 void test_IntWrapper_Multiply(MyMatrix<double, 10, 9> &m, IntWrapper &w3) {
   // CHECK-LABEL: define{{.*}} void @_Z24test_IntWrapper_MultiplyR8MyMatrixIdLj10ELj9EER10IntWrapper(
   // CHECK:       [[SCALAR:%.*]] = call noundef i32 @_ZN10IntWrappercviEv(ptr noundef {{.*}})
-  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 [[SCALAR]] to double
+  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i64 0
