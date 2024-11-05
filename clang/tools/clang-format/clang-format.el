@@ -233,7 +233,7 @@ supported vc."
                            (string-width (expand-file-name base-dir))
                            nil)))
         (let ((status (call-process
-                       "git"
+                       vc-git-program
                        nil
                        `(:file, tmpfile-vc-head)
                        nil
@@ -323,7 +323,7 @@ specific locations for reformatting (i.e diff locations)."
             (if incomplete-format
                 (message "(clang-format: incomplete (syntax errors)%s)" stderr)
               (message "(clang-format: success%s)" stderr))))
-      (delete-file temp-file)
+      (ignore-errors (delete-file temp-file))
       (when (buffer-name temp-buffer) (kill-buffer temp-buffer)))))
 
 
@@ -360,7 +360,7 @@ file. If no ASSUME-FILE-NAME is given uses the function
                style
                assume-file-name
                diff-lines))))
-      (progn
+      (ignore-errors
         ;; Cleanup temporary files we created.
         (when tmpfile-vc-head (delete-file tmpfile-vc-head))
         (when tmpfile-curbuf (delete-file tmpfile-curbuf))))))
