@@ -1163,8 +1163,8 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
   }
 }
 
-// Wrap the given range of instruction with try-delegate. RangeBegin and
-// RangeEnd are inclusive.
+// Wrap the given range of instructions with a try-delegate that targets
+// 'UnwindDest'. RangeBegin and RangeEnd are inclusive.
 void WebAssemblyCFGStackify::addNestedTryDelegate(
     MachineInstr *RangeBegin, MachineInstr *RangeEnd,
     MachineBasicBlock *UnwindDest) {
@@ -1212,23 +1212,24 @@ void WebAssemblyCFGStackify::addNestedTryDelegate(
   } else {
     // When the split pos is in the middle of a BB, we split the BB into two and
     // put the 'delegate' BB in between. We normally create a split BB and make
-    // it a successor of the original BB (PostSplit == true), but in case the BB
-    // is an EH pad and the split pos is before 'catch', we should preserve the
-    // BB's property, including that it is an EH pad, in the later part of the
-    // BB, where 'catch' is. In this case we set PostSplit to false.
-    bool PostSplit = true;
+    // it a successor of the original BB (CatchAfterSplit == false), but in case
+    // the BB is an EH pad and there is a 'catch' after the split pos
+    // (CatchAfterSplit == true), we should preserve the BB's property,
+    // including that it is an EH pad, in the later part of the BB, where the
+    // 'catch' is.
+    bool CatchAfterSplit = false;
     if (EndBB->isEHPad()) {
       for (auto I = MachineBasicBlock::iterator(SplitPos), E = EndBB->end();
            I != E; ++I) {
         if (WebAssembly::isCatch(I->getOpcode())) {
-          PostSplit = false;
+          CatchAfterSplit = true;
           break;
         }
       }
     }
 
     MachineBasicBlock *PreBB = nullptr, *PostBB = nullptr;
-    if (PostSplit) {
+    if (!CatchAfterSplit) {
       // If the range's end instruction is in the middle of the BB, we split the
       // BB into two and insert the delegate BB in between.
       // - Before:
@@ -1279,7 +1280,7 @@ void WebAssemblyCFGStackify::addNestedTryDelegate(
     PreBB->addSuccessor(PostBB);
   }
 
-  // Add 'delegate' instruction in the delegate BB created above.
+  // Add a 'delegate' instruction in the delegate BB created above.
   MachineInstr *Delegate = BuildMI(DelegateBB, RangeEnd->getDebugLoc(),
                                    TII.get(WebAssembly::DELEGATE))
                                .addMBB(UnwindDest);
@@ -1598,7 +1599,7 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   // catch                 ;; N == 3
   // end
   //                       ;; N == 4 (to caller)
-
+  //
   // 1. When an instruction may throw, but the EH pad it will unwind to can be
   //    different from the original CFG.
   //
@@ -1627,9 +1628,9 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   //   ...
   // end_try
   //
-  // Now if bar() throws, it is going to end up ip in bb2, not bb3, where it
-  // is supposed to end up. We solve this problem by wrapping the mismatching
-  // call with an inner try-delegate that rethrows the exception to the right
+  // Now if bar() throws, it is going to end up in bb2, not bb3, where it is
+  // supposed to end up. We solve this problem by wrapping the mismatching call
+  // with an inner try-delegate that rethrows the exception to the right
   // 'catch'.
   //
   // try
@@ -1667,7 +1668,7 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   //   ...
   // end_try
   //
-  // Now if bar() throws, it is going to end up ip in bb2, when it is supposed
+  // Now if bar() throws, it is going to end up in bb2, when it is supposed
   // throw up to the caller. We solve this problem in the same way, but in this
   // case 'delegate's immediate argument is the number of block depths + 1,
   // which means it rethrows to the caller.
@@ -2029,14 +2030,15 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // throws a foreign exception that is not caught by ehpad A, and its next
   // destination should be the caller. But after control flow linearization,
   // another EH pad can be placed in between (e.g. ehpad B here), making the
-  // next unwind destination incorrect. In this case, the  foreign exception
-  // will instead go to ehpad B and will be caught there instead. In this
-  // example the correct next unwind destination is the caller, but it can be
-  // another outer catch in other cases.
+  // next unwind destination incorrect. In this case, the foreign exception will
+  // instead go to ehpad B and will be caught there instead. In this example the
+  // correct next unwind destination is the caller, but it can be another outer
+  // catch in other cases.
   //
   // There is no specific 'call' or 'throw' instruction to wrap with a
   // try-delegate, so we wrap the whole try-catch-end with a try-delegate and
-  // make it rethrow to the right destination, as in the example below:
+  // make it rethrow to the right destination, which is the caller in the
+  // example below:
   // try
   //   try                     ;; (new)
   //     try

@@ -1,11 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file -verify-diagnostics
 
-// expected-error @+2 {{cannot bufferize bodiless function that returns a tensor}}
-// expected-error @+1 {{failed to bufferize op}}
-func.func private @foo() -> tensor<?xf32>
-
-// -----
-
 // expected-error @+1 {{cannot bufferize a FuncOp with tensors and without a unique ReturnOp}}
 func.func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
     -> (tensor<f32>, tensor<f32>)
@@ -119,17 +113,6 @@ func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
 
   %1 = tensor.extract %0[%idx] : tensor<?xf32>
   return %1 : f32
-}
-
-// -----
-
-// expected-error @+2 {{failed to bufferize op}}
-// expected-error @+1 {{cannot bufferize bodiless function that returns a tensor}}
-func.func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
-
-func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
-  call @foo(%t) : (tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
-  return
 }
 
 // -----

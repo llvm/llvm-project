@@ -519,6 +519,17 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addArraySubscriptOperators()
         .completeDefinition();
   });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWStructuredBuffer")
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+                    ResourceKind::TypedBuffer, /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

@@ -993,7 +993,11 @@ if config.host_os == "Darwin":
 # default configs for the test runs. In particular, anything hardening
 # related is likely to cause issues with sanitizer tests, because it may
 # preempt something we're looking to trap (e.g. _FORTIFY_SOURCE vs our ASAN).
-config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+#
+# Only set this if we know we can still build for the target while disabling
+# default configs.
+if config.has_no_default_config_flag:
+    config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
 if config.has_compiler_rt_libatomic:
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"

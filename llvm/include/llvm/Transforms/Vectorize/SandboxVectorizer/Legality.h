@@ -13,6 +13,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,8 +30,14 @@ enum class LegalityResultID {
 
 /// The reason for vectorizing or not vectorizing.
 enum class ResultReason {
+  NotInstructions,
   DiffOpcodes,
   DiffTypes,
+  DiffMathFlags,
+  DiffWrapFlags,
+  NotConsecutive,
+  Unimplemented,
+  Infeasible,
 };
 
 #ifndef NDEBUG
@@ -41,15 +49,29 @@ struct ToStr {
     case LegalityResultID::Widen:
       return "Widen";
     }
+    llvm_unreachable("Unknown LegalityResultID enum");
   }
 
   static const char *getVecReason(ResultReason Reason) {
     switch (Reason) {
+    case ResultReason::NotInstructions:
+      return "NotInstructions";
     case ResultReason::DiffOpcodes:
       return "DiffOpcodes";
     case ResultReason::DiffTypes:
       return "DiffTypes";
+    case ResultReason::DiffMathFlags:
+      return "DiffMathFlags";
+    case ResultReason::DiffWrapFlags:
+      return "DiffWrapFlags";
+    case ResultReason::NotConsecutive:
+      return "NotConsecutive";
+    case ResultReason::Unimplemented:
+      return "Unimplemented";
+    case ResultReason::Infeasible:
+      return "Infeasible";
     }
+    llvm_unreachable("Unknown ResultReason enum");
   }
 };
 #endif // NDEBUG
@@ -64,6 +86,10 @@ protected:
   /// Only Legality can create LegalityResults.
   LegalityResult(LegalityResultID ID) : ID(ID) {}
   friend class LegalityAnalysis;
+
+  /// We shouldn't need copies.
+  LegalityResult(const LegalityResult &) = delete;
+  LegalityResult &operator=(const LegalityResult &) = delete;
 
 public:
   virtual ~LegalityResult() {}
@@ -88,6 +114,7 @@ class LegalityResultWithReason : public LegalityResult {
   friend class Pack; // For constructor.
 
 public:
+  ResultReason getReason() const { return Reason; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
     LegalityResult::print(OS);
@@ -126,8 +153,12 @@ class LegalityAnalysis {
   std::optional<ResultReason>
   notVectorizableBasedOnOpcodesAndTypes(ArrayRef<Value *> Bndl);
 
+  ScalarEvolution &SE;
+  const DataLayout &DL;
+
 public:
-  LegalityAnalysis() = default;
+  LegalityAnalysis(ScalarEvolution &SE, const DataLayout &DL)
+      : SE(SE), DL(DL) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT... Args) {
@@ -136,7 +167,7 @@ public:
   }
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
-  LegalityResult &canVectorize(ArrayRef<Value *> Bndl);
+  const LegalityResult &canVectorize(ArrayRef<Value *> Bndl);
 };
 
 } // namespace llvm::sandboxir

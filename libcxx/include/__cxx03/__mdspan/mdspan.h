@@ -17,37 +17,37 @@
 #ifndef _LIBCPP___MDSPAN_MDSPAN_H
 #define _LIBCPP___MDSPAN_MDSPAN_H
 
-#include <__assert>
-#include <__config>
-#include <__fwd/mdspan.h>
-#include <__mdspan/default_accessor.h>
-#include <__mdspan/extents.h>
-#include <__type_traits/extent.h>
-#include <__type_traits/is_abstract.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/rank.h>
-#include <__type_traits/remove_all_extents.h>
-#include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_pointer.h>
-#include <__type_traits/remove_reference.h>
-#include <__utility/integer_sequence.h>
-#include <array>
-#include <cinttypes>
-#include <cstddef>
-#include <limits>
-#include <span>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/mdspan.h>
+#include <__cxx03/__mdspan/default_accessor.h>
+#include <__cxx03/__mdspan/extents.h>
+#include <__cxx03/__type_traits/extent.h>
+#include <__cxx03/__type_traits/is_abstract.h>
+#include <__cxx03/__type_traits/is_array.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_pointer.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/rank.h>
+#include <__cxx03/__type_traits/remove_all_extents.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/__type_traits/remove_pointer.h>
+#include <__cxx03/__type_traits/remove_reference.h>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/array>
+#include <__cxx03/cinttypes>
+#include <__cxx03/cstddef>
+#include <__cxx03/limits>
+#include <__cxx03/span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

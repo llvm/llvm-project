@@ -17,7 +17,6 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <vector>
 using namespace llvm;
 
 #define DEBUG_TYPE "pseudo-lowering"

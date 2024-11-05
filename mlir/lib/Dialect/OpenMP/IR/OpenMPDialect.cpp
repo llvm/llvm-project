@@ -2499,13 +2499,7 @@ void OrderedRegionOp::build(OpBuilder &builder, OperationState &state,
   OrderedRegionOp::build(builder, state, clauses.parLevelSimd);
 }
 
-LogicalResult OrderedRegionOp::verify() {
-  // TODO: The code generation for ordered simd directive is not supported yet.
-  if (getParLevelSimd())
-    return failure();
-
-  return verifyOrderedParent(**this);
-}
+LogicalResult OrderedRegionOp::verify() { return verifyOrderedParent(**this); }
 
 //===----------------------------------------------------------------------===//
 // TaskwaitOp

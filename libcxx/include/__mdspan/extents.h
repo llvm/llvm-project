@@ -21,6 +21,7 @@
 #include <__config>
 
 #include <__concepts/arithmetic.h>
+#include <__cstddef/byte.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -29,9 +30,7 @@
 #include <__utility/integer_sequence.h>
 #include <__utility/unreachable.h>
 #include <array>
-#include <cinttypes>
 #include <concepts>
-#include <cstddef>
 #include <limits>
 #include <span>
 

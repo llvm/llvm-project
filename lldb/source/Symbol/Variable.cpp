@@ -9,8 +9,6 @@
 #include "lldb/Symbol/Variable.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -31,6 +29,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "llvm/ADT/Twine.h"
 
