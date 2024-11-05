@@ -19,11 +19,14 @@ class TestBreakpointSameCU(TestBase):
         comment_line = line_number("common.cpp", "// A comment here")
         self.assertNotEqual(comment_line, 0, "line_number worked")
         bkpt = target.BreakpointCreateByLocation("common.cpp", comment_line)
-        self.assertEqual(bkpt.GetNumLocations(), 4, "Got the right number of breakpoints")
+        self.assertEqual(
+            bkpt.GetNumLocations(), 4, "Got the right number of breakpoints"
+        )
 
         # And break on the code, both should work:
         code_line = line_number("common.cpp", "// The line with code")
         self.assertNotEqual(comment_line, 0, "line_number worked again")
         bkpt = target.BreakpointCreateByLocation("common.cpp", code_line)
-        self.assertEqual(bkpt.GetNumLocations(), 4, "Got the right number of breakpoints")
-        
+        self.assertEqual(
+            bkpt.GetNumLocations(), 4, "Got the right number of breakpoints"
+        )

@@ -326,10 +326,11 @@ void CompileUnit::ResolveSymbolContext(
   // the function containing the PC of the line table match.  That way we can
   // limit the call site search to that function.
   // We will miss functions that ONLY exist as a call site entry.
-  
+
   if (line_entry.IsValid() &&
-      (line_entry.line != line || (column_num != 0 && line_entry.column != column_num))
-      && (resolve_scope & eSymbolContextLineEntry) && check_inlines) {
+      (line_entry.line != line ||
+       (column_num != 0 && line_entry.column != column_num)) &&
+      (resolve_scope & eSymbolContextLineEntry) && check_inlines) {
     // We don't move lines over function boundaries, so the address in the
     // line entry will be the in function that contained the line that might
     // be a CallSite, and we can just iterate over that function to find any
