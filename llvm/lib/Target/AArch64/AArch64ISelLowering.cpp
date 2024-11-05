@@ -14153,11 +14153,13 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return ResultSLI;
 }
 
-/// Try to lower the construction of a pointer alias mask to a WHILEWR.
-/// The mask's enabled lanes represent the elements that will not overlap across
-/// one loop iteration. This tries to match:
-/// or (splat (setcc_lt (sub ptrA, ptrB), -(element_size - 1))),
+/// Try to lower the construction of a pointer alias mask to a WHILEWR or
+/// WHILERW. The mask's enabled lanes represent the elements that will not
+/// overlap across one loop iteration. This tries to match:
+/// or (splat (setcc_lt/lte/eq (sub ptrA, ptrB), 0)),
 ///    (get_active_lane_mask 0, (div (sub ptrA, ptrB), element_size))
+/// A call to abs on the subtraction signifies that it's a read-after-write and
+/// hence a WHILERW.
 SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
                          const AArch64Subtarget &Subtarget) {
   if (!Subtarget.hasSVE2())
@@ -14170,6 +14172,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
 
   if (LaneMask.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
       LaneMask.getConstantOperandVal(0) != Intrinsic::get_active_lane_mask ||
+      !isNullConstant(LaneMask.getOperand(1)) ||
       Splat.getOpcode() != ISD::SPLAT_VECTOR)
     return SDValue();
 
@@ -14177,16 +14180,17 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
   if (Cmp.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  CondCodeSDNode *Cond = cast<CondCodeSDNode>(Cmp.getOperand(2));
-
-  auto ComparatorConst = dyn_cast<ConstantSDNode>(Cmp.getOperand(1));
-  if (!ComparatorConst || ComparatorConst->getSExtValue() > 0 ||
-      Cond->get() != ISD::CondCode::SETLT)
-    return SDValue();
-  unsigned CompValue = std::abs(ComparatorConst->getSExtValue());
-  unsigned EltSize = CompValue + 1;
-  if (!isPowerOf2_64(EltSize) || EltSize > 8)
-    return SDValue();
+  // The number of elements that alias is calculated by dividing the positive
+  // difference between the pointers by the element size. An alias mask for i8
+  // elements omits the division because it would just divide by 1
+  SDValue DiffDiv = LaneMask.getOperand(2);
+  unsigned EltSize = 1;
+  if (DiffDiv.getOpcode() == ISD::SRA) {
+    auto DiffDivConst = dyn_cast<ConstantSDNode>(DiffDiv.getOperand(1));
+    if (!DiffDivConst)
+      return SDValue();
+    EltSize = 1 << DiffDivConst->getZExtValue();
+  }
 
   SDValue Diff = Cmp.getOperand(0);
   SDValue NonAbsDiff = Diff;
@@ -14197,66 +14201,81 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
     WriteAfterRead = false;
   }
 
+  ISD::CondCode Cond = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+  auto ComparatorConst = dyn_cast<ConstantSDNode>(Cmp.getOperand(1));
+  if (!ComparatorConst)
+    return SDValue();
+
+  // The diff should be compared to 0. A write-after-read should be less than or
+  // equal and a read-after-write should be equal.
+  int CompValue = ComparatorConst->getSExtValue();
+  switch (CompValue) {
+  case 0:
+    if (WriteAfterRead && Cond != ISD::CondCode::SETLE)
+      return SDValue();
+    else if (!WriteAfterRead && Cond != ISD::CondCode::SETEQ)
+      return SDValue();
+    break;
+  case 1:
+    if (!WriteAfterRead)
+      return SDValue();
+    if (Cond != ISD::CondCode::SETLT)
+      return SDValue();
+    break;
+  default:
+    return SDValue();
+  }
+
   if (NonAbsDiff.getOpcode() != ISD::SUB ||
       NonAbsDiff.getValueType() != MVT::i64)
     return SDValue();
 
-  if (!isNullConstant(LaneMask.getOperand(1)) ||
-      (EltSize != 1 && LaneMask.getOperand(2).getOpcode() != ISD::SRA))
-    return SDValue();
-
-  // The number of elements that alias is calculated by dividing the positive
-  // difference between the pointers by the element size. An alias mask for i8
-  // elements omits the division because it would just divide by 1
-  if (EltSize > 1) {
-    SDValue DiffDiv = LaneMask.getOperand(2);
-    auto DiffDivConst = dyn_cast<ConstantSDNode>(DiffDiv.getOperand(1));
-    if (!DiffDivConst || DiffDivConst->getZExtValue() != Log2_64(EltSize))
+  if (EltSize == 1) {
+    // When the element size is 1, the division is omitted, so the lane mask
+    // just uses the raw difference between the pointers.
+    if (LaneMask.getOperand(2) != Diff)
       return SDValue();
-    if (EltSize > 2) {
-      // When masking i32 or i64 elements, the positive value of the
-      // possibly-negative difference comes from a select of the difference if
-      // it's positive, otherwise the difference plus the element size if it's
-      // negative: pos_diff = diff < 0 ? (diff + 7) : diff
-      SDValue Select = DiffDiv.getOperand(0);
-      SDValue SelectOp3 = Select.getOperand(3);
-      // Check for an abs in the case of a read-after-write
-      if (!WriteAfterRead && SelectOp3.getOpcode() == ISD::ABS)
-        SelectOp3 = SelectOp3.getOperand(0);
+  } else if (EltSize == 2) {
+    // When masking i16 elements, this positive value comes from adding the
+    // difference's sign bit to the difference itself. This is equivalent to
+    // the 32 bit and 64 bit case: pos_diff = diff + sign_bit (diff)
+    SDValue Add = DiffDiv.getOperand(0);
+    if (Add.getOpcode() != ISD::ADD || Add.getOperand(0) != Diff)
+      return SDValue();
+    // A logical right shift by 63 extracts the sign bit from the difference
+    SDValue Shift = Add.getOperand(1);
+    if (Shift.getOpcode() != ISD::SRL || Shift.getOperand(0) != Diff)
+      return SDValue();
+    if (auto *ShiftConst = dyn_cast<ConstantSDNode>(Shift.getOperand(1));
+        !ShiftConst || ShiftConst->getZExtValue() != 63)
+      return SDValue();
+  } else if (EltSize > 2) {
+    // When masking i32 or i64 elements, the positive value of the
+    // possibly-negative difference comes from a select of the difference if
+    // it's positive, otherwise the difference plus the element size if it's
+    // negative: pos_diff = diff < 0 ? (diff + 7) : diff
+    SDValue Select = DiffDiv.getOperand(0);
+    SDValue SelectOp3 = Select.getOperand(3);
+    // Check for an abs in the case of a read-after-write
+    if (!WriteAfterRead && SelectOp3.getOpcode() == ISD::ABS)
+      SelectOp3 = SelectOp3.getOperand(0);
 
-      // Make sure the difference is being compared by the select
-      if (Select.getOpcode() != ISD::SELECT_CC || SelectOp3 != NonAbsDiff)
-        return SDValue();
-      // Make sure it's checking if the difference is less than 0
-      if (!isNullConstant(Select.getOperand(1)) ||
-          cast<CondCodeSDNode>(Select.getOperand(4))->get() !=
-              ISD::CondCode::SETLT)
-        return SDValue();
-      // An add creates a positive value from the negative difference
-      SDValue Add = Select.getOperand(2);
-      if (Add.getOpcode() != ISD::ADD || Add.getOperand(0) != Diff)
-        return SDValue();
-      if (auto *AddConst = dyn_cast<ConstantSDNode>(Add.getOperand(1));
-          !AddConst || AddConst->getZExtValue() != EltSize - 1)
-        return SDValue();
-    } else {
-      // When masking i16 elements, this positive value comes from adding the
-      // difference's sign bit to the difference itself. This is equivalent to
-      // the 32 bit and 64 bit case: pos_diff = diff + sign_bit (diff)
-      SDValue Add = DiffDiv.getOperand(0);
-      if (Add.getOpcode() != ISD::ADD || Add.getOperand(0) != Diff)
-        return SDValue();
-      // A logical right shift by 63 extracts the sign bit from the difference
-      SDValue Shift = Add.getOperand(1);
-      if (Shift.getOpcode() != ISD::SRL || Shift.getOperand(0) != Diff)
-        return SDValue();
-      if (auto *ShiftConst = dyn_cast<ConstantSDNode>(Shift.getOperand(1));
-          !ShiftConst || ShiftConst->getZExtValue() != 63)
-        return SDValue();
-    }
-  } else if (LaneMask.getOperand(2) != Diff)
-    return SDValue();
-
+    // Make sure the difference is being compared by the select
+    if (Select.getOpcode() != ISD::SELECT_CC || SelectOp3 != NonAbsDiff)
+      return SDValue();
+    // Make sure it's checking if the difference is less than 0
+    if (!isNullConstant(Select.getOperand(1)) ||
+        cast<CondCodeSDNode>(Select.getOperand(4))->get() !=
+            ISD::CondCode::SETLT)
+      return SDValue();
+    // An add creates a positive value from the negative difference
+    SDValue Add = Select.getOperand(2);
+    if (Add.getOpcode() != ISD::ADD || Add.getOperand(0) != Diff)
+      return SDValue();
+    if (auto *AddConst = dyn_cast<ConstantSDNode>(Add.getOperand(1));
+        !AddConst || AddConst->getZExtValue() != EltSize - 1)
+      return SDValue();
+  }
   SDValue StorePtr = NonAbsDiff.getOperand(0);
   SDValue ReadPtr = NonAbsDiff.getOperand(1);
 

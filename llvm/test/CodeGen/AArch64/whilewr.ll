@@ -11,7 +11,7 @@ define <vscale x 16 x i1> @whilewr_8(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-LABEL: whilewr_8:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
 ; CHECK-NOSVE2-NEXT:    sub x8, x1, x2
-; CHECK-NOSVE2-NEXT:    cmp x8, #0
+; CHECK-NOSVE2-NEXT:    cmp x8, #1
 ; CHECK-NOSVE2-NEXT:    cset w9, lt
 ; CHECK-NOSVE2-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NOSVE2-NEXT:    sbfx x8, x9, #0, #1
@@ -22,7 +22,7 @@ entry:
   %c14 = ptrtoint ptr %c to i64
   %b15 = ptrtoint ptr %b to i64
   %sub.diff = sub i64 %b15, %c14
-  %neg.compare = icmp slt i64 %sub.diff, 0
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 16 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 16 x i1> %.splatinsert, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %sub.diff)
@@ -33,15 +33,15 @@ entry:
 define <vscale x 16 x i1> @whilerw_8(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilerw_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilerw p0.b, x2, x1
+; CHECK-NEXT:    whilerw p0.b, x1, x2
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOSVE2-LABEL: whilerw_8:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
-; CHECK-NOSVE2-NEXT:    subs x8, x2, x1
+; CHECK-NOSVE2-NEXT:    subs x8, x1, x2
 ; CHECK-NOSVE2-NEXT:    cneg x8, x8, mi
 ; CHECK-NOSVE2-NEXT:    cmp x8, #0
-; CHECK-NOSVE2-NEXT:    cset w9, lt
+; CHECK-NOSVE2-NEXT:    cset w9, eq
 ; CHECK-NOSVE2-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NOSVE2-NEXT:    sbfx x8, x9, #0, #1
 ; CHECK-NOSVE2-NEXT:    whilelo p1.b, xzr, x8
@@ -50,9 +50,9 @@ define <vscale x 16 x i1> @whilerw_8(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 entry:
   %b24 = ptrtoint ptr %b to i64
   %c25 = ptrtoint ptr %c to i64
-  %sub.diff = sub i64 %c25, %b24
+  %sub.diff = sub i64 %b24, %c25
   %0 = tail call i64 @llvm.abs.i64(i64 %sub.diff, i1 false)
-  %neg.compare = icmp slt i64 %0, 0
+  %neg.compare = icmp eq i64 %0, 0
   %.splatinsert = insertelement <vscale x 16 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 16 x i1> %.splatinsert, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %0)
@@ -69,7 +69,7 @@ define <vscale x 16 x i1> @whilewr_commutative(ptr noalias %a, ptr %b, ptr %c, i
 ; CHECK-NOSVE2-LABEL: whilewr_commutative:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
 ; CHECK-NOSVE2-NEXT:    sub x8, x1, x2
-; CHECK-NOSVE2-NEXT:    cmp x8, #0
+; CHECK-NOSVE2-NEXT:    cmp x8, #1
 ; CHECK-NOSVE2-NEXT:    cset w9, lt
 ; CHECK-NOSVE2-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NOSVE2-NEXT:    sbfx x8, x9, #0, #1
@@ -80,7 +80,7 @@ entry:
   %c14 = ptrtoint ptr %c to i64
   %b15 = ptrtoint ptr %b to i64
   %sub.diff = sub i64 %b15, %c14
-  %neg.compare = icmp slt i64 %sub.diff, 0
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 16 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 16 x i1> %.splatinsert, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %sub.diff)
@@ -97,7 +97,7 @@ define <vscale x 8 x i1> @whilewr_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-LABEL: whilewr_16:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
 ; CHECK-NOSVE2-NEXT:    sub x8, x1, x2
-; CHECK-NOSVE2-NEXT:    cmn x8, #1
+; CHECK-NOSVE2-NEXT:    cmp x8, #1
 ; CHECK-NOSVE2-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-NOSVE2-NEXT:    cset w9, lt
 ; CHECK-NOSVE2-NEXT:    sbfx x9, x9, #0, #1
@@ -111,7 +111,7 @@ entry:
   %c15 = ptrtoint ptr %c to i64
   %sub.diff = sub i64 %b14, %c15
   %diff = sdiv i64 %sub.diff, 2
-  %neg.compare = icmp slt i64 %sub.diff, -1
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 8 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 8 x i1> %.splatinsert, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %diff)
@@ -122,16 +122,16 @@ entry:
 define <vscale x 8 x i1> @whilerw_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilerw_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilerw p0.h, x2, x1
+; CHECK-NEXT:    whilerw p0.h, x1, x2
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOSVE2-LABEL: whilerw_16:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
-; CHECK-NOSVE2-NEXT:    subs x8, x2, x1
+; CHECK-NOSVE2-NEXT:    subs x8, x1, x2
 ; CHECK-NOSVE2-NEXT:    cneg x8, x8, mi
-; CHECK-NOSVE2-NEXT:    cmn x8, #1
+; CHECK-NOSVE2-NEXT:    cmp x8, #0
 ; CHECK-NOSVE2-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE2-NEXT:    cset w9, lt
+; CHECK-NOSVE2-NEXT:    cset w9, eq
 ; CHECK-NOSVE2-NEXT:    sbfx x9, x9, #0, #1
 ; CHECK-NOSVE2-NEXT:    asr x8, x8, #1
 ; CHECK-NOSVE2-NEXT:    whilelo p0.h, xzr, x9
@@ -141,10 +141,10 @@ define <vscale x 8 x i1> @whilerw_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 entry:
   %b24 = ptrtoint ptr %b to i64
   %c25 = ptrtoint ptr %c to i64
-  %sub.diff = sub i64 %c25, %b24
+  %sub.diff = sub i64 %b24, %c25
   %0 = tail call i64 @llvm.abs.i64(i64 %sub.diff, i1 false)
   %diff = sdiv i64 %0, 2
-  %neg.compare = icmp slt i64 %0, -1
+  %neg.compare = icmp eq i64 %0, 0
   %.splatinsert = insertelement <vscale x 8 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 8 x i1> %.splatinsert, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %diff)
@@ -164,7 +164,7 @@ define <vscale x 4 x i1> @whilewr_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x9, x8, #3
 ; CHECK-NOSVE2-NEXT:    cmp x8, #0
 ; CHECK-NOSVE2-NEXT:    csel x9, x9, x8, lt
-; CHECK-NOSVE2-NEXT:    cmn x8, #3
+; CHECK-NOSVE2-NEXT:    cmp x8, #1
 ; CHECK-NOSVE2-NEXT:    cset w8, lt
 ; CHECK-NOSVE2-NEXT:    asr x9, x9, #2
 ; CHECK-NOSVE2-NEXT:    sbfx x8, x8, #0, #1
@@ -177,7 +177,7 @@ entry:
   %c13 = ptrtoint ptr %c to i64
   %sub.diff = sub i64 %b12, %c13
   %diff = sdiv i64 %sub.diff, 4
-  %neg.compare = icmp slt i64 %sub.diff, -3
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 4 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 4 x i1> %.splatinsert, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %diff)
@@ -188,31 +188,30 @@ entry:
 define <vscale x 4 x i1> @whilerw_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilerw_32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilerw p0.s, x2, x1
+; CHECK-NEXT:    whilerw p0.s, x1, x2
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOSVE2-LABEL: whilerw_32:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
-; CHECK-NOSVE2-NEXT:    subs x8, x2, x1
+; CHECK-NOSVE2-NEXT:    subs x8, x1, x2
 ; CHECK-NOSVE2-NEXT:    cneg x8, x8, mi
-; CHECK-NOSVE2-NEXT:    add x9, x8, #3
 ; CHECK-NOSVE2-NEXT:    cmp x8, #0
-; CHECK-NOSVE2-NEXT:    csel x9, x9, x8, lt
-; CHECK-NOSVE2-NEXT:    cmn x8, #3
-; CHECK-NOSVE2-NEXT:    cset w8, lt
-; CHECK-NOSVE2-NEXT:    asr x9, x9, #2
-; CHECK-NOSVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NOSVE2-NEXT:    whilelo p1.s, xzr, x9
-; CHECK-NOSVE2-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NOSVE2-NEXT:    add x9, x8, #3
+; CHECK-NOSVE2-NEXT:    cset w10, eq
+; CHECK-NOSVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-NOSVE2-NEXT:    sbfx x9, x10, #0, #1
+; CHECK-NOSVE2-NEXT:    asr x8, x8, #2
+; CHECK-NOSVE2-NEXT:    whilelo p0.s, xzr, x9
+; CHECK-NOSVE2-NEXT:    whilelo p1.s, xzr, x8
 ; CHECK-NOSVE2-NEXT:    mov p0.b, p1/m, p1.b
 ; CHECK-NOSVE2-NEXT:    ret
 entry:
   %b24 = ptrtoint ptr %b to i64
   %c25 = ptrtoint ptr %c to i64
-  %sub.diff = sub i64 %c25, %b24
+  %sub.diff = sub i64 %b24, %c25
   %0 = tail call i64 @llvm.abs.i64(i64 %sub.diff, i1 false)
   %diff = sdiv i64 %0, 4
-  %neg.compare = icmp slt i64 %0, -3
+  %neg.compare = icmp eq i64 %0, 0
   %.splatinsert = insertelement <vscale x 4 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 4 x i1> %.splatinsert, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %diff)
@@ -232,7 +231,7 @@ define <vscale x 2 x i1> @whilewr_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x9, x8, #7
 ; CHECK-NOSVE2-NEXT:    cmp x8, #0
 ; CHECK-NOSVE2-NEXT:    csel x9, x9, x8, lt
-; CHECK-NOSVE2-NEXT:    cmn x8, #7
+; CHECK-NOSVE2-NEXT:    cmp x8, #1
 ; CHECK-NOSVE2-NEXT:    cset w8, lt
 ; CHECK-NOSVE2-NEXT:    asr x9, x9, #3
 ; CHECK-NOSVE2-NEXT:    sbfx x8, x8, #0, #1
@@ -245,7 +244,7 @@ entry:
   %c13 = ptrtoint ptr %c to i64
   %sub.diff = sub i64 %b12, %c13
   %diff = sdiv i64 %sub.diff, 8
-  %neg.compare = icmp slt i64 %sub.diff, -7
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 2 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 2 x i1> %.splatinsert, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %diff)
@@ -256,31 +255,30 @@ entry:
 define <vscale x 2 x i1> @whilerw_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilerw_64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilerw p0.d, x2, x1
+; CHECK-NEXT:    whilerw p0.d, x1, x2
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOSVE2-LABEL: whilerw_64:
 ; CHECK-NOSVE2:       // %bb.0: // %entry
-; CHECK-NOSVE2-NEXT:    subs x8, x2, x1
+; CHECK-NOSVE2-NEXT:    subs x8, x1, x2
 ; CHECK-NOSVE2-NEXT:    cneg x8, x8, mi
-; CHECK-NOSVE2-NEXT:    add x9, x8, #7
 ; CHECK-NOSVE2-NEXT:    cmp x8, #0
-; CHECK-NOSVE2-NEXT:    csel x9, x9, x8, lt
-; CHECK-NOSVE2-NEXT:    cmn x8, #7
-; CHECK-NOSVE2-NEXT:    cset w8, lt
-; CHECK-NOSVE2-NEXT:    asr x9, x9, #3
-; CHECK-NOSVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NOSVE2-NEXT:    whilelo p1.d, xzr, x9
-; CHECK-NOSVE2-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NOSVE2-NEXT:    add x9, x8, #7
+; CHECK-NOSVE2-NEXT:    cset w10, eq
+; CHECK-NOSVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-NOSVE2-NEXT:    sbfx x9, x10, #0, #1
+; CHECK-NOSVE2-NEXT:    asr x8, x8, #3
+; CHECK-NOSVE2-NEXT:    whilelo p0.d, xzr, x9
+; CHECK-NOSVE2-NEXT:    whilelo p1.d, xzr, x8
 ; CHECK-NOSVE2-NEXT:    mov p0.b, p1/m, p1.b
 ; CHECK-NOSVE2-NEXT:    ret
 entry:
   %b24 = ptrtoint ptr %b to i64
   %c25 = ptrtoint ptr %c to i64
-  %sub.diff = sub i64 %c25, %b24
+  %sub.diff = sub i64 %b24, %c25
   %0 = tail call i64 @llvm.abs.i64(i64 %sub.diff, i1 false)
   %diff = sdiv i64 %0, 8
-  %neg.compare = icmp slt i64 %0, -7
+  %neg.compare = icmp eq i64 %0, 0
   %.splatinsert = insertelement <vscale x 2 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 2 x i1> %.splatinsert, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %diff)
@@ -297,7 +295,7 @@ define <vscale x 1 x i1> @no_whilewr_128(ptr noalias %a, ptr %b, ptr %c, i32 %n)
 ; CHECK-NEXT:    add x9, x8, #15
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csel x9, x9, x8, lt
-; CHECK-NEXT:    cmn x8, #15
+; CHECK-NEXT:    cmp x8, #1
 ; CHECK-NEXT:    asr x9, x9, #4
 ; CHECK-NEXT:    cset w8, lt
 ; CHECK-NEXT:    sbfx x8, x8, #0, #1
@@ -317,7 +315,7 @@ define <vscale x 1 x i1> @no_whilewr_128(ptr noalias %a, ptr %b, ptr %c, i32 %n)
 ; CHECK-NOSVE2-NEXT:    add x9, x8, #15
 ; CHECK-NOSVE2-NEXT:    cmp x8, #0
 ; CHECK-NOSVE2-NEXT:    csel x9, x9, x8, lt
-; CHECK-NOSVE2-NEXT:    cmn x8, #15
+; CHECK-NOSVE2-NEXT:    cmp x8, #1
 ; CHECK-NOSVE2-NEXT:    asr x9, x9, #4
 ; CHECK-NOSVE2-NEXT:    cset w8, lt
 ; CHECK-NOSVE2-NEXT:    sbfx x8, x8, #0, #1
@@ -333,7 +331,7 @@ entry:
   %c13 = ptrtoint ptr %c to i64
   %sub.diff = sub i64 %b12, %c13
   %diff = sdiv i64 %sub.diff, 16
-  %neg.compare = icmp slt i64 %sub.diff, -15
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 1 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 1 x i1> %.splatinsert, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i64(i64 0, i64 %diff)
@@ -373,7 +371,7 @@ define void @whilewr_loop_8(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NOSVE2-NEXT:    sub x9, x1, x2
 ; CHECK-NOSVE2-NEXT:    mov x8, xzr
-; CHECK-NOSVE2-NEXT:    cmp x9, #0
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    whilelo p0.b, xzr, x9
 ; CHECK-NOSVE2-NEXT:    sbfx x9, x10, #0, #1
@@ -404,7 +402,7 @@ for.body.preheader:
   %b15 = ptrtoint ptr %b to i64
   %wide.trip.count = zext nneg i32 %n to i64
   %sub.diff = sub i64 %b15, %c14
-  %neg.compare = icmp slt i64 %sub.diff, 0
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 16 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 16 x i1> %.splatinsert, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %sub.diff)
@@ -442,18 +440,18 @@ define void @whilewr_loop_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB11_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w8, w3
-; CHECK-NEXT:    whilewr p1.h, x1, x2
+; CHECK-NEXT:    whilewr p0.h, x1, x2
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-NEXT:  .LBB11_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x9, lsl #1]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1, x9, lsl #1]
+; CHECK-NEXT:    and p2.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ld1h { z0.h }, p2/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    ld1h { z1.h }, p2/z, [x1, x9, lsl #1]
 ; CHECK-NEXT:    add z0.h, z1.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x2, x9, lsl #1]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x2, x9, lsl #1]
 ; CHECK-NEXT:    inch x9
-; CHECK-NEXT:    whilelo p0.h, x9, x8
+; CHECK-NEXT:    whilelo p1.h, x9, x8
 ; CHECK-NEXT:    b.mi .LBB11_2
 ; CHECK-NEXT:  .LBB11_3: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -467,7 +465,7 @@ define void @whilewr_loop_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    sub x10, x1, x2
 ; CHECK-NOSVE2-NEXT:    mov x8, xzr
 ; CHECK-NOSVE2-NEXT:    whilelo p0.h, xzr, x9
-; CHECK-NOSVE2-NEXT:    cmn x10, #1
+; CHECK-NOSVE2-NEXT:    cmp x10, #1
 ; CHECK-NOSVE2-NEXT:    add x10, x10, x10, lsr #63
 ; CHECK-NOSVE2-NEXT:    cset w11, lt
 ; CHECK-NOSVE2-NEXT:    sbfx x11, x11, #0, #1
@@ -476,11 +474,11 @@ define void @whilewr_loop_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    whilelo p2.h, xzr, x10
 ; CHECK-NOSVE2-NEXT:    cnth x10
 ; CHECK-NOSVE2-NEXT:    mov p1.b, p2/m, p2.b
-; CHECK-NOSVE2-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NOSVE2-NEXT:  .LBB11_2: // %vector.body
 ; CHECK-NOSVE2-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NOSVE2-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; CHECK-NOSVE2-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; CHECK-NOSVE2-NEXT:    and p2.b, p1/z, p1.b, p0.b
+; CHECK-NOSVE2-NEXT:    ld1h { z0.h }, p2/z, [x0, x8, lsl #1]
+; CHECK-NOSVE2-NEXT:    ld1h { z1.h }, p2/z, [x1, x8, lsl #1]
 ; CHECK-NOSVE2-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NOSVE2-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
 ; CHECK-NOSVE2-NEXT:    add x8, x8, x10
@@ -501,21 +499,21 @@ for.body.preheader:
   %active.lane.mask.entry = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %wide.trip.count)
   %sub.diff = sub i64 %b14, %c15
   %diff = sdiv i64 %sub.diff, 2
-  %neg.compare = icmp slt i64 %sub.diff, -1
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 8 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 8 x i1> %.splatinsert, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %diff)
   %active.lane.mask.alias = or <vscale x 8 x i1> %ptr.diff.lane.mask, %.splat
-  %2 = and <vscale x 8 x i1> %active.lane.mask.alias, %active.lane.mask.entry
   br label %vector.body
 
 vector.body:
   %index = phi i64 [ 0, %for.body.preheader ], [ %index.next, %vector.body ]
-  %active.lane.mask = phi <vscale x 8 x i1> [ %2, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %active.lane.mask = phi <vscale x 8 x i1> [ %active.lane.mask.entry, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %2 = and <vscale x 8 x i1> %active.lane.mask.alias, %active.lane.mask
   %3 = getelementptr inbounds i16, ptr %a, i64 %index
-  %wide.masked.load = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %3, i32 2, <vscale x 8 x i1> %active.lane.mask, <vscale x 8 x i16> poison)
+  %wide.masked.load = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %3, i32 2, <vscale x 8 x i1> %2, <vscale x 8 x i16> poison)
   %4 = getelementptr inbounds i16, ptr %b, i64 %index
-  %wide.masked.load16 = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %4, i32 2, <vscale x 8 x i1> %active.lane.mask, <vscale x 8 x i16> poison)
+  %wide.masked.load16 = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %4, i32 2, <vscale x 8 x i1> %2, <vscale x 8 x i16> poison)
   %5 = add <vscale x 8 x i16> %wide.masked.load16, %wide.masked.load
   %6 = getelementptr inbounds i16, ptr %c, i64 %index
   tail call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %5, ptr %6, i32 2, <vscale x 8 x i1> %active.lane.mask)
@@ -535,18 +533,18 @@ define void @whilewr_loop_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB12_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w8, w3
-; CHECK-NEXT:    whilewr p1.s, x1, x2
+; CHECK-NEXT:    whilewr p0.s, x1, x2
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    whilelo p0.s, xzr, x8
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    whilelo p1.s, xzr, x8
 ; CHECK-NEXT:  .LBB12_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x9, lsl #2]
+; CHECK-NEXT:    and p2.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x0, x9, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x1, x9, lsl #2]
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x2, x9, lsl #2]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x2, x9, lsl #2]
 ; CHECK-NEXT:    incw x9
-; CHECK-NEXT:    whilelo p0.s, x9, x8
+; CHECK-NEXT:    whilelo p1.s, x9, x8
 ; CHECK-NEXT:    b.mi .LBB12_2
 ; CHECK-NEXT:  .LBB12_3: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -563,7 +561,7 @@ define void @whilewr_loop_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x11, x10, #3
 ; CHECK-NOSVE2-NEXT:    cmp x10, #0
 ; CHECK-NOSVE2-NEXT:    csel x11, x11, x10, lt
-; CHECK-NOSVE2-NEXT:    cmn x10, #3
+; CHECK-NOSVE2-NEXT:    cmp x10, #1
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    asr x11, x11, #2
 ; CHECK-NOSVE2-NEXT:    sbfx x10, x10, #0, #1
@@ -571,11 +569,11 @@ define void @whilewr_loop_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    whilelo p1.s, xzr, x10
 ; CHECK-NOSVE2-NEXT:    cntw x10
 ; CHECK-NOSVE2-NEXT:    mov p1.b, p2/m, p2.b
-; CHECK-NOSVE2-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NOSVE2-NEXT:  .LBB12_2: // %vector.body
 ; CHECK-NOSVE2-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NOSVE2-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NOSVE2-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; CHECK-NOSVE2-NEXT:    and p2.b, p1/z, p1.b, p0.b
+; CHECK-NOSVE2-NEXT:    ld1w { z0.s }, p2/z, [x0, x8, lsl #2]
+; CHECK-NOSVE2-NEXT:    ld1w { z1.s }, p2/z, [x1, x8, lsl #2]
 ; CHECK-NOSVE2-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NOSVE2-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
 ; CHECK-NOSVE2-NEXT:    add x8, x8, x10
@@ -596,21 +594,21 @@ for.body.preheader:
   %active.lane.mask.entry = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %wide.trip.count)
   %sub.diff = sub i64 %b12, %c13
   %diff = sdiv i64 %sub.diff, 4
-  %neg.compare = icmp slt i64 %sub.diff, -3
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 4 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 4 x i1> %.splatinsert, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %diff)
   %active.lane.mask.alias = or <vscale x 4 x i1> %ptr.diff.lane.mask, %.splat
-  %2 = and <vscale x 4 x i1> %active.lane.mask.alias, %active.lane.mask.entry
   br label %vector.body
 
 vector.body:
   %index = phi i64 [ 0, %for.body.preheader ], [ %index.next, %vector.body ]
-  %active.lane.mask = phi <vscale x 4 x i1> [ %2, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %active.lane.mask = phi <vscale x 4 x i1> [ %active.lane.mask.entry, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %2 = and <vscale x 4 x i1> %active.lane.mask.alias, %active.lane.mask
   %3 = getelementptr inbounds i32, ptr %a, i64 %index
-  %wide.masked.load = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %3, i32 4, <vscale x 4 x i1> %active.lane.mask, <vscale x 4 x i32> poison)
+  %wide.masked.load = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %3, i32 4, <vscale x 4 x i1> %2, <vscale x 4 x i32> poison)
   %4 = getelementptr inbounds i32, ptr %b, i64 %index
-  %wide.masked.load14 = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %4, i32 4, <vscale x 4 x i1> %active.lane.mask, <vscale x 4 x i32> poison)
+  %wide.masked.load14 = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %4, i32 4, <vscale x 4 x i1> %2, <vscale x 4 x i32> poison)
   %5 = add <vscale x 4 x i32> %wide.masked.load14, %wide.masked.load
   %6 = getelementptr inbounds i32, ptr %c, i64 %index
   tail call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %5, ptr %6, i32 4, <vscale x 4 x i1> %active.lane.mask)
@@ -630,18 +628,18 @@ define void @whilewr_loop_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB13_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w8, w3
-; CHECK-NEXT:    whilewr p1.d, x1, x2
+; CHECK-NEXT:    whilewr p0.d, x1, x2
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    whilelo p0.d, xzr, x8
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
 ; CHECK-NEXT:  .LBB13_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x9, lsl #3]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1, x9, lsl #3]
+; CHECK-NEXT:    and p2.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x0, x9, lsl #3]
+; CHECK-NEXT:    ld1d { z1.d }, p2/z, [x1, x9, lsl #3]
 ; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x2, x9, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x2, x9, lsl #3]
 ; CHECK-NEXT:    incd x9
-; CHECK-NEXT:    whilelo p0.d, x9, x8
+; CHECK-NEXT:    whilelo p1.d, x9, x8
 ; CHECK-NEXT:    b.mi .LBB13_2
 ; CHECK-NEXT:  .LBB13_3: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -658,7 +656,7 @@ define void @whilewr_loop_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x11, x10, #7
 ; CHECK-NOSVE2-NEXT:    cmp x10, #0
 ; CHECK-NOSVE2-NEXT:    csel x11, x11, x10, lt
-; CHECK-NOSVE2-NEXT:    cmn x10, #7
+; CHECK-NOSVE2-NEXT:    cmp x10, #1
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    asr x11, x11, #3
 ; CHECK-NOSVE2-NEXT:    sbfx x10, x10, #0, #1
@@ -666,11 +664,11 @@ define void @whilewr_loop_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    whilelo p1.d, xzr, x10
 ; CHECK-NOSVE2-NEXT:    cntd x10
 ; CHECK-NOSVE2-NEXT:    mov p1.b, p2/m, p2.b
-; CHECK-NOSVE2-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NOSVE2-NEXT:  .LBB13_2: // %vector.body
 ; CHECK-NOSVE2-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NOSVE2-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; CHECK-NOSVE2-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; CHECK-NOSVE2-NEXT:    and p2.b, p1/z, p1.b, p0.b
+; CHECK-NOSVE2-NEXT:    ld1d { z0.d }, p2/z, [x0, x8, lsl #3]
+; CHECK-NOSVE2-NEXT:    ld1d { z1.d }, p2/z, [x1, x8, lsl #3]
 ; CHECK-NOSVE2-NEXT:    add z0.d, z1.d, z0.d
 ; CHECK-NOSVE2-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
 ; CHECK-NOSVE2-NEXT:    add x8, x8, x10
@@ -691,21 +689,21 @@ for.body.preheader:
   %active.lane.mask.entry = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %wide.trip.count)
   %sub.diff = sub i64 %b12, %c13
   %diff = sdiv i64 %sub.diff, 8
-  %neg.compare = icmp slt i64 %sub.diff, -7
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 2 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 2 x i1> %.splatinsert, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %diff)
   %active.lane.mask.alias = or <vscale x 2 x i1> %ptr.diff.lane.mask, %.splat
-  %2 = and <vscale x 2 x i1> %active.lane.mask.alias, %active.lane.mask.entry
   br label %vector.body
 
 vector.body:
   %index = phi i64 [ 0, %for.body.preheader ], [ %index.next, %vector.body ]
-  %active.lane.mask = phi <vscale x 2 x i1> [ %2, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %active.lane.mask = phi <vscale x 2 x i1> [ %active.lane.mask.entry, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %2 = and <vscale x 2 x i1> %active.lane.mask.alias, %active.lane.mask
   %3 = getelementptr inbounds i64, ptr %a, i64 %index
-  %wide.masked.load = tail call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %3, i32 8, <vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i64> poison)
+  %wide.masked.load = tail call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %3, i32 8, <vscale x 2 x i1> %2, <vscale x 2 x i64> poison)
   %4 = getelementptr inbounds i64, ptr %b, i64 %index
-  %wide.masked.load14 = tail call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %4, i32 8, <vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i64> poison)
+  %wide.masked.load14 = tail call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %4, i32 8, <vscale x 2 x i1> %2, <vscale x 2 x i64> poison)
   %5 = add <vscale x 2 x i64> %wide.masked.load14, %wide.masked.load
   %6 = getelementptr inbounds i64, ptr %c, i64 %index
   tail call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %5, ptr %6, i32 8, <vscale x 2 x i1> %active.lane.mask)
@@ -752,13 +750,13 @@ define void @whilewr_loop_multiple_8(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NOSVE2-NEXT:    sub x9, x0, x2
 ; CHECK-NOSVE2-NEXT:    mov x8, xzr
-; CHECK-NOSVE2-NEXT:    cmp x9, #0
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    whilelo p0.b, xzr, x9
 ; CHECK-NOSVE2-NEXT:    sub x9, x1, x2
 ; CHECK-NOSVE2-NEXT:    sbfx x10, x10, #0, #1
 ; CHECK-NOSVE2-NEXT:    whilelo p1.b, xzr, x10
-; CHECK-NOSVE2-NEXT:    cmp x9, #0
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    whilelo p3.b, xzr, x9
 ; CHECK-NOSVE2-NEXT:    mov w9, w3
@@ -792,13 +790,13 @@ for.body.preheader:
   %b16 = ptrtoint ptr %b to i64
   %wide.trip.count = zext nneg i32 %n to i64
   %sub.diff = sub i64 %a15, %c14
-  %neg.compare = icmp slt i64 %sub.diff, 0
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 16 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 16 x i1> %.splatinsert, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %sub.diff)
   %active.lane.mask.alias = or <vscale x 16 x i1> %ptr.diff.lane.mask, %.splat
   %sub.diff18 = sub i64 %b16, %c14
-  %neg.compare20 = icmp slt i64 %sub.diff18, 0
+  %neg.compare20 = icmp sle i64 %sub.diff18, 0
   %.splatinsert21 = insertelement <vscale x 16 x i1> poison, i1 %neg.compare20, i64 0
   %.splat22 = shufflevector <vscale x 16 x i1> %.splatinsert21, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %ptr.diff.lane.mask23 = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %sub.diff18)
@@ -864,7 +862,7 @@ define void @whilewr_loop_multiple_16(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NOSVE2-NEXT:    sub x9, x0, x2
 ; CHECK-NOSVE2-NEXT:    mov x8, xzr
-; CHECK-NOSVE2-NEXT:    cmn x9, #1
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    sbfx x10, x10, #0, #1
@@ -873,7 +871,7 @@ define void @whilewr_loop_multiple_16(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    sub x10, x1, x2
 ; CHECK-NOSVE2-NEXT:    whilelo p1.h, xzr, x9
 ; CHECK-NOSVE2-NEXT:    add x9, x10, x10, lsr #63
-; CHECK-NOSVE2-NEXT:    cmn x10, #1
+; CHECK-NOSVE2-NEXT:    cmp x10, #1
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    asr x9, x9, #1
 ; CHECK-NOSVE2-NEXT:    mov p0.b, p1/m, p1.b
@@ -909,14 +907,14 @@ for.body.preheader:
   %wide.trip.count = zext nneg i32 %n to i64
   %sub.diff = sub i64 %a15, %c14
   %diff = sdiv i64 %sub.diff, 2
-  %neg.compare = icmp slt i64 %sub.diff, -1
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 8 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 8 x i1> %.splatinsert, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %diff)
   %active.lane.mask.alias = or <vscale x 8 x i1> %ptr.diff.lane.mask, %.splat
   %sub.diff18 = sub i64 %b16, %c14
   %diff19 = sdiv i64 %sub.diff18, 2
-  %neg.compare20 = icmp slt i64 %sub.diff18, -1
+  %neg.compare20 = icmp sle i64 %sub.diff18, 0
   %.splatinsert21 = insertelement <vscale x 8 x i1> poison, i1 %neg.compare20, i64 0
   %.splat22 = shufflevector <vscale x 8 x i1> %.splatinsert21, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %ptr.diff.lane.mask23 = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %diff19)
@@ -985,7 +983,7 @@ define void @whilewr_loop_multiple_32(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x10, x9, #3
 ; CHECK-NOSVE2-NEXT:    cmp x9, #0
 ; CHECK-NOSVE2-NEXT:    csel x10, x10, x9, lt
-; CHECK-NOSVE2-NEXT:    cmn x9, #3
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    asr x9, x10, #2
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    sbfx x10, x10, #0, #1
@@ -995,7 +993,7 @@ define void @whilewr_loop_multiple_32(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x10, x9, #3
 ; CHECK-NOSVE2-NEXT:    cmp x9, #0
 ; CHECK-NOSVE2-NEXT:    csel x10, x10, x9, lt
-; CHECK-NOSVE2-NEXT:    cmn x9, #3
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NOSVE2-NEXT:    cset w9, lt
 ; CHECK-NOSVE2-NEXT:    asr x10, x10, #2
@@ -1031,14 +1029,14 @@ for.body.preheader:
   %wide.trip.count = zext nneg i32 %n to i64
   %sub.diff = sub i64 %a13, %c12
   %diff = sdiv i64 %sub.diff, 4
-  %neg.compare = icmp slt i64 %sub.diff, -3
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 4 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 4 x i1> %.splatinsert, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %diff)
   %active.lane.mask.alias = or <vscale x 4 x i1> %ptr.diff.lane.mask, %.splat
   %sub.diff16 = sub i64 %b14, %c12
   %diff17 = sdiv i64 %sub.diff16, 4
-  %neg.compare18 = icmp slt i64 %sub.diff16, -3
+  %neg.compare18 = icmp sle i64 %sub.diff16, 0
   %.splatinsert19 = insertelement <vscale x 4 x i1> poison, i1 %neg.compare18, i64 0
   %.splat20 = shufflevector <vscale x 4 x i1> %.splatinsert19, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %ptr.diff.lane.mask21 = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %diff17)
@@ -1107,7 +1105,7 @@ define void @whilewr_loop_multiple_64(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x10, x9, #7
 ; CHECK-NOSVE2-NEXT:    cmp x9, #0
 ; CHECK-NOSVE2-NEXT:    csel x10, x10, x9, lt
-; CHECK-NOSVE2-NEXT:    cmn x9, #7
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    asr x9, x10, #3
 ; CHECK-NOSVE2-NEXT:    cset w10, lt
 ; CHECK-NOSVE2-NEXT:    sbfx x10, x10, #0, #1
@@ -1117,7 +1115,7 @@ define void @whilewr_loop_multiple_64(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NOSVE2-NEXT:    add x10, x9, #7
 ; CHECK-NOSVE2-NEXT:    cmp x9, #0
 ; CHECK-NOSVE2-NEXT:    csel x10, x10, x9, lt
-; CHECK-NOSVE2-NEXT:    cmn x9, #7
+; CHECK-NOSVE2-NEXT:    cmp x9, #1
 ; CHECK-NOSVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NOSVE2-NEXT:    cset w9, lt
 ; CHECK-NOSVE2-NEXT:    asr x10, x10, #3
@@ -1153,14 +1151,14 @@ for.body.preheader:
   %wide.trip.count = zext nneg i32 %n to i64
   %sub.diff = sub i64 %a13, %c12
   %diff = sdiv i64 %sub.diff, 8
-  %neg.compare = icmp slt i64 %sub.diff, -7
+  %neg.compare = icmp sle i64 %sub.diff, 0
   %.splatinsert = insertelement <vscale x 2 x i1> poison, i1 %neg.compare, i64 0
   %.splat = shufflevector <vscale x 2 x i1> %.splatinsert, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %ptr.diff.lane.mask = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %diff)
   %active.lane.mask.alias = or <vscale x 2 x i1> %ptr.diff.lane.mask, %.splat
   %sub.diff16 = sub i64 %b14, %c12
   %diff17 = sdiv i64 %sub.diff16, 8
-  %neg.compare18 = icmp slt i64 %sub.diff16, -7
+  %neg.compare18 = icmp sle i64 %sub.diff16, 0
   %.splatinsert19 = insertelement <vscale x 2 x i1> poison, i1 %neg.compare18, i64 0
   %.splat20 = shufflevector <vscale x 2 x i1> %.splatinsert19, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %ptr.diff.lane.mask21 = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %diff17)
