@@ -8819,47 +8819,51 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
   }
 }
 
-// Collect VPIRInstructions for phis in the original exit block that are modeled
+// Collect VPIRInstructions for phis in the exit blocks that are modeled
 // in VPlan and add the exiting VPValue as operand. Some exiting values are not
 // modeled explicitly yet and won't be included. Those are un-truncated
 // VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
 // increments.
-static SetVector<VPIRInstruction *> collectUsersInExitBlock(
+static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  // No edge from the middle block to the unique exit block has been inserted
-  // and there is nothing to fix from vector loop; phis should have incoming
-  // from scalar loop only.
-  if (MiddleVPBB->getNumSuccessors() != 2)
-    return {};
   SetVector<VPIRInstruction *> ExitUsersToFix;
-  VPBasicBlock *ExitVPBB = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
-  for (VPRecipeBase &R : *ExitVPBB) {
-    auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
-    if (!ExitIRI)
+  for (VPBlockBase *VPB : vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getSingleSuccessor())) {
+    if (VPB->getNumSuccessors() != 0 || VPB == Plan.getScalarHeader())
       continue;
-    auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
-    if (!ExitPhi)
-      break;
-    Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
-    VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-    // Exit values for inductions are computed and updated outside of VPlan and
-    // independent of induction recipes.
-    // TODO: Compute induction exit values in VPlan.
-    if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
-         !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
-        isa<VPWidenPointerInductionRecipe>(V) ||
-        (isa<Instruction>(IncomingValue) &&
-         OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
-         any_of(IncomingValue->users(), [&Inductions](User *U) {
-           auto *P = dyn_cast<PHINode>(U);
-           return P && Inductions.contains(P);
-         })))
-      continue;
-    ExitUsersToFix.insert(ExitIRI);
-    ExitIRI->addOperand(V);
+    auto *ExitVPBB = cast<VPIRBasicBlock>(VPB);
+    BasicBlock *ExitBB = ExitVPBB->getIRBasicBlock();
+    BasicBlock *ExitingBB = find_singleton<BasicBlock>(
+        to_vector(predecessors(ExitBB)),
+        [OrigLoop](BasicBlock *Pred, bool AllowRepeats) {
+          return OrigLoop->contains(Pred) ? Pred : nullptr;
+        });
+    for (VPRecipeBase &R : *ExitVPBB) {
+      auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
+      if (!ExitIRI)
+        continue;
+      auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
+      if (!ExitPhi)
+        break;
+      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
+      // Exit values for inductions are computed and updated outside of VPlan
+      // and independent of induction recipes.
+      // TODO: Compute induction exit values in VPlan.
+      if ((isa<VPWidenIntOrFpInductionRecipe>(V) &&
+           !cast<VPWidenIntOrFpInductionRecipe>(V)->getTruncInst()) ||
+          isa<VPWidenPointerInductionRecipe>(V) ||
+          (isa<Instruction>(IncomingValue) &&
+           OrigLoop->contains(cast<Instruction>(IncomingValue)) &&
+           any_of(IncomingValue->users(), [&Inductions](User *U) {
+             auto *P = dyn_cast<PHINode>(U);
+             return P && Inductions.contains(P);
+           })))
+        continue;
+      ExitUsersToFix.insert(ExitIRI);
+      ExitIRI->addOperand(V);
+    }
   }
   return ExitUsersToFix;
 }
@@ -8867,7 +8871,7 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlock(
 // Add exit values to \p Plan. Extracts are added for each entry in \p
 // ExitUsersToFix if needed and their operands are updated.
 static void
-addUsersInExitBlock(VPlan &Plan,
+addUsersInExitBlocks(VPlan &Plan,
                     const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
     return;
@@ -9161,10 +9165,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   RecipeBuilder.fixHeaderPhis();
 
   addScalarResumePhis(RecipeBuilder, *Plan);
-  SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlock(
+  SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
       OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  addUsersInExitBlock(*Plan, ExitUsersToFix);
+  addUsersInExitBlocks(*Plan, ExitUsersToFix);
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
