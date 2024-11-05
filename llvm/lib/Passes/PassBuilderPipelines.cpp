@@ -1849,13 +1849,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(CalledValuePropagationPass());
   }
 
-  // For higher optimization levels this Pass has just run, so don't repeat it.
-  if (Level.getSpeedupLevel() == 1) {
-    // Now deduce any function attributes based on the current code.
-    MPM.addPass(
-        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
-  }
-
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
