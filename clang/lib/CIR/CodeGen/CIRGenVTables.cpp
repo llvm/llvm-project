@@ -150,6 +150,16 @@ void CIRGenModule::buildDeferredVTables() {
   DeferredVTables.clear();
 }
 
+/// This is a callback from Sema to tell us that a particular vtable is
+/// required to be emitted in this translation unit.
+///
+/// This is only called for vtables that _must_ be emitted (mainly due to key
+/// functions).  For weak vtables, CodeGen tracks when they are needed and
+/// emits them as-needed.
+void CIRGenModule::buildVTable(CXXRecordDecl *rd) {
+  VTables.GenerateClassData(rd);
+}
+
 void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
   assert(!MissingFeatures::generateDebugInfo());
 

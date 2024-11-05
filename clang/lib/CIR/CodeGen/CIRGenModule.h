@@ -345,6 +345,8 @@ public:
   void buildDeferredVTables();
   bool shouldOpportunisticallyEmitVTables();
 
+  void buildVTable(CXXRecordDecl *rd);
+
   void setDSOLocal(mlir::cir::CIRGlobalValueInterface GV) const;
 
   /// Return the appropriate linkage for the vtable, VTT, and type information

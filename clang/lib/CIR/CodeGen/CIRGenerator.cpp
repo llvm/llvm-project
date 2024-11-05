@@ -190,3 +190,10 @@ void CIRGenerator::CompleteTentativeDefinition(VarDecl *D) {
 
   CGM->buildTentativeDefinition(D);
 }
+
+void CIRGenerator::HandleVTable(CXXRecordDecl *rd) {
+  if (Diags.hasErrorOccurred())
+    return;
+
+  CGM->buildVTable(rd);
+}
