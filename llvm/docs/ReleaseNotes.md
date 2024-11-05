@@ -185,6 +185,7 @@ Changes to the RISC-V Backend
 * The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
+* `-mcpu=tt-ascalon-d8` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
