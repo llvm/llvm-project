@@ -2209,20 +2209,12 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
     return true;
 
   // Convervatively only handle extracting half of a vector.
+  // TODO: We can do arbitrary slidedowns, but for now only support extracting
+  // the upper half of a vector until we have more test coverage.
   // TODO: For sizes which aren't multiples of VLEN sizes, this may not be
   // a cheap extract.  However, this case is important in practice for
   // shuffled extracts of longer vectors.  How resolve?
-  if ((ResElts * 2) != SrcElts)
-    return false;
-
-  // Slide can support arbitrary index, but we only treat vslidedown.vi as
-  // cheap.
-  if (Index >= 32)
-    return false;
-
-  // TODO: We can do arbitrary slidedowns, but for now only support extracting
-  // the upper half of a vector until we have more test coverage.
-  return Index == 0 || Index == ResElts;
+  return (ResElts * 2) == SrcElts && (Index == 0 || Index == ResElts);
 }
 
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
