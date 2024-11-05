@@ -699,6 +699,7 @@ public:
     Op->IsPPC64 = IsPPC64;
     return Op;
   }
+
   static std::unique_ptr<PPCOperand> CreateImm(int64_t Val, SMLoc S, SMLoc E,
                                                bool IsPPC64,
                                                bool IsMemOpBase = false) {
