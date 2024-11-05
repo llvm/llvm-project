@@ -14,6 +14,7 @@
 
 namespace llvm {
 
+class AAResults;
 class ScalarEvolution;
 
 namespace sandboxir {
@@ -22,14 +23,16 @@ class Function;
 class Region;
 
 class Analyses {
+  AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
 
   Analyses() = default;
 
 public:
-  Analyses(ScalarEvolution &SE) : SE(&SE) {}
+  Analyses(AAResults &AA, ScalarEvolution &SE) : AA(&AA), SE(&SE) {}
 
 public:
+  AAResults &getAA() const { return *AA; }
   ScalarEvolution &getScalarEvolution() const { return *SE; }
   /// For use by unit tests.
   static Analyses emptyForTesting() { return Analyses(); }
