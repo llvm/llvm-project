@@ -5882,6 +5882,12 @@ let TargetPrefix = "x86" in {
   def int_x86_tilestored64 : ClangBuiltin<"__builtin_ia32_tilestored64">,
               Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
                         [ImmArg<ArgIndex<0>>]>;
+  def int_x86_tileloaddrs64 : ClangBuiltin<"__builtin_ia32_tileloaddrs64">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_tileloaddrst164 : ClangBuiltin<"__builtin_ia32_tileloaddrst164">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
   def int_x86_tdpbssd : ClangBuiltin<"__builtin_ia32_tdpbssd">,
               Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
@@ -5952,6 +5958,20 @@ let TargetPrefix = "x86" in {
               Intrinsic<[], [llvm_i8_ty, llvm_i8_ty],
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
+  // AMX-MORVS, AMX-TRANSPOSE
+  def int_x86_t2rpntlvwz0rs : ClangBuiltin<"__builtin_ia32_t2rpntlvwz0rs">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_t2rpntlvwz0rst1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz0rst1">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_t2rpntlvwz1rs : ClangBuiltin<"__builtin_ia32_t2rpntlvwz1rs">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_t2rpntlvwz1rst1 : ClangBuiltin<"__builtin_ia32_t2rpntlvwz1rst1">,
+              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+
   // AMX - internal intrinsics
   def int_x86_ldtilecfg_internal :
               ClangBuiltin<"__builtin_ia32_tile_loadconfig_internal">,
@@ -5963,6 +5983,16 @@ let TargetPrefix = "x86" in {
                         []>;
   def int_x86_tileloaddt164_internal :
               ClangBuiltin<"__builtin_ia32_tileloaddt164_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_tileloaddrs64_internal :
+              ClangBuiltin<"__builtin_ia32_tileloaddrs64_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_tileloaddrst164_internal :
+              ClangBuiltin<"__builtin_ia32_tileloaddrst164_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
                         []>;
@@ -6029,6 +6059,24 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
                          llvm_x86amx_ty, llvm_x86amx_ty,
                          llvm_x86amx_ty], []>;
+
+  // AMX-MORVS, AMX-TRANSPOSE - internal intrinsics
+  def int_x86_t2rpntlvwz0rs_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [IntrArgMemOnly, IntrReadMem]>;
+  def int_x86_t2rpntlvwz0rst1_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [IntrArgMemOnly]>;
+  def int_x86_t2rpntlvwz1rs_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [IntrArgMemOnly]>;
+  def int_x86_t2rpntlvwz1rst1_internal :
+              Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        [IntrArgMemOnly]>;
 
   def int_x86_t2rpntlvwz0_internal :
               Intrinsic<[llvm_x86amx_ty, llvm_x86amx_ty],

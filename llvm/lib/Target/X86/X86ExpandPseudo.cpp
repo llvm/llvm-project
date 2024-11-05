@@ -558,6 +558,15 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(GET_EGPR_IF_ENABLED(X86::LDTILECFG)));
     return true;
   }
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V: {
+    for (unsigned i = 2; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned Opc =
+        Opcode == X86::PTILELOADDRSV ? X86::TILELOADDRS : X86::TILELOADDRST1;
+    MI.setDesc(TII->get(Opc));
+    return true;
+  }
   case X86::PTILELOADDV:
   case X86::PTILELOADDT1V: {
     for (unsigned i = 2; i > 0; --i)
@@ -680,6 +689,32 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       break;
     case X86::PT2RPNTLVWZ1T1V:
       Opc = X86::T2RPNTLVWZ1T1;
+      break;
+    default:
+      llvm_unreachable("Impossible Opcode!");
+    }
+    MI.setDesc(TII->get(Opc));
+    return true;
+  }
+  case X86::PT2RPNTLVWZ0RSV:
+  case X86::PT2RPNTLVWZ0RST1V:
+  case X86::PT2RPNTLVWZ1RSV:
+  case X86::PT2RPNTLVWZ1RST1V: {
+    for (unsigned i = 3; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned Opc;
+    switch (Opcode) {
+    case X86::PT2RPNTLVWZ0RSV:
+      Opc = X86::T2RPNTLVWZ0RS;
+      break;
+    case X86::PT2RPNTLVWZ0RST1V:
+      Opc = X86::T2RPNTLVWZ0RST1;
+      break;
+    case X86::PT2RPNTLVWZ1RSV:
+      Opc = X86::T2RPNTLVWZ1RS;
+      break;
+    case X86::PT2RPNTLVWZ1RST1V:
+      Opc = X86::T2RPNTLVWZ1RST1;
       break;
     default:
       llvm_unreachable("Impossible Opcode!");

@@ -229,7 +229,13 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_t2rpntlvwz1t1_internal:
   case Intrinsic::x86_tileloadd64_internal:
   case Intrinsic::x86_tileloaddt164_internal:
-  case Intrinsic::x86_tilestored64_internal: {
+  case Intrinsic::x86_tilestored64_internal:
+  case Intrinsic::x86_t2rpntlvwz0rs_internal:
+  case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+  case Intrinsic::x86_t2rpntlvwz1rs_internal:
+  case Intrinsic::x86_t2rpntlvwz1rst1_internal:
+  case Intrinsic::x86_tileloaddrs64_internal:
+  case Intrinsic::x86_tileloaddrst164_internal: {
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
     break;

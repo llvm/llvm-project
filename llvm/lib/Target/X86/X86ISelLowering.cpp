@@ -27291,6 +27291,13 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
+    case Intrinsic::x86_t2rpntlvwz0rs_internal:
+    case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+    case Intrinsic::x86_t2rpntlvwz1rs_internal:
+    case Intrinsic::x86_t2rpntlvwz1rst1_internal:
+      if (!Subtarget.hasAMXTRANSPOSE() || !Subtarget.hasAMXMOVRS())
+        break;
+      [[fallthrough]];
     case Intrinsic::x86_t2rpntlvwz0_internal:
     case Intrinsic::x86_t2rpntlvwz0t1_internal:
     case Intrinsic::x86_t2rpntlvwz1_internal:
@@ -27315,6 +27322,18 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
         break;
       case Intrinsic::x86_t2rpntlvwz1t1_internal:
         Opc = X86::PT2RPNTLVWZ1T1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0rs_internal:
+        Opc = X86::PT2RPNTLVWZ0RSV;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+        Opc = X86::PT2RPNTLVWZ0RST1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1rs_internal:
+        Opc = X86::PT2RPNTLVWZ1RSV;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1rst1_internal:
+        Opc = X86::PT2RPNTLVWZ1RST1V;
         break;
       }
 
@@ -37553,6 +37572,35 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
+  case X86::PTILELOADDRS:
+  case X86::PTILELOADDRST1: {
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("illegal opcode!");
+    case X86::PTILELOADDRS:
+      Opc = X86::TILELOADDRS;
+      break;
+    case X86::PTILELOADDRST1:
+      Opc = X86::TILELOADDRST1;
+      break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
+    unsigned CurOp = 0;
+    if (Opc != X86::TILESTORED)
+      MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
+                 RegState::Define);
+    MIB.add(MI.getOperand(CurOp++)); // base
+    MIB.add(MI.getOperand(CurOp++)); // scale
+    MIB.add(MI.getOperand(CurOp++)); // index -- stride
+    MIB.add(MI.getOperand(CurOp++)); // displacement
+    MIB.add(MI.getOperand(CurOp++)); // segment
+    if (Opc == X86::TILESTORED)
+      MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
+                 RegState::Undef);
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
   case X86::PTCMMIMFP16PS:
   case X86::PTCMMRLFP16PS: {
     const MIMetadata MIMD(MI);
@@ -37592,6 +37640,39 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       break;
     case X86::PT2RPNTLVWZ1T1:
       Opc = X86::T2RPNTLVWZ1T1;
+      break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.addReg(TMMImmToTMMPair(MI.getOperand(0).getImm()), RegState::Define);
+
+    MIB.add(MI.getOperand(1)); // base
+    MIB.add(MI.getOperand(2)); // scale
+    MIB.add(MI.getOperand(3)); // index
+    MIB.add(MI.getOperand(4)); // displacement
+    MIB.add(MI.getOperand(5)); // segment
+    MI.eraseFromParent();      // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PT2RPNTLVWZ0RS:
+  case X86::PT2RPNTLVWZ0RST1:
+  case X86::PT2RPNTLVWZ1RS:
+  case X86::PT2RPNTLVWZ1RST1: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected instruction!");
+    case X86::PT2RPNTLVWZ0RS:
+      Opc = X86::T2RPNTLVWZ0RS;
+      break;
+    case X86::PT2RPNTLVWZ0RST1:
+      Opc = X86::T2RPNTLVWZ0RST1;
+      break;
+    case X86::PT2RPNTLVWZ1RS:
+      Opc = X86::T2RPNTLVWZ1RS;
+      break;
+    case X86::PT2RPNTLVWZ1RST1:
+      Opc = X86::T2RPNTLVWZ1RST1;
       break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
