@@ -967,7 +967,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // parameters that the surrounding function hasn't been instantiated yet. Note
   // this may happen while we're comparing two templates' constraint
   // equivalence.
-  LocalInstantiationScope ScopeForParameters(S);
+  LocalInstantiationScope ScopeForParameters(S, /*CombineWithOuterScope=*/true);
   if (auto *FD = DeclInfo.getDecl()->getAsFunction())
     for (auto *PVD : FD->parameters()) {
       if (!PVD->isParameterPack()) {
