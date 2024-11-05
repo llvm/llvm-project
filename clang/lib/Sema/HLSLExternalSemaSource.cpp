@@ -58,6 +58,7 @@ struct BuiltinTypeDeclBuilder {
     LookupResult Result(S, &II, SourceLocation(), Sema::LookupTagName);
     CXXRecordDecl *PrevDecl = nullptr;
     if (S.LookupQualifiedName(Result, HLSLNamespace)) {
+      // Declaration already exists (from precompiled headers)
       NamedDecl *Found = Result.getFoundDecl();
       if (auto *TD = dyn_cast<ClassTemplateDecl>(Found)) {
         PrevDecl = TD->getTemplatedDecl();
@@ -69,6 +70,7 @@ struct BuiltinTypeDeclBuilder {
 
     if (PrevDecl && PrevDecl->isCompleteDefinition()) {
       Record = PrevDecl;
+      Template = PrevTemplate;
       return;
     }
 
@@ -92,8 +94,7 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &
   addMemberVariable(StringRef Name, QualType Type, llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
-    if (Record->isCompleteDefinition())
-      return *this;
+    assert(!Record->isCompleteDefinition() && "record is already complete");
     assert(Record->isBeingDefined() &&
            "Definition must be started before adding members!");
     ASTContext &AST = Record->getASTContext();
@@ -119,8 +120,7 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &
   addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV, bool RawBuffer,
                   AccessSpecifier Access = AccessSpecifier::AS_private) {
-    if (Record->isCompleteDefinition())
-      return *this;
+    assert(!Record->isCompleteDefinition() && "record is already complete");
 
     ASTContext &Ctx = S.getASTContext();
     TypeSourceInfo *ElementTypeInfo = nullptr;
@@ -155,8 +155,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor(ResourceClass RC) {
-    if (Record->isCompleteDefinition())
-      return *this;
+    assert(!Record->isCompleteDefinition() && "record is already complete");
     ASTContext &AST = Record->getASTContext();
 
     QualType ConstructorType =
@@ -179,16 +178,13 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &addArraySubscriptOperators() {
-    if (Record->isCompleteDefinition())
-      return *this;
     addArraySubscriptOperator(true);
     addArraySubscriptOperator(false);
     return *this;
   }
 
   BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
-    if (Record->isCompleteDefinition())
-      return *this;
+    assert(!Record->isCompleteDefinition() && "record is already complete");
 
     ASTContext &AST = Record->getASTContext();
     QualType ElemTy = AST.Char8Ty;
@@ -277,15 +273,13 @@ struct BuiltinTypeDeclBuilder {
 
   BuiltinTypeDeclBuilder &startDefinition() {
     // we might already have complete definition from a precompiled header
-    if (Record->isCompleteDefinition())
-      return *this;
+    assert(!Record->isCompleteDefinition() && "record is already complete");
     Record->startDefinition();
     return *this;
   }
 
   BuiltinTypeDeclBuilder &completeDefinition() {
-    if (Record->isCompleteDefinition())
-      return *this;
+    assert(!Record->isCompleteDefinition() && "record is already complete");
     assert(Record->isBeingDefined() &&
            "Definition must be started before completing it.");
 
@@ -311,8 +305,7 @@ struct TemplateParameterListBuilder {
 
   TemplateParameterListBuilder &
   addTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
-    if (Builder.Record->isCompleteDefinition())
-      return *this;
+    assert(!Builder.Record->isCompleteDefinition() && "record is already complete");
     ASTContext &AST = Builder.S.getASTContext();
     unsigned Position = static_cast<unsigned>(Params.size());
     auto *Decl = TemplateTypeParmDecl::Create(
@@ -497,11 +490,8 @@ public:
   }
 
   BuiltinTypeDeclBuilder &finalizeMethod() {
-    if (DeclBuilder.Record->isCompleteDefinition())
-      return DeclBuilder;
-
-    if (!Method)
-      createMethodDecl();
+    assert(!DeclBuilder.Record->isCompleteDefinition() && "record is already complete");
+    assert(Method != nullptr && "method decl not created; are you missing a call to build the body?");
 
     if (!Method->hasBody()) {
       ASTContext &AST = DeclBuilder.S.getASTContext();
@@ -540,6 +530,12 @@ TemplateParameterListBuilder BuiltinTypeDeclBuilder::addTemplateArgumentList() {
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names) {
+  if (Record->isCompleteDefinition()) {
+    assert(Template && "existing record it not a template");
+    assert(Template->getTemplateParameters()->size() == Names.size() && "template param count mismatch");
+    return *this;
+  }
+
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList();
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
@@ -732,7 +728,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
                                           CompletionFunction Fn) {
-  Completions.insert(std::make_pair(Record->getCanonicalDecl(), Fn));
+  if (!Record->isCompleteDefinition())
+    Completions.insert(std::make_pair(Record->getCanonicalDecl(), Fn));
 }
 
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
