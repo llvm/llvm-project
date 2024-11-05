@@ -170,6 +170,9 @@ private:
   std::string BuildIDBinaryName;
 
   /// Memory map info for a single file as recorded in perf.data
+  /// When a binary has multiple text segments, the Size is computed as the
+  /// difference of the last address of these segments from the BaseAddress.
+  /// The base addresses of all text segments must be the same.
   struct MMapInfo {
     uint64_t BaseAddress{0}; /// Base address of the mapped binary.
     uint64_t MMapAddress{0}; /// Address of the executable segment.

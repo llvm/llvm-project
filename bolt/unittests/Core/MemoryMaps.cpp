@@ -25,6 +25,10 @@ extern cl::opt<std::string> ReadPerfEvents;
 } // namespace opts
 
 namespace {
+
+/// Perform checks on memory map events normally captured in perf. Tests use
+/// the 'opts::ReadPerfEvents' flag to emulate these events, passing a custom
+/// 'perf script' output to DataAggregator.
 struct MemoryMapsTester : public testing::TestWithParam<Triple::ArchType> {
   void SetUp() override {
     initalizeLLVM();
@@ -81,8 +85,7 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MemoryMapsTester,
 #endif
 
 /// Check that the correct mmap size is computed when we have multiple text
-/// segment mappings. Uses 'opts::ReadPerfEvents' flag to pass a custom 'perf
-/// script' output, along with two text segments (SegmentInfo).
+/// segment mappings.
 TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
@@ -94,13 +97,9 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
       Pid, Filename);
 
   BC->SegmentMapInfo[0x11da000] =
-      SegmentInfo{0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000};
+      SegmentInfo{0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true};
   BC->SegmentMapInfo[0x31d0000] =
-      SegmentInfo{0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000};
-
-  // Dont show DataAggregators out/err output.
-  testing::internal::CaptureStdout();
-  testing::internal::CaptureStderr();
+      SegmentInfo{0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000, true};
 
   DataAggregator DA("");
   BC->setFilename(Filename);
@@ -114,4 +113,30 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   // Check that memory mapping is present and has the expected size.
   ASSERT_NE(El, BinaryMMapInfo.end());
   ASSERT_EQ(El->second.Size, static_cast<uint64_t>(0xb1d0000));
+}
+
+/// Check that DataAggregator aborts when pre-processing an input binary
+/// with multiple text segments that have different base addresses.
+TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
+  const int Pid = 1234;
+  StringRef Filename = "BINARY";
+  opts::ReadPerfEvents = formatv(
+      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+      "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
+      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+      "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
+      Pid, Filename);
+
+  BC->SegmentMapInfo[0x11da000] =
+      SegmentInfo{0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true};
+  // Using '0x31d0fff' FileOffset which triggers a different base address
+  // for this second text segment.
+  BC->SegmentMapInfo[0x31d0000] =
+      SegmentInfo{0x31d0000, 0x51ac82c, 0x31d0fff, 0x3000000, 0x200000, true};
+
+  DataAggregator DA("");
+  BC->setFilename(Filename);
+  ASSERT_DEATH(
+      { Error Err = DA.preprocessProfile(*BC); },
+      "Base address on multiple segment mappings should match");
 }

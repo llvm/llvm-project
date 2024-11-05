@@ -471,7 +471,7 @@ void DataAggregator::filterBinaryMMapInfo() {
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
   if (!opts::ReadPerfEvents.empty()) {
-    dbgs() << "PERF2BOLT: using pre-processed perf events for '" << Name
+    outs() << "PERF2BOLT: using pre-processed perf events for '" << Name
            << "' (perf-script-events)\n";
     ParsingBuf = opts::ReadPerfEvents;
     return 0;
@@ -2124,10 +2124,14 @@ std::error_code DataAggregator::parseMMapEvents() {
       MMapInfo.BaseAddress = *BaseAddress;
     }
 
-    // Try to add MMapInfo to the map and update its size. Large binaries
-    // may span multiple text segments, so the mapping is inserted only on the
-    // first occurrence. If a larger section size is found, it will be updated.
-    BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo));
+    // Try to add MMapInfo to the map and update its size. Large binaries may
+    // span to multiple text segments, so the mapping is inserted only on the
+    // first occurrence.
+    if (!BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo)).second)
+      assert(MMapInfo.BaseAddress == BinaryMMapInfo[MMapInfo.PID].BaseAddress &&
+             "Base address on multiple segment mappings should match");
+
+    // Update section size.
     uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
     uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
     if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
