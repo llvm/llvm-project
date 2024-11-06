@@ -2598,7 +2598,6 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::TRUNCATE: {
     SDValue Src = Op.getOperand(0);
-    SDNodeFlags Flags = Op->getFlags();
 
     // Simplify the input, using demanded bit information, and compute the known
     // zero/one bits live out.
