@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPUMemoryUtils.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -1508,7 +1509,8 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        GV->getName() != "llvm.amdgcn.module.lds") {
+        GV->getName() != "llvm.amdgcn.module.lds" &&
+        !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(

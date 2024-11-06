@@ -946,8 +946,8 @@ public:
            Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::DS_GWS_INIT ||
-           Opcode == AMDGPU::DS_GWS_BARRIER;
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
+           Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
