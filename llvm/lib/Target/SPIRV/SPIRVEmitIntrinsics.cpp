@@ -1219,6 +1219,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   SmallVector<Value *, 2> Args = {Pointer, VMD, B.getInt32(AddressSpace)};
   auto *PtrCastI = B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
   I->setOperand(OperandToReplace, PtrCastI);
+  // We need to set up a pointee type for the newly created spv_ptrcast.
+  buildAssignPtr(B, ExpectedElementType, PtrCastI);
 }
 
 void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
