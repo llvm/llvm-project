@@ -1147,13 +1147,13 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 //  * the return size becomes the attribute encapsulating the known size, and
 //  * dim is updated from kDynamic to its actual known value.
 static std::pair<int64_t, OpFoldResult>
-getSimplifiedDimSizePair(OpFoldResult tileSizeOfr, PatternRewriter &rewriter) {
+getSimplifiedDimSizePair(OpFoldResult tileSizeOfr, Builder &b) {
   int64_t tileSizeForShape =
       getConstantIntValue(tileSizeOfr).value_or(ShapedType::kDynamic);
 
   OpFoldResult tileSizeOfrSimplified;
   if (tileSizeForShape != ShapedType::kDynamic) {
-    tileSizeOfrSimplified = rewriter.getIndexAttr(tileSizeForShape);
+    tileSizeOfrSimplified = b.getIndexAttr(tileSizeForShape);
   } else {
     tileSizeOfrSimplified = tileSizeOfr;
   }
@@ -1226,28 +1226,18 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
   // 2.1 Create tensor.empty (init value for TransposeOp)
   SmallVector<OpFoldResult> transShapeForEmptyOpDynamic;
-  SmallVector<int64_t> transShapeForEmptyOpStatic;
 
   // Acquire tensor shape required to create EmptyOp. This will match the inner
-  // tile sizes, but the actual data format will depend on whether the tile
-  // sizes are static or dynamic (each case leads to a different builder for
-  // EmptyOp). Conservatively, prepare for both scenarios.
+  // tile sizes.
   size_t idx = numTiles;
   while (idx != 0) {
     transShapeForEmptyOpDynamic.push_back(extractSliceSizes[srcRank - idx]);
-    transShapeForEmptyOpStatic.push_back(
-        outputShapeForExtractSlice[numTiles - idx]);
     idx--;
   }
 
-  applyPermutationToVector<int64_t>(transShapeForEmptyOpStatic, perm);
   applyPermutationToVector<OpFoldResult>(transShapeForEmptyOpDynamic, perm);
-
-  Value empty = ShapedType::isDynamicShape(transShapeForEmptyOpStatic)
-                    ? rewriter.create<tensor::EmptyOp>(
-                          loc, transShapeForEmptyOpDynamic, elemType)
-                    : rewriter.create<tensor::EmptyOp>(
-                          loc, transShapeForEmptyOpStatic, elemType);
+  Value empty =  rewriter.create<tensor::EmptyOp>(
+                          loc, transShapeForEmptyOpDynamic, elemType);
 
   // 2.2 Create linalg.transpose
   auto transposedOp =
