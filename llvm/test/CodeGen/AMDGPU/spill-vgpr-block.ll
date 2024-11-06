@@ -38,7 +38,6 @@ define i32 @non_entry_func(i32 %x) {
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %local = alloca i32, i32 3, addrspace(5)
   store i32 %x, ptr addrspace(5) %local
@@ -63,7 +62,6 @@ define amdgpu_kernel void @entry_func(i32 %x) {
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GISEL-NEXT:    s_wait_alu 0xfffe
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GISEL-NEXT:    s_wait_alu 0xfffe
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -84,7 +82,6 @@ define amdgpu_kernel void @entry_func(i32 %x) {
 ; DAGISEL-NEXT:    s_mov_b32 s32, 0
 ; DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, s6
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL-NEXT:    s_endpgm
   call void asm "s_nop", "~{v0},~{v8},~{v40},~{v41},~{v49},~{v52},~{v56},~{v60},~{v120},~{s0},~{s40}"()
