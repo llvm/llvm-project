@@ -545,11 +545,15 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
           Op0 = new VPWidenCastRecipe(
               MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
               MulAcc->getResultType(), *MulAcc->getExt0Instr());
-          Op1 = new VPWidenCastRecipe(
-              MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-              MulAcc->getResultType(), *MulAcc->getExt1Instr());
           Op0->getDefiningRecipe()->insertBefore(MulAcc);
-          Op1->getDefiningRecipe()->insertBefore(MulAcc);
+          if (!MulAcc->isSameExtend()) {
+            Op1 = new VPWidenCastRecipe(
+                MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                MulAcc->getResultType(), *MulAcc->getExt1Instr());
+            Op1->getDefiningRecipe()->insertBefore(MulAcc);
+          } else {
+            Op1 = Op0;
+          }
         } else {
           Op0 = MulAcc->getVecOp0();
           Op1 = MulAcc->getVecOp1();
@@ -559,14 +563,13 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
         auto *Mul = new VPWidenRecipe(*MulInstr,
                                       make_range(MulOps.begin(), MulOps.end()));
-        if (auto *OuterExtInstr = MulAcc->getExtInstr()) {
-          // dbgs() <<"\n!!!"<< *OuterExtInstr << " " << MulAcc->getExtOpcode()
-          // << "\n";
+        // Outer extend.
+        if (auto *OuterExtInstr = MulAcc->getExtInstr())
           VecOp = new VPWidenCastRecipe(
               MulAcc->getExtOpcode(), Mul,
               MulAcc->getRecurrenceDescriptor().getRecurrenceType(),
               *OuterExtInstr);
-        } else
+        else
           VecOp = Mul;
         auto *Red = new VPReductionRecipe(
             MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),

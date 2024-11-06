@@ -2711,18 +2711,19 @@ class VPExtendedReductionRecipe : public VPSingleDefRecipe {
   bool IsConditional = false;
   /// Type after extend.
   Type *ResultTy;
+  /// Opcode for the extend instruction.
   Instruction::CastOps ExtOp;
-  CastInst *CastInstr;
+  CastInst *ExtInstr;
   bool IsZExt;
 
 protected:
   VPExtendedReductionRecipe(const unsigned char SC,
                             const RecurrenceDescriptor &R, Instruction *RedI,
-                            Instruction::CastOps ExtOp, CastInst *CastI,
+                            Instruction::CastOps ExtOp, CastInst *ExtI,
                             ArrayRef<VPValue *> Operands, VPValue *CondOp,
                             bool IsOrdered, Type *ResultTy)
       : VPSingleDefRecipe(SC, Operands, RedI), RdxDesc(R), IsOrdered(IsOrdered),
-        ResultTy(ResultTy), ExtOp(ExtOp), CastInstr(CastI) {
+        ResultTy(ResultTy), ExtOp(ExtOp), ExtInstr(ExtI) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2732,20 +2733,13 @@ protected:
 
 public:
   VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
-                            CastInst *CastI, VPValue *ChainOp, VPValue *VecOp,
-                            VPValue *CondOp, bool IsOrdered, Type *ResultTy)
-      : VPExtendedReductionRecipe(VPDef::VPExtendedReductionSC, R, RedI,
-                                  CastI->getOpcode(), CastI,
-                                  ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                                  IsOrdered, ResultTy) {}
-
-  VPExtendedReductionRecipe(VPReductionRecipe *Red, VPWidenCastRecipe *Ext)
+                            VPValue *ChainOp, VPWidenCastRecipe *Ext,
+                            VPValue *CondOp, bool IsOrdered)
       : VPExtendedReductionRecipe(
-            VPDef::VPExtendedReductionSC, Red->getRecurrenceDescriptor(),
-            Red->getUnderlyingInstr(), Ext->getOpcode(),
+            VPDef::VPExtendedReductionSC, R, RedI, Ext->getOpcode(),
             cast<CastInst>(Ext->getUnderlyingInstr()),
-            ArrayRef<VPValue *>({Red->getChainOp(), Ext->getOperand(0)}),
-            Red->getCondOp(), Red->isOrdered(), Ext->getResultType()) {}
+            ArrayRef<VPValue *>({ChainOp, Ext->getOperand(0)}), CondOp,
+            IsOrdered, Ext->getResultType()) {}
 
   ~VPExtendedReductionRecipe() override = default;
 
@@ -2762,7 +2756,6 @@ public:
     return R && classof(R);
   }
 
-  /// Generate the reduction in the loop
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPExtendedReductionRecipe should be transform to "
                      "VPExtendedRecipe + VPReductionRecipe before execution.");
@@ -2794,9 +2787,12 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
+  /// The Type after extended.
   Type *getResultType() const { return ResultTy; };
+  /// The Opcode of extend instruction.
   Instruction::CastOps getExtOpcode() const { return ExtOp; };
-  CastInst *getExtInstr() const { return CastInstr; };
+  /// The CastInst of the extend instruction.
+  CastInst *getExtInstr() const { return ExtInstr; };
 };
 
 /// A recipe to represent inloop MulAccreduction operations, performing a
@@ -2812,16 +2808,17 @@ class VPMulAccRecipe : public VPSingleDefRecipe {
   bool IsConditional = false;
   /// Type after extend.
   Type *ResultType;
-  /// reduce.add(ext((mul(Ext(), Ext())))
+  // Note that all extend instruction must have the same opcode in MulAcc.
   Instruction::CastOps ExtOp;
 
+  /// reduce.add(ext(mul(ext0(), ext1())))
   Instruction *MulInstr;
   CastInst *ExtInstr = nullptr;
-  CastInst *Ext0Instr;
-  CastInst *Ext1Instr;
+  CastInst *Ext0Instr = nullptr;
+  CastInst *Ext1Instr = nullptr;
 
+  /// Is this MulAcc recipe contains extend recipes?
   bool IsExtended;
-  bool IsOuterExtended = false;
 
 protected:
   VPMulAccRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
@@ -2835,6 +2832,7 @@ protected:
         ExtInstr(cast_if_present<CastInst>(ExtInstr)),
         Ext0Instr(cast<CastInst>(Ext0Instr)),
         Ext1Instr(cast<CastInst>(Ext1Instr)) {
+    assert(MulInstr->getOpcode() == Instruction::Mul);
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2847,6 +2845,7 @@ protected:
                  ArrayRef<VPValue *> Operands, VPValue *CondOp, bool IsOrdered)
       : VPSingleDefRecipe(SC, Operands, RedI), RdxDesc(R), IsOrdered(IsOrdered),
         MulInstr(MulInstr) {
+    assert(MulInstr->getOpcode() == Instruction::Mul);
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2898,13 +2897,12 @@ public:
     return R && classof(R);
   }
 
-  /// Generate the reduction in the loop
   void execute(VPTransformState &State) override {
     llvm_unreachable("VPMulAccRecipe should transform to VPWidenCastRecipe + "
                      "VPWidenRecipe + VPReductionRecipe before execution");
   }
 
-  /// Return the cost of VPExtendedReductionRecipe.
+  /// Return the cost of VPMulAccRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
@@ -2931,13 +2929,24 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
+  /// Return the type after inner extended, which must equal to the type of mul
+  /// instruction. If the ResultType != recurrenceType, than it must have a
+  /// extend recipe after mul recipe.
   Type *getResultType() const { return ResultType; };
+  /// The opcode of the extend instructions.
   Instruction::CastOps getExtOpcode() const { return ExtOp; };
+  /// The underlying instruction for VPWidenRecipe.
   Instruction *getMulInstr() const { return MulInstr; };
+  /// The underlying Instruction for outer VPWidenCastRecipe.
   CastInst *getExtInstr() const { return ExtInstr; };
+  /// The underlying Instruction for inner VPWidenCastRecipe.
   CastInst *getExt0Instr() const { return Ext0Instr; };
+  /// The underlying Instruction for inner VPWidenCastRecipe.
   CastInst *getExt1Instr() const { return Ext1Instr; };
+  /// Return if this MulAcc recipe contains extend instructions.
   bool isExtended() const { return IsExtended; };
+  /// Return if the operands of mul instruction come from same extend.
+  bool isSameExtend() const { return Ext0Instr == Ext1Instr; };
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar

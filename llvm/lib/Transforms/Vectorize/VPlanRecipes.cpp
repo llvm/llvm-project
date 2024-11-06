@@ -2214,122 +2214,6 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
         Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
   }
 
-  /*
-  using namespace llvm::VPlanPatternMatch;
-  auto GetMulAccReductionCost =
-      [&](const VPReductionRecipe *Red) -> InstructionCost {
-    VPValue *A, *B;
-    InstructionCost InnerExt0Cost = 0;
-    InstructionCost InnerExt1Cost = 0;
-    InstructionCost ExtCost = 0;
-    InstructionCost MulCost = 0;
-
-    VectorType *SrcVecTy = VectorTy;
-    Type *InnerExt0Ty;
-    Type *InnerExt1Ty;
-    Type *MaxInnerExtTy;
-    bool IsUnsigned = true;
-    bool HasOuterExt = false;
-
-    auto *Ext = dyn_cast_if_present<VPWidenCastRecipe>(
-        Red->getVecOp()->getDefiningRecipe());
-    VPRecipeBase *Mul;
-    // Try to match outer extend reduce.add(ext(...))
-    if (Ext && match(Ext, m_ZExtOrSExt(m_VPValue())) &&
-        cast<VPWidenCastRecipe>(Ext)->getNumUsers() == 1) {
-      IsUnsigned =
-          Ext->getOpcode() == Instruction::CastOps::ZExt ? true : false;
-      ExtCost = Ext->computeCost(VF, Ctx);
-      Mul = Ext->getOperand(0)->getDefiningRecipe();
-      HasOuterExt = true;
-    } else {
-      Mul = Red->getVecOp()->getDefiningRecipe();
-    }
-
-    // Match reduce.add(mul())
-    if (Mul && match(Mul, m_Mul(m_VPValue(A), m_VPValue(B))) &&
-        cast<VPWidenRecipe>(Mul)->getNumUsers() == 1) {
-      MulCost = cast<VPWidenRecipe>(Mul)->computeCost(VF, Ctx);
-      auto *InnerExt0 =
-          dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
-      auto *InnerExt1 =
-          dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-      bool HasInnerExt = false;
-      // Try to match inner extends.
-      if (InnerExt0 && InnerExt1 &&
-          match(InnerExt0, m_ZExtOrSExt(m_VPValue())) &&
-          match(InnerExt1, m_ZExtOrSExt(m_VPValue())) &&
-          InnerExt0->getOpcode() == InnerExt1->getOpcode() &&
-          (InnerExt0->getNumUsers() > 0 &&
-           !InnerExt0->hasMoreThanOneUniqueUser()) &&
-          (InnerExt1->getNumUsers() > 0 &&
-           !InnerExt1->hasMoreThanOneUniqueUser())) {
-        InnerExt0Cost = InnerExt0->computeCost(VF, Ctx);
-        InnerExt1Cost = InnerExt1->computeCost(VF, Ctx);
-        Type *InnerExt0Ty = Ctx.Types.inferScalarType(InnerExt0->getOperand(0));
-        Type *InnerExt1Ty = Ctx.Types.inferScalarType(InnerExt1->getOperand(0));
-        Type *MaxInnerExtTy = InnerExt0Ty->getIntegerBitWidth() >
-                                      InnerExt1Ty->getIntegerBitWidth()
-                                  ? InnerExt0Ty
-                                  : InnerExt1Ty;
-        SrcVecTy = cast<VectorType>(ToVectorTy(MaxInnerExtTy, VF));
-        IsUnsigned = true;
-        HasInnerExt = true;
-      }
-      InstructionCost MulAccRedCost = Ctx.TTI.getMulAccReductionCost(
-          IsUnsigned, ElementTy, SrcVecTy, CostKind);
-      // Check if folding ext/mul into MulAccReduction is profitable.
-      if (MulAccRedCost.isValid() &&
-          MulAccRedCost <
-              ExtCost + MulCost + InnerExt0Cost + InnerExt1Cost + BaseCost) {
-        if (HasInnerExt) {
-          Ctx.FoldedRecipes[VF].insert(InnerExt0);
-          Ctx.FoldedRecipes[VF].insert(InnerExt1);
-        }
-        Ctx.FoldedRecipes[VF].insert(Mul);
-        if (HasOuterExt)
-          Ctx.FoldedRecipes[VF].insert(Ext);
-        return MulAccRedCost;
-      }
-    }
-    return InstructionCost::getInvalid();
-  };
-
-  // Match reduce(ext(...))
-  auto GetExtendedReductionCost =
-      [&](const VPReductionRecipe *Red) -> InstructionCost {
-    VPValue *VecOp = Red->getVecOp();
-    VPValue *A;
-    if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) && VecOp->getNumUsers() == 1) {
-      VPWidenCastRecipe *Ext =
-          cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
-      bool IsUnsigned = Ext->getOpcode() == Instruction::CastOps::ZExt;
-      InstructionCost ExtCost = Ext->computeCost(VF, Ctx);
-      auto *ExtVecTy =
-          cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(A), VF));
-      InstructionCost ExtendedRedCost = Ctx.TTI.getExtendedReductionCost(
-          Opcode, IsUnsigned, ElementTy, ExtVecTy, RdxDesc.getFastMathFlags(),
-          CostKind);
-      // Check if folding ext into ExtendedReduction is profitable.
-      if (ExtendedRedCost.isValid() && ExtendedRedCost < ExtCost + BaseCost) {
-        Ctx.FoldedRecipes[VF].insert(Ext);
-        return ExtendedRedCost;
-      }
-    }
-    return InstructionCost::getInvalid();
-  };
-
-  // Match MulAccReduction patterns.
-  InstructionCost MulAccCost = GetMulAccReductionCost(this);
-  if (MulAccCost.isValid())
-    return MulAccCost;
-
-  // Match ExtendedReduction patterns.
-  InstructionCost ExtendedCost = GetExtendedReductionCost(this);
-  if (ExtendedCost.isValid())
-    return ExtendedCost;
-  */
-
   // Default cost.
   return BaseCost;
 }
@@ -2342,9 +2226,6 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
-
-  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
-         "Inferred type and recurrence type mismatch.");
 
   // BaseCost = Reduction cost + BinOp cost
   InstructionCost ReductionCost =
@@ -2387,8 +2268,8 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
 
-  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
-         "Inferred type and recurrence type mismatch.");
+  assert(Opcode == Instruction::Add &&
+         "Reduction opcode must be add in the VPMulAccRecipe.");
 
   // BaseCost = Reduction cost + BinOp cost
   InstructionCost ReductionCost =

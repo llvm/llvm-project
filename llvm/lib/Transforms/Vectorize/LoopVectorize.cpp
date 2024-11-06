@@ -7399,7 +7399,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // VPExtendedReductionRecipe contains a folded extend instruction.
       if (auto *ExtendedRed = dyn_cast<VPExtendedReductionRecipe>(&R))
         SeenInstrs.insert(ExtendedRed->getExtInstr());
-      // VPMulAccRecupe constians a mul and otional extend instructions.
+      // VPMulAccRecipe constians a mul and otional extend instructions.
       else if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
         SeenInstrs.insert(MulAcc->getMulInstr());
         if (MulAcc->isExtended()) {
@@ -9398,77 +9398,82 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
-      VPValue *A, *B;
-      VPSingleDefRecipe *RedRecipe;
-      // reduce.add(mul(ext, ext)) can folded into VPMulAccRecipe
-      if (RdxDesc.getOpcode() == Instruction::Add &&
-          match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
-        VPRecipeBase *RecipeA = A->getDefiningRecipe();
-        VPRecipeBase *RecipeB = B->getDefiningRecipe();
-        if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
-            match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
-            cast<VPWidenCastRecipe>(RecipeA)->getOpcode() ==
-                cast<VPWidenCastRecipe>(RecipeB)->getOpcode() &&
-            !A->hasMoreThanOneUniqueUser() && !B->hasMoreThanOneUniqueUser()) {
-          RedRecipe = new VPMulAccRecipe(
-              RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-              CM.useOrderedReductions(RdxDesc),
-              cast<VPWidenRecipe>(VecOp->getDefiningRecipe()),
-              cast<VPWidenCastRecipe>(RecipeA),
-              cast<VPWidenCastRecipe>(RecipeB));
-        } else {
-          RedRecipe = new VPMulAccRecipe(
-              RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-              CM.useOrderedReductions(RdxDesc),
-              cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
-        }
-      } else if (RdxDesc.getOpcode() == Instruction::Add &&
-                 match(VecOp,
-                       m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue(A)),
-                                          m_ZExtOrSExt(m_VPValue(B)))))) {
-        VPWidenCastRecipe *Ext =
-            dyn_cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
-        VPWidenRecipe *Mul =
-            dyn_cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
-        if (Mul && match(Mul, m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                    m_ZExtOrSExt(m_VPValue())))) {
+      auto TryToMatchMulAcc = [&]() -> VPSingleDefRecipe * {
+        VPValue *A, *B;
+        if (RdxDesc.getOpcode() != Instruction::Add)
+          return nullptr;
+        // reduce.add(mul(ext, ext)) can folded into VPMulAccRecipe
+        if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B))) &&
+            !VecOp->hasMoreThanOneUniqueUser()) {
+          VPRecipeBase *RecipeA = A->getDefiningRecipe();
+          VPRecipeBase *RecipeB = B->getDefiningRecipe();
+          if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+              match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
+              cast<VPWidenCastRecipe>(RecipeA)->getOpcode() ==
+                  cast<VPWidenCastRecipe>(RecipeB)->getOpcode() &&
+              !A->hasMoreThanOneUniqueUser() &&
+              !B->hasMoreThanOneUniqueUser()) {
+            return new VPMulAccRecipe(
+                RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+                CM.useOrderedReductions(RdxDesc),
+                cast<VPWidenRecipe>(VecOp->getDefiningRecipe()),
+                cast<VPWidenCastRecipe>(RecipeA),
+                cast<VPWidenCastRecipe>(RecipeB));
+          } else {
+            // Matched reduce.add(mul(...))
+            return new VPMulAccRecipe(
+                RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+                CM.useOrderedReductions(RdxDesc),
+                cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
+          }
+          // Matched reduce.add(ext(mul(ext, ext)))
+          // Note that 3 extend instructions must have same opcode.
+        } else if (match(VecOp,
+                         m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                            m_ZExtOrSExt(m_VPValue())))) &&
+                   !VecOp->hasMoreThanOneUniqueUser()) {
+          VPWidenCastRecipe *Ext =
+              dyn_cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
           VPWidenRecipe *Mul =
-              cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+              dyn_cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
           VPWidenCastRecipe *Ext0 =
               cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
           VPWidenCastRecipe *Ext1 =
               cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
           if (Ext->getOpcode() == Ext0->getOpcode() &&
-              Ext0->getOpcode() == Ext1->getOpcode()) {
-            RedRecipe = new VPMulAccRecipe(
+              Ext0->getOpcode() == Ext1->getOpcode() &&
+              !Mul->hasMoreThanOneUniqueUser() &&
+              !Ext0->hasMoreThanOneUniqueUser() &&
+              !Ext1->hasMoreThanOneUniqueUser()) {
+            return new VPMulAccRecipe(
                 RdxDesc, CurrentLinkI, PreviousLink, CondOp,
                 CM.useOrderedReductions(RdxDesc),
                 cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe()), Mul,
                 cast<VPWidenCastRecipe>(Ext0), cast<VPWidenCastRecipe>(Ext1));
-          } else
-            RedRecipe = new VPExtendedReductionRecipe(
-                RdxDesc, CurrentLinkI,
-                cast<CastInst>(
-                    cast<VPWidenCastRecipe>(VecOp)->getUnderlyingInstr()),
-                PreviousLink, cast<VPWidenCastRecipe>(VecOp)->getOperand(0),
-                CondOp, CM.useOrderedReductions(RdxDesc),
-                cast<VPWidenCastRecipe>(VecOp)->getResultType());
+          }
         }
-      }
-      // VPWidenCastRecipes can folded into VPReductionRecipe
-      else if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
-               !VecOp->hasMoreThanOneUniqueUser()) {
-        RedRecipe = new VPExtendedReductionRecipe(
-            RdxDesc, CurrentLinkI,
-            cast<CastInst>(
-                cast<VPWidenCastRecipe>(VecOp)->getUnderlyingInstr()),
-            PreviousLink, A, CondOp, CM.useOrderedReductions(RdxDesc),
-            cast<VPWidenCastRecipe>(VecOp)->getResultType());
-      } else {
+        return nullptr;
+      };
+      auto TryToMatchExtendedReduction = [&]() -> VPSingleDefRecipe * {
+        VPValue *A;
+        if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+            !VecOp->hasMoreThanOneUniqueUser()) {
+          return new VPExtendedReductionRecipe(
+              RdxDesc, CurrentLinkI, PreviousLink,
+              cast<VPWidenCastRecipe>(VecOp), CondOp,
+              CM.useOrderedReductions(RdxDesc));
+        }
+        return nullptr;
+      };
+      VPSingleDefRecipe *RedRecipe;
+      if (auto *MulAcc = TryToMatchMulAcc())
+        RedRecipe = MulAcc;
+      else if (auto *ExtendedRed = TryToMatchExtendedReduction())
+        RedRecipe = ExtendedRed;
+      else
         RedRecipe =
             new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink, VecOp,
                                   CondOp, CM.useOrderedReductions(RdxDesc));
-      }
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including
