@@ -22,8 +22,11 @@ class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
 
+  CIRGenAction::OutputType Action;
+
   std::unique_ptr<raw_pwrite_stream> OutputStream;
 
+  ASTContext *Context{nullptr};
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
 
@@ -37,13 +40,36 @@ public:
                  const LangOptions &LangOptions,
                  const FrontendOptions &FEOptions,
                  std::unique_ptr<raw_pwrite_stream> OS)
-      : OutputStream(std::move(OS)), FS(VFS),
+      : Action(Action), OutputStream(std::move(OS)), FS(VFS),
         Gen(std::make_unique<CIRGenerator>(DiagnosticsEngine, std::move(VFS),
                                            CodeGenOptions)) {}
+
+  void Initialize(ASTContext &Ctx) override {
+    assert(!Context && "initialized multiple times");
+    Context = &Ctx;
+    Gen->Initialize(Ctx);
+  }
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
     Gen->HandleTopLevelDecl(D);
     return true;
+  }
+
+  void HandleTranslationUnit(ASTContext &C) override {
+    Gen->HandleTranslationUnit(C);
+    mlir::ModuleOp MlirModule = Gen->getModule();
+    switch (Action) {
+    case CIRGenAction::OutputType::EmitCIR:
+      if (OutputStream && MlirModule) {
+        mlir::OpPrintingFlags Flags;
+        Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+        MlirModule->print(*OutputStream, Flags);
+      }
+      break;
+    default:
+      llvm_unreachable("NYI: CIRGenAction other than EmitCIR");
+      break;
+    }
   }
 };
 } // namespace cir
@@ -55,9 +81,22 @@ CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
+static std::unique_ptr<raw_pwrite_stream>
+getOutputStream(CompilerInstance &CI, StringRef InFile,
+                CIRGenAction::OutputType Action) {
+  switch (Action) {
+  case CIRGenAction::OutputType::EmitCIR:
+    return CI.createDefaultOutputFile(false, InFile, "cir");
+  }
+  llvm_unreachable("Invalid CIRGenAction::OutputType");
+}
+
 std::unique_ptr<ASTConsumer>
 CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<llvm::raw_pwrite_stream> Out = CI.takeOutputStream();
+
+  if (!Out)
+    Out = getOutputStream(CI, InFile, Action);
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
       Action, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
