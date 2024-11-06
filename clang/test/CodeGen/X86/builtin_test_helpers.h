@@ -4,6 +4,11 @@
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 
+constexpr bool match_m64(__m64 _v, unsigned long long a) {
+  __v1du v = (__v1du)_v;
+  return v[0] == a;
+}
+
 constexpr bool match_m128(__m128 v, float a, float b, float c, float d) {
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
