@@ -503,11 +503,8 @@ set(files
   __locale_dir/locale_base_api/win32.h
   __locale_dir/locale_guard.h
   __locale_dir/support/apple.h
-  __locale_dir/support/characters/bsd_like.h
+  __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
-  __locale_dir/support/management/bsd_like.h
-  __locale_dir/support/other/bsd_like.h
-  __locale_dir/support/strtonum/bsd_like.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h

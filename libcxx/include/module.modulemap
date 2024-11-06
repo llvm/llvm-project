@@ -1469,15 +1469,9 @@ module std [system] {
     }
 
     module support_impl {
-      // platform support
       textual header "__locale_dir/support/apple.h"
+      textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
-
-      // helpers to create platform support headers
-      textual header "__locale_dir/support/characters/bsd_like.h"
-      textual header "__locale_dir/support/management/bsd_like.h"
-      textual header "__locale_dir/support/other/bsd_like.h"
-      textual header "__locale_dir/support/strtonum/bsd_like.h"
     }
 
     module locale_base_api {

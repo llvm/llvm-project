@@ -15,10 +15,6 @@
 #  pragma GCC system_header
 #endif
 
-#include <__locale_dir/support/management/bsd_like.h> // must come first since it defines __locale_t
-
-#include <__locale_dir/support/characters/bsd_like.h>
-#include <__locale_dir/support/other/bsd_like.h>
-#include <__locale_dir/support/strtonum/bsd_like.h>
+#include <__locale_dir/support/bsd_like.h>
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
