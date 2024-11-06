@@ -1695,18 +1695,17 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
 
   auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
-              .addDef(ResVReg)
-              .addUse(GR.getSPIRVTypeID(ResType))
-              .addUse(I.getOperand(2).getReg())
-              .addUse(I.getOperand(3).getReg())
-              .constrainAllUses(TII, TRI, RBI);
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 // Since pre-1.6 SPIRV has no integer dot implementation,
 // expand by piecewise multiplying and adding the results
-bool SPIRVInstructionSelector::selectIntegerDotExpansion(Register ResVReg,
-                                                const SPIRVType *ResType,
-                                                MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectIntegerDotExpansion(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
   assert(I.getNumOperands() == 4);
   assert(I.getOperand(2).isReg());
   assert(I.getOperand(3).isReg());
@@ -2704,7 +2703,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_sdot:
     if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
         STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-      return selectIntegerDot(ResVReg, ResType, I, /*Signed=*/IID == Intrinsic::spv_sdot);
+      return selectIntegerDot(ResVReg, ResType, I,
+                              /*Signed=*/IID == Intrinsic::spv_sdot);
     return selectIntegerDotExpansion(ResVReg, ResType, I);
   case Intrinsic::spv_dot4add_i8packed:
     if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||

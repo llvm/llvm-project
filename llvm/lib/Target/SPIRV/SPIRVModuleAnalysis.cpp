@@ -1015,7 +1015,8 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
   const MachineInstr *InputInstr = MRI.getVRegDef(MI.getOperand(2).getReg());
-  assert(InputInstr->getOperand(1).isReg() && "Unexpected operand in dot input");
+  assert(InputInstr->getOperand(1).isReg() &&
+         "Unexpected operand in dot input");
 
   Register TypeReg = InputInstr->getOperand(1).getReg();
   SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
@@ -1026,8 +1027,8 @@ static void AddDotProductRequirements(const MachineInstr &MI,
     SPIRVType *ScalarTypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
     if (ScalarTypeDef->getOperand(1).getImm() == 8) {
-      assert(TypeDef->getOperand(2).getImm() == 4
-             && "Dot operand of 8-bit integer type requires 4 components");
+      assert(TypeDef->getOperand(2).getImm() == 4 &&
+             "Dot operand of 8-bit integer type requires 4 components");
       Reqs.addCapability(SPIRV::Capability::DotProductInput4x8Bit);
     } else {
       Reqs.addCapability(SPIRV::Capability::DotProductInputAll);
