@@ -29,9 +29,9 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], splat (i8 -128)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <16 x i8> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>, <16 x i8> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> splat (i8 127), <16 x i8> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[WIDE_LOAD]], <16 x i8> [[TMP4]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP5]], ptr [[NEXT_GEP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
@@ -124,9 +124,9 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX7]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], splat (i16 -32768)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub <8 x i16> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP4]], <8 x i16> <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>, <8 x i16> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP4]], <8 x i16> splat (i16 32767), <8 x i16> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <8 x i1> [[TMP3]], <8 x i16> [[WIDE_LOAD]], <8 x i16> [[TMP6]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP7]], ptr [[NEXT_GEP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -219,9 +219,9 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX7]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 -2147483648)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <4 x i32> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>, <4 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> splat (i32 2147483647), <4 x i32> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[NEXT_GEP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

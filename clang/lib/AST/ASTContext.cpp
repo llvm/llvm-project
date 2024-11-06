@@ -1592,14 +1592,17 @@ ASTContext::setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
   InstantiatedFromUsingShadowDecl[Inst] = Pattern;
 }
 
-FieldDecl *ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) {
+FieldDecl *
+ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) const {
   return InstantiatedFromUnnamedFieldDecl.lookup(Field);
 }
 
 void ASTContext::setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst,
                                                      FieldDecl *Tmpl) {
-  assert(!Inst->getDeclName() && "Instantiated field decl is not unnamed");
-  assert(!Tmpl->getDeclName() && "Template field decl is not unnamed");
+  assert((!Inst->getDeclName() || Inst->isPlaceholderVar(getLangOpts())) &&
+         "Instantiated field decl is not unnamed");
+  assert((!Inst->getDeclName() || Inst->isPlaceholderVar(getLangOpts())) &&
+         "Template field decl is not unnamed");
   assert(!InstantiatedFromUnnamedFieldDecl[Inst] &&
          "Already noted what unnamed field was instantiated from");
 
