@@ -83,59 +83,6 @@ namespace acc {
 /// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4 };
 
-/// Used to obtain the `varPtr` from a data clause operation.
-/// Returns empty value if not a data clause operation or is a data exit
-/// operation with no `varPtr`.
-mlir::Value getVarPtr(mlir::Operation *accDataClauseOp);
-
-/// Used to obtain the `accPtr` from a data clause operation.
-/// When a data entry operation, it obtains its result `accPtr` value.
-/// If a data exit operation, it obtains its operand `accPtr` value.
-/// Returns empty value if not a data clause operation.
-mlir::Value getAccPtr(mlir::Operation *accDataClauseOp);
-
-/// Used to obtain the `varPtrPtr` from a data clause operation.
-/// Returns empty value if not a data clause operation.
-mlir::Value getVarPtrPtr(mlir::Operation *accDataClauseOp);
-
-/// Used to obtain `bounds` from an acc data clause operation.
-/// Returns an empty vector if there are no bounds.
-mlir::SmallVector<mlir::Value> getBounds(mlir::Operation *accDataClauseOp);
-
-/// Used to obtain `async` operands from an acc data clause operation.
-/// Returns an empty vector if there are no such operands.
-mlir::SmallVector<mlir::Value>
-getAsyncOperands(mlir::Operation *accDataClauseOp);
-
-/// Returns an array of acc:DeviceTypeAttr attributes attached to
-/// an acc data clause operation, that correspond to the device types
-/// associated with the async clauses with an async-value.
-mlir::ArrayAttr getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp);
-
-/// Returns an array of acc:DeviceTypeAttr attributes attached to
-/// an acc data clause operation, that correspond to the device types
-/// associated with the async clauses without an async-value.
-mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
-
-/// Used to obtain the `name` from an acc operation.
-std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
-
-/// Used to obtain the `dataClause` from a data entry operation.
-/// Returns empty optional if not a data entry operation.
-std::optional<mlir::acc::DataClause>
-getDataClause(mlir::Operation *accDataEntryOp);
-
-/// Used to find out whether data operation is implicit.
-/// Returns false if not a data operation or if it is a data operation without
-/// implicit flag.
-bool getImplicitFlag(mlir::Operation *accDataEntryOp);
-
-/// Used to get an immutable range iterating over the data operands.
-mlir::ValueRange getDataOperands(mlir::Operation *accOp);
-
-/// Used to get a mutable range iterating over the data operands.
-mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
-
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
   return StringLiteral("acc.declare");
