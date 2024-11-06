@@ -548,8 +548,7 @@ private:
   void WriteSubStmt(Stmt *S);
 
   void WriteBlockInfoBlock();
-  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot);
+  void WriteControlBlock(Preprocessor &PP, StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
   void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
