@@ -85,10 +85,7 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: pack_i64:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 32
-; RV64ZBKB-NEXT:    srli a0, a0, 32
-; RV64ZBKB-NEXT:    slli a1, a1, 32
-; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    pack a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %shl = and i64 %a, 4294967295
   %shl1 = shl i64 %b, 32
@@ -109,12 +106,9 @@ define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: pack_i64_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 32
-; RV64ZBKB-NEXT:    srli a0, a0, 32
 ; RV64ZBKB-NEXT:    slli a1, a1, 32
 ; RV64ZBKB-NEXT:    srli a1, a1, 32
-; RV64ZBKB-NEXT:    slli a1, a1, 32
-; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    pack a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %zexta = zext i32 %a to i64
   %zextb = zext i32 %b to i64
@@ -343,10 +337,7 @@ define i64 @pack_i64_allWUsers(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64ZBKB-NEXT:    add a0, a1, a0
 ; RV64ZBKB-NEXT:    slli a0, a0, 32
 ; RV64ZBKB-NEXT:    srli a0, a0, 32
-; RV64ZBKB-NEXT:    slli a0, a0, 32
-; RV64ZBKB-NEXT:    slli a2, a2, 32
-; RV64ZBKB-NEXT:    srli a2, a2, 32
-; RV64ZBKB-NEXT:    or a0, a0, a2
+; RV64ZBKB-NEXT:    pack a0, a2, a0
 ; RV64ZBKB-NEXT:    ret
   %4 = add i32 %1, %0
   %5 = zext i32 %4 to i64
