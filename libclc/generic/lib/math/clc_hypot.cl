@@ -23,6 +23,7 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
+#include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
 
@@ -88,7 +89,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_hypot(double x, double y) {
 
   // Check for NaN
   // c = x != x | y != y;
-  c = isnan(x) | isnan(y);
+  c = __clc_isnan(x) | __clc_isnan(y);
   r = c ? as_double(QNANBITPATT_DP64) : r;
 
   // If either is Inf, we must return Inf
