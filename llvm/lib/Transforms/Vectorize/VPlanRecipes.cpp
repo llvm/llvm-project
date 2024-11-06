@@ -960,20 +960,6 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
-    Value *EVL = Args.back();
-    Args.pop_back();
-    // Add EVL && Mask Ops for vector-predication intrinsics.
-    if (VPIntrinsic::getMaskParamPos(VectorIntrinsicID)) {
-      Value *Mask =
-          State.Builder.CreateVectorSplat(State.VF, State.Builder.getTrue());
-      Args.push_back(Mask);
-    }
-    if (VPIntrinsic::getVectorLengthParamPos(VectorIntrinsicID)) {
-      Args.push_back(EVL);
-    }
-  }
-
   // Use vector version of the intrinsic.
   Module *M = State.Builder.GetInsertBlock()->getModule();
   Function *VectorF =
@@ -1023,9 +1009,9 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
         VPIntrinsic::getFunctionalIntrinsicIDForVP(VectorIntrinsicID);
     if (ID) {
       FID = ID.value();
-      NumOperands = getNumOperands() - 1;
-      // Remove the EVL from arg_operands
-      arg_operands = make_range(op_begin(), op_begin() + getNumOperands() - 1);
+      NumOperands = getNumOperands() - 2;
+      // Remove the Mask && EVL from arg_operands
+      arg_operands = make_range(op_begin(), op_begin() + getNumOperands() - 2);
     }
   }
 

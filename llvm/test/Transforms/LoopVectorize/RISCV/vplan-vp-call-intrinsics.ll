@@ -27,7 +27,7 @@ define void @vp_smax(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SMAX:%.+]]> = call llvm.vp.smax(ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SMAX:%.+]]> = call llvm.vp.smax(ir<[[LD1]]>, ir<[[LD2]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[SMAX]]>, vp<[[EVL]]>
@@ -80,7 +80,7 @@ define void @vp_smin(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SMIN:%.+]]> = call llvm.vp.smin(ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[SMIN:%.+]]> = call llvm.vp.smin(ir<[[LD1]]>, ir<[[LD2]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[SMIN]]>, vp<[[EVL]]>
@@ -133,7 +133,7 @@ define void @vp_umax(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[UMAX:%.+]]> = call llvm.vp.umax(ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[UMAX:%.+]]> = call llvm.vp.umax(ir<[[LD1]]>, ir<[[LD2]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[UMAX]]>, vp<[[EVL]]>
@@ -186,7 +186,7 @@ define void @vp_umin(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[UMIN:%.+]]> = call llvm.vp.umin(ir<[[LD1]]>, ir<[[LD2]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[UMIN:%.+]]> = call llvm.vp.umin(ir<[[LD1]]>, ir<[[LD2]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[UMIN]]>, vp<[[EVL]]>
@@ -237,7 +237,7 @@ define void @vp_ctlz(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[CTLZ:%.+]]> = call llvm.vp.ctlz(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[CTLZ:%.+]]> = call llvm.vp.ctlz(ir<[[LD1]]>, ir<true>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[CTLZ]]>, vp<[[EVL]]>
@@ -285,7 +285,7 @@ define void @vp_cttz(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[CTTZ:%.+]]> = call llvm.vp.cttz(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[CTTZ:%.+]]> = call llvm.vp.cttz(ir<[[LD1]]>, ir<true>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[CTTZ]]>, vp<[[EVL]]>
@@ -334,7 +334,7 @@ define void @vp_lrint(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN-CAST ir<[[FPEXT:%.+]]> = fpext  ir<[[LD1]]> to double
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[LRINT:%.+]]> = call llvm.vp.lrint(ir<[[FPEXT]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[LRINT:%.+]]> = call llvm.vp.lrint(ir<[[FPEXT]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN-CAST ir<[[TRUNC:%.+]]> = trunc ir<[[LRINT]]> to i32
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
@@ -386,7 +386,7 @@ define void @vp_llrint(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN-CAST ir<[[FPEXT:%.+]]> = fpext  ir<[[LD1]]> to double
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[LLRINT:%.+]]> = call llvm.vp.llrint(ir<[[FPEXT]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[LLRINT:%.+]]> = call llvm.vp.llrint(ir<[[FPEXT]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN-CAST ir<[[TRUNC:%.+]]> = trunc ir<[[LLRINT]]> to i32
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
@@ -437,7 +437,7 @@ define void @vp_abs(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[ABS:%.+]]> = call llvm.vp.abs(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[ABS:%.+]]> = call llvm.vp.abs(ir<[[LD1]]>, ir<true>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ABS]]>, vp<[[EVL]]>
