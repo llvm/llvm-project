@@ -18,10 +18,10 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/AlignedAllocation.h"
@@ -8821,13 +8821,13 @@ static ExprResult attemptRecovery(Sema &SemaRef,
 }
 
 namespace {
-class FindTypoExprs : public RecursiveASTVisitor<FindTypoExprs> {
+class FindTypoExprs : public DynamicRecursiveASTVisitor {
   llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs;
 
 public:
   explicit FindTypoExprs(llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs)
       : TypoExprs(TypoExprs) {}
-  bool VisitTypoExpr(TypoExpr *TE) {
+  bool VisitTypoExpr(TypoExpr *TE) override {
     TypoExprs.insert(TE);
     return true;
   }

@@ -17,11 +17,11 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/IgnoreExpr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/TypeLoc.h"
@@ -3606,15 +3606,15 @@ namespace {
 /// others. Pretend that all local typedefs are always referenced, to not warn
 /// on this. This isn't necessary if f has internal linkage, or the typedef
 /// is private.
-class LocalTypedefNameReferencer
-    : public RecursiveASTVisitor<LocalTypedefNameReferencer> {
+class LocalTypedefNameReferencer : public DynamicRecursiveASTVisitor {
 public:
   LocalTypedefNameReferencer(Sema &S) : S(S) {}
-  bool VisitRecordType(const RecordType *RT);
+  bool VisitRecordType(RecordType *RT) override;
+
 private:
   Sema &S;
 };
-bool LocalTypedefNameReferencer::VisitRecordType(const RecordType *RT) {
+bool LocalTypedefNameReferencer::VisitRecordType(RecordType *RT) {
   auto *R = dyn_cast<CXXRecordDecl>(RT->getDecl());
   if (!R || !R->isLocalClass() || !R->isLocalClass()->isExternallyVisible() ||
       R->isDependentType())
