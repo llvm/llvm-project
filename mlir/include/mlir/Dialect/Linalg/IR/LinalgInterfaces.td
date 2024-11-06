@@ -252,7 +252,7 @@ def LinalgStructuredInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return getNumParallelLoops() ==  getNumParallelLoops();
+        return getNumParallelLoops() ==  getNumLoops();
       }]
     >,
     InterfaceMethod<
