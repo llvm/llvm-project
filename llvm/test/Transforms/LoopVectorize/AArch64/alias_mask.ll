@@ -30,7 +30,7 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 16
 ; CHECK-NEXT:    [[SUB_DIFF:%.*]] = sub i64 [[B4]], [[C3]]
-; CHECK-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 1
+; CHECK-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 0
 ; CHECK-NEXT:    [[NEG_COMPARE:%.*]] = icmp sle i64 [[DIFF]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i1> poison, i1 [[NEG_COMPARE]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i1> [[DOTSPLATINSERT]], <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer

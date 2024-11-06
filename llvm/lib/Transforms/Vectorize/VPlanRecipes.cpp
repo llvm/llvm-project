@@ -3630,21 +3630,24 @@ void VPAliasLaneMaskRecipe::execute(VPTransformState &State) {
 
   Value *Diff = Builder.CreateSub(SourceValue, SinkValue, "sub.diff");
   auto *Type = Diff->getType();
+  Value *Zero = ConstantInt::get(Type, 0);
   if (!WriteAfterRead)
     Diff = Builder.CreateIntrinsic(
         Intrinsic::abs, {Type},
-        {Diff, ConstantInt::getFalse(Builder.getInt1Ty())});
-  Value *MemEltSize = ConstantInt::get(Type, ElementSize);
-  Value *DiffDiv = Builder.CreateSDiv(Diff, MemEltSize, "diff");
-  // If the difference is negative then some elements may alias
-  Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_SLE, DiffDiv,
-                                  ConstantInt::get(Type, 0), "neg.compare");
+        {Diff, ConstantInt::getFalse(Builder.getInt1Ty())}, nullptr, "sub.abs");
+
+  Value *DiffDiv = Builder.CreateSDiv(Diff, Zero, "diff");
+  // If the difference is positive then some elements may alias
+  auto CmpCode = WriteAfterRead ? CmpInst::Predicate::ICMP_SLE
+                                : CmpInst::Predicate::ICMP_EQ;
+  Value *Cmp = Builder.CreateICmp(CmpCode, DiffDiv, Zero, "neg.compare");
+
   // Splat the compare result then OR it with a lane mask
   Value *Splat = Builder.CreateVectorSplat(State.VF, Cmp);
   Value *DiffMask = Builder.CreateIntrinsic(
       Intrinsic::get_active_lane_mask,
-      {VectorType::get(Builder.getInt1Ty(), State.VF), Type},
-      {ConstantInt::get(Type, 0), DiffDiv}, nullptr, "ptr.diff.lane.mask");
+      {VectorType::get(Builder.getInt1Ty(), State.VF), Type}, {Zero, DiffDiv},
+      nullptr, "ptr.diff.lane.mask");
   Value *Or = Builder.CreateBinOp(Instruction::BinaryOps::Or, DiffMask, Splat);
   State.set(this, Or, /*IsScalar=*/false);
 }

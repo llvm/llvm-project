@@ -122,7 +122,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 16 x i64> [[BROADCAST_SPLAT6]], i32 0
 ; PRED-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 16 x i64> [[BROADCAST_SPLAT]], i32 0
 ; PRED-NEXT:    [[SUB_DIFF:%.*]] = sub i64 [[TMP10]], [[TMP9]]
-; PRED-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 1
+; PRED-NEXT:    [[DIFF:%.*]] = sdiv i64 [[SUB_DIFF]], 0
 ; PRED-NEXT:    [[NEG_COMPARE:%.*]] = icmp sle i64 [[DIFF]], 0
 ; PRED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i1> poison, i1 [[NEG_COMPARE]], i64 0
 ; PRED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i1> [[DOTSPLATINSERT]], <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
