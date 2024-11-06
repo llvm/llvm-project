@@ -559,6 +559,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 - Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Fixed a crash when mixture of designated and non-designated initializers in union. (#GH113855)
 - Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
@@ -568,9 +569,6 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
-- Clang now uses the correct set of template argument lists when comparing the constraints of
-  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
-  a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047), (#GH49093)
@@ -590,6 +588,7 @@ Bug Fixes to C++ Support
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
+- Name independent data members were not correctly initialized from default member initializers. (#GH114069)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -715,6 +714,7 @@ CUDA Support
 ^^^^^^^^^^^^
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
+- Added support for `__grid_constant__` attribute.
 
 AIX Support
 ^^^^^^^^^^^
@@ -871,10 +871,9 @@ Sanitizers
   This new flag should allow those projects to enable integer sanitizers with
   less noise.
 
-- Arithmetic overflow sanitizers ``-fsanitize=signed-integer-overflow`` and
-  ``-fsanitize=unsigned-integer-overflow`` as well as the implicit integer
-  truncation sanitizers ``-fsanitize=implicit-signed-integer-truncation`` and
-  ``-fsanitize=implicit-unsigned-integer-truncation`` now properly support the
+- ``-fsanitize=signed-integer-overflow``, ``-fsanitize=unsigned-integer-overflow``,
+  ``-fsanitize=implicit-signed-integer-truncation``, ``-fsanitize=implicit-unsigned-integer-truncation``,
+  ``-fsanitize=enum`` now properly support the
   "type" prefix within `Sanitizer Special Case Lists (SSCL)
   <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
   for examples.
@@ -887,6 +886,7 @@ OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
+- Added support for allocator-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^
