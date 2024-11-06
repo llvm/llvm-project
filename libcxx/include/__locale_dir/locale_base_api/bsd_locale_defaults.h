@@ -109,6 +109,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __l
   return ::sscanf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
 }
 _LIBCPP_DIAGNOSTIC_POP
+#undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 
 _LIBCPP_END_NAMESPACE_STD
 
