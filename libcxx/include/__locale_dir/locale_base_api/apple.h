@@ -11,6 +11,7 @@
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_APPLE_H
 
 #include <__config>
+#include <ctype.h>
 #include <string.h>
 #include <time.h>
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
