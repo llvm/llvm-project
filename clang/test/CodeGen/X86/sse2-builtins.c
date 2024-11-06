@@ -610,6 +610,7 @@ __m128d test_mm_cvtsi64_sd(__m128d A, long long B) {
   // X64: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_cvtsi64_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cvtsi64_sd((__m128d){-42.0, +99.0}, 55), +55.0, +99.0));
 #endif
 
 __m128i test_mm_cvtsi64_si128(long long A) {
