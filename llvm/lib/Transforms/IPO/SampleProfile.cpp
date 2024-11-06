@@ -195,7 +195,8 @@ static cl::opt<bool> ProfileSizeInline(
 static cl::opt<bool> DisableSampleLoaderInlining(
     "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
     cl::desc("If true, artifically skip inline transformation in sample-loader "
-             "pass, and use flattened profiles to emit annotation."));
+             "pass, and merge (or scale) profiles (as configured by "
+             "--sample-profile-merge-inlinee)."));
 
 namespace llvm {
 cl::opt<bool>
@@ -469,7 +470,8 @@ public:
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-      LazyCallGraph &CG, bool DisableSampleProfileInlining)
+      LazyCallGraph &CG, bool DisableSampleProfileInlining,
+      bool UseFlattenedProfile)
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
                                     std::move(FS)),
         GetAC(std::move(GetAssumptionCache)),
@@ -479,7 +481,8 @@ public:
                               ? llvm::AnnotateInlinePassName(InlineContext{
                                     LTOPhase, InlinePass::SampleProfileInliner})
                               : CSINLINE_DEBUG),
-        DisableSampleProfileInlining(DisableSampleProfileInlining) {}
+        DisableSampleProfileInlining(DisableSampleProfileInlining),
+        UseFlattenedProfile(UseFlattenedProfile) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -594,6 +597,8 @@ protected:
   bool ProfAccForSymsInList;
 
   bool DisableSampleProfileInlining;
+
+  bool UseFlattenedProfile;
 
   // External inline advisor used to replay inline decision from remarks.
   std::unique_ptr<InlineAdvisor> ExternalInlineAdvisor;
@@ -1980,9 +1985,9 @@ bool SampleProfileLoader::doInitialization(Module &M,
   if (DisableSampleLoaderInlining.getNumOccurrences())
     DisableSampleProfileInlining = DisableSampleLoaderInlining;
 
-  // Use flattened profile if inlining is disabled.
-  if (DisableSampleProfileInlining && !Reader->profileIsCS())
-    ProfileConverter::flattenProfile(Reader->getProfiles());
+  if (UseFlattenedProfile)
+    ProfileConverter::flattenProfile(Reader->getProfiles(),
+                                     Reader->profileIsCS());
 
   // While profile-sample-accurate is on, ignore symbol list.
   ProfAccForSymsInList =
@@ -2314,10 +2319,12 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
 }
 SampleProfileLoaderPass::SampleProfileLoaderPass(
     std::string File, std::string RemappingFile, ThinOrFullLTOPhase LTOPhase,
-    IntrusiveRefCntPtr<vfs::FileSystem> FS, bool DisableSampleProfileInlining)
+    IntrusiveRefCntPtr<vfs::FileSystem> FS, bool DisableSampleProfileInlining,
+    bool UseFlattenedProfile)
     : ProfileFileName(File), ProfileRemappingFileName(RemappingFile),
       LTOPhase(LTOPhase), FS(std::move(FS)),
-      DisableSampleProfileInlining(DisableSampleProfileInlining) {}
+      DisableSampleProfileInlining(DisableSampleProfileInlining),
+      UseFlattenedProfile(UseFlattenedProfile) {}
 
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
@@ -2343,7 +2350,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
       ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
                                        : ProfileRemappingFileName,
       LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG,
-      DisableSampleProfileInlining);
+      DisableSampleProfileInlining, UseFlattenedProfile);
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 
