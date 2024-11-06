@@ -4798,6 +4798,12 @@ def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "int(unsigned int, unsigned int, int)";
 }
 
+def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbithigh"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
   let Attributes = [NoThrow, Const];
