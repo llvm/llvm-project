@@ -27,6 +27,12 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+f -mattr=+d \
 ; RUN:   -mattr=+zfhmin -target-abi lp64d < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64IFDZFHMIN
+; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+zdinx \
+; RUN:   -target-abi ilp32 < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32IZDINX
+; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+zdinx \
+; RUN:   -target-abi lp64 < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64IZDINX
 
 ; Test fcopysign scenarios where the sign argument is casted to the type of the
 ; magnitude argument. Those casts can be folded away by the DAGCombiner.
@@ -120,6 +126,18 @@ define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; RV64IFDZFHMIN-NEXT:    fcvt.d.s fa5, fa1
 ; RV64IFDZFHMIN-NEXT:    fsgnj.d fa0, fa0, fa5
 ; RV64IFDZFHMIN-NEXT:    ret
+;
+; RV32IZDINX-LABEL: fold_promote_d_s:
+; RV32IZDINX:       # %bb.0:
+; RV32IZDINX-NEXT:    fcvt.d.s a2, a2
+; RV32IZDINX-NEXT:    fsgnj.d a0, a0, a2
+; RV32IZDINX-NEXT:    ret
+;
+; RV64IZDINX-LABEL: fold_promote_d_s:
+; RV64IZDINX:       # %bb.0:
+; RV64IZDINX-NEXT:    fcvt.d.s a1, a1
+; RV64IZDINX-NEXT:    fsgnj.d a0, a0, a1
+; RV64IZDINX-NEXT:    ret
   %c = fpext float %b to double
   %t = call double @llvm.copysign.f64(double %a, double %c)
   ret double %t
@@ -232,6 +250,39 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV64IFDZFHMIN-NEXT:    fcvt.d.h fa5, fa1
 ; RV64IFDZFHMIN-NEXT:    fsgnj.d fa0, fa0, fa5
 ; RV64IFDZFHMIN-NEXT:    ret
+;
+; RV32IZDINX-LABEL: fold_promote_d_h:
+; RV32IZDINX:       # %bb.0:
+; RV32IZDINX-NEXT:    addi sp, sp, -16
+; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    mv s1, a1
+; RV32IZDINX-NEXT:    mv s0, a0
+; RV32IZDINX-NEXT:    mv a0, a2
+; RV32IZDINX-NEXT:    call __extendhfsf2
+; RV32IZDINX-NEXT:    fcvt.d.s a0, a0
+; RV32IZDINX-NEXT:    fsgnj.d a0, s0, a0
+; RV32IZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    addi sp, sp, 16
+; RV32IZDINX-NEXT:    ret
+;
+; RV64IZDINX-LABEL: fold_promote_d_h:
+; RV64IZDINX:       # %bb.0:
+; RV64IZDINX-NEXT:    addi sp, sp, -16
+; RV64IZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64IZDINX-NEXT:    mv s0, a0
+; RV64IZDINX-NEXT:    mv a0, a1
+; RV64IZDINX-NEXT:    call __extendhfsf2
+; RV64IZDINX-NEXT:    fcvt.d.s a0, a0
+; RV64IZDINX-NEXT:    fsgnj.d a0, s0, a0
+; RV64IZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IZDINX-NEXT:    addi sp, sp, 16
+; RV64IZDINX-NEXT:    ret
   %c = fpext half %b to double
   %t = call double @llvm.copysign.f64(double %a, double %c)
   ret double %t
@@ -335,6 +386,34 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV64IFDZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; RV64IFDZFHMIN-NEXT:    fsgnj.s fa0, fa0, fa5
 ; RV64IFDZFHMIN-NEXT:    ret
+;
+; RV32IZDINX-LABEL: fold_promote_f_h:
+; RV32IZDINX:       # %bb.0:
+; RV32IZDINX-NEXT:    addi sp, sp, -16
+; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    mv s0, a0
+; RV32IZDINX-NEXT:    mv a0, a1
+; RV32IZDINX-NEXT:    call __extendhfsf2
+; RV32IZDINX-NEXT:    fsgnj.s a0, s0, a0
+; RV32IZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    addi sp, sp, 16
+; RV32IZDINX-NEXT:    ret
+;
+; RV64IZDINX-LABEL: fold_promote_f_h:
+; RV64IZDINX:       # %bb.0:
+; RV64IZDINX-NEXT:    addi sp, sp, -16
+; RV64IZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64IZDINX-NEXT:    mv s0, a0
+; RV64IZDINX-NEXT:    mv a0, a1
+; RV64IZDINX-NEXT:    call __extendhfsf2
+; RV64IZDINX-NEXT:    fsgnj.s a0, s0, a0
+; RV64IZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IZDINX-NEXT:    addi sp, sp, 16
+; RV64IZDINX-NEXT:    ret
   %c = fpext half %b to float
   %t = call float @llvm.copysign.f32(float %a, float %c)
   ret float %t
@@ -413,6 +492,20 @@ define float @fold_demote_s_d(float %a, double %b) nounwind {
 ; RV64IFDZFHMIN-NEXT:    fcvt.s.d fa5, fa1
 ; RV64IFDZFHMIN-NEXT:    fsgnj.s fa0, fa0, fa5
 ; RV64IFDZFHMIN-NEXT:    ret
+;
+; RV32IZDINX-LABEL: fold_demote_s_d:
+; RV32IZDINX:       # %bb.0:
+; RV32IZDINX-NEXT:    mv a3, a2
+; RV32IZDINX-NEXT:    mv a2, a1
+; RV32IZDINX-NEXT:    fcvt.s.d a1, a2
+; RV32IZDINX-NEXT:    fsgnj.s a0, a0, a1
+; RV32IZDINX-NEXT:    ret
+;
+; RV64IZDINX-LABEL: fold_demote_s_d:
+; RV64IZDINX:       # %bb.0:
+; RV64IZDINX-NEXT:    fcvt.s.d a1, a1
+; RV64IZDINX-NEXT:    fsgnj.s a0, a0, a1
+; RV64IZDINX-NEXT:    ret
   %c = fptrunc double %b to float
   %t = call float @llvm.copysign.f32(float %a, float %c)
   ret float %t
@@ -536,6 +629,36 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV64IFDZFHMIN-NEXT:    or a0, a1, a0
 ; RV64IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IFDZFHMIN-NEXT:    ret
+;
+; RV32IZDINX-LABEL: fold_demote_h_s:
+; RV32IZDINX:       # %bb.0:
+; RV32IZDINX-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32IZDINX-NEXT:    lui a2, 524288
+; RV32IZDINX-NEXT:    and a1, a1, a2
+; RV32IZDINX-NEXT:    srli a1, a1, 16
+; RV32IZDINX-NEXT:    slli a0, a0, 17
+; RV32IZDINX-NEXT:    srli a0, a0, 17
+; RV32IZDINX-NEXT:    lui a2, 1048560
+; RV32IZDINX-NEXT:    or a0, a0, a2
+; RV32IZDINX-NEXT:    or a0, a0, a1
+; RV32IZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32IZDINX-NEXT:    ret
+;
+; RV64IZDINX-LABEL: fold_demote_h_s:
+; RV64IZDINX:       # %bb.0:
+; RV64IZDINX-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64IZDINX-NEXT:    lui a2, 524288
+; RV64IZDINX-NEXT:    and a1, a1, a2
+; RV64IZDINX-NEXT:    srli a1, a1, 16
+; RV64IZDINX-NEXT:    slli a0, a0, 49
+; RV64IZDINX-NEXT:    srli a0, a0, 49
+; RV64IZDINX-NEXT:    lui a2, 1048560
+; RV64IZDINX-NEXT:    or a0, a0, a2
+; RV64IZDINX-NEXT:    or a0, a0, a1
+; RV64IZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64IZDINX-NEXT:    ret
   %c = fptrunc float %b to half
   %t = call half @llvm.copysign.f16(half %a, half %c)
   ret half %t
@@ -665,6 +788,34 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV64IFDZFHMIN-NEXT:    or a0, a1, a0
 ; RV64IFDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IFDZFHMIN-NEXT:    ret
+;
+; RV32IZDINX-LABEL: fold_demote_h_d:
+; RV32IZDINX:       # %bb.0:
+; RV32IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32IZDINX-NEXT:    lui a1, 524288
+; RV32IZDINX-NEXT:    and a1, a2, a1
+; RV32IZDINX-NEXT:    srli a1, a1, 16
+; RV32IZDINX-NEXT:    slli a0, a0, 17
+; RV32IZDINX-NEXT:    srli a0, a0, 17
+; RV32IZDINX-NEXT:    lui a2, 1048560
+; RV32IZDINX-NEXT:    or a0, a0, a2
+; RV32IZDINX-NEXT:    or a0, a0, a1
+; RV32IZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32IZDINX-NEXT:    ret
+;
+; RV64IZDINX-LABEL: fold_demote_h_d:
+; RV64IZDINX:       # %bb.0:
+; RV64IZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64IZDINX-NEXT:    slli a0, a0, 49
+; RV64IZDINX-NEXT:    srli a0, a0, 49
+; RV64IZDINX-NEXT:    srli a1, a1, 63
+; RV64IZDINX-NEXT:    slli a1, a1, 63
+; RV64IZDINX-NEXT:    srli a1, a1, 48
+; RV64IZDINX-NEXT:    lui a2, 1048560
+; RV64IZDINX-NEXT:    or a0, a0, a2
+; RV64IZDINX-NEXT:    or a0, a0, a1
+; RV64IZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64IZDINX-NEXT:    ret
   %c = fptrunc double %b to half
   %t = call half @llvm.copysign.f16(half %a, half %c)
   ret half %t
