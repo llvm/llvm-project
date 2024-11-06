@@ -75,7 +75,7 @@ public:
   template <class _Stored>
   _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
-      std::__libcpp_deallocate((void*)__buffer_, _BufferSize * sizeof(byte), alignof(_Stored));
+      std::__libcpp_deallocate(*reinterpret_cast<void**>(__buffer_), _BufferSize * sizeof(byte), alignof(_Stored));
   }
 
   template <class _Stored, class... _Args>
