@@ -1711,6 +1711,14 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_UMULL);
   case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_SMULL);
+  case Intrinsic::aarch64_neon_abs: {
+    // Lower the intrinsic to G_ABS.
+    MachineIRBuilder MIB(MI);
+    MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  }
+
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
