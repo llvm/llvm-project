@@ -3862,16 +3862,7 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
 
     for (const auto &[Idx, FS] : enumerate(Spellings)) {
       if (Names.size() == 1) {
-        OS << "    if (getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
-           << " && ComputedScope == ";
-
-        if (FS.nameSpace() == "")
-          OS << "AttributeCommonInfo::Scope::NONE";
-        else
-          OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
-
-        OS << ")\n"
-           << "      return " << Idx << ";\n";
+        OS << "    if (";
       } else {
         SmallVector<StringRef, 6> SameLenNames;
         llvm::copy_if(
@@ -3879,31 +3870,26 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
             [&](StringRef N) { return N.size() == FS.name().size(); });
 
         if (SameLenNames.size() == 1) {
-          OS << "    if (Name.size() == " << FS.name().size()
-             << " && getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
-             << " && ComputedScope == ";
-
-          if (FS.nameSpace() == "")
-            OS << "AttributeCommonInfo::Scope::NONE";
-          else
-            OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
-
-          OS << ")\n"
-             << "      return " << Idx << ";\n";
+          OS << "    if (Name.size() == " << FS.name().size() << " && ";
         } else {
+          // FIXME: We currently fall back to comparing entire strings if there
+          // are 2 or more spelling names with the same length. This can be
+          // optimized to check only for the the first differing character
+          // between them instead.
           OS << "    if (Name == \"" << FS.name() << "\""
-             << " && getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
-             << " && ComputedScope == ";
-
-          if (FS.nameSpace() == "")
-            OS << "AttributeCommonInfo::Scope::NONE";
-          else
-            OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
-
-          OS << ")\n"
-             << "      return " << Idx << ";\n";
+             << " && ";
         }
       }
+
+      OS << "getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
+         << " && ComputedScope == ";
+      if (FS.nameSpace() == "")
+        OS << "AttributeCommonInfo::Scope::NONE";
+      else
+        OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
+
+      OS << ")\n"
+         << "      return " << Idx << ";\n";
     }
 
     OS << "    break;\n"

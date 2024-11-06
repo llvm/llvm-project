@@ -168,9 +168,7 @@ const llvm::StringMap<AttributeCommonInfo::Scope> ScopeMap = {
 AttributeCommonInfo::Scope
 getScopeFromNormalizedScopeName(StringRef ScopeName) {
   auto It = ScopeMap.find(ScopeName);
-  if (It == ScopeMap.end()) {
-    llvm_unreachable("Unknown normalized scope name. Shouldn't get here");
-  }
+  assert(It != ScopeMap.end());
 
   return It->second;
 }
