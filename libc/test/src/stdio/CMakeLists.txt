@@ -198,6 +198,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  iprintf_test
+  ${hermetic_test_only}
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    iprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.iprintf
+)
+
+add_libc_test(
    asprintf_test
    SUITE
      libc_stdio_unittests

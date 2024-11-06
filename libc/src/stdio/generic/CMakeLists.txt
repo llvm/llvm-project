@@ -366,7 +366,6 @@ add_entrypoint_object(
 list(APPEND fprintf_deps
       libc.hdr.types.FILE
       libc.src.__support.arg_list
-      libc.src.stdio.printf_core.vfprintf_internal
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -393,6 +392,19 @@ add_entrypoint_object(
     ../printf.h
   DEPENDS
     ${printf_deps}
+    libc.src.stdio.printf_core.vfprintf_internal
+)
+
+# the printf variant with no floats is called iprintf for some reason
+add_entrypoint_object(
+  iprintf
+  SRCS
+    iprintf.cpp
+  HDRS
+    ../iprintf.h
+  DEPENDS
+    ${printf_deps}
+    libc.src.stdio.printf_core.vfprintf_internal_nofloat
 )
 
 add_entrypoint_object(
@@ -403,6 +415,7 @@ add_entrypoint_object(
     ../vprintf.h
   DEPENDS
     ${printf_deps}
+    libc.src.stdio.printf_core.vfprintf_internal
 )
 
 add_entrypoint_object(
@@ -413,6 +426,7 @@ add_entrypoint_object(
     ../fprintf.h
   DEPENDS
     ${fprintf_deps}
+    libc.src.stdio.printf_core.vfprintf_internal
 )
 
 add_entrypoint_object(
@@ -423,6 +437,7 @@ add_entrypoint_object(
     ../vfprintf.h
   DEPENDS
     ${fprintf_deps}
+    libc.src.stdio.printf_core.vfprintf_internal
 )
 
 add_entrypoint_object(
