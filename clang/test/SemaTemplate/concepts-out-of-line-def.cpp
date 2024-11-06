@@ -721,3 +721,19 @@ template struct c<int>;
 template struct d<int, int>;
 
 } // namespace GH115098
+
+namespace GH114685 {
+
+template <typename T> struct ptr {
+  template <typename U>
+  friend ptr<U> make_item(auto &&args)
+    requires(sizeof(args) > 1);
+};
+
+template <typename U>
+ptr<U> make_item(auto &&args)
+  requires(sizeof(args) > 1) {}
+
+ptr<char> p;
+
+} // namespace GH114685

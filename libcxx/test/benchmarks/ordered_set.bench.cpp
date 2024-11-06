@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <random>
 #include <set>
 #include <string>
@@ -181,7 +184,7 @@ struct IterateRangeFor : Base {
     while (State.KeepRunningBatch(TableSize * NumTables)) {
       for (auto& Set : Data.Sets) {
         for (auto& V : Set) {
-          benchmark::DoNotOptimize(V);
+          benchmark::DoNotOptimize(const_cast<std::set<uint64_t>::reference>(V));
         }
       }
     }
@@ -199,7 +202,7 @@ struct IterateBeginEnd : Base {
     while (State.KeepRunningBatch(TableSize * NumTables)) {
       for (auto& Set : Data.Sets) {
         for (auto it = Set.begin(); it != Set.end(); ++it) {
-          benchmark::DoNotOptimize(*it);
+          benchmark::DoNotOptimize(const_cast<std::set<uint64_t>::reference>(*it));
         }
       }
     }

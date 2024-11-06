@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -104,8 +103,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
-#include <deque>
-#include <iterator>
 #include <limits>
 #include <optional>
 #include <tuple>
@@ -2154,8 +2151,10 @@ void SelectionDAGBuilder::visitCleanupRet(const CleanupReturnInst &I) {
   FuncInfo.MBB->normalizeSuccProbs();
 
   // Create the terminator node.
-  SDValue Ret =
-      DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other, getControlRoot());
+  MachineBasicBlock *CleanupPadMBB =
+      FuncInfo.getMBB(I.getCleanupPad()->getParent());
+  SDValue Ret = DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other,
+                            getControlRoot(), DAG.getBasicBlock(CleanupPadMBB));
   DAG.setRoot(Ret);
 }
 
@@ -3778,7 +3777,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     }
 
     if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
-        (TLI.isOperationLegalOrCustomOrPromote(Opc, VT) ||
+        (TLI.isOperationLegalOrCustom(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
         // If the underlying comparison instruction is used by any other

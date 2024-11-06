@@ -133,8 +133,6 @@ public:
   ///     The newly remapped filespec that is guaranteed to exist.
   std::optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
 
-  uint32_t FindIndexForPath(llvm::StringRef path) const;
-
   uint32_t GetModificationID() const {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);
     return m_mod_id;
@@ -146,7 +144,8 @@ protected:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  void AppendImpl(llvm::StringRef path, llvm::StringRef replacement);
+  void AppendNoLock(llvm::StringRef path, llvm::StringRef replacement);
+  uint32_t FindIndexForPathNoLock(llvm::StringRef path) const;
   void Notify(bool notify) const;
 
   iterator FindIteratorForPath(ConstString path);
