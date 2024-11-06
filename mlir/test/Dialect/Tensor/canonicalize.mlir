@@ -2091,8 +2091,8 @@ func.func @fold_expand_shape_from_elements(%arg0: i32) -> tensor<1xi32> {
 
 // -----
 
-// CHECK-LABEL: func @propogate_index_cast
-func.func @propogate_index_cast(%arg0: tensor<1xi32>) -> index {
+// CHECK-LABEL: func @propagate_index_cast
+func.func @propagate_index_cast(%arg0: tensor<1xi32>) -> index {
   // CHECK: %[[IDX:.+]] = arith.constant 0
   // CHECK: %[[EXT:.+]] = tensor.extract %arg0[%[[IDX]]] : tensor<1xi32>
   // CHECK: %[[CAST:.+]] = arith.index_cast %[[EXT]]
@@ -2718,17 +2718,36 @@ func.func @dim_out_of_bounds() -> vector<7xi32> {
 
 // -----
 
-// CHECK-LABEL:   func.func @test_destination_multiple_result(
+// CHECK-LABEL:   func.func @fold_cast_multiple_results(
 // CHECK-SAME:         %[[ARG1:.*]]: tensor<2x2xf32>,
 // CHECK-SAME:         %[[ARG2:.*]]: tensor<2x2xf32>) -> index {
 // CHECK:           %[[RES:.*]]:2 = test.destination_style_op ins(%[[ARG1]] : tensor<2x2xf32>)
 // CHECK-SAME:      outs(%[[ARG2]] : tensor<2x2xf32>) -> tensor<2x2xf32>, index
 // CHECK:           return %[[RES]]#1 : index
-func.func @test_destination_multiple_result(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf32>) -> index {
+func.func @fold_cast_multiple_results(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf32>) -> index {
   %cast = tensor.cast %arg0 : tensor<2x2xf32> to tensor<?x2xf32>
   %cast_0 = tensor.cast %arg1 : tensor<2x2xf32> to tensor<?x2xf32>
   %0:2 = test.destination_style_op ins(%cast : tensor<?x2xf32>) outs(%cast_0 : tensor<?x2xf32>) -> tensor<?x2xf32>, index
   return %0#1 : index
+}
+// -----
+
+// CHECK-LABEL:   func.func @fold_cast_pack_dynamic_tile_size
+// CHECK-SAME:      %[[DEST:.*]]: tensor<1x1x8x1xi32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<7x?xi32>,
+// CHECK-SAME:      %[[PAD:.*]]: i32) -> tensor<1x1x8x1xi32> {
+// CHECK:           %[[PACK:.*]] = tensor.pack %[[SRC]] padding_value(%[[PAD]] : i32) inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] : tensor<7x?xi32> -> tensor<1x1x8x1xi32>
+// CHECK:           return %[[PACK]] : tensor<1x1x8x1xi32>
+func.func @fold_cast_pack_dynamic_tile_size(
+  %dest: tensor<1x1x8x1xi32>,
+  %src: tensor<7x?xi32>,
+  %pad: i32) -> tensor<1x1x8x1xi32> {
+
+    %cast = tensor.cast %dest : tensor<1x1x8x1xi32> to tensor<1x1x?x1xi32>
+    %c8 = arith.constant 8 : index
+    %pack = tensor.pack %src padding_value(%pad : i32) inner_dims_pos = [0, 1] inner_tiles = [%c8, 1] into %cast : tensor<7x?xi32> -> tensor<1x1x?x1xi32>
+    %res = tensor.cast %pack : tensor<1x1x?x1xi32> to tensor<1x1x8x1xi32>
+    return %res : tensor<1x1x8x1xi32>
 }
 
 // -----

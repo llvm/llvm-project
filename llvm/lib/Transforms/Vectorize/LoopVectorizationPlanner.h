@@ -506,7 +506,7 @@ private:
   // instructions leading from the loop exit instr to the phi need to be
   // converted to reductions, with one operand being vector and the other being
   // the scalar reduction chain. For other reductions, a select is introduced
-  // between the phi and live-out recipes when folding the tail.
+  // between the phi and users outside the vector region when folding the tail.
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);

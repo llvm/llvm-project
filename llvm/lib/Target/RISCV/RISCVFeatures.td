@@ -1386,6 +1386,13 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+foreach nf = {2-8} in
+  def TuneOptimizedNF#nf#SegmentLoadStore :
+      SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
+                       "HasOptimizedNF"#nf#"SegmentLoadStore",
+                       "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are"
+                       "implemented as a wide memory op and shuffle">;
+
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
                       "true", "Experimental intrinsics">;

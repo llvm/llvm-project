@@ -163,6 +163,17 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_v2f16(%value: vector<2xf16>, %buf: mem
   func.return
 }
 
+// CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_fadd_v2bf16
+func.func @gpu_gcn_raw_buffer_atomic_fadd_v2bf16(%value: vector<2xbf16>, %buf: memref<64xbf16>, %idx: i32) {
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(128 : i32)
+  // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
+  // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)
+  // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]]
+  // CHECK: rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : vector<2xbf16>
+  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %value -> %buf[%idx] : vector<2xbf16> -> memref<64xbf16>, i32
+  func.return
+}
+
 // CHECK-LABEL: func @gpu_gcn_raw_buffer_atomic_fmax_f32
 func.func @gpu_gcn_raw_buffer_atomic_fmax_f32(%value: f32, %buf: memref<64xf32>, %idx: i32) {
   // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
