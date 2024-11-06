@@ -3,7 +3,7 @@
 
 declare i32 @llvm.lround.i32.f32(float)
 
-; We support lround with i32 as return type on LoongArch64. This is needed by flang.
+;; We support lround with i32 as return type on LoongArch64. This is needed by flang.
 define i32 @lround_i32_f32(float %a) nounwind {
 ; CHECK-LABEL: lround_i32_f32:
 ; CHECK:       # %bb.0:
