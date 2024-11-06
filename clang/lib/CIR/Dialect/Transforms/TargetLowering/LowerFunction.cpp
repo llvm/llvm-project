@@ -257,6 +257,23 @@ Value emitAddressAtOffset(LowerFunction &LF, Value addr,
   return addr;
 }
 
+mlir::cir::AllocaOp findAlloca(Operation *op) {
+  if (!op)
+    return {};
+
+  if (auto al = dyn_cast<mlir::cir::AllocaOp>(op)) {
+    return al;
+  } else if (auto ret = dyn_cast<mlir::cir::ReturnOp>(op)) {
+    auto vals = ret.getInput();
+    if (vals.size() == 1)
+      return findAlloca(vals[0].getDefiningOp());
+  } else if (auto load = dyn_cast<mlir::cir::LoadOp>(op)) {
+    return findAlloca(load.getAddr().getDefiningOp());
+  }
+
+  return {};
+}
+
 /// After the calling convention is lowered, an ABI-agnostic type might have to
 /// be loaded back to its ABI-aware couterpart so it may be returned. If they
 /// differ, we have to do a coerced load. A coerced load, which means to load a
@@ -303,6 +320,31 @@ Value castReturnValue(Value Src, Type Ty, LowerFunction &LF) {
     // to that information.
     auto Cast = createCoercedBitcast(Src, Ty, LF);
     return LF.getRewriter().create<LoadOp>(Src.getLoc(), Cast);
+  }
+
+  // Otherwise do coercion through memory.
+  if (auto addr = findAlloca(Src.getDefiningOp())) {
+    auto &rewriter = LF.getRewriter();
+    auto *ctxt = LF.LM.getMLIRContext();
+    auto ptrTy = PointerType::get(ctxt, Ty);
+    auto voidPtr = PointerType::get(ctxt, mlir::cir::VoidType::get(ctxt));
+
+    // insert alloca near the previuos one
+    auto point = rewriter.saveInsertionPoint();
+    rewriter.setInsertionPointAfter(addr);
+    auto align = LF.LM.getDataLayout().getABITypeAlign(Ty);
+    auto alignAttr = rewriter.getI64IntegerAttr(align.value());
+    auto tmp =
+        rewriter.create<AllocaOp>(Src.getLoc(), ptrTy, Ty, "tmp", alignAttr);
+    rewriter.restoreInsertionPoint(point);
+
+    auto srcVoidPtr = createBitcast(addr, voidPtr, LF);
+    auto dstVoidPtr = createBitcast(tmp, voidPtr, LF);
+    auto i64Ty = IntType::get(ctxt, 64, false);
+    auto len = rewriter.create<ConstantOp>(
+        Src.getLoc(), IntAttr::get(i64Ty, SrcSize.getFixedValue()));
+    rewriter.create<MemCpyOp>(Src.getLoc(), dstVoidPtr, srcVoidPtr, len);
+    return rewriter.create<LoadOp>(Src.getLoc(), tmp.getResult());
   }
 
   cir_cconv_unreachable("NYI");
@@ -530,23 +572,6 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
   }
 
   return success();
-}
-
-mlir::cir::AllocaOp findAlloca(Operation *op) {
-  if (!op)
-    return {};
-
-  if (auto al = dyn_cast<mlir::cir::AllocaOp>(op)) {
-    return al;
-  } else if (auto ret = dyn_cast<mlir::cir::ReturnOp>(op)) {
-    auto vals = ret.getInput();
-    if (vals.size() == 1)
-      return findAlloca(vals[0].getDefiningOp());
-  } else if (auto load = dyn_cast<mlir::cir::LoadOp>(op)) {
-    return findAlloca(load.getAddr().getDefiningOp());
-  }
-
-  return {};
 }
 
 LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {

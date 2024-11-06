@@ -74,6 +74,32 @@ GT_128 ret_gt_128() {
   return x;
 }
 
+typedef struct {
+  int a;
+  int b;
+  int c;  
+} S;
+
+// CHECK: cir.func {{.*@retS}}() -> !cir.array<!u64i x 2>
+// CHECK:   %[[#V0:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   %[[#V1:]] = cir.alloca !cir.array<!u64i x 2>, !cir.ptr<!cir.array<!u64i x 2>>, ["tmp"] {alignment = 8 : i64}
+// CHECK:   %[[#V2:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_S>), !cir.ptr<!void>
+// CHECK:   %[[#V3:]] = cir.cast(bitcast, %[[#V1]] : !cir.ptr<!cir.array<!u64i x 2>>), !cir.ptr<!void>
+// CHECK:   %[[#V4:]] = cir.const #cir.int<12> : !u64i
+// CHECK:   cir.libc.memcpy %[[#V4]] bytes from %[[#V2]] to %[[#V3]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+// CHECK:   %[[#V5:]] = cir.load %[[#V1]] : !cir.ptr<!cir.array<!u64i x 2>>, !cir.array<!u64i x 2>
+// CHECK:   cir.return %[[#V5]] : !cir.array<!u64i x 2>
+
+// LLVM: [2 x i64] @retS() 
+// LLVM:   %[[#V1:]] = alloca %struct.S, i64 1, align 4
+// LLVM:   %[[#V2:]] = alloca [2 x i64], i64 1, align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[#V2]], ptr %[[#V1]], i64 12, i1 false)
+// LLVM:   %[[#V3:]] = load [2 x i64], ptr %[[#V2]], align 8
+// LLVM:   ret [2 x i64] %[[#V3]]
+S retS() {
+  S s;
+  return s;
+}
 // CHECK: cir.func {{.*@pass_lt_64}}(%arg0: !u64
 // CHECK:   %[[#V0:]] = cir.alloca !ty_LT_64_, !cir.ptr<!ty_LT_64_>
 // CHECK:   %[[#V1:]] = cir.cast(integral, %arg0 : !u64i), !u16i
