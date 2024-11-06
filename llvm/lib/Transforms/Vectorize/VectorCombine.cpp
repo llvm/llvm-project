@@ -665,9 +665,9 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
                        m_ExtractElt(m_Value(SrcVec), m_SpecificInt(Index))))))
     return false;
 
-  // TODO: We could handle this with a length-changing shuffle.
   auto *VecTy = cast<FixedVectorType>(I.getType());
-  if (SrcVec->getType() != VecTy)
+  auto *SrcVecTy = cast<FixedVectorType>(SrcVec->getType());
+  if (SrcVecTy->getScalarType() != VecTy->getScalarType())
     return false;
 
   // Ignore bogus insert/extract index.
@@ -682,7 +682,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   std::iota(Mask.begin(), Mask.end(), 0);
   Mask[Index] = Index + NumElts;
 
-  Type *ScalarTy = VecTy->getScalarType();
+  Type *ScalarTy = SrcVecTy->getScalarType();
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy, CostKind) +
       TTI.getVectorInstrCost(I, VecTy, CostKind, Index);
@@ -697,14 +698,31 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
       TTI.getArithmeticInstrCost(Instruction::FNeg, VecTy, CostKind) +
       TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask, CostKind);
 
+  bool NeedLenChg = SrcVecTy->getNumElements() != NumElts;
+  // If the lengths of the two vectors are not equal,
+  // we need to add a length-change vector. Add this cost.
+  if (NeedLenChg)
+    NewCost +=
+        TTI.getShuffleCost(TargetTransformInfo::SK_Select, SrcVecTy, Mask);
+
   if (NewCost > OldCost)
     return false;
 
-  // insertelt DestVec, (fneg (extractelt SrcVec, Index)), Index -->
-  // shuffle DestVec, (fneg SrcVec), Mask
+  Value *NewShuf;
+  // insertelt DestVec, (fneg (extractelt SrcVec, Index)), Index
   Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
-  Value *Shuf = Builder.CreateShuffleVector(DestVec, VecFNeg, Mask);
-  replaceValue(I, *Shuf);
+  if (NeedLenChg) {
+    // shuffle DestVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
+    SmallVector<int> SrcMask(NumElts, PoisonMaskElem);
+    SrcMask[Index] = Index;
+    Value *LenChgShuf = Builder.CreateShuffleVector(
+        SrcVec, PoisonValue::get(SrcVecTy), SrcMask);
+    NewShuf = Builder.CreateShuffleVector(DestVec, LenChgShuf, Mask);
+  } else
+    // shuffle DestVec, (fneg SrcVec), Mask
+    NewShuf = Builder.CreateShuffleVector(DestVec, VecFNeg, Mask);
+
+  replaceValue(I, *NewShuf);
   return true;
 }
 
