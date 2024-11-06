@@ -876,6 +876,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CUDAGridConstantAttr>(TmplAttr)) {
+      if (!New->hasAttr<CUDAGridConstantAttr>())
+        New->addAttr(A->clone(Context));
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
