@@ -61,8 +61,8 @@ void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
 void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 
 bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
-  Legality = std::make_unique<LegalityAnalysis>(A.getScalarEvolution(),
-                                                F.getParent()->getDataLayout());
+  Legality = std::make_unique<LegalityAnalysis>(
+      A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout());
   Change = false;
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
