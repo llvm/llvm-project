@@ -1600,37 +1600,33 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       if (isKernelFunc) {
         if (PTy) {
-          O << "\t.param .u" << PTySizeInBits << " ";
+          O << "\t.param .u" << PTySizeInBits << " .ptr ";
 
-          int addrSpace = PTy->getAddressSpace();
+          switch (PTy->getAddressSpace()) {
+          default:
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << ".global ";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << ".shared ";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << ".const ";
+            break;
+          case ADDRESS_SPACE_LOCAL:
+            O << ".local ";
+            break;
+          }
+
           const bool IsCUDA =
               static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
               NVPTX::CUDA;
 
-          O << ".ptr ";
-          switch (addrSpace) {
-          default:
-            // Special handling for pointer arguments to kernel
-            // CUDA kernels assume that pointers are in global address space
-            // See:
-            // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parameter-state-space
-            if (IsCUDA)
-              O << " .global ";
-            break;
-          case ADDRESS_SPACE_CONST:
-            O << " .const ";
-            break;
-          case ADDRESS_SPACE_SHARED:
-            O << " .shared ";
-            break;
-          case ADDRESS_SPACE_GLOBAL:
-            O << " .global ";
-            break;
-          }
+          MaybeAlign ParamAlign = I->getParamAlign();
+          if (ParamAlign.has_value() || !IsCUDA)
+            O << ".align " << ParamAlign.valueOrOne().value() << " ";
 
-          Align ParamAlign = I->getParamAlign().valueOrOne();
-          if (ParamAlign != 1 || !IsCUDA)
-            O << ".align " << ParamAlign.value() << " ";
           O << TLI->getParamName(F, paramIndex);
           continue;
         }
