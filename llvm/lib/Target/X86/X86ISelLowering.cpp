@@ -6267,6 +6267,30 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     Ops.push_back(Src);
     return true;
   }
+  case ISD::SHL:
+  case ISD::SRL: {
+    // We can only decode 'whole byte' bit shifts as shuffles.
+    std::optional<uint64_t> Amt = DAG.getValidShiftAmount(N, DemandedElts);
+    if (!Amt || (*Amt % 8) != 0)
+      return false;
+
+    uint64_t ByteShift = *Amt / 8;
+    Ops.push_back(N.getOperand(0));
+
+    // Clear mask to all zeros and insert the shifted byte indices.
+    Mask.append(NumSizeInBytes, SM_SentinelZero);
+
+    if (ISD::SHL == Opcode) {
+      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
+        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
+          Mask[i + j] = i + j - ByteShift;
+    } else {
+      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
+        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
+          Mask[i + j - ByteShift] = i + j;
+    }
+    return true;
+  }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     uint64_t ShiftVal = N.getConstantOperandVal(1);
@@ -56904,6 +56928,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       bool AllConstants = true;
       bool AllSubs = true;
       unsigned VecSize = VT.getSizeInBits();
+      SDValue BC0 = peekThroughBitcasts(SubOps[0].getOperand(Op));
+      if (isa<LoadSDNode>(BC0) && all_of(SubOps, [&](SDValue SubOp) {
+            return BC0 == peekThroughBitcasts(SubOp.getOperand(Op));
+          }))
+        return true;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
         SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
         unsigned SubSize = BC.getValueSizeInBits();
@@ -56918,6 +56947,26 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     };
 
     switch (Op0.getOpcode()) {
+    case ISD::VECTOR_SHUFFLE: {
+      if (NumOps == 2 && VT.is256BitVector() &&
+          (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
+          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
+        int NumSubElts = Op0.getValueType().getVectorNumElements();
+        SmallVector<int> NewMask;
+        for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
+          M = M >= NumSubElts ? M + NumSubElts : M;
+          NewMask.push_back(M);
+        }
+        for (int M : cast<ShuffleVectorSDNode>(Ops[1])->getMask()) {
+          if (0 <= M)
+            M = (M >= NumSubElts ? M + NumSubElts : M) + NumSubElts;
+          NewMask.push_back(M);
+        }
+        return DAG.getVectorShuffle(VT, DL, ConcatSubOperand(VT, Ops, 0),
+                                    ConcatSubOperand(VT, Ops, 1), NewMask);
+      }
+      break;
+    }
     case X86ISD::VBROADCAST: {
       if (!IsSplat && llvm::all_of(Ops, [](SDValue Op) {
             return Op.getOperand(0).getValueType().is128BitVector();

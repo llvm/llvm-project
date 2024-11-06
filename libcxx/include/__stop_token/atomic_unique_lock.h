@@ -133,7 +133,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __set_locked_bit = [](_State __state) { return __state | _LockedBit; };
 };
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 
