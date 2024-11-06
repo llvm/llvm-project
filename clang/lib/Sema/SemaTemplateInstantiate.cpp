@@ -237,8 +237,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTPSD,
-                                VTPSD->getInjectedTemplateArgs(S.Context),
+      AddOuterTemplateArguments(VTPSD, VTPSD->getTemplateArgs().asArray(),
                                 /*Final=*/false);
 
     if (VTPSD->isMemberSpecialization())
@@ -275,8 +274,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTPSD,
-                                CTPSD->getInjectedTemplateArgs(S.Context),
+      AddOuterTemplateArguments(CTPSD, CTPSD->getTemplateArgs().asArray(),
                                 /*Final=*/false);
 
     if (CTPSD->isMemberSpecialization())
