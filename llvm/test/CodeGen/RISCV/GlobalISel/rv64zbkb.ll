@@ -230,10 +230,7 @@ define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: packh_i64_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    andi a0, a0, 255
-; RV64ZBKB-NEXT:    andi a1, a1, 255
-; RV64ZBKB-NEXT:    slli a1, a1, 8
-; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    packh a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %and = and i64 %a, 255
   %and1 = and i64 %b, 255
