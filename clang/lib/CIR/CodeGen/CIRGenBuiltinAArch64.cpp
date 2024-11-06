@@ -2172,6 +2172,16 @@ getSignChangedVectorType(CIRGenBuilderTy &builder,
                                     vecTy.getSize());
 }
 
+static mlir::cir::VectorType
+getHalfEltSizeTwiceNumElemsVecType(CIRGenBuilderTy &builder,
+                                   mlir::cir::VectorType vecTy) {
+  auto elemTy = mlir::cast<mlir::cir::IntType>(vecTy.getEltType());
+  elemTy = elemTy.isSigned() ? builder.getSIntNTy(elemTy.getWidth() / 2)
+                             : builder.getUIntNTy(elemTy.getWidth() / 2);
+  return mlir::cir::VectorType::get(builder.getContext(), elemTy,
+                                    vecTy.getSize() * 2);
+}
+
 /// Get integer from a mlir::Value that is an int constant or a constant op.
 static int64_t getIntValueFromConstOp(mlir::Value val) {
   auto constOp = mlir::cast<mlir::cir::ConstantOp>(val.getDefiningOp());
@@ -2349,6 +2359,16 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     // It really is truncation in this context.
     // In CIR, integral cast op supports vector of int type truncating.
     return builder.createIntCast(ops[0], ty);
+  }
+  case NEON::BI__builtin_neon_vpaddl_v:
+  case NEON::BI__builtin_neon_vpaddlq_v: {
+    // The source operand type has twice as many elements of half the size.
+    mlir::cir::VectorType narrowTy =
+        getHalfEltSizeTwiceNumElemsVecType(builder, vTy);
+    return buildNeonCall(builder, {narrowTy}, ops,
+                         isUnsigned ? "aarch64.neon.uaddlp"
+                                    : "aarch64.neon.saddlp",
+                         vTy, getLoc(e->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vext_v:
   case NEON::BI__builtin_neon_vextq_v: {

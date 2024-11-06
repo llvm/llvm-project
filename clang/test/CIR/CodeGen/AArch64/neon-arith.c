@@ -607,3 +607,135 @@ uint64x2_t test_vqsubq_u64(uint64x2_t a, uint64x2_t b) {
 // LLVM: {{.*}}test_vqsubq_u64(<2 x i64>{{.*}} [[A:%.*]], <2 x i64>{{.*}} [[B:%.*]])
 // LLVM: [[RES:%.*]] = call <2 x i64> @llvm.aarch64.neon.uqsub.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
 // LLVM: ret <2 x i64> [[RES]]
+
+int16x4_t test_vpaddl_s8(int8x8_t a) {
+  return vpaddl_s8(a);
+
+  // CIR-LABEL: vpaddl_s8
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} : (!cir.vector<!s8i x 8>) -> !cir.vector<!s16i x 4>
+
+  // LLVM: {{.*}}test_vpaddl_s8(<8 x i8>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.saddlp.v4i16.v8i8(<8 x i8> [[A]])
+  // LLVM:   ret <4 x i16> [[VPADDL1_I]]
+}
+
+int32x2_t test_vpaddl_s16(int16x4_t a) {
+  return vpaddl_s16(a);
+
+  // CIR-LABEL: vpaddl_s16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} : (!cir.vector<!s16i x 4>) -> !cir.vector<!s32i x 2>
+
+  // LLVM: {{.*}}test_vpaddl_s16(<4 x i16>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16> [[A]])
+  // LLVM:   ret <2 x i32> [[VPADDL1_I]]
+}
+
+int64x1_t test_vpaddl_s32(int32x2_t a) {
+  return vpaddl_s32(a);
+
+  // CIR-LABEL: vpaddl_s32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} : (!cir.vector<!s32i x 2>) -> !cir.vector<!s64i x 1>
+
+  // LLVM: {{.*}}test_vpaddl_s32(<2 x i32>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32> [[A]])
+  // LLVM:   ret <1 x i64> [[VPADDL1_I]]
+}
+
+uint16x4_t test_vpaddl_u8(uint8x8_t a) {
+  return vpaddl_u8(a);
+
+  // CIR-LABEL: vpaddl_u8
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} : (!cir.vector<!u8i x 8>) -> !cir.vector<!u16i x 4>
+
+  // LLVM: {{.*}}test_vpaddl_u8(<8 x i8>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uaddlp.v4i16.v8i8(<8 x i8> [[A]])
+  // LLVM:   ret <4 x i16> [[VPADDL1_I]]
+}
+
+uint32x2_t test_vpaddl_u16(uint16x4_t a) {
+  return vpaddl_u16(a);
+
+  // CIR-LABEL: vpaddl_u16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} : (!cir.vector<!u16i x 4>) -> !cir.vector<!u32i x 2>
+
+  // LLVM: {{.*}}test_vpaddl_u16(<4 x i16>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.uaddlp.v2i32.v4i16(<4 x i16> [[A]])
+  // LLVM:   ret <2 x i32> [[VPADDL1_I]]
+}
+
+uint64x1_t test_vpaddl_u32(uint32x2_t a) {
+  return vpaddl_u32(a);
+
+  // CIR-LABEL: vpaddl_u32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} : (!cir.vector<!u32i x 2>) -> !cir.vector<!u64i x 1>
+
+  // LLVM: {{.*}}test_vpaddl_u32(<2 x i32>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.uaddlp.v1i64.v2i32(<2 x i32> [[A]])
+  // LLVM:   ret <1 x i64> [[VPADDL1_I]]
+}
+
+int16x8_t test_vpaddlq_s8(int8x16_t a) {
+  return vpaddlq_s8(a);
+
+  // CIR-LABEL: vpaddlq_s8
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} : (!cir.vector<!s8i x 16>) -> !cir.vector<!s16i x 8>
+
+  // LLVM: {{.*}}test_vpaddlq_s8(<16 x i8>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.saddlp.v8i16.v16i8(<16 x i8> [[A]])
+  // LLVM:   ret <8 x i16> [[VPADDL1_I]]
+}
+
+int32x4_t test_vpaddlq_s16(int16x8_t a) {
+  return vpaddlq_s16(a);
+
+  // CIR-LABEL: vpaddlq_s16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} : (!cir.vector<!s16i x 8>) -> !cir.vector<!s32i x 4>
+
+  // LLVM: {{.*}}test_vpaddlq_s16(<8 x i16>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.saddlp.v4i32.v8i16(<8 x i16> [[A]])
+  // LLVM:   ret <4 x i32> [[VPADDL1_I]]
+}
+
+int64x2_t test_vpaddlq_s32(int32x4_t a) {
+  return vpaddlq_s32(a);
+
+  // CIR-LABEL: vpaddlq_s32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.saddlp" {{%.*}} : (!cir.vector<!s32i x 4>) -> !cir.vector<!s64i x 2>
+
+  // LLVM: {{.*}}test_vpaddlq_s32(<4 x i32>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.saddlp.v2i64.v4i32(<4 x i32> [[A]])
+  // LLVM:   ret <2 x i64> [[VPADDL1_I]]
+}
+
+uint16x8_t test_vpaddlq_u8(uint8x16_t a) {
+  return vpaddlq_u8(a);
+
+  // CIR-LABEL: vpaddlq_u8
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} : (!cir.vector<!u8i x 16>) -> !cir.vector<!u16i x 8>
+
+  // LLVM: {{.*}}test_vpaddlq_u8(<16 x i8>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8> [[A]])
+  // LLVM:   ret <8 x i16> [[VPADDL1_I]]
+}
+
+uint32x4_t test_vpaddlq_u16(uint16x8_t a) {
+  return vpaddlq_u16(a);
+
+  // CIR-LABEL: vpaddlq_u16
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} : (!cir.vector<!u16i x 8>) -> !cir.vector<!u32i x 4>
+
+  // LLVM: {{.*}}test_vpaddlq_u16(<8 x i16>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> [[A]])
+  // LLVM:   ret <4 x i32> [[VPADDL1_I]]
+}
+
+uint64x2_t test_vpaddlq_u32(uint32x4_t a) {
+  return vpaddlq_u32(a);
+
+  // CIR-LABEL: vpaddlq_u32
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.uaddlp" {{%.*}} : (!cir.vector<!u32i x 4>) -> !cir.vector<!u64i x 2>
+
+  // LLVM: {{.*}}test_vpaddlq_u32(<4 x i32>{{.*}}[[A:%[a-z0-9]+]])
+  // LLVM:   [[VPADDL1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.uaddlp.v2i64.v4i32(<4 x i32> [[A]])
+  // LLVM:   ret <2 x i64> [[VPADDL1_I]]
+}
