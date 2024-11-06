@@ -919,7 +919,6 @@ struct AAAMDMaxNumWorkgroups
 
   ChangeStatus manifest(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    // TODO: Skip adding if worst case?
     LLVMContext &Ctx = F->getContext();
     SmallString<32> Buffer;
     raw_svector_ostream OS(Buffer);
