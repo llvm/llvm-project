@@ -127,10 +127,17 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
+// x86_64
 #if __SIZEOF_LONG_DOUBLE__ == 16
   using StorageType = UInt128;
-#else
+// i386-linux-gnu
+#elif __SIZEOF_LONG_DOUBLE__ == 12
   using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
+#else
+# TODO: https://github.com/llvm/llvm-project/issues/115184
+# Android i386 uses `long double == double` i.e. `sizeof(long double) == 8`
+# https://developer.android.com/ndk/guides/abis#x86
+#error "unexpected size of long double"
 #endif
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
