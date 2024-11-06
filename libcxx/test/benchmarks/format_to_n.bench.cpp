@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <format>
 
 #include <algorithm>
@@ -18,6 +20,7 @@
 
 #include "benchmark/benchmark.h"
 #include "make_string.h"
+#include "test_macros.h"
 
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
@@ -90,6 +93,7 @@ BENCHMARK(BM_format_to_n_string_begin<std::list<char>>)->RangeMultiplier(2)->Ran
 BENCHMARK(BM_format_to_n_string_span<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
 BENCHMARK(BM_format_to_n_string_pointer<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 BENCHMARK(BM_format_to_n_string_back_inserter<std::wstring>)->RangeMultiplier(2)->Range(1, 1 << 20);
 BENCHMARK(BM_format_to_n_string_back_inserter<std::vector<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
 BENCHMARK(BM_format_to_n_string_back_inserter<std::list<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
@@ -98,5 +102,6 @@ BENCHMARK(BM_format_to_n_string_begin<std::vector<wchar_t>>)->RangeMultiplier(2)
 BENCHMARK(BM_format_to_n_string_begin<std::list<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
 BENCHMARK(BM_format_to_n_string_span<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
 BENCHMARK(BM_format_to_n_string_pointer<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
+#endif
 
 BENCHMARK_MAIN();

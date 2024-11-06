@@ -1049,7 +1049,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
 
   Register SrcReg = MI.getOperand(1).getReg();
   auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
-  if (!LoadDef || !MRI.hasOneNonDBGUse(DstReg))
+  if (!LoadDef || !MRI.hasOneNonDBGUse(SrcReg))
     return false;
 
   uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
@@ -2042,6 +2042,31 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   if (ShiftVal == ShiftTy.getScalarSizeInBits() - 1)
     MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
   Observer.changedInstr(MI);
+}
+
+bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) {
+  GSub &Sub = cast<GSub>(MI);
+
+  LLT Ty = MRI.getType(Sub.getReg(0));
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {Ty}}))
+    return false;
+
+  if (!isConstantLegalOrBeforeLegalizer(Ty))
+    return false;
+
+  APInt Imm = getIConstantFromReg(Sub.getRHSReg(), MRI);
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto NegCst = B.buildConstant(Ty, -Imm);
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
+    MI.getOperand(2).setReg(NegCst.getReg(0));
+    MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    Observer.changedInstr(MI);
+  };
+  return true;
 }
 
 // shl ([sza]ext x), y => zext (shl x, y), if shift does not overflow source

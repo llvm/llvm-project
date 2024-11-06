@@ -1865,12 +1865,17 @@ struct VectorFromElementsLowering
 };
 
 /// Conversion pattern for vector.step.
-struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
+struct VectorScalableStepOpLowering
+    : public ConvertOpToLLVMPattern<vector::StepOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto resultType = cast<VectorType>(stepOp.getType());
+    if (!resultType.isScalable()) {
+      return failure();
+    }
     Type llvmType = typeConverter->convertType(stepOp.getType());
     rewriter.replaceOpWithNewOp<LLVM::StepVectorOp>(stepOp, llvmType);
     return success();
@@ -1886,6 +1891,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorFMAOpNDRewritePattern>(ctx);
   populateVectorInsertExtractStridedSliceTransforms(patterns);
+  populateVectorStepLoweringPatterns(patterns);
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
   patterns.add<VectorCreateMaskOpRewritePattern>(ctx, force32BitVectorIndices);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
@@ -1903,7 +1909,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
-               VectorStepOpLowering>(converter);
+               VectorScalableStepOpLowering>(converter);
   // Transfer ops with rank > 1 are handled by VectorToSCF.
   populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }

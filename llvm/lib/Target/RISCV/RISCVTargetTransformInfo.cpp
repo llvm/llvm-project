@@ -737,9 +737,9 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
 
-        // Most available hardware today optimizes NF=2 as as one wide memory op
-        // + Factor * LMUL shuffle ops.
-        if (Factor == 2) {
+        // Some processors optimize segment loads/stores as one wide memory op +
+        // Factor * LMUL shuffle ops.
+        if (ST->hasOptimizedSegmentLoadStore(Factor)) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
