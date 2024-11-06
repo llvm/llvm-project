@@ -16,9 +16,7 @@ define i32 @pack_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV32ZBKB-LABEL: pack_i32:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    zext.h a0, a0
-; RV32ZBKB-NEXT:    slli a1, a1, 16
-; RV32ZBKB-NEXT:    or a0, a1, a0
+; RV32ZBKB-NEXT:    pack a0, a0, a1
 ; RV32ZBKB-NEXT:    ret
   %shl = and i32 %a, 65535
   %shl1 = shl i32 %b, 16
