@@ -274,7 +274,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType(ISD::STRICT_UINT_TO_FP, MVT::i1, RegVT);
 
       setOperationAction(ISD::SINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType (ISD::SINT_TO_FP, MVT::i1, RegVT);
+      AddPromotedToType(ISD::SINT_TO_FP, MVT::i1, RegVT);
       setOperationAction(ISD::UINT_TO_FP, MVT::i1, Promote);
       AddPromotedToType(ISD::UINT_TO_FP, MVT::i1, RegVT);
 
@@ -475,9 +475,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::BSWAP, MVT::i32, Expand);
-    setOperationAction(
-        ISD::BSWAP, MVT::i64,
-        (Subtarget.hasP9Vector() && isPPC64) ? Custom : Expand);
+    setOperationAction(ISD::BSWAP, MVT::i64,
+                       (Subtarget.hasP9Vector() && isPPC64) ? Custom : Expand);
   }
 
   // CTPOP or CTTZ were introduced in P8/P9 respectively
@@ -3186,9 +3185,9 @@ SDValue PPCTargetLowering::getTOCEntry(SelectionDAG &DAG, const SDLoc &dl,
                                        SDValue GA) const {
   EVT VT = Subtarget.getScalarIntVT();
   SDValue Reg = Subtarget.isPPC64() ? DAG.getRegister(PPC::X2, VT)
-                        : Subtarget.isAIXABI()
-                              ? DAG.getRegister(PPC::R2, VT)
-                              : DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
+                : Subtarget.isAIXABI()
+                    ? DAG.getRegister(PPC::R2, VT)
+                    : DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
   SDValue Ops[] = { GA, Reg };
   return DAG.getMemIntrinsicNode(
       PPCISD::TOC_ENTRY, dl, DAG.getVTList(VT, MVT::Other), Ops, VT,
@@ -4000,8 +3999,8 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   Entry.Node = Trmp; Args.push_back(Entry);
 
   // TrampSize == (isPPC64 ? 48 : 40);
-  Entry.Node = DAG.getConstant(isPPC64 ? 48 : 40, dl,
-                               Subtarget.getScalarIntVT());
+  Entry.Node =
+      DAG.getConstant(isPPC64 ? 48 : 40, dl, Subtarget.getScalarIntVT());
   Args.push_back(Entry);
 
   Entry.Node = FPtr; Args.push_back(Entry);
@@ -5246,7 +5245,7 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
 static void
 CalculateTailCallArgDest(SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64,
                          SDValue Arg, int SPDiff, unsigned ArgOffset,
-                     SmallVectorImpl<TailCallArgumentInfo>& TailCallArguments) {
+                     SmallVectorImpl<TailCallArgumentInfo> &TailCallArguments) {
   int Offset = ArgOffset + SPDiff;
   uint32_t OpSize = (Arg.getValueSizeInBits() + 7) / 8;
   int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
@@ -5713,7 +5712,8 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
                   SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass,
                   SDValue Glue, SDValue Chain, SDValue &Callee, int SPDiff,
                   const PPCSubtarget &Subtarget) {
-  const bool IsPPC64 = Subtarget.isPPC64(); // MVT for a general purpose register.
+  // MVT for a general purpose register.
+  const bool IsPPC64 = Subtarget.isPPC64();
   const MVT RegVT = Subtarget.getScalarIntVT();
 
   // First operand is always the chain.

@@ -216,8 +216,8 @@ public:
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
 
-  bool is64BitELFABI() const { return  isSVR4ABI() && IsPPC64; }
-  bool is32BitELFABI() const { return  isSVR4ABI() && !IsPPC64; }
+  bool is64BitELFABI() const { return isSVR4ABI() && IsPPC64; }
+  bool is32BitELFABI() const { return isSVR4ABI() && !IsPPC64; }
   bool isUsingPCRelativeCalls() const;
 
   /// Originally, this function return hasISEL(). Now we always enable it,
