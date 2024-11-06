@@ -14,7 +14,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <wctype.h>
 #endif
 
