@@ -634,3 +634,30 @@ body:             |
     RET_ReallyLR implicit $x0
 ...
 ---
+name:            extract_from_build_vector_const_huge
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_const_huge
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY %arg1(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = G_CONSTANT i64 0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %bv:_(<18 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64), %arg1(s64), %arg2(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<18 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---

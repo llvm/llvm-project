@@ -489,7 +489,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (failed(emitSwitchCase(emitter, os, switchOp.getDefaultRegion())))
     return failure();
 
-  os.unindent() << "}";
+  os.unindent() << "}\n}";
   return success();
 }
 

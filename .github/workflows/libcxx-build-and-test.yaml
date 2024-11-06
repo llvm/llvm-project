@@ -49,7 +49,8 @@ env:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-runners-set
+    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -79,12 +80,14 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-runners-set
+    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -123,6 +126,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -160,20 +164,21 @@ jobs:
           'benchmarks',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8-set' ]
+        machine: [ 'libcxx-runners-set' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8-set
+          machine: libcxx-runners-set
         - config: 'generic-asan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-runners-set
         - config: 'generic-tsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-runners-set
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-runners-set
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-runners-set
     runs-on: ${{ matrix.machine }}
+    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -188,22 +193,30 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
 
   macos:
-    runs-on: macos-14
     needs: [ stage1 ]
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        config: [
-          generic-cxx03,
-          generic-cxx23,
-          generic-modules,
-          apple-configuration
-        ]
+        include:
+        - config: generic-cxx03
+          os: macos-latest
+        - config: generic-cxx23
+          os: macos-latest
+        - config: generic-modules
+          os: macos-latest
+        - config: apple-configuration
+          os: macos-latest
+        - config: apple-system
+          os: macos-13
+        - config: apple-system-hardened
+          os: macos-13
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
@@ -223,6 +236,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*

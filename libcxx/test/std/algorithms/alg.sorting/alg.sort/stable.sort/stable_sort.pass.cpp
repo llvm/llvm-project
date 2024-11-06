@@ -18,6 +18,7 @@
 #include <cassert>
 #include <iterator>
 #include <random>
+#include <vector>
 
 #include "count_new.h"
 #include "test_macros.h"

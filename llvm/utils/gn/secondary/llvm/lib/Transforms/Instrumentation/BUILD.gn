@@ -21,7 +21,6 @@ static_library("Instrumentation") {
     "IndirectCallPromotion.cpp",
     "InstrOrderFile.cpp",
     "InstrProfiling.cpp",
-    "Instrumentation.cpp",
     "KCFI.cpp",
     "LowerAllowCheckPass.cpp",
     "MemProfiler.cpp",

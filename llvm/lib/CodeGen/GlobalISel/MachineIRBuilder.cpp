@@ -898,8 +898,9 @@ MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
 MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
-                                                const SrcOp &Op1) {
-  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1});
+                                                const SrcOp &Op1,
+                                                std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
@@ -942,7 +943,7 @@ MachineInstrBuilder MachineIRBuilder::buildInsertSubvector(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildExtractSubvector(const DstOp &Res,
                                                             const SrcOp &Src,
                                                             unsigned Idx) {
-  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+  return buildInstr(TargetOpcode::G_EXTRACT_SUBVECTOR, Res,
                     {Src, uint64_t(Idx)});
 }
 

@@ -22,8 +22,8 @@ struct {
 
 struct {
   unsigned mvendorid;
-  unsigned marchid;
-  unsigned mimpid;
+  unsigned long long marchid;
+  unsigned long long mimpid;
 } __riscv_cpu_model __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td

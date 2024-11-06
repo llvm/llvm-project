@@ -21,64 +21,18 @@ define <4 x bfloat> @splat_idx_v4bf16(<4 x bfloat> %v, i64 %idx) {
 ;
 ; RV32-ZFBFMIN-LABEL: splat_idx_v4bf16:
 ; RV32-ZFBFMIN:       # %bb.0:
-; RV32-ZFBFMIN-NEXT:    addi sp, sp, -48
-; RV32-ZFBFMIN-NEXT:    .cfi_def_cfa_offset 48
-; RV32-ZFBFMIN-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32-ZFBFMIN-NEXT:    .cfi_offset ra, -4
-; RV32-ZFBFMIN-NEXT:    csrr a1, vlenb
-; RV32-ZFBFMIN-NEXT:    slli a1, a1, 1
-; RV32-ZFBFMIN-NEXT:    sub sp, sp, a1
-; RV32-ZFBFMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 2 * vlenb
-; RV32-ZFBFMIN-NEXT:    addi a1, sp, 32
-; RV32-ZFBFMIN-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; RV32-ZFBFMIN-NEXT:    andi a0, a0, 3
-; RV32-ZFBFMIN-NEXT:    li a1, 2
-; RV32-ZFBFMIN-NEXT:    call __mulsi3
-; RV32-ZFBFMIN-NEXT:    addi a1, sp, 16
-; RV32-ZFBFMIN-NEXT:    add a0, a1, a0
-; RV32-ZFBFMIN-NEXT:    addi a2, sp, 32
-; RV32-ZFBFMIN-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
 ; RV32-ZFBFMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-ZFBFMIN-NEXT:    vse16.v v8, (a1)
-; RV32-ZFBFMIN-NEXT:    flh fa5, 0(a0)
-; RV32-ZFBFMIN-NEXT:    fmv.x.h a0, fa5
+; RV32-ZFBFMIN-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-ZFBFMIN-NEXT:    vmv.x.s a0, v8
 ; RV32-ZFBFMIN-NEXT:    vmv.v.x v8, a0
-; RV32-ZFBFMIN-NEXT:    csrr a0, vlenb
-; RV32-ZFBFMIN-NEXT:    slli a0, a0, 1
-; RV32-ZFBFMIN-NEXT:    add sp, sp, a0
-; RV32-ZFBFMIN-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32-ZFBFMIN-NEXT:    addi sp, sp, 48
 ; RV32-ZFBFMIN-NEXT:    ret
 ;
 ; RV64-ZFBFMIN-LABEL: splat_idx_v4bf16:
 ; RV64-ZFBFMIN:       # %bb.0:
-; RV64-ZFBFMIN-NEXT:    addi sp, sp, -48
-; RV64-ZFBFMIN-NEXT:    .cfi_def_cfa_offset 48
-; RV64-ZFBFMIN-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64-ZFBFMIN-NEXT:    .cfi_offset ra, -8
-; RV64-ZFBFMIN-NEXT:    csrr a1, vlenb
-; RV64-ZFBFMIN-NEXT:    slli a1, a1, 1
-; RV64-ZFBFMIN-NEXT:    sub sp, sp, a1
-; RV64-ZFBFMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 2 * vlenb
-; RV64-ZFBFMIN-NEXT:    addi a1, sp, 32
-; RV64-ZFBFMIN-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; RV64-ZFBFMIN-NEXT:    andi a0, a0, 3
-; RV64-ZFBFMIN-NEXT:    li a1, 2
-; RV64-ZFBFMIN-NEXT:    call __muldi3
-; RV64-ZFBFMIN-NEXT:    addi a1, sp, 16
-; RV64-ZFBFMIN-NEXT:    add a0, a1, a0
-; RV64-ZFBFMIN-NEXT:    addi a2, sp, 32
-; RV64-ZFBFMIN-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
 ; RV64-ZFBFMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-ZFBFMIN-NEXT:    vse16.v v8, (a1)
-; RV64-ZFBFMIN-NEXT:    flh fa5, 0(a0)
-; RV64-ZFBFMIN-NEXT:    fmv.x.h a0, fa5
+; RV64-ZFBFMIN-NEXT:    vslidedown.vx v8, v8, a0
+; RV64-ZFBFMIN-NEXT:    vmv.x.s a0, v8
 ; RV64-ZFBFMIN-NEXT:    vmv.v.x v8, a0
-; RV64-ZFBFMIN-NEXT:    csrr a0, vlenb
-; RV64-ZFBFMIN-NEXT:    slli a0, a0, 1
-; RV64-ZFBFMIN-NEXT:    add sp, sp, a0
-; RV64-ZFBFMIN-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64-ZFBFMIN-NEXT:    addi sp, sp, 48
 ; RV64-ZFBFMIN-NEXT:    ret
   %x = extractelement <4 x bfloat> %v, i64 %idx
   %ins = insertelement <4 x bfloat> poison, bfloat %x, i32 0

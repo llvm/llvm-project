@@ -107,7 +107,7 @@ InstallAPIContext::findAndRecordFile(const FileEntry *FE,
 }
 
 void InstallAPIContext::addKnownHeader(const HeaderFile &H) {
-  auto FE = FM->getFile(H.getPath());
+  auto FE = FM->getOptionalFileRef(H.getPath());
   if (!FE)
     return; // File does not exist.
   KnownFiles[*FE] = H.getType();

@@ -51,8 +51,8 @@ enum NodeType : unsigned {
   CallSeqEnd,
   CallPrototype,
   ProxyReg,
-  FUN_SHFL_CLAMP,
-  FUN_SHFR_CLAMP,
+  FSHL_CLAMP,
+  FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
   IMAD,
@@ -61,7 +61,10 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+  FCOPYSIGN,
   DYNAMIC_STACKALLOC,
+  STACKRESTORE,
+  STACKSAVE,
   BrxStart,
   BrxItem,
   BrxEnd,
@@ -69,8 +72,6 @@ enum NodeType : unsigned {
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LoadV4,
-  LDGV2, // LDG.v2
-  LDGV4, // LDG.v4
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
@@ -527,6 +528,8 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
@@ -617,11 +620,15 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
 
+  SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;

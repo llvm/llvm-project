@@ -87,6 +87,7 @@ set(hlsl_h
 set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_intrinsics.h
+  hlsl/hlsl_detail.h
   )
 set(hlsl_files
   ${hlsl_h}
@@ -119,6 +120,7 @@ set(ppc_htm_files
 
 set(riscv_files
   riscv_bitmanip.h
+        riscv_corev_alu.h
   riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
@@ -146,7 +148,9 @@ set(x86_files
   ammintrin.h
   amxcomplexintrin.h
   amxfp16intrin.h
+  amxfp8intrin.h
   amxintrin.h
+  amxtransposeintrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -155,6 +159,7 @@ set(x86_files
   avx10_2_512satcvtintrin.h
   avx10_2bf16intrin.h
   avx10_2convertintrin.h
+  avx10_2copyintrin.h
   avx10_2minmaxintrin.h
   avx10_2niintrin.h
   avx10_2satcvtdsintrin.h
@@ -218,6 +223,8 @@ set(x86_files
   mm3dnow.h
   mmintrin.h
   movdirintrin.h
+  movrs_avx10_2_512intrin.h
+  movrs_avx10_2intrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h
@@ -238,6 +245,7 @@ set(x86_files
   shaintrin.h
   sm3intrin.h
   sm4intrin.h
+  sm4evexintrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h

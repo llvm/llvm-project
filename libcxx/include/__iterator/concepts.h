@@ -26,7 +26,6 @@
 #include <__concepts/semiregular.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
-#include <__functional/invoke.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
@@ -35,6 +34,7 @@
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>

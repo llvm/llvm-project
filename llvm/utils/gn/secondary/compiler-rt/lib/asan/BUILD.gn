@@ -60,12 +60,12 @@ if (current_toolchain == host_toolchain) {
     "asan_thread.h",
     "asan_win.cpp",
   ]
-  if (target_os != "mac" && target_os != "win") {
+  if (current_os != "mac" && current_os != "win") {
     asan_sources += [ "asan_interceptors_vfork.S" ]
   }
   config("asan_config") {
     cflags = []
-    if (target_os != "win") {
+    if (current_os != "win") {
       cflags += [ "-ftls-model=initial-exec" ]
     } else {
       ldflags = [ "/OPT:NOICF" ]
@@ -76,11 +76,11 @@ if (current_toolchain == host_toolchain) {
     # FIXME: add_sanitizer_rt_version_list (cf hwasan)
     # FIXME: need libclang_rt.asan*.a.syms?
 
-    if (target_os == "android") {
+    if (current_os == "android") {
       ldflags = [ "-Wl,-z,global" ]
     }
 
-    if (target_os == "mac") {
+    if (current_os == "mac") {
       # The -U flags below correspond to the add_weak_symbols() calls in CMake.
       ldflags = [
         "-lc++",
@@ -145,7 +145,7 @@ if (current_toolchain == host_toolchain) {
     configs -= [ "//llvm/utils/gn/build:llvm_code" ]
     configs += [ "//llvm/utils/gn/build:crt_code" ]
     sources = [ "asan_rtl_static.cpp" ]
-    if (target_os != "mac" && target_os != "win") {
+    if (current_os != "mac" && current_os != "win") {
       sources += [ "asan_rtl_x86_64.S" ]
     }
   }
@@ -183,7 +183,7 @@ if (current_toolchain == host_toolchain) {
     }
   }
 
-  if (current_os != "mac") {
+  if (current_os != "mac" && current_os != "win") {
     static_library("asan_static_library") {
       output_dir = crt_current_out_dir
       output_name = "clang_rt.asan$crt_current_target_suffix"
@@ -232,7 +232,8 @@ if (current_toolchain == host_toolchain) {
   if (current_os == "win") {
     static_library("asan_static_runtime_thunk") {
       output_dir = crt_current_out_dir
-      output_name = "clang_rt.asan_static_runtime_thunk$crt_current_target_suffix"
+      output_name =
+          "clang_rt.asan_static_runtime_thunk$crt_current_target_suffix"
       configs -= [ "//llvm/utils/gn/build:llvm_code" ]
       configs += [ "//llvm/utils/gn/build:crt_code" ]
       complete_static_lib = true
@@ -277,11 +278,11 @@ if (current_toolchain == host_toolchain) {
     deps = [ ":asan_shared_library" ]
     if (current_os == "win") {
       deps += [
-        ":asan_static_runtime_thunk",
         ":asan_dynamic_runtime_thunk",
+        ":asan_static_runtime_thunk",
       ]
     }
-    if (current_os != "mac") {
+    if (current_os != "mac" && current_os != "win") {
       deps += [
         ":asan_cxx",
         ":asan_preinit",

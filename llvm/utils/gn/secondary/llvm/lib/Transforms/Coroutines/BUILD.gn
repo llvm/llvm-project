@@ -18,6 +18,7 @@ static_library("Coroutines") {
     "CoroFrame.cpp",
     "CoroSplit.cpp",
     "Coroutines.cpp",
+    "MaterializationUtils.cpp",
     "SpillUtils.cpp",
     "SuspendCrossingInfo.cpp",
   ]

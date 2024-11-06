@@ -23,7 +23,6 @@ module attributes {omp.is_target_device = true} {
   // CHECK-DAG: br label %omp.region.cont
     %map = omp.map.info var_ptr(%0 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     omp.target   map_entries(%map -> %arg0 : !llvm.ptr) {
-      ^bb0(%arg0: !llvm.ptr):
       %1 = llvm.mlir.constant(1 : i32) : i32
       llvm.store %1, %arg0 : i32, !llvm.ptr
       omp.terminator

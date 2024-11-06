@@ -83,8 +83,8 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK: omp.teams {
   !$omp teams
 
-  ! CHECK:      omp.parallel private(@{{.*}} %[[X]]#0 -> %[[X_ARG:.*]] : !fir.ref<i64>,
-  ! CHECK-SAME:                      @{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK:      omp.parallel private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^,]+]],
+  ! CHECK-SAME:                      @{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:.*]] : !fir.ref<i64>, !fir.ref<i32>) {
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
   ! CHECK:      %[[INDEX_PRIV:.*]]:2 = hlfir.declare %[[INDEX_ARG]]
   ! CHECK:      omp.distribute {

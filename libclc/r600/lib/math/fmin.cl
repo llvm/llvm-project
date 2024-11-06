@@ -1,6 +1,6 @@
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
-#include "../../../generic/lib/clcmacro.h"
 #include "../../../generic/lib/math/math.h"
 
 _CLC_DEF _CLC_OVERLOAD float fmin(float x, float y)

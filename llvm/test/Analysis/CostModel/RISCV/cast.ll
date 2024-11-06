@@ -93,7 +93,7 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_v32i8 = sext <32 x i1> undef to <32 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i1_v32i16 = sext <32 x i1> undef to <32 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i1_v32i32 = sext <32 x i1> undef to <32 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v32i1_v32i64 = sext <32 x i1> undef to <32 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v32i1_v32i64 = sext <32 x i1> undef to <32 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.sext.v32i16.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
@@ -103,7 +103,7 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.sext.v32i8.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.sext.v32i16.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i16 = sext <64 x i8> undef to <64 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v64i8_v64i32 = sext <64 x i8> undef to <64 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v64i8_v64i64 = sext <64 x i8> undef to <64 x i64>
@@ -112,8 +112,8 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v64i32_v64i64 = sext <64 x i32> undef to <64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i1_v64i8 = sext <64 x i1> undef to <64 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i1_v64i16 = sext <64 x i1> undef to <64 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i1_v64i32 = sext <64 x i1> undef to <64 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i1_v64i64 = sext <64 x i1> undef to <64 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v64i1_v64i32 = sext <64 x i1> undef to <64 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v64i1_v64i64 = sext <64 x i1> undef to <64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.sext.v64i16.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
@@ -122,8 +122,8 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.sext.v64i8.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.sext.v64i16.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v128i8_v128i16 = sext <128 x i8> undef to <128 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v128i8_v128i32 = sext <128 x i8> undef to <128 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %v128i8_v128i64 = sext <128 x i8> undef to <128 x i64>
@@ -131,9 +131,9 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v128i16_v128i64 = sext <128 x i16> undef to <128 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v128i32_v128i64 = sext <128 x i32> undef to <128 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i1_v128i8 = sext <128 x i1> undef to <128 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i1_v128i16 = sext <128 x i1> undef to <128 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i1_v128i32 = sext <128 x i1> undef to <128 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i1_v128i64 = sext <128 x i1> undef to <128 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v128i1_v128i16 = sext <128 x i1> undef to <128 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v128i1_v128i32 = sext <128 x i1> undef to <128 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v128i1_v128i64 = sext <128 x i1> undef to <128 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
@@ -141,29 +141,29 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.sext.v128i8.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v256i8_v256i16 = sext <256 x i8> undef to <256 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v256i8_v256i32 = sext <256 x i8> undef to <256 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %v256i8_v256i64 = sext <256 x i8> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = sext <256 x i16> undef to <256 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = sext <256 x i16> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = sext <256 x i32> undef to <256 x i64>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = sext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = sext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = sext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -253,7 +253,7 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv16i1_nxv16i8 = sext <vscale x 16 x i1> undef to <vscale x 16 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv16i1_nxv16i16 = sext <vscale x 16 x i1> undef to <vscale x 16 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv16i1_nxv16i32 = sext <vscale x 16 x i1> undef to <vscale x 16 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv16i1_nxv16i64 = sext <vscale x 16 x i1> undef to <vscale x 16 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv16i1_nxv16i64 = sext <vscale x 16 x i1> undef to <vscale x 16 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i16.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
@@ -263,7 +263,7 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.sext.nxv16i8.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i16.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i8_nxv32i16 = sext <vscale x 32 x i8> undef to <vscale x 32 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i8_nxv32i32 = sext <vscale x 32 x i8> undef to <vscale x 32 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv32i8_nxv32i64 = sext <vscale x 32 x i8> undef to <vscale x 32 x i64>
@@ -272,8 +272,8 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv32i32_nxv32i64 = sext <vscale x 32 x i32> undef to <vscale x 32 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i1_nxv32i8 = sext <vscale x 32 x i1> undef to <vscale x 32 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv32i1_nxv32i16 = sext <vscale x 32 x i1> undef to <vscale x 32 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv32i1_nxv32i32 = sext <vscale x 32 x i1> undef to <vscale x 32 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv32i1_nxv32i64 = sext <vscale x 32 x i1> undef to <vscale x 32 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv32i1_nxv32i32 = sext <vscale x 32 x i1> undef to <vscale x 32 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv32i1_nxv32i64 = sext <vscale x 32 x i1> undef to <vscale x 32 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i16.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
@@ -282,8 +282,8 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.sext.nxv32i8.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i16.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv64i8_nxv64i16 = sext <vscale x 64 x i8> undef to <vscale x 64 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv64i8_nxv64i32 = sext <vscale x 64 x i8> undef to <vscale x 64 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv64i8_nxv64i64 = sext <vscale x 64 x i8> undef to <vscale x 64 x i64>
@@ -291,8 +291,8 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %nxv64i16_nxv64i64 = sext <vscale x 64 x i16> undef to <vscale x 64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %nxv64i32_nxv64i64 = sext <vscale x 64 x i32> undef to <vscale x 64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv64i1_nxv64i8 = sext <vscale x 64 x i1> undef to <vscale x 64 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv64i1_nxv64i16 = sext <vscale x 64 x i1> undef to <vscale x 64 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv64i1_nxv64i32 = sext <vscale x 64 x i1> undef to <vscale x 64 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv64i1_nxv64i16 = sext <vscale x 64 x i1> undef to <vscale x 64 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv64i1_nxv64i32 = sext <vscale x 64 x i1> undef to <vscale x 64 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv64i1_nxv64i64 = sext <vscale x 64 x i1> undef to <vscale x 64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
@@ -301,8 +301,8 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.sext.nxv64i8.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv128i8_nxv128i16 = sext <vscale x 128 x i8> undef to <vscale x 128 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %nxv128i8_nxv128i32 = sext <vscale x 128 x i8> undef to <vscale x 128 x i32>
@@ -310,9 +310,9 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = sext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = sext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = sext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = sext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -320,9 +320,9 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -416,7 +416,7 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_v32i8 = sext <32 x i1> undef to <32 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i1_v32i16 = sext <32 x i1> undef to <32 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i1_v32i32 = sext <32 x i1> undef to <32 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v32i1_v32i64 = sext <32 x i1> undef to <32 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v32i1_v32i64 = sext <32 x i1> undef to <32 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.sext.v32i16.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
@@ -426,7 +426,7 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.sext.v32i8.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.sext.v32i16.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i16 = sext <64 x i8> undef to <64 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v64i8_v64i32 = sext <64 x i8> undef to <64 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v64i8_v64i64 = sext <64 x i8> undef to <64 x i64>
@@ -435,8 +435,8 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v64i32_v64i64 = sext <64 x i32> undef to <64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i1_v64i8 = sext <64 x i1> undef to <64 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i1_v64i16 = sext <64 x i1> undef to <64 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i1_v64i32 = sext <64 x i1> undef to <64 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i1_v64i64 = sext <64 x i1> undef to <64 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v64i1_v64i32 = sext <64 x i1> undef to <64 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v64i1_v64i64 = sext <64 x i1> undef to <64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.sext.v64i16.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
@@ -445,8 +445,8 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.sext.v64i8.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.sext.v64i16.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v128i8_v128i16 = sext <128 x i8> undef to <128 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v128i8_v128i32 = sext <128 x i8> undef to <128 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %v128i8_v128i64 = sext <128 x i8> undef to <128 x i64>
@@ -454,9 +454,9 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v128i16_v128i64 = sext <128 x i16> undef to <128 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v128i32_v128i64 = sext <128 x i32> undef to <128 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i1_v128i8 = sext <128 x i1> undef to <128 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i1_v128i16 = sext <128 x i1> undef to <128 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i1_v128i32 = sext <128 x i1> undef to <128 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i1_v128i64 = sext <128 x i1> undef to <128 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v128i1_v128i16 = sext <128 x i1> undef to <128 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v128i1_v128i32 = sext <128 x i1> undef to <128 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v128i1_v128i64 = sext <128 x i1> undef to <128 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
@@ -464,29 +464,29 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.sext.v128i8.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v256i8_v256i16 = sext <256 x i8> undef to <256 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v256i8_v256i32 = sext <256 x i8> undef to <256 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %v256i8_v256i64 = sext <256 x i8> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = sext <256 x i16> undef to <256 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = sext <256 x i16> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = sext <256 x i32> undef to <256 x i64>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = sext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = sext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = sext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -576,7 +576,7 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv16i1_nxv16i8 = sext <vscale x 16 x i1> undef to <vscale x 16 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv16i1_nxv16i16 = sext <vscale x 16 x i1> undef to <vscale x 16 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv16i1_nxv16i32 = sext <vscale x 16 x i1> undef to <vscale x 16 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv16i1_nxv16i64 = sext <vscale x 16 x i1> undef to <vscale x 16 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv16i1_nxv16i64 = sext <vscale x 16 x i1> undef to <vscale x 16 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i16.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
@@ -586,7 +586,7 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.sext.nxv16i8.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i16.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i8_nxv32i16 = sext <vscale x 32 x i8> undef to <vscale x 32 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i8_nxv32i32 = sext <vscale x 32 x i8> undef to <vscale x 32 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv32i8_nxv32i64 = sext <vscale x 32 x i8> undef to <vscale x 32 x i64>
@@ -595,8 +595,8 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv32i32_nxv32i64 = sext <vscale x 32 x i32> undef to <vscale x 32 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i1_nxv32i8 = sext <vscale x 32 x i1> undef to <vscale x 32 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv32i1_nxv32i16 = sext <vscale x 32 x i1> undef to <vscale x 32 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv32i1_nxv32i32 = sext <vscale x 32 x i1> undef to <vscale x 32 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv32i1_nxv32i64 = sext <vscale x 32 x i1> undef to <vscale x 32 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv32i1_nxv32i32 = sext <vscale x 32 x i1> undef to <vscale x 32 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv32i1_nxv32i64 = sext <vscale x 32 x i1> undef to <vscale x 32 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i16.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
@@ -605,8 +605,8 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.sext.nxv32i8.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i16.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv64i8_nxv64i16 = sext <vscale x 64 x i8> undef to <vscale x 64 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv64i8_nxv64i32 = sext <vscale x 64 x i8> undef to <vscale x 64 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %nxv64i8_nxv64i64 = sext <vscale x 64 x i8> undef to <vscale x 64 x i64>
@@ -614,9 +614,9 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %nxv64i16_nxv64i64 = sext <vscale x 64 x i16> undef to <vscale x 64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv64i32_nxv64i64 = sext <vscale x 64 x i32> undef to <vscale x 64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv64i1_nxv64i8 = sext <vscale x 64 x i1> undef to <vscale x 64 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv64i1_nxv64i16 = sext <vscale x 64 x i1> undef to <vscale x 64 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv64i1_nxv64i32 = sext <vscale x 64 x i1> undef to <vscale x 64 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv64i1_nxv64i64 = sext <vscale x 64 x i1> undef to <vscale x 64 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv64i1_nxv64i16 = sext <vscale x 64 x i1> undef to <vscale x 64 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv64i1_nxv64i32 = sext <vscale x 64 x i1> undef to <vscale x 64 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %nxv64i1_nxv64i64 = sext <vscale x 64 x i1> undef to <vscale x 64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_nxv64i8_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
@@ -624,18 +624,18 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.sext.nxv64i8.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv128i8_nxv128i16 = sext <vscale x 128 x i8> undef to <vscale x 128 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %nxv128i8_nxv128i32 = sext <vscale x 128 x i8> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i8_nxv128i128 = sext <vscale x 128 x i8> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = sext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = sext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = sext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = sext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -643,9 +643,9 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -660,16 +660,16 @@ define void @sext() {
   %v2i1_v2i32 = sext <2 x i1> undef to <2 x i32>
   %v2i1_v2i64 = sext <2 x i1> undef to <2 x i64>
 
-  %vp_v2i8_v2i16 = call <2 x i16> @llvm.vp.sext.v2i8.v2i16(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i8_v2i32 = call <2 x i32> @llvm.vp.sext.v2i8.v2i32(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i8_v2i64 = call <2 x i64> @llvm.vp.sext.v2i8.v2i64(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i32 = call <2 x i32> @llvm.vp.sext.v2i16.v2i32(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i64 = call <2 x i64> @llvm.vp.sext.v2i16.v2i64(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i32_v2i64 = call <2 x i64> @llvm.vp.sext.v2i32.v2i64(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i8 = call <2 x i8> @llvm.vp.sext.v2i1.v2i8(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i16 = call <2 x i16> @llvm.vp.sext.v2i1.v2i16(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i32 = call <2 x i32> @llvm.vp.sext.v2i1.v2i32(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i64 = call <2 x i64> @llvm.vp.sext.v2i1.v2i64(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i16 = call <2 x i16> @llvm.vp.sext.v2i16.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i32 = call <2 x i32> @llvm.vp.sext.v2i32.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i64 = call <2 x i64> @llvm.vp.sext.v2i64.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i32 = call <2 x i32> @llvm.vp.sext.v2i32.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i64 = call <2 x i64> @llvm.vp.sext.v2i64.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i32_v2i64 = call <2 x i64> @llvm.vp.sext.v2i64.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i8 = call <2 x i8> @llvm.vp.sext.v2i8.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i16 = call <2 x i16> @llvm.vp.sext.v2i16.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i32 = call <2 x i32> @llvm.vp.sext.v2i32.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i64 = call <2 x i64> @llvm.vp.sext.v2i64.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
 
   %v4i8_v4i16 = sext <4 x i8> undef to <4 x i16>
   %v4i8_v4i32 = sext <4 x i8> undef to <4 x i32>
@@ -682,16 +682,16 @@ define void @sext() {
   %v4i1_v4i32 = sext <4 x i1> undef to <4 x i32>
   %v4i1_v4i64 = sext <4 x i1> undef to <4 x i64>
 
-  %vp_v4i8_v4i16 = call <4 x i16> @llvm.vp.sext.v4i8.v4i16(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i8_v4i32 = call <4 x i32> @llvm.vp.sext.v4i8.v4i32(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i8_v4i64 = call <4 x i64> @llvm.vp.sext.v4i8.v4i64(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i16_v4i32 = call <4 x i32> @llvm.vp.sext.v4i16.v4i32(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i16_v4i64 = call <4 x i64> @llvm.vp.sext.v4i16.v4i64(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i32_v4i64 = call <4 x i64> @llvm.vp.sext.v4i32.v4i64(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i8 = call <4 x i8> @llvm.vp.sext.v4i1.v4i8(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i16 = call <4 x i16> @llvm.vp.sext.v4i1.v4i16(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i32 = call <4 x i32> @llvm.vp.sext.v4i1.v4i32(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i64 = call <4 x i64> @llvm.vp.sext.v4i1.v4i64(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i16 = call <4 x i16> @llvm.vp.sext.v4i16.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i32 = call <4 x i32> @llvm.vp.sext.v4i32.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i64 = call <4 x i64> @llvm.vp.sext.v4i64.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i16_v4i32 = call <4 x i32> @llvm.vp.sext.v4i32.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i16_v4i64 = call <4 x i64> @llvm.vp.sext.v4i64.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i32_v4i64 = call <4 x i64> @llvm.vp.sext.v4i64.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i8 = call <4 x i8> @llvm.vp.sext.v4i8.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i16 = call <4 x i16> @llvm.vp.sext.v4i16.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i32 = call <4 x i32> @llvm.vp.sext.v4i32.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i64 = call <4 x i64> @llvm.vp.sext.v4i64.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
 
   %v8i8_v8i16 = sext <8 x i8> undef to <8 x i16>
   %v8i8_v8i32 = sext <8 x i8> undef to <8 x i32>
@@ -704,16 +704,16 @@ define void @sext() {
   %v8i1_v8i32 = sext <8 x i1> undef to <8 x i32>
   %v8i1_v8i64 = sext <8 x i1> undef to <8 x i64>
 
-  %vp_v8i8_v8i16 = call <8 x i16> @llvm.vp.sext.v8i8.v8i16(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i8_v8i32 = call <8 x i32> @llvm.vp.sext.v8i8.v8i32(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i8_v8i64 = call <8 x i64> @llvm.vp.sext.v8i8.v8i64(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i16_v8i32 = call <8 x i32> @llvm.vp.sext.v8i16.v8i32(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i16_v8i64 = call <8 x i64> @llvm.vp.sext.v8i16.v8i64(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i32_v8i64 = call <8 x i64> @llvm.vp.sext.v8i32.v8i64(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i8 = call <8 x i8> @llvm.vp.sext.v8i1.v8i8(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i16 = call <8 x i16> @llvm.vp.sext.v8i1.v8i16(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i32 = call <8 x i32> @llvm.vp.sext.v8i1.v8i32(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i64 = call <8 x i64> @llvm.vp.sext.v8i1.v8i64(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i16 = call <8 x i16> @llvm.vp.sext.v8i16.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i32 = call <8 x i32> @llvm.vp.sext.v8i32.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i64 = call <8 x i64> @llvm.vp.sext.v8i64.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i16_v8i32 = call <8 x i32> @llvm.vp.sext.v8i32.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i16_v8i64 = call <8 x i64> @llvm.vp.sext.v8i64.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i32_v8i64 = call <8 x i64> @llvm.vp.sext.v8i64.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i8 = call <8 x i8> @llvm.vp.sext.v8i8.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i16 = call <8 x i16> @llvm.vp.sext.v8i16.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i32 = call <8 x i32> @llvm.vp.sext.v8i32.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i64 = call <8 x i64> @llvm.vp.sext.v8i64.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
 
   %v16i8_v16i16 = sext <16 x i8> undef to <16 x i16>
   %v16i8_v16i32 = sext <16 x i8> undef to <16 x i32>
@@ -726,16 +726,16 @@ define void @sext() {
   %v16i1_v16i32 = sext <16 x i1> undef to <16 x i32>
   %v16i1_v16i64 = sext <16 x i1> undef to <16 x i64>
 
-  %vp_v16i8_v16i16 = call <16 x i16> @llvm.vp.sext.v16i8.v16i16(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i8_v16i32 = call <16 x i32> @llvm.vp.sext.v16i8.v16i32(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i8_v16i64 = call <16 x i64> @llvm.vp.sext.v16i8.v16i64(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i16_v16i32 = call <16 x i32> @llvm.vp.sext.v16i16.v16i32(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i16_v16i64 = call <16 x i64> @llvm.vp.sext.v16i16.v16i64(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i32_v16i64 = call <16 x i64> @llvm.vp.sext.v16i32.v16i64(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i8 = call <16 x i8> @llvm.vp.sext.v16i1.v16i8(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i16 = call <16 x i16> @llvm.vp.sext.v16i1.v16i16(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i32 = call <16 x i32> @llvm.vp.sext.v16i1.v16i32(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i64 = call <16 x i64> @llvm.vp.sext.v16i1.v16i64(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i16 = call <16 x i16> @llvm.vp.sext.v16i16.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i32 = call <16 x i32> @llvm.vp.sext.v16i32.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i64 = call <16 x i64> @llvm.vp.sext.v16i64.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i16_v16i32 = call <16 x i32> @llvm.vp.sext.v16i32.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i16_v16i64 = call <16 x i64> @llvm.vp.sext.v16i64.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i32_v16i64 = call <16 x i64> @llvm.vp.sext.v16i64.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i8 = call <16 x i8> @llvm.vp.sext.v16i8.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i16 = call <16 x i16> @llvm.vp.sext.v16i16.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i32 = call <16 x i32> @llvm.vp.sext.v16i32.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i64 = call <16 x i64> @llvm.vp.sext.v16i64.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
 
   %v32i8_v32i16 = sext <32 x i8> undef to <32 x i16>
   %v32i8_v32i32 = sext <32 x i8> undef to <32 x i32>
@@ -748,16 +748,16 @@ define void @sext() {
   %v32i1_v32i32 = sext <32 x i1> undef to <32 x i32>
   %v32i1_v32i64 = sext <32 x i1> undef to <32 x i64>
 
-  %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.sext.v32i8.v32i16(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.sext.v32i8.v32i32(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.sext.v32i8.v32i64(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i16_v32i32 = call <32 x i32> @llvm.vp.sext.v32i16.v32i32(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i16_v32i64 = call <32 x i64> @llvm.vp.sext.v32i16.v32i64(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i32_v32i64 = call <32 x i64> @llvm.vp.sext.v32i32.v32i64(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.sext.v32i1.v32i8(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.sext.v32i1.v32i16(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.sext.v32i1.v32i32(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.sext.v32i1.v32i64(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.sext.v32i16.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i16_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i16_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i32_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.sext.v32i8.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.sext.v32i16.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.sext.v32i32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.sext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 
   %v64i8_v64i16 = sext <64 x i8> undef to <64 x i16>
   %v64i8_v64i32 = sext <64 x i8> undef to <64 x i32>
@@ -770,16 +770,16 @@ define void @sext() {
   %v64i1_v64i32 = sext <64 x i1> undef to <64 x i32>
   %v64i1_v64i64 = sext <64 x i1> undef to <64 x i64>
 
-  %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.sext.v64i8.v64i16(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.sext.v64i8.v64i32(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.sext.v64i8.v64i64(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i16_v64i32 = call <64 x i32> @llvm.vp.sext.v64i16.v64i32(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i16_v64i64 = call <64 x i64> @llvm.vp.sext.v64i16.v64i64(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.sext.v64i32.v64i64(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.sext.v64i1.v64i8(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.sext.v64i1.v64i16(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.sext.v64i1.v64i32(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.sext.v64i1.v64i64(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.sext.v64i16.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i16_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i16_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.sext.v64i8.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.sext.v64i16.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.sext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.sext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 
   %v128i8_v128i16 = sext <128 x i8> undef to <128 x i16>
   %v128i8_v128i32 = sext <128 x i8> undef to <128 x i32>
@@ -792,16 +792,16 @@ define void @sext() {
   %v128i1_v128i32 = sext <128 x i1> undef to <128 x i32>
   %v128i1_v128i64 = sext <128 x i1> undef to <128 x i64>
 
-  %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.sext.v128i8.v128i16(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.sext.v128i8.v128i32(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.sext.v128i8.v128i64(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i16_v128i32 = call <128 x i32> @llvm.vp.sext.v128i16.v128i32(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.sext.v128i16.v128i64(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.sext.v128i32.v128i64(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.sext.v128i1.v128i8(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.sext.v128i1.v128i16(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.sext.v128i1.v128i32(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.sext.v128i1.v128i64(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i16_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.sext.v128i8.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.sext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.sext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.sext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 
   %v256i8_v256i16 = sext <256 x i8> undef to <256 x i16>
   %v256i8_v256i32 = sext <256 x i8> undef to <256 x i32>
@@ -814,16 +814,16 @@ define void @sext() {
   %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
   %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
 
-  %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.sext.v256i8.v256i16(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.sext.v256i8.v256i32(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.sext.v256i8.v256i64(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.sext.v256i16.v256i32(<256 x i16> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.sext.v256i16.v256i64(<256 x i16> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.sext.v256i32.v256i64(<256 x i32> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i1.v256i8(<256 x i1> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i1.v256i16(<256 x i1> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i1.v256i32(<256 x i1> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i1.v256i64(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 
   %nxv1i8_nxv1i16 = sext <vscale x 1 x i8> undef to <vscale x 1 x i16>
   %nxv1i8_nxv1i32 = sext <vscale x 1 x i8> undef to <vscale x 1 x i32>
@@ -836,16 +836,16 @@ define void @sext() {
   %nxv1i1_nxv1i32 = sext <vscale x 1 x i1> undef to <vscale x 1 x i32>
   %nxv1i1_nxv1i64 = sext <vscale x 1 x i1> undef to <vscale x 1 x i64>
 
-  %vp_nxv1i8_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.sext.nxv1i8.nxv1i16(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i8_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i8.nxv1i32(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i8_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i8.nxv1i64(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i16_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i16.nxv1i32(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i16_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i16.nxv1i64(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i32.nxv1i64(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.sext.nxv1i1.nxv1i8(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.sext.nxv1i1.nxv1i16(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i1.nxv1i32(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i1.nxv1i64(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.sext.nxv1i16.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i16_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i16_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.sext.nxv1i8.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.sext.nxv1i16.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2i8_nxv2i16 = sext <vscale x 2 x i8> undef to <vscale x 2 x i16>
   %nxv2i8_nxv2i32 = sext <vscale x 2 x i8> undef to <vscale x 2 x i32>
@@ -858,16 +858,16 @@ define void @sext() {
   %nxv2i1_nxv2i32 = sext <vscale x 2 x i1> undef to <vscale x 2 x i32>
   %nxv2i1_nxv2i64 = sext <vscale x 2 x i1> undef to <vscale x 2 x i64>
 
-  %vp_nxv2i8_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.sext.nxv2i8.nxv2i16(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i8_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i8.nxv2i32(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i8_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i8.nxv2i64(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i16_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i16.nxv2i32(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i16_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i16.nxv2i64(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i32.nxv2i64(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.sext.nxv2i1.nxv2i8(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.sext.nxv2i1.nxv2i16(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i1.nxv2i32(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i1.nxv2i64(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.sext.nxv2i16.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i16_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i16_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.sext.nxv2i8.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.sext.nxv2i16.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.sext.nxv2i32.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.sext.nxv2i64.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4i8_nxv4i16 = sext <vscale x 4 x i8> undef to <vscale x 4 x i16>
   %nxv4i8_nxv4i32 = sext <vscale x 4 x i8> undef to <vscale x 4 x i32>
@@ -880,16 +880,16 @@ define void @sext() {
   %nxv4i1_nxv4i32 = sext <vscale x 4 x i1> undef to <vscale x 4 x i32>
   %nxv4i1_nxv4i64 = sext <vscale x 4 x i1> undef to <vscale x 4 x i64>
 
-  %vp_nxv4i8_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.sext.nxv4i8.nxv4i16(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i8_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.sext.nxv4i8.nxv4i32(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i8_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i8.nxv4i64(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i16_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.sext.nxv4i16.nxv4i32(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i16_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i16.nxv4i64(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i32.nxv4i64(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.sext.nxv4i1.nxv4i8(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.sext.nxv4i1.nxv4i16(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.sext.nxv4i1.nxv4i32(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i1.nxv4i64(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.sext.nxv4i16.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.sext.nxv4i32.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i64.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i16_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.sext.nxv4i32.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i16_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i64.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i64.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.sext.nxv4i8.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.sext.nxv4i16.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.sext.nxv4i32.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.sext.nxv4i64.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8i8_nxv8i16 = sext <vscale x 8 x i8> undef to <vscale x 8 x i16>
   %nxv8i8_nxv8i32 = sext <vscale x 8 x i8> undef to <vscale x 8 x i32>
@@ -902,16 +902,16 @@ define void @sext() {
   %nxv8i1_nxv8i32 = sext <vscale x 8 x i1> undef to <vscale x 8 x i32>
   %nxv8i1_nxv8i64 = sext <vscale x 8 x i1> undef to <vscale x 8 x i64>
 
-  %vp_nxv8i8_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.sext.nxv8i8.nxv8i16(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i8_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.sext.nxv8i8.nxv8i32(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i8_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i8.nxv8i64(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i16_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.sext.nxv8i16.nxv8i32(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i16_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i16.nxv8i64(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i32.nxv8i64(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.sext.nxv8i1.nxv8i8(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.sext.nxv8i1.nxv8i16(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.sext.nxv8i1.nxv8i32(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i1.nxv8i64(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.sext.nxv8i16.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.sext.nxv8i32.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i64.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i16_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.sext.nxv8i32.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i16_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i64.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i64.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.sext.nxv8i8.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.sext.nxv8i16.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.sext.nxv8i32.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.sext.nxv8i64.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16i8_nxv16i16 = sext <vscale x 16 x i8> undef to <vscale x 16 x i16>
   %nxv16i8_nxv16i32 = sext <vscale x 16 x i8> undef to <vscale x 16 x i32>
@@ -924,16 +924,16 @@ define void @sext() {
   %nxv16i1_nxv16i32 = sext <vscale x 16 x i1> undef to <vscale x 16 x i32>
   %nxv16i1_nxv16i64 = sext <vscale x 16 x i1> undef to <vscale x 16 x i64>
 
-  %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i8.nxv16i16(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i8.nxv16i32(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i8.nxv16i64(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i16_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i16.nxv16i32(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i16_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i16.nxv16i64(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i32.nxv16i64(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.sext.nxv16i1.nxv16i8(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i1.nxv16i16(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i1.nxv16i32(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i1.nxv16i64(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i16.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i16_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i16_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.sext.nxv16i8.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.sext.nxv16i16.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.sext.nxv16i32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.sext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32i8_nxv32i16 = sext <vscale x 32 x i8> undef to <vscale x 32 x i16>
   %nxv32i8_nxv32i32 = sext <vscale x 32 x i8> undef to <vscale x 32 x i32>
@@ -946,16 +946,16 @@ define void @sext() {
   %nxv32i1_nxv32i32 = sext <vscale x 32 x i1> undef to <vscale x 32 x i32>
   %nxv32i1_nxv32i64 = sext <vscale x 32 x i1> undef to <vscale x 32 x i64>
 
-  %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i8.nxv32i16(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i8.nxv32i32(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i8.nxv32i64(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i16_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i16.nxv32i32(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i16_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i16.nxv32i64(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i32.nxv32i64(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.sext.nxv32i1.nxv32i8(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i1.nxv32i16(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i1.nxv32i32(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i1.nxv32i64(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i16.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i16_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i16_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.sext.nxv32i8.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.sext.nxv32i16.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.sext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64i8_nxv64i16 = sext <vscale x 64 x i8> undef to <vscale x 64 x i16>
   %nxv64i8_nxv64i32 = sext <vscale x 64 x i8> undef to <vscale x 64 x i32>
@@ -968,16 +968,16 @@ define void @sext() {
   %nxv64i1_nxv64i32 = sext <vscale x 64 x i1> undef to <vscale x 64 x i32>
   %nxv64i1_nxv64i64 = sext <vscale x 64 x i1> undef to <vscale x 64 x i64>
 
-  %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i8.nxv64i16(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i8.nxv64i32(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i8_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i8.nxv64i64(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i16_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i16.nxv64i32(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i16.nxv64i64(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i32.nxv64i64(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.sext.nxv64i1.nxv64i8(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i1.nxv64i16(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i1.nxv64i32(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i1.nxv64i64(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i16_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.sext.nxv64i8.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.sext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.sext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.sext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 
   %nxv128i8_nxv128i16 = sext <vscale x 128 x i8> undef to <vscale x 128 x i16>
   %nxv128i8_nxv128i32 = sext <vscale x 128 x i8> undef to <vscale x 128 x i32>
@@ -990,16 +990,16 @@ define void @sext() {
   %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
   %nxv128i1_nxv128i128 = sext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 
-  %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i8.nxv128i16(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i8.nxv128i32(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i8_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i8.nxv128i128(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i16.nxv128i32(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i16.nxv128i128(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i32.nxv128i128(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i1.nxv128i8(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i1.nxv128i16(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i1.nxv128i32(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i1.nxv128i128(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i8_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 
   ret void
 }
@@ -1095,7 +1095,7 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_v32i8 = zext <32 x i1> undef to <32 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i1_v32i16 = zext <32 x i1> undef to <32 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i1_v32i32 = zext <32 x i1> undef to <32 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v32i1_v32i64 = zext <32 x i1> undef to <32 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v32i1_v32i64 = zext <32 x i1> undef to <32 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.zext.v32i16.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
@@ -1105,7 +1105,7 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.zext.v32i8.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.zext.v32i16.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i16 = zext <64 x i8> undef to <64 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v64i8_v64i32 = zext <64 x i8> undef to <64 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v64i8_v64i64 = zext <64 x i8> undef to <64 x i64>
@@ -1114,8 +1114,8 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v64i32_v64i64 = zext <64 x i32> undef to <64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i1_v64i8 = zext <64 x i1> undef to <64 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i1_v64i16 = zext <64 x i1> undef to <64 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i1_v64i32 = zext <64 x i1> undef to <64 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i1_v64i64 = zext <64 x i1> undef to <64 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v64i1_v64i32 = zext <64 x i1> undef to <64 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v64i1_v64i64 = zext <64 x i1> undef to <64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.zext.v64i16.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
@@ -1124,8 +1124,8 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.zext.v64i8.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.zext.v64i16.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v128i8_v128i16 = zext <128 x i8> undef to <128 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v128i8_v128i32 = zext <128 x i8> undef to <128 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %v128i8_v128i64 = zext <128 x i8> undef to <128 x i64>
@@ -1133,9 +1133,9 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v128i16_v128i64 = zext <128 x i16> undef to <128 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v128i32_v128i64 = zext <128 x i32> undef to <128 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i1_v128i8 = zext <128 x i1> undef to <128 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i1_v128i16 = zext <128 x i1> undef to <128 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i1_v128i32 = zext <128 x i1> undef to <128 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i1_v128i64 = zext <128 x i1> undef to <128 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v128i1_v128i16 = zext <128 x i1> undef to <128 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v128i1_v128i32 = zext <128 x i1> undef to <128 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v128i1_v128i64 = zext <128 x i1> undef to <128 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
@@ -1143,29 +1143,29 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.zext.v128i8.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v256i8_v256i16 = zext <256 x i8> undef to <256 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v256i8_v256i32 = zext <256 x i8> undef to <256 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %v256i8_v256i64 = zext <256 x i8> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = zext <256 x i16> undef to <256 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = zext <256 x i16> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = zext <256 x i32> undef to <256 x i64>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = zext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = zext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = zext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -1255,7 +1255,7 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv16i1_nxv16i8 = zext <vscale x 16 x i1> undef to <vscale x 16 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv16i1_nxv16i16 = zext <vscale x 16 x i1> undef to <vscale x 16 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv16i1_nxv16i32 = zext <vscale x 16 x i1> undef to <vscale x 16 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv16i1_nxv16i64 = zext <vscale x 16 x i1> undef to <vscale x 16 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv16i1_nxv16i64 = zext <vscale x 16 x i1> undef to <vscale x 16 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i16.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
@@ -1265,7 +1265,7 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.zext.nxv16i8.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i16.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i8_nxv32i16 = zext <vscale x 32 x i8> undef to <vscale x 32 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i8_nxv32i32 = zext <vscale x 32 x i8> undef to <vscale x 32 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv32i8_nxv32i64 = zext <vscale x 32 x i8> undef to <vscale x 32 x i64>
@@ -1274,8 +1274,8 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv32i32_nxv32i64 = zext <vscale x 32 x i32> undef to <vscale x 32 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i1_nxv32i8 = zext <vscale x 32 x i1> undef to <vscale x 32 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv32i1_nxv32i16 = zext <vscale x 32 x i1> undef to <vscale x 32 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv32i1_nxv32i32 = zext <vscale x 32 x i1> undef to <vscale x 32 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv32i1_nxv32i64 = zext <vscale x 32 x i1> undef to <vscale x 32 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv32i1_nxv32i32 = zext <vscale x 32 x i1> undef to <vscale x 32 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv32i1_nxv32i64 = zext <vscale x 32 x i1> undef to <vscale x 32 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i16.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
@@ -1284,8 +1284,8 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.zext.nxv32i8.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i16.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv64i8_nxv64i16 = zext <vscale x 64 x i8> undef to <vscale x 64 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv64i8_nxv64i32 = zext <vscale x 64 x i8> undef to <vscale x 64 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv64i8_nxv64i64 = zext <vscale x 64 x i8> undef to <vscale x 64 x i64>
@@ -1293,8 +1293,8 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %nxv64i16_nxv64i64 = zext <vscale x 64 x i16> undef to <vscale x 64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %nxv64i32_nxv64i64 = zext <vscale x 64 x i32> undef to <vscale x 64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv64i1_nxv64i8 = zext <vscale x 64 x i1> undef to <vscale x 64 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv64i1_nxv64i16 = zext <vscale x 64 x i1> undef to <vscale x 64 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv64i1_nxv64i32 = zext <vscale x 64 x i1> undef to <vscale x 64 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv64i1_nxv64i16 = zext <vscale x 64 x i1> undef to <vscale x 64 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv64i1_nxv64i32 = zext <vscale x 64 x i1> undef to <vscale x 64 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv64i1_nxv64i64 = zext <vscale x 64 x i1> undef to <vscale x 64 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
@@ -1303,8 +1303,8 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.zext.nxv64i8.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv128i8_nxv128i16 = zext <vscale x 128 x i8> undef to <vscale x 128 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %nxv128i8_nxv128i32 = zext <vscale x 128 x i8> undef to <vscale x 128 x i32>
@@ -1312,9 +1312,9 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = zext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = zext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = zext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = zext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -1322,9 +1322,9 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1418,7 +1418,7 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_v32i8 = zext <32 x i1> undef to <32 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i1_v32i16 = zext <32 x i1> undef to <32 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i1_v32i32 = zext <32 x i1> undef to <32 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v32i1_v32i64 = zext <32 x i1> undef to <32 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v32i1_v32i64 = zext <32 x i1> undef to <32 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.zext.v32i16.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
@@ -1428,7 +1428,7 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.zext.v32i8.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.zext.v32i16.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i16 = zext <64 x i8> undef to <64 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v64i8_v64i32 = zext <64 x i8> undef to <64 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v64i8_v64i64 = zext <64 x i8> undef to <64 x i64>
@@ -1437,8 +1437,8 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v64i32_v64i64 = zext <64 x i32> undef to <64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i1_v64i8 = zext <64 x i1> undef to <64 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i1_v64i16 = zext <64 x i1> undef to <64 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i1_v64i32 = zext <64 x i1> undef to <64 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i1_v64i64 = zext <64 x i1> undef to <64 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v64i1_v64i32 = zext <64 x i1> undef to <64 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v64i1_v64i64 = zext <64 x i1> undef to <64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.zext.v64i16.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
@@ -1447,8 +1447,8 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.zext.v64i8.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.zext.v64i16.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v128i8_v128i16 = zext <128 x i8> undef to <128 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v128i8_v128i32 = zext <128 x i8> undef to <128 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %v128i8_v128i64 = zext <128 x i8> undef to <128 x i64>
@@ -1456,9 +1456,9 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v128i16_v128i64 = zext <128 x i16> undef to <128 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v128i32_v128i64 = zext <128 x i32> undef to <128 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i1_v128i8 = zext <128 x i1> undef to <128 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i1_v128i16 = zext <128 x i1> undef to <128 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i1_v128i32 = zext <128 x i1> undef to <128 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i1_v128i64 = zext <128 x i1> undef to <128 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v128i1_v128i16 = zext <128 x i1> undef to <128 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v128i1_v128i32 = zext <128 x i1> undef to <128 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v128i1_v128i64 = zext <128 x i1> undef to <128 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
@@ -1466,29 +1466,29 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.zext.v128i8.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v256i8_v256i16 = zext <256 x i8> undef to <256 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v256i8_v256i32 = zext <256 x i8> undef to <256 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %v256i8_v256i64 = zext <256 x i8> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = zext <256 x i16> undef to <256 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = zext <256 x i16> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = zext <256 x i32> undef to <256 x i64>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = zext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = zext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = zext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -1578,7 +1578,7 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv16i1_nxv16i8 = zext <vscale x 16 x i1> undef to <vscale x 16 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv16i1_nxv16i16 = zext <vscale x 16 x i1> undef to <vscale x 16 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv16i1_nxv16i32 = zext <vscale x 16 x i1> undef to <vscale x 16 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv16i1_nxv16i64 = zext <vscale x 16 x i1> undef to <vscale x 16 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv16i1_nxv16i64 = zext <vscale x 16 x i1> undef to <vscale x 16 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i16.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
@@ -1588,7 +1588,7 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.zext.nxv16i8.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i16.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i8_nxv32i16 = zext <vscale x 32 x i8> undef to <vscale x 32 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i8_nxv32i32 = zext <vscale x 32 x i8> undef to <vscale x 32 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv32i8_nxv32i64 = zext <vscale x 32 x i8> undef to <vscale x 32 x i64>
@@ -1597,8 +1597,8 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv32i32_nxv32i64 = zext <vscale x 32 x i32> undef to <vscale x 32 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32i1_nxv32i8 = zext <vscale x 32 x i1> undef to <vscale x 32 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv32i1_nxv32i16 = zext <vscale x 32 x i1> undef to <vscale x 32 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv32i1_nxv32i32 = zext <vscale x 32 x i1> undef to <vscale x 32 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv32i1_nxv32i64 = zext <vscale x 32 x i1> undef to <vscale x 32 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv32i1_nxv32i32 = zext <vscale x 32 x i1> undef to <vscale x 32 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv32i1_nxv32i64 = zext <vscale x 32 x i1> undef to <vscale x 32 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i16.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
@@ -1607,8 +1607,8 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.zext.nxv32i8.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i16.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv64i8_nxv64i16 = zext <vscale x 64 x i8> undef to <vscale x 64 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %nxv64i8_nxv64i32 = zext <vscale x 64 x i8> undef to <vscale x 64 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %nxv64i8_nxv64i64 = zext <vscale x 64 x i8> undef to <vscale x 64 x i64>
@@ -1616,9 +1616,9 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %nxv64i16_nxv64i64 = zext <vscale x 64 x i16> undef to <vscale x 64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv64i32_nxv64i64 = zext <vscale x 64 x i32> undef to <vscale x 64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %nxv64i1_nxv64i8 = zext <vscale x 64 x i1> undef to <vscale x 64 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv64i1_nxv64i16 = zext <vscale x 64 x i1> undef to <vscale x 64 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv64i1_nxv64i32 = zext <vscale x 64 x i1> undef to <vscale x 64 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv64i1_nxv64i64 = zext <vscale x 64 x i1> undef to <vscale x 64 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv64i1_nxv64i16 = zext <vscale x 64 x i1> undef to <vscale x 64 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv64i1_nxv64i32 = zext <vscale x 64 x i1> undef to <vscale x 64 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %nxv64i1_nxv64i64 = zext <vscale x 64 x i1> undef to <vscale x 64 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: %vp_nxv64i8_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
@@ -1626,18 +1626,18 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.zext.nxv64i8.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %nxv128i8_nxv128i16 = zext <vscale x 128 x i8> undef to <vscale x 128 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %nxv128i8_nxv128i32 = zext <vscale x 128 x i8> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i8_nxv128i128 = zext <vscale x 128 x i8> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = zext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = zext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = zext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = zext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -1645,9 +1645,9 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1662,16 +1662,16 @@ define void @zext() {
   %v2i1_v2i32 = zext <2 x i1> undef to <2 x i32>
   %v2i1_v2i64 = zext <2 x i1> undef to <2 x i64>
 
-  %vp_v2i8_v2i16 = call <2 x i16> @llvm.vp.zext.v2i8.v2i16(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i8_v2i32 = call <2 x i32> @llvm.vp.zext.v2i8.v2i32(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i8_v2i64 = call <2 x i64> @llvm.vp.zext.v2i8.v2i64(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i32 = call <2 x i32> @llvm.vp.zext.v2i16.v2i32(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i64 = call <2 x i64> @llvm.vp.zext.v2i16.v2i64(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i32_v2i64 = call <2 x i64> @llvm.vp.zext.v2i32.v2i64(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i8 = call <2 x i8> @llvm.vp.zext.v2i1.v2i8(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i16 = call <2 x i16> @llvm.vp.zext.v2i1.v2i16(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i32 = call <2 x i32> @llvm.vp.zext.v2i1.v2i32(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i1_v2i64 = call <2 x i64> @llvm.vp.zext.v2i1.v2i64(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i16 = call <2 x i16> @llvm.vp.zext.v2i16.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i32 = call <2 x i32> @llvm.vp.zext.v2i32.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i64 = call <2 x i64> @llvm.vp.zext.v2i64.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i32 = call <2 x i32> @llvm.vp.zext.v2i32.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i64 = call <2 x i64> @llvm.vp.zext.v2i64.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i32_v2i64 = call <2 x i64> @llvm.vp.zext.v2i64.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i8 = call <2 x i8> @llvm.vp.zext.v2i8.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i16 = call <2 x i16> @llvm.vp.zext.v2i16.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i32 = call <2 x i32> @llvm.vp.zext.v2i32.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i1_v2i64 = call <2 x i64> @llvm.vp.zext.v2i64.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
 
   %v4i8_v4i16 = zext <4 x i8> undef to <4 x i16>
   %v4i8_v4i32 = zext <4 x i8> undef to <4 x i32>
@@ -1684,16 +1684,16 @@ define void @zext() {
   %v4i1_v4i32 = zext <4 x i1> undef to <4 x i32>
   %v4i1_v4i64 = zext <4 x i1> undef to <4 x i64>
 
-  %vp_v4i8_v4i16 = call <4 x i16> @llvm.vp.zext.v4i8.v4i16(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i8_v4i32 = call <4 x i32> @llvm.vp.zext.v4i8.v4i32(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i8_v4i64 = call <4 x i64> @llvm.vp.zext.v4i8.v4i64(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i16_v4i32 = call <4 x i32> @llvm.vp.zext.v4i16.v4i32(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i16_v4i64 = call <4 x i64> @llvm.vp.zext.v4i16.v4i64(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i32_v4i64 = call <4 x i64> @llvm.vp.zext.v4i32.v4i64(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i8 = call <4 x i8> @llvm.vp.zext.v4i1.v4i8(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i16 = call <4 x i16> @llvm.vp.zext.v4i1.v4i16(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i32 = call <4 x i32> @llvm.vp.zext.v4i1.v4i32(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i1_v4i64 = call <4 x i64> @llvm.vp.zext.v4i1.v4i64(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i16 = call <4 x i16> @llvm.vp.zext.v4i16.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i32 = call <4 x i32> @llvm.vp.zext.v4i32.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i64 = call <4 x i64> @llvm.vp.zext.v4i64.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i16_v4i32 = call <4 x i32> @llvm.vp.zext.v4i32.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i16_v4i64 = call <4 x i64> @llvm.vp.zext.v4i64.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i32_v4i64 = call <4 x i64> @llvm.vp.zext.v4i64.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i8 = call <4 x i8> @llvm.vp.zext.v4i8.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i16 = call <4 x i16> @llvm.vp.zext.v4i16.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i32 = call <4 x i32> @llvm.vp.zext.v4i32.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i1_v4i64 = call <4 x i64> @llvm.vp.zext.v4i64.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
 
   %v8i8_v8i16 = zext <8 x i8> undef to <8 x i16>
   %v8i8_v8i32 = zext <8 x i8> undef to <8 x i32>
@@ -1706,16 +1706,16 @@ define void @zext() {
   %v8i1_v8i32 = zext <8 x i1> undef to <8 x i32>
   %v8i1_v8i64 = zext <8 x i1> undef to <8 x i64>
 
-  %vp_v8i8_v8i16 = call <8 x i16> @llvm.vp.zext.v8i8.v8i16(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i8_v8i32 = call <8 x i32> @llvm.vp.zext.v8i8.v8i32(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i8_v8i64 = call <8 x i64> @llvm.vp.zext.v8i8.v8i64(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i16_v8i32 = call <8 x i32> @llvm.vp.zext.v8i16.v8i32(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i16_v8i64 = call <8 x i64> @llvm.vp.zext.v8i16.v8i64(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i32_v8i64 = call <8 x i64> @llvm.vp.zext.v8i32.v8i64(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i8 = call <8 x i8> @llvm.vp.zext.v8i1.v8i8(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i16 = call <8 x i16> @llvm.vp.zext.v8i1.v8i16(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i32 = call <8 x i32> @llvm.vp.zext.v8i1.v8i32(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i1_v8i64 = call <8 x i64> @llvm.vp.zext.v8i1.v8i64(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i16 = call <8 x i16> @llvm.vp.zext.v8i16.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i32 = call <8 x i32> @llvm.vp.zext.v8i32.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i64 = call <8 x i64> @llvm.vp.zext.v8i64.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i16_v8i32 = call <8 x i32> @llvm.vp.zext.v8i32.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i16_v8i64 = call <8 x i64> @llvm.vp.zext.v8i64.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i32_v8i64 = call <8 x i64> @llvm.vp.zext.v8i64.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i8 = call <8 x i8> @llvm.vp.zext.v8i8.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i16 = call <8 x i16> @llvm.vp.zext.v8i16.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i32 = call <8 x i32> @llvm.vp.zext.v8i32.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i1_v8i64 = call <8 x i64> @llvm.vp.zext.v8i64.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
 
   %v16i8_v16i16 = zext <16 x i8> undef to <16 x i16>
   %v16i8_v16i32 = zext <16 x i8> undef to <16 x i32>
@@ -1728,16 +1728,16 @@ define void @zext() {
   %v16i1_v16i32 = zext <16 x i1> undef to <16 x i32>
   %v16i1_v16i64 = zext <16 x i1> undef to <16 x i64>
 
-  %vp_v16i8_v16i16 = call <16 x i16> @llvm.vp.zext.v16i8.v16i16(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i8_v16i32 = call <16 x i32> @llvm.vp.zext.v16i8.v16i32(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i8_v16i64 = call <16 x i64> @llvm.vp.zext.v16i8.v16i64(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i16_v16i32 = call <16 x i32> @llvm.vp.zext.v16i16.v16i32(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i16_v16i64 = call <16 x i64> @llvm.vp.zext.v16i16.v16i64(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i32_v16i64 = call <16 x i64> @llvm.vp.zext.v16i32.v16i64(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i8 = call <16 x i8> @llvm.vp.zext.v16i1.v16i8(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i16 = call <16 x i16> @llvm.vp.zext.v16i1.v16i16(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i32 = call <16 x i32> @llvm.vp.zext.v16i1.v16i32(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i1_v16i64 = call <16 x i64> @llvm.vp.zext.v16i1.v16i64(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i16 = call <16 x i16> @llvm.vp.zext.v16i16.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i32 = call <16 x i32> @llvm.vp.zext.v16i32.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i64 = call <16 x i64> @llvm.vp.zext.v16i64.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i16_v16i32 = call <16 x i32> @llvm.vp.zext.v16i32.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i16_v16i64 = call <16 x i64> @llvm.vp.zext.v16i64.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i32_v16i64 = call <16 x i64> @llvm.vp.zext.v16i64.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i8 = call <16 x i8> @llvm.vp.zext.v16i8.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i16 = call <16 x i16> @llvm.vp.zext.v16i16.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i32 = call <16 x i32> @llvm.vp.zext.v16i32.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i1_v16i64 = call <16 x i64> @llvm.vp.zext.v16i64.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
 
   %v32i8_v32i16 = zext <32 x i8> undef to <32 x i16>
   %v32i8_v32i32 = zext <32 x i8> undef to <32 x i32>
@@ -1750,16 +1750,16 @@ define void @zext() {
   %v32i1_v32i32 = zext <32 x i1> undef to <32 x i32>
   %v32i1_v32i64 = zext <32 x i1> undef to <32 x i64>
 
-  %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.zext.v32i8.v32i16(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.zext.v32i8.v32i32(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.zext.v32i8.v32i64(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i16_v32i32 = call <32 x i32> @llvm.vp.zext.v32i16.v32i32(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i16_v32i64 = call <32 x i64> @llvm.vp.zext.v32i16.v32i64(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i32_v32i64 = call <32 x i64> @llvm.vp.zext.v32i32.v32i64(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.zext.v32i1.v32i8(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.zext.v32i1.v32i16(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.zext.v32i1.v32i32(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.zext.v32i1.v32i64(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i16 = call <32 x i16> @llvm.vp.zext.v32i16.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i16_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i16_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i32_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i8 = call <32 x i8> @llvm.vp.zext.v32i8.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i16 = call <32 x i16> @llvm.vp.zext.v32i16.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i32 = call <32 x i32> @llvm.vp.zext.v32i32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i1_v32i64 = call <32 x i64> @llvm.vp.zext.v32i64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 
   %v64i8_v64i16 = zext <64 x i8> undef to <64 x i16>
   %v64i8_v64i32 = zext <64 x i8> undef to <64 x i32>
@@ -1772,16 +1772,16 @@ define void @zext() {
   %v64i1_v64i32 = zext <64 x i1> undef to <64 x i32>
   %v64i1_v64i64 = zext <64 x i1> undef to <64 x i64>
 
-  %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.zext.v64i8.v64i16(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.zext.v64i8.v64i32(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.zext.v64i8.v64i64(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i16_v64i32 = call <64 x i32> @llvm.vp.zext.v64i16.v64i32(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i16_v64i64 = call <64 x i64> @llvm.vp.zext.v64i16.v64i64(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.zext.v64i32.v64i64(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.zext.v64i1.v64i8(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.zext.v64i1.v64i16(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.zext.v64i1.v64i32(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.zext.v64i1.v64i64(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i16 = call <64 x i16> @llvm.vp.zext.v64i16.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i16_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i16_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i32_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i8 = call <64 x i8> @llvm.vp.zext.v64i8.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i16 = call <64 x i16> @llvm.vp.zext.v64i16.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i32 = call <64 x i32> @llvm.vp.zext.v64i32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i1_v64i64 = call <64 x i64> @llvm.vp.zext.v64i64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 
   %v128i8_v128i16 = zext <128 x i8> undef to <128 x i16>
   %v128i8_v128i32 = zext <128 x i8> undef to <128 x i32>
@@ -1794,16 +1794,16 @@ define void @zext() {
   %v128i1_v128i32 = zext <128 x i1> undef to <128 x i32>
   %v128i1_v128i64 = zext <128 x i1> undef to <128 x i64>
 
-  %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.zext.v128i8.v128i16(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.zext.v128i8.v128i32(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.zext.v128i8.v128i64(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i16_v128i32 = call <128 x i32> @llvm.vp.zext.v128i16.v128i32(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.zext.v128i16.v128i64(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.zext.v128i32.v128i64(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.zext.v128i1.v128i8(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.zext.v128i1.v128i16(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.zext.v128i1.v128i32(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.zext.v128i1.v128i64(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i16_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i16_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i32_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i8 = call <128 x i8> @llvm.vp.zext.v128i8.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i16 = call <128 x i16> @llvm.vp.zext.v128i16.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i32 = call <128 x i32> @llvm.vp.zext.v128i32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i1_v128i64 = call <128 x i64> @llvm.vp.zext.v128i64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 
   %v256i8_v256i16 = zext <256 x i8> undef to <256 x i16>
   %v256i8_v256i32 = zext <256 x i8> undef to <256 x i32>
@@ -1816,16 +1816,16 @@ define void @zext() {
   %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
   %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
 
-  %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.zext.v256i8.v256i16(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.zext.v256i8.v256i32(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.zext.v256i8.v256i64(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.zext.v256i16.v256i32(<256 x i16> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.zext.v256i16.v256i64(<256 x i16> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.zext.v256i32.v256i64(<256 x i32> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i1.v256i8(<256 x i1> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i1.v256i16(<256 x i1> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i1.v256i32(<256 x i1> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i1.v256i64(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 
   %nxv1i8_nxv1i16 = zext <vscale x 1 x i8> undef to <vscale x 1 x i16>
   %nxv1i8_nxv1i32 = zext <vscale x 1 x i8> undef to <vscale x 1 x i32>
@@ -1838,16 +1838,16 @@ define void @zext() {
   %nxv1i1_nxv1i32 = zext <vscale x 1 x i1> undef to <vscale x 1 x i32>
   %nxv1i1_nxv1i64 = zext <vscale x 1 x i1> undef to <vscale x 1 x i64>
 
-  %vp_nxv1i8_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.zext.nxv1i8.nxv1i16(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i8_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.zext.nxv1i8.nxv1i32(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i8_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i8.nxv1i64(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i16_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.zext.nxv1i16.nxv1i32(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i16_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i16.nxv1i64(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i32.nxv1i64(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.zext.nxv1i1.nxv1i8(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.zext.nxv1i1.nxv1i16(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.zext.nxv1i1.nxv1i32(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i1_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i1.nxv1i64(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.zext.nxv1i16.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.zext.nxv1i32.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i64.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i16_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.zext.nxv1i32.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i16_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i64.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i64.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.zext.nxv1i8.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.zext.nxv1i16.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.zext.nxv1i32.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i1_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.zext.nxv1i64.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2i8_nxv2i16 = zext <vscale x 2 x i8> undef to <vscale x 2 x i16>
   %nxv2i8_nxv2i32 = zext <vscale x 2 x i8> undef to <vscale x 2 x i32>
@@ -1860,16 +1860,16 @@ define void @zext() {
   %nxv2i1_nxv2i32 = zext <vscale x 2 x i1> undef to <vscale x 2 x i32>
   %nxv2i1_nxv2i64 = zext <vscale x 2 x i1> undef to <vscale x 2 x i64>
 
-  %vp_nxv2i8_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i8.nxv2i16(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i8_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i8.nxv2i32(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i8_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i8.nxv2i64(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i16_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i16.nxv2i32(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i16_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i16.nxv2i64(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i32.nxv2i64(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.zext.nxv2i1.nxv2i8(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i1.nxv2i16(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i1.nxv2i32(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i1_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i1.nxv2i64(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i16_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i16_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.zext.nxv2i8.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i1_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4i8_nxv4i16 = zext <vscale x 4 x i8> undef to <vscale x 4 x i16>
   %nxv4i8_nxv4i32 = zext <vscale x 4 x i8> undef to <vscale x 4 x i32>
@@ -1882,16 +1882,16 @@ define void @zext() {
   %nxv4i1_nxv4i32 = zext <vscale x 4 x i1> undef to <vscale x 4 x i32>
   %nxv4i1_nxv4i64 = zext <vscale x 4 x i1> undef to <vscale x 4 x i64>
 
-  %vp_nxv4i8_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.zext.nxv4i8.nxv4i16(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i8_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.zext.nxv4i8.nxv4i32(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i8_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i8.nxv4i64(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i16_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.zext.nxv4i16.nxv4i32(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i16_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i16.nxv4i64(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i32.nxv4i64(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.zext.nxv4i1.nxv4i8(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.zext.nxv4i1.nxv4i16(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.zext.nxv4i1.nxv4i32(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i1_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i1.nxv4i64(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.zext.nxv4i16.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.zext.nxv4i32.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i64.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i16_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.zext.nxv4i32.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i16_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i64.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i64.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.zext.nxv4i8.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.zext.nxv4i16.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.zext.nxv4i32.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i1_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.zext.nxv4i64.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8i8_nxv8i16 = zext <vscale x 8 x i8> undef to <vscale x 8 x i16>
   %nxv8i8_nxv8i32 = zext <vscale x 8 x i8> undef to <vscale x 8 x i32>
@@ -1904,16 +1904,16 @@ define void @zext() {
   %nxv8i1_nxv8i32 = zext <vscale x 8 x i1> undef to <vscale x 8 x i32>
   %nxv8i1_nxv8i64 = zext <vscale x 8 x i1> undef to <vscale x 8 x i64>
 
-  %vp_nxv8i8_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.zext.nxv8i8.nxv8i16(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i8_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i8.nxv8i32(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i8_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i8.nxv8i64(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i16_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i16.nxv8i32(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i16_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i16.nxv8i64(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i32.nxv8i64(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.zext.nxv8i1.nxv8i8(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.zext.nxv8i1.nxv8i16(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i1.nxv8i32(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i1_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i1.nxv8i64(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.zext.nxv8i16.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i32.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i64.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i16_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i32.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i16_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i64.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i64.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.zext.nxv8i8.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.zext.nxv8i16.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i32.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i1_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.zext.nxv8i64.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16i8_nxv16i16 = zext <vscale x 16 x i8> undef to <vscale x 16 x i16>
   %nxv16i8_nxv16i32 = zext <vscale x 16 x i8> undef to <vscale x 16 x i32>
@@ -1926,16 +1926,16 @@ define void @zext() {
   %nxv16i1_nxv16i32 = zext <vscale x 16 x i1> undef to <vscale x 16 x i32>
   %nxv16i1_nxv16i64 = zext <vscale x 16 x i1> undef to <vscale x 16 x i64>
 
-  %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i8.nxv16i16(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i8.nxv16i32(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i8.nxv16i64(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i16_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i16.nxv16i32(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i16_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i16.nxv16i64(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i32.nxv16i64(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.zext.nxv16i1.nxv16i8(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i1.nxv16i16(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i1.nxv16i32(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i1.nxv16i64(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i16.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i16_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i16_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.zext.nxv16i8.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.zext.nxv16i16.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.zext.nxv16i32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i1_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.zext.nxv16i64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32i8_nxv32i16 = zext <vscale x 32 x i8> undef to <vscale x 32 x i16>
   %nxv32i8_nxv32i32 = zext <vscale x 32 x i8> undef to <vscale x 32 x i32>
@@ -1948,16 +1948,16 @@ define void @zext() {
   %nxv32i1_nxv32i32 = zext <vscale x 32 x i1> undef to <vscale x 32 x i32>
   %nxv32i1_nxv32i64 = zext <vscale x 32 x i1> undef to <vscale x 32 x i64>
 
-  %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i8.nxv32i16(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i8.nxv32i32(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i8.nxv32i64(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i16_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i16.nxv32i32(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i16_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i16.nxv32i64(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i32.nxv32i64(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.zext.nxv32i1.nxv32i8(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i1.nxv32i16(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i1.nxv32i32(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i1.nxv32i64(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i16.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i16_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i16_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.zext.nxv32i8.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.zext.nxv32i16.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i1_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.zext.nxv32i64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64i8_nxv64i16 = zext <vscale x 64 x i8> undef to <vscale x 64 x i16>
   %nxv64i8_nxv64i32 = zext <vscale x 64 x i8> undef to <vscale x 64 x i32>
@@ -1970,16 +1970,16 @@ define void @zext() {
   %nxv64i1_nxv64i32 = zext <vscale x 64 x i1> undef to <vscale x 64 x i32>
   %nxv64i1_nxv64i64 = zext <vscale x 64 x i1> undef to <vscale x 64 x i64>
 
-  %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i8.nxv64i16(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i8.nxv64i32(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i8_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i8.nxv64i64(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i16_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i16.nxv64i32(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i16.nxv64i64(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i32.nxv64i64(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.zext.nxv64i1.nxv64i8(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i1.nxv64i16(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i1.nxv64i32(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i1.nxv64i64(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i16_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i16_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.zext.nxv64i8.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.zext.nxv64i16.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.zext.nxv64i32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i1_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.zext.nxv64i64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 
   %nxv128i8_nxv128i16 = zext <vscale x 128 x i8> undef to <vscale x 128 x i16>
   %nxv128i8_nxv128i32 = zext <vscale x 128 x i8> undef to <vscale x 128 x i32>
@@ -1992,16 +1992,16 @@ define void @zext() {
   %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
   %nxv128i1_nxv128i128 = zext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 
-  %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i8.nxv128i16(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i8.nxv128i32(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i8_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i8.nxv128i128(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i16.nxv128i32(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i16.nxv128i128(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i32.nxv128i128(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i1.nxv128i8(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i1.nxv128i16(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i1.nxv128i32(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-  %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i1.nxv128i128(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i8_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+  %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 
   ret void
 }
@@ -2117,7 +2117,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i16_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i32_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i16_v64i8 = trunc <64 x i16> undef to <64 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v64i32_v64i8 = trunc <64 x i32> undef to <64 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v64i64_v64i8 = trunc <64 x i64> undef to <64 x i8>
@@ -2127,7 +2127,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i1 = trunc <64 x i8> undef to <64 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i16_v64i1 = trunc <64 x i16> undef to <64 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v64i16_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %vp_v64i32_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %vp_v64i64_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
@@ -2137,7 +2137,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i16_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v128i16_v128i8 = trunc <128 x i16> undef to <128 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v128i32_v128i8 = trunc <128 x i32> undef to <128 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v128i64_v128i8 = trunc <128 x i64> undef to <128 x i8>
@@ -2147,7 +2147,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i8_v128i1 = trunc <128 x i8> undef to <128 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i16_v128i1 = trunc <128 x i16> undef to <128 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %vp_v128i16_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %vp_v128i32_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %vp_v128i64_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
@@ -2157,27 +2157,27 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i8_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i16_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v256i16_v256i8 = trunc <256 x i16> undef to <256 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v256i32_v256i8 = trunc <256 x i32> undef to <256 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %v256i64_v256i8 = trunc <256 x i64> undef to <256 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v256i32_v256i16 = trunc <256 x i32> undef to <256 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v256i64_v256i16 = trunc <256 x i64> undef to <256 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v256i64_v256i32 = trunc <256 x i64> undef to <256 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %vp_v256i16_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %vp_v256i32_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %vp_v256i64_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %vp_v256i32_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %vp_v256i64_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %vp_v256i64_v256i32 = call <256 x i32> @llvm.vp.trunc.v256i32.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i16_nxv1i8 = trunc <vscale x 1 x i16> undef to <vscale x 1 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv1i32_nxv1i8 = trunc <vscale x 1 x i32> undef to <vscale x 1 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv1i64_nxv1i8 = trunc <vscale x 1 x i64> undef to <vscale x 1 x i8>
@@ -2430,7 +2430,7 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i16_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i32_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i16_v64i8 = trunc <64 x i16> undef to <64 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v64i32_v64i8 = trunc <64 x i32> undef to <64 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v64i64_v64i8 = trunc <64 x i64> undef to <64 x i8>
@@ -2439,8 +2439,8 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v64i64_v64i32 = trunc <64 x i64> undef to <64 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i1 = trunc <64 x i8> undef to <64 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i16_v64i1 = trunc <64 x i16> undef to <64 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v64i16_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %vp_v64i32_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %vp_v64i64_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
@@ -2449,8 +2449,8 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %vp_v64i64_v64i32 = call <64 x i32> @llvm.vp.trunc.v64i32.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i16_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v128i16_v128i8 = trunc <128 x i16> undef to <128 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v128i32_v128i8 = trunc <128 x i32> undef to <128 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v128i64_v128i8 = trunc <128 x i64> undef to <128 x i8>
@@ -2459,8 +2459,8 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v128i64_v128i32 = trunc <128 x i64> undef to <128 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i8_v128i1 = trunc <128 x i8> undef to <128 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i16_v128i1 = trunc <128 x i16> undef to <128 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %vp_v128i16_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %vp_v128i32_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %vp_v128i64_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
@@ -2469,28 +2469,28 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %vp_v128i64_v128i32 = call <128 x i32> @llvm.vp.trunc.v128i32.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i8_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i16_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v256i16_v256i8 = trunc <256 x i16> undef to <256 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v256i32_v256i8 = trunc <256 x i32> undef to <256 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %v256i64_v256i8 = trunc <256 x i64> undef to <256 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v256i32_v256i16 = trunc <256 x i32> undef to <256 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v256i64_v256i16 = trunc <256 x i64> undef to <256 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v256i64_v256i32 = trunc <256 x i64> undef to <256 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %vp_v256i16_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %vp_v256i32_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %vp_v256i64_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %vp_v256i32_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %vp_v256i64_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %vp_v256i64_v256i32 = call <256 x i32> @llvm.vp.trunc.v256i32.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i16_nxv1i8 = trunc <vscale x 1 x i16> undef to <vscale x 1 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv1i32_nxv1i8 = trunc <vscale x 1 x i32> undef to <vscale x 1 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv1i64_nxv1i8 = trunc <vscale x 1 x i64> undef to <vscale x 1 x i8>
@@ -2640,11 +2640,11 @@ define void @trunc() {
   %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
   %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
 
-  %vp_v2i16_v2i2 = call <2 x i2> @llvm.vp.trunc.v2i16.v2i2(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i4 = call <2 x i4> @llvm.vp.trunc.v2i16.v2i4(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i6 = call <2 x i6> @llvm.vp.trunc.v2i16.v2i6(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i4_v2i2 = call <2 x i2> @llvm.vp.trunc.v2i4.v2i2(<2 x i4> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i6_v2i4 = call <2 x i4> @llvm.vp.trunc.v2i6.v2i4(<2 x i6> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i2 = call <2 x i2> @llvm.vp.trunc.v2i2.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i4 = call <2 x i4> @llvm.vp.trunc.v2i4.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i6 = call <2 x i6> @llvm.vp.trunc.v2i6.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i4_v2i2 = call <2 x i2> @llvm.vp.trunc.v2i2.v2i4(<2 x i4> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i6_v2i4 = call <2 x i4> @llvm.vp.trunc.v2i4.v2i6(<2 x i6> undef, <2 x i1> undef, i32 undef)
 
   %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
   %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
@@ -2657,16 +2657,16 @@ define void @trunc() {
   %v2i32_v2i1 = trunc <2 x i32> undef to <2 x i1>
   %v2i64_v2i1 = trunc <2 x i64> undef to <2 x i1>
 
-  %vp_v2i16_v2i8 = call <2 x i8> @llvm.vp.trunc.v2i16.v2i8(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i32_v2i8 = call <2 x i8> @llvm.vp.trunc.v2i32.v2i8(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i64_v2i8 = call <2 x i8> @llvm.vp.trunc.v2i64.v2i8(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i32_v2i16 = call <2 x i16> @llvm.vp.trunc.v2i32.v2i16(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i64_v2i16 = call <2 x i16> @llvm.vp.trunc.v2i64.v2i16(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i64_v2i32 = call <2 x i32> @llvm.vp.trunc.v2i64.v2i32(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i8_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i8.v2i1(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i16_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i16.v2i1(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i32_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i32.v2i1(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2i64_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i64.v2i1(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i8 = call <2 x i8> @llvm.vp.trunc.v2i8.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i32_v2i8 = call <2 x i8> @llvm.vp.trunc.v2i8.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i64_v2i8 = call <2 x i8> @llvm.vp.trunc.v2i8.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i32_v2i16 = call <2 x i16> @llvm.vp.trunc.v2i16.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i64_v2i16 = call <2 x i16> @llvm.vp.trunc.v2i16.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i64_v2i32 = call <2 x i32> @llvm.vp.trunc.v2i32.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i8_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i1.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i16_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i32_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2i64_v2i1 = call <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
 
   %v4i16_v4i8 = trunc <4 x i16> undef to <4 x i8>
   %v4i32_v4i8 = trunc <4 x i32> undef to <4 x i8>
@@ -2679,16 +2679,16 @@ define void @trunc() {
   %v4i32_v4i1 = trunc <4 x i32> undef to <4 x i1>
   %v4i64_v4i1 = trunc <4 x i64> undef to <4 x i1>
 
-  %vp_v4i16_v4i8 = call <4 x i8> @llvm.vp.trunc.v4i16.v4i8(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i32_v4i8 = call <4 x i8> @llvm.vp.trunc.v4i32.v4i8(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i64_v4i8 = call <4 x i8> @llvm.vp.trunc.v4i64.v4i8(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i32_v4i16 = call <4 x i16> @llvm.vp.trunc.v4i32.v4i16(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i64_v4i16 = call <4 x i16> @llvm.vp.trunc.v4i64.v4i16(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i64_v4i32 = call <4 x i32> @llvm.vp.trunc.v4i64.v4i32(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i8_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i8.v4i1(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i16_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i16.v4i1(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i32_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i32.v4i1(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4i64_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i64.v4i1(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i16_v4i8 = call <4 x i8> @llvm.vp.trunc.v4i8.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i32_v4i8 = call <4 x i8> @llvm.vp.trunc.v4i8.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i64_v4i8 = call <4 x i8> @llvm.vp.trunc.v4i8.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i32_v4i16 = call <4 x i16> @llvm.vp.trunc.v4i16.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i64_v4i16 = call <4 x i16> @llvm.vp.trunc.v4i16.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i64_v4i32 = call <4 x i32> @llvm.vp.trunc.v4i32.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i8_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i1.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i16_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i1.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i32_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i1.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4i64_v4i1 = call <4 x i1> @llvm.vp.trunc.v4i1.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
 
   %v8i16_v8i8 = trunc <8 x i16> undef to <8 x i8>
   %v8i32_v8i8 = trunc <8 x i32> undef to <8 x i8>
@@ -2701,16 +2701,16 @@ define void @trunc() {
   %v8i32_v8i1 = trunc <8 x i32> undef to <8 x i1>
   %v8i64_v8i1 = trunc <8 x i64> undef to <8 x i1>
 
-  %vp_v8i16_v8i8 = call <8 x i8> @llvm.vp.trunc.v8i16.v8i8(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i32_v8i8 = call <8 x i8> @llvm.vp.trunc.v8i32.v8i8(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i64_v8i8 = call <8 x i8> @llvm.vp.trunc.v8i64.v8i8(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i32_v8i16 = call <8 x i16> @llvm.vp.trunc.v8i32.v8i16(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i64_v8i16 = call <8 x i16> @llvm.vp.trunc.v8i64.v8i16(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i64_v8i32 = call <8 x i32> @llvm.vp.trunc.v8i64.v8i32(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i8_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i8.v8i1(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i16_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i16.v8i1(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i32_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i32.v8i1(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8i64_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i64.v8i1(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i16_v8i8 = call <8 x i8> @llvm.vp.trunc.v8i8.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i32_v8i8 = call <8 x i8> @llvm.vp.trunc.v8i8.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i64_v8i8 = call <8 x i8> @llvm.vp.trunc.v8i8.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i32_v8i16 = call <8 x i16> @llvm.vp.trunc.v8i16.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i64_v8i16 = call <8 x i16> @llvm.vp.trunc.v8i16.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i64_v8i32 = call <8 x i32> @llvm.vp.trunc.v8i32.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i8_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i1.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i16_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i1.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i32_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i1.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8i64_v8i1 = call <8 x i1> @llvm.vp.trunc.v8i1.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
 
   %v16i16_v16i8 = trunc <2 x i16> undef to <2 x i8>
   %v16i32_v16i8 = trunc <2 x i32> undef to <2 x i8>
@@ -2723,16 +2723,16 @@ define void @trunc() {
   %v16i32_v16i1 = trunc <2 x i32> undef to <2 x i1>
   %v16i64_v16i1 = trunc <2 x i64> undef to <2 x i1>
 
-  %vp_v16i16_v16i8 = call <16 x i8> @llvm.vp.trunc.v16i16.v16i8(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i32_v16i8 = call <16 x i8> @llvm.vp.trunc.v16i32.v16i8(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i64_v16i8 = call <16 x i8> @llvm.vp.trunc.v16i64.v16i8(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i32_v16i16 = call <16 x i16> @llvm.vp.trunc.v16i32.v16i16(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i64_v16i16 = call <16 x i16> @llvm.vp.trunc.v16i64.v16i16(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i64_v16i32 = call <16 x i32> @llvm.vp.trunc.v16i64.v16i32(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i8_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i8.v16i1(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i16_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i16.v16i1(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i32_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i32.v16i1(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16i64_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i64.v16i1(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i16_v16i8 = call <16 x i8> @llvm.vp.trunc.v16i8.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i32_v16i8 = call <16 x i8> @llvm.vp.trunc.v16i8.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i64_v16i8 = call <16 x i8> @llvm.vp.trunc.v16i8.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i32_v16i16 = call <16 x i16> @llvm.vp.trunc.v16i16.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i64_v16i16 = call <16 x i16> @llvm.vp.trunc.v16i16.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i64_v16i32 = call <16 x i32> @llvm.vp.trunc.v16i32.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i8_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i1.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i16_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i1.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i32_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i1.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16i64_v16i1 = call <16 x i1> @llvm.vp.trunc.v16i1.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
 
   %v32i16_v32i8 = trunc <16 x i16> undef to <16 x i8>
   %v32i32_v32i8 = trunc <16 x i32> undef to <16 x i8>
@@ -2745,16 +2745,16 @@ define void @trunc() {
   %v32i32_v32i1 = trunc <16 x i32> undef to <16 x i1>
   %v32i64_v32i1 = trunc <16 x i64> undef to <16 x i1>
 
-  %vp_v32i16_v32i8 = call <32 x i8> @llvm.vp.trunc.v32i16.v32i8(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i32_v32i8 = call <32 x i8> @llvm.vp.trunc.v32i32.v32i8(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i64_v32i8 = call <32 x i8> @llvm.vp.trunc.v32i64.v32i8(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i32_v32i16 = call <32 x i16> @llvm.vp.trunc.v32i32.v32i16(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i64_v32i16 = call <32 x i16> @llvm.vp.trunc.v32i64.v32i16(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i64_v32i32 = call <32 x i32> @llvm.vp.trunc.v32i64.v32i32(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i8_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i8.v32i1(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i16_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i16.v32i1(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i32_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i32.v32i1(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i64.v32i1(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i16_v32i8 = call <32 x i8> @llvm.vp.trunc.v32i8.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i32_v32i8 = call <32 x i8> @llvm.vp.trunc.v32i8.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i64_v32i8 = call <32 x i8> @llvm.vp.trunc.v32i8.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i32_v32i16 = call <32 x i16> @llvm.vp.trunc.v32i16.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i64_v32i16 = call <32 x i16> @llvm.vp.trunc.v32i16.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i64_v32i32 = call <32 x i32> @llvm.vp.trunc.v32i32.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i8_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i16_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i32_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
 
   %v64i16_v64i8 = trunc <64 x i16> undef to <64 x i8>
   %v64i32_v64i8 = trunc <64 x i32> undef to <64 x i8>
@@ -2767,16 +2767,16 @@ define void @trunc() {
   %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
   %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
 
-  %vp_v64i16_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i16.v64i8(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i32_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i32.v64i8(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i64_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i64.v64i8(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i32_v64i16 = call <64 x i16> @llvm.vp.trunc.v64i32.v64i16(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i64_v64i16 = call <64 x i16> @llvm.vp.trunc.v64i64.v64i16(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i64_v64i32 = call <64 x i32> @llvm.vp.trunc.v64i64.v64i32(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i8_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i8.v64i1(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i16_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i16.v64i1(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i32.v64i1(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i64.v64i1(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i16_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i32_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i64_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i32_v64i16 = call <64 x i16> @llvm.vp.trunc.v64i16.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i64_v64i16 = call <64 x i16> @llvm.vp.trunc.v64i16.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i64_v64i32 = call <64 x i32> @llvm.vp.trunc.v64i32.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i8_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i16_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 
   %v128i16_v128i8 = trunc <128 x i16> undef to <128 x i8>
   %v128i32_v128i8 = trunc <128 x i32> undef to <128 x i8>
@@ -2789,16 +2789,16 @@ define void @trunc() {
   %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
   %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
 
-  %vp_v128i16_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i16.v128i8(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i32_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i32.v128i8(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i64_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i64.v128i8(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i32_v128i16 = call <128 x i16> @llvm.vp.trunc.v128i32.v128i16(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i64_v128i16 = call <128 x i16> @llvm.vp.trunc.v128i64.v128i16(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i64_v128i32 = call <128 x i32> @llvm.vp.trunc.v128i64.v128i32(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i8_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i8.v128i1(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i16_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i16.v128i1(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i32.v128i1(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i64.v128i1(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i16_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i32_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i64_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i32_v128i16 = call <128 x i16> @llvm.vp.trunc.v128i16.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i64_v128i16 = call <128 x i16> @llvm.vp.trunc.v128i16.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i64_v128i32 = call <128 x i32> @llvm.vp.trunc.v128i32.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i8_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i16_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 
   %v256i16_v256i8 = trunc <256 x i16> undef to <256 x i8>
   %v256i32_v256i8 = trunc <256 x i32> undef to <256 x i8>
@@ -2811,16 +2811,16 @@ define void @trunc() {
   %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
   %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
 
-  %vp_v256i16_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i16.v256i8(<256 x i16> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i32_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i32.v256i8(<256 x i32> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i64_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i64.v256i8(<256 x i64> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i32_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i32.v256i16(<256 x i32> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i64_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i64.v256i16(<256 x i64> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i64_v256i32 = call <256 x i32> @llvm.vp.trunc.v256i64.v256i32(<256 x i64> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i8.v256i1(<256 x i8> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i16.v256i1(<256 x i16> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i32.v256i1(<256 x i32> undef, <256 x i1> undef, i32 undef)
-  %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i64.v256i1(<256 x i64> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i16_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i32_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i64_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i32_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i64_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i64_v256i32 = call <256 x i32> @llvm.vp.trunc.v256i32.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+  %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 
   %nxv1i16_nxv1i8 = trunc <vscale x 1 x i16> undef to <vscale x 1 x i8>
   %nxv1i32_nxv1i8 = trunc <vscale x 1 x i32> undef to <vscale x 1 x i8>
@@ -2833,16 +2833,16 @@ define void @trunc() {
   %nxv1i32_nxv1i1 = trunc <vscale x 1 x i32> undef to <vscale x 1 x i1>
   %nxv1i64_nxv1i1 = trunc <vscale x 1 x i64> undef to <vscale x 1 x i1>
 
-  %vp_nxv1i16_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i16.nxv1i8(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i32_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i32.nxv1i8(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i64_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i64.nxv1i8(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i32_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i32.nxv1i16(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i64_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i64.nxv1i16(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i64_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.trunc.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i8_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i8.nxv1i1(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i16_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i16.nxv1i1(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i32_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i32.nxv1i1(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1i64_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i64.nxv1i1(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i16_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i32_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i64_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i32_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i16.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i64_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i16.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i64_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.trunc.nxv1i32.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i8_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i1.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i16_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i1.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i32_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i1.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1i64_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.trunc.nxv1i1.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2i16_nxv2i8 = trunc <vscale x 2 x i16> undef to <vscale x 2 x i8>
   %nxv2i32_nxv2i8 = trunc <vscale x 2 x i32> undef to <vscale x 2 x i8>
@@ -2855,16 +2855,16 @@ define void @trunc() {
   %nxv2i32_nxv2i1 = trunc <vscale x 2 x i32> undef to <vscale x 2 x i1>
   %nxv2i64_nxv2i1 = trunc <vscale x 2 x i64> undef to <vscale x 2 x i1>
 
-  %vp_nxv2i16_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i16.nxv2i8(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i32_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i32.nxv2i8(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i64_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i64.nxv2i8(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i32_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i32.nxv2i16(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i64_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i64.nxv2i16(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i64_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i64.nxv2i32(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i8_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i8.nxv2i1(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i16_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i16.nxv2i1(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i32_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i32.nxv2i1(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2i64_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i64.nxv2i1(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i16_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i32_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i64_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i32_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i64_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i64_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i8_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i16_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i32_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2i64_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4i16_nxv4i8 = trunc <vscale x 4 x i16> undef to <vscale x 4 x i8>
   %nxv4i32_nxv4i8 = trunc <vscale x 4 x i32> undef to <vscale x 4 x i8>
@@ -2877,16 +2877,16 @@ define void @trunc() {
   %nxv4i32_nxv4i1 = trunc <vscale x 4 x i32> undef to <vscale x 4 x i1>
   %nxv4i64_nxv4i1 = trunc <vscale x 4 x i64> undef to <vscale x 4 x i1>
 
-  %vp_nxv4i16_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.trunc.nxv4i16.nxv4i8(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i32_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.trunc.nxv4i32.nxv4i8(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i64_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.trunc.nxv4i64.nxv4i8(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i32_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.trunc.nxv4i32.nxv4i16(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i64_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.trunc.nxv4i64.nxv4i16(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i64_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.trunc.nxv4i64.nxv4i32(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i8_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i8.nxv4i1(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i16_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i16.nxv4i1(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i32_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i32.nxv4i1(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4i64_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i64.nxv4i1(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i16_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.trunc.nxv4i8.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i32_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.trunc.nxv4i8.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i64_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.trunc.nxv4i8.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i32_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.trunc.nxv4i16.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i64_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.trunc.nxv4i16.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i64_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.trunc.nxv4i32.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i8_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i1.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i16_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i1.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i32_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i1.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4i64_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.trunc.nxv4i1.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8i16_nxv8i8 = trunc <vscale x 8 x i16> undef to <vscale x 8 x i8>
   %nxv8i32_nxv8i8 = trunc <vscale x 8 x i32> undef to <vscale x 8 x i8>
@@ -2899,16 +2899,16 @@ define void @trunc() {
   %nxv8i32_nxv8i1 = trunc <vscale x 8 x i32> undef to <vscale x 8 x i1>
   %nxv8i64_nxv8i1 = trunc <vscale x 8 x i64> undef to <vscale x 8 x i1>
 
-  %vp_nxv8i16_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i16.nxv8i8(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i32_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i32.nxv8i8(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i64_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i64.nxv8i8(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i32_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.trunc.nxv8i32.nxv8i16(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i64_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.trunc.nxv8i64.nxv8i16(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i64_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.trunc.nxv8i64.nxv8i32(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i8_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i8.nxv8i1(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i16_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i16.nxv8i1(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i32_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i32.nxv8i1(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8i64_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i64.nxv8i1(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i16_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i8.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i32_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i8.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i64_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i8.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i32_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.trunc.nxv8i16.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i64_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.trunc.nxv8i16.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i64_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.trunc.nxv8i32.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i8_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i1.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i16_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i1.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i32_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i1.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8i64_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.trunc.nxv8i1.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16i16_nxv16i8 = trunc <vscale x 16 x i16> undef to <vscale x 16 x i8>
   %nxv16i32_nxv16i8 = trunc <vscale x 16 x i32> undef to <vscale x 16 x i8>
@@ -2921,16 +2921,16 @@ define void @trunc() {
   %nxv16i32_nxv16i1 = trunc <vscale x 16 x i32> undef to <vscale x 16 x i1>
   %nxv16i64_nxv16i1 = trunc <vscale x 16 x i64> undef to <vscale x 16 x i1>
 
-  %vp_nxv16i16_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.trunc.nxv16i16.nxv16i8(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i32_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.trunc.nxv16i32.nxv16i8(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i64_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.trunc.nxv16i64.nxv16i8(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i32_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.trunc.nxv16i32.nxv16i16(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i64_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.trunc.nxv16i64.nxv16i16(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i64_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.trunc.nxv16i64.nxv16i32(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i8_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i8.nxv16i1(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i16_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i16.nxv16i1(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i32_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i32.nxv16i1(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16i64_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i64.nxv16i1(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i16_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.trunc.nxv16i8.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i32_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.trunc.nxv16i8.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i64_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.trunc.nxv16i8.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i32_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.trunc.nxv16i16.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i64_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.trunc.nxv16i16.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i64_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.trunc.nxv16i32.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i8_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i1.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i16_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i1.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i32_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i1.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16i64_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.trunc.nxv16i1.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32i16_nxv32i8 = trunc <vscale x 32 x i16> undef to <vscale x 32 x i8>
   %nxv32i32_nxv32i8 = trunc <vscale x 32 x i32> undef to <vscale x 32 x i8>
@@ -2943,16 +2943,16 @@ define void @trunc() {
   %nxv32i32_nxv32i1 = trunc <vscale x 32 x i32> undef to <vscale x 32 x i1>
   %nxv32i64_nxv32i1 = trunc <vscale x 32 x i64> undef to <vscale x 32 x i1>
 
-  %vp_nxv32i16_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i16.nxv32i8(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i32_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i32.nxv32i8(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i64_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i64.nxv32i8(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i32_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.trunc.nxv32i32.nxv32i16(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i64_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.trunc.nxv32i64.nxv32i16(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i64_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.trunc.nxv32i64.nxv32i32(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i8_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i8.nxv32i1(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i16_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i16.nxv32i1(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i32_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i32.nxv32i1(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32i64_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i64.nxv32i1(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i16_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i8.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i32_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i8.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i64_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i8.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i32_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.trunc.nxv32i16.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i64_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.trunc.nxv32i16.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i64_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.trunc.nxv32i32.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i8_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i1.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i16_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i1.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i32_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i1.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32i64_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.trunc.nxv32i1.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64i16_nxv64i8 = trunc <vscale x 64 x i16> undef to <vscale x 64 x i8>
   %nxv64i32_nxv64i8 = trunc <vscale x 64 x i32> undef to <vscale x 64 x i8>
@@ -2965,16 +2965,16 @@ define void @trunc() {
   %nxv64i32_nxv64i1 = trunc <vscale x 64 x i32> undef to <vscale x 64 x i1>
   %nxv64i64_nxv64i1 = trunc <vscale x 64 x i64> undef to <vscale x 64 x i1>
 
-  %vp_nxv64i16_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.trunc.nxv64i16.nxv64i8(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i32_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.trunc.nxv64i32.nxv64i8(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i64_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.trunc.nxv64i64.nxv64i8(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i32_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.trunc.nxv64i32.nxv64i16(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i64_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.trunc.nxv64i64.nxv64i16(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i64_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.trunc.nxv64i64.nxv64i32(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i8_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i8.nxv64i1(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i16_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i16.nxv64i1(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i32_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i32.nxv64i1(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64i64_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i64.nxv64i1(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i16_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.trunc.nxv64i8.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i32_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.trunc.nxv64i8.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i64_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.trunc.nxv64i8.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i32_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.trunc.nxv64i16.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i64_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.trunc.nxv64i16.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i64_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.trunc.nxv64i32.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i8_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i1.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i16_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i1.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i32_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i1.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64i64_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.trunc.nxv64i1.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -3071,113 +3071,113 @@ define void @fpext() {
   %v2f16_v2f64 = fpext <2 x half> undef to <2 x double>
   %v2f32_v2f64 = fpext <2 x float> undef to <2 x double>
 
-  %vp_v2f16_v2f32 = call <2 x float> @llvm.vp.fpext.v2half.v2float(<2 x half> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f16_v2f64 = call <2 x double> @llvm.vp.fpext.v2half.v2double(<2 x half> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2f64 = call <2 x double> @llvm.vp.fpext.v2float.v2double(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f16_v2f32 = call <2 x float> @llvm.vp.fpext.v2f32.v2f16(<2 x half> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f16_v2f64 = call <2 x double> @llvm.vp.fpext.v2f64.v2f16(<2 x half> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2f64 = call <2 x double> @llvm.vp.fpext.v2f64.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
 
   %v4f16_v4f32 = fpext <4 x half> undef to <4 x float>
   %v4f16_v4f64 = fpext <4 x half> undef to <4 x double>
   %v4f32_v4f64 = fpext <4 x float> undef to <4 x double>
 
-  %vp_v4f16_v4f32 = call <4 x float> @llvm.vp.fpext.v4half.v4float(<4 x half> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f16_v4f64 = call <4 x double> @llvm.vp.fpext.v4half.v4double(<4 x half> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4f64 = call <4 x double> @llvm.vp.fpext.v4float.v4double(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f16_v4f32 = call <4 x float> @llvm.vp.fpext.v4f32.v4f16(<4 x half> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f16_v4f64 = call <4 x double> @llvm.vp.fpext.v4f64.v4f16(<4 x half> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4f64 = call <4 x double> @llvm.vp.fpext.v4f64.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
 
   %v8f16_v8f32 = fpext <8 x half> undef to <8 x float>
   %v8f16_v8f64 = fpext <8 x half> undef to <8 x double>
   %v8f32_v8f64 = fpext <8 x float> undef to <8 x double>
 
-  %vp_v8f16_v8f32 = call <8 x float> @llvm.vp.fpext.v8half.v8float(<8 x half> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f16_v8f64 = call <8 x double> @llvm.vp.fpext.v8half.v8double(<8 x half> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8f64 = call <8 x double> @llvm.vp.fpext.v8float.v8double(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f16_v8f32 = call <8 x float> @llvm.vp.fpext.v8f32.v8f16(<8 x half> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f16_v8f64 = call <8 x double> @llvm.vp.fpext.v8f64.v8f16(<8 x half> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8f64 = call <8 x double> @llvm.vp.fpext.v8f64.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
 
   %v16f16_v16f32 = fpext <16 x half> undef to <16 x float>
   %v16f16_v16f64 = fpext <16 x half> undef to <16 x double>
   %v16f32_v16f64 = fpext <16 x float> undef to <16 x double>
 
-  %vp_v16f16_v16f32 = call <16 x float> @llvm.vp.fpext.v16half.v16float(<16 x half> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f16_v16f64 = call <16 x double> @llvm.vp.fpext.v16half.v16double(<16 x half> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16f64 = call <16 x double> @llvm.vp.fpext.v16float.v16double(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f16_v16f32 = call <16 x float> @llvm.vp.fpext.v16f32.v16f16(<16 x half> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f16_v16f64 = call <16 x double> @llvm.vp.fpext.v16f64.v16f16(<16 x half> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16f64 = call <16 x double> @llvm.vp.fpext.v16f64.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
 
   %v32f16_v32f32 = fpext <32 x half> undef to <32 x float>
   %v32f16_v32f64 = fpext <32 x half> undef to <32 x double>
   %v32f32_v32f64 = fpext <32 x float> undef to <32 x double>
 
-  %vp_v32f16_v32f32 = call <32 x float> @llvm.vp.fpext.v32half.v32float(<32 x half> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f16_v32f64 = call <32 x double> @llvm.vp.fpext.v32half.v32double(<32 x half> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32f64 = call <32 x double> @llvm.vp.fpext.v32float.v32double(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f16_v32f32 = call <32 x float> @llvm.vp.fpext.v32f32.v32f16(<32 x half> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f16_v32f64 = call <32 x double> @llvm.vp.fpext.v32f64.v32f16(<32 x half> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32f64 = call <32 x double> @llvm.vp.fpext.v32f64.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
 
   %v64f16_v64f32 = fpext <64 x half> undef to <64 x float>
   %v64f16_v64f64 = fpext <64 x half> undef to <64 x double>
   %v64f32_v64f64 = fpext <64 x float> undef to <64 x double>
 
-  %vp_v64f16_v64f32 = call <64 x float> @llvm.vp.fpext.v64half.v64float(<64 x half> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f16_v64f64 = call <64 x double> @llvm.vp.fpext.v64half.v64double(<64 x half> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64f64 = call <64 x double> @llvm.vp.fpext.v64float.v64double(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f16_v64f32 = call <64 x float> @llvm.vp.fpext.v64f32.v64f16(<64 x half> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f16_v64f64 = call <64 x double> @llvm.vp.fpext.v64f64.v64f16(<64 x half> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64f64 = call <64 x double> @llvm.vp.fpext.v64f64.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
 
   %v128f16_v128f32 = fpext <128 x half> undef to <128 x float>
   %v128f16_v128f64 = fpext <128 x half> undef to <128 x double>
   %v128f32_v128f64 = fpext <128 x float> undef to <128 x double>
 
-  %vp_v128f16_v128f32 = call <128 x float> @llvm.vp.fpext.v128half.v128float(<128 x half> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f16_v128f64 = call <128 x double> @llvm.vp.fpext.v128half.v128double(<128 x half> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128f64 = call <128 x double> @llvm.vp.fpext.v128float.v128double(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f16_v128f32 = call <128 x float> @llvm.vp.fpext.v128f32.v128f16(<128 x half> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f16_v128f64 = call <128 x double> @llvm.vp.fpext.v128f64.v128f16(<128 x half> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128f64 = call <128 x double> @llvm.vp.fpext.v128f64.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
 
   %nxv1f16_nxv1f32 = fpext <vscale x 1 x half> undef to <vscale x 1 x float>
   %nxv1f16_nxv1f64 = fpext <vscale x 1 x half> undef to <vscale x 1 x double>
   %nxv1f32_nxv1f64 = fpext <vscale x 1 x float> undef to <vscale x 1 x double>
 
-  %vp_nxv1f16_nxv1f32 = call <vscale x 1 x float> @llvm.vp.fpext.nxv1half.nxv1float(<vscale x 1 x half> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f16_nxv1f64 = call <vscale x 1 x double> @llvm.vp.fpext.nxv1half.nxv1double(<vscale x 1 x half> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1f64 = call <vscale x 1 x double> @llvm.vp.fpext.nxv1float.nxv1double(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f16_nxv1f32 = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f16_nxv1f64 = call <vscale x 1 x double> @llvm.vp.fpext.nxv1f64.nxv1f16(<vscale x 1 x half> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1f64 = call <vscale x 1 x double> @llvm.vp.fpext.nxv1f64.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2f16_nxv2f32 = fpext <vscale x 2 x half> undef to <vscale x 2 x float>
   %nxv2f16_nxv2f64 = fpext <vscale x 2 x half> undef to <vscale x 2 x double>
   %nxv2f32_nxv2f64 = fpext <vscale x 2 x float> undef to <vscale x 2 x double>
 
-  %vp_nxv2f16_nxv2f32 = call <vscale x 2 x float> @llvm.vp.fpext.nxv2half.nxv2float(<vscale x 2 x half> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f16_nxv2f64 = call <vscale x 2 x double> @llvm.vp.fpext.nxv2half.nxv2double(<vscale x 2 x half> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2f64 = call <vscale x 2 x double> @llvm.vp.fpext.nxv2float.nxv2double(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f16_nxv2f32 = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f16_nxv2f64 = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2f64 = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4f16_nxv4f32 = fpext <vscale x 4 x half> undef to <vscale x 4 x float>
   %nxv4f16_nxv4f64 = fpext <vscale x 4 x half> undef to <vscale x 4 x double>
   %nxv4f32_nxv4f64 = fpext <vscale x 4 x float> undef to <vscale x 4 x double>
 
-  %vp_nxv4f16_nxv4f32 = call <vscale x 4 x float> @llvm.vp.fpext.nxv4half.nxv4float(<vscale x 4 x half> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f16_nxv4f64 = call <vscale x 4 x double> @llvm.vp.fpext.nxv4half.nxv4double(<vscale x 4 x half> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4f64 = call <vscale x 4 x double> @llvm.vp.fpext.nxv4float.nxv4double(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f16_nxv4f32 = call <vscale x 4 x float> @llvm.vp.fpext.nxv4f32.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f16_nxv4f64 = call <vscale x 4 x double> @llvm.vp.fpext.nxv4f64.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4f64 = call <vscale x 4 x double> @llvm.vp.fpext.nxv4f64.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8f16_nxv8f32 = fpext <vscale x 8 x half> undef to <vscale x 8 x float>
   %nxv8f16_nxv8f64 = fpext <vscale x 8 x half> undef to <vscale x 8 x double>
   %nxv8f32_nxv8f64 = fpext <vscale x 8 x float> undef to <vscale x 8 x double>
 
-  %vp_nxv8f16_nxv8f32 = call <vscale x 8 x float> @llvm.vp.fpext.nxv8half.nxv8float(<vscale x 8 x half> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f16_nxv8f64 = call <vscale x 8 x double> @llvm.vp.fpext.nxv8half.nxv8double(<vscale x 8 x half> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8f64 = call <vscale x 8 x double> @llvm.vp.fpext.nxv8float.nxv8double(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f16_nxv8f32 = call <vscale x 8 x float> @llvm.vp.fpext.nxv8f32.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f16_nxv8f64 = call <vscale x 8 x double> @llvm.vp.fpext.nxv8f64.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8f64 = call <vscale x 8 x double> @llvm.vp.fpext.nxv8f64.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16f16_nxv16f32 = fpext <vscale x 16 x half> undef to <vscale x 16 x float>
   %nxv16f16_nxv16f64 = fpext <vscale x 16 x half> undef to <vscale x 16 x double>
   %nxv16f32_nxv16f64 = fpext <vscale x 16 x float> undef to <vscale x 16 x double>
 
-  %vp_nxv16f16_nxv16f32 = call <vscale x 16 x float> @llvm.vp.fpext.nxv16half.nxv16float(<vscale x 16 x half> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f16_nxv16f64 = call <vscale x 16 x double> @llvm.vp.fpext.nxv16half.nxv16double(<vscale x 16 x half> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16f64 = call <vscale x 16 x double> @llvm.vp.fpext.nxv16float.nxv16double(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f16_nxv16f32 = call <vscale x 16 x float> @llvm.vp.fpext.nxv16f32.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f16_nxv16f64 = call <vscale x 16 x double> @llvm.vp.fpext.nxv16f64.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16f64 = call <vscale x 16 x double> @llvm.vp.fpext.nxv16f64.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32f16_nxv32f32 = fpext <vscale x 32 x half> undef to <vscale x 32 x float>
   %nxv32f16_nxv32f64 = fpext <vscale x 32 x half> undef to <vscale x 32 x double>
   %nxv32f32_nxv32f64 = fpext <vscale x 32 x float> undef to <vscale x 32 x double>
 
-  %vp_nxv32f16_nxv32f32 = call <vscale x 32 x float> @llvm.vp.fpext.nxv32half.nxv32float(<vscale x 32 x half> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f16_nxv32f64 = call <vscale x 32 x double> @llvm.vp.fpext.nxv32half.nxv32double(<vscale x 32 x half> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32f64 = call <vscale x 32 x double> @llvm.vp.fpext.nxv32float.nxv32double(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f16_nxv32f32 = call <vscale x 32 x float> @llvm.vp.fpext.nxv32f32.nxv32f16(<vscale x 32 x half> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f16_nxv32f64 = call <vscale x 32 x double> @llvm.vp.fpext.nxv32f64.nxv32f16(<vscale x 32 x half> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32f64 = call <vscale x 32 x double> @llvm.vp.fpext.nxv32f64.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64f16_nxv64f32 = fpext <vscale x 64 x half> undef to <vscale x 64 x float>
   %nxv64f16_nxv64f64 = fpext <vscale x 64 x half> undef to <vscale x 64 x double>
   %nxv64f32_nxv64f64 = fpext <vscale x 64 x float> undef to <vscale x 64 x double>
 
-  %vp_nxv64f16_nxv64f32 = call <vscale x 64 x float> @llvm.vp.fpext.nxv64half.nxv64float(<vscale x 64 x half> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f16_nxv64f64 = call <vscale x 64 x double> @llvm.vp.fpext.nxv64half.nxv64double(<vscale x 64 x half> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64f64 = call <vscale x 64 x double> @llvm.vp.fpext.nxv64float.nxv64double(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f16_nxv64f32 = call <vscale x 64 x float> @llvm.vp.fpext.nxv64f32.nxv64f16(<vscale x 64 x half> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f16_nxv64f64 = call <vscale x 64 x double> @llvm.vp.fpext.nxv64f64.nxv64f16(<vscale x 64 x half> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64f64 = call <vscale x 64 x double> @llvm.vp.fpext.nxv64f64.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -3274,113 +3274,113 @@ define void @fptrunc() {
   %v2f64_v2f16 = fptrunc <2 x double> undef to <2 x half>
   %v2f64_v2f32 = fptrunc <2 x double> undef to <2 x float>
 
-  %vp_v2f32_v2f16 = call <2 x half> @llvm.vp.fptrunc.v2float.v2half(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2f16 = call <2 x half> @llvm.vp.fptrunc.v2double.v2half(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2f32 = call <2 x float> @llvm.vp.fptrunc.v2double.v2float(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2f16 = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2f16 = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2f32 = call <2 x float> @llvm.vp.fptrunc.v2f32.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
 
   %v4f32_v4f16 = fptrunc <4 x float> undef to <4 x half>
   %v4f64_v4f16 = fptrunc <4 x double> undef to <4 x half>
   %v4f64_v4f32 = fptrunc <4 x double> undef to <4 x float>
 
-  %vp_v4f32_v4f16 = call <4 x half> @llvm.vp.fptrunc.v4float.v4half(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4f16 = call <4 x half> @llvm.vp.fptrunc.v4double.v4half(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4f32 = call <4 x float> @llvm.vp.fptrunc.v4double.v4float(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4f16 = call <4 x half> @llvm.vp.fptrunc.v4f16.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4f16 = call <4 x half> @llvm.vp.fptrunc.v4f16.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4f32 = call <4 x float> @llvm.vp.fptrunc.v4f32.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
 
   %v8f32_v8f16 = fptrunc <8 x float> undef to <8 x half>
   %v8f64_v8f16 = fptrunc <8 x double> undef to <8 x half>
   %v8f64_v8f32 = fptrunc <8 x double> undef to <8 x float>
 
-  %vp_v8f32_v8f16 = call <8 x half> @llvm.vp.fptrunc.v8float.v8half(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8f16 = call <8 x half> @llvm.vp.fptrunc.v8double.v8half(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8f32 = call <8 x float> @llvm.vp.fptrunc.v8double.v8float(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8f16 = call <8 x half> @llvm.vp.fptrunc.v8f16.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8f16 = call <8 x half> @llvm.vp.fptrunc.v8f16.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8f32 = call <8 x float> @llvm.vp.fptrunc.v8f32.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
 
   %v16f32_v16f16 = fptrunc <16 x float> undef to <16 x half>
   %v16f64_v16f16 = fptrunc <16 x double> undef to <16 x half>
   %v16f64_v16f32 = fptrunc <16 x double> undef to <16 x float>
 
-  %vp_v16f32_v16f16 = call <16 x half> @llvm.vp.fptrunc.v16float.v16half(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16f16 = call <16 x half> @llvm.vp.fptrunc.v16double.v16half(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16f32 = call <16 x float> @llvm.vp.fptrunc.v16double.v16float(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16f16 = call <16 x half> @llvm.vp.fptrunc.v16f16.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16f16 = call <16 x half> @llvm.vp.fptrunc.v16f16.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16f32 = call <16 x float> @llvm.vp.fptrunc.v16f32.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
 
   %v32f32_v32f16 = fptrunc <32 x float> undef to <32 x half>
   %v32f64_v32f16 = fptrunc <32 x double> undef to <32 x half>
   %v32f64_v32f32 = fptrunc <32 x double> undef to <32 x float>
 
-  %vp_v32f32_v32f16 = call <32 x half> @llvm.vp.fptrunc.v32float.v32half(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32f16 = call <32 x half> @llvm.vp.fptrunc.v32double.v32half(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32f32 = call <32 x float> @llvm.vp.fptrunc.v32double.v32float(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32f16 = call <32 x half> @llvm.vp.fptrunc.v32f16.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32f16 = call <32 x half> @llvm.vp.fptrunc.v32f16.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32f32 = call <32 x float> @llvm.vp.fptrunc.v32f32.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
 
   %v64f32_v64f16 = fptrunc <64 x float> undef to <64 x half>
   %v64f64_v64f16 = fptrunc <64 x double> undef to <64 x half>
   %v64f64_v64f32 = fptrunc <64 x double> undef to <64 x float>
 
-  %vp_v64f32_v64f16 = call <64 x half> @llvm.vp.fptrunc.v64float.v64half(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64f16 = call <64 x half> @llvm.vp.fptrunc.v64double.v64half(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64f32 = call <64 x float> @llvm.vp.fptrunc.v64double.v64float(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64f16 = call <64 x half> @llvm.vp.fptrunc.v64f16.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64f16 = call <64 x half> @llvm.vp.fptrunc.v64f16.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64f32 = call <64 x float> @llvm.vp.fptrunc.v64f32.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
 
   %v128f32_v128f16 = fptrunc <128 x float> undef to <128 x half>
   %v128f64_v128f16 = fptrunc <128 x double> undef to <128 x half>
   %v128f64_v128f32 = fptrunc <128 x double> undef to <128 x float>
 
-  %vp_v128f32_v128f16 = call <128 x half> @llvm.vp.fptrunc.v128float.v128half(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128f16 = call <128 x half> @llvm.vp.fptrunc.v128double.v128half(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128f32 = call <128 x float> @llvm.vp.fptrunc.v128double.v128float(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128f16 = call <128 x half> @llvm.vp.fptrunc.v128f16.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128f16 = call <128 x half> @llvm.vp.fptrunc.v128f16.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128f32 = call <128 x float> @llvm.vp.fptrunc.v128f32.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
 
   %nxv1f32_nxv1f16 = fptrunc <vscale x 1 x float> undef to <vscale x 1 x half>
   %nxv1f64_nxv1f16 = fptrunc <vscale x 1 x double> undef to <vscale x 1 x half>
   %nxv1f64_nxv1f32 = fptrunc <vscale x 1 x double> undef to <vscale x 1 x float>
 
-  %vp_nxv1f32_nxv1f16 = call <vscale x 1 x half> @llvm.vp.fptrunc.nxv1float.nxv1half(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1f16 = call <vscale x 1 x half> @llvm.vp.fptrunc.nxv1double.nxv1half(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1f32 = call <vscale x 1 x float> @llvm.vp.fptrunc.nxv1double.nxv1float(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1f16 = call <vscale x 1 x half> @llvm.vp.fptrunc.nxv1f16.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1f16 = call <vscale x 1 x half> @llvm.vp.fptrunc.nxv1f16.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1f32 = call <vscale x 1 x float> @llvm.vp.fptrunc.nxv1f32.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2f32_nxv1f16 = fptrunc <vscale x 2 x float> undef to <vscale x 2 x half>
   %nxv2f64_nxv1f16 = fptrunc <vscale x 2 x double> undef to <vscale x 2 x half>
   %nxv2f64_nxv1f32 = fptrunc <vscale x 2 x double> undef to <vscale x 2 x float>
 
-  %vp_nxv2f32_nxv2f16 = call <vscale x 2 x half> @llvm.vp.fptrunc.nxv2float.nxv2half(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2f16 = call <vscale x 2 x half> @llvm.vp.fptrunc.nxv2double.nxv2half(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2f32 = call <vscale x 2 x float> @llvm.vp.fptrunc.nxv2double.nxv2float(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2f16 = call <vscale x 2 x half> @llvm.vp.fptrunc.nxv2f16.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2f16 = call <vscale x 2 x half> @llvm.vp.fptrunc.nxv2f16.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2f32 = call <vscale x 2 x float> @llvm.vp.fptrunc.nxv2f32.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4f32_nxv4f16 = fptrunc <vscale x 4 x float> undef to <vscale x 4 x half>
   %nxv4f64_nxv4f16 = fptrunc <vscale x 4 x double> undef to <vscale x 4 x half>
   %nxv4f64_nxv4f32 = fptrunc <vscale x 4 x double> undef to <vscale x 4 x float>
 
-  %vp_nxv4f32_nxv4f16 = call <vscale x 4 x half> @llvm.vp.fptrunc.nxv4float.nxv4half(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4f16 = call <vscale x 4 x half> @llvm.vp.fptrunc.nxv4double.nxv4half(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4f32 = call <vscale x 4 x float> @llvm.vp.fptrunc.nxv4double.nxv4float(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4f16 = call <vscale x 4 x half> @llvm.vp.fptrunc.nxv4f16.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4f16 = call <vscale x 4 x half> @llvm.vp.fptrunc.nxv4f16.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4f32 = call <vscale x 4 x float> @llvm.vp.fptrunc.nxv4f32.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8f32_nxv8f16 = fptrunc <vscale x 8 x float> undef to <vscale x 8 x half>
   %nxv8f64_nxv8f16 = fptrunc <vscale x 8 x double> undef to <vscale x 8 x half>
   %nxv8f64_nxv8f32 = fptrunc <vscale x 8 x double> undef to <vscale x 8 x float>
 
-  %vp_nxv8f32_nxv8f16 = call <vscale x 8 x half> @llvm.vp.fptrunc.nxv8float.nxv8half(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8f16 = call <vscale x 8 x half> @llvm.vp.fptrunc.nxv8double.nxv8half(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8f32 = call <vscale x 8 x float> @llvm.vp.fptrunc.nxv8double.nxv8float(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8f16 = call <vscale x 8 x half> @llvm.vp.fptrunc.nxv8f16.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8f16 = call <vscale x 8 x half> @llvm.vp.fptrunc.nxv8f16.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8f32 = call <vscale x 8 x float> @llvm.vp.fptrunc.nxv8f32.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16f32_nxv16f16 = fptrunc <vscale x 16 x float> undef to <vscale x 16 x half>
   %nxv16f64_nxv16f16 = fptrunc <vscale x 16 x double> undef to <vscale x 16 x half>
   %nxv16f64_nxv16f32 = fptrunc <vscale x 16 x double> undef to <vscale x 16 x float>
 
-  %vp_nxv16f32_nxv16f16 = call <vscale x 16 x half> @llvm.vp.fptrunc.nxv16float.nxv16half(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16f16 = call <vscale x 16 x half> @llvm.vp.fptrunc.nxv16double.nxv16half(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16f32 = call <vscale x 16 x float> @llvm.vp.fptrunc.nxv16double.nxv16float(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16f16 = call <vscale x 16 x half> @llvm.vp.fptrunc.nxv16f16.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16f16 = call <vscale x 16 x half> @llvm.vp.fptrunc.nxv16f16.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16f32 = call <vscale x 16 x float> @llvm.vp.fptrunc.nxv16f32.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32f32_nxv32f16 = fptrunc <vscale x 32 x float> undef to <vscale x 32 x half>
   %nxv32f64_nxv32f16 = fptrunc <vscale x 32 x double> undef to <vscale x 32 x half>
   %nxv32f64_nxv32f32 = fptrunc <vscale x 32 x double> undef to <vscale x 32 x float>
 
-  %vp_nxv32f32_nxv32f16 = call <vscale x 32 x half> @llvm.vp.fptrunc.nxv32float.nxv32half(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32f16 = call <vscale x 32 x half> @llvm.vp.fptrunc.nxv32double.nxv32half(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32f32 = call <vscale x 32 x float> @llvm.vp.fptrunc.nxv32double.nxv32float(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32f16 = call <vscale x 32 x half> @llvm.vp.fptrunc.nxv32f16.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32f16 = call <vscale x 32 x half> @llvm.vp.fptrunc.nxv32f16.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32f32 = call <vscale x 32 x float> @llvm.vp.fptrunc.nxv32f32.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64f32_nxv64f16 = fptrunc <vscale x 64 x float> undef to <vscale x 64 x half>
   %nxv64f64_nxv64f16 = fptrunc <vscale x 64 x double> undef to <vscale x 64 x half>
   %nxv64f64_nxv64f32 = fptrunc <vscale x 64 x double> undef to <vscale x 64 x float>
 
-  %vp_nxv64f32_nxv64f16 = call <vscale x 64 x half> @llvm.vp.fptrunc.nxv64float.nxv64half(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64f16 = call <vscale x 64 x half> @llvm.vp.fptrunc.nxv64double.nxv64half(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64f32 = call <vscale x 64 x float> @llvm.vp.fptrunc.nxv64double.nxv64float(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64f16 = call <vscale x 64 x half> @llvm.vp.fptrunc.nxv64f16.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64f16 = call <vscale x 64 x half> @llvm.vp.fptrunc.nxv64f16.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64f32 = call <vscale x 64 x float> @llvm.vp.fptrunc.nxv64f32.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -3963,16 +3963,16 @@ define void @fptosi() {
   %v2f32_v2i1 = fptosi <2 x float> undef to <2 x i1>
   %v2f64_v2i1 = fptosi <2 x double> undef to <2 x i1>
 
-  %vp_v2f32_v2i8 = call <2 x i8> @llvm.vp.fptosi.v2float.v2i8(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i8 = call <2 x i8> @llvm.vp.fptosi.v2double.v2i8(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i16 = call <2 x i16> @llvm.vp.fptosi.v2float.v2i16(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i16 = call <2 x i16> @llvm.vp.fptosi.v2double.v2i16(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i32 = call <2 x i32> @llvm.vp.fptosi.v2float.v2i32(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i32 = call <2 x i32> @llvm.vp.fptosi.v2double.v2i32(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i64 = call <2 x i64> @llvm.vp.fptosi.v2float.v2i64(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i64 = call <2 x i64> @llvm.vp.fptosi.v2double.v2i64(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i1 = call <2 x i1> @llvm.vp.fptosi.v2float.v2i1(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i1 = call <2 x i1> @llvm.vp.fptosi.v2double.v2i1(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i8 = call <2 x i8> @llvm.vp.fptosi.v2i8.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i8 = call <2 x i8> @llvm.vp.fptosi.v2i8.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i16 = call <2 x i16> @llvm.vp.fptosi.v2i16.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i16 = call <2 x i16> @llvm.vp.fptosi.v2i16.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i32 = call <2 x i32> @llvm.vp.fptosi.v2i32.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i32 = call <2 x i32> @llvm.vp.fptosi.v2i32.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i64 = call <2 x i64> @llvm.vp.fptosi.v2i64.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i64 = call <2 x i64> @llvm.vp.fptosi.v2i64.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i1 = call <2 x i1> @llvm.vp.fptosi.v2i1.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i1 = call <2 x i1> @llvm.vp.fptosi.v2i1.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
 
   %v4f32_v4i8 = fptosi <4 x float> undef to <4 x i8>
   %v4f64_v4i8 = fptosi <4 x double> undef to <4 x i8>
@@ -3985,16 +3985,16 @@ define void @fptosi() {
   %v4f32_v4i1 = fptosi <4 x float> undef to <4 x i1>
   %v4f64_v4i1 = fptosi <4 x double> undef to <4 x i1>
 
-  %vp_v4f32_v4i8 = call <4 x i8> @llvm.vp.fptosi.v4float.v4i8(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i8 = call <4 x i8> @llvm.vp.fptosi.v4double.v4i8(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i16 = call <4 x i16> @llvm.vp.fptosi.v4float.v4i16(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i16 = call <4 x i16> @llvm.vp.fptosi.v4double.v4i16(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i32 = call <4 x i32> @llvm.vp.fptosi.v4float.v4i32(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i32 = call <4 x i32> @llvm.vp.fptosi.v4double.v4i32(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i64 = call <4 x i64> @llvm.vp.fptosi.v4float.v4i64(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i64 = call <4 x i64> @llvm.vp.fptosi.v4double.v4i64(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i1 = call <4 x i1> @llvm.vp.fptosi.v4float.v4i1(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i1 = call <4 x i1> @llvm.vp.fptosi.v4double.v4i1(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i8 = call <4 x i8> @llvm.vp.fptosi.v4i8.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i8 = call <4 x i8> @llvm.vp.fptosi.v4i8.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i16 = call <4 x i16> @llvm.vp.fptosi.v4i16.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i16 = call <4 x i16> @llvm.vp.fptosi.v4i16.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i32 = call <4 x i32> @llvm.vp.fptosi.v4i32.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i32 = call <4 x i32> @llvm.vp.fptosi.v4i32.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i64 = call <4 x i64> @llvm.vp.fptosi.v4i64.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i64 = call <4 x i64> @llvm.vp.fptosi.v4i64.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i1 = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i1 = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
 
   %v8f32_v8i8 = fptosi <8 x float> undef to <8 x i8>
   %v8f64_v8i8 = fptosi <8 x double> undef to <8 x i8>
@@ -4007,16 +4007,16 @@ define void @fptosi() {
   %v8f32_v8i1 = fptosi <8 x float> undef to <8 x i1>
   %v8f64_v8i1 = fptosi <8 x double> undef to <8 x i1>
 
-  %vp_v8f32_v8i8 = call <8 x i8> @llvm.vp.fptosi.v8float.v8i8(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i8 = call <8 x i8> @llvm.vp.fptosi.v8double.v8i8(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i16 = call <8 x i16> @llvm.vp.fptosi.v8float.v8i16(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i16 = call <8 x i16> @llvm.vp.fptosi.v8double.v8i16(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i32 = call <8 x i32> @llvm.vp.fptosi.v8float.v8i32(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i32 = call <8 x i32> @llvm.vp.fptosi.v8double.v8i32(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i64 = call <8 x i64> @llvm.vp.fptosi.v8float.v8i64(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i64 = call <8 x i64> @llvm.vp.fptosi.v8double.v8i64(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i1 = call <8 x i1> @llvm.vp.fptosi.v8float.v8i1(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i1 = call <8 x i1> @llvm.vp.fptosi.v8double.v8i1(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i8 = call <8 x i8> @llvm.vp.fptosi.v8i8.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i8 = call <8 x i8> @llvm.vp.fptosi.v8i8.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i16 = call <8 x i16> @llvm.vp.fptosi.v8i16.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i16 = call <8 x i16> @llvm.vp.fptosi.v8i16.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i32 = call <8 x i32> @llvm.vp.fptosi.v8i32.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i32 = call <8 x i32> @llvm.vp.fptosi.v8i32.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i64 = call <8 x i64> @llvm.vp.fptosi.v8i64.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i64 = call <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i1 = call <8 x i1> @llvm.vp.fptosi.v8i1.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i1 = call <8 x i1> @llvm.vp.fptosi.v8i1.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
 
   %v16f32_v16i8 = fptosi <16 x float> undef to <16 x i8>
   %v16f64_v16i8 = fptosi <16 x double> undef to <16 x i8>
@@ -4029,16 +4029,16 @@ define void @fptosi() {
   %v16f32_v16i1 = fptosi <16 x float> undef to <16 x i1>
   %v16f64_v16i1 = fptosi <16 x double> undef to <16 x i1>
 
-  %vp_v16f32_v16i8 = call <16 x i8> @llvm.vp.fptosi.v16float.v16i8(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i8 = call <16 x i8> @llvm.vp.fptosi.v16double.v16i8(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i16 = call <16 x i16> @llvm.vp.fptosi.v16float.v16i16(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i16 = call <16 x i16> @llvm.vp.fptosi.v16double.v16i16(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i32 = call <16 x i32> @llvm.vp.fptosi.v16float.v16i32(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i32 = call <16 x i32> @llvm.vp.fptosi.v16double.v16i32(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i64 = call <16 x i64> @llvm.vp.fptosi.v16float.v16i64(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i64 = call <16 x i64> @llvm.vp.fptosi.v16double.v16i64(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i1 = call <16 x i1> @llvm.vp.fptosi.v16float.v16i1(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i1 = call <16 x i1> @llvm.vp.fptosi.v16double.v16i1(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i8 = call <16 x i8> @llvm.vp.fptosi.v16i8.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i8 = call <16 x i8> @llvm.vp.fptosi.v16i8.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i16 = call <16 x i16> @llvm.vp.fptosi.v16i16.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i16 = call <16 x i16> @llvm.vp.fptosi.v16i16.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i32 = call <16 x i32> @llvm.vp.fptosi.v16i32.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i32 = call <16 x i32> @llvm.vp.fptosi.v16i32.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i64 = call <16 x i64> @llvm.vp.fptosi.v16i64.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i64 = call <16 x i64> @llvm.vp.fptosi.v16i64.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i1 = call <16 x i1> @llvm.vp.fptosi.v16i1.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i1 = call <16 x i1> @llvm.vp.fptosi.v16i1.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
 
   %v32f32_v32i8 = fptosi <32 x float> undef to <32 x i8>
   %v32f64_v32i8 = fptosi <32 x double> undef to <32 x i8>
@@ -4051,16 +4051,16 @@ define void @fptosi() {
   %v32f32_v32i1 = fptosi <32 x float> undef to <32 x i1>
   %v32f64_v32i1 = fptosi <32 x double> undef to <32 x i1>
 
-  %vp_v32f32_v32i8 = call <32 x i8> @llvm.vp.fptosi.v32float.v32i8(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i8 = call <32 x i8> @llvm.vp.fptosi.v32double.v32i8(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i16 = call <32 x i16> @llvm.vp.fptosi.v32float.v32i16(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i16 = call <32 x i16> @llvm.vp.fptosi.v32double.v32i16(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i32 = call <32 x i32> @llvm.vp.fptosi.v32float.v32i32(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i32 = call <32 x i32> @llvm.vp.fptosi.v32double.v32i32(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i64 = call <32 x i64> @llvm.vp.fptosi.v32float.v32i64(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i64 = call <32 x i64> @llvm.vp.fptosi.v32double.v32i64(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i1 = call <32 x i1> @llvm.vp.fptosi.v32float.v32i1(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i1 = call <32 x i1> @llvm.vp.fptosi.v32double.v32i1(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i8 = call <32 x i8> @llvm.vp.fptosi.v32i8.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i8 = call <32 x i8> @llvm.vp.fptosi.v32i8.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i16 = call <32 x i16> @llvm.vp.fptosi.v32i16.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i16 = call <32 x i16> @llvm.vp.fptosi.v32i16.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i32 = call <32 x i32> @llvm.vp.fptosi.v32i32.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i32 = call <32 x i32> @llvm.vp.fptosi.v32i32.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i64 = call <32 x i64> @llvm.vp.fptosi.v32i64.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i64 = call <32 x i64> @llvm.vp.fptosi.v32i64.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i1 = call <32 x i1> @llvm.vp.fptosi.v32i1.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i1 = call <32 x i1> @llvm.vp.fptosi.v32i1.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
 
   %v64f32_v64i8 = fptosi <64 x float> undef to <64 x i8>
   %v64f64_v64i8 = fptosi <64 x double> undef to <64 x i8>
@@ -4073,16 +4073,16 @@ define void @fptosi() {
   %v64f32_v64i1 = fptosi <64 x float> undef to <64 x i1>
   %v64f64_v64i1 = fptosi <64 x double> undef to <64 x i1>
 
-  %vp_v64f32_v64i8 = call <64 x i8> @llvm.vp.fptosi.v64float.v64i8(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i8 = call <64 x i8> @llvm.vp.fptosi.v64double.v64i8(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i16 = call <64 x i16> @llvm.vp.fptosi.v64float.v64i16(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i16 = call <64 x i16> @llvm.vp.fptosi.v64double.v64i16(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i32 = call <64 x i32> @llvm.vp.fptosi.v64float.v64i32(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i32 = call <64 x i32> @llvm.vp.fptosi.v64double.v64i32(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i64 = call <64 x i64> @llvm.vp.fptosi.v64float.v64i64(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i64 = call <64 x i64> @llvm.vp.fptosi.v64double.v64i64(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i1 = call <64 x i1> @llvm.vp.fptosi.v64float.v64i1(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i1 = call <64 x i1> @llvm.vp.fptosi.v64double.v64i1(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i8 = call <64 x i8> @llvm.vp.fptosi.v64i8.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i8 = call <64 x i8> @llvm.vp.fptosi.v64i8.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i16 = call <64 x i16> @llvm.vp.fptosi.v64i16.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i16 = call <64 x i16> @llvm.vp.fptosi.v64i16.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i32 = call <64 x i32> @llvm.vp.fptosi.v64i32.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i32 = call <64 x i32> @llvm.vp.fptosi.v64i32.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i64 = call <64 x i64> @llvm.vp.fptosi.v64i64.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i64 = call <64 x i64> @llvm.vp.fptosi.v64i64.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i1 = call <64 x i1> @llvm.vp.fptosi.v64i1.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i1 = call <64 x i1> @llvm.vp.fptosi.v64i1.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
 
   %v128f32_v128i8 = fptosi <128 x float> undef to <128 x i8>
   %v128f64_v128i8 = fptosi <128 x double> undef to <128 x i8>
@@ -4095,16 +4095,16 @@ define void @fptosi() {
   %v128f32_v128i1 = fptosi <128 x float> undef to <128 x i1>
   %v128f64_v128i1 = fptosi <128 x double> undef to <128 x i1>
 
-  %vp_v128f32_v128i8 = call <128 x i8> @llvm.vp.fptosi.v128float.v128i8(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i8 = call <128 x i8> @llvm.vp.fptosi.v128double.v128i8(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i16 = call <128 x i16> @llvm.vp.fptosi.v128float.v128i16(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i16 = call <128 x i16> @llvm.vp.fptosi.v128double.v128i16(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i32 = call <128 x i32> @llvm.vp.fptosi.v128float.v128i32(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i32 = call <128 x i32> @llvm.vp.fptosi.v128double.v128i32(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i64 = call <128 x i64> @llvm.vp.fptosi.v128float.v128i64(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i64 = call <128 x i64> @llvm.vp.fptosi.v128double.v128i64(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i1 = call <128 x i1> @llvm.vp.fptosi.v128float.v128i1(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i1 = call <128 x i1> @llvm.vp.fptosi.v128double.v128i1(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i8 = call <128 x i8> @llvm.vp.fptosi.v128i8.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i8 = call <128 x i8> @llvm.vp.fptosi.v128i8.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i16 = call <128 x i16> @llvm.vp.fptosi.v128i16.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i16 = call <128 x i16> @llvm.vp.fptosi.v128i16.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i32 = call <128 x i32> @llvm.vp.fptosi.v128i32.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i32 = call <128 x i32> @llvm.vp.fptosi.v128i32.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i64 = call <128 x i64> @llvm.vp.fptosi.v128i64.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i64 = call <128 x i64> @llvm.vp.fptosi.v128i64.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i1 = call <128 x i1> @llvm.vp.fptosi.v128i1.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i1 = call <128 x i1> @llvm.vp.fptosi.v128i1.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
 
   %nxv1f32_nxv1i8 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i8>
   %nxv1f64_nxv1i8 = fptosi <vscale x 1 x double> undef to <vscale x 1 x i8>
@@ -4117,16 +4117,16 @@ define void @fptosi() {
   %nxv1f32_nxv1i1 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i1>
   %nxv1f64_nxv1i1 = fptosi <vscale x 1 x double> undef to <vscale x 1 x i1>
 
-  %vp_nxv1f32_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptosi.nxv1float.nxv1i8(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptosi.nxv1double.nxv1i8(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptosi.nxv1float.nxv1i16(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptosi.nxv1double.nxv1i16(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptosi.nxv1float.nxv1i32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptosi.nxv1double.nxv1i32(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptosi.nxv1float.nxv1i64(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptosi.nxv1double.nxv1i64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptosi.nxv1float.nxv1i1(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptosi.nxv1double.nxv1i1(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptosi.nxv1i8.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptosi.nxv1i8.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptosi.nxv1i16.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptosi.nxv1i16.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptosi.nxv1i32.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptosi.nxv1i32.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptosi.nxv1i64.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptosi.nxv1i64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptosi.nxv1i1.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptosi.nxv1i1.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2f32_nxv2i8 = fptosi <vscale x 2 x float> undef to <vscale x 2 x i8>
   %nxv2f64_nxv2i8 = fptosi <vscale x 2 x double> undef to <vscale x 2 x i8>
@@ -4139,16 +4139,16 @@ define void @fptosi() {
   %nxv2f32_nxv2i1 = fptosi <vscale x 2 x float> undef to <vscale x 2 x i1>
   %nxv2f64_nxv2i1 = fptosi <vscale x 2 x double> undef to <vscale x 2 x i1>
 
-  %vp_nxv2f32_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptosi.nxv2float.nxv2i8(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptosi.nxv2double.nxv2i8(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptosi.nxv2float.nxv2i16(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptosi.nxv2double.nxv2i16(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptosi.nxv2float.nxv2i32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptosi.nxv2double.nxv2i32(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptosi.nxv2float.nxv2i64(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptosi.nxv2double.nxv2i64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptosi.nxv2float.nxv2i1(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptosi.nxv2double.nxv2i1(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptosi.nxv2i8.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptosi.nxv2i8.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptosi.nxv2i16.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptosi.nxv2i16.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptosi.nxv2i32.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptosi.nxv2i32.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptosi.nxv2i64.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptosi.nxv2i64.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptosi.nxv2i1.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4f32_nxv4i8 = fptosi <vscale x 4 x float> undef to <vscale x 4 x i8>
   %nxv4f64_nxv4i8 = fptosi <vscale x 4 x double> undef to <vscale x 4 x i8>
@@ -4161,16 +4161,16 @@ define void @fptosi() {
   %nxv4f32_nxv4i1 = fptosi <vscale x 4 x float> undef to <vscale x 4 x i1>
   %nxv4f64_nxv4i1 = fptosi <vscale x 4 x double> undef to <vscale x 4 x i1>
 
-  %vp_nxv4f32_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptosi.nxv4float.nxv4i8(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptosi.nxv4double.nxv4i8(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptosi.nxv4float.nxv4i16(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptosi.nxv4double.nxv4i16(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptosi.nxv4float.nxv4i32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptosi.nxv4double.nxv4i32(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptosi.nxv4float.nxv4i64(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptosi.nxv4double.nxv4i64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptosi.nxv4float.nxv4i1(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptosi.nxv4double.nxv4i1(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptosi.nxv4i8.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptosi.nxv4i8.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptosi.nxv4i16.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptosi.nxv4i16.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptosi.nxv4i32.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptosi.nxv4i32.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptosi.nxv4i64.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptosi.nxv4i64.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptosi.nxv4i1.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptosi.nxv4i1.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8f32_nxv8i8 = fptosi <vscale x 8 x float> undef to <vscale x 8 x i8>
   %nxv8f64_nxv8i8 = fptosi <vscale x 8 x double> undef to <vscale x 8 x i8>
@@ -4183,16 +4183,16 @@ define void @fptosi() {
   %nxv8f32_nxv8i1 = fptosi <vscale x 8 x float> undef to <vscale x 8 x i1>
   %nxv8f64_nxv8i1 = fptosi <vscale x 8 x double> undef to <vscale x 8 x i1>
 
-  %vp_nxv8f32_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptosi.nxv8float.nxv8i8(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptosi.nxv8double.nxv8i8(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptosi.nxv8float.nxv8i16(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptosi.nxv8double.nxv8i16(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptosi.nxv8float.nxv8i32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptosi.nxv8double.nxv8i32(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptosi.nxv8float.nxv8i64(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptosi.nxv8double.nxv8i64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptosi.nxv8float.nxv8i1(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptosi.nxv8double.nxv8i1(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptosi.nxv8i8.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptosi.nxv8i8.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptosi.nxv8i16.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptosi.nxv8i16.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptosi.nxv8i32.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptosi.nxv8i32.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptosi.nxv8i64.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptosi.nxv8i64.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptosi.nxv8i1.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptosi.nxv8i1.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16f32_nxv16i8 = fptosi <vscale x 16 x float> undef to <vscale x 16 x i8>
   %nxv16f64_nxv16i8 = fptosi <vscale x 16 x double> undef to <vscale x 16 x i8>
@@ -4205,16 +4205,16 @@ define void @fptosi() {
   %nxv16f32_nxv16i1 = fptosi <vscale x 16 x float> undef to <vscale x 16 x i1>
   %nxv16f64_nxv16i1 = fptosi <vscale x 16 x double> undef to <vscale x 16 x i1>
 
-  %vp_nxv16f32_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptosi.nxv16float.nxv16i8(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptosi.nxv16double.nxv16i8(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptosi.nxv16float.nxv16i16(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptosi.nxv16double.nxv16i16(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptosi.nxv16float.nxv16i32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptosi.nxv16double.nxv16i32(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptosi.nxv16float.nxv16i64(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptosi.nxv16double.nxv16i64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptosi.nxv16float.nxv16i1(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptosi.nxv16double.nxv16i1(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptosi.nxv16i8.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptosi.nxv16i8.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptosi.nxv16i16.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptosi.nxv16i16.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptosi.nxv16i32.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptosi.nxv16i32.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptosi.nxv16i64.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptosi.nxv16i64.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptosi.nxv16i1.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptosi.nxv16i1.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32f32_nxv32i8 = fptosi <vscale x 32 x float> undef to <vscale x 32 x i8>
   %nxv32f64_nxv32i8 = fptosi <vscale x 32 x double> undef to <vscale x 32 x i8>
@@ -4227,16 +4227,16 @@ define void @fptosi() {
   %nxv32f32_nxv32i1 = fptosi <vscale x 32 x float> undef to <vscale x 32 x i1>
   %nxv32f64_nxv32i1 = fptosi <vscale x 32 x double> undef to <vscale x 32 x i1>
 
-  %vp_nxv32f32_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptosi.nxv32float.nxv32i8(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptosi.nxv32double.nxv32i8(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptosi.nxv32float.nxv32i16(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptosi.nxv32double.nxv32i16(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptosi.nxv32float.nxv32i32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptosi.nxv32double.nxv32i32(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptosi.nxv32float.nxv32i64(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptosi.nxv32double.nxv32i64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptosi.nxv32float.nxv32i1(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptosi.nxv32double.nxv32i1(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptosi.nxv32i8.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptosi.nxv32i8.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptosi.nxv32i16.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptosi.nxv32i16.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptosi.nxv32i32.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptosi.nxv32i32.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptosi.nxv32i64.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptosi.nxv32i64.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptosi.nxv32i1.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptosi.nxv32i1.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64f32_nxv64i8 = fptosi <vscale x 64 x float> undef to <vscale x 64 x i8>
   %nxv64f64_nxv64i8 = fptosi <vscale x 64 x double> undef to <vscale x 64 x i8>
@@ -4249,16 +4249,16 @@ define void @fptosi() {
   %nxv64f32_nxv64i1 = fptosi <vscale x 64 x float> undef to <vscale x 64 x i1>
   %nxv64f64_nxv64i1 = fptosi <vscale x 64 x double> undef to <vscale x 64 x i1>
 
-  %vp_nxv64f32_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptosi.nxv64float.nxv64i8(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptosi.nxv64double.nxv64i8(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptosi.nxv64float.nxv64i16(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptosi.nxv64double.nxv64i16(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptosi.nxv64float.nxv64i32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptosi.nxv64double.nxv64i32(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptosi.nxv64float.nxv64i64(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptosi.nxv64double.nxv64i64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptosi.nxv64float.nxv64i1(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptosi.nxv64double.nxv64i1(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptosi.nxv64i8.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptosi.nxv64i8.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptosi.nxv64i16.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptosi.nxv64i16.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptosi.nxv64i32.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptosi.nxv64i32.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptosi.nxv64i64.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptosi.nxv64i64.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptosi.nxv64i1.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptosi.nxv64i1.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -4841,16 +4841,16 @@ define void @fptoui() {
   %v2f32_v2i1 = fptoui <2 x float> undef to <2 x i1>
   %v2f64_v2i1 = fptoui <2 x double> undef to <2 x i1>
 
-  %vp_v2f32_v2i8 = call <2 x i8> @llvm.vp.fptoui.v2float.v2i8(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i8 = call <2 x i8> @llvm.vp.fptoui.v2double.v2i8(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i16 = call <2 x i16> @llvm.vp.fptoui.v2float.v2i16(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i16 = call <2 x i16> @llvm.vp.fptoui.v2double.v2i16(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i32 = call <2 x i32> @llvm.vp.fptoui.v2float.v2i32(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i32 = call <2 x i32> @llvm.vp.fptoui.v2double.v2i32(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i64 = call <2 x i64> @llvm.vp.fptoui.v2float.v2i64(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i64 = call <2 x i64> @llvm.vp.fptoui.v2double.v2i64(<2 x double> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f32_v2i1 = call <2 x i1> @llvm.vp.fptoui.v2float.v2i1(<2 x float> undef, <2 x i1> undef, i32 undef)
-  %vp_v2f64_v2i1 = call <2 x i1> @llvm.vp.fptoui.v2double.v2i1(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i8 = call <2 x i8> @llvm.vp.fptoui.v2i8.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i8 = call <2 x i8> @llvm.vp.fptoui.v2i8.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i16 = call <2 x i16> @llvm.vp.fptoui.v2i16.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i16 = call <2 x i16> @llvm.vp.fptoui.v2i16.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i32 = call <2 x i32> @llvm.vp.fptoui.v2i32.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i32 = call <2 x i32> @llvm.vp.fptoui.v2i32.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i64 = call <2 x i64> @llvm.vp.fptoui.v2i64.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i64 = call <2 x i64> @llvm.vp.fptoui.v2i64.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f32_v2i1 = call <2 x i1> @llvm.vp.fptoui.v2i1.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
+  %vp_v2f64_v2i1 = call <2 x i1> @llvm.vp.fptoui.v2i1.v2f64(<2 x double> undef, <2 x i1> undef, i32 undef)
 
   %v4f32_v4i8 = fptoui <4 x float> undef to <4 x i8>
   %v4f64_v4i8 = fptoui <4 x double> undef to <4 x i8>
@@ -4863,16 +4863,16 @@ define void @fptoui() {
   %v4f32_v4i1 = fptoui <4 x float> undef to <4 x i1>
   %v4f64_v4i1 = fptoui <4 x double> undef to <4 x i1>
 
-  %vp_v4f32_v4i8 = call <4 x i8> @llvm.vp.fptoui.v4float.v4i8(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i8 = call <4 x i8> @llvm.vp.fptoui.v4double.v4i8(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i16 = call <4 x i16> @llvm.vp.fptoui.v4float.v4i16(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i16 = call <4 x i16> @llvm.vp.fptoui.v4double.v4i16(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i32 = call <4 x i32> @llvm.vp.fptoui.v4float.v4i32(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i32 = call <4 x i32> @llvm.vp.fptoui.v4double.v4i32(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i64 = call <4 x i64> @llvm.vp.fptoui.v4float.v4i64(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i64 = call <4 x i64> @llvm.vp.fptoui.v4double.v4i64(<4 x double> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f32_v4i1 = call <4 x i1> @llvm.vp.fptoui.v4float.v4i1(<4 x float> undef, <4 x i1> undef, i32 undef)
-  %vp_v4f64_v4i1 = call <4 x i1> @llvm.vp.fptoui.v4double.v4i1(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i8 = call <4 x i8> @llvm.vp.fptoui.v4i8.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i8 = call <4 x i8> @llvm.vp.fptoui.v4i8.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i16 = call <4 x i16> @llvm.vp.fptoui.v4i16.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i16 = call <4 x i16> @llvm.vp.fptoui.v4i16.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i32 = call <4 x i32> @llvm.vp.fptoui.v4i32.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i32 = call <4 x i32> @llvm.vp.fptoui.v4i32.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i64 = call <4 x i64> @llvm.vp.fptoui.v4i64.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i64 = call <4 x i64> @llvm.vp.fptoui.v4i64.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f32_v4i1 = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
+  %vp_v4f64_v4i1 = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f64(<4 x double> undef, <4 x i1> undef, i32 undef)
 
   %v8f32_v8i8 = fptoui <8 x float> undef to <8 x i8>
   %v8f64_v8i8 = fptoui <8 x double> undef to <8 x i8>
@@ -4885,16 +4885,16 @@ define void @fptoui() {
   %v8f32_v8i1 = fptoui <8 x float> undef to <8 x i1>
   %v8f64_v8i1 = fptoui <8 x double> undef to <8 x i1>
 
-  %vp_v8f32_v8i8 = call <8 x i8> @llvm.vp.fptoui.v8float.v8i8(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i8 = call <8 x i8> @llvm.vp.fptoui.v8double.v8i8(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i16 = call <8 x i16> @llvm.vp.fptoui.v8float.v8i16(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i16 = call <8 x i16> @llvm.vp.fptoui.v8double.v8i16(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i32 = call <8 x i32> @llvm.vp.fptoui.v8float.v8i32(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i32 = call <8 x i32> @llvm.vp.fptoui.v8double.v8i32(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i64 = call <8 x i64> @llvm.vp.fptoui.v8float.v8i64(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i64 = call <8 x i64> @llvm.vp.fptoui.v8double.v8i64(<8 x double> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f32_v8i1 = call <8 x i1> @llvm.vp.fptoui.v8float.v8i1(<8 x float> undef, <8 x i1> undef, i32 undef)
-  %vp_v8f64_v8i1 = call <8 x i1> @llvm.vp.fptoui.v8double.v8i1(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i8 = call <8 x i8> @llvm.vp.fptoui.v8i8.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i8 = call <8 x i8> @llvm.vp.fptoui.v8i8.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i16 = call <8 x i16> @llvm.vp.fptoui.v8i16.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i16 = call <8 x i16> @llvm.vp.fptoui.v8i16.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i32 = call <8 x i32> @llvm.vp.fptoui.v8i32.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i32 = call <8 x i32> @llvm.vp.fptoui.v8i32.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i64 = call <8 x i64> @llvm.vp.fptoui.v8i64.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i64 = call <8 x i64> @llvm.vp.fptoui.v8i64.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f32_v8i1 = call <8 x i1> @llvm.vp.fptoui.v8i1.v8f32(<8 x float> undef, <8 x i1> undef, i32 undef)
+  %vp_v8f64_v8i1 = call <8 x i1> @llvm.vp.fptoui.v8i1.v8f64(<8 x double> undef, <8 x i1> undef, i32 undef)
 
   %v16f32_v16i8 = fptoui <16 x float> undef to <16 x i8>
   %v16f64_v16i8 = fptoui <16 x double> undef to <16 x i8>
@@ -4907,16 +4907,16 @@ define void @fptoui() {
   %v16f32_v16i1 = fptoui <16 x float> undef to <16 x i1>
   %v16f64_v16i1 = fptoui <16 x double> undef to <16 x i1>
 
-  %vp_v16f32_v16i8 = call <16 x i8> @llvm.vp.fptoui.v16float.v16i8(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i8 = call <16 x i8> @llvm.vp.fptoui.v16double.v16i8(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i16 = call <16 x i16> @llvm.vp.fptoui.v16float.v16i16(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i16 = call <16 x i16> @llvm.vp.fptoui.v16double.v16i16(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i32 = call <16 x i32> @llvm.vp.fptoui.v16float.v16i32(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i32 = call <16 x i32> @llvm.vp.fptoui.v16double.v16i32(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i64 = call <16 x i64> @llvm.vp.fptoui.v16float.v16i64(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i64 = call <16 x i64> @llvm.vp.fptoui.v16double.v16i64(<16 x double> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f32_v16i1 = call <16 x i1> @llvm.vp.fptoui.v16float.v16i1(<16 x float> undef, <16 x i1> undef, i32 undef)
-  %vp_v16f64_v16i1 = call <16 x i1> @llvm.vp.fptoui.v16double.v16i1(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i8 = call <16 x i8> @llvm.vp.fptoui.v16i8.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i8 = call <16 x i8> @llvm.vp.fptoui.v16i8.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i16 = call <16 x i16> @llvm.vp.fptoui.v16i16.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i16 = call <16 x i16> @llvm.vp.fptoui.v16i16.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i32 = call <16 x i32> @llvm.vp.fptoui.v16i32.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i32 = call <16 x i32> @llvm.vp.fptoui.v16i32.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i64 = call <16 x i64> @llvm.vp.fptoui.v16i64.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i64 = call <16 x i64> @llvm.vp.fptoui.v16i64.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f32_v16i1 = call <16 x i1> @llvm.vp.fptoui.v16i1.v16f32(<16 x float> undef, <16 x i1> undef, i32 undef)
+  %vp_v16f64_v16i1 = call <16 x i1> @llvm.vp.fptoui.v16i1.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
 
   %v32f32_v32i8 = fptoui <32 x float> undef to <32 x i8>
   %v32f64_v32i8 = fptoui <32 x double> undef to <32 x i8>
@@ -4929,16 +4929,16 @@ define void @fptoui() {
   %v32f32_v32i1 = fptoui <32 x float> undef to <32 x i1>
   %v32f64_v32i1 = fptoui <32 x double> undef to <32 x i1>
 
-  %vp_v32f32_v32i8 = call <32 x i8> @llvm.vp.fptoui.v32float.v32i8(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i8 = call <32 x i8> @llvm.vp.fptoui.v32double.v32i8(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i16 = call <32 x i16> @llvm.vp.fptoui.v32float.v32i16(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i16 = call <32 x i16> @llvm.vp.fptoui.v32double.v32i16(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i32 = call <32 x i32> @llvm.vp.fptoui.v32float.v32i32(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i32 = call <32 x i32> @llvm.vp.fptoui.v32double.v32i32(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i64 = call <32 x i64> @llvm.vp.fptoui.v32float.v32i64(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i64 = call <32 x i64> @llvm.vp.fptoui.v32double.v32i64(<32 x double> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f32_v32i1 = call <32 x i1> @llvm.vp.fptoui.v32float.v32i1(<32 x float> undef, <32 x i1> undef, i32 undef)
-  %vp_v32f64_v32i1 = call <32 x i1> @llvm.vp.fptoui.v32double.v32i1(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i8 = call <32 x i8> @llvm.vp.fptoui.v32i8.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i8 = call <32 x i8> @llvm.vp.fptoui.v32i8.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i16 = call <32 x i16> @llvm.vp.fptoui.v32i16.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i16 = call <32 x i16> @llvm.vp.fptoui.v32i16.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i32 = call <32 x i32> @llvm.vp.fptoui.v32i32.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i32 = call <32 x i32> @llvm.vp.fptoui.v32i32.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i64 = call <32 x i64> @llvm.vp.fptoui.v32i64.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i64 = call <32 x i64> @llvm.vp.fptoui.v32i64.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f32_v32i1 = call <32 x i1> @llvm.vp.fptoui.v32i1.v32f32(<32 x float> undef, <32 x i1> undef, i32 undef)
+  %vp_v32f64_v32i1 = call <32 x i1> @llvm.vp.fptoui.v32i1.v32f64(<32 x double> undef, <32 x i1> undef, i32 undef)
 
   %v64f32_v64i8 = fptoui <64 x float> undef to <64 x i8>
   %v64f64_v64i8 = fptoui <64 x double> undef to <64 x i8>
@@ -4951,16 +4951,16 @@ define void @fptoui() {
   %v64f32_v64i1 = fptoui <64 x float> undef to <64 x i1>
   %v64f64_v64i1 = fptoui <64 x double> undef to <64 x i1>
 
-  %vp_v64f32_v64i8 = call <64 x i8> @llvm.vp.fptoui.v64float.v64i8(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i8 = call <64 x i8> @llvm.vp.fptoui.v64double.v64i8(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i16 = call <64 x i16> @llvm.vp.fptoui.v64float.v64i16(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i16 = call <64 x i16> @llvm.vp.fptoui.v64double.v64i16(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i32 = call <64 x i32> @llvm.vp.fptoui.v64float.v64i32(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i32 = call <64 x i32> @llvm.vp.fptoui.v64double.v64i32(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i64 = call <64 x i64> @llvm.vp.fptoui.v64float.v64i64(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i64 = call <64 x i64> @llvm.vp.fptoui.v64double.v64i64(<64 x double> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f32_v64i1 = call <64 x i1> @llvm.vp.fptoui.v64float.v64i1(<64 x float> undef, <64 x i1> undef, i32 undef)
-  %vp_v64f64_v64i1 = call <64 x i1> @llvm.vp.fptoui.v64double.v64i1(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i8 = call <64 x i8> @llvm.vp.fptoui.v64i8.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i8 = call <64 x i8> @llvm.vp.fptoui.v64i8.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i16 = call <64 x i16> @llvm.vp.fptoui.v64i16.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i16 = call <64 x i16> @llvm.vp.fptoui.v64i16.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i32 = call <64 x i32> @llvm.vp.fptoui.v64i32.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i32 = call <64 x i32> @llvm.vp.fptoui.v64i32.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i64 = call <64 x i64> @llvm.vp.fptoui.v64i64.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i64 = call <64 x i64> @llvm.vp.fptoui.v64i64.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f32_v64i1 = call <64 x i1> @llvm.vp.fptoui.v64i1.v64f32(<64 x float> undef, <64 x i1> undef, i32 undef)
+  %vp_v64f64_v64i1 = call <64 x i1> @llvm.vp.fptoui.v64i1.v64f64(<64 x double> undef, <64 x i1> undef, i32 undef)
 
   %v128f32_v128i8 = fptoui <128 x float> undef to <128 x i8>
   %v128f64_v128i8 = fptoui <128 x double> undef to <128 x i8>
@@ -4973,16 +4973,16 @@ define void @fptoui() {
   %v128f32_v128i1 = fptoui <128 x float> undef to <128 x i1>
   %v128f64_v128i1 = fptoui <128 x double> undef to <128 x i1>
 
-  %vp_v128f32_v128i8 = call <128 x i8> @llvm.vp.fptoui.v128float.v128i8(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i8 = call <128 x i8> @llvm.vp.fptoui.v128double.v128i8(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i16 = call <128 x i16> @llvm.vp.fptoui.v128float.v128i16(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i16 = call <128 x i16> @llvm.vp.fptoui.v128double.v128i16(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i32 = call <128 x i32> @llvm.vp.fptoui.v128float.v128i32(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i32 = call <128 x i32> @llvm.vp.fptoui.v128double.v128i32(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i64 = call <128 x i64> @llvm.vp.fptoui.v128float.v128i64(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i64 = call <128 x i64> @llvm.vp.fptoui.v128double.v128i64(<128 x double> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f32_v128i1 = call <128 x i1> @llvm.vp.fptoui.v128float.v128i1(<128 x float> undef, <128 x i1> undef, i32 undef)
-  %vp_v128f64_v128i1 = call <128 x i1> @llvm.vp.fptoui.v128double.v128i1(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i8 = call <128 x i8> @llvm.vp.fptoui.v128i8.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i8 = call <128 x i8> @llvm.vp.fptoui.v128i8.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i16 = call <128 x i16> @llvm.vp.fptoui.v128i16.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i16 = call <128 x i16> @llvm.vp.fptoui.v128i16.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i32 = call <128 x i32> @llvm.vp.fptoui.v128i32.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i32 = call <128 x i32> @llvm.vp.fptoui.v128i32.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i64 = call <128 x i64> @llvm.vp.fptoui.v128i64.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i64 = call <128 x i64> @llvm.vp.fptoui.v128i64.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f32_v128i1 = call <128 x i1> @llvm.vp.fptoui.v128i1.v128f32(<128 x float> undef, <128 x i1> undef, i32 undef)
+  %vp_v128f64_v128i1 = call <128 x i1> @llvm.vp.fptoui.v128i1.v128f64(<128 x double> undef, <128 x i1> undef, i32 undef)
 
   %nxv1f32_nxv1i8 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i8>
   %nxv1f64_nxv1i8 = fptoui <vscale x 1 x double> undef to <vscale x 1 x i8>
@@ -4995,16 +4995,16 @@ define void @fptoui() {
   %nxv1f32_nxv1i1 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i1>
   %nxv1f64_nxv1i1 = fptoui <vscale x 1 x double> undef to <vscale x 1 x i1>
 
-  %vp_nxv1f32_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptoui.nxv1float.nxv1i8(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptoui.nxv1double.nxv1i8(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptoui.nxv1float.nxv1i16(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptoui.nxv1double.nxv1i16(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptoui.nxv1float.nxv1i32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptoui.nxv1double.nxv1i32(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptoui.nxv1float.nxv1i64(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptoui.nxv1double.nxv1i64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f32_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptoui.nxv1float.nxv1i1(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1f64_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptoui.nxv1double.nxv1i1(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptoui.nxv1i8.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i8 = call <vscale x 1 x i8> @llvm.vp.fptoui.nxv1i8.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptoui.nxv1i16.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i16 = call <vscale x 1 x i16> @llvm.vp.fptoui.nxv1i16.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptoui.nxv1i32.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i32 = call <vscale x 1 x i32> @llvm.vp.fptoui.nxv1i32.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptoui.nxv1i64.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i64 = call <vscale x 1 x i64> @llvm.vp.fptoui.nxv1i64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f32_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptoui.nxv1i1.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1f64_nxv1i1 = call <vscale x 1 x i1> @llvm.vp.fptoui.nxv1i1.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2f32_nxv2i8 = fptoui <vscale x 2 x float> undef to <vscale x 2 x i8>
   %nxv2f64_nxv2i8 = fptoui <vscale x 2 x double> undef to <vscale x 2 x i8>
@@ -5017,16 +5017,16 @@ define void @fptoui() {
   %nxv2f32_nxv2i1 = fptoui <vscale x 2 x float> undef to <vscale x 2 x i1>
   %nxv2f64_nxv2i1 = fptoui <vscale x 2 x double> undef to <vscale x 2 x i1>
 
-  %vp_nxv2f32_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2float.nxv2i8(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2double.nxv2i8(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2float.nxv2i16(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2double.nxv2i16(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2float.nxv2i32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2double.nxv2i32(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2float.nxv2i64(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2double.nxv2i64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f32_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptoui.nxv2float.nxv2i1(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2f64_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptoui.nxv2double.nxv2i1(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i8 = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i16 = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2i32.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i32 = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2i32.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2i64.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i64 = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2i64.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f32_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptoui.nxv2i1.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2f64_nxv2i1 = call <vscale x 2 x i1> @llvm.vp.fptoui.nxv2i1.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4f32_nxv4i8 = fptoui <vscale x 4 x float> undef to <vscale x 4 x i8>
   %nxv4f64_nxv4i8 = fptoui <vscale x 4 x double> undef to <vscale x 4 x i8>
@@ -5039,16 +5039,16 @@ define void @fptoui() {
   %nxv4f32_nxv4i1 = fptoui <vscale x 4 x float> undef to <vscale x 4 x i1>
   %nxv4f64_nxv4i1 = fptoui <vscale x 4 x double> undef to <vscale x 4 x i1>
 
-  %vp_nxv4f32_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptoui.nxv4float.nxv4i8(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptoui.nxv4double.nxv4i8(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptoui.nxv4float.nxv4i16(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptoui.nxv4double.nxv4i16(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptoui.nxv4float.nxv4i32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptoui.nxv4double.nxv4i32(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptoui.nxv4float.nxv4i64(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptoui.nxv4double.nxv4i64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f32_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptoui.nxv4float.nxv4i1(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4f64_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptoui.nxv4double.nxv4i1(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptoui.nxv4i8.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i8 = call <vscale x 4 x i8> @llvm.vp.fptoui.nxv4i8.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptoui.nxv4i16.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i16 = call <vscale x 4 x i16> @llvm.vp.fptoui.nxv4i16.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptoui.nxv4i32.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i32 = call <vscale x 4 x i32> @llvm.vp.fptoui.nxv4i32.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptoui.nxv4i64.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i64 = call <vscale x 4 x i64> @llvm.vp.fptoui.nxv4i64.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f32_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptoui.nxv4i1.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4f64_nxv4i1 = call <vscale x 4 x i1> @llvm.vp.fptoui.nxv4i1.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8f32_nxv8i8 = fptoui <vscale x 8 x float> undef to <vscale x 8 x i8>
   %nxv8f64_nxv8i8 = fptoui <vscale x 8 x double> undef to <vscale x 8 x i8>
@@ -5061,16 +5061,16 @@ define void @fptoui() {
   %nxv8f32_nxv8i1 = fptoui <vscale x 8 x float> undef to <vscale x 8 x i1>
   %nxv8f64_nxv8i1 = fptoui <vscale x 8 x double> undef to <vscale x 8 x i1>
 
-  %vp_nxv8f32_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptoui.nxv8float.nxv8i8(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptoui.nxv8double.nxv8i8(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptoui.nxv8float.nxv8i16(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptoui.nxv8double.nxv8i16(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptoui.nxv8float.nxv8i32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptoui.nxv8double.nxv8i32(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptoui.nxv8float.nxv8i64(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptoui.nxv8double.nxv8i64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f32_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptoui.nxv8float.nxv8i1(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8f64_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptoui.nxv8double.nxv8i1(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptoui.nxv8i8.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i8 = call <vscale x 8 x i8> @llvm.vp.fptoui.nxv8i8.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptoui.nxv8i16.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i16 = call <vscale x 8 x i16> @llvm.vp.fptoui.nxv8i16.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptoui.nxv8i32.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i32 = call <vscale x 8 x i32> @llvm.vp.fptoui.nxv8i32.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptoui.nxv8i64.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i64 = call <vscale x 8 x i64> @llvm.vp.fptoui.nxv8i64.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f32_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptoui.nxv8i1.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8f64_nxv8i1 = call <vscale x 8 x i1> @llvm.vp.fptoui.nxv8i1.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16f32_nxv16i8 = fptoui <vscale x 16 x float> undef to <vscale x 16 x i8>
   %nxv16f64_nxv16i8 = fptoui <vscale x 16 x double> undef to <vscale x 16 x i8>
@@ -5083,16 +5083,16 @@ define void @fptoui() {
   %nxv16f32_nxv16i1 = fptoui <vscale x 16 x float> undef to <vscale x 16 x i1>
   %nxv16f64_nxv16i1 = fptoui <vscale x 16 x double> undef to <vscale x 16 x i1>
 
-  %vp_nxv16f32_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptoui.nxv16float.nxv16i8(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptoui.nxv16double.nxv16i8(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptoui.nxv16float.nxv16i16(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptoui.nxv16double.nxv16i16(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptoui.nxv16float.nxv16i32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptoui.nxv16double.nxv16i32(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptoui.nxv16float.nxv16i64(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptoui.nxv16double.nxv16i64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f32_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptoui.nxv16float.nxv16i1(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16f64_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptoui.nxv16double.nxv16i1(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptoui.nxv16i8.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i8 = call <vscale x 16 x i8> @llvm.vp.fptoui.nxv16i8.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptoui.nxv16i16.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i16 = call <vscale x 16 x i16> @llvm.vp.fptoui.nxv16i16.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptoui.nxv16i32.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i32 = call <vscale x 16 x i32> @llvm.vp.fptoui.nxv16i32.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptoui.nxv16i64.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i64 = call <vscale x 16 x i64> @llvm.vp.fptoui.nxv16i64.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f32_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptoui.nxv16i1.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16f64_nxv16i1 = call <vscale x 16 x i1> @llvm.vp.fptoui.nxv16i1.nxv16f64(<vscale x 16 x double> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32f32_nxv32i8 = fptoui <vscale x 32 x float> undef to <vscale x 32 x i8>
   %nxv32f64_nxv32i8 = fptoui <vscale x 32 x double> undef to <vscale x 32 x i8>
@@ -5105,16 +5105,16 @@ define void @fptoui() {
   %nxv32f32_nxv32i1 = fptoui <vscale x 32 x float> undef to <vscale x 32 x i1>
   %nxv32f64_nxv32i1 = fptoui <vscale x 32 x double> undef to <vscale x 32 x i1>
 
-  %vp_nxv32f32_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptoui.nxv32float.nxv32i8(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptoui.nxv32double.nxv32i8(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptoui.nxv32float.nxv32i16(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptoui.nxv32double.nxv32i16(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptoui.nxv32float.nxv32i32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptoui.nxv32double.nxv32i32(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptoui.nxv32float.nxv32i64(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptoui.nxv32double.nxv32i64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f32_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptoui.nxv32float.nxv32i1(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32f64_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptoui.nxv32double.nxv32i1(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptoui.nxv32i8.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i8 = call <vscale x 32 x i8> @llvm.vp.fptoui.nxv32i8.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptoui.nxv32i16.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i16 = call <vscale x 32 x i16> @llvm.vp.fptoui.nxv32i16.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptoui.nxv32i32.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i32 = call <vscale x 32 x i32> @llvm.vp.fptoui.nxv32i32.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptoui.nxv32i64.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i64 = call <vscale x 32 x i64> @llvm.vp.fptoui.nxv32i64.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f32_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptoui.nxv32i1.nxv32f32(<vscale x 32 x float> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32f64_nxv32i1 = call <vscale x 32 x i1> @llvm.vp.fptoui.nxv32i1.nxv32f64(<vscale x 32 x double> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64f32_nxv64i8 = fptoui <vscale x 64 x float> undef to <vscale x 64 x i8>
   %nxv64f64_nxv64i8 = fptoui <vscale x 64 x double> undef to <vscale x 64 x i8>
@@ -5127,16 +5127,16 @@ define void @fptoui() {
   %nxv64f32_nxv64i1 = fptoui <vscale x 64 x float> undef to <vscale x 64 x i1>
   %nxv64f64_nxv64i1 = fptoui <vscale x 64 x double> undef to <vscale x 64 x i1>
 
-  %vp_nxv64f32_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptoui.nxv64float.nxv64i8(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptoui.nxv64double.nxv64i8(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptoui.nxv64float.nxv64i16(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptoui.nxv64double.nxv64i16(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptoui.nxv64float.nxv64i32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptoui.nxv64double.nxv64i32(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptoui.nxv64float.nxv64i64(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptoui.nxv64double.nxv64i64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f32_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptoui.nxv64float.nxv64i1(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64f64_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptoui.nxv64double.nxv64i1(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptoui.nxv64i8.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i8 = call <vscale x 64 x i8> @llvm.vp.fptoui.nxv64i8.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptoui.nxv64i16.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i16 = call <vscale x 64 x i16> @llvm.vp.fptoui.nxv64i16.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptoui.nxv64i32.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i32 = call <vscale x 64 x i32> @llvm.vp.fptoui.nxv64i32.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptoui.nxv64i64.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i64 = call <vscale x 64 x i64> @llvm.vp.fptoui.nxv64i64.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f32_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptoui.nxv64i1.nxv64f32(<vscale x 64 x float> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64f64_nxv64i1 = call <vscale x 64 x i1> @llvm.vp.fptoui.nxv64i1.nxv64f64(<vscale x 64 x double> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -5719,16 +5719,16 @@ define void @sitofp() {
   %v2i1_v2f32 = sitofp <2 x i1> undef to <2 x float>
   %v2i1_v2f64 = sitofp <2 x i1> undef to <2 x double>
 
-  %vp_v2fi8_v2f32 = call <2 x float> @llvm.vp.sitofp.v2i8.v2float(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi8_v2f64 = call <2 x double> @llvm.vp.sitofp.v2i8.v2double(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi16_v2f32 = call <2 x float> @llvm.vp.sitofp.v2i16.v2float(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi16_v2f64 = call <2 x double> @llvm.vp.sitofp.v2i16.v2double(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi32_v2f32 = call <2 x float> @llvm.vp.sitofp.v2i32.v2float(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi32_v2f64 = call <2 x double> @llvm.vp.sitofp.v2i32.v2double(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi64_v2f32 = call <2 x float> @llvm.vp.sitofp.v2i64.v2float(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi64_v2f64 = call <2 x double> @llvm.vp.sitofp.v2i64.v2double(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi1_v2f32 = call <2 x float> @llvm.vp.sitofp.v2i1.v2float(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi1_v2f64 = call <2 x double> @llvm.vp.sitofp.v2i1.v2double(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi8_v2f32 = call <2 x float> @llvm.vp.sitofp.v2f32.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi8_v2f64 = call <2 x double> @llvm.vp.sitofp.v2f64.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi16_v2f32 = call <2 x float> @llvm.vp.sitofp.v2f32.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi16_v2f64 = call <2 x double> @llvm.vp.sitofp.v2f64.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi32_v2f32 = call <2 x float> @llvm.vp.sitofp.v2f32.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi32_v2f64 = call <2 x double> @llvm.vp.sitofp.v2f64.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi64_v2f32 = call <2 x float> @llvm.vp.sitofp.v2f32.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi64_v2f64 = call <2 x double> @llvm.vp.sitofp.v2f64.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi1_v2f32 = call <2 x float> @llvm.vp.sitofp.v2f32.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi1_v2f64 = call <2 x double> @llvm.vp.sitofp.v2f64.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
 
   %v4i8_v4f32 = sitofp <4 x i8> undef to <4 x float>
   %v4i8_v4f64 = sitofp <4 x i8> undef to <4 x double>
@@ -5741,16 +5741,16 @@ define void @sitofp() {
   %v4i1_v4f32 = sitofp <4 x i1> undef to <4 x float>
   %v4i1_v4f64 = sitofp <4 x i1> undef to <4 x double>
 
-  %vp_v4fi8_v4f32 = call <4 x float> @llvm.vp.sitofp.v4i8.v4float(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi8_v4f64 = call <4 x double> @llvm.vp.sitofp.v4i8.v4double(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi16_v4f32 = call <4 x float> @llvm.vp.sitofp.v4i16.v4float(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi16_v4f64 = call <4 x double> @llvm.vp.sitofp.v4i16.v4double(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi32_v4f32 = call <4 x float> @llvm.vp.sitofp.v4i32.v4float(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi32_v4f64 = call <4 x double> @llvm.vp.sitofp.v4i32.v4double(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi64_v4f32 = call <4 x float> @llvm.vp.sitofp.v4i64.v4float(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi64_v4f64 = call <4 x double> @llvm.vp.sitofp.v4i64.v4double(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi1_v4f32 = call <4 x float> @llvm.vp.sitofp.v4i1.v4float(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi1_v4f64 = call <4 x double> @llvm.vp.sitofp.v4i1.v4double(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi8_v4f32 = call <4 x float> @llvm.vp.sitofp.v4f32.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi8_v4f64 = call <4 x double> @llvm.vp.sitofp.v4f64.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi16_v4f32 = call <4 x float> @llvm.vp.sitofp.v4f32.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi16_v4f64 = call <4 x double> @llvm.vp.sitofp.v4f64.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi32_v4f32 = call <4 x float> @llvm.vp.sitofp.v4f32.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi32_v4f64 = call <4 x double> @llvm.vp.sitofp.v4f64.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi64_v4f32 = call <4 x float> @llvm.vp.sitofp.v4f32.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi64_v4f64 = call <4 x double> @llvm.vp.sitofp.v4f64.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi1_v4f32 = call <4 x float> @llvm.vp.sitofp.v4f32.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi1_v4f64 = call <4 x double> @llvm.vp.sitofp.v4f64.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
 
   %v8i8_v8f32 = sitofp <8 x i8> undef to <8 x float>
   %v8i8_v8f64 = sitofp <8 x i8> undef to <8 x double>
@@ -5763,16 +5763,16 @@ define void @sitofp() {
   %v8i1_v8f32 = sitofp <8 x i1> undef to <8 x float>
   %v8i1_v8f64 = sitofp <8 x i1> undef to <8 x double>
 
-  %vp_v8fi8_v8f32 = call <8 x float> @llvm.vp.sitofp.v8i8.v8float(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi8_v8f64 = call <8 x double> @llvm.vp.sitofp.v8i8.v8double(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi16_v8f32 = call <8 x float> @llvm.vp.sitofp.v8i16.v8float(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi16_v8f64 = call <8 x double> @llvm.vp.sitofp.v8i16.v8double(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi32_v8f32 = call <8 x float> @llvm.vp.sitofp.v8i32.v8float(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi32_v8f64 = call <8 x double> @llvm.vp.sitofp.v8i32.v8double(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi64_v8f32 = call <8 x float> @llvm.vp.sitofp.v8i64.v8float(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi64_v8f64 = call <8 x double> @llvm.vp.sitofp.v8i64.v8double(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi1_v8f32 = call <8 x float> @llvm.vp.sitofp.v8i1.v8float(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi1_v8f64 = call <8 x double> @llvm.vp.sitofp.v8i1.v8double(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi8_v8f32 = call <8 x float> @llvm.vp.sitofp.v8f32.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi8_v8f64 = call <8 x double> @llvm.vp.sitofp.v8f64.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi16_v8f32 = call <8 x float> @llvm.vp.sitofp.v8f32.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi16_v8f64 = call <8 x double> @llvm.vp.sitofp.v8f64.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi32_v8f32 = call <8 x float> @llvm.vp.sitofp.v8f32.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi32_v8f64 = call <8 x double> @llvm.vp.sitofp.v8f64.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi64_v8f32 = call <8 x float> @llvm.vp.sitofp.v8f32.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi64_v8f64 = call <8 x double> @llvm.vp.sitofp.v8f64.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi1_v8f32 = call <8 x float> @llvm.vp.sitofp.v8f32.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi1_v8f64 = call <8 x double> @llvm.vp.sitofp.v8f64.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
 
   %v16i8_v16f32 = sitofp <16 x i8> undef to <16 x float>
   %v16i8_v16f64 = sitofp <16 x i8> undef to <16 x double>
@@ -5785,16 +5785,16 @@ define void @sitofp() {
   %v16i1_v16f32 = sitofp <16 x i1> undef to <16 x float>
   %v16i1_v16f64 = sitofp <16 x i1> undef to <16 x double>
 
-  %vp_v16fi8_v16f32 = call <16 x float> @llvm.vp.sitofp.v16i8.v16float(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi8_v16f64 = call <16 x double> @llvm.vp.sitofp.v16i8.v16double(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi16_v16f32 = call <16 x float> @llvm.vp.sitofp.v16i16.v16float(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi16_v16f64 = call <16 x double> @llvm.vp.sitofp.v16i16.v16double(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi32_v16f32 = call <16 x float> @llvm.vp.sitofp.v16i32.v16float(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi32_v16f64 = call <16 x double> @llvm.vp.sitofp.v16i32.v16double(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi64_v16f32 = call <16 x float> @llvm.vp.sitofp.v16i64.v16float(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi64_v16f64 = call <16 x double> @llvm.vp.sitofp.v16i64.v16double(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi1_v16f32 = call <16 x float> @llvm.vp.sitofp.v16i1.v16float(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi1_v16f64 = call <16 x double> @llvm.vp.sitofp.v16i1.v16double(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi8_v16f32 = call <16 x float> @llvm.vp.sitofp.v16f32.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi8_v16f64 = call <16 x double> @llvm.vp.sitofp.v16f64.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi16_v16f32 = call <16 x float> @llvm.vp.sitofp.v16f32.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi16_v16f64 = call <16 x double> @llvm.vp.sitofp.v16f64.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi32_v16f32 = call <16 x float> @llvm.vp.sitofp.v16f32.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi32_v16f64 = call <16 x double> @llvm.vp.sitofp.v16f64.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi64_v16f32 = call <16 x float> @llvm.vp.sitofp.v16f32.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi64_v16f64 = call <16 x double> @llvm.vp.sitofp.v16f64.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi1_v16f32 = call <16 x float> @llvm.vp.sitofp.v16f32.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi1_v16f64 = call <16 x double> @llvm.vp.sitofp.v16f64.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
 
   %v32i8_v32f32 = sitofp <32 x i8> undef to <32 x float>
   %v32i8_v32f64 = sitofp <32 x i8> undef to <32 x double>
@@ -5807,16 +5807,16 @@ define void @sitofp() {
   %v32i1_v32f32 = sitofp <32 x i1> undef to <32 x float>
   %v32i1_v32f64 = sitofp <32 x i1> undef to <32 x double>
 
-  %vp_v32fi8_v32f32 = call <32 x float> @llvm.vp.sitofp.v32i8.v32float(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi8_v32f64 = call <32 x double> @llvm.vp.sitofp.v32i8.v32double(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi16_v32f32 = call <32 x float> @llvm.vp.sitofp.v32i16.v32float(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi16_v32f64 = call <32 x double> @llvm.vp.sitofp.v32i16.v32double(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi32_v32f32 = call <32 x float> @llvm.vp.sitofp.v32i32.v32float(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi32_v32f64 = call <32 x double> @llvm.vp.sitofp.v32i32.v32double(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi64_v32f32 = call <32 x float> @llvm.vp.sitofp.v32i64.v32float(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi64_v32f64 = call <32 x double> @llvm.vp.sitofp.v32i64.v32double(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi1_v32f32 = call <32 x float> @llvm.vp.sitofp.v32i1.v32float(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi1_v32f64 = call <32 x double> @llvm.vp.sitofp.v32i1.v32double(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi8_v32f32 = call <32 x float> @llvm.vp.sitofp.v32f32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi8_v32f64 = call <32 x double> @llvm.vp.sitofp.v32f64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi16_v32f32 = call <32 x float> @llvm.vp.sitofp.v32f32.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi16_v32f64 = call <32 x double> @llvm.vp.sitofp.v32f64.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi32_v32f32 = call <32 x float> @llvm.vp.sitofp.v32f32.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi32_v32f64 = call <32 x double> @llvm.vp.sitofp.v32f64.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi64_v32f32 = call <32 x float> @llvm.vp.sitofp.v32f32.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi64_v32f64 = call <32 x double> @llvm.vp.sitofp.v32f64.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi1_v32f32 = call <32 x float> @llvm.vp.sitofp.v32f32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi1_v32f64 = call <32 x double> @llvm.vp.sitofp.v32f64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 
   %v64i8_v64f32 = sitofp <64 x i8> undef to <64 x float>
   %v64i8_v64f64 = sitofp <64 x i8> undef to <64 x double>
@@ -5829,16 +5829,16 @@ define void @sitofp() {
   %v64i1_v64f32 = sitofp <64 x i1> undef to <64 x float>
   %v64i1_v64f64 = sitofp <64 x i1> undef to <64 x double>
 
-  %vp_v64fi8_v64f32 = call <64 x float> @llvm.vp.sitofp.v64i8.v64float(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi8_v64f64 = call <64 x double> @llvm.vp.sitofp.v64i8.v64double(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi16_v64f32 = call <64 x float> @llvm.vp.sitofp.v64i16.v64float(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi16_v64f64 = call <64 x double> @llvm.vp.sitofp.v64i16.v64double(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi32_v64f32 = call <64 x float> @llvm.vp.sitofp.v64i32.v64float(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi32_v64f64 = call <64 x double> @llvm.vp.sitofp.v64i32.v64double(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi64_v64f32 = call <64 x float> @llvm.vp.sitofp.v64i64.v64float(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi64_v64f64 = call <64 x double> @llvm.vp.sitofp.v64i64.v64double(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi1_v64f32 = call <64 x float> @llvm.vp.sitofp.v64i1.v64float(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi1_v64f64 = call <64 x double> @llvm.vp.sitofp.v64i1.v64double(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi8_v64f32 = call <64 x float> @llvm.vp.sitofp.v64f32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi8_v64f64 = call <64 x double> @llvm.vp.sitofp.v64f64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi16_v64f32 = call <64 x float> @llvm.vp.sitofp.v64f32.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi16_v64f64 = call <64 x double> @llvm.vp.sitofp.v64f64.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi32_v64f32 = call <64 x float> @llvm.vp.sitofp.v64f32.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi32_v64f64 = call <64 x double> @llvm.vp.sitofp.v64f64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi64_v64f32 = call <64 x float> @llvm.vp.sitofp.v64f32.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi64_v64f64 = call <64 x double> @llvm.vp.sitofp.v64f64.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi1_v64f32 = call <64 x float> @llvm.vp.sitofp.v64f32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi1_v64f64 = call <64 x double> @llvm.vp.sitofp.v64f64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 
   %v128i8_v128f32 = sitofp <128 x i8> undef to <128 x float>
   %v128i8_v128f64 = sitofp <128 x i8> undef to <128 x double>
@@ -5851,16 +5851,16 @@ define void @sitofp() {
   %v128i1_v128f32 = sitofp <128 x i1> undef to <128 x float>
   %v128i1_v128f64 = sitofp <128 x i1> undef to <128 x double>
 
-  %vp_v128fi8_v128f32 = call <128 x float> @llvm.vp.sitofp.v128i8.v128float(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi8_v128f64 = call <128 x double> @llvm.vp.sitofp.v128i8.v128double(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi16_v128f32 = call <128 x float> @llvm.vp.sitofp.v128i16.v128float(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi16_v128f64 = call <128 x double> @llvm.vp.sitofp.v128i16.v128double(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi32_v128f32 = call <128 x float> @llvm.vp.sitofp.v128i32.v128float(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi32_v128f64 = call <128 x double> @llvm.vp.sitofp.v128i32.v128double(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi64_v128f32 = call <128 x float> @llvm.vp.sitofp.v128i64.v128float(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi64_v128f64 = call <128 x double> @llvm.vp.sitofp.v128i64.v128double(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi1_v128f32 = call <128 x float> @llvm.vp.sitofp.v128i1.v128float(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi1_v128f64 = call <128 x double> @llvm.vp.sitofp.v128i1.v128double(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi8_v128f32 = call <128 x float> @llvm.vp.sitofp.v128f32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi8_v128f64 = call <128 x double> @llvm.vp.sitofp.v128f64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi16_v128f32 = call <128 x float> @llvm.vp.sitofp.v128f32.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi16_v128f64 = call <128 x double> @llvm.vp.sitofp.v128f64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi32_v128f32 = call <128 x float> @llvm.vp.sitofp.v128f32.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi32_v128f64 = call <128 x double> @llvm.vp.sitofp.v128f64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi64_v128f32 = call <128 x float> @llvm.vp.sitofp.v128f32.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi64_v128f64 = call <128 x double> @llvm.vp.sitofp.v128f64.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi1_v128f32 = call <128 x float> @llvm.vp.sitofp.v128f32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi1_v128f64 = call <128 x double> @llvm.vp.sitofp.v128f64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 
   %nxv1i8_nxv1f32 = sitofp <vscale x 1 x i8> undef to <vscale x 1 x float>
   %nxv1i8_nxv1f64 = sitofp <vscale x 1 x i8> undef to <vscale x 1 x double>
@@ -5873,16 +5873,16 @@ define void @sitofp() {
   %nxv1i1_nxv1f32 = sitofp <vscale x 1 x i1> undef to <vscale x 1 x float>
   %nxv1i1_nxv1f64 = sitofp <vscale x 1 x i1> undef to <vscale x 1 x double>
 
-  %vp_nxv1fi8_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1i8.nxv1float(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi8_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1i8.nxv1double(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi16_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1i16.nxv1float(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi16_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1i16.nxv1double(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi32_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1i32.nxv1float(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi32_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1i32.nxv1double(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi64_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1i64.nxv1float(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi64_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1i64.nxv1double(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi1_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1i1.nxv1float(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi1_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1i1.nxv1double(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi8_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi8_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi16_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi16_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi32_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi32_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi64_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi64_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi1_nxv1f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi1_nxv1f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2i8_nxv2f32 = sitofp <vscale x 2 x i8> undef to <vscale x 2 x float>
   %nxv2i8_nxv2f64 = sitofp <vscale x 2 x i8> undef to <vscale x 2 x double>
@@ -5895,16 +5895,16 @@ define void @sitofp() {
   %nxv2i1_nxv2f32 = sitofp <vscale x 2 x i1> undef to <vscale x 2 x float>
   %nxv2i1_nxv2f64 = sitofp <vscale x 2 x i1> undef to <vscale x 2 x double>
 
-  %vp_nxv2fi8_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2i8.nxv2float(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi8_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2i8.nxv2double(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi16_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2i16.nxv2float(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi16_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2i16.nxv2double(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi32_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2i32.nxv2float(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi32_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2i32.nxv2double(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi64_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2i64.nxv2float(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi64_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2i64.nxv2double(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi1_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2i1.nxv2float(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi1_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2i1.nxv2double(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi8_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi8_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2f64.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi16_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi16_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2f64.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi32_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi32_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2f64.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi64_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi64_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2f64.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi1_nxv2f32 = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi1_nxv2f64 = call <vscale x 2 x double> @llvm.vp.sitofp.nxv2f64.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4i8_nxv4f32 = sitofp <vscale x 4 x i8> undef to <vscale x 4 x float>
   %nxv4i8_nxv4f64 = sitofp <vscale x 4 x i8> undef to <vscale x 4 x double>
@@ -5917,16 +5917,16 @@ define void @sitofp() {
   %nxv4i1_nxv4f32 = sitofp <vscale x 4 x i1> undef to <vscale x 4 x float>
   %nxv4i1_nxv4f64 = sitofp <vscale x 4 x i1> undef to <vscale x 4 x double>
 
-  %vp_nxv4fi8_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4i8.nxv4float(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi8_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4i8.nxv4double(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi16_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4i16.nxv4float(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi16_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4i16.nxv4double(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi32_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4i32.nxv4float(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi32_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4i32.nxv4double(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi64_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4i64.nxv4float(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi64_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4i64.nxv4double(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi1_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4i1.nxv4float(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi1_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4i1.nxv4double(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi8_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4f32.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi8_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4f64.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi16_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4f32.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi16_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4f64.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi32_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4f32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi32_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4f64.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi64_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4f32.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi64_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4f64.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi1_nxv4f32 = call <vscale x 4 x float> @llvm.vp.sitofp.nxv4f32.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi1_nxv4f64 = call <vscale x 4 x double> @llvm.vp.sitofp.nxv4f64.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8i8_nxv8f32 = sitofp <vscale x 8 x i8> undef to <vscale x 8 x float>
   %nxv8i8_nxv8f64 = sitofp <vscale x 8 x i8> undef to <vscale x 8 x double>
@@ -5939,16 +5939,16 @@ define void @sitofp() {
   %nxv8i1_nxv8f32 = sitofp <vscale x 8 x i1> undef to <vscale x 8 x float>
   %nxv8i1_nxv8f64 = sitofp <vscale x 8 x i1> undef to <vscale x 8 x double>
 
-  %vp_nxv8fi8_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv8i8.nxv8float(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi8_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv8i8.nxv8double(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi16_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv8i16.nxv8float(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi16_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv8i16.nxv8double(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi32_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv8i32.nxv8float(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi32_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv8i32.nxv8double(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi64_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv8i64.nxv8float(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi64_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv8i64.nxv8double(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi1_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv8i1.nxv8float(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv8fi1_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv8i1.nxv8double(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi8_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi8_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi16_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi16_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi32_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi32_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi64_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi64_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi1_nxv8f32 = call <vscale x 1 x float> @llvm.vp.sitofp.nxv1f32.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv8fi1_nxv8f64 = call <vscale x 1 x double> @llvm.vp.sitofp.nxv1f64.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv16i8_nxv16f32 = sitofp <vscale x 16 x i8> undef to <vscale x 16 x float>
   %nxv16i8_nxv16f64 = sitofp <vscale x 16 x i8> undef to <vscale x 16 x double>
@@ -5961,16 +5961,16 @@ define void @sitofp() {
   %nxv16i1_nxv16f32 = sitofp <vscale x 16 x i1> undef to <vscale x 16 x float>
   %nxv16i1_nxv16f64 = sitofp <vscale x 16 x i1> undef to <vscale x 16 x double>
 
-  %vp_nxv16fi8_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16i8.nxv16float(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi8_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16i8.nxv16double(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi16_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16i16.nxv16float(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi16_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16i16.nxv16double(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi32_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16i32.nxv16float(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi32_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16i32.nxv16double(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi64_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16i64.nxv16float(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi64_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16i64.nxv16double(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi1_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16i1.nxv16float(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi1_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16i1.nxv16double(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi8_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16f32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi8_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16f64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi16_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16f32.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi16_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16f64.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi32_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16f32.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi32_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16f64.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi64_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16f32.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi64_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16f64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi1_nxv16f32 = call <vscale x 16 x float> @llvm.vp.sitofp.nxv16f32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi1_nxv16f64 = call <vscale x 16 x double> @llvm.vp.sitofp.nxv16f64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32i8_nxv32f32 = sitofp <vscale x 32 x i8> undef to <vscale x 32 x float>
   %nxv32i8_nxv32f64 = sitofp <vscale x 32 x i8> undef to <vscale x 32 x double>
@@ -5983,16 +5983,16 @@ define void @sitofp() {
   %nxv32i1_nxv32f32 = sitofp <vscale x 32 x i1> undef to <vscale x 32 x float>
   %nxv32i1_nxv32f64 = sitofp <vscale x 32 x i1> undef to <vscale x 32 x double>
 
-  %vp_nxv32fi8_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32i8.nxv32float(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi8_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32i8.nxv32double(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi16_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32i16.nxv32float(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi16_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32i16.nxv32double(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi32_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32i32.nxv32float(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi32_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32i32.nxv32double(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi64_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32i64.nxv32float(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi64_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32i64.nxv32double(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi1_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32i1.nxv32float(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi1_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32i1.nxv32double(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi8_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32f32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi8_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32f64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi16_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32f32.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi16_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32f64.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi32_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32f32.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi32_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32f64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi64_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32f32.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi64_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32f64.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi1_nxv32f32 = call <vscale x 32 x float> @llvm.vp.sitofp.nxv32f32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi1_nxv32f64 = call <vscale x 32 x double> @llvm.vp.sitofp.nxv32f64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64i8_nxv64f32 = sitofp <vscale x 64 x i8> undef to <vscale x 64 x float>
   %nxv64i8_nxv64f64 = sitofp <vscale x 64 x i8> undef to <vscale x 64 x double>
@@ -6005,16 +6005,16 @@ define void @sitofp() {
   %nxv64i1_nxv64f32 = sitofp <vscale x 64 x i1> undef to <vscale x 64 x float>
   %nxv64i1_nxv64f64 = sitofp <vscale x 64 x i1> undef to <vscale x 64 x double>
 
-  %vp_nxv64fi8_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64i8.nxv64float(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi8_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64i8.nxv64double(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi16_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64i16.nxv64float(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi16_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64i16.nxv64double(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi32_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64i32.nxv64float(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi32_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64i32.nxv64double(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi64_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64i64.nxv64float(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi64_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64i64.nxv64double(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi1_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64i1.nxv64float(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi1_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64i1.nxv64double(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi8_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64f32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi8_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64f64.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi16_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64f32.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi16_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64f64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi32_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64f32.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi32_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64f64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi64_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64f32.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi64_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64f64.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi1_nxv64f32 = call <vscale x 64 x float> @llvm.vp.sitofp.nxv64f32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi1_nxv64f64 = call <vscale x 64 x double> @llvm.vp.sitofp.nxv64f64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -6597,16 +6597,16 @@ define void @uitofp() {
   %v2i1_v2f32 = uitofp <2 x i1> undef to <2 x float>
   %v2i1_v2f64 = uitofp <2 x i1> undef to <2 x double>
 
-  %vp_v2fi8_v2f32 = call <2 x float> @llvm.vp.uitofp.v2i8.v2float(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi8_v2f64 = call <2 x double> @llvm.vp.uitofp.v2i8.v2double(<2 x i8> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi16_v2f32 = call <2 x float> @llvm.vp.uitofp.v2i16.v2float(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi16_v2f64 = call <2 x double> @llvm.vp.uitofp.v2i16.v2double(<2 x i16> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi32_v2f32 = call <2 x float> @llvm.vp.uitofp.v2i32.v2float(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi32_v2f64 = call <2 x double> @llvm.vp.uitofp.v2i32.v2double(<2 x i32> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi64_v2f32 = call <2 x float> @llvm.vp.uitofp.v2i64.v2float(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi64_v2f64 = call <2 x double> @llvm.vp.uitofp.v2i64.v2double(<2 x i64> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi1_v2f32 = call <2 x float> @llvm.vp.uitofp.v2i1.v2float(<2 x i1> undef, <2 x i1> undef, i32 undef)
-  %vp_v2fi1_v2f64 = call <2 x double> @llvm.vp.uitofp.v2i1.v2double(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi8_v2f32 = call <2 x float> @llvm.vp.uitofp.v2f32.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi8_v2f64 = call <2 x double> @llvm.vp.uitofp.v2f64.v2i8(<2 x i8> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi16_v2f32 = call <2 x float> @llvm.vp.uitofp.v2f32.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi16_v2f64 = call <2 x double> @llvm.vp.uitofp.v2f64.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi32_v2f32 = call <2 x float> @llvm.vp.uitofp.v2f32.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi32_v2f64 = call <2 x double> @llvm.vp.uitofp.v2f64.v2i32(<2 x i32> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi64_v2f32 = call <2 x float> @llvm.vp.uitofp.v2f32.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi64_v2f64 = call <2 x double> @llvm.vp.uitofp.v2f64.v2i64(<2 x i64> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi1_v2f32 = call <2 x float> @llvm.vp.uitofp.v2f32.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
+  %vp_v2fi1_v2f64 = call <2 x double> @llvm.vp.uitofp.v2f64.v2i1(<2 x i1> undef, <2 x i1> undef, i32 undef)
 
   %v4i8_v4f32 = uitofp <4 x i8> undef to <4 x float>
   %v4i8_v4f64 = uitofp <4 x i8> undef to <4 x double>
@@ -6619,16 +6619,16 @@ define void @uitofp() {
   %v4i1_v4f32 = uitofp <4 x i1> undef to <4 x float>
   %v4i1_v4f64 = uitofp <4 x i1> undef to <4 x double>
 
-  %vp_v4fi8_v4f32 = call <4 x float> @llvm.vp.uitofp.v4i8.v4float(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi8_v4f64 = call <4 x double> @llvm.vp.uitofp.v4i8.v4double(<4 x i8> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi16_v4f32 = call <4 x float> @llvm.vp.uitofp.v4i16.v4float(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi16_v4f64 = call <4 x double> @llvm.vp.uitofp.v4i16.v4double(<4 x i16> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi32_v4f32 = call <4 x float> @llvm.vp.uitofp.v4i32.v4float(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi32_v4f64 = call <4 x double> @llvm.vp.uitofp.v4i32.v4double(<4 x i32> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi64_v4f32 = call <4 x float> @llvm.vp.uitofp.v4i64.v4float(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi64_v4f64 = call <4 x double> @llvm.vp.uitofp.v4i64.v4double(<4 x i64> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi1_v4f32 = call <4 x float> @llvm.vp.uitofp.v4i1.v4float(<4 x i1> undef, <4 x i1> undef, i32 undef)
-  %vp_v4fi1_v4f64 = call <4 x double> @llvm.vp.uitofp.v4i1.v4double(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi8_v4f32 = call <4 x float> @llvm.vp.uitofp.v4f32.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi8_v4f64 = call <4 x double> @llvm.vp.uitofp.v4f64.v4i8(<4 x i8> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi16_v4f32 = call <4 x float> @llvm.vp.uitofp.v4f32.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi16_v4f64 = call <4 x double> @llvm.vp.uitofp.v4f64.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi32_v4f32 = call <4 x float> @llvm.vp.uitofp.v4f32.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi32_v4f64 = call <4 x double> @llvm.vp.uitofp.v4f64.v4i32(<4 x i32> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi64_v4f32 = call <4 x float> @llvm.vp.uitofp.v4f32.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi64_v4f64 = call <4 x double> @llvm.vp.uitofp.v4f64.v4i64(<4 x i64> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi1_v4f32 = call <4 x float> @llvm.vp.uitofp.v4f32.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
+  %vp_v4fi1_v4f64 = call <4 x double> @llvm.vp.uitofp.v4f64.v4i1(<4 x i1> undef, <4 x i1> undef, i32 undef)
 
   %v8i8_v8f32 = uitofp <8 x i8> undef to <8 x float>
   %v8i8_v8f64 = uitofp <8 x i8> undef to <8 x double>
@@ -6641,16 +6641,16 @@ define void @uitofp() {
   %v8i1_v8f32 = uitofp <8 x i1> undef to <8 x float>
   %v8i1_v8f64 = uitofp <8 x i1> undef to <8 x double>
 
-  %vp_v8fi8_v8f32 = call <8 x float> @llvm.vp.uitofp.v8i8.v8float(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi8_v8f64 = call <8 x double> @llvm.vp.uitofp.v8i8.v8double(<8 x i8> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi16_v8f32 = call <8 x float> @llvm.vp.uitofp.v8i16.v8float(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi16_v8f64 = call <8 x double> @llvm.vp.uitofp.v8i16.v8double(<8 x i16> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi32_v8f32 = call <8 x float> @llvm.vp.uitofp.v8i32.v8float(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi32_v8f64 = call <8 x double> @llvm.vp.uitofp.v8i32.v8double(<8 x i32> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi64_v8f32 = call <8 x float> @llvm.vp.uitofp.v8i64.v8float(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi64_v8f64 = call <8 x double> @llvm.vp.uitofp.v8i64.v8double(<8 x i64> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi1_v8f32 = call <8 x float> @llvm.vp.uitofp.v8i1.v8float(<8 x i1> undef, <8 x i1> undef, i32 undef)
-  %vp_v8fi1_v8f64 = call <8 x double> @llvm.vp.uitofp.v8i1.v8double(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi8_v8f32 = call <8 x float> @llvm.vp.uitofp.v8f32.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi8_v8f64 = call <8 x double> @llvm.vp.uitofp.v8f64.v8i8(<8 x i8> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi16_v8f32 = call <8 x float> @llvm.vp.uitofp.v8f32.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi16_v8f64 = call <8 x double> @llvm.vp.uitofp.v8f64.v8i16(<8 x i16> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi32_v8f32 = call <8 x float> @llvm.vp.uitofp.v8f32.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi32_v8f64 = call <8 x double> @llvm.vp.uitofp.v8f64.v8i32(<8 x i32> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi64_v8f32 = call <8 x float> @llvm.vp.uitofp.v8f32.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi64_v8f64 = call <8 x double> @llvm.vp.uitofp.v8f64.v8i64(<8 x i64> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi1_v8f32 = call <8 x float> @llvm.vp.uitofp.v8f32.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
+  %vp_v8fi1_v8f64 = call <8 x double> @llvm.vp.uitofp.v8f64.v8i1(<8 x i1> undef, <8 x i1> undef, i32 undef)
 
   %v16i8_v16f32 = uitofp <16 x i8> undef to <16 x float>
   %v16i8_v16f64 = uitofp <16 x i8> undef to <16 x double>
@@ -6663,16 +6663,16 @@ define void @uitofp() {
   %v16i1_v16f32 = uitofp <16 x i1> undef to <16 x float>
   %v16i1_v16f64 = uitofp <16 x i1> undef to <16 x double>
 
-  %vp_v16fi8_v16f32 = call <16 x float> @llvm.vp.uitofp.v16i8.v16float(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi8_v16f64 = call <16 x double> @llvm.vp.uitofp.v16i8.v16double(<16 x i8> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi16_v16f32 = call <16 x float> @llvm.vp.uitofp.v16i16.v16float(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi16_v16f64 = call <16 x double> @llvm.vp.uitofp.v16i16.v16double(<16 x i16> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi32_v16f32 = call <16 x float> @llvm.vp.uitofp.v16i32.v16float(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi32_v16f64 = call <16 x double> @llvm.vp.uitofp.v16i32.v16double(<16 x i32> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi64_v16f32 = call <16 x float> @llvm.vp.uitofp.v16i64.v16float(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi64_v16f64 = call <16 x double> @llvm.vp.uitofp.v16i64.v16double(<16 x i64> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi1_v16f32 = call <16 x float> @llvm.vp.uitofp.v16i1.v16float(<16 x i1> undef, <16 x i1> undef, i32 undef)
-  %vp_v16fi1_v16f64 = call <16 x double> @llvm.vp.uitofp.v16i1.v16double(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi8_v16f32 = call <16 x float> @llvm.vp.uitofp.v16f32.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi8_v16f64 = call <16 x double> @llvm.vp.uitofp.v16f64.v16i8(<16 x i8> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi16_v16f32 = call <16 x float> @llvm.vp.uitofp.v16f32.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi16_v16f64 = call <16 x double> @llvm.vp.uitofp.v16f64.v16i16(<16 x i16> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi32_v16f32 = call <16 x float> @llvm.vp.uitofp.v16f32.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi32_v16f64 = call <16 x double> @llvm.vp.uitofp.v16f64.v16i32(<16 x i32> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi64_v16f32 = call <16 x float> @llvm.vp.uitofp.v16f32.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi64_v16f64 = call <16 x double> @llvm.vp.uitofp.v16f64.v16i64(<16 x i64> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi1_v16f32 = call <16 x float> @llvm.vp.uitofp.v16f32.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
+  %vp_v16fi1_v16f64 = call <16 x double> @llvm.vp.uitofp.v16f64.v16i1(<16 x i1> undef, <16 x i1> undef, i32 undef)
 
   %v32i8_v32f32 = uitofp <32 x i8> undef to <32 x float>
   %v32i8_v32f64 = uitofp <32 x i8> undef to <32 x double>
@@ -6685,16 +6685,16 @@ define void @uitofp() {
   %v32i1_v32f32 = uitofp <32 x i1> undef to <32 x float>
   %v32i1_v32f64 = uitofp <32 x i1> undef to <32 x double>
 
-  %vp_v32fi8_v32f32 = call <32 x float> @llvm.vp.uitofp.v32i8.v32float(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi8_v32f64 = call <32 x double> @llvm.vp.uitofp.v32i8.v32double(<32 x i8> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi16_v32f32 = call <32 x float> @llvm.vp.uitofp.v32i16.v32float(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi16_v32f64 = call <32 x double> @llvm.vp.uitofp.v32i16.v32double(<32 x i16> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi32_v32f32 = call <32 x float> @llvm.vp.uitofp.v32i32.v32float(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi32_v32f64 = call <32 x double> @llvm.vp.uitofp.v32i32.v32double(<32 x i32> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi64_v32f32 = call <32 x float> @llvm.vp.uitofp.v32i64.v32float(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi64_v32f64 = call <32 x double> @llvm.vp.uitofp.v32i64.v32double(<32 x i64> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi1_v32f32 = call <32 x float> @llvm.vp.uitofp.v32i1.v32float(<32 x i1> undef, <32 x i1> undef, i32 undef)
-  %vp_v32fi1_v32f64 = call <32 x double> @llvm.vp.uitofp.v32i1.v32double(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi8_v32f32 = call <32 x float> @llvm.vp.uitofp.v32f32.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi8_v32f64 = call <32 x double> @llvm.vp.uitofp.v32f64.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi16_v32f32 = call <32 x float> @llvm.vp.uitofp.v32f32.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi16_v32f64 = call <32 x double> @llvm.vp.uitofp.v32f64.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi32_v32f32 = call <32 x float> @llvm.vp.uitofp.v32f32.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi32_v32f64 = call <32 x double> @llvm.vp.uitofp.v32f64.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi64_v32f32 = call <32 x float> @llvm.vp.uitofp.v32f32.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi64_v32f64 = call <32 x double> @llvm.vp.uitofp.v32f64.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi1_v32f32 = call <32 x float> @llvm.vp.uitofp.v32f32.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
+  %vp_v32fi1_v32f64 = call <32 x double> @llvm.vp.uitofp.v32f64.v32i1(<32 x i1> undef, <32 x i1> undef, i32 undef)
 
   %v64i8_v64f32 = uitofp <64 x i8> undef to <64 x float>
   %v64i8_v64f64 = uitofp <64 x i8> undef to <64 x double>
@@ -6707,16 +6707,16 @@ define void @uitofp() {
   %v64i1_v64f32 = uitofp <64 x i1> undef to <64 x float>
   %v64i1_v64f64 = uitofp <64 x i1> undef to <64 x double>
 
-  %vp_v64fi8_v64f32 = call <64 x float> @llvm.vp.uitofp.v64i8.v64float(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi8_v64f64 = call <64 x double> @llvm.vp.uitofp.v64i8.v64double(<64 x i8> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi16_v64f32 = call <64 x float> @llvm.vp.uitofp.v64i16.v64float(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi16_v64f64 = call <64 x double> @llvm.vp.uitofp.v64i16.v64double(<64 x i16> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi32_v64f32 = call <64 x float> @llvm.vp.uitofp.v64i32.v64float(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi32_v64f64 = call <64 x double> @llvm.vp.uitofp.v64i32.v64double(<64 x i32> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi64_v64f32 = call <64 x float> @llvm.vp.uitofp.v64i64.v64float(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi64_v64f64 = call <64 x double> @llvm.vp.uitofp.v64i64.v64double(<64 x i64> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi1_v64f32 = call <64 x float> @llvm.vp.uitofp.v64i1.v64float(<64 x i1> undef, <64 x i1> undef, i32 undef)
-  %vp_v64fi1_v64f64 = call <64 x double> @llvm.vp.uitofp.v64i1.v64double(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi8_v64f32 = call <64 x float> @llvm.vp.uitofp.v64f32.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi8_v64f64 = call <64 x double> @llvm.vp.uitofp.v64f64.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi16_v64f32 = call <64 x float> @llvm.vp.uitofp.v64f32.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi16_v64f64 = call <64 x double> @llvm.vp.uitofp.v64f64.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi32_v64f32 = call <64 x float> @llvm.vp.uitofp.v64f32.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi32_v64f64 = call <64 x double> @llvm.vp.uitofp.v64f64.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi64_v64f32 = call <64 x float> @llvm.vp.uitofp.v64f32.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi64_v64f64 = call <64 x double> @llvm.vp.uitofp.v64f64.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi1_v64f32 = call <64 x float> @llvm.vp.uitofp.v64f32.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
+  %vp_v64fi1_v64f64 = call <64 x double> @llvm.vp.uitofp.v64f64.v64i1(<64 x i1> undef, <64 x i1> undef, i32 undef)
 
   %v128i8_v128f32 = uitofp <128 x i8> undef to <128 x float>
   %v128i8_v128f64 = uitofp <128 x i8> undef to <128 x double>
@@ -6729,16 +6729,16 @@ define void @uitofp() {
   %v128i1_v128f32 = uitofp <128 x i1> undef to <128 x float>
   %v128i1_v128f64 = uitofp <128 x i1> undef to <128 x double>
 
-  %vp_v128fi8_v128f32 = call <128 x float> @llvm.vp.uitofp.v128i8.v128float(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi8_v128f64 = call <128 x double> @llvm.vp.uitofp.v128i8.v128double(<128 x i8> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi16_v128f32 = call <128 x float> @llvm.vp.uitofp.v128i16.v128float(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi16_v128f64 = call <128 x double> @llvm.vp.uitofp.v128i16.v128double(<128 x i16> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi32_v128f32 = call <128 x float> @llvm.vp.uitofp.v128i32.v128float(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi32_v128f64 = call <128 x double> @llvm.vp.uitofp.v128i32.v128double(<128 x i32> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi64_v128f32 = call <128 x float> @llvm.vp.uitofp.v128i64.v128float(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi64_v128f64 = call <128 x double> @llvm.vp.uitofp.v128i64.v128double(<128 x i64> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi1_v128f32 = call <128 x float> @llvm.vp.uitofp.v128i1.v128float(<128 x i1> undef, <128 x i1> undef, i32 undef)
-  %vp_v128fi1_v128f64 = call <128 x double> @llvm.vp.uitofp.v128i1.v128double(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi8_v128f32 = call <128 x float> @llvm.vp.uitofp.v128f32.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi8_v128f64 = call <128 x double> @llvm.vp.uitofp.v128f64.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi16_v128f32 = call <128 x float> @llvm.vp.uitofp.v128f32.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi16_v128f64 = call <128 x double> @llvm.vp.uitofp.v128f64.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi32_v128f32 = call <128 x float> @llvm.vp.uitofp.v128f32.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi32_v128f64 = call <128 x double> @llvm.vp.uitofp.v128f64.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi64_v128f32 = call <128 x float> @llvm.vp.uitofp.v128f32.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi64_v128f64 = call <128 x double> @llvm.vp.uitofp.v128f64.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi1_v128f32 = call <128 x float> @llvm.vp.uitofp.v128f32.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
+  %vp_v128fi1_v128f64 = call <128 x double> @llvm.vp.uitofp.v128f64.v128i1(<128 x i1> undef, <128 x i1> undef, i32 undef)
 
   %nxv1i8_nxv1f32 = uitofp <vscale x 1 x i8> undef to <vscale x 1 x float>
   %nxv1i8_nxv1f64 = uitofp <vscale x 1 x i8> undef to <vscale x 1 x double>
@@ -6751,16 +6751,16 @@ define void @uitofp() {
   %nxv1i1_nxv1f32 = uitofp <vscale x 1 x i1> undef to <vscale x 1 x float>
   %nxv1i1_nxv1f64 = uitofp <vscale x 1 x i1> undef to <vscale x 1 x double>
 
-  %vp_nxv1fi8_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1i8.nxv1float(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi8_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1i8.nxv1double(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi16_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1i16.nxv1float(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi16_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1i16.nxv1double(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi32_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1i32.nxv1float(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi32_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1i32.nxv1double(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi64_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1i64.nxv1float(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi64_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1i64.nxv1double(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi1_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1i1.nxv1float(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
-  %vp_nxv1fi1_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1i1.nxv1double(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi8_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1f32.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi8_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1f64.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi16_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1f32.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi16_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1f64.nxv1i16(<vscale x 1 x i16> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi32_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1f32.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi32_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1f64.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi64_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1f32.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi64_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1f64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi1_nxv1f32 = call <vscale x 1 x float> @llvm.vp.uitofp.nxv1f32.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
+  %vp_nxv1fi1_nxv1f64 = call <vscale x 1 x double> @llvm.vp.uitofp.nxv1f64.nxv1i1(<vscale x 1 x i1> undef, <vscale x 1 x i1> undef, i32 undef)
 
   %nxv2i8_nxv2f32 = uitofp <vscale x 2 x i8> undef to <vscale x 2 x float>
   %nxv2i8_nxv2f64 = uitofp <vscale x 2 x i8> undef to <vscale x 2 x double>
@@ -6773,16 +6773,16 @@ define void @uitofp() {
   %nxv2i1_nxv2f32 = uitofp <vscale x 2 x i1> undef to <vscale x 2 x float>
   %nxv2i1_nxv2f64 = uitofp <vscale x 2 x i1> undef to <vscale x 2 x double>
 
-  %vp_nxv2fi8_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2i8.nxv2float(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi8_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2i8.nxv2double(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi16_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2i16.nxv2float(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi16_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2i16.nxv2double(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi32_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2i32.nxv2float(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi32_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2i32.nxv2double(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi64_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2i64.nxv2float(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi64_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2i64.nxv2double(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi1_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2i1.nxv2float(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
-  %vp_nxv2fi1_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2i1.nxv2double(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi8_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi8_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i8(<vscale x 2 x i8> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi16_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi16_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi32_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi32_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi64_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi64_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi1_nxv2f32 = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
+  %vp_nxv2fi1_nxv2f64 = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i1(<vscale x 2 x i1> undef, <vscale x 2 x i1> undef, i32 undef)
 
   %nxv4i8_nxv4f32 = uitofp <vscale x 4 x i8> undef to <vscale x 4 x float>
   %nxv4i8_nxv4f64 = uitofp <vscale x 4 x i8> undef to <vscale x 4 x double>
@@ -6795,16 +6795,16 @@ define void @uitofp() {
   %nxv4i1_nxv4f32 = uitofp <vscale x 4 x i1> undef to <vscale x 4 x float>
   %nxv4i1_nxv4f64 = uitofp <vscale x 4 x i1> undef to <vscale x 4 x double>
 
-  %vp_nxv4fi8_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4i8.nxv4float(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi8_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4i8.nxv4double(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi16_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4i16.nxv4float(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi16_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4i16.nxv4double(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi32_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4i32.nxv4float(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi32_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4i32.nxv4double(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi64_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4i64.nxv4float(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi64_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4i64.nxv4double(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi1_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4i1.nxv4float(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
-  %vp_nxv4fi1_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4i1.nxv4double(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi8_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4f32.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi8_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4f64.nxv4i8(<vscale x 4 x i8> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi16_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4f32.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi16_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4f64.nxv4i16(<vscale x 4 x i16> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi32_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4f32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi32_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4f64.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi64_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4f32.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi64_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4f64.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi1_nxv4f32 = call <vscale x 4 x float> @llvm.vp.uitofp.nxv4f32.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
+  %vp_nxv4fi1_nxv4f64 = call <vscale x 4 x double> @llvm.vp.uitofp.nxv4f64.nxv4i1(<vscale x 4 x i1> undef, <vscale x 4 x i1> undef, i32 undef)
 
   %nxv8i8_nxv8f32 = uitofp <vscale x 8 x i8> undef to <vscale x 8 x float>
   %nxv8i8_nxv8f64 = uitofp <vscale x 8 x i8> undef to <vscale x 8 x double>
@@ -6817,16 +6817,16 @@ define void @uitofp() {
   %nxv8i1_nxv8f32 = uitofp <vscale x 8 x i1> undef to <vscale x 8 x float>
   %nxv8i1_nxv8f64 = uitofp <vscale x 8 x i1> undef to <vscale x 8 x double>
 
-  %vp_nxv8fi8_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8i8.nxv8float(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi8_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8i8.nxv8double(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi16_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8i16.nxv8float(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi16_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8i16.nxv8double(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi32_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8i32.nxv8float(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi32_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8i32.nxv8double(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi64_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8i64.nxv8float(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi64_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8i64.nxv8double(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi1_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8i1.nxv8float(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
-  %vp_nxv8fi1_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8i1.nxv8double(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi8_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8f32.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi8_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8f64.nxv8i8(<vscale x 8 x i8> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi16_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8f32.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi16_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8f64.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi32_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8f32.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi32_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8f64.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi64_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8f32.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi64_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8f64.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi1_nxv8f32 = call <vscale x 8 x float> @llvm.vp.uitofp.nxv8f32.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
+  %vp_nxv8fi1_nxv8f64 = call <vscale x 8 x double> @llvm.vp.uitofp.nxv8f64.nxv8i1(<vscale x 8 x i1> undef, <vscale x 8 x i1> undef, i32 undef)
 
   %nxv16i8_nxv16f32 = uitofp <vscale x 16 x i8> undef to <vscale x 16 x float>
   %nxv16i8_nxv16f64 = uitofp <vscale x 16 x i8> undef to <vscale x 16 x double>
@@ -6839,16 +6839,16 @@ define void @uitofp() {
   %nxv16i1_nxv16f32 = uitofp <vscale x 16 x i1> undef to <vscale x 16 x float>
   %nxv16i1_nxv16f64 = uitofp <vscale x 16 x i1> undef to <vscale x 16 x double>
 
-  %vp_nxv16fi8_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16i8.nxv16float(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi8_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16i8.nxv16double(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi16_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16i16.nxv16float(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi16_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16i16.nxv16double(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi32_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16i32.nxv16float(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi32_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16i32.nxv16double(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi64_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16i64.nxv16float(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi64_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16i64.nxv16double(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi1_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16i1.nxv16float(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
-  %vp_nxv16fi1_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16i1.nxv16double(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi8_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16f32.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi8_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16f64.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi16_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16f32.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi16_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16f64.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi32_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16f32.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi32_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16f64.nxv16i32(<vscale x 16 x i32> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi64_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16f32.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi64_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16f64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi1_nxv16f32 = call <vscale x 16 x float> @llvm.vp.uitofp.nxv16f32.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
+  %vp_nxv16fi1_nxv16f64 = call <vscale x 16 x double> @llvm.vp.uitofp.nxv16f64.nxv16i1(<vscale x 16 x i1> undef, <vscale x 16 x i1> undef, i32 undef)
 
   %nxv32i8_nxv32f32 = uitofp <vscale x 32 x i8> undef to <vscale x 32 x float>
   %nxv32i8_nxv32f64 = uitofp <vscale x 32 x i8> undef to <vscale x 32 x double>
@@ -6861,16 +6861,16 @@ define void @uitofp() {
   %nxv32i1_nxv32f32 = uitofp <vscale x 32 x i1> undef to <vscale x 32 x float>
   %nxv32i1_nxv32f64 = uitofp <vscale x 32 x i1> undef to <vscale x 32 x double>
 
-  %vp_nxv32fi8_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32i8.nxv32float(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi8_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32i8.nxv32double(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi16_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32i16.nxv32float(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi16_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32i16.nxv32double(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi32_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32i32.nxv32float(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi32_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32i32.nxv32double(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi64_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32i64.nxv32float(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi64_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32i64.nxv32double(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi1_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32i1.nxv32float(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
-  %vp_nxv32fi1_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32i1.nxv32double(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi8_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32f32.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi8_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32f64.nxv32i8(<vscale x 32 x i8> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi16_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32f32.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi16_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32f64.nxv32i16(<vscale x 32 x i16> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi32_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32f32.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi32_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32f64.nxv32i32(<vscale x 32 x i32> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi64_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32f32.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi64_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32f64.nxv32i64(<vscale x 32 x i64> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi1_nxv32f32 = call <vscale x 32 x float> @llvm.vp.uitofp.nxv32f32.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
+  %vp_nxv32fi1_nxv32f64 = call <vscale x 32 x double> @llvm.vp.uitofp.nxv32f64.nxv32i1(<vscale x 32 x i1> undef, <vscale x 32 x i1> undef, i32 undef)
 
   %nxv64i8_nxv64f32 = uitofp <vscale x 64 x i8> undef to <vscale x 64 x float>
   %nxv64i8_nxv64f64 = uitofp <vscale x 64 x i8> undef to <vscale x 64 x double>
@@ -6883,16 +6883,16 @@ define void @uitofp() {
   %nxv64i1_nxv64f32 = uitofp <vscale x 64 x i1> undef to <vscale x 64 x float>
   %nxv64i1_nxv64f64 = uitofp <vscale x 64 x i1> undef to <vscale x 64 x double>
 
-  %vp_nxv64fi8_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64i8.nxv64float(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi8_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64i8.nxv64double(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi16_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64i16.nxv64float(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi16_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64i16.nxv64double(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi32_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64i32.nxv64float(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi32_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64i32.nxv64double(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi64_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64i64.nxv64float(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi64_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64i64.nxv64double(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi1_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64i1.nxv64float(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
-  %vp_nxv64fi1_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64i1.nxv64double(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi8_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64f32.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi8_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64f64.nxv64i8(<vscale x 64 x i8> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi16_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64f32.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi16_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64f64.nxv64i16(<vscale x 64 x i16> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi32_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64f32.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi32_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64f64.nxv64i32(<vscale x 64 x i32> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi64_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64f32.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi64_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64f64.nxv64i64(<vscale x 64 x i64> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi1_nxv64f32 = call <vscale x 64 x float> @llvm.vp.uitofp.nxv64f32.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
+  %vp_nxv64fi1_nxv64f64 = call <vscale x 64 x double> @llvm.vp.uitofp.nxv64f64.nxv64i1(<vscale x 64 x i1> undef, <vscale x 64 x i1> undef, i32 undef)
 
   ret void
 }
@@ -6957,5 +6957,31 @@ define void @oddvec_sizes() {
   fptoui <7 x float> undef to <7 x i32>
   fptoui <15 x float> undef to <15 x i32>
 
+  ret void
+}
+
+; This test exercises cases which involve both vector widening and
+; vector splitting.  We previously crashed on this case due to an
+; infinite recursion between cast costing and scalarization costing.
+define void @legalization_crash() {
+; CHECK-LABEL: 'legalization_crash'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16700 for instruction: %1 = bitcast <24 x i8> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %2 = trunc <192 x i8> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %3 = zext <192 x i1> undef to <192 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %4 = sext <192 x i1> undef to <192 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 948 for instruction: %5 = sitofp <192 x i1> undef to <192 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 948 for instruction: %6 = uitofp <192 x i1> undef to <192 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16892 for instruction: %7 = fptosi <192 x float> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16892 for instruction: %8 = fptoui <192 x float> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  bitcast <24 x i8> undef to <192 x i1>
+  trunc <192 x i8> undef to <192 x i1>
+  zext <192 x i1> undef to <192 x i8>
+  sext <192 x i1> undef to <192 x i8>
+  sitofp <192 x i1> undef to <192 x float>
+  uitofp <192 x i1> undef to <192 x float>
+  fptosi <192 x float> undef to <192 x i1>
+  fptoui <192 x float> undef to <192 x i1>
   ret void
 }

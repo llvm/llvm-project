@@ -14,8 +14,14 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 using namespace llvm;
 
@@ -113,7 +119,8 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
 }
 
 // Convert NVVM intrinsics to target-generic LLVM code where possible.
-static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
+static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
+                                               IntrinsicInst *II) {
   // Each NVVM intrinsic we can simplify can be replaced with one of:
   //
   //  * an LLVM intrinsic,
@@ -134,6 +141,7 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // simplify.
   enum SpecialCase {
     SPC_Reciprocal,
+    SCP_FunnelShiftClamp,
   };
 
   // SimplifyAction is a poor-man's variant (plus an additional flag) that
@@ -314,6 +322,10 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     case Intrinsic::nvvm_rcp_rn_d:
       return {SPC_Reciprocal, FTZ_Any};
 
+    case Intrinsic::nvvm_fshl_clamp:
+    case Intrinsic::nvvm_fshr_clamp:
+      return {SCP_FunnelShiftClamp, FTZ_Any};
+
       // We do not currently simplify intrinsics that give an approximate
       // answer. These include:
       //
@@ -360,7 +372,8 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
     return CallInst::Create(
-        Intrinsic::getDeclaration(II->getModule(), *Action.IID, Tys), Args);
+        Intrinsic::getOrInsertDeclaration(II->getModule(), *Action.IID, Tys),
+        Args);
   }
 
   // Simplify to target-generic binary op.
@@ -383,15 +396,85 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     return BinaryOperator::Create(
         Instruction::FDiv, ConstantFP::get(II->getArgOperand(0)->getType(), 1),
         II->getArgOperand(0), II->getName());
+
+  case SCP_FunnelShiftClamp: {
+    // Canonicalize a clamping funnel shift to the generic llvm funnel shift
+    // when possible, as this is easier for llvm to optimize further.
+    if (const auto *ShiftConst = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
+      const bool IsLeft = II->getIntrinsicID() == Intrinsic::nvvm_fshl_clamp;
+      if (ShiftConst->getZExtValue() >= II->getType()->getIntegerBitWidth())
+        return IC.replaceInstUsesWith(*II, II->getArgOperand(IsLeft ? 1 : 0));
+
+      const unsigned FshIID = IsLeft ? Intrinsic::fshl : Intrinsic::fshr;
+      return CallInst::Create(Intrinsic::getOrInsertDeclaration(
+                                  II->getModule(), FshIID, II->getType()),
+                              SmallVector<Value *, 3>(II->args()));
+    }
+    return nullptr;
+  }
   }
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
+// Returns an instruction pointer (may be nullptr if we do not know the answer).
+// Returns nullopt if `II` is not one of the `isspacep` intrinsics.
+static std::optional<Instruction *>
+handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
+  // Returns true/false when we know the answer, nullopt otherwise.
+  auto CheckASMatch = [](unsigned IID, unsigned AS) -> std::optional<bool> {
+    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+        AS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      return std::nullopt; // Got to check at run-time.
+    switch (IID) {
+    case Intrinsic::nvvm_isspacep_global:
+      return AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+    case Intrinsic::nvvm_isspacep_local:
+      return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
+    case Intrinsic::nvvm_isspacep_shared:
+      return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    case Intrinsic::nvvm_isspacep_shared_cluster:
+      // We can't tell shared from shared_cluster at compile time from AS alone,
+      // but it can't be either is AS is not shared.
+      return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
+                                                 : std::optional{false};
+    case Intrinsic::nvvm_isspacep_const:
+      return AS == NVPTXAS::ADDRESS_SPACE_CONST;
+    default:
+      llvm_unreachable("Unexpected intrinsic");
+    }
+  };
+
+  switch (auto IID = II.getIntrinsicID()) {
+  case Intrinsic::nvvm_isspacep_global:
+  case Intrinsic::nvvm_isspacep_local:
+  case Intrinsic::nvvm_isspacep_shared:
+  case Intrinsic::nvvm_isspacep_shared_cluster:
+  case Intrinsic::nvvm_isspacep_const: {
+    Value *Op0 = II.getArgOperand(0);
+    unsigned AS = Op0->getType()->getPointerAddressSpace();
+    // Peek through ASC to generic AS.
+    // TODO: we could dig deeper through both ASCs and GEPs.
+    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC)
+      if (auto *ASCO = dyn_cast<AddrSpaceCastOperator>(Op0))
+        AS = ASCO->getOperand(0)->getType()->getPointerAddressSpace();
+
+    if (std::optional<bool> Answer = CheckASMatch(IID, AS))
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::get(II.getType(), *Answer));
+    return nullptr; // Don't know the answer, got to check at run time.
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
-  if (Instruction *I = simplifyNvvmIntrinsic(&II, IC)) {
+  if (std::optional<Instruction *> I = handleSpaceCheckIntrinsics(IC, II))
+    return *I;
+  if (Instruction *I = convertNvvmIntrinsicToLlvm(IC, &II))
     return I;
-  }
+
   return std::nullopt;
 }
 

@@ -89,3 +89,10 @@ func.func @optional_location_specifier() {
   test.attr_with_loc("foo" loc("foo_loc"))
   return
 }
+
+// CHECK-LABEL: @dialect_location
+// CHECK: test.attr_with_loc("dialectLoc" loc(#test.custom_location<"foo.mlir" * 32>))
+func.func @dialect_location() {
+  test.attr_with_loc("dialectLoc" loc(#test.custom_location<"foo.mlir"*32>))
+  return
+}

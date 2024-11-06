@@ -60,7 +60,7 @@ export namespace std {
   using std::atomic_char _LIBCPP_USING_IF_EXISTS;
   using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
   using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
   using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
 #endif
   using std::atomic_int _LIBCPP_USING_IF_EXISTS;

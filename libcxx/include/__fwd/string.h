@@ -24,7 +24,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits;
 template <>
 struct char_traits<char>;
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <>
 struct char_traits<char8_t>;
 #endif
@@ -48,7 +48,7 @@ using string = basic_string<char>;
 using wstring = basic_string<wchar_t>;
 #endif
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 using u8string = basic_string<char8_t>;
 #endif
 
@@ -67,7 +67,7 @@ using string _LIBCPP_AVAILABILITY_PMR = basic_string<char>;
 using wstring _LIBCPP_AVAILABILITY_PMR = basic_string<wchar_t>;
 #  endif
 
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 using u8string _LIBCPP_AVAILABILITY_PMR = basic_string<char8_t>;
 #  endif
 
@@ -83,7 +83,7 @@ class _LIBCPP_PREFERRED_NAME(string)
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
       _LIBCPP_PREFERRED_NAME(wstring)
 #endif
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
       _LIBCPP_PREFERRED_NAME(u8string)
 #endif
       _LIBCPP_PREFERRED_NAME(u16string)
@@ -93,7 +93,7 @@ class _LIBCPP_PREFERRED_NAME(string)
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
       _LIBCPP_PREFERRED_NAME(pmr::wstring)
 #  endif
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
       _LIBCPP_PREFERRED_NAME(pmr::u8string)
 #  endif
       _LIBCPP_PREFERRED_NAME(pmr::u16string)
