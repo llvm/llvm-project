@@ -47,7 +47,6 @@ public:
 
 protected:
   mutable StringMap<std::unique_ptr<XtensaSubtarget>> SubtargetMap;
-
 };
 } // end namespace llvm
 
