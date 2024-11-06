@@ -4694,10 +4694,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   // Keep a chain of previous declarations.
   New->setPreviousDecl(Old);
-  if (NewTemplate) {
-    NewTemplate->mergePrevDecl(OldTemplate);
+  if (NewTemplate)
     NewTemplate->setPreviousDecl(OldTemplate);
-  }
 
   // Inherit access appropriately.
   New->setAccess(Old->getAccess());
