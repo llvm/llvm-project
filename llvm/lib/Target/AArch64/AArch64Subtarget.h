@@ -417,6 +417,8 @@ public:
     return DefaultSVETFOpts;
   }
 
+  bool useScalarIncVL() const;
+
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
