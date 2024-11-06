@@ -9764,6 +9764,12 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     // The following code enables it for SReg_64 operands
     // used as source and destination. Remaining source
     // operands are handled in isInlinableImm.
+    //
+    // Additionally, allow null where destination of 128-bit or larger is
+    // expected.
+  case MCK_SReg_128:
+  case MCK_SReg_256:
+  case MCK_SReg_512:
     return Operand.isNull() ? Match_Success : Match_InvalidOperand;
   default:
     return Match_InvalidOperand;
