@@ -7,7 +7,7 @@ struct Foo {
   void f1(this auto &self, int a) { self.a = a; }
   void f2(int a) { } // expected-warning {{declaration shadows a field of 'GH95707::Foo'}}
   void f3() {
-    [&](this auto &self, int x) { }; // expected-warning {{expression result unused}}
+    (void)[&](this auto &self, int x) { };
   }
 };
 } // namespace GH95707
