@@ -354,7 +354,8 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5, UseEPCSearchGen))
+        if (auto Err =
+                Interp->LoadDynamicLibrary(Input.data() + 5, UseEPCSearchGen))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
