@@ -43,14 +43,15 @@ int setcontext(const ucontext_t *ucp);
 
 namespace __tsan {
 
-// The non-barrier versions of OSAtomic* functions are semantically mo_relaxed,
-// but the two variants (e.g. OSAtomicAdd32 and OSAtomicAdd32Barrier) are
-// actually aliases of each other, and we cannot have different interceptors for
-// them, because they're actually the same function.  Thus, we have to stay
-// conservative and treat the non-barrier versions as mo_acq_rel.
-static constexpr morder kMacOrderBarrier = mo_acq_rel;
-static constexpr morder kMacOrderNonBarrier = mo_acq_rel;
-static constexpr morder kMacFailureOrder = mo_relaxed;
+// The non-barrier versions of OSAtomic* functions are semantically
+// morder::relaxed, but the two variants (e.g. OSAtomicAdd32 and
+// OSAtomicAdd32Barrier) are actually aliases of each other, and we cannot have
+// different interceptors for them, because they're actually the same function.
+// Thus, we have to stay conservative and treat the non-barrier versions as
+// morder::acq_rel.
+static constexpr morder kMacOrderBarrier = morder::acq_rel;
+static constexpr morder kMacOrderNonBarrier = morder::acq_rel;
+static constexpr morder kMacFailureOrder = morder::relaxed;
 
 #  define OSATOMIC_INTERCEPTOR(return_t, t, tsan_t, f, tsan_atomic_f, mo) \
     TSAN_INTERCEPTOR(return_t, f, t x, volatile t *ptr) {                 \
@@ -467,7 +468,7 @@ struct fake_shared_weak_count {
 // Shared and weak pointers in C++ maintain reference counts via atomics in
 // libc++.dylib, which are TSan-invisible, and this leads to false positives in
 // destructor code. These interceptors re-implements the whole functions so that
-// the mo_acq_rel semantics of the atomic decrement are visible.
+// the morder::acq_rel semantics of the atomic decrement are visible.
 //
 // Unfortunately, the interceptors cannot simply Acquire/Release some sync
 // object and call the original function, because it would have a race between
@@ -482,11 +483,11 @@ STDCXX_INTERCEPTOR(void, _ZNSt3__119__shared_weak_count16__release_sharedEv,
 
   SCOPED_TSAN_INTERCEPTOR(_ZNSt3__119__shared_weak_count16__release_sharedEv,
                           o);
-  if (__tsan_atomic64_fetch_add(&o->shared_owners, -1, mo_release) == 0) {
+  if (__tsan_atomic64_fetch_add(&o->shared_owners, -1, morder::release) == 0) {
     Acquire(thr, pc, (uptr)&o->shared_owners);
     o->on_zero_shared();
-    if (__tsan_atomic64_fetch_add(&o->shared_weak_owners, -1, mo_release) ==
-        0) {
+    if (__tsan_atomic64_fetch_add(&o->shared_weak_owners, -1,
+                                  morder::release) == 0) {
       Acquire(thr, pc, (uptr)&o->shared_weak_owners);
       o->on_zero_shared_weak();
     }
@@ -499,7 +500,7 @@ STDCXX_INTERCEPTOR(bool, _ZNSt3__114__shared_count16__release_sharedEv,
     return REAL(_ZNSt3__114__shared_count16__release_sharedEv)(o);
 
   SCOPED_TSAN_INTERCEPTOR(_ZNSt3__114__shared_count16__release_sharedEv, o);
-  if (__tsan_atomic64_fetch_add(&o->shared_owners, -1, mo_release) == 0) {
+  if (__tsan_atomic64_fetch_add(&o->shared_owners, -1, morder::release) == 0) {
     Acquire(thr, pc, (uptr)&o->shared_owners);
     o->on_zero_shared();
     return true;
