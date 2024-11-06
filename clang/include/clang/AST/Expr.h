@@ -4145,7 +4145,7 @@ public:
   /// Does one of the subexpressions have the wraps attribute?
   bool hasWrappingOperand(const ASTContext &Ctx) const;
 
-  /// How about the no_wraps attribute?
+  /// Does one of the subexpressions have the no_wraps attribute?
   bool hasNonWrappingOperand(const ASTContext &Ctx) const;
 
 protected:

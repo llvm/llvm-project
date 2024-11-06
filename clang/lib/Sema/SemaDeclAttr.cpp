@@ -6963,6 +6963,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:
     handleAvailableOnlyInDefaultEvalMethod(S, D, AL);
     break;
+
   case ParsedAttr::AT_CountedBy:
   case ParsedAttr::AT_CountedByOrNull:
   case ParsedAttr::AT_SizedBy:
