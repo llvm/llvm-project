@@ -60,11 +60,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Func>
-_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) {
-  return f;
-}
-
 template <auto _Func>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
 
@@ -78,8 +73,8 @@ _LIBCPP_END_NAMESPACE_STD
     extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
-    constexpr bool __is_function_overridden<__overload_of<type arglist>(name)>() {                                     \
-      return __overload_of<type arglist>(name) != symbol##_impl__;                                                     \
+    constexpr bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                    \
+      return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
     type symbol##_impl__ arglist
@@ -87,11 +82,6 @@ _LIBCPP_END_NAMESPACE_STD
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Func>
-_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) {
-  return f;
-}
 
 template <auto _Func>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
@@ -104,8 +94,8 @@ _LIBCPP_END_NAMESPACE_STD
     [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
-    constexpr bool __is_function_overridden<__overload_of<type arglist>(name)>() {                                     \
-      return __overload_of<type arglist>(name) != symbol##_impl__;                                                     \
+    constexpr bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                    \
+      return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
     type symbol##_impl__ arglist
