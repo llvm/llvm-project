@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "Utility/LoongArch_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
@@ -56,11 +57,11 @@ namespace {
 namespace dwarf {
 enum regnums {
   r0,
-  ra,
-  r1 = ra,
+  r1,
+  ra = r1,
   r2,
-  sp,
-  r3 = sp,
+  r3,
+  sp = r3,
   r4,
   r5,
   r6,
@@ -79,8 +80,8 @@ enum regnums {
   r19,
   r20,
   r21,
-  fp,
-  r22 = fp,
+  r22,
+  fp = r22,
   r23,
   r24,
   r25,
@@ -154,7 +155,7 @@ ABISysV_loongarch::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   ABISysV_loongarch *abi =
       new ABISysV_loongarch(std::move(process_sp), MakeMCRegisterInfo(arch));
   if (abi)
-    abi->SetIsLA64((llvm::Triple::loongarch64 == machine) ? true : false);
+    abi->SetIsLA64(llvm::Triple::loongarch64 == machine);
   return ABISP(abi);
 }
 
@@ -211,11 +212,11 @@ bool ABISysV_loongarch::PrepareTrivialCall(Thread &thread, addr_t sp,
   for (auto [idx, arg] : enumerate(args)) {
     const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfo(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + idx);
-    LLDB_LOG(log, "About to write arg{0} (0x{1:x}) into {2}", idx, arg,
+    LLDB_LOG(log, "About to write arg{0} ({1:x}) into {2}", idx, arg,
              reg_info->name);
 
     if (!reg_ctx_sp->WriteRegisterFromUnsigned(reg_info, arg)) {
-      LLDB_LOG(log, "Failed to write arg{0} (0x{1:x}) into {2}", idx, arg,
+      LLDB_LOG(log, "Failed to write arg{0} ({1:x}) into {2}", idx, arg,
                reg_info->name);
       return false;
     }
@@ -231,7 +232,7 @@ bool ABISysV_loongarch::PrepareTrivialCall(Thread &thread, addr_t sp,
                       LLDB_REGNUM_GENERIC_RA, return_addr))
     return false;
 
-  LLDB_LOG(log, "ABISysV_riscv::{0}() success", __FUNCTION__);
+  LLDB_LOG(log, "ABISysV_loongarch::{0}() success", __FUNCTION__);
   return true;
 }
 
@@ -288,6 +289,10 @@ Status ABISysV_loongarch::SetReturnValueObject(StackFrameSP &frame_sp,
 
   offset_t offset = 0;
   uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
+  // According to psABI, i32 (no matter signed or unsigned) should be
+  // sign-extended in register.
+  if (4 == num_bytes && m_is_la64)
+    raw_value = llvm::SignExtend64<32>(raw_value);
   auto reg_info =
       reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {

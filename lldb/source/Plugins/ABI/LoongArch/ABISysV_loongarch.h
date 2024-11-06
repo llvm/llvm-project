@@ -97,8 +97,7 @@ private:
 
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance
                                                         // instead.
-  bool m_is_la64; // true if target is loongarch64; false if target is
-                  // loongarch32
+  bool m_is_la64;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_LOONGARCH_ABISYSV_LOONGARCH_H
