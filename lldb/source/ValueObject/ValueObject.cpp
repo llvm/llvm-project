@@ -2998,15 +2998,6 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
   AddressType address_type = eAddressTypeInvalid;
   const bool scalar_is_load_address = false;
-
-  // For reference type we need to get the address of the object that
-  // it refers to.
-  if (GetCompilerType().IsReferenceType()) {
-    ValueObjectSP deref_obj = Dereference(error);
-    if (error.Fail() || !deref_obj)
-      return ValueObjectSP();
-    return deref_obj->AddressOf(error);
-  }
   addr_t addr = GetAddressOf(scalar_is_load_address, &address_type);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
