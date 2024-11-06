@@ -216,7 +216,7 @@ define <4 x i64> @test_x86_avx2_psad_bw(<32 x i8> %a0, <32 x i8> %a1) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i8> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr <4 x i64> [[TMP6]], <i64 48, i64 48, i64 48, i64 48>
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr <4 x i64> [[TMP6]], splat (i64 48)
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8> [[A0:%.*]], <32 x i8> [[A1:%.*]])
 ; CHECK-NEXT:    store <4 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
@@ -885,9 +885,9 @@ define <32 x i8> @test_x86_avx2_pblendvb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <32 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = ashr <32 x i8> [[A2:%.*]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr <32 x i8> [[A2:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <32 x i8> [[TMP4]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <32 x i8> [[TMP1]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <32 x i8> [[TMP1]], splat (i8 7)
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <32 x i8> [[TMP6]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> [[TMP2]], <32 x i8> [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <32 x i8> [[A1:%.*]], [[A0:%.*]]
@@ -1438,7 +1438,7 @@ define <2 x i64> @test_x86_avx2_psrlv_q_const() #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 -1>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> <i64 4, i64 4>, <2 x i64> <i64 1, i64 -1>)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> splat (i64 4), <2 x i64> <i64 1, i64 -1>)
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -1471,7 +1471,7 @@ define <4 x i64> @test_x86_avx2_psrlv_q_256_const() #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> zeroinitializer, <4 x i64> <i64 1, i64 1, i64 1, i64 -1>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> <i64 4, i64 4, i64 4, i64 4>, <4 x i64> <i64 1, i64 1, i64 1, i64 -1>)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> splat (i64 4), <4 x i64> <i64 1, i64 1, i64 1, i64 -1>)
 ; CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
 ;
