@@ -1072,11 +1072,8 @@ define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 15, e8, m1, ta, ma
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v8, v8, v9
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 15, e8, m1, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8, v0.t
+; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
@@ -1551,12 +1548,8 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 31, e8, m2, ta, ma
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v10, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    li a0, 32
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v12, v8, v10
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 31, e8, m2, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v12, v0.t
+; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v12
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
@@ -1565,12 +1558,8 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vsetivli zero, 31, e8, m2, ta, ma
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v10, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    li a0, 32
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v12, v8, v10
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetivli zero, 31, e8, m2, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v12, v0.t
+; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v12
 ; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
@@ -2078,12 +2067,8 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v12, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    li a0, 64
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v16, v8, v12
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v16, v0.t
+; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v16
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
@@ -2093,12 +2078,8 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v12, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    li a0, 64
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v16, v8, v12
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v16, v0.t
+; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v16
 ; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
@@ -2498,12 +2479,8 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v16, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    li a0, 128
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v24, v8, v16
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v24, v0.t
+; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v24
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
@@ -2513,12 +2490,8 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v16, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    li a0, 128
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmset.m v0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v24, v8, v16
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v24, v0.t
+; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v24
 ; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:

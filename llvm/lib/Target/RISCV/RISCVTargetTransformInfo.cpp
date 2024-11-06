@@ -2527,7 +2527,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     Options.LoadSizes = {8, 4, 2, 1};
   else
     Options.LoadSizes = {4, 2, 1};
-  if (IsZeroCmp && ST->hasVInstructions()) {
+  if (IsZeroCmp && ST->hasVInstructions() && ST->enableUnalignedVectorMem()) {
     unsigned VLenB = ST->getRealMinVLen() / 8;
     // The minimum size should be the maximum bytes between `VLen * LMUL_MF8`
     // and `XLen * 2`.
