@@ -246,6 +246,8 @@ public:
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
+  MVT getScalarIntVT() const { return IsPPC64 ? MVT::i64 : MVT::i32; }
+
   /// Calculates the effective code model for argument GV.
   CodeModel::Model getCodeModel(const TargetMachine &TM,
                                 const GlobalValue *GV) const;

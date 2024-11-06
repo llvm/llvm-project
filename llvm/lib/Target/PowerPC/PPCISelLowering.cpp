@@ -183,6 +183,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // arguments are at least 4/8 bytes aligned.
   bool isPPC64 = Subtarget.isPPC64();
   setMinStackArgumentAlignment(isPPC64 ? Align(8) : Align(4));
+  const MVT RegVT = Subtarget.getScalarIntVT();
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &PPC::GPRCRegClass);
@@ -198,7 +199,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
-  setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
+  setOperationAction(ISD::UADDO, RegVT, Custom);
 
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
@@ -268,32 +269,24 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
     if (isPPC64 || Subtarget.hasFPCVT()) {
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_SINT_TO_FP, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_SINT_TO_FP, MVT::i1, RegVT);
       setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_UINT_TO_FP, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_UINT_TO_FP, MVT::i1, RegVT);
 
       setOperationAction(ISD::SINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType (ISD::SINT_TO_FP, MVT::i1,
-                         isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType (ISD::SINT_TO_FP, MVT::i1, RegVT);
       setOperationAction(ISD::UINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType(ISD::UINT_TO_FP, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::UINT_TO_FP, MVT::i1, RegVT);
 
       setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::i1, RegVT);
       setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::i1, RegVT);
 
       setOperationAction(ISD::FP_TO_SINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::FP_TO_SINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::FP_TO_SINT, MVT::i1, RegVT);
       setOperationAction(ISD::FP_TO_UINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::FP_TO_UINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::FP_TO_UINT, MVT::i1, RegVT);
     } else {
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i1, Custom);
       setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i1, Custom);
@@ -484,7 +477,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::i32, Expand);
     setOperationAction(
         ISD::BSWAP, MVT::i64,
-        (Subtarget.hasP9Vector() && Subtarget.isPPC64()) ? Custom : Expand);
+        (Subtarget.hasP9Vector() && isPPC64) ? Custom : Expand);
   }
 
   // CTPOP or CTTZ were introduced in P8/P9 respectively
@@ -709,7 +702,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
 
-    if (Subtarget.hasLFIWAX() || Subtarget.isPPC64()) {
+    if (Subtarget.hasLFIWAX() || isPPC64) {
       setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
     }
@@ -3191,9 +3184,8 @@ static void setUsesTOCBasePtr(SelectionDAG &DAG) {
 
 SDValue PPCTargetLowering::getTOCEntry(SelectionDAG &DAG, const SDLoc &dl,
                                        SDValue GA) const {
-  const bool Is64Bit = Subtarget.isPPC64();
-  EVT VT = Is64Bit ? MVT::i64 : MVT::i32;
-  SDValue Reg = Is64Bit ? DAG.getRegister(PPC::X2, VT)
+  EVT VT = Subtarget.getScalarIntVT();
+  SDValue Reg = Subtarget.isPPC64() ? DAG.getRegister(PPC::X2, VT)
                         : Subtarget.isAIXABI()
                               ? DAG.getRegister(PPC::R2, VT)
                               : DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
@@ -4009,7 +4001,7 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
   // TrampSize == (isPPC64 ? 48 : 40);
   Entry.Node = DAG.getConstant(isPPC64 ? 48 : 40, dl,
-                               isPPC64 ? MVT::i64 : MVT::i32);
+                               Subtarget.getScalarIntVT());
   Args.push_back(Entry);
 
   Entry.Node = FPtr; Args.push_back(Entry);
@@ -5237,12 +5229,11 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
     MachineFunction &MF = DAG.getMachineFunction();
     const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
     const PPCFrameLowering *FL = Subtarget.getFrameLowering();
-    bool isPPC64 = Subtarget.isPPC64();
-    int SlotSize = isPPC64 ? 8 : 4;
+    int SlotSize = Subtarget.isPPC64() ? 8 : 4;
     int NewRetAddrLoc = SPDiff + FL->getReturnSaveOffset();
     int NewRetAddr = MF.getFrameInfo().CreateFixedObject(SlotSize,
                                                          NewRetAddrLoc, true);
-    EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+    EVT VT = Subtarget.getScalarIntVT();
     SDValue NewRetAddrFrIdx = DAG.getFrameIndex(NewRetAddr, VT);
     Chain = DAG.getStore(Chain, dl, OldRetAddr, NewRetAddrFrIdx,
                          MachinePointerInfo::getFixedStack(MF, NewRetAddr));
@@ -5253,13 +5244,13 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
 /// CalculateTailCallArgDest - Remember Argument for later processing. Calculate
 /// the position of the argument.
 static void
-CalculateTailCallArgDest(SelectionDAG &DAG, MachineFunction &MF, bool isPPC64,
+CalculateTailCallArgDest(SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64,
                          SDValue Arg, int SPDiff, unsigned ArgOffset,
                      SmallVectorImpl<TailCallArgumentInfo>& TailCallArguments) {
   int Offset = ArgOffset + SPDiff;
   uint32_t OpSize = (Arg.getValueSizeInBits() + 7) / 8;
   int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
-  EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+  EVT VT = IsPPC64 ? MVT::i64 : MVT::i32;
   SDValue FIN = DAG.getFrameIndex(FI, VT);
   TailCallArgumentInfo Info;
   Info.Arg = Arg;
@@ -5276,7 +5267,7 @@ SDValue PPCTargetLowering::EmitTailCallLoadFPAndRetAddr(
     SDValue &FPOpOut, const SDLoc &dl) const {
   if (SPDiff) {
     // Load the LR and FP stack slot for later adjusting.
-    EVT VT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    EVT VT = Subtarget.getScalarIntVT();
     LROpOut = getReturnAddrFrameIndex(DAG);
     LROpOut = DAG.getLoad(VT, dl, Chain, LROpOut, MachinePointerInfo());
     Chain = SDValue(LROpOut.getNode(), 1);
@@ -5672,7 +5663,7 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   const unsigned TOCAnchorOffset = Subtarget.descriptorTOCAnchorOffset();
   const unsigned EnvPtrOffset = Subtarget.descriptorEnvironmentPointerOffset();
 
-  const MVT RegVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  const MVT RegVT = Subtarget.getScalarIntVT();
   const Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
 
   // One load for the functions entry point address.
@@ -5722,9 +5713,8 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
                   SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass,
                   SDValue Glue, SDValue Chain, SDValue &Callee, int SPDiff,
                   const PPCSubtarget &Subtarget) {
-  const bool IsPPC64 = Subtarget.isPPC64();
-  // MVT for a general purpose register.
-  const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+  const bool IsPPC64 = Subtarget.isPPC64(); // MVT for a general purpose register.
+  const MVT RegVT = Subtarget.getScalarIntVT();
 
   // First operand is always the chain.
   Ops.push_back(Chain);
@@ -6867,7 +6857,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   const unsigned PtrSize = IsPPC64 ? 8 : 4;
   const Align PtrAlign(PtrSize);
   const Align StackAlign(16);
-  const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+  const MVT RegVT = Subtarget.getScalarIntVT();
 
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
@@ -7818,7 +7808,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     assert(!CFlags.IsTailCall && "Indirect tail-calls not supported.");
     const MCRegister TOCBaseReg = Subtarget.getTOCPointerRegister();
     const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
-    const MVT PtrVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    const MVT PtrVT = Subtarget.getScalarIntVT();
     const unsigned TOCSaveOffset =
         Subtarget.getFrameLowering()->getTOCSaveOffset();
 
@@ -8383,7 +8373,7 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
       Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
   }
   if ((DestTy == MVT::i8 || DestTy == MVT::i16) && Subtarget.hasP9Vector())
-    DestTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    DestTy = Subtarget.getScalarIntVT();
   unsigned Opc = ISD::DELETED_NODE;
   switch (DestTy.SimpleTy) {
   default: llvm_unreachable("Unhandled FP_TO_INT type in custom expander!");
@@ -11319,7 +11309,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Val);
     }
     unsigned Opcode = Subtarget.isPPC64() ? PPC::CFENCE8 : PPC::CFENCE;
-    EVT FTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    EVT FTy = Subtarget.getScalarIntVT();
     return SDValue(
         DAG.getMachineNode(Opcode, DL, MVT::Other,
                            DAG.getNode(ISD::ANY_EXTEND, DL, FTy, Val),
@@ -17361,7 +17351,6 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
   // the stack.
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   FuncInfo->setLRStoreRequired();
-  bool isPPC64 = Subtarget.isPPC64();
   auto PtrVT = getPointerTy(MF.getDataLayout());
 
   if (Depth > 0) {
@@ -17373,7 +17362,7 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
                     LowerFRAMEADDR(Op, DAG), MachinePointerInfo());
     SDValue Offset =
         DAG.getConstant(Subtarget.getFrameLowering()->getReturnSaveOffset(), dl,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+                        Subtarget.getScalarIntVT());
     return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(),
                        DAG.getNode(ISD::ADD, dl, PtrVT, FrameAddr, Offset),
                        MachinePointerInfo());
