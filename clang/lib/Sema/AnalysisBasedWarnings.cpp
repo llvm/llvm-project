@@ -1181,7 +1181,7 @@ public:
 
         ++UnannotatedCnt;
     }
-      return !!UnannotatedCnt;
+    return !!UnannotatedCnt;
   }
 
   bool VisitAttributedStmt(AttributedStmt *S) override {
