@@ -47,7 +47,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

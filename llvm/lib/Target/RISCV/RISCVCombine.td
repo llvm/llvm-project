@@ -23,5 +23,6 @@ def RISCVO0PreLegalizerCombiner: GICombiner<
 // TODO: Add more combines.
 def RISCVPostLegalizerCombiner
     : GICombiner<"RISCVPostLegalizerCombinerImpl",
-                 [redundant_and, identity_combines]> {
+                 [redundant_and, identity_combines, commute_constant_to_rhs,
+                  constant_fold_cast_op]> {
 }
