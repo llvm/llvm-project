@@ -1339,9 +1339,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
-        // FIXME: mload, mstore, mgather, mscatter, vp_gather/scatter can be
+        // FIXME: mload, mstore, vp_gather/scatter can be
         // hoisted to here.
-        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        setOperationAction({ISD::LOAD, ISD::STORE, ISD::MGATHER, ISD::MSCATTER},
+                           VT, Custom);
         setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
                             ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
                             ISD::EXPERIMENTAL_VP_STRIDED_STORE},
@@ -1408,8 +1409,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::BUILD_VECTOR, ISD::SCALAR_TO_VECTOR}, VT,
                            Custom);
 
-        setOperationAction(
-            {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
+        setOperationAction({ISD::MLOAD, ISD::MSTORE}, VT, Custom);
 
         setOperationAction({ISD::VP_GATHER, ISD::VP_SCATTER}, VT, Custom);
 
