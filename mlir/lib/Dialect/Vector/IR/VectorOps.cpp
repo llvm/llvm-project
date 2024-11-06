@@ -1713,10 +1713,11 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
 ///     : vector<8xf32>, vector<8xf32>
 ///   %extract = vector.extract %shuffle[3] : f32 from vector<4xf32>
 /// ->
-///   %extract = vector.extract %b[7] : f32 from vector<4xf32>
+///   %extract = vector.extract %b[7] : f32 from vector<8xf32>
 ///
 static Value foldExtractFromShuffle(ExtractOp extractOp) {
-  // TODO: Canonicalization for dynamic position not implemented yet.
+  // Dynamic positions are not folded as the resulting code would be more
+  // complex than the input code.
   if (extractOp.hasDynamicPosition())
     return Value();
 
