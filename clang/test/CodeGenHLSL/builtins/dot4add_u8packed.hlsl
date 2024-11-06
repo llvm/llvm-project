@@ -8,7 +8,7 @@
 
 // Test basic lowering to runtime function call.
 
-// CHECK-LABEL: test
+// CHECK-LABEL: define {{.*}}test
 uint test(uint a, uint b, uint c) {
   // CHECK:  %[[RET:.*]] = call [[TY:i32]] @llvm.[[TARGET]].dot4add.u8packed([[TY]] %[[#]], [[TY]] %[[#]], [[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
