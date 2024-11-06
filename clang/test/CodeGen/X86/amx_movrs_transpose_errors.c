@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown \
 // RUN: -target-feature +amx-int8 -target-feature +amx-transpose -target-feature +amx-movrs \
-// RUN: -emit-llvm -verify
+// RUN: -verify
 
 #include <immintrin.h>
 #include <stddef.h>
