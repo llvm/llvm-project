@@ -31,7 +31,7 @@ define ptr @test() {
 ; CHECK:       [[CLEANUP]]:
 ; CHECK-NEXT:    br i1 false, label %[[FOR_BODY]], label %[[CLEANUP2_LOOPEXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[CLEANUP2_LOOPEXIT]]:
-; CHECK-NEXT:    [[RETVAL_2_LCSSA_PH:%.*]] = phi ptr [ [[RETVAL_2_PEEL]], %[[CLEANUP]] ]
+; CHECK-NEXT:    [[RETVAL_2_LCSSA_PH:%.*]] = phi ptr [ @GlobIntONE, %[[CLEANUP]] ]
 ; CHECK-NEXT:    br label %[[CLEANUP2]]
 ; CHECK:       [[CLEANUP2]]:
 ; CHECK-NEXT:    [[RETVAL_2_LCSSA:%.*]] = phi ptr [ [[RETVAL_2_PEEL]], %[[CLEANUP_PEEL]] ], [ [[RETVAL_2_LCSSA_PH]], %[[CLEANUP2_LOOPEXIT]] ]
