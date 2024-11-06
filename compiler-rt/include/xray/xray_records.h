@@ -47,6 +47,7 @@ struct alignas(32) XRayFileHeader {
   // reading the data in the file.
   bool ConstantTSC : 1;
   bool NonstopTSC : 1;
+  bool HasFunctionMap : 1;
 
   // The frequency by which TSC increases per-second.
   alignas(8) uint64_t CycleFrequency = 0;
@@ -67,7 +68,16 @@ static_assert(sizeof(XRayFileHeader) == 32, "XRayFileHeader != 32 bytes");
 enum RecordTypes {
   NORMAL = 0,
   ARG_PAYLOAD = 1,
+  FUNC_INFO = 2
 };
+
+struct alignas(16) XRayFunctionInfoRecord {
+  uint16_t RecordType = RecordTypes::FUNC_INFO;
+  int32_t FuncId = 0;
+  int16_t NameLen = 0;
+  int16_t DemangledNameLen = 0;
+  char Padding[6] = {};
+} __attribute__((packed));
 
 struct alignas(32) XRayRecord {
   // This is the type of the record being written. We use 16 bits to allow us to

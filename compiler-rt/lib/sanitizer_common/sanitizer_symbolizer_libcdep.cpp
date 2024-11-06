@@ -435,6 +435,8 @@ bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
       "DATA", info->module, info->module_offset, info->module_arch);
   if (!buf)
     return false;
+  // FIXME: Remove debug output
+  Report("Response: %s\n", buf);
   ParseSymbolizeDataOutput(buf, info);
   info->start += (addr - info->module_offset); // Add the base address.
   return true;
@@ -468,6 +470,9 @@ const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
     Report("WARNING: Command buffer too small");
     return nullptr;
   }
+
+  // FIXME: Remove
+  Report("Command: %s\n", buffer_);
 
   return symbolizer_process_->SendCommand(buffer_);
 }

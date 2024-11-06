@@ -19,6 +19,26 @@
 
 extern "C" {
 
+// TODO: The following is for a prototype implementation
+struct FunctionMapEntry {
+  int32_t FunctionId;
+  uint64_t Addr;
+  FunctionMapEntry* Next;
+};
+
+struct XRaySymbolInfo {
+  int32_t FuncId;
+  const char* Name;
+  const char* Module;
+  const char* File;
+  int64_t Line;
+};
+
+extern int __xray_symbolize(int32_t PackedId, XRaySymbolInfo* SymInfo);
+
+extern FunctionMapEntry* __xray_export_function_map();
+
+
 /// Synchronize this with AsmPrinter::SledKind in LLVM.
 enum XRayEntryType {
   ENTRY = 0,

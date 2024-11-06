@@ -27,6 +27,8 @@
 
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_dense_map.h"
+#include "sanitizer_common/sanitizer_symbolizer.h"
 #include "xray/xray_records.h"
 #include "xray_recursion_guard.h"
 #include "xray_basic_flags.h"
@@ -42,6 +44,8 @@ namespace __xray {
 static SpinMutex LogMutex;
 
 namespace {
+
+
 // We use elements of this type to record the entry TSC of every function ID we
 // see as we're tracing a particular thread's execution.
 struct alignas(16) StackEntry {
@@ -83,6 +87,8 @@ static atomic_uint8_t UseRealTSC{0};
 static atomic_uint64_t ThresholdTicks{0};
 static atomic_uint64_t TicksPerSec{0};
 static atomic_uint64_t CycleFrequency{NanosecondsPerSecond};
+
+
 
 static LogWriter *getLog() XRAY_NEVER_INSTRUMENT {
   LogWriter* LW = LogWriter::Open();
@@ -153,6 +159,40 @@ static ThreadLocalData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
   }();
   return TLD;
 }
+
+struct FunctionRecordLogger {
+  DenseMap<int32_t, DataInfo> SymInfo;
+
+  static FunctionRecordLogger& Get() {
+    static FunctionRecordLogger Instance;
+    return Instance;
+  }
+
+  static void LogFunctionRecord(int32_t FuncId) {
+    auto& Instance = Get();
+    if (Instance.SymInfo.contains(FuncId)) {
+      return;
+    }
+
+    auto& Entry = Instance.SymInfo[FuncId];
+    Symbolize(FuncId, &Entry);
+    // TODO: handle error
+
+  }
+
+  static void Flush(LogWriter* Writer) {
+    auto& Instance = Get();
+    Instance.SymInfo.forEach([&](auto& Entry) {
+      XRayFunctionInfoRecord FIR;
+      auto& Id = Entry.getFirst();
+      DataInfo& DI = Entry.getSecond();
+      FIR.FuncId = Id;
+      FIR.NameLen = internal_strlen(DI.name);
+      FIR.DemangledNameLen = internal_strlen(DI.name);
+    });
+    Writer->WriteAll();
+  }
+};
 
 template <class RDTSC>
 void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
@@ -229,6 +269,7 @@ void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
     DCHECK(false && "Unsupported XRayEntryType encountered.");
     break;
   }
+
 
   // First determine whether the delta between the function's enter record and
   // the exit record is higher than the threshold.
