@@ -282,9 +282,12 @@ extern "C" {
 void csqrtf_wrapper(const float[], float[]);
 void csqrt_wrapper(const double[], double[]);
 } // extern "C"
+#endif
 
 template <typename HostT>
-static std::complex<HostT> CSQRT(const std::complex<HostT> &x) {
+static std::complex<HostT> CSqrt(const std::complex<HostT> &x) {
+  std::complex<HostT> res;
+#if _AIX
   HostT y[2]{x.real(), x.imag()};
   HostT r[2];
   if constexpr (std::is_same_v<HostT, float>) {
@@ -292,10 +295,13 @@ static std::complex<HostT> CSQRT(const std::complex<HostT> &x) {
   } else if constexpr (std::is_same_v<HostT, double>) {
     csqrt_wrapper(y, r);
   }
-  std::complex<HostT> res(r[0], r[1]);
+  res.real(r[0]);
+  res.imag(r[1]);
+#else
+  res = std::sqrt(x);
+#endif
   return res;
 }
-#endif
 
 template <typename HostT>
 struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
@@ -322,11 +328,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
       FolderFactory<F2B, F2B{StdPowF2B}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),
-#ifdef _AIX
-      FolderFactory<F, F{CSQRT}>::Create("sqrt"),
-#else
-      FolderFactory<F, F{std::sqrt}>::Create("sqrt"),
-#endif
+      FolderFactory<F, F{CSqrt}>::Create("sqrt"),
       FolderFactory<F, F{std::tan}>::Create("tan"),
       FolderFactory<F, F{std::tanh}>::Create("tanh"),
   };

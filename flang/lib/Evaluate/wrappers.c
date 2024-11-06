@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef _AIX
 #include <complex.h>
 
 void csqrtf_wrapper(const float x[2], float res[2]) {
@@ -21,3 +22,4 @@ void csqrt_wrapper(const double x[2], double res[2]) {
   res[0] = creal(r);
   res[1] = cimag(r);
 }
+#endif
