@@ -939,6 +939,8 @@ class VPRecipeIRFlags {
   };
 
 public:
+  void transferFlags(const VPRecipeIRFlags &Other) { *this = Other; }
+
   struct WrapFlagsTy {
     char HasNUW : 1;
     char HasNSW : 1;
@@ -1326,7 +1328,7 @@ public:
   VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
     auto *New = new VPInstruction(Opcode, Operands, getDebugLoc(), Name);
-    *New->getIRFlags() = *getIRFlags();
+    New->transferFlags(*this);
     return New;
   }
 
@@ -1473,7 +1475,7 @@ public:
 
   VPWidenRecipe *clone() override {
     auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
-    *R->getIRFlags() = *getIRFlags();
+    R->transferFlags(*this);
     return R;
   }
 
@@ -1515,7 +1517,7 @@ public:
   }
   VPWidenEVLRecipe(VPWidenRecipe &W, VPValue &EVL)
       : VPWidenEVLRecipe(*W.getUnderlyingInstr(), W.operands(), EVL) {
-    *getIRFlags() = *W.getIRFlags();
+    transferFlags(W);
   }
 
   ~VPWidenEVLRecipe() override = default;
@@ -2694,7 +2696,7 @@ public:
     auto *Copy =
         new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
                               isPredicated() ? getMask() : nullptr);
-    *Copy->getIRFlags() = *getIRFlags();
+    Copy->transferFlags(*this);
     return Copy;
   }
 
