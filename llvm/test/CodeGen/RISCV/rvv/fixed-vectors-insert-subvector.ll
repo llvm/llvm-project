@@ -1000,3 +1000,12 @@ define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
   %2 = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %1, i64 0)
   ret <4 x i32> %2
 }
+
+define <vscale x 24 x i8> @insert_nxv24i8_v48i8_0(<vscale x 24 x i8> %v, <48 x i8> %w) vscale_range(2) {
+; CHECK-LABEL: insert_nxv24i8_v48i8_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    ret
+  %x = call <vscale x 24 x i8> @llvm.vector.insert.v48i8.nxv24i8(<vscale x 24 x i8> %v, <48 x i8> %w, i64 0)
+  ret <vscale x 24 x i8> %x
+}

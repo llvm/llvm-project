@@ -7066,7 +7066,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
 
   // We need to make sure that the indices are still valid, otherwise we might
   // widen what was previously well-defined to something undefined.
-  if (IndicesValid && InVec.isUndef() && N->getConstantOperandVal(2) == 0)
+  if (IndicesValid && N->getConstantOperandVal(2) == 0)
     return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, InVec, SubVec,
                        N->getOperand(2));
 
