@@ -8,8 +8,8 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenACC/Utils/OpenACCUtils.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/Utils/OpenACCUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 

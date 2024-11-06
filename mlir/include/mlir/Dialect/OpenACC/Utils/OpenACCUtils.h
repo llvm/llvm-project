@@ -51,11 +51,10 @@ mlir::SmallVector<mlir::Value> getBounds(mlir::Operation *accDataClauseOp);
 /// Used to set `bounds` for an acc data clause operation. It completely
 /// replaces all bounds operands with the new list.
 /// Returns false if new bounds were not set (such as when argument is not
-/// an acc dat aclause operation).
+/// an acc data clause operation).
 bool setBounds(mlir::Operation *accDataClauseOp,
                mlir::SmallVector<mlir::Value> &bounds);
-bool setBounds(mlir::Operation *accDataClauseOp,
-               mlir::Value bound);
+bool setBounds(mlir::Operation *accDataClauseOp, mlir::Value bound);
 
 /// Used to obtain the `dataClause` from a data clause operation.
 /// Returns empty optional if not a data operation.
