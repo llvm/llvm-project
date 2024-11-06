@@ -226,6 +226,14 @@ void LowerModule::constructAttributeList(StringRef Name,
       // Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
       cir_cconv_assert(!::cir::MissingFeatures::noFPClass());
       break;
+    case ABIArgInfo::Indirect: {
+      cir_cconv_assert(!::cir::MissingFeatures::ABIInRegAttribute());
+      cir_cconv_assert(!::cir::MissingFeatures::ABIByValAttribute());
+      cir_cconv_assert(!::cir::MissingFeatures::ABINoAliasAttribute());
+      cir_cconv_assert(!::cir::MissingFeatures::ABIAlignmentAttribute());
+      cir_cconv_assert(!::cir::MissingFeatures::ABIPotentialArgAccess());
+      break;
+    }
     default:
       cir_cconv_unreachable("Missing ABIArgInfo::Kind");
     }

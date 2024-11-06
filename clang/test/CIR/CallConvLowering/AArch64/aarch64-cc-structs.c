@@ -141,3 +141,14 @@ void pass_lt_128(LT_128 s) {}
 // LLVM:   %[[#V1]] = alloca %struct.EQ_128, i64 1, align 4
 // LLVM:   store [2 x i64] %0, ptr %[[#V1]], align 8
 void pass_eq_128(EQ_128 s) {}
+
+// CHECK: cir.func @pass_gt_128(%arg0: !cir.ptr<!ty_GT_128_>
+// CHECK:   %[[#V0:]] = cir.alloca !cir.ptr<!ty_GT_128_>, !cir.ptr<!cir.ptr<!ty_GT_128_>>, [""] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %[[#V0]] : !cir.ptr<!ty_GT_128_>, !cir.ptr<!cir.ptr<!ty_GT_128_>>
+// CHECK:   %[[#V1:]] = cir.load %[[#V0]] : !cir.ptr<!cir.ptr<!ty_GT_128_>>, !cir.ptr<!ty_GT_128_>
+
+// LLVM: void @pass_gt_128(ptr %0)
+// LLVM:   %[[#V1:]] = alloca ptr, i64 1, align 8
+// LLVM:   store ptr %0, ptr %[[#V1]], align 8
+// LLVM:   %[[#V2:]] = load ptr, ptr %[[#V1]], align 8
+void pass_gt_128(GT_128 s) {}

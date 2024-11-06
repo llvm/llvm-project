@@ -269,6 +269,9 @@ struct MissingFeatures {
   static bool ABIPointerParameterAttrs() { return false; }
   static bool ABITransparentUnionHandling() { return false; }
   static bool ABIPotentialArgAccess() { return false; }
+  static bool ABIByValAttribute() { return false; }
+  static bool ABIAlignmentAttribute() { return false; }
+  static bool ABINoAliasAttribute() { return false; }
 
   //-- Missing AST queries
 

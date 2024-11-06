@@ -188,7 +188,7 @@ AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
     return ABIArgInfo::getDirect(argTy);
   }
 
-  cir_cconv_unreachable("NYI");
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
 }
 
 std::unique_ptr<TargetLoweringInfo>

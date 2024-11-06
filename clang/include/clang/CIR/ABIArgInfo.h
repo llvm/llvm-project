@@ -215,9 +215,19 @@ public:
     IndirectAttr.Align = align;
   }
 
+  bool getIndirectByVal() const {
+    assert(isIndirect() && "Invalid kind!");
+    return IndirectByVal;
+  }
+
   void setIndirectByVal(bool IBV) {
     assert(isIndirect() && "Invalid kind!");
     IndirectByVal = IBV;
+  }
+
+  bool getIndirectRealign() const {
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
+    return IndirectRealign;
   }
 
   void setIndirectRealign(bool IR) {
