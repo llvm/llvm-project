@@ -66,6 +66,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/Version.h"
 #include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APInt.h"
@@ -9452,6 +9453,7 @@ void clang::serializeObjCMethodReferencesAsJson(
     const clang::ObjCMethodReferenceInfo &Info, llvm::raw_ostream &OS) {
   llvm::json::OStream Out(OS, /*IndentSize=*/4);
   Out.object([&] {
+    Out.attribute(Info.ToolName, Info.ToolVersion);
     Out.attribute("format-version", Info.FormatVersion);
     Out.attribute("target", Info.Target);
     if (!Info.TargetVariant.empty())
@@ -9517,6 +9519,8 @@ void ASTContext::writeObjCMsgSendUsages(const std::string &Filename) {
         SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID());
     SmallString<256> MainFile(FE->getName());
     SourceMgr.getFileManager().makeAbsolutePath(MainFile);
+    Info.ToolName = "clang-compiler-version";
+    Info.ToolVersion = getClangFullVersion();
     Info.Target = getTargetInfo().getTriple().str();
     if (auto *VariantTriple = getTargetInfo().getDarwinTargetVariantTriple())
       Info.TargetVariant = VariantTriple->str();

@@ -24,6 +24,7 @@ class ObjCMethodDecl;
 
 struct ObjCMethodReferenceInfo {
   static constexpr unsigned FormatVersion = 1;
+  std::string ToolName, ToolVersion;
   std::string Target, TargetVariant;
 
   /// Paths to the files in which ObjC methods are referenced.
