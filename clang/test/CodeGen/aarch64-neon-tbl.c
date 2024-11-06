@@ -245,10 +245,10 @@ int8x16_t test_vqtbl4q_s8(int8x16x4_t a, int8x16_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]])
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], splat (i8 8)
 // CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i8> [[TMP1]], splat (i8 -1)
 // CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i8> [[TMP3]], [[VTBL11_I]]
 // CHECK-NEXT:    [[VTBX_I:%.*]] = or <8 x i8> [[TMP2]], [[TMP4]]
 // CHECK-NEXT:    ret <8 x i8> [[VTBX_I]]
@@ -296,10 +296,10 @@ int8x8_t test_vtbx2_s8(int8x8_t a, int8x8x2_t b, int8x8_t c) {
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]])
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], splat (i8 24)
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i8>
 // CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i8> [[TMP5]], [[A]]
-// CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i8> [[TMP5]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i8> [[TMP5]], splat (i8 -1)
 // CHECK-NEXT:    [[TMP8:%.*]] = and <8 x i8> [[TMP7]], [[VTBL26_I]]
 // CHECK-NEXT:    [[VTBX_I:%.*]] = or <8 x i8> [[TMP6]], [[TMP8]]
 // CHECK-NEXT:    ret <8 x i8> [[VTBX_I]]
@@ -725,10 +725,10 @@ uint8x16_t test_vqtbl4q_u8(uint8x16x4_t a, uint8x16_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]])
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], splat (i8 8)
 // CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i8> [[TMP1]], splat (i8 -1)
 // CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i8> [[TMP3]], [[VTBL11_I]]
 // CHECK-NEXT:    [[VTBX_I:%.*]] = or <8 x i8> [[TMP2]], [[TMP4]]
 // CHECK-NEXT:    ret <8 x i8> [[VTBX_I]]
@@ -776,10 +776,10 @@ uint8x8_t test_vtbx2_u8(uint8x8_t a, uint8x8x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]])
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], splat (i8 24)
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i8>
 // CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i8> [[TMP5]], [[A]]
-// CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i8> [[TMP5]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i8> [[TMP5]], splat (i8 -1)
 // CHECK-NEXT:    [[TMP8:%.*]] = and <8 x i8> [[TMP7]], [[VTBL26_I]]
 // CHECK-NEXT:    [[VTBX_I:%.*]] = or <8 x i8> [[TMP6]], [[TMP8]]
 // CHECK-NEXT:    ret <8 x i8> [[VTBX_I]]
@@ -1205,10 +1205,10 @@ poly8x16_t test_vqtbl4q_p8(poly8x16x4_t a, uint8x16_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VTBL1_I:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL11_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> [[VTBL1_I]], <8 x i8> [[C]])
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp uge <8 x i8> [[C]], splat (i8 8)
 // CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP1]], [[A]]
-// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i8> [[TMP1]], splat (i8 -1)
 // CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i8> [[TMP3]], [[VTBL11_I]]
 // CHECK-NEXT:    [[VTBX_I:%.*]] = or <8 x i8> [[TMP2]], [[TMP4]]
 // CHECK-NEXT:    ret <8 x i8> [[VTBX_I]]
@@ -1256,10 +1256,10 @@ poly8x8_t test_vtbx2_p8(poly8x8_t a, poly8x8x2_t b, uint8x8_t c) {
 // CHECK-NEXT:    [[VTBL2_I:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL25_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    [[VTBL26_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[VTBL2_I]], <16 x i8> [[VTBL25_I]], <8 x i8> [[C]])
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <8 x i8> [[C]], splat (i8 24)
 // CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i8>
 // CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i8> [[TMP5]], [[A]]
-// CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i8> [[TMP5]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[TMP7:%.*]] = xor <8 x i8> [[TMP5]], splat (i8 -1)
 // CHECK-NEXT:    [[TMP8:%.*]] = and <8 x i8> [[TMP7]], [[VTBL26_I]]
 // CHECK-NEXT:    [[VTBX_I:%.*]] = or <8 x i8> [[TMP6]], [[TMP8]]
 // CHECK-NEXT:    ret <8 x i8> [[VTBX_I]]
