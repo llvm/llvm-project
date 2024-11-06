@@ -156,20 +156,20 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
 
   {
     // Schedule all instructions in sequence.
-    sandboxir::Scheduler Sched(getAA(*LLVMF));
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_TRUE(Sched.trySchedule({S1}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
   }
   {
     // Skip instructions.
-    sandboxir::Scheduler Sched(getAA(*LLVMF));
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
   }
   {
     // Try invalid scheduling
-    sandboxir::Scheduler Sched(getAA(*LLVMF));
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
     EXPECT_FALSE(Sched.trySchedule({S1}));
@@ -197,7 +197,7 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF));
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
   EXPECT_TRUE(Sched.trySchedule({Ret}));
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
