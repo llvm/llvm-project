@@ -5878,7 +5878,9 @@ struct AAPointerInfo : public AbstractAttribute {
 
     unsigned size() const { return Ranges.size(); }
 
+#ifndef __swift__
     bool operator==(const RangeList &OI) const { return Ranges == OI.Ranges; }
+#endif
 
     /// Merge the ranges in \p RHS into the current ranges.
     /// - Merging a list of  unknown ranges makes the current list unknown.
@@ -6012,11 +6014,13 @@ struct AAPointerInfo : public AbstractAttribute {
     Access(const Access &Other) = default;
 
     Access &operator=(const Access &Other) = default;
+#ifndef __swift__
     bool operator==(const Access &R) const {
       return LocalI == R.LocalI && RemoteI == R.RemoteI && Ranges == R.Ranges &&
              Content == R.Content && Kind == R.Kind;
     }
     bool operator!=(const Access &R) const { return !(*this == R); }
+#endif
 
     Access &operator&=(const Access &R) {
       assert(RemoteI == R.RemoteI && "Expected same instruction!");

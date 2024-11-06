@@ -149,9 +149,11 @@ public:
     return tmp;
   }
 
+#ifndef __swift__
   bool operator==(ddiag_iterator Other) const {
     return Ptr == Other.Ptr;
   }
+#endif
 
   bool operator!=(ddiag_iterator Other) const {
     return Ptr != Other.Ptr;
