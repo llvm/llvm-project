@@ -1347,10 +1347,10 @@ define void @zext_mload_avgflooru(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; SVE-NEXT:    ld1b { z1.h }, p0/z, [x1]
-; SVE-NEXT:    and z0.h, z0.h, #0xff
-; SVE-NEXT:    and z1.h, z1.h, #0xff
+; SVE-NEXT:    eor z2.d, z0.d, z1.d
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.h, z2.h, #1
 ; SVE-NEXT:    add z0.h, z0.h, z1.h
-; SVE-NEXT:    lsr z0.h, z0.h, #1
 ; SVE-NEXT:    st1h { z0.h }, p0, [x0]
 ; SVE-NEXT:    ret
 ;
@@ -1359,8 +1359,6 @@ define void @zext_mload_avgflooru(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
 ; SVE2-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; SVE2-NEXT:    ld1b { z1.h }, p0/z, [x1]
 ; SVE2-NEXT:    ptrue p1.h
-; SVE2-NEXT:    and z0.h, z0.h, #0xff
-; SVE2-NEXT:    and z1.h, z1.h, #0xff
 ; SVE2-NEXT:    uhadd z0.h, p1/m, z0.h, z1.h
 ; SVE2-NEXT:    st1h { z0.h }, p0, [x0]
 ; SVE2-NEXT:    ret
@@ -1380,12 +1378,10 @@ define void @zext_mload_avgceilu(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; SVE-NEXT:    ld1b { z1.h }, p0/z, [x1]
-; SVE-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
-; SVE-NEXT:    and z0.h, z0.h, #0xff
-; SVE-NEXT:    and z1.h, z1.h, #0xff
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
-; SVE-NEXT:    sub z0.h, z1.h, z0.h
-; SVE-NEXT:    lsr z0.h, z0.h, #1
+; SVE-NEXT:    eor z2.d, z0.d, z1.d
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    lsr z1.h, z2.h, #1
+; SVE-NEXT:    sub z0.h, z0.h, z1.h
 ; SVE-NEXT:    st1b { z0.h }, p0, [x0]
 ; SVE-NEXT:    ret
 ;
@@ -1394,8 +1390,6 @@ define void @zext_mload_avgceilu(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
 ; SVE2-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; SVE2-NEXT:    ld1b { z1.h }, p0/z, [x1]
 ; SVE2-NEXT:    ptrue p1.h
-; SVE2-NEXT:    and z0.h, z0.h, #0xff
-; SVE2-NEXT:    and z1.h, z1.h, #0xff
 ; SVE2-NEXT:    urhadd z0.h, p1/m, z0.h, z1.h
 ; SVE2-NEXT:    st1b { z0.h }, p0, [x0]
 ; SVE2-NEXT:    ret

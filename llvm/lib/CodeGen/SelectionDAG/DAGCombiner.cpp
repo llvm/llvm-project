@@ -7095,8 +7095,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // fold (and (masked_load) (splat_vec (x, ...))) to zext_masked_load
     auto *MLoad = dyn_cast<MaskedLoadSDNode>(N0);
     ConstantSDNode *Splat = isConstOrConstSplat(N1, true, true);
-    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat &&
-        N1.hasOneUse()) {
+    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && Splat) {
       EVT LoadVT = MLoad->getMemoryVT();
       EVT ExtVT = VT;
       if (TLI.isLoadExtLegal(ISD::ZEXTLOAD, ExtVT, LoadVT)) {
