@@ -547,6 +547,8 @@ struct Ctx {
   LinkerScript *script;
   std::unique_ptr<TargetInfo> target;
 
+  ErrorHandler *errHandler;
+
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart;
@@ -678,6 +680,39 @@ static inline void internalLinkerError(StringRef loc, const Twine &msg) {
   errorOrWarn(loc + "internal linker error: " + msg + "\n" +
               llvm::getBugReportMsg());
 }
+
+struct ELFSyncStream : SyncStream {
+  Ctx &ctx;
+  ELFSyncStream(Ctx &ctx, DiagLevel level)
+      : SyncStream(*ctx.errHandler, level), ctx(ctx) {}
+};
+
+template <typename T>
+std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>,
+                 const ELFSyncStream &>
+operator<<(const ELFSyncStream &s, T &&v) {
+  s.os << std::forward<T>(v);
+  return s;
+}
+
+// Report a log if --verbose is specified.
+ELFSyncStream Log(Ctx &ctx);
+
+// Report a warning. Upgraded to an error if --fatal-warnings is specified.
+ELFSyncStream Warn(Ctx &ctx);
+
+// Report an error that will suppress the output file generation. Downgraded to
+// a warning if --noinhibit-exec is specified.
+ELFSyncStream Err(Ctx &ctx);
+
+// Report an error regardless of --noinhibit-exec.
+ELFSyncStream ErrAlways(Ctx &ctx);
+
+// Report a fatal error that exits immediately. This should generally be avoided
+// in favor of Err.
+ELFSyncStream Fatal(Ctx &ctx);
+
+uint64_t errCount(Ctx &ctx);
 
 } // namespace lld::elf
 
