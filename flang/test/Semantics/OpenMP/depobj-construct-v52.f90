@@ -13,3 +13,9 @@ subroutine f03
 !ERROR: The DESTROY clause must refer to the same object as the DEPOBJ construct
   !$omp depobj(obj) destroy(jbo)
 end
+
+subroutine f06
+  integer :: obj
+!WARNING: The DESTROY clause without argument on DEPOBJ construct is deprecated in OpenMP v5.2
+  !$omp depobj(obj) destroy
+end

@@ -53,6 +53,7 @@
 // CHECK-EXE-SAME: "--unresolved-symbols=report-all"
 // CHECK-EXE-SAME: "-z" "now"
 // CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
+// CHECK-EXE-SAME: "-z" "rodynamic"
 // CHECK-EXE-SAME: "-z" "common-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "max-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
