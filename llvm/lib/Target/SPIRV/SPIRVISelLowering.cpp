@@ -478,7 +478,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           MachineIRBuilder MIB(MI);
           SPIRVType *Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
           SPIRVType *RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
-          assert(RetType && "Expect return type");
+          assert(RetType && "Expected return type");
           validatePtrTypes(
               STI, MRI, GR, MI, MI.getNumOperands() - 1,
               RetType->getOpcode() != SPIRV::OpTypeVector
@@ -494,7 +494,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           // The last operand must be of a pointer to the base type represented
           // by the previous operand.
           assert(MI.getOperand(MI.getNumOperands() - 2).isReg() &&
-                 "Expect v-reg");
+                 "Expected v-reg");
           validatePtrTypes(
               STI, MRI, GR, MI, MI.getNumOperands() - 1,
               GR.getSPIRVTypeForVReg(
@@ -504,7 +504,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           // Expected `ptr` type is a pointer to float, integer or vector, but
           // the pontee value can be wrapped into a struct.
           assert(MI.getOperand(MI.getNumOperands() - 2).isReg() &&
-                 "Expect v-reg");
+                 "Expected v-reg");
           validatePtrUnwrapStructField(STI, MRI, GR, MI,
                                        MI.getNumOperands() - 2);
           break;
