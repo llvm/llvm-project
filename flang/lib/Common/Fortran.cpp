@@ -138,7 +138,7 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
                 (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
                     *y == CUDADataAttr::Shared)) ||
             (!y && (isCudaUnified || isCudaManaged))) {
-          if (y && *y == CUDADataAttr::Shared) {
+          if (y && *y == CUDADataAttr::Shared && warning) {
             *warning = "SHARED attribute ignored"s;
           }
           return true;
