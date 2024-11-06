@@ -23,7 +23,6 @@ static constexpr uint16_t POS_STOP = 0x7c00U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xfc00U;
 
-
 TEST_F(LlvmLibcTanpif16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
@@ -37,6 +36,5 @@ TEST_F(LlvmLibcTanpif16Test, NegativeRange) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanpi, x,
                                    LIBC_NAMESPACE::tanpif16(x), 0.5);
- }
+  }
 }
-
