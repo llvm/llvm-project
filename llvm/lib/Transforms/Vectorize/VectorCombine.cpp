@@ -452,6 +452,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   //       operands to element 0.
   unsigned BestExtIndex = Extract0Cost > Extract1Cost ? Ext0Index : Ext1Index;
   unsigned BestInsIndex = Extract0Cost > Extract1Cost ? Ext1Index : Ext0Index;
+  Value *BestVec = (Extract0Cost > Extract1Cost ? Ext1 : Ext0)->getOperand(0);
   InstructionCost CheapExtractCost = std::min(Extract0Cost, Extract1Cost);
 
   // Extra uses of the extracts mean that we include those costs in the
@@ -491,11 +492,12 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
       SmallVector<int> ShuffleMask(FixedVecTy->getNumElements(),
                                    PoisonMaskElem);
       ShuffleMask[BestInsIndex] = BestExtIndex;
-      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                    VecTy, ShuffleMask);
-    } else {
       NewCost +=
-          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
+                             ShuffleMask, CostKind, 0, nullptr, {BestVec});
+    } else {
+      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                    VecTy, {}, CostKind, 0, nullptr, {BestVec});
     }
   }
 
