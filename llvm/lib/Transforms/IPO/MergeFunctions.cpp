@@ -105,6 +105,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Type.h"
@@ -117,6 +118,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -197,9 +199,10 @@ public:
   MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  bool runOnModule(Module &M);
-  bool runOnFunctions(std::set<Function *> &F);
-  std::map<Function *, Function *> &getDelToNewMap();
+  template <typename FuncContainer>
+  bool runOnModule(FuncContainer &Functions);
+  std::pair<bool, DenseMap<Function *, Function *>>
+  runOnFunctions(std::set<Function *> &F);
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -302,7 +305,7 @@ private:
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
 
   /// Deleted-New functions mapping
-  std::map<Function *, Function *> DelToNewMap;
+  DenseMap<Function *, Function *> DelToNewMap;
 };
 } // end anonymous namespace
 
@@ -318,11 +321,10 @@ bool MergeFunctionsPass::runOnModule(Module &M) {
   return MF.runOnModule(M);
 }
 
-std::pair<bool, std::map<Function *, Function *>>
+std::pair<bool, DenseMap<Function *, Function *>>
 MergeFunctionsPass::runOnFunctions(std::set<Function *> &F) {
   MergeFunctions MF;
-  bool MergeResult = MF.runOnFunctions(F);
-  return {MergeResult, MF.getDelToNewMap()};
+  return MF.runOnFunctions(F);
 }
 
 #ifndef NDEBUG
@@ -426,24 +428,36 @@ static bool isEligibleForMerging(Function &F) {
          !hasDistinctMetadataIntrinsic(F);
 }
 
-bool MergeFunctions::runOnModule(Module &M) {
+template <typename FuncContainer>
+bool MergeFunctions::runOnModule(FuncContainer &M) {
   bool Changed = false;
 
-  SmallVector<GlobalValue *, 4> UsedV;
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  Used.insert(UsedV.begin(), UsedV.end());
+  if constexpr (std::is_same<FuncContainer, Module>::value) {
+    SmallVector<GlobalValue *, 4> UsedV;
+    collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+    collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+    Used.insert(UsedV.begin(), UsedV.end());
+  }
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
   std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
-  for (Function &Func : M) {
-    if (isEligibleForMerging(Func)) {
-      HashedFuncs.push_back({StructuralHash(Func), &Func});
+  if constexpr (std::is_same<FuncContainer, std::set<Function *>>::value) {
+    for (Function *Func : M) {
+      if (isEligibleForMerging(*Func)) {
+        HashedFuncs.push_back({StructuralHash(*Func), Func});
+      }
+    }
+  }
+  if constexpr (std::is_same<FuncContainer, Module>::value) {
+    for (Function &Func : M) {
+      if (isEligibleForMerging(Func)) {
+        HashedFuncs.push_back({StructuralHash(Func), &Func});
+      }
     }
   }
 
-  llvm::stable_sort(HashedFuncs, less_first());
+  stable_sort(HashedFuncs, less_first());
 
   auto S = HashedFuncs.begin();
   for (auto I = HashedFuncs.begin(), IE = HashedFuncs.end(); I != IE; ++I) {
@@ -484,50 +498,16 @@ bool MergeFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
-bool MergeFunctions::runOnFunctions(std::set<Function *> &F) {
-  bool Changed = false;
-  std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
-  for (Function *Func : F) {
-    if (isEligibleForMerging(*Func)) {
-      HashedFuncs.push_back({StructuralHash(*Func), Func});
-    }
-  }
-  llvm::stable_sort(HashedFuncs, less_first());
-  auto S = HashedFuncs.begin();
-  for (auto I = HashedFuncs.begin(), IE = HashedFuncs.end(); I != IE; ++I) {
-    if ((I != S && std::prev(I)->first == I->first) ||
-        (std::next(I) != IE && std::next(I)->first == I->first)) {
-      Deferred.push_back(WeakTrackingVH(I->second));
-    }
-  }
-  do {
-    std::vector<WeakTrackingVH> Worklist;
-    Deferred.swap(Worklist);
-    LLVM_DEBUG(dbgs() << "size of function: " << F.size() << '\n');
-    LLVM_DEBUG(dbgs() << "size of worklist: " << Worklist.size() << '\n');
-    for (WeakTrackingVH &I : Worklist) {
-      if (!I)
-        continue;
-      Function *F = cast<Function>(I);
-      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage()) {
-        Changed |= insert(F);
-      }
-    }
-    LLVM_DEBUG(dbgs() << "size of FnTree: " << FnTree.size() << '\n');
-  } while (!Deferred.empty());
-  FnTree.clear();
-  FNodesInTree.clear();
-  GlobalNumbers.clear();
-  return Changed;
-}
-
-std::map<Function *, Function *> &MergeFunctions::getDelToNewMap() {
-  return this->DelToNewMap;
+std::pair<bool, DenseMap<Function *, Function *>>
+MergeFunctions::runOnFunctions(std::set<Function *> &F) {
+  bool MergeResult = false;
+  MergeResult = this->runOnModule(F);
+  return {MergeResult, this->DelToNewMap};
 }
 
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
-  for (Use &U : llvm::make_early_inc_range(Old->uses())) {
+  for (Use &U : make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
       // Do not copy attributes from the called function to the call-site.
@@ -826,8 +806,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   ReturnInst *RI = nullptr;
   bool isSwiftTailCall = F->getCallingConv() == CallingConv::SwiftTail &&
                          G->getCallingConv() == CallingConv::SwiftTail;
-  CI->setTailCallKind(isSwiftTailCall ? llvm::CallInst::TCK_MustTail
-                                      : llvm::CallInst::TCK_Tail);
+  CI->setTailCallKind(isSwiftTailCall ? CallInst::TCK_MustTail
+                                      : CallInst::TCK_Tail);
   CI->setCallingConv(F->getCallingConv());
   CI->setAttributes(F->getAttributes());
   if (H->getReturnType()->isVoidTy()) {
@@ -1061,7 +1041,7 @@ bool MergeFunctions::insert(Function *NewFunction) {
 
   Function *DeleteF = NewFunction;
   mergeTwoFunctions(OldF.getFunc(), DeleteF);
-  this->DelToNewMap.emplace(DeleteF, OldF.getFunc());
+  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
   return true;
 }
 

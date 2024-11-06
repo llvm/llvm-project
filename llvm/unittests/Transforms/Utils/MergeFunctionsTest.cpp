@@ -129,7 +129,7 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
   for (Function &F : *M)
     FunctionsSet.insert(&F);
 
-  std::pair<bool, std::map<Function *, Function *>> MergeResult =
+  std::pair<bool, DenseMap<Function *, Function *>> MergeResult =
       MergeFunctionsPass::runOnFunctions(FunctionsSet);
 
   // Expects true after merging _slice_add10 and _slice_add10_alt
@@ -138,7 +138,7 @@ TEST(MergeFunctions, TrueOutputFunctionsTest) {
   // Expects that both functions (_slice_add10 and _slice_add10_alt)
   // be mapped to the same new function
   EXPECT_TRUE(MergeResult.second.size() > 0);
-  std::map<Function *, Function *> DelToNew = MergeResult.second;
+  DenseMap<Function *, Function *> DelToNew = MergeResult.second;
   Function *NewFunction = M->getFunction("_slice_add10");
   for (auto P : DelToNew)
     if (P.second)
@@ -255,7 +255,7 @@ TEST(MergeFunctions, FalseOutputFunctionsTest) {
   for (Function &F : *M)
     FunctionsSet.insert(&F);
 
-  std::pair<bool, std::map<Function *, Function *>> MergeResult =
+  std::pair<bool, DenseMap<Function *, Function *>> MergeResult =
       MergeFunctionsPass::runOnFunctions(FunctionsSet);
 
   for (auto P : MergeResult.second)

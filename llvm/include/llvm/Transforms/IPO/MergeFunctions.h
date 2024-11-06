@@ -17,7 +17,6 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
-#include <map>
 #include <set>
 
 namespace llvm {
@@ -30,7 +29,7 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool runOnModule(Module &M);
-  static std::pair<bool, std::map<Function *, Function *>>
+  static std::pair<bool, DenseMap<Function *, Function *>>
   runOnFunctions(std::set<Function *> &F);
 };
 
