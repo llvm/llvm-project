@@ -2512,9 +2512,11 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
+  // Here we assume that a core that has implemented unaligned vector access
+  // should also have implemented unaligned scalar access.
   // TODO: Enable expansion when unaligned access is not supported after we fix
   // issues in ExpandMemcmp.
-  if (!(ST->enableUnalignedScalarMem() &&
+  if (!((ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem()) &&
         (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
     return Options;
 
@@ -2525,5 +2527,21 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     Options.LoadSizes = {8, 4, 2, 1};
   else
     Options.LoadSizes = {4, 2, 1};
+  if (IsZeroCmp && ST->hasVInstructions() && ST->enableUnalignedVectorMem()) {
+    unsigned RealMinVLen = ST->getRealMinVLen();
+    // Support Fractional LMULs if the lengths are larger than XLen.
+    // TODO: Support non-power-of-2 types.
+    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
+      unsigned Len = RealMinVLen / FLMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
+         LMUL *= 2) {
+      unsigned Len = RealMinVLen * LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+  }
   return Options;
 }
