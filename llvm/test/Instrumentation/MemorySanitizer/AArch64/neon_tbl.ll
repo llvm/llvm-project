@@ -214,7 +214,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask(<16 x i8> %a, <16 x 
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> splat (i8 -1), i8 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <16 x i8> [[_MSPROP]], i8 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <16 x i8> [[INS_0]], i8 [[V]], i32 1
@@ -353,7 +353,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask(<16 x i8> %a, <16 x
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> splat (i8 -1), i8 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <16 x i8> [[_MSPROP]], i8 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <16 x i8> [[INS_0]], i8 [[V]], i32 1
@@ -429,7 +429,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask2(<16 x i8> %a, <16 
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> splat (i8 -1), i8 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <16 x i8> [[_MSPROP]], i8 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <16 x i8> [[INS_0]], i8 [[V]], i32 1

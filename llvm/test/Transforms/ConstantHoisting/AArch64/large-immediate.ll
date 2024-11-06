@@ -123,17 +123,11 @@ define i64 @sdiv_minsize(i64 %a) minsize {
 }
 
 define <2 x i64> @sdiv_v2i64(<2 x i64> %a) {
-; CV-LABEL: define <2 x i64> @sdiv_v2i64(
-; CV-SAME: <2 x i64> [[A:%.*]]) {
-; CV-NEXT:    [[TMP1:%.*]] = sdiv <2 x i64> [[A]], <i64 4294967087, i64 4294967087>
-; CV-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[TMP1]], <i64 4294967087, i64 4294967087>
-; CV-NEXT:    ret <2 x i64> [[TMP2]]
-;
-; CI-LABEL: define <2 x i64> @sdiv_v2i64(
-; CI-SAME: <2 x i64> [[A:%.*]]) {
-; CI-NEXT:    [[TMP1:%.*]] = sdiv <2 x i64> [[A]], splat (i64 4294967087)
-; CI-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[TMP1]], splat (i64 4294967087)
-; CI-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-LABEL: define <2 x i64> @sdiv_v2i64(
+; CHECK-SAME: <2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i64> [[A]], splat (i64 4294967087)
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[TMP1]], splat (i64 4294967087)
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %1 = sdiv <2 x i64> %a, <i64 4294967087, i64 4294967087>
   %2 = add <2 x i64> %1, <i64 4294967087, i64 4294967087>

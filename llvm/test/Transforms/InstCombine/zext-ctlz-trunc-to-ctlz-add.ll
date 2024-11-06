@@ -28,7 +28,7 @@ define i16 @trunc_ctlz_zext_i16_i32(i16 %x) {
 define <2 x i8> @trunc_ctlz_zext_v2i8_v2i33(<2 x i8> %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_v2i8_v2i33(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <2 x i8> [[TMP1]], <i8 25, i8 25>
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <2 x i8> [[TMP1]], splat (i8 25)
 ; CHECK-NEXT:    ret <2 x i8> [[ZZ]]
 ;
   %z = zext <2 x i8> %x to <2 x i33>

@@ -11,9 +11,9 @@ define <2 x double> @test_x86_sse41_blendvpd(<2 x double> %a0, <2 x double> %a1,
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x double> [[A2:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <2 x i64> [[TMP4]], <i64 63, i64 63>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <2 x i64> [[TMP4]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <2 x i64> [[TMP5]] to <2 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <2 x i64> [[TMP1]], <i64 63, i64 63>
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <2 x i64> [[TMP7]] to <2 x i1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP2]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x double> [[A1:%.*]] to <2 x i64>
@@ -39,9 +39,9 @@ define <4 x float> @test_x86_sse41_blendvps(<4 x float> %a0, <4 x float> %a1, <4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[A2:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i32> [[TMP4]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i32> [[TMP4]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i32> [[TMP1]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x float> [[A1:%.*]] to <4 x i32>
@@ -226,9 +226,9 @@ define <16 x i8> @test_x86_sse41_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = ashr <16 x i8> [[A2:%.*]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr <16 x i8> [[A2:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i8> [[TMP4]] to <16 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <16 x i8> [[TMP1]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <16 x i8> [[TMP1]], splat (i8 7)
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <16 x i8> [[TMP6]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <16 x i8> [[A1:%.*]], [[A0:%.*]]

@@ -473,7 +473,7 @@ define <4 x i32> @slp_v4i32_Op1_unknown_Op2_const(<4 x i32> %a)
 define <4 x i32> @slp_v4i32_Op1_unknown_Op2_uniform_const(<4 x i32> %a)
 ; CHECK-LABEL: define <4 x i32> @slp_v4i32_Op1_unknown_Op2_uniform_const(
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[A]], <i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[A]], splat (i32 5)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
 {
@@ -495,7 +495,7 @@ define <4 x i32> @slp_v4i32_Op1_unknown_Op2_uniform_const(<4 x i32> %a)
 define <4 x i32> @slp_v4i32_Op1_unknown_Op2_uniform_const_pow2(<4 x i32> %a)
 ; CHECK-LABEL: define <4 x i32> @slp_v4i32_Op1_unknown_Op2_uniform_const_pow2(
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[A]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> [[A]], splat (i32 4)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
 {

@@ -939,10 +939,10 @@ define i1 @extract_value_uadd_fail2(<2 x i8> %xx, <2 x i8> %yy, i32 %idx) {
 
 define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
 ; CHECK-LABEL: @extract_value_uadd_fail3(
-; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], splat (i8 1)
 ; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1

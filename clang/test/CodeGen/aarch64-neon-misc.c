@@ -1668,98 +1668,98 @@ poly8x16_t test_vcntq_p8(poly8x16_t a) {
 }
 
 // CHECK-LABEL: @test_vmvn_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, splat (i8 -1)
 // CHECK:   ret <8 x i8> [[NEG_I]]
 int8x8_t test_vmvn_s8(int8x8_t a) {
   return vmvn_s8(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_s8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, splat (i8 -1)
 // CHECK:   ret <16 x i8> [[NEG_I]]
 int8x16_t test_vmvnq_s8(int8x16_t a) {
   return vmvnq_s8(a);
 }
 
 // CHECK-LABEL: @test_vmvn_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, splat (i16 -1)
 // CHECK:   ret <4 x i16> [[NEG_I]]
 int16x4_t test_vmvn_s16(int16x4_t a) {
   return vmvn_s16(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_s16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, splat (i16 -1)
 // CHECK:   ret <8 x i16> [[NEG_I]]
 int16x8_t test_vmvnq_s16(int16x8_t a) {
   return vmvnq_s16(a);
 }
 
 // CHECK-LABEL: @test_vmvn_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, splat (i32 -1)
 // CHECK:   ret <2 x i32> [[NEG_I]]
 int32x2_t test_vmvn_s32(int32x2_t a) {
   return vmvn_s32(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_s32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, splat (i32 -1)
 // CHECK:   ret <4 x i32> [[NEG_I]]
 int32x4_t test_vmvnq_s32(int32x4_t a) {
   return vmvnq_s32(a);
 }
 
 // CHECK-LABEL: @test_vmvn_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, splat (i8 -1)
 // CHECK:   ret <8 x i8> [[NEG_I]]
 uint8x8_t test_vmvn_u8(uint8x8_t a) {
   return vmvn_u8(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_u8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, splat (i8 -1)
 // CHECK:   ret <16 x i8> [[NEG_I]]
 uint8x16_t test_vmvnq_u8(uint8x16_t a) {
   return vmvnq_u8(a);
 }
 
 // CHECK-LABEL: @test_vmvn_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i16> %a, splat (i16 -1)
 // CHECK:   ret <4 x i16> [[NEG_I]]
 uint16x4_t test_vmvn_u16(uint16x4_t a) {
   return vmvn_u16(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_u16(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i16> %a, splat (i16 -1)
 // CHECK:   ret <8 x i16> [[NEG_I]]
 uint16x8_t test_vmvnq_u16(uint16x8_t a) {
   return vmvnq_u16(a);
 }
 
 // CHECK-LABEL: @test_vmvn_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, <i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <2 x i32> %a, splat (i32 -1)
 // CHECK:   ret <2 x i32> [[NEG_I]]
 uint32x2_t test_vmvn_u32(uint32x2_t a) {
   return vmvn_u32(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_u32(
-// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <4 x i32> %a, splat (i32 -1)
 // CHECK:   ret <4 x i32> [[NEG_I]]
 uint32x4_t test_vmvnq_u32(uint32x4_t a) {
   return vmvnq_u32(a);
 }
 
 // CHECK-LABEL: @test_vmvn_p8(
-// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <8 x i8> %a, splat (i8 -1)
 // CHECK:   ret <8 x i8> [[NEG_I]]
 poly8x8_t test_vmvn_p8(poly8x8_t a) {
   return vmvn_p8(a);
 }
 
 // CHECK-LABEL: @test_vmvnq_p8(
-// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK:   [[NEG_I:%.*]] = xor <16 x i8> %a, splat (i8 -1)
 // CHECK:   ret <16 x i8> [[NEG_I]]
 poly8x16_t test_vmvnq_p8(poly8x16_t a) {
   return vmvnq_p8(a);
@@ -2076,7 +2076,7 @@ uint32x4_t test_vqmovn_high_u64(uint32x2_t a, uint64x2_t b) {
 
 // CHECK-LABEL: @test_vshll_n_s8(
 // CHECK:   [[TMP0:%.*]] = sext <8 x i8> %a to <8 x i16>
-// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 8)
 // CHECK:   ret <8 x i16> [[VSHLL_N]]
 int16x8_t test_vshll_n_s8(int8x8_t a) {
   return vshll_n_s8(a, 8);
@@ -2086,7 +2086,7 @@ int16x8_t test_vshll_n_s8(int8x8_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
 // CHECK:   ret <4 x i32> [[VSHLL_N]]
 int32x4_t test_vshll_n_s16(int16x4_t a) {
   return vshll_n_s16(a, 16);
@@ -2096,7 +2096,7 @@ int32x4_t test_vshll_n_s16(int16x4_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 32, i64 32>
+// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 32)
 // CHECK:   ret <2 x i64> [[VSHLL_N]]
 int64x2_t test_vshll_n_s32(int32x2_t a) {
   return vshll_n_s32(a, 32);
@@ -2104,7 +2104,7 @@ int64x2_t test_vshll_n_s32(int32x2_t a) {
 
 // CHECK-LABEL: @test_vshll_n_u8(
 // CHECK:   [[TMP0:%.*]] = zext <8 x i8> %a to <8 x i16>
-// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 8)
 // CHECK:   ret <8 x i16> [[VSHLL_N]]
 uint16x8_t test_vshll_n_u8(uint8x8_t a) {
   return vshll_n_u8(a, 8);
@@ -2114,7 +2114,7 @@ uint16x8_t test_vshll_n_u8(uint8x8_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
 // CHECK:   ret <4 x i32> [[VSHLL_N]]
 uint32x4_t test_vshll_n_u16(uint16x4_t a) {
   return vshll_n_u16(a, 16);
@@ -2124,7 +2124,7 @@ uint32x4_t test_vshll_n_u16(uint16x4_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 32, i64 32>
+// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 32)
 // CHECK:   ret <2 x i64> [[VSHLL_N]]
 uint64x2_t test_vshll_n_u32(uint32x2_t a) {
   return vshll_n_u32(a, 32);
@@ -2133,7 +2133,7 @@ uint64x2_t test_vshll_n_u32(uint32x2_t a) {
 // CHECK-LABEL: @test_vshll_high_n_s8(
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %a, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK:   [[TMP0:%.*]] = sext <8 x i8> [[SHUFFLE_I]] to <8 x i16>
-// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 8)
 // CHECK:   ret <8 x i16> [[VSHLL_N]]
 int16x8_t test_vshll_high_n_s8(int8x16_t a) {
   return vshll_high_n_s8(a, 8);
@@ -2144,7 +2144,7 @@ int16x8_t test_vshll_high_n_s8(int8x16_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
 // CHECK:   ret <4 x i32> [[VSHLL_N]]
 int32x4_t test_vshll_high_n_s16(int16x8_t a) {
   return vshll_high_n_s16(a, 16);
@@ -2155,7 +2155,7 @@ int32x4_t test_vshll_high_n_s16(int16x8_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 32, i64 32>
+// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 32)
 // CHECK:   ret <2 x i64> [[VSHLL_N]]
 int64x2_t test_vshll_high_n_s32(int32x4_t a) {
   return vshll_high_n_s32(a, 32);
@@ -2164,7 +2164,7 @@ int64x2_t test_vshll_high_n_s32(int32x4_t a) {
 // CHECK-LABEL: @test_vshll_high_n_u8(
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %a, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK:   [[TMP0:%.*]] = zext <8 x i8> [[SHUFFLE_I]] to <8 x i16>
-// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+// CHECK:   [[VSHLL_N:%.*]] = shl <8 x i16> [[TMP0]], splat (i16 8)
 // CHECK:   ret <8 x i16> [[VSHLL_N]]
 uint16x8_t test_vshll_high_n_u8(uint8x16_t a) {
   return vshll_high_n_u8(a, 8);
@@ -2175,7 +2175,7 @@ uint16x8_t test_vshll_high_n_u8(uint8x16_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
 // CHECK:   [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
-// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], <i32 16, i32 16, i32 16, i32 16>
+// CHECK:   [[VSHLL_N:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
 // CHECK:   ret <4 x i32> [[VSHLL_N]]
 uint32x4_t test_vshll_high_n_u16(uint16x8_t a) {
   return vshll_high_n_u16(a, 16);
@@ -2186,7 +2186,7 @@ uint32x4_t test_vshll_high_n_u16(uint16x8_t a) {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
 // CHECK:   [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], <i64 32, i64 32>
+// CHECK:   [[VSHLL_N:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 32)
 // CHECK:   ret <2 x i64> [[VSHLL_N]]
 uint64x2_t test_vshll_high_n_u32(uint32x4_t a) {
   return vshll_high_n_u32(a, 32);
