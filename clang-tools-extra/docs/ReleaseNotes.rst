@@ -190,6 +190,10 @@ Changes in existing checks
   fix false positive that floating point variable is only used in increment
   expression.
 
+- Improved :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check to
+  avoid false positive when detecting templated class with inheritance.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positive when member initialization depends on a structured
