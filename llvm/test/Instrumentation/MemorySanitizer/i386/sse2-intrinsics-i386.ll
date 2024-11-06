@@ -213,7 +213,7 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P0]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -2147483649
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
@@ -290,7 +290,7 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext_load(ptr %p0) nounwind #0 {
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P0]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -2147483649
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
@@ -389,7 +389,7 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, ptr %p1) #0 {
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1:%.*]] = load <2 x double>, ptr [[P1:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P1]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[_MSLD]], i32 0
@@ -423,7 +423,7 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, ptr %p1
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1:%.*]] = load <2 x double>, ptr [[P1:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P1]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[_MSLD]], i32 0
@@ -501,7 +501,7 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P0]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -2147483649
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
@@ -1146,7 +1146,7 @@ define <8 x i16> @test_x86_sse2_psrl_w_load(<8 x i16> %a0, ptr %p) #0 {
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <8 x i16>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i16> [[_MSLD]] to i128

@@ -2615,7 +2615,7 @@ define void @test25(ptr %p, <1 x i64> %a) nounwind optsize ssp #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
 ; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -2147483649
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0

@@ -6,21 +6,21 @@ target triple = "i386-unknown-linux-gnu"
 
 define <2 x double> @test_x86_sse41_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2) #0 {
 ; CHECK-LABEL: @test_x86_sse41_blendvpd(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x double> [[A2:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <2 x i64> [[TMP4]], splat (i64 63)
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x double> [[A2:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <2 x i64> [[TMP13]], <i64 63, i64 63>
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <2 x i64> [[TMP5]] to <2 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 63)
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <2 x i64> [[TMP4]], <i64 63, i64 63>
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <2 x i64> [[TMP7]] to <2 x i1>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP2]], <2 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP2]], <2 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x double> [[A1:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x double> [[A0:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i64> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i64> [[TMP12]], [[TMP2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i64> [[TMP13]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i64> [[_MSPROP]], [[TMP12]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <2 x i1> [[TMP8]], <2 x i64> [[TMP14]], <2 x i64> [[TMP9]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> [[A0]], <2 x double> [[A1]], <2 x double> [[A2]])
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
@@ -34,21 +34,21 @@ declare <2 x double> @llvm.x86.sse41.blendvpd(<2 x double>, <2 x double>, <2 x d
 
 define <4 x float> @test_x86_sse41_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) #0 {
 ; CHECK-LABEL: @test_x86_sse41_blendvps(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[A2:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i32> [[TMP4]], splat (i32 31)
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x float> [[A2:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i32> [[TMP13]], <i32 31, i32 31, i32 31, i32 31>
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 31)
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i32> [[TMP4]], <i32 31, i32 31, i32 31, i32 31>
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i1>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x float> [[A1:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x float> [[A0:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i32> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i32> [[TMP12]], [[TMP2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i32> [[TMP13]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i32> [[_MSPROP]], [[TMP12]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP14]], <4 x i32> [[TMP9]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> [[A0]], <4 x float> [[A1]], <4 x float> [[A2]])
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
@@ -165,7 +165,7 @@ define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(ptr %ptr, <16 x i8> %a1) #0 {
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A0:%.*]] = load <16 x i8>, ptr [[PTR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <16 x i8>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[_MSLD]] to i128
@@ -222,18 +222,18 @@ define <8 x i16> @test_x86_sse41_packusdw_fold() #0 {
 
 define <16 x i8> @test_x86_sse41_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) #0 {
 ; CHECK-LABEL: @test_x86_sse41_pblendvb(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = ashr <16 x i8> [[A2:%.*]], splat (i8 7)
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i8> [[TMP4]] to <16 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <16 x i8> [[TMP1]], splat (i8 7)
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr <16 x i8> [[A2:%.*]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i8> [[TMP10]] to <16 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <16 x i8> [[TMP4]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <16 x i8> [[TMP6]] to <16 x i1>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <16 x i8> [[A1:%.*]], [[A0:%.*]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i8> [[TMP9]], [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i8> [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> [[TMP2]], <16 x i8> [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <16 x i8> [[A1:%.*]], [[A0:%.*]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i8> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i8> [[_MSPROP]], [[TMP9]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <16 x i1> [[TMP7]], <16 x i8> [[TMP11]], <16 x i8> [[TMP8]]
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A0]], <16 x i8> [[A1]], <16 x i8> [[A2]])
 ; CHECK-NEXT:    store <16 x i8> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
@@ -387,7 +387,7 @@ define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, ptr %a1) #0 
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1B:%.*]] = load <2 x double>, ptr [[A1:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A1]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> [[_MSLD]], <2 x i32> <i32 2, i32 1>
@@ -414,7 +414,7 @@ define <4 x float> @test_x86_sse41_round_ss_load(<4 x float> %a0, ptr %a1) #0 {
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1B:%.*]] = load <4 x float>, ptr [[A1:%.*]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A1]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], -2147483649
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[_MSLD]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>

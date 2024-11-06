@@ -15,7 +15,7 @@ define void @StoreIntrinsic(ptr %p, <4 x float> %x) nounwind uwtable sanitize_me
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2147483649
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP4]], align 1
 ; CHECK-NEXT:    store <4 x float> [[X]], ptr [[P]], align 1
@@ -27,9 +27,9 @@ define void @StoreIntrinsic(ptr %p, <4 x float> %x) nounwind uwtable sanitize_me
 ; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
-; ORIGINS-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], -2147483649
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ORIGINS-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 1073741824
 ; ORIGINS-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], -4
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; ORIGINS-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP5]], align 1
@@ -64,7 +64,7 @@ define <16 x i8> @LoadIntrinsic(ptr %p) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -2147483649
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[CALL:%.*]] = call <16 x i8> @llvm.x86.sse3.ldu.dq(ptr [[P]])
@@ -75,9 +75,9 @@ define <16 x i8> @LoadIntrinsic(ptr %p) nounwind uwtable sanitize_memory {
 ; ORIGINS-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; ORIGINS-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGINS-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -2147483649
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; ORIGINS-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGINS-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 1073741824
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -4
 ; ORIGINS-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; ORIGINS-NEXT:    [[_MSLD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
