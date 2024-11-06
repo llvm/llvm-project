@@ -8743,7 +8743,7 @@ when building with ``-fsanitize=signed-integer-overflow``:
 
 ``wraps`` may also be used with function parameters or declarations of
 variables as well as members of structures. Using ``wraps`` on non-integer
-types will result in a `-Wuseless-wraps-attribute`. One may disable this
+types will result in a ``-Wuseless-wraps-attribute``. One may disable this
 warning with ``-Wno-useless-wraps-attribute``.
 
 ``wraps`` persists through implicit type promotions and will be applied to the
