@@ -1515,25 +1515,6 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   return true;
 }
 
-bool LoopVectorizationLegality::canVectorizeEarlyExit() const {
-  // Currently only allow vectorizing loops with early exits, if early-exit
-  // vectorization is explicitly enabled and the loop has metadata to force
-  // vectorization.
-
-  SmallVector<BasicBlock *> Exiting;
-  TheLoop->getExitingBlocks(Exiting);
-  if (Exiting.size() == 1)
-    return false;
-
-  LoopVectorizeHints Hints(TheLoop, true, *ORE);
-  if (Hints.getForce() == LoopVectorizeHints::FK_Undefined)
-    return false;
-
-  Function *Fn = TheLoop->getHeader()->getParent();
-  return Hints.allowVectorization(Fn, TheLoop,
-                                  true /*VectorizeOnlyWhenForced*/);
-}
-
 // Helper function to canVectorizeLoopNestCFG.
 bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
                                                     bool UseVPlanNativePath) {
