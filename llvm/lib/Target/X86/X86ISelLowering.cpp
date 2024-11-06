@@ -46833,23 +46833,21 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // AVX512 - Extend select with zero to merge with target shuffle.
   // select(mask, extract_subvector(shuffle(x)), zero) -->
   // extract_subvector(select(insert_subvector(mask), shuffle(x), zero))
-  // TODO - support non target shuffles as well.
+  // TODO - support non target shuffles as well with canCombineAsMaskOperation.
   if (Subtarget.hasAVX512() && CondVT.isVector() &&
       CondVT.getVectorElementType() == MVT::i1) {
-    auto SelectableOp = [&TLI](SDValue Op) {
+    auto SelectableOp = [&TLI](SDValue Op, SDValue Alt) {
       return Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
              isTargetShuffle(Op.getOperand(0).getOpcode()) &&
              isNullConstant(Op.getOperand(1)) &&
              TLI.isTypeLegal(Op.getOperand(0).getValueType()) &&
-             Op.hasOneUse() && Op.getOperand(0).hasOneUse();
+             Op.hasOneUse() && Op.getOperand(0).hasOneUse() &&
+             ISD::isBuildVectorAllZeros(Alt.getNode());
     };
 
-    bool SelectableLHS = SelectableOp(LHS);
-    bool SelectableRHS = SelectableOp(RHS);
-    bool ZeroLHS = ISD::isBuildVectorAllZeros(LHS.getNode());
-    bool ZeroRHS = ISD::isBuildVectorAllZeros(RHS.getNode());
-
-    if ((SelectableLHS && ZeroRHS) || (SelectableRHS && ZeroLHS)) {
+    bool SelectableLHS = SelectableOp(LHS, RHS);
+    bool SelectableRHS = SelectableOp(RHS, LHS);
+    if (SelectableLHS || SelectableRHS) {
       EVT SrcVT = SelectableLHS ? LHS.getOperand(0).getValueType()
                                 : RHS.getOperand(0).getValueType();
       EVT SrcCondVT = SrcVT.changeVectorElementType(MVT::i1);

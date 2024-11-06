@@ -34,7 +34,7 @@ define i1 @trueval_is_true(i1 %C, i1 %X) {
 
 define <2 x i1> @trueval_is_true_vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @trueval_is_true_vec(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> <i1 true, i1 true>, <2 x i1> %X
@@ -89,7 +89,7 @@ define i1 @test9(i1 %C, i1 %X) {
 
 define <2 x i1> @test9vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_C]], <2 x i1> [[X:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -119,8 +119,8 @@ define i1 @test10(i1 %C, i1 %X) {
 
 define <2 x i1> @test10vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @test10vec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_C]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X:%.*]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_C]], <2 x i1> splat (i1 true), <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> %X, <2 x i1> <i1 true, i1 true>
@@ -156,7 +156,7 @@ define i1 @test24(i1 %a, i1 %b) {
 
 define <2 x i1> @test24vec(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @test24vec(
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %c = select <2 x i1> %a, <2 x i1> %a, <2 x i1> %b
@@ -176,7 +176,7 @@ define i1 @test62(i1 %A, i1 %B) {
 
 define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test62vec(
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -198,8 +198,8 @@ define i1 @test63(i1 %A, i1 %B) {
 
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> splat (i1 true), <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -276,7 +276,7 @@ define i32 @test12b(i1 %cond, i32 %a) {
 
 define <2 x i32> @test12bvec(<2 x i1> %cond, <2 x i32> %a) {
 ; CHECK-LABEL: @test12bvec(
-; CHECK-NEXT:    [[NOT_COND:%.*]] = xor <2 x i1> [[COND:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_COND:%.*]] = xor <2 x i1> [[COND:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[B:%.*]] = zext <2 x i1> [[NOT_COND]] to <2 x i32>
 ; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i32> [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
@@ -1450,7 +1450,7 @@ define i32 @select_icmp_slt0_xor(i32 %x) {
 define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @select_icmp_slt0_xor_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X]], splat (i32 -2147483648)
 ; CHECK-NEXT:    [[X_XOR:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[X]], <2 x i32> [[XOR]]
 ; CHECK-NEXT:    ret <2 x i32> [[X_XOR]]
 ;
@@ -1535,7 +1535,7 @@ define <4 x float> @PR33721(<4 x float> %w) {
 ; CHECK-LABEL: @PR33721(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp ole <4 x float> [[W:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[TMP0]], <4 x float> splat (float 0xFFFFFFFFE0000000), <4 x float> zeroinitializer
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
 entry:
@@ -1607,7 +1607,7 @@ define i32 @test_shl_zext_bool(i1 %t) {
 
 define <2 x i32> @test_shl_zext_bool_splat(<2 x i1> %t) {
 ; CHECK-LABEL: @test_shl_zext_bool_splat(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T:%.*]], <2 x i32> <i32 8, i32 8>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T:%.*]], <2 x i32> splat (i32 8), <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %r = select <2 x i1> %t, <2 x i32> <i32 8, i32 8>, <2 x i32> zeroinitializer
@@ -1648,7 +1648,7 @@ define float @copysign1_fmf(float %x) {
 define <2 x float> @copysign2(<2 x float> %x) {
 ; CHECK-LABEL: @copysign2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 4.200000e+01), <2 x float> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
@@ -1672,7 +1672,7 @@ define float @copysign3(float %x) {
 define <2 x float> @copysign_vec_poison(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 4.200000e+01), <2 x float> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
@@ -1683,7 +1683,7 @@ define <2 x float> @copysign_vec_poison(<2 x float> %x) {
 
 define <2 x float> @copysign_vec_poison1(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_vec_poison1(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 4.200000e+01), <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
@@ -1694,7 +1694,7 @@ define <2 x float> @copysign_vec_poison1(<2 x float> %x) {
 
 define <2 x float> @copysign_vec_poison3(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_vec_poison3(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float 4.200000e+01), <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
@@ -1743,7 +1743,7 @@ define <2 x float> @copysign_type_mismatch2(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_type_mismatch2(
 ; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to i64
 ; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[I]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], <2 x float> splat (float 1.000000e+00), <2 x float> splat (float -1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to i64
@@ -2766,8 +2766,8 @@ define i8 @select_replacement_add_eq(i8 %x, i8 %y) {
 
 define <2 x i8> @select_replacement_add_eq_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @select_replacement_add_eq_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 2, i8 2>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> splat (i8 2), <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 1, i8 1>
@@ -2803,7 +2803,7 @@ define <2 x i8> @select_replacement_add_eq_vec_poison(<2 x i8> %x, <2 x i8> %y) 
 define <2 x i8> @select_replacement_add_eq_vec_undef(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @select_replacement_add_eq_vec_undef(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 undef>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], splat (i8 1)
 ; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
@@ -2815,7 +2815,7 @@ define <2 x i8> @select_replacement_add_eq_vec_undef(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @select_replacement_add_eq_vec_undef_okay(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @select_replacement_add_eq_vec_undef_okay(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 2, i8 undef>, <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
@@ -3374,7 +3374,7 @@ define i32 @select_cond_zext_cond(i1 %cond, i32 %b) {
 
 define <2 x i32> @select_cond_zext_cond_vec(<2 x i1> %cond, <2 x i32> %b) {
 ; CHECK-LABEL: @select_cond_zext_cond_vec(
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 1, i32 1>, <2 x i32> [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> splat (i32 1), <2 x i32> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %zext = zext <2 x i1> %cond to <2 x i32>
@@ -3394,7 +3394,7 @@ define i32 @select_cond_sext_cond(i1 %cond, i32 %b) {
 
 define <2 x i32> @select_cond_sext_cond_vec(<2 x i1> %cond, <2 x i32> %b) {
 ; CHECK-LABEL: @select_cond_sext_cond_vec(
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> splat (i32 -1), <2 x i32> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %sext = sext <2 x i1> %cond to <2 x i32>
@@ -3586,7 +3586,7 @@ define i32 @not_clamp_umin2(i32 %x) {
 
 define <2 x i8> @clamp_umaxval(<2 x i8> %x) {
 ; CHECK-LABEL: @clamp_umaxval(
-; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 -2, i8 -2>)
+; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -2))
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 255, i8 255>
@@ -3671,7 +3671,7 @@ define i8 @not_clamp_smin2(i8 %x) {
 
 define <2 x i8> @clamp_smaxval(<2 x i8> %x) {
 ; CHECK-LABEL: @clamp_smaxval(
-; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 126, i8 126>)
+; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 126))
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 127, i8 127>

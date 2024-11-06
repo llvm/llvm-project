@@ -48,7 +48,7 @@ define <2 x i64> @Test_x86_sse2_psad_bw(<16 x i8> %a, <16 x i8> %b) sanitize_mem
 ; CHECK: bitcast <16 x i8> {{.*}} to <2 x i64>
 ; CHECK: icmp ne <2 x i64> {{.*}}, zeroinitializer
 ; CHECK: sext <2 x i1> {{.*}} to <2 x i64>
-; CHECK: lshr <2 x i64> {{.*}}, <i64 48, i64 48>
+; CHECK: lshr <2 x i64> {{.*}}, splat (i64 48)
 ; CHECK: ret <2 x i64>
 
 
