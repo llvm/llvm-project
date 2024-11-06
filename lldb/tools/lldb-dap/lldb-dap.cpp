@@ -734,7 +734,7 @@ void EventThreadFunction(DAP &dap) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
           auto bp = Breakpoint(
-              &dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
+              dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
           // If the breakpoint was originated from the IDE, it will have the
           // BreakpointBase::GetBreakpointLabel() label attached. Regardless
           // of wether the locations were added or removed, the breakpoint
@@ -2944,7 +2944,7 @@ void request_setBreakpoints(DAP &dap, const llvm::json::Object &request) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
-        SourceBreakpoint src_bp(&dap, *bp_obj);
+        SourceBreakpoint src_bp(dap, *bp_obj);
         request_bps.try_emplace(src_bp.line, src_bp);
         const auto [kv, inserted] =
             dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
@@ -3149,7 +3149,7 @@ void request_setFunctionBreakpoints(DAP &dap,
     const auto *bp_obj = value.getAsObject();
     if (bp_obj == nullptr)
       continue;
-    FunctionBreakpoint func_bp(&dap, *bp_obj);
+    FunctionBreakpoint func_bp(dap, *bp_obj);
     request_bps.try_emplace(func_bp.functionName, std::move(func_bp));
   }
 
@@ -3437,8 +3437,7 @@ void request_setDataBreakpoints(DAP &dap, const llvm::json::Object &request) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
-        Watchpoint wp(&dap, *bp_obj);
-        watchpoints.push_back(wp);
+        watchpoints.emplace_back(dap, *bp_obj);
       }
     }
   }
@@ -4790,7 +4789,7 @@ void request__testGetTargetBreakpoints(DAP &dap,
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = Breakpoint(&dap, dap.target.GetBreakpointAtIndex(i));
+    auto bp = Breakpoint(dap, dap.target.GetBreakpointAtIndex(i));
     AppendBreakpoint(bp, response_breakpoints);
   }
   llvm::json::Object body;
@@ -5004,7 +5003,7 @@ void request_setInstructionBreakpoints(DAP &dap,
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         // Read instruction breakpoint request.
-        InstructionBreakpoint inst_bp(&dap, *bp_obj);
+        InstructionBreakpoint inst_bp(dap, *bp_obj);
         // Store them into map for reference.
         request_ibp.try_emplace(inst_bp.instructionAddressReference,
                                 std::move(inst_bp));

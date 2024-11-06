@@ -11,7 +11,7 @@
 
 using namespace lldb_dap;
 
-BreakpointBase::BreakpointBase(DAP *d, const llvm::json::Object &obj)
+BreakpointBase::BreakpointBase(DAP &d, const llvm::json::Object &obj)
     : dap(d), condition(std::string(GetString(obj, "condition"))),
       hitCondition(std::string(GetString(obj, "hitCondition"))) {}
 

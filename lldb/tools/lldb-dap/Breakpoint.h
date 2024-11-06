@@ -19,9 +19,9 @@ struct Breakpoint : public BreakpointBase {
   // The LLDB breakpoint associated wit this source breakpoint
   lldb::SBBreakpoint bp;
 
-  Breakpoint(DAP *d) : BreakpointBase(d) {}
-  Breakpoint(DAP *d, const llvm::json::Object &obj) : BreakpointBase(d, obj) {}
-  Breakpoint(DAP *d, lldb::SBBreakpoint bp) : BreakpointBase(d), bp(bp) {}
+  Breakpoint(DAP &d) : BreakpointBase(d) {}
+  Breakpoint(DAP &d, const llvm::json::Object &obj) : BreakpointBase(d, obj) {}
+  Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), bp(bp) {}
 
   void SetCondition() override;
   void SetHitCondition() override;
