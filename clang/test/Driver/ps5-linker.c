@@ -53,6 +53,7 @@
 // CHECK-EXE-SAME: "--unresolved-symbols=report-all"
 // CHECK-EXE-SAME: "-z" "now"
 // CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
+// CHECK-EXE-SAME: "-z" "rodynamic"
 // CHECK-EXE-SAME: "-z" "common-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "max-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
@@ -65,6 +66,19 @@
 // CHECK-NO-EXE-NOT: "--build-id
 // CHECK-NO-EXE-NOT: "--unresolved-symbols
 // CHECK-NO-EXE-NOT: "-z"
+
+// Test that an appropriate linker script is supplied by the driver.
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=main %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=prx %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=static %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-SCRIPT %s
+
+// CHECK-SCRIPT: {{ld(\.exe)?}}"
+// CHECK-SCRIPT-SAME: "--default-script" "[[SCRIPT]].script"
+
+// CHECK-NO-SCRIPT: {{ld(\.exe)?}}"
+// CHECK-NO-SCRIPT-NOT: "--default-script"
 
 // Test that -static is forwarded to the linker
 

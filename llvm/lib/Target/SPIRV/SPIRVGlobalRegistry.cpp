@@ -400,7 +400,7 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-  return getOrCreateConstInt(Val->getUniqueInteger().getSExtValue(), I,
+  return getOrCreateConstInt(Val->getUniqueInteger().getZExtValue(), I,
                              SpvBaseType, TII, ZeroAsNull);
 }
 

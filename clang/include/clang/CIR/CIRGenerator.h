@@ -53,6 +53,7 @@ public:
   ~CIRGenerator() override;
   void Initialize(clang::ASTContext &astCtx) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
+  mlir::ModuleOp getModule() const;
 };
 
 } // namespace cir
