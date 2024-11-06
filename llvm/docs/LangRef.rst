@@ -3730,10 +3730,10 @@ Fast-Math Flags
 
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
-:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), and :ref:`phi <i_phi>`,
-:ref:`select <i_select>`, or :ref:`call <i_call>` instructions that return
-floating-point types may use the following flags to enable otherwise unsafe
-floating-point transformations.
+:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
+:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
+:ref:`call <i_call>` instructions that return floating-point types may use the
+following flags to enable otherwise unsafe floating-point transformations.
 
 ``fast``
    This flag is a shorthand for specifying all fast-math flags at once, and
@@ -11827,6 +11827,8 @@ Example:
       %Y = sext i1 true to i32             ; yields i32:-1
       %Z = sext <2 x i16> <i16 8, i16 7> to <2 x i32> ; yields <i32 8, i32 7>
 
+.. _i_fptrunc:
+
 '``fptrunc .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -11874,6 +11876,8 @@ Example:
 
       %X = fptrunc double 16777217.0 to float    ; yields float:16777216.0
       %Y = fptrunc double 1.0E+300 to half       ; yields half:+infinity
+
+.. _i_fpext:
 
 '``fpext .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

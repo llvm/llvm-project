@@ -157,7 +157,7 @@ __global__ void ffp3(long double *p) {
 
 __device__ double ffp4(double *p, float f) {
   // CHECK-LABEL: @_Z4ffp4Pdf
-  // CHECK: fpext float {{.*}} to double
+  // CHECK: fpext contract float {{.*}} to double
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8{{$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
