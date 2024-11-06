@@ -56,3 +56,22 @@ int *test_std_addressof2() {
   // LLVM: [[RES:%.*]] = load ptr, ptr [[ADDR]], align 8
   // LLVM: ret ptr [[RES]]
 }
+
+extern "C" char* test_memchr(const char arg[32]) {
+  return __builtin_char_memchr(arg, 123, 32);
+
+  // CIR-LABEL: test_memchr
+  // CIR: [[PATTERN:%.*]] = cir.const #cir.int<123> : !s32i 
+  // CIR: [[LEN:%.*]] = cir.const #cir.int<32> : !s32i 
+  // CIR: [[LEN_U64:%.*]] = cir.cast(integral, [[LEN]] : !s32i), !u64i 
+  // CIR: {{%.*}} = cir.libc.memchr({{%.*}}, [[PATTERN]], [[LEN_U64]])
+
+  // LLVM: {{.*}}@test_memchr(ptr{{.*}}[[ARG:%.*]]) 
+  // LLVM: [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+  // LLVM: store ptr [[ARG]], ptr [[TMP0]], align 8
+  // LLVM: [[SRC:%.*]] = load ptr, ptr [[TMP0]], align 8
+  // LLVM: [[RES:%.*]] = call ptr @memchr(ptr [[SRC]], i32 123, i64 32)
+  // LLVM: store ptr [[RES]], ptr [[RET_P:%.*]], align 8
+  // LLVM: [[RET:%.*]] = load ptr, ptr [[RET_P]], align 8
+  // LLVM: ret ptr [[RET]]
+}

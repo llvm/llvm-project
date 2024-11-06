@@ -1423,7 +1423,16 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_memcpy_inline NYI");
 
   case Builtin::BI__builtin_char_memchr:
-    llvm_unreachable("BI__builtin_char_memchr NYI");
+  case Builtin::BI__builtin_memchr: {
+    Address srcPtr = buildPointerWithAlignment(E->getArg(0));
+    mlir::Value src =
+        builder.createBitcast(srcPtr.getPointer(), builder.getVoidPtrTy());
+    mlir::Value pattern = buildScalarExpr(E->getArg(1));
+    mlir::Value len = buildScalarExpr(E->getArg(2));
+    mlir::Value res =
+        builder.create<MemChrOp>(getLoc(E->getExprLoc()), src, pattern, len);
+    return RValue::get(res);
+  }
 
   case Builtin::BI__builtin___memcpy_chk: {
     // fold __builtin_memcpy_chk(x, y, cst1, cst2) to memcpy iff cst1<=cst2.
