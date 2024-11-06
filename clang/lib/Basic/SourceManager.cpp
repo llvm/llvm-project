@@ -29,6 +29,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -2240,19 +2241,13 @@ static std::string humanizeNumber(uint64_t Number) {
        {1'000'000UL, 'M'},
        {1'000UL, 'k'}}};
 
-  std::string HumanString;
-  llvm::raw_string_ostream HumanStringStream(HumanString);
   for (const auto &[UnitSize, UnitSign] : Units) {
     if (Number >= UnitSize) {
-      HumanStringStream << llvm::format(
-          "%.2f%c", Number / static_cast<double>(UnitSize), UnitSign);
-      break;
+      return llvm::formatv("{0:F}{1}", Number / static_cast<double>(UnitSize),
+                           UnitSign);
     }
   }
-  if (HumanString.empty()) {
-    HumanStringStream << Number;
-  }
-  return HumanString;
+  return std::to_string(Number);
 }
 
 void SourceManager::noteSLocAddressSpaceUsage(
