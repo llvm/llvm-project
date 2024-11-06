@@ -2872,7 +2872,7 @@ static unsigned getNumberOfModules(Module *Mod) {
   return ChildModules + 1;
 }
 
-void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext &Context) {
+void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   // Enter the submodule description block.
   Stream.EnterSubblock(SUBMODULE_BLOCK_ID, /*bits for abbreviations*/5);
 
@@ -3123,12 +3123,14 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext &Context) {
 
     // Emit the reachable initializers.
     // The initializer may only be unreachable in reduced BMI.
-    RecordData Inits;
-    for (Decl *D : Context.getModuleInitializers(Mod))
-      if (wasDeclEmitted(D))
-        AddDeclRef(D, Inits);
-    if (!Inits.empty())
-      Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
+    if (Context) {
+      RecordData Inits;
+      for (Decl *D : Context->getModuleInitializers(Mod))
+        if (wasDeclEmitted(D))
+          AddDeclRef(D, Inits);
+      if (!Inits.empty())
+        Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
+    }
 
     // Emit the name of the re-exported module, if any.
     if (!Mod->ExportAsModule.empty()) {
@@ -3743,7 +3745,7 @@ bool IsInterestingNonMacroIdentifier(const IdentifierInfo *II,
 class ASTIdentifierTableTrait {
   ASTWriter &Writer;
   Preprocessor &PP;
-  IdentifierResolver &IdResolver;
+  IdentifierResolver *IdResolver;
   bool IsModule;
   bool NeedDecls;
   ASTWriter::RecordData *InterestingIdentifierOffsets;
@@ -3768,7 +3770,7 @@ public:
   using offset_type = unsigned;
 
   ASTIdentifierTableTrait(ASTWriter &Writer, Preprocessor &PP,
-                          IdentifierResolver &IdResolver, bool IsModule,
+                          IdentifierResolver *IdResolver, bool IsModule,
                           ASTWriter::RecordData *InterestingIdentifierOffsets)
       : Writer(Writer), PP(PP), IdResolver(IdResolver), IsModule(IsModule),
         NeedDecls(!IsModule || !Writer.getLangOpts().CPlusPlus),
@@ -3807,8 +3809,8 @@ public:
       if (MacroOffset)
         DataLen += 4; // MacroDirectives offset.
 
-      if (NeedDecls)
-        DataLen += std::distance(IdResolver.begin(II), IdResolver.end()) *
+      if (NeedDecls && IdResolver)
+        DataLen += std::distance(IdResolver->begin(II), IdResolver->end()) *
                    sizeof(DeclID);
     }
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
@@ -3846,14 +3848,14 @@ public:
     if (HadMacroDefinition)
       LE.write<uint32_t>(MacroOffset);
 
-    if (NeedDecls) {
+    if (NeedDecls && IdResolver) {
       // Emit the declaration IDs in reverse order, because the
       // IdentifierResolver provides the declarations as they would be
       // visible (e.g., the function "stat" would come before the struct
       // "stat"), but the ASTReader adds declarations to the end of the list
       // (so we need to see the struct "stat" before the function "stat").
       // Only emit declarations that aren't from a chained PCH, though.
-      SmallVector<NamedDecl *, 16> Decls(IdResolver.decls(II));
+      SmallVector<NamedDecl *, 16> Decls(IdResolver->decls(II));
       for (NamedDecl *D : llvm::reverse(Decls))
         LE.write<DeclID>((DeclID)Writer.getDeclID(
             getDeclForLocalLookup(PP.getLangOpts(), D)));
@@ -3873,7 +3875,7 @@ static bool isLocalIdentifierID(IdentifierID ID) { return !(ID >> 32); }
 /// (the actual identifiers themselves) and a separate "offsets" index
 /// that maps identifier IDs to locations within the blob.
 void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
-                                     IdentifierResolver &IdResolver,
+                                     IdentifierResolver *IdResolver,
                                      bool IsModule) {
   using namespace llvm;
 
@@ -4858,14 +4860,21 @@ time_t ASTWriter::getTimestampForOutput(const FileEntry *E) const {
   return IncludeTimestamps ? E->getModificationTime() : 0;
 }
 
-ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
-                                     Module *WritingModule, StringRef isysroot,
-                                     bool ShouldCacheASTInMemory) {
+ASTFileSignature
+ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
+                    StringRef OutputFile, Module *WritingModule,
+                    StringRef isysroot, bool ShouldCacheASTInMemory) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  ASTHasCompilerErrors =
-      SemaRef.PP.getDiagnostics().hasUncompilableErrorOccurred();
+  Sema *SemaPtr = Subject.dyn_cast<Sema *>();
+  Preprocessor &PPRef = [&]() -> Preprocessor & {
+    if (SemaPtr)
+      return SemaPtr->getPreprocessor();
+    return *Subject.get<Preprocessor *>();
+  }();
+
+  ASTHasCompilerErrors = PPRef.getDiagnostics().hasUncompilableErrorOccurred();
 
   // Emit the file header.
   Stream.Emit((unsigned)'C', 8);
@@ -4875,16 +4884,16 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
 
   WriteBlockInfoBlock();
 
-  PP = &SemaRef.PP;
+  PP = &PPRef;
   this->WritingModule = WritingModule;
-  ASTFileSignature Signature = WriteASTCore(SemaRef, isysroot, WritingModule);
+  ASTFileSignature Signature = WriteASTCore(SemaPtr, isysroot, WritingModule);
   PP = nullptr;
   this->WritingModule = nullptr;
   this->BaseDirectory.clear();
 
   WritingAST = false;
 
-  if (WritingModule && SemaRef.PP.getHeaderSearchInfo()
+  if (WritingModule && PPRef.getHeaderSearchInfo()
                            .getHeaderSearchOpts()
                            .ModulesValidateOncePerBuildSession)
     updateModuleTimestamp(OutputFile);
@@ -5349,7 +5358,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
-ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
+ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
                                          Module *WritingModule) {
   using namespace llvm;
 
@@ -5359,14 +5368,11 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   if (Chain)
     Chain->finalizeForWriting();
 
-  ASTContext &Context = SemaRef.Context;
-  Preprocessor &PP = SemaRef.PP;
-
   // This needs to be done very early, since everything that writes
   // SourceLocations or FileIDs depends on it.
   computeNonAffectingInputFiles();
 
-  writeUnhashedControlBlock(PP);
+  writeUnhashedControlBlock(*PP);
 
   // Don't reuse type ID and Identifier ID from readers for C++ standard named
   // modules since we want to support no-transitive-change model for named
@@ -5391,7 +5397,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // We do this before emitting any Decl and Types to make sure the
   // Identifier ID is stable.
   SmallVector<const IdentifierInfo *, 128> IIs;
-  for (const auto &ID : PP.getIdentifierTable())
+  for (const auto &ID : PP->getIdentifierTable())
     if (IsInterestingNonMacroIdentifier(ID.second, *this))
       IIs.push_back(ID.second);
   // Sort the identifiers lexicographically before getting the references so
@@ -5404,31 +5410,37 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // entire table, since later PCH files in a PCH chain are only interested in
   // the results at the end of the chain.
   RecordData WeakUndeclaredIdentifiers;
-  for (const auto &WeakUndeclaredIdentifierList :
-       SemaRef.WeakUndeclaredIdentifiers) {
-    const IdentifierInfo *const II = WeakUndeclaredIdentifierList.first;
-    for (const auto &WI : WeakUndeclaredIdentifierList.second) {
-      AddIdentifierRef(II, WeakUndeclaredIdentifiers);
-      AddIdentifierRef(WI.getAlias(), WeakUndeclaredIdentifiers);
-      AddSourceLocation(WI.getLocation(), WeakUndeclaredIdentifiers);
+  if (SemaPtr) {
+    for (const auto &WeakUndeclaredIdentifierList :
+         SemaPtr->WeakUndeclaredIdentifiers) {
+      const IdentifierInfo *const II = WeakUndeclaredIdentifierList.first;
+      for (const auto &WI : WeakUndeclaredIdentifierList.second) {
+        AddIdentifierRef(II, WeakUndeclaredIdentifiers);
+        AddIdentifierRef(WI.getAlias(), WeakUndeclaredIdentifiers);
+        AddSourceLocation(WI.getLocation(), WeakUndeclaredIdentifiers);
+      }
     }
   }
 
   // Form the record of special types.
   RecordData SpecialTypes;
-  AddTypeRef(Context, Context.getRawCFConstantStringType(), SpecialTypes);
-  AddTypeRef(Context, Context.getFILEType(), SpecialTypes);
-  AddTypeRef(Context, Context.getjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context, Context.getsigjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context, Context.ObjCIdRedefinitionType, SpecialTypes);
-  AddTypeRef(Context, Context.ObjCClassRedefinitionType, SpecialTypes);
-  AddTypeRef(Context, Context.ObjCSelRedefinitionType, SpecialTypes);
-  AddTypeRef(Context, Context.getucontext_tType(), SpecialTypes);
+  if (SemaPtr) {
+    ASTContext &Context = SemaPtr->Context;
+    AddTypeRef(Context, Context.getRawCFConstantStringType(), SpecialTypes);
+    AddTypeRef(Context, Context.getFILEType(), SpecialTypes);
+    AddTypeRef(Context, Context.getjmp_bufType(), SpecialTypes);
+    AddTypeRef(Context, Context.getsigjmp_bufType(), SpecialTypes);
+    AddTypeRef(Context, Context.ObjCIdRedefinitionType, SpecialTypes);
+    AddTypeRef(Context, Context.ObjCClassRedefinitionType, SpecialTypes);
+    AddTypeRef(Context, Context.ObjCSelRedefinitionType, SpecialTypes);
+    AddTypeRef(Context, Context.getucontext_tType(), SpecialTypes);
+  }
 
-  PrepareWritingSpecialDecls(SemaRef);
+  if (SemaPtr)
+    PrepareWritingSpecialDecls(*SemaPtr);
 
   // Write the control block
-  WriteControlBlock(PP, isysroot);
+  WriteControlBlock(*PP, isysroot);
 
   // Write the remaining AST contents.
   Stream.FlushToWord();
@@ -5450,11 +5462,13 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   // It's possible that updateOutOfDateSelector can update SelectorIDs. To be
   // safe, we copy all selectors out.
-  llvm::SmallVector<Selector, 256> AllSelectors;
-  for (auto &SelectorAndID : SelectorIDs)
-    AllSelectors.push_back(SelectorAndID.first);
-  for (auto &Selector : AllSelectors)
-    SemaRef.ObjC().updateOutOfDateSelector(Selector);
+  if (SemaPtr) {
+    llvm::SmallVector<Selector, 256> AllSelectors;
+    for (auto &SelectorAndID : SelectorIDs)
+      AllSelectors.push_back(SelectorAndID.first);
+    for (auto &Selector : AllSelectors)
+      SemaPtr->ObjC().updateOutOfDateSelector(Selector);
+  }
 
   if (Chain) {
     // Write the mapping information describing our module dependencies and how
@@ -5518,28 +5532,35 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
                               Buffer.data(), Buffer.size());
   }
 
-  WriteDeclAndTypes(Context);
+  if (SemaPtr)
+    WriteDeclAndTypes(SemaPtr->Context);
 
   WriteFileDeclIDsMap();
-  WriteSourceManagerBlock(PP.getSourceManager());
-  WriteComments(Context);
-  WritePreprocessor(PP, isModule);
-  WriteHeaderSearch(PP.getHeaderSearchInfo());
-  WriteSelectors(SemaRef);
-  WriteReferencedSelectorsPool(SemaRef);
-  WriteLateParsedTemplates(SemaRef);
-  WriteIdentifierTable(PP, SemaRef.IdResolver, isModule);
-  WriteFPPragmaOptions(SemaRef.CurFPFeatureOverrides());
-  WriteOpenCLExtensions(SemaRef);
-  WriteCUDAPragmas(SemaRef);
+  WriteSourceManagerBlock(PP->getSourceManager());
+  if (SemaPtr)
+    WriteComments(SemaPtr->Context);
+  WritePreprocessor(*PP, isModule);
+  WriteHeaderSearch(PP->getHeaderSearchInfo());
+  if (SemaPtr) {
+    WriteSelectors(*SemaPtr);
+    WriteReferencedSelectorsPool(*SemaPtr);
+    WriteLateParsedTemplates(*SemaPtr);
+  }
+  WriteIdentifierTable(*PP, SemaPtr ? &SemaPtr->IdResolver : nullptr, isModule);
+  if (SemaPtr) {
+    WriteFPPragmaOptions(SemaPtr->CurFPFeatureOverrides());
+    WriteOpenCLExtensions(*SemaPtr);
+    WriteCUDAPragmas(*SemaPtr);
+  }
 
   // If we're emitting a module, write out the submodule information.
   if (WritingModule)
-    WriteSubmodules(WritingModule, SemaRef.Context);
+    WriteSubmodules(WritingModule, SemaPtr ? &SemaPtr->Context : nullptr);
 
   Stream.EmitRecord(SPECIAL_TYPES, SpecialTypes);
 
-  WriteSpecialDeclRecords(SemaRef);
+  if (SemaPtr)
+    WriteSpecialDeclRecords(*SemaPtr);
 
   // Write the record containing weak undeclared identifiers.
   if (!WeakUndeclaredIdentifiers.empty())
@@ -5554,10 +5575,12 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
       ModuleInfo(uint64_t ID, Module *M) : ID(ID), M(M) {}
     };
     llvm::SmallVector<ModuleInfo, 64> Imports;
-    for (const auto *I : Context.local_imports()) {
-      assert(SubmoduleIDs.contains(I->getImportedModule()));
-      Imports.push_back(ModuleInfo(SubmoduleIDs[I->getImportedModule()],
-                         I->getImportedModule()));
+    if (SemaPtr) {
+      for (const auto *I : SemaPtr->Context.local_imports()) {
+        assert(SubmoduleIDs.contains(I->getImportedModule()));
+        Imports.push_back(ModuleInfo(SubmoduleIDs[I->getImportedModule()],
+                                     I->getImportedModule()));
+      }
     }
 
     if (!Imports.empty()) {
@@ -5579,7 +5602,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
         // FIXME: If the module has macros imported then later has declarations
         // imported, this location won't be the right one as a location for the
         // declaration imports.
-        AddSourceLocation(PP.getModuleImportLoc(Import.M), ImportedModules);
+        AddSourceLocation(PP->getModuleImportLoc(Import.M), ImportedModules);
       }
 
       Stream.EmitRecord(IMPORTED_MODULES, ImportedModules);
@@ -5587,14 +5610,16 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   }
 
   WriteObjCCategories();
-  if(!WritingModule) {
-    WriteOptimizePragmaOptions(SemaRef);
-    WriteMSStructPragmaOptions(SemaRef);
-    WriteMSPointersToMembersPragmaOptions(SemaRef);
+  if (SemaPtr) {
+    if (!WritingModule) {
+      WriteOptimizePragmaOptions(*SemaPtr);
+      WriteMSStructPragmaOptions(*SemaPtr);
+      WriteMSPointersToMembersPragmaOptions(*SemaPtr);
+    }
+    WritePackPragmaOptions(*SemaPtr);
+    WriteFloatControlPragmaOptions(*SemaPtr);
+    WriteDeclsWithEffectsToVerify(*SemaPtr);
   }
-  WritePackPragmaOptions(SemaRef);
-  WriteFloatControlPragmaOptions(SemaRef);
-  WriteDeclsWithEffectsToVerify(SemaRef);
 
   // Some simple statistics
   RecordData::value_type Record[] = {
@@ -5605,8 +5630,9 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   ASTBlockRange.second = Stream.GetCurrentBitNo() >> 3;
 
   // Write the module file extension blocks.
-  for (const auto &ExtWriter : ModuleFileExtensionWriters)
-    WriteModuleFileExtension(SemaRef, *ExtWriter);
+  if (SemaPtr)
+    for (const auto &ExtWriter : ModuleFileExtensionWriters)
+      WriteModuleFileExtension(*SemaPtr, *ExtWriter);
 
   return backpatchSignature();
 }

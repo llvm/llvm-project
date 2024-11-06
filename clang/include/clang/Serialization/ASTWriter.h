@@ -561,7 +561,7 @@ private:
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec,
                                uint64_t MacroOffsetsBase);
-  void WriteSubmodules(Module *WritingModule, ASTContext &Context);
+  void WriteSubmodules(Module *WritingModule, ASTContext *Context);
 
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
@@ -582,7 +582,7 @@ private:
   void WriteComments(ASTContext &Context);
   void WriteSelectors(Sema &SemaRef);
   void WriteReferencedSelectorsPool(Sema &SemaRef);
-  void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
+  void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver *IdResolver,
                             bool IsModule);
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
@@ -639,7 +639,7 @@ private:
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
-  ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
+  ASTFileSignature WriteASTCore(Sema *SemaPtr, StringRef isysroot,
                                 Module *WritingModule);
 
 public:
@@ -661,8 +661,8 @@ public:
 
   /// Write a precompiled header for the given semantic analysis.
   ///
-  /// \param SemaRef a reference to the semantic analysis object that processed
-  /// the AST to be written into the precompiled header.
+  /// \param Subject The object that processed the input to be written into the
+  /// AST file.
   ///
   /// \param WritingModule The module that we are writing. If null, we are
   /// writing a precompiled header.
@@ -673,8 +673,9 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(Sema &SemaRef, StringRef OutputFile,
-                            Module *WritingModule, StringRef isysroot,
+  ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor*> Subject,
+                            StringRef OutputFile, Module *WritingModule,
+                            StringRef isysroot,
                             bool ShouldCacheASTInMemory = false);
 
   /// Emit a token.
