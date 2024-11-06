@@ -2234,8 +2234,7 @@ static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
 /// entries for files that we actually need. In the common case (no
 /// errors), we probably won't have to create file entries for any of
 /// the files in the AST.
-void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
-                                        const Preprocessor &PP) {
+void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
   RecordData Record;
 
   // Enter the source manager block.
@@ -2323,8 +2322,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         // We add one to the size so that we capture the trailing NULL
         // that is required by llvm::MemoryBuffer::getMemBuffer (on
         // the reader side).
-        std::optional<llvm::MemoryBufferRef> Buffer =
-            Content->getBufferOrNone(PP.getDiagnostics(), PP.getFileManager());
+        std::optional<llvm::MemoryBufferRef> Buffer = Content->getBufferOrNone(
+            SourceMgr.getDiagnostics(), SourceMgr.getFileManager());
         StringRef Name = Buffer ? Buffer->getBufferIdentifier() : "";
         Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
                                   StringRef(Name.data(), Name.size() + 1));
@@ -2334,8 +2333,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       if (EmitBlob) {
         // Include the implicit terminating null character in the on-disk buffer
         // if we're writing it uncompressed.
-        std::optional<llvm::MemoryBufferRef> Buffer =
-            Content->getBufferOrNone(PP.getDiagnostics(), PP.getFileManager());
+        std::optional<llvm::MemoryBufferRef> Buffer = Content->getBufferOrNone(
+            SourceMgr.getDiagnostics(), SourceMgr.getFileManager());
         if (!Buffer)
           Buffer = llvm::MemoryBufferRef("<<<INVALID BUFFER>>>", "");
         StringRef Blob(Buffer->getBufferStart(), Buffer->getBufferSize() + 1);
@@ -5526,7 +5525,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteDeclAndTypes(Context);
 
   WriteFileDeclIDsMap();
-  WriteSourceManagerBlock(Context.getSourceManager(), PP);
+  WriteSourceManagerBlock(PP.getSourceManager());
   WriteComments();
   WritePreprocessor(PP, isModule);
   WriteHeaderSearch(PP.getHeaderSearchInfo());
