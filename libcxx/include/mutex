@@ -199,7 +199,6 @@ template<class Callable, class ...Args>
 #include <__thread/id.h>
 #include <__thread/support.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <limits>
 #ifndef _LIBCPP_CXX03_LANG
 #  include <tuple>

@@ -589,6 +589,15 @@ declare ptr @gets(ptr)
 ; CHECK: declare noundef i32 @gettimeofday(ptr nocapture noundef, ptr nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @gettimeofday(ptr, ptr)
 
+; CHECK: declare double @hypot(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @hypot(double, double)
+
+; CHECK: declare float @hypotf(float, float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @hypotf(float, float)
+
+; CHECK: declare x86_fp80 @hypotl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @hypotl(x86_fp80, x86_fp80)
+
 ; CHECK: declare i32 @isascii(i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i32 @isascii(i32)
 

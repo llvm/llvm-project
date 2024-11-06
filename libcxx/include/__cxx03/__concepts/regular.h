@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___CONCEPTS_REGULAR_H
 #define _LIBCPP___CONCEPTS_REGULAR_H
 
-#include <__concepts/equality_comparable.h>
-#include <__concepts/semiregular.h>
-#include <__config>
+#include <__cxx03/__concepts/equality_comparable.h>
+#include <__cxx03/__concepts/semiregular.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

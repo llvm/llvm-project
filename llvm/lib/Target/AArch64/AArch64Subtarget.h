@@ -90,6 +90,8 @@ protected:
   unsigned VScaleForTuning = 2;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
+  bool EnableSubregLiveness;
+
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -153,6 +155,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+  bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }

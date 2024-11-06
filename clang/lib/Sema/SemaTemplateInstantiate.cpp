@@ -343,7 +343,7 @@ struct TemplateInstantiationArgumentCollecter
       // If this function was instantiated from a specialized member that is
       // a function template, we're done.
       assert(FD->getPrimaryTemplate() && "No function template?");
-      if (FD->getPrimaryTemplate()->hasMemberSpecialization())
+      if (FD->getPrimaryTemplate()->isMemberSpecialization())
         return Done();
 
       // If this function is a generic lambda specialization, we are done.
@@ -442,11 +442,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = CTSD->getSpecializedTemplateOrPartial();
     if (auto *CTPSD =
             Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      if (CTPSD->hasMemberSpecialization())
+      if (CTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *CTD = Specialized.get<ClassTemplateDecl *>();
-      if (CTD->hasMemberSpecialization())
+      if (CTD->isMemberSpecialization())
         return Done();
     }
     return UseNextDecl(CTSD);
@@ -478,11 +478,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD =
             Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (VTPSD->hasMemberSpecialization())
+      if (VTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      if (VTD->hasMemberSpecialization())
+      if (VTD->isMemberSpecialization())
         return Done();
     }
     return UseNextDecl(VTSD);
@@ -3978,11 +3978,24 @@ bool Sema::usesPartialOrExplicitSpecialization(
     return true;
 
   SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
-  ClassTemplateSpec->getSpecializedTemplate()
-                   ->getPartialSpecializations(PartialSpecs);
-  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
+  ClassTemplateDecl *CTD = ClassTemplateSpec->getSpecializedTemplate();
+  CTD->getPartialSpecializations(PartialSpecs);
+  for (ClassTemplatePartialSpecializationDecl *CTPSD : PartialSpecs) {
+    // C++ [temp.spec.partial.member]p2:
+    //   If the primary member template is explicitly specialized for a given
+    //   (implicit) specialization of the enclosing class template, the partial
+    //   specializations of the member template are ignored for this
+    //   specialization of the enclosing class template. If a partial
+    //   specialization of the member template is explicitly specialized for a
+    //   given (implicit) specialization of the enclosing class template, the
+    //   primary member template and its other partial specializations are still
+    //   considered for this specialization of the enclosing class template.
+    if (CTD->getMostRecentDecl()->isMemberSpecialization() &&
+        !CTPSD->getMostRecentDecl()->isMemberSpecialization())
+      continue;
+
     TemplateDeductionInfo Info(Loc);
-    if (DeduceTemplateArguments(PartialSpecs[I],
+    if (DeduceTemplateArguments(CTPSD,
                                 ClassTemplateSpec->getTemplateArgs().asArray(),
                                 Info) == TemplateDeductionResult::Success)
       return true;
@@ -4025,8 +4038,21 @@ getPatternForClassTemplateSpecialization(
     SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     Template->getPartialSpecializations(PartialSpecs);
     TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
-    for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-      ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+    for (ClassTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
+      // C++ [temp.spec.partial.member]p2:
+      //   If the primary member template is explicitly specialized for a given
+      //   (implicit) specialization of the enclosing class template, the
+      //   partial specializations of the member template are ignored for this
+      //   specialization of the enclosing class template. If a partial
+      //   specialization of the member template is explicitly specialized for a
+      //   given (implicit) specialization of the enclosing class template, the
+      //   primary member template and its other partial specializations are
+      //   still considered for this specialization of the enclosing class
+      //   template.
+      if (Template->getMostRecentDecl()->isMemberSpecialization() &&
+          !Partial->getMostRecentDecl()->isMemberSpecialization())
+        continue;
+
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
       if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
               Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info);
@@ -4115,7 +4141,7 @@ getPatternForClassTemplateSpecialization(
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *CTD = Specialized.dyn_cast<ClassTemplateDecl *>()) {
-    while (!CTD->hasMemberSpecialization()) {
+    while (!CTD->isMemberSpecialization()) {
       if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
         CTD = NewCTD;
       else
@@ -4125,7 +4151,7 @@ getPatternForClassTemplateSpecialization(
   } else if (auto *CTPSD =
                  Specialized
                      .dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-    while (!CTPSD->hasMemberSpecialization()) {
+    while (!CTPSD->isMemberSpecialization()) {
       if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
         CTPSD = NewCTPSD;
       else

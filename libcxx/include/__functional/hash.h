@@ -20,7 +20,6 @@
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -407,7 +406,11 @@ struct _LIBCPP_TEMPLATE_VIS hash<long> : public __unary_function<long, size_t> {
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long> : public __unary_function<unsigned long, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT {
+    static_assert(sizeof(size_t) >= sizeof(unsigned long),
+                  "This would be a terrible hash function on a platform where size_t is smaller than unsigned long");
+    return static_cast<size_t>(__v);
+  }
 };
 
 template <>

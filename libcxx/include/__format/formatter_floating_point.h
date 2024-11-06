@@ -23,6 +23,7 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
@@ -36,7 +37,6 @@
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cmath>
-#include <cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <__locale>

@@ -163,5 +163,6 @@ add_libc_unittest(
     libc.src.unistd.ftruncate
     libc.src.unistd.close
     libc.src.__support.OSUtil.osutil
+    libc.hdr.fcntl_macros
     libc.test.UnitTest.ErrnoSetterMatcher
 )

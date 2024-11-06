@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_MINMAX_H
 #define _LIBCPP___ALGORITHM_MINMAX_H
 
-#include <__algorithm/comp.h>
-#include <__algorithm/minmax_element.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__type_traits/is_callable.h>
-#include <__utility/pair.h>
-#include <initializer_list>
+#include <__cxx03/__algorithm/comp.h>
+#include <__cxx03/__algorithm/minmax_element.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__type_traits/is_callable.h>
+#include <__cxx03/__utility/pair.h>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
