@@ -560,8 +560,7 @@ private:
   ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
-  void WriteSourceManagerBlock(SourceManager &SourceMgr,
-                               const Preprocessor &PP);
+  void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec,
