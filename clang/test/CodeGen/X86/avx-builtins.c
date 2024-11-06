@@ -53,14 +53,14 @@ __m256 test_mm256_and_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_andnot_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_andnot_pd
-  // CHECK: xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: xor <4 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <4 x i64>
   return _mm256_andnot_pd(A, B);
 }
 
 __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_andnot_ps
-  // CHECK: xor <8 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <8 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <8 x i32>
   return _mm256_andnot_ps(A, B);
 }

@@ -154,12 +154,12 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, i32 [[START:%.*]], i32 0
+; NO-VP-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> splat (i32 1), i32 [[START:%.*]], i32 0
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ splat (i32 1), [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
@@ -1223,12 +1223,12 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[TMP0:%.*]] = insertelement <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, float [[START:%.*]], i32 0
+; NO-VP-NEXT:    [[TMP0:%.*]] = insertelement <8 x float> splat (float 1.000000e+00), float [[START:%.*]], i32 0
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ splat (float 1.000000e+00), [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP1]]
 ; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
