@@ -34,9 +34,9 @@
 // This currently works with Mach-O files (used on Darwin) and with ELF files (used on Linux
 // and others). On platforms where we know how to implement this detection, the macro
 // _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION is defined to 1, and it is defined to 0 on
-// other platforms. The _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE macro is defined to
-// nothing on unsupported platforms so that it can be used to decorate functions regardless
-// of whether detection is actually supported.
+// other platforms. The _LIBCPP_OVERRIDABLE_FUNCTION macro expands to regular function
+// definition on unsupported platforms so that it can be used to decorate functions
+// regardless of whether detection is actually supported.
 //
 // How does this work?
 // -------------------
@@ -52,18 +52,19 @@
 // Important note
 // --------------
 //
-// This mechanism should never be used outside of the libc++ built library.
+// This mechanism should never be used outside of the libc++ built library. Functions defined
+// with this macro must be defined at global scope.
 //
 
 #if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <typename _Func>
-constexpr _Func* __overload_of(_Func* f) { return f; }
+template <class _Func>
+_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) { return f; }
 
 template <auto _Func>
-constexpr bool __is_function_overridden();
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
 
 _LIBCPP_END_NAMESPACE_STD
 
@@ -85,11 +86,11 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <typename _Func>
-constexpr _Func* __overload_of(_Func* f) { return f; }
+template <class _Func>
+_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) { return f; }
 
 template <auto _Func>
-constexpr bool __is_function_overridden();
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
 
 _LIBCPP_END_NAMESPACE_STD
 

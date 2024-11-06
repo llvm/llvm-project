@@ -136,8 +136,6 @@ static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignm
   return p;
 }
 
-//_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE _LIBCPP_WEAK void*
-//operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
 _LIBCPP_OVERRIDABLE_FUNCTION(_ZnwmSt11align_val_t, void*, operator new, (std::size_t size, std::align_val_t alignment)) _THROW_BAD_ALLOC {
   void* p = operator_new_aligned_impl(size, alignment);
   if (p == nullptr)
