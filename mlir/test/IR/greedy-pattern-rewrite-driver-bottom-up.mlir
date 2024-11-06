@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-patterns="max-iterations=1" \
+// RUN: mlir-opt %s -test-greedy-patterns="max-iterations=1" \
 // RUN:     -allow-unregistered-dialect --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @add_to_worklist_after_inplace_update()

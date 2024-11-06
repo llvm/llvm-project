@@ -899,7 +899,9 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
          Args.hasArg(options::OPT_fprofile_instr_generate) ||
          Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
          Args.hasArg(options::OPT_fcreate_profile) ||
-         Args.hasArg(options::OPT_forder_file_instrumentation);
+         Args.hasArg(options::OPT_forder_file_instrumentation) ||
+         Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage) ||
+         Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage_EQ);
 }
 
 bool ToolChain::needsGCovInstrumentation(const llvm::opt::ArgList &Args) {
@@ -1097,6 +1099,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString();
+  case llvm::Triple::amdgcn: {
+    llvm::Triple Triple = getTriple();
+    if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "amdgcnspirv")
+      Triple.setArch(llvm::Triple::ArchType::spirv64);
+    return Triple.getTriple();
+  }
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:

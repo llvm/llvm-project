@@ -226,14 +226,14 @@ using LocalVisitor = llvm::function_ref<bool(IndirectLocalPath &Path, Local L,
                                              ReferenceKind RK)>;
 } // namespace
 
-static bool isVarOnPath(IndirectLocalPath &Path, VarDecl *VD) {
+static bool isVarOnPath(const IndirectLocalPath &Path, VarDecl *VD) {
   for (auto E : Path)
     if (E.Kind == IndirectLocalPathEntry::VarInit && E.D == VD)
       return true;
   return false;
 }
 
-static bool pathContainsInit(IndirectLocalPath &Path) {
+static bool pathContainsInit(const IndirectLocalPath &Path) {
   return llvm::any_of(Path, [=](IndirectLocalPathEntry E) {
     return E.Kind == IndirectLocalPathEntry::DefaultInit ||
            E.Kind == IndirectLocalPathEntry::VarInit;
@@ -1076,7 +1076,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
   return E->getSourceRange();
 }
 
-static bool pathOnlyHandlesGslPointer(IndirectLocalPath &Path) {
+static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
   for (const auto &It : llvm::reverse(Path)) {
     switch (It.Kind) {
     case IndirectLocalPathEntry::VarInit:
@@ -1124,7 +1124,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
   // FIXME: consider moving the TemporaryVisitor and visitLocalsRetained*
   // functions to a dedicated class.
-  auto TemporaryVisitor = [&](IndirectLocalPath &Path, Local L,
+  auto TemporaryVisitor = [&](const IndirectLocalPath &Path, Local L,
                               ReferenceKind RK) -> bool {
     SourceRange DiagRange = nextPathEntryRange(Path, 0, L);
     SourceLocation DiagLoc = DiagRange.getBegin();
@@ -1132,7 +1132,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
     bool IsGslPtrValueFromGslTempOwner = false;
-    bool IsLocalGslOwner = false;
     if (pathOnlyHandlesGslPointer(Path)) {
       if (isa<DeclRefExpr>(L)) {
         // We do not want to follow the references when returning a pointer
@@ -1140,8 +1139,8 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         //   int &p = *localUniquePtr;
         //   someContainer.add(std::move(localUniquePtr));
         //   return p;
-        IsLocalGslOwner = isRecordWithAttr<OwnerAttr>(L->getType());
-        if (pathContainsInit(Path) || !IsLocalGslOwner)
+        if (pathContainsInit(Path) ||
+            !isRecordWithAttr<OwnerAttr>(L->getType()))
           return false;
       } else {
         IsGslPtrValueFromGslTempOwner =
@@ -1261,12 +1260,12 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         if (pathContainsInit(Path))
           return false;
 
+        auto *DRE = dyn_cast<DeclRefExpr>(L);
         // Suppress false positives for code like the one below:
-        //   Ctor(unique_ptr<T> up) : member(*up), member2(move(up)) {}
-        if (IsLocalGslOwner && pathOnlyHandlesGslPointer(Path))
+        //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
+        if (DRE && isRecordWithAttr<OwnerAttr>(DRE->getType()))
           return false;
 
-        auto *DRE = dyn_cast<DeclRefExpr>(L);
         auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
         if (!VD) {
           // A member was initialized to a local block.

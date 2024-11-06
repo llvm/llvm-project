@@ -155,7 +155,7 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   Function *F;
   const DataLayout &DL;
   TargetTransformInfo &TTI;
-  SCCPSolver &Solver;
+  const SCCPSolver &Solver;
 
   ConstMap KnownConstants;
   // Basic blocks known to be unreachable after constant propagation.

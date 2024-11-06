@@ -692,7 +692,9 @@ define <16 x i64> @fshr_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call <16 x i64> @llvm.vp.fshr.v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %res
@@ -727,7 +729,9 @@ define <16 x i64> @fshl_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call <16 x i64> @llvm.vp.fshl.v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %res

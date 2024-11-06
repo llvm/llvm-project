@@ -2758,6 +2758,20 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         return true; // Keep iterating over index types, language mismatch.
     }
 
+    // Since mangled names are unique, we only need to check if the names are
+    // the same.
+    if (query.GetSearchByMangledName()) {
+      if (die.GetMangledName(/*substitute_name_allowed=*/false) !=
+          query.GetTypeBasename().GetStringRef())
+        return true; // Keep iterating over index types, mangled name mismatch.
+      if (Type *matching_type = ResolveType(die, true, true)) {
+        results.InsertUnique(matching_type->shared_from_this());
+        return !results.Done(query); // Keep iterating if we aren't done.
+      }
+      return true; // Keep iterating over index types, weren't able to resolve
+                   // this type
+    }
+
     // Check the context matches
     std::vector<lldb_private::CompilerContext> die_context;
     if (query.GetModuleSearch())
