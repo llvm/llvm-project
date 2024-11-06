@@ -67,7 +67,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    extern "C" type symbol##_impl__ arglist;                                                                           \
+    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__));                                    \
     __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
     __asm__(".set _" _LIBCPP_TOSTRING(symbol) ", _" _LIBCPP_TOSTRING(symbol##_impl__));                                \
     extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
@@ -77,7 +77,7 @@ _LIBCPP_END_NAMESPACE_STD
       return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    type symbol##_impl__ arglist
+    static type symbol##_impl__ arglist
 
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
@@ -90,7 +90,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    extern "C" type symbol##_impl__ arglist;                                                                           \
+    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__));                                    \
     [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
@@ -98,7 +98,7 @@ _LIBCPP_END_NAMESPACE_STD
       return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    type symbol##_impl__ arglist
+    static type symbol##_impl__ arglist
 
 #else
 
