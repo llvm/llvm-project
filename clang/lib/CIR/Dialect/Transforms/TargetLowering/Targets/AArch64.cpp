@@ -162,7 +162,6 @@ AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);
-  const Type Base = nullptr;
 
   // Aggregates <= 16 bytes are passed directly in registers or on the stack.
   if (Size <= 128) {
