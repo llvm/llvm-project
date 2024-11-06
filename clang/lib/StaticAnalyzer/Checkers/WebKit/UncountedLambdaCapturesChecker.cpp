@@ -52,13 +52,10 @@ public:
       bool shouldVisitTemplateInstantiations() const { return true; }
       bool shouldVisitImplicitCode() const { return false; }
 
-      bool TraverseDecl(Decl *D) {
-        if (auto *CXXMD = dyn_cast<CXXMethodDecl>(D)) {
-          llvm::SaveAndRestore SavedDecl(ClsType);
-          ClsType = CXXMD->getThisType();
-          return Base::TraverseDecl(D);
-        }
-        return Base::TraverseDecl(D);
+      bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = CXXMD->getThisType();
+        return Base::TraverseDecl(CXXMD);
       }
 
       bool shouldCheckThis() {
@@ -128,8 +125,10 @@ public:
         auto *VD = dyn_cast_or_null<VarDecl>(ArgRef->getDecl());
         if (!VD)
           return;
-        auto *Init = VD->getInit()->IgnoreParenCasts();
-        auto *L = dyn_cast_or_null<LambdaExpr>(Init);
+        auto *Init = VD->getInit();
+        if (!Init)
+          return;
+        auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts());
         if (!L)
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
