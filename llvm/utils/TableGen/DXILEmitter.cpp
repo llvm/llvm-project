@@ -208,25 +208,15 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
           bool IsI8 = Arg->getValueAsBit("is_i8");
           bool IsI32 = Arg->getValueAsBit("is_i32");
           int Index = Arg->getValueAsInt("index");
-          const Record *ValueRec = Arg->getValueAsOptionalDef("value");
+          int Value = Arg->getValueAsInt("value");
 
           DXILArgSelect ArgSelect;
           if (IsI8) {
-            if (!ValueRec) {
-              PrintFatalError(R, Twine("'value' must be defined for i8 "
-                                       "ArgSelect for DXIL operation - ") +
-                                     OpName);
-            }
             ArgSelect.Type = DXILArgSelect::Type::I8;
-            ArgSelect.Value = ValueRec->getValueAsInt("value");
+            ArgSelect.Value = Value;
           } else if (IsI32) {
-            if (!ValueRec) {
-              PrintFatalError(R, Twine("'value' must be defined for i32 "
-                                       "ArgSelect for DXIL operation - ") +
-                                     OpName);
-            }
             ArgSelect.Type = DXILArgSelect::Type::I32;
-            ArgSelect.Value = ValueRec->getValueAsInt("value");
+            ArgSelect.Value = Value;
           } else {
             if (Index < 0) {
               PrintFatalError(

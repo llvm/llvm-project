@@ -294,34 +294,28 @@ class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
   list<DXILAttribute> op_attrs = attrs;
 }
 
-class DXILConstant<int value_> {
-  int value = value_;
-}
-
-defset list<DXILConstant> BarrierModes = {
-  def BarrierMode_DeviceMemoryBarrier              : DXILConstant<2>;
-  def BarrierMode_DeviceMemoryBarrierWithGroupSync : DXILConstant<3>;
-  def BarrierMode_GroupMemoryBarrier               : DXILConstant<8>;
-  def BarrierMode_GroupMemoryBarrierWithGroupSync  : DXILConstant<9>;
-  def BarrierMode_AllMemoryBarrier                 : DXILConstant<10>;
-  def BarrierMode_AllMemoryBarrierWithGroupSync    : DXILConstant<11>;
-}
+defvar BarrierMode_DeviceMemoryBarrier              = 2;
+defvar BarrierMode_DeviceMemoryBarrierWithGroupSync = 3;
+defvar BarrierMode_GroupMemoryBarrier               = 8;
+defvar BarrierMode_GroupMemoryBarrierWithGroupSync  = 9;
+defvar BarrierMode_AllMemoryBarrier                 = 10;
+defvar BarrierMode_AllMemoryBarrierWithGroupSync    = 11;
 
 // Intrinsic arg selection
 class Arg {
   int index = -1;
-  DXILConstant value;
+  int value = 0;
   bit is_i8 = 0;
   bit is_i32 = 0;
 }
 class ArgSelect<int index_> : Arg {
   let index = index_;
 }
-class ArgI32<DXILConstant value_> : Arg {
+class ArgI32<int value_> : Arg {
   let value = value_;
   let is_i32 = 1;
 }
-class ArgI8<DXILConstant value_> : Arg {
+class ArgI8<int value_> : Arg {
   let value = value_;
   let is_i8 = 1;
 }
