@@ -280,17 +280,17 @@ define dso_local signext i32 @str1() local_unnamed_addr #0 {
 ;
 ; LINUX64LE-LABEL: str1:
 ; LINUX64LE:       # %bb.0: # %entry
-; LINUX64LE-NEXT:     mflr r0
-; LINUX64LE-NEXT:     stdu r1, -32(r1)
-; LINUX64LE-NEXT:     addis r3, r2, .L_MergedGlobals@toc@ha
-; LINUX64LE-NEXT:     std r0, 48(r1)
-; LINUX64LE-NEXT:     addi r3, r3, .L_MergedGlobals@toc@l
-; LINUX64LE-NEXT:     bl callee
-; LINUX64LE-NEXT:     nop
-; LINUX64LE-NEXT:     addi r1, r1, 32
-; LINUX64LE-NEXT:     ld r0, 16(r1)
-; LINUX64LE-NEXT:     mtlr r0
-; LINUX64LE-NEXT:     blr
+; LINUX64LE-NEXT:    mflr r0
+; LINUX64LE-NEXT:    stdu r1, -32(r1)
+; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64LE-NEXT:    std r0, 48(r1)
+; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
+; LINUX64LE-NEXT:    bl callee
+; LINUX64LE-NEXT:    nop
+; LINUX64LE-NEXT:    addi r1, r1, 32
+; LINUX64LE-NEXT:    ld r0, 16(r1)
+; LINUX64LE-NEXT:    mtlr r0
+; LINUX64LE-NEXT:    blr
 entry:
   %call = tail call signext i32 @callee(ptr noundef nonnull @.str.1)
   ret i32 %call
@@ -370,25 +370,25 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ;
 ; LINUX64LE-LABEL: array0:
 ; LINUX64LE:       # %bb.0: # %entry
-; LINUX64LE-NEXT:     mflr r0
-; LINUX64LE-NEXT:     stdu r1, -64(r1)
-; LINUX64LE-NEXT:     addis r3, r2, .L_MergedGlobals@toc@ha
-; LINUX64LE-NEXT:     li r4, 24
-; LINUX64LE-NEXT:     std r0, 80(r1)
-; LINUX64LE-NEXT:     addi r3, r3, .L_MergedGlobals@toc@l
-; LINUX64LE-NEXT:     lxvd2x vs0, r3, r4
-; LINUX64LE-NEXT:     addi r4, r1, 44
-; LINUX64LE-NEXT:     stxvd2x vs0, 0, r4
-; LINUX64LE-NEXT:     li r4, 12
-; LINUX64LE-NEXT:     lxvd2x vs0, r3, r4
-; LINUX64LE-NEXT:     addi r3, r1, 32
-; LINUX64LE-NEXT:     stxvd2x vs0, 0, r3
-; LINUX64LE-NEXT:     bl calleeInt
-; LINUX64LE-NEXT:     nop
-; LINUX64LE-NEXT:     addi r1, r1, 64
-; LINUX64LE-NEXT:     ld r0, 16(r1)
-; LINUX64LE-NEXT:     mtlr r0
-; LINUX64LE-NEXT:     blr
+; LINUX64LE-NEXT:    mflr r0
+; LINUX64LE-NEXT:    stdu r1, -64(r1)
+; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; LINUX64LE-NEXT:    li r4, 24
+; LINUX64LE-NEXT:    std r0, 80(r1)
+; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
+; LINUX64LE-NEXT:    lxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    addi r4, r1, 44
+; LINUX64LE-NEXT:    stxvd2x vs0, 0, r4
+; LINUX64LE-NEXT:    li r4, 12
+; LINUX64LE-NEXT:    lxvd2x vs0, r3, r4
+; LINUX64LE-NEXT:    addi r3, r1, 32
+; LINUX64LE-NEXT:    stxvd2x vs0, 0, r3
+; LINUX64LE-NEXT:    bl calleeInt
+; LINUX64LE-NEXT:    nop
+; LINUX64LE-NEXT:    addi r1, r1, 64
+; LINUX64LE-NEXT:    ld r0, 16(r1)
+; LINUX64LE-NEXT:    mtlr r0
+; LINUX64LE-NEXT:    blr
 entry:
   %IntArray = alloca [7 x i32], align 4
   call void @llvm.lifetime.start.p0(i64 28, ptr nonnull %IntArray)
@@ -799,15 +799,15 @@ define dso_local signext i32 @array3() local_unnamed_addr #0 {
 ; LINUX64BE-NEXT:    stdu r1, -288(r1)
 ; LINUX64BE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
 ; LINUX64BE-NEXT:    std r0, 304(r1)
-; LINUX64BE-NEXT:    std r30, 272(r1)                        # 8-byte Folded Spill
+; LINUX64BE-NEXT:    std r30, 272(r1) # 8-byte Folded Spill
 ; LINUX64BE-NEXT:    addi r30, r1, 112
 ; LINUX64BE-NEXT:    li r5, 160
 ; LINUX64BE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
 ; LINUX64BE-NEXT:    addi r4, r3, 264
-; LINUX64BE-NEXT:    mr      r3, r30
+; LINUX64BE-NEXT:    mr r3, r30
 ; LINUX64BE-NEXT:    bl memcpy
 ; LINUX64BE-NEXT:    nop
-; LINUX64BE-NEXT:    mr      r3, r30
+; LINUX64BE-NEXT:    mr r3, r30
 ; LINUX64BE-NEXT:    bl calleeInt
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    ld r30, 272(r1) # 8-byte Folded Reload
@@ -819,7 +819,7 @@ define dso_local signext i32 @array3() local_unnamed_addr #0 {
 ; LINUX64LE-LABEL: array3:
 ; LINUX64LE:       # %bb.0: # %entry
 ; LINUX64LE-NEXT:    mflr r0
-; LINUX64LE-NEXT:    std r30, -16(r1)                        # 8-byte Folded Spill
+; LINUX64LE-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; LINUX64LE-NEXT:    stdu r1, -208(r1)
 ; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
 ; LINUX64LE-NEXT:    addi r30, r1, 32
@@ -827,15 +827,15 @@ define dso_local signext i32 @array3() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    std r0, 224(r1)
 ; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
 ; LINUX64LE-NEXT:    addi r4, r3, 264
-; LINUX64LE-NEXT:    mr      r3, r30
+; LINUX64LE-NEXT:    mr r3, r30
 ; LINUX64LE-NEXT:    bl memcpy
 ; LINUX64LE-NEXT:    nop
-; LINUX64LE-NEXT:    mr      r3, r30
+; LINUX64LE-NEXT:    mr r3, r30
 ; LINUX64LE-NEXT:    bl calleeInt
 ; LINUX64LE-NEXT:    nop
 ; LINUX64LE-NEXT:    addi r1, r1, 208
 ; LINUX64LE-NEXT:    ld r0, 16(r1)
-; LINUX64LE-NEXT:    ld r30, -16(r1)                         # 8-byte Folded Reload
+; LINUX64LE-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; LINUX64LE-NEXT:    mtlr r0
 ; LINUX64LE-NEXT:    blr
 entry:
@@ -898,15 +898,15 @@ define dso_local signext i32 @array4() local_unnamed_addr #0 {
 ; LINUX64BE-NEXT:    stdu r1, -448(r1)
 ; LINUX64BE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
 ; LINUX64BE-NEXT:    std r0, 464(r1)
-; LINUX64BE-NEXT:    std r30, 432(r1)                        # 8-byte Folded Spill
+; LINUX64BE-NEXT:    std r30, 432(r1) # 8-byte Folded Spill
 ; LINUX64BE-NEXT:    addi r30, r1, 112
 ; LINUX64BE-NEXT:    li r5, 320
 ; LINUX64BE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
 ; LINUX64BE-NEXT:    addi r4, r3, 424
-; LINUX64BE-NEXT:    mr      r3, r30
+; LINUX64BE-NEXT:    mr r3, r30
 ; LINUX64BE-NEXT:    bl memcpy
 ; LINUX64BE-NEXT:    nop
-; LINUX64BE-NEXT:    mr      r3, r30
+; LINUX64BE-NEXT:    mr r3, r30
 ; LINUX64BE-NEXT:    bl calleeInt
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    ld r30, 432(r1) # 8-byte Folded Reload
@@ -921,18 +921,18 @@ define dso_local signext i32 @array4() local_unnamed_addr #0 {
 ; LINUX64LE-NEXT:    stdu r1, -368(r1)
 ; LINUX64LE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
 ; LINUX64LE-NEXT:    std r0, 384(r1)
-; LINUX64LE-NEXT:    std r30, 352(r1)                        # 8-byte Folded Spill
+; LINUX64LE-NEXT:    std r30, 352(r1) # 8-byte Folded Spill
 ; LINUX64LE-NEXT:    addi r30, r1, 32
 ; LINUX64LE-NEXT:    li r5, 320
 ; LINUX64LE-NEXT:    addi r3, r3, .L_MergedGlobals@toc@l
 ; LINUX64LE-NEXT:    addi r4, r3, 424
-; LINUX64LE-NEXT:    mr      r3, r30
+; LINUX64LE-NEXT:    mr r3, r30
 ; LINUX64LE-NEXT:    bl memcpy
 ; LINUX64LE-NEXT:    nop
-; LINUX64LE-NEXT:    mr      r3, r30
+; LINUX64LE-NEXT:    mr r3, r30
 ; LINUX64LE-NEXT:    bl calleeInt
 ; LINUX64LE-NEXT:    nop
-; LINUX64LE-NEXT:    ld r30, 352(r1)                         # 8-byte Folded Reload
+; LINUX64LE-NEXT:    ld r30, 352(r1) # 8-byte Folded Reload
 ; LINUX64LE-NEXT:    addi r1, r1, 368
 ; LINUX64LE-NEXT:    ld r0, 16(r1)
 ; LINUX64LE-NEXT:    mtlr r0

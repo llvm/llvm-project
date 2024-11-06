@@ -716,15 +716,16 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
     auto checkUsers = [] (const GlobalVariable *GV) {
       for (const User *CurrentUser : GV->users()) {
-        if (auto *I = dyn_cast<Instruction>(CurrentUser)) {
-          // Do not merge globals in exception pads.
-          if (I->isEHPad())
+        auto *I = dyn_cast<Instruction>(CurrentUser);
+        if (!I)
+          continue;
+        // Do not merge globals in exception pads.
+        if (I->isEHPad())
+          return false;
+        if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+          // Some intrinsics require a plain global.
+          if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
             return false;
-          if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-            // Some intrinsics require a plain global.
-            if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
-              return false;
-          }
         }
       }
       return true;

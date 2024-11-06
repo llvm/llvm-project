@@ -94,7 +94,7 @@ define void @print_tls_func() {
 ; LINUX64BE-NEXT:    .cfi_offset lr, 16
 ; LINUX64BE-NEXT:    .cfi_offset r30, -16
 ; LINUX64BE-NEXT:    addis r3, r2, a@got@tlsld@ha
-; LINUX64BE-NEXT:    std r30, 112(r1)                        # 8-byte Folded Spill
+; LINUX64BE-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; LINUX64BE-NEXT:    addi r3, r3, a@got@tlsld@l
 ; LINUX64BE-NEXT:    bl __tls_get_addr(a@tlsld)
 ; LINUX64BE-NEXT:    nop
@@ -105,14 +105,14 @@ define void @print_tls_func() {
 ; LINUX64BE-NEXT:    bl __tls_get_addr(b@tlsld)
 ; LINUX64BE-NEXT:    nop
 ; LINUX64BE-NEXT:    addis r3, r3, b@dtprel@ha
-; LINUX64BE-NEXT:    mr      r4, r30
+; LINUX64BE-NEXT:    mr r4, r30
 ; LINUX64BE-NEXT:    addi r5, r3, b@dtprel@l
 ; LINUX64BE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
 ; LINUX64BE-NEXT:    addi r6, r3, .L_MergedGlobals@toc@l
 ; LINUX64BE-NEXT:    addi r3, r6, 72
 ; LINUX64BE-NEXT:    bl printf
 ; LINUX64BE-NEXT:    nop
-; LINUX64BE-NEXT:    ld r30, 112(r1)                         # 8-byte Folded Reload
+; LINUX64BE-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
 ; LINUX64BE-NEXT:    addi r1, r1, 128
 ; LINUX64BE-NEXT:    ld r0, 16(r1)
 ; LINUX64BE-NEXT:    mtlr r0
@@ -152,6 +152,7 @@ define void @test_func() {
 ; CHECK32-NEXT:    lwz r0, 8(r1)
 ; CHECK32-NEXT:    mtlr r0
 ; CHECK32-NEXT:    blr
+
 ; LINUX64LE-LABEL: test_func:
 ; LINUX64LE:       # %bb.0: # %entry
 ; LINUX64LE-NEXT:    mflr r0
