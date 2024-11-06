@@ -1441,7 +1441,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         [[fallthrough]];
 
       // For a urem recurrence, the result can never exceed the start value. The
-      // start value could either be the numerator or the denominator.
+      // phi could either be the numerator or the denominator.
       case Instruction::URem: {
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
