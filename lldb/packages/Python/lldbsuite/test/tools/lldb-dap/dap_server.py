@@ -1155,7 +1155,8 @@ class DebugAdaptorServer(DebugCommunication):
         self,
         executable=None,
         launch=True,
-        connect=None,
+        port=None,
+        unix_socket=None,
         init_commands=[],
         log_file=None,
         env=None,
@@ -1163,17 +1164,18 @@ class DebugAdaptorServer(DebugCommunication):
         self.process = None
         if launch:
             self.process = DebugAdaptorServer.launch(
-                executable, connect=connect, log_file=log_file, env=env
+                executable, port=port, unix_socket=unix_socket, log_file=log_file, env=env
             )
 
-        if connect:
-            if isinstance(connect, str) and connect.startswith("/"):
-                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                s.connect(connect)
-            else:
-                port = int(connect)
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect(("127.0.0.1", port))
+        if port:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(("127.0.0.1", port))
+            DebugCommunication.__init__(
+                self, s.makefile("rb"), s.makefile("wb"), init_commands, log_file
+            )
+        elif unix_socket:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.connect(unix_socket)
             DebugCommunication.__init__(
                 self, s.makefile("rb"), s.makefile("wb"), init_commands, log_file
             )
@@ -1196,7 +1198,7 @@ class DebugAdaptorServer(DebugCommunication):
 
     @classmethod
     def launch(
-        cls, executable: str, /, connect=None, log_file=None, env=None
+        cls, executable: str, /, port=None, unix_socket=None, log_file=None, env=None
     ) -> subprocess.Popen:
         adaptor_env = os.environ.copy()
         if env:
@@ -1206,13 +1208,12 @@ class DebugAdaptorServer(DebugCommunication):
             adaptor_env["LLDBDAP_LOG"] = log_file
 
         args = [executable]
-        if connect:
-            if isinstance(connect, str) and connect.startswith("/"):
-                args.append("--unix-socket")
-                args.append(connect)
-            else:
-                args.append("--port")
-                args.append(str(connect))
+        if port:
+            args.append("--port")
+            args.append(str(port))
+        elif unix_socket:
+            args.append("--unix-socket")
+            args.append(unix_socket)
 
         proc = subprocess.Popen(
             args,
@@ -1222,7 +1223,7 @@ class DebugAdaptorServer(DebugCommunication):
             env=adaptor_env,
         )
 
-        if connect:
+        if port or unix_socket:
             # Wait for the server to startup.
             time.sleep(0.1)
 
