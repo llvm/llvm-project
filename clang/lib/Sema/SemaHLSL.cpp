@@ -2200,17 +2200,20 @@ static void BuildFlattenedTypeList(QualType BaseTy,
 }
 
 bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
-  if (QT.isNull())
+  // null and array types are not allowed.
+  if (QT.isNull() || QT->isArrayType())
     return false;
 
-  // check if the outer type was an array type
-  if (QT->isArrayType())
+  // UDT types are not allowed
+  clang::QualType CanonicalType = QT.getCanonicalType();
+  if (CanonicalType->getAs<clang::RecordType>()) {
     return false;
+  }
 
   llvm::SmallVector<QualType, 4> QTTypes;
   BuildFlattenedTypeList(QT, QTTypes);
 
-  // empty structs are not typed resource element compatible
+  // empty element type is not typed resource element compatible
   if (QTTypes.size() == 0)
     return false;
 
