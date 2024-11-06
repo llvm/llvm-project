@@ -1297,7 +1297,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SIMD,         AArch64::AEK_FP16,
       AArch64::AEK_FP16FML,      AArch64::AEK_PROFILE,
       AArch64::AEK_RAS,          AArch64::AEK_SVE,
-      AArch64::AEK_SVE2,         AArch64::AEK_SVE2AES,
+      AArch64::AEK_SVE2,         AArch64::AEK_ALIAS_SVE2AES,
       AArch64::AEK_SVE2SM4,      AArch64::AEK_SVE2SHA3,
       AArch64::AEK_SVE2BITPERM,  AArch64::AEK_RCPC,
       AArch64::AEK_RAND,         AArch64::AEK_MTE,

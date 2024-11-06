@@ -82,8 +82,8 @@
 // CHECK-NEXT:     ssve-fp8dot4        FEAT_SSVE_FP8DOT4                                      Enable SVE2 FP8 4-way dot product instructions
 // CHECK-NEXT:     ssve-fp8fma         FEAT_SSVE_FP8FMA                                       Enable SVE2 FP8 multiply-add instructions
 // CHECK-NEXT:     sve                 FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
-// CHECK-NEXT:     sve-aes             FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and 128-bit PMULL instructions
-// CHECK-NEXT:     sve-aes2            FEAT_SVE_AES2                                          Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions
+// CHECK-NEXT:     sve-aes             FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword PMULL instructions
+// CHECK-NEXT:     sve-aes2            FEAT_SVE_AES2                                          Enable Armv9.6-A SVE multi-vector AES and quadword PMULL instructions
 // CHECK-NEXT:     sve-b16b16          FEAT_SVE_B16B16                                        Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions
 // CHECK-NEXT:     sve-bfscale         FEAT_SVE_BFSCALE                                       Enable Armv9.6-A SVE BFloat16 scaling instructions
 // CHECK-NEXT:     sve-f16f32mm        FEAT_SVE_F16F32MM                                      Enable Armv9.6-A FP16 to FP32 Matrix Multiply
