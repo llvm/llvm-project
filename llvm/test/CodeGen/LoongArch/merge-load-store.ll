@@ -4,7 +4,7 @@
 ; RUN: llc --mtriple=loongarch64 --verify-machineinstrs < %s \
 ; RUN:   | FileCheck --check-prefix=LA64 %s
 
-define void @merge_load_store(ptr noalias nocapture noundef readonly align 1 dereferenceable(8) %src, ptr noalias nocapture noundef writeonly align 1 dereferenceable(8) %dst) unnamed_addr {
+define void @merge_load_store(ptr noalias %src, ptr noalias %dst) unnamed_addr {
 ; LA32-LABEL: merge_load_store:
 ; LA32:       # %bb.0: # %start
 ; LA32-NEXT:    ld.b $a2, $a0, 0

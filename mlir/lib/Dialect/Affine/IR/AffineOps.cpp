@@ -4605,23 +4605,14 @@ struct DropUnitExtentBasis
   }
 };
 
-/// Drop delinearization pattern related to loops in the following way
+/// Drop delinearization with a single basis element
 ///
-/// ```
-/// <loop>(%iv) = (%c0) to (%ub) step (%c1) {
-///   %0 = affine.delinearize_index %iv into (%ub) : index
-///   <some_use>(%0)
-/// }
-/// ```
-///
-/// can be canonicalized to
-///
-/// ```
-/// <loop>(%iv) = (%c0) to (%ub) step (%c1) {
-///   <some_use>(%iv)
-/// }
-/// ```
-struct DropDelinearizeOfSingleLoop
+/// By definition, `delinearize_index %linear into (%basis)` is
+/// `%linear floorDiv 1` (since `1` is the product of the basis elememts,
+/// ignoring the 0th one, and since there is no previous division we need
+/// to use the remainder of). Therefore, a single-element `delinearize`
+/// can be replaced by the underlying linear index.
+struct DropDelinearizeOneBasisElement
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -4629,50 +4620,7 @@ struct DropDelinearizeOfSingleLoop
                                 PatternRewriter &rewriter) const override {
     if (delinearizeOp.getStaticBasis().size() != 1)
       return failure();
-    auto basis = delinearizeOp.getMixedBasis();
-
-    // Check that the `linear_index` is an induction variable.
-    auto inductionVar = dyn_cast<BlockArgument>(delinearizeOp.getLinearIndex());
-    if (!inductionVar)
-      return failure();
-
-    // Check that the parent is a `LoopLikeOpInterface`.
-    auto loopLikeOp = dyn_cast<LoopLikeOpInterface>(
-        inductionVar.getParentRegion()->getParentOp());
-    if (!loopLikeOp)
-      return failure();
-
-    // Check that loop is unit-rank and that the `linear_index` is the induction
-    // variable.
-    auto inductionVars = loopLikeOp.getLoopInductionVars();
-    if (!inductionVars || inductionVars->size() != 1 ||
-        inductionVars->front() != inductionVar) {
-      return rewriter.notifyMatchFailure(
-          delinearizeOp, "`linear_index` is not loop induction variable");
-    }
-
-    // Check that the upper-bound is the basis.
-    auto upperBounds = loopLikeOp.getLoopUpperBounds();
-    if (!upperBounds || upperBounds->size() != 1 ||
-        upperBounds->front() != basis.front()) {
-      return rewriter.notifyMatchFailure(delinearizeOp,
-                                         "`basis` is not upper bound");
-    }
-
-    // Check that the lower bound is zero.
-    auto lowerBounds = loopLikeOp.getLoopLowerBounds();
-    if (!lowerBounds || lowerBounds->size() != 1 ||
-        !isZeroIndex(lowerBounds->front())) {
-      return rewriter.notifyMatchFailure(delinearizeOp,
-                                         "loop lower bound is not zero");
-    }
-
-    // Check that the step is one.
-    auto steps = loopLikeOp.getLoopSteps();
-    if (!steps || steps->size() != 1 || !isConstantIntValue(steps->front(), 1))
-      return rewriter.notifyMatchFailure(delinearizeOp, "loop step is not one");
-
-    rewriter.replaceOp(delinearizeOp, inductionVar);
+    rewriter.replaceOp(delinearizeOp, delinearizeOp.getLinearIndex());
     return success();
   }
 };
@@ -4681,7 +4629,116 @@ struct DropDelinearizeOfSingleLoop
 
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.insert<DropDelinearizeOfSingleLoop, DropUnitExtentBasis>(context);
+  patterns.insert<DropDelinearizeOneBasisElement, DropUnitExtentBasis>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// LinearizeIndexOp
+//===----------------------------------------------------------------------===//
+
+void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
+                                   OperationState &odsState,
+                                   ValueRange multiIndex, ValueRange basis,
+                                   bool disjoint) {
+  SmallVector<Value> dynamicBasis;
+  SmallVector<int64_t> staticBasis;
+  dispatchIndexOpFoldResults(getAsOpFoldResult(basis), dynamicBasis,
+                             staticBasis);
+  build(odsBuilder, odsState, multiIndex, dynamicBasis, staticBasis, disjoint);
+}
+
+void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
+                                   OperationState &odsState,
+                                   ValueRange multiIndex,
+                                   ArrayRef<OpFoldResult> basis,
+                                   bool disjoint) {
+  SmallVector<Value> dynamicBasis;
+  SmallVector<int64_t> staticBasis;
+  dispatchIndexOpFoldResults(basis, dynamicBasis, staticBasis);
+  build(odsBuilder, odsState, multiIndex, dynamicBasis, staticBasis, disjoint);
+}
+
+void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
+                                   OperationState &odsState,
+                                   ValueRange multiIndex,
+                                   ArrayRef<int64_t> basis, bool disjoint) {
+  build(odsBuilder, odsState, multiIndex, ValueRange{}, basis, disjoint);
+}
+
+LogicalResult AffineLinearizeIndexOp::verify() {
+  if (getStaticBasis().empty())
+    return emitOpError("basis should not be empty");
+
+  if (getMultiIndex().size() != getStaticBasis().size())
+    return emitOpError("should be passed an index for each basis element");
+
+  auto dynamicMarkersCount =
+      llvm::count_if(getStaticBasis(), ShapedType::isDynamic);
+  if (static_cast<size_t>(dynamicMarkersCount) != getDynamicBasis().size())
+    return emitOpError(
+        "mismatch between dynamic and static basis (kDynamic marker but no "
+        "corresponding dynamic basis entry) -- this can only happen due to an "
+        "incorrect fold/rewrite");
+
+  return success();
+}
+
+namespace {
+/// Rewrite `affine.linearize_index disjoint [%...a, %x, %...b] by (%...c, 1,
+/// %...d)` to `affine.linearize_index disjoint [%...a, %...b] by (%...c,
+/// %...d)`.
+
+/// Note that `disjoint` is required here, because, without it, we could have
+/// `affine.linearize_index [%...a, %c64, %...b] by (%...c, 1, %...d)`
+/// is a valid operation where the `%c64` cannot be trivially dropped.
+///
+/// Alternatively, if `%x` in the above is a known constant 0, remove it even if
+/// the operation isn't asserted to be `disjoint`.
+struct DropLinearizeUnitComponentsIfDisjointOrZero final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
+                                PatternRewriter &rewriter) const override {
+    size_t numIndices = op.getMultiIndex().size();
+    SmallVector<Value> newIndices;
+    newIndices.reserve(numIndices);
+    SmallVector<OpFoldResult> newBasis;
+    newBasis.reserve(numIndices);
+
+    SmallVector<OpFoldResult> basis = op.getMixedBasis();
+    for (auto [index, basisElem] : llvm::zip_equal(op.getMultiIndex(), basis)) {
+      std::optional<int64_t> basisEntry = getConstantIntValue(basisElem);
+      if (!basisEntry || *basisEntry != 1) {
+        newIndices.push_back(index);
+        newBasis.push_back(basisElem);
+        continue;
+      }
+
+      std::optional<int64_t> indexValue = getConstantIntValue(index);
+      if (!op.getDisjoint() && (!indexValue || *indexValue != 0)) {
+        newIndices.push_back(index);
+        newBasis.push_back(basisElem);
+        continue;
+      }
+    }
+    if (newIndices.size() == numIndices)
+      return failure();
+
+    if (newIndices.size() == 0) {
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<affine::AffineLinearizeIndexOp>(
+        op, newIndices, newBasis, op.getDisjoint());
+    return success();
+  }
+};
+} // namespace
+
+void affine::AffineLinearizeIndexOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<DropLinearizeUnitComponentsIfDisjointOrZero>(context);
 }
 
 //===----------------------------------------------------------------------===//

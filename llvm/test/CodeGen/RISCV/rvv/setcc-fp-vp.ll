@@ -1654,7 +1654,9 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64bf16(<vscale x 64 x bfloat> %va, <vs
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64bf16(<vscale x 64 x bfloat> %va, <vscale x 64 x bfloat> %vb, metadata !"oeq", <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i1> %v
@@ -3781,7 +3783,9 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFH-NEXT:    csrr a0, vlenb
 ; ZVFH-NEXT:    slli a0, a0, 4
 ; ZVFH-NEXT:    add sp, sp, a0
+; ZVFH-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFH-NEXT:    addi sp, sp, 16
+; ZVFH-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_oeq_vv_nxv64f16:
@@ -3973,7 +3977,9 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, a0, a1
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
+; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64f16(<vscale x 64 x half> %va, <vscale x 64 x half> %vb, metadata !"oeq", <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i1> %v

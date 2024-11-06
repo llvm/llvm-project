@@ -15,12 +15,10 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
 #include "rtsan/rtsan.h"
-#include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
 
@@ -33,11 +31,11 @@ extern "C" {
 typedef int32_t OSSpinLock;
 void OSSpinLockLock(volatile OSSpinLock *__lock);
 }
-#endif
+#endif // TARGET_OS_MAC
 
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_INTERCEPT_MEMALIGN || SANITIZER_INTERCEPT_PVALLOC
 #include <malloc.h>
