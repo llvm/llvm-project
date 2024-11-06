@@ -173,6 +173,20 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
 
 // -----
 
+// Ensure extract dense resource elements not crash.
+
+// CHECK-LABEL: func @extract_dense_resource_nofold
+func.func @extract_dense_resource_nofold() -> i64 {
+  // CHECK:      %[[EXT:.+]] = tensor.extract
+  // CHECK-NEXT:   return %[[EXT]]
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense_resource<__elided__> : tensor<1xi64>
+  %extracted = tensor.extract %cst[%c0] : tensor<1xi64>
+  return %extracted : i64
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_insert
 func.func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
   // Fold an insert into a splat.

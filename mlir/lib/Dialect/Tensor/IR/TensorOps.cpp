@@ -1128,11 +1128,16 @@ LogicalResult ExtractOp::verify() {
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
-  // If this is a splat elements attribute, simply return the value. All of
-  // the elements of a splat attribute are the same.
-  if (Attribute tensor = adaptor.getTensor())
+  if (Attribute tensor = adaptor.getTensor()) {
+    // If this is a splat elements attribute, simply return the value.
+    // All of the elements of a splat attribute are the same.
     if (auto splatTensor = llvm::dyn_cast<SplatElementsAttr>(tensor))
       return splatTensor.getSplatValue<Attribute>();
+
+    // If this is a dense resource elements attribute, return.
+    if (isa<DenseResourceElementsAttr>(tensor))
+      return {};
+  }
 
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
