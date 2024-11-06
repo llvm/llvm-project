@@ -11748,6 +11748,13 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (!DebugCounter::shouldExecute(VectorizedGraphs))
     return true;
 
+  // Graph is empty - do nothing.
+  if (VectorizableTree.empty()) {
+    assert(ExternalUses.empty() && "We shouldn't have any external users");
+
+    return true;
+  }
+
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -11806,10 +11813,6 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       VectorizableTree.back()->getVectorFactor() > 2 &&
       allSameBlock(VectorizableTree.back()->Scalars))
     return false;
-
-  assert(VectorizableTree.empty()
-             ? ExternalUses.empty()
-             : true && "We shouldn't have any external users");
 
   // Otherwise, we can't vectorize the tree. It is both tiny and not fully
   // vectorizable.
