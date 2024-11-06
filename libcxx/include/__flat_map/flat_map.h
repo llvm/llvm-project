@@ -11,6 +11,7 @@
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
 #include <__algorithm/lexicographical_compare_three_way.h>
+#include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
@@ -19,11 +20,14 @@
 #include <__algorithm/ranges_stable_sort.h>
 #include <__algorithm/ranges_unique.h>
 #include <__algorithm/ranges_upper_bound.h>
+#include <__algorithm/remove_if.h>
+#include <__assert>
 #include <__compare/synth_three_way.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/swappable.h>
 #include <__config>
 #include <__cstddef/byte.h>
+#include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/sorted_unique.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
@@ -34,13 +38,17 @@
 #include <__iterator/next.h>
 #include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__memory/uses_allocator_construction.h>
+#include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
+#include <__ranges/from_range.h>
 #include <__ranges/ref_view.h>
+#include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
 #include <__type_traits/conjunction.h>
@@ -52,10 +60,9 @@
 #include <__type_traits/maybe_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/pair.h>
+#include <__vector/vector.h>
 #include <initializer_list>
 #include <stdexcept>
-#include <string>
-#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -1600,6 +1600,12 @@ def : Pat<(xor (v4i32 LSX128:$vj), (v4i32 (vsplat_uimm_pow2 uimm5:$imm))),
 def : Pat<(xor (v2i64 LSX128:$vj), (v2i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (VBITREVI_D LSX128:$vj, uimm6:$imm)>;
 
+// Vector bswaps
+def : Pat<(bswap (v8i16 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b10110001)>;
+def : Pat<(bswap (v4i32 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b00011011)>;
+def : Pat<(bswap (v2i64 LSX128:$vj)),
+          (VSHUF4I_W (VSHUF4I_B LSX128:$vj, 0b00011011), 0b10110001)>;
+
 // VFADD_{S/D}
 defm : PatVrVrF<fadd, "VFADD">;
 
@@ -2252,6 +2258,32 @@ def : Pat<(loongarch_vfrsqrte v4f32:$src),
 def : Pat<(loongarch_vfrsqrte v2f64:$src), 
           (VFRSQRTE_D v2f64:$src)>;
 }
+
+// Vector floating-point conversion
+def : Pat<(f32 (fceil FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRP_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (fceil FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRP_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+def : Pat<(f32 (ffloor FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRM_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (ffloor FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRM_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+def : Pat<(f32 (ftrunc FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRZ_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (ftrunc FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRZ_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+def : Pat<(f32 (froundeven FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRNE_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (froundeven FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

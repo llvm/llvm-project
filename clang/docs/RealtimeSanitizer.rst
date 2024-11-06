@@ -12,9 +12,9 @@ projects. RTSan can be used to detect real-time violations, i.e. calls to method
 that are not safe for use in functions with deterministic run time requirements.
 RTSan considers any function marked with the ``[[clang::nonblocking]]`` attribute
 to be a real-time function. At run-time, if RTSan detects a call to ``malloc``, 
-``free``, ``pthread_mutex_lock``, or anything else that could have a 
+``free``, ``pthread_mutex_lock``, or anything else known to have a 
 non-deterministic execution time in a function marked ``[[clang::nonblocking]]``
-RTSan raises an error.
+it raises an error. 
 
 RTSan performs its analysis at run-time but shares the ``[[clang::nonblocking]]`` 
 attribute with the :doc:`FunctionEffectAnalysis` system, which operates at 

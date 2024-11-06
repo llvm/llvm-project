@@ -221,7 +221,7 @@ add_entrypoint_object(
   HDRS
     div.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.div_t
     libc.src.__support.integer_operations
 )
 
@@ -232,7 +232,7 @@ add_entrypoint_object(
   HDRS
     ldiv.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.ldiv_t
     libc.src.__support.integer_operations
 )
 
@@ -243,7 +243,7 @@ add_entrypoint_object(
   HDRS
     lldiv.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.lldiv_t
     libc.src.__support.integer_operations
 )
 
@@ -277,7 +277,7 @@ add_entrypoint_object(
     qsort.h
   DEPENDS
     .qsort_util
-    libc.include.stdlib
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -288,7 +288,7 @@ add_entrypoint_object(
     qsort_r.h
   DEPENDS
     .qsort_util
-    libc.include.stdlib
+    libc.hdr.types.size_t
 )
 
 add_object_library(
@@ -309,7 +309,7 @@ add_entrypoint_object(
     rand.h
   DEPENDS
     .rand_util
-    libc.include.stdlib
+    libc.hdr.stdlib_macros
     libc.src.__support.threads.sleep
 )
 
@@ -321,7 +321,6 @@ add_entrypoint_object(
     srand.h
   DEPENDS
     .rand_util
-    libc.include.stdlib
 )
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
