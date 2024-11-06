@@ -9,8 +9,9 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINT_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINT_H
 
-#include "BreakpointBase.h"
 #include "lldb/API/SBBreakpoint.h"
+
+#include "BreakpointBase.h"
 
 namespace lldb_dap {
 
@@ -18,9 +19,9 @@ struct Breakpoint : public BreakpointBase {
   // The LLDB breakpoint associated wit this source breakpoint
   lldb::SBBreakpoint bp;
 
-  Breakpoint() = default;
-  Breakpoint(const llvm::json::Object &obj) : BreakpointBase(obj){};
-  Breakpoint(lldb::SBBreakpoint bp) : bp(bp) {}
+  Breakpoint(DAP &d) : BreakpointBase(d) {}
+  Breakpoint(DAP &d, const llvm::json::Object &obj) : BreakpointBase(d, obj) {}
+  Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), bp(bp) {}
 
   void SetCondition() override;
   void SetHitCondition() override;

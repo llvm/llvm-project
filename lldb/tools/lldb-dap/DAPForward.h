@@ -16,6 +16,7 @@ struct FunctionBreakpoint;
 struct SourceBreakpoint;
 struct Watchpoint;
 struct InstructionBreakpoint;
+struct DAP;
 } // namespace lldb_dap
 
 namespace lldb {

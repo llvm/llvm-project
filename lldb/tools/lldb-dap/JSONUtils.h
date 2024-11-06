@@ -380,17 +380,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread);
 
-/// Create a "instruction" object for a LLDB disassemble object as described in
-/// the Visual Studio Code debug adaptor definition.
-///
-/// \param[in] bp
-///     The LLDB instruction object used to populate the disassembly
-///     instruction.
-/// \return
-///     A "Scope" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp);
-
 /// Create a "Thread" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
