@@ -11,9 +11,7 @@ define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    slli a2, zero, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    beq a1, a2, .LBB0_2
+; RV64I-NEXT:    beqz a1, .LBB0_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -72,10 +70,8 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    slli a2, zero, 32
-; RV64I-NEXT:    srli a2, a2, 32
 ; RV64I-NEXT:    li s0, 31
-; RV64I-NEXT:    beq a1, a2, .LBB1_2
+; RV64I-NEXT:    beqz a1, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
@@ -140,10 +136,8 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    srli a2, a1, 32
-; RV64I-NEXT:    slli a1, zero, 32
-; RV64I-NEXT:    srli a3, a1, 32
 ; RV64I-NEXT:    li a1, 32
-; RV64I-NEXT:    beq a2, a3, .LBB2_2
+; RV64I-NEXT:    beqz a2, .LBB2_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
@@ -237,9 +231,7 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    call __muldi3
 ; RV64I-NEXT:    slli s1, s1, 32
 ; RV64I-NEXT:    srli s1, s1, 32
-; RV64I-NEXT:    slli a1, zero, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    beq s1, a1, .LBB3_2
+; RV64I-NEXT:    beqz s1, .LBB3_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    srliw a0, a0, 24
 ; RV64I-NEXT:    li a1, 32
@@ -257,10 +249,8 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    slli a1, a0, 32
 ; RV64ZBB-NEXT:    srli a2, a1, 32
-; RV64ZBB-NEXT:    slli a1, zero, 32
-; RV64ZBB-NEXT:    srli a3, a1, 32
 ; RV64ZBB-NEXT:    li a1, -1
-; RV64ZBB-NEXT:    beq a2, a3, .LBB3_2
+; RV64ZBB-NEXT:    beqz a2, .LBB3_2
 ; RV64ZBB-NEXT:  # %bb.1:
 ; RV64ZBB-NEXT:    clzw a0, a0
 ; RV64ZBB-NEXT:    xori a1, a0, 31
@@ -280,9 +270,7 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-NEXT:    srliw a0, a0, 1
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    slli a2, zero, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    beq a1, a2, .LBB4_2
+; RV64I-NEXT:    beqz a1, .LBB4_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
@@ -421,9 +409,7 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    slli a2, zero, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    beq a1, a2, .LBB6_2
+; RV64I-NEXT:    beqz a1, .LBB6_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -538,9 +524,7 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    call __muldi3
 ; RV64I-NEXT:    slli s1, s1, 32
 ; RV64I-NEXT:    srli s1, s1, 32
-; RV64I-NEXT:    slli a1, zero, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    beq s1, a1, .LBB8_2
+; RV64I-NEXT:    beqz s1, .LBB8_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    srliw s0, a0, 24
 ; RV64I-NEXT:  .LBB8_2:
@@ -555,10 +539,8 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    slli a1, a0, 32
 ; RV64ZBB-NEXT:    srli a2, a1, 32
-; RV64ZBB-NEXT:    slli a1, zero, 32
-; RV64ZBB-NEXT:    srli a3, a1, 32
 ; RV64ZBB-NEXT:    li a1, -1
-; RV64ZBB-NEXT:    beq a2, a3, .LBB8_2
+; RV64ZBB-NEXT:    beqz a2, .LBB8_2
 ; RV64ZBB-NEXT:  # %bb.1:
 ; RV64ZBB-NEXT:    ctzw a1, a0
 ; RV64ZBB-NEXT:  .LBB8_2:
@@ -601,11 +583,9 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    call __muldi3
 ; RV64I-NEXT:    slli s0, s0, 32
 ; RV64I-NEXT:    srli s0, s0, 32
-; RV64I-NEXT:    slli a1, zero, 32
-; RV64I-NEXT:    srli a2, a1, 32
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    beq s0, a2, .LBB9_2
+; RV64I-NEXT:    beqz s0, .LBB9_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    srliw a0, a1, 24
 ; RV64I-NEXT:    addiw a0, a0, 1
@@ -619,10 +599,8 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    slli a1, a0, 32
 ; RV64ZBB-NEXT:    srli a2, a1, 32
-; RV64ZBB-NEXT:    slli a1, zero, 32
-; RV64ZBB-NEXT:    srli a3, a1, 32
 ; RV64ZBB-NEXT:    li a1, 0
-; RV64ZBB-NEXT:    beq a2, a3, .LBB9_2
+; RV64ZBB-NEXT:    beqz a2, .LBB9_2
 ; RV64ZBB-NEXT:  # %bb.1:
 ; RV64ZBB-NEXT:    ctzw a1, a0
 ; RV64ZBB-NEXT:    addiw a1, a1, 1
@@ -744,8 +722,6 @@ define i1 @ctpop_i32_ult_two(i32 signext %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    li s0, 2
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    lui a2, 349525
 ; RV64I-NEXT:    addi a2, a2, 1365
@@ -768,23 +744,17 @@ define i1 @ctpop_i32_ult_two(i32 signext %a) nounwind {
 ; RV64I-NEXT:    srliw a0, a0, 24
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli s0, s0, 32
-; RV64I-NEXT:    srli s0, s0, 32
-; RV64I-NEXT:    sltu a0, a0, s0
+; RV64I-NEXT:    sltiu a0, a0, 2
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop_i32_ult_two:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    li a1, 2
 ; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    slli a0, a0, 32
 ; RV64ZBB-NEXT:    srli a0, a0, 32
-; RV64ZBB-NEXT:    slli a1, a1, 32
-; RV64ZBB-NEXT:    srli a1, a1, 32
-; RV64ZBB-NEXT:    sltu a0, a0, a1
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
 ; RV64ZBB-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   %2 = icmp ult i32 %1, 2
