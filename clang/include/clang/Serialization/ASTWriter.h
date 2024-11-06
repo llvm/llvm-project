@@ -929,9 +929,9 @@ class PCHGenerator : public SemaConsumer {
   void anchor() override;
 
   Preprocessor &PP;
+  llvm::PointerUnion<Sema *, Preprocessor *> Subject;
   std::string OutputFile;
   std::string isysroot;
-  Sema *SemaPtr;
   std::shared_ptr<PCHBuffer> Buffer;
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
@@ -946,9 +946,7 @@ protected:
   bool isComplete() const { return Buffer->IsComplete; }
   PCHBuffer *getBufferPtr() { return Buffer.get(); }
   StringRef getOutputFile() const { return OutputFile; }
-  DiagnosticsEngine &getDiagnostics() const {
-    return SemaPtr->getDiagnostics();
-  }
+  DiagnosticsEngine &getDiagnostics() const;
   Preprocessor &getPreprocessor() { return PP; }
 
   virtual Module *getEmittingModule(ASTContext &Ctx);
@@ -964,7 +962,7 @@ public:
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
-  void InitializeSema(Sema &S) override { SemaPtr = &S; }
+  void InitializeSema(Sema &S) override;
   void HandleTranslationUnit(ASTContext &Ctx) override;
   void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;
