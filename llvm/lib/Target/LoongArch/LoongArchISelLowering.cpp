@@ -286,6 +286,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                         VT, Expand);
     }
     setOperationAction(ISD::CTPOP, GRLenVT, Legal);
+    setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FFLOOR, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FTRUNC, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FROUNDEVEN, {MVT::f32, MVT::f64}, Legal);
   }
 
   // Set operations for 'LASX' feature.
