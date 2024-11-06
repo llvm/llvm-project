@@ -1150,6 +1150,7 @@ class VPseudoUnaryNoMaskGPROut :
 class VPseudoUnaryMaskGPROut :
       Pseudo<(outs GPR:$rd),
              (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+      RISCVMaskedPseudo<MaskIdx=1>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
