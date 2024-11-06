@@ -62,9 +62,6 @@ namespace memprof {
 struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
-
   bool operator<(const LineLocation &O) const {
     return LineOffset < O.LineOffset ||
            (LineOffset == O.LineOffset && Column < O.Column);

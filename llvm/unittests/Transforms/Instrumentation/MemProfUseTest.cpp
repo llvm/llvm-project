@@ -90,19 +90,14 @@ declare !dbg !19 void @_Z2f3v()
 
   // Verify that call sites show up in the ascending order of their source
   // locations.
-  EXPECT_EQ(CallSites[0].first.LineOffset, 1U);
-  EXPECT_EQ(CallSites[0].first.Column, 3U);
-  EXPECT_EQ(CallSites[0].second,
-            memprof::IndexedMemProfRecord::getGUID("_Z2f1v"));
-
-  EXPECT_EQ(CallSites[1].first.LineOffset, 2U);
-  EXPECT_EQ(CallSites[1].first.Column, 3U);
-  EXPECT_EQ(CallSites[1].second,
-            memprof::IndexedMemProfRecord::getGUID("_Z2f2v"));
-
-  EXPECT_EQ(CallSites[2].first.LineOffset, 2U);
-  EXPECT_EQ(CallSites[2].first.Column, 9U);
-  EXPECT_EQ(CallSites[2].second,
-            memprof::IndexedMemProfRecord::getGUID("_Z2f3v"));
+  EXPECT_THAT(CallSites[0],
+              testing::Pair(testing::FieldsAre(1U, 3U),
+                            memprof::IndexedMemProfRecord::getGUID("_Z2f1v")));
+  EXPECT_THAT(CallSites[1],
+              testing::Pair(testing::FieldsAre(2U, 3U),
+                            memprof::IndexedMemProfRecord::getGUID("_Z2f2v")));
+  EXPECT_THAT(CallSites[2],
+              testing::Pair(testing::FieldsAre(2U, 9U),
+                            memprof::IndexedMemProfRecord::getGUID("_Z2f3v")));
 }
 } // namespace

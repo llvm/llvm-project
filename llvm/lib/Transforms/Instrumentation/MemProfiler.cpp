@@ -833,10 +833,9 @@ memprof::extractCallsFromIR(Module &M) {
   }
 
   // Sort each call list by the source location.
-  for (auto &KV : Calls) {
-    auto &Calls = KV.second;
-    llvm::sort(Calls);
-    Calls.erase(llvm::unique(Calls), Calls.end());
+  for (auto &[CallerGUID, CallList] : Calls) {
+    llvm::sort(CallList);
+    CallList.erase(llvm::unique(CallList), CallList.end());
   }
 
   return Calls;
