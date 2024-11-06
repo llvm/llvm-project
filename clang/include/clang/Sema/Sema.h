@@ -357,7 +357,8 @@ struct SkipBodyInfo {
 /// to modify AST, e.g. to instantiate templates.
 struct SemaASTMutator : EvalASTMutator {
   Sema &SemaRef;
-  SemaASTMutator(Sema &SemaRef) void InstantiateFunctionDefinition(
+  SemaASTMutator(Sema &SemaRef);
+  void InstantiateFunctionDefinition(
       SourceLocation PointOfInstantiation, FunctionDecl *Function,
       bool Recursive, bool DefinitionRequired, bool AtEndOfTU) override;
 };
