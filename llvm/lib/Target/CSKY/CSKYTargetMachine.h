@@ -24,9 +24,6 @@ class CSKYTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<CSKYSubtarget>> SubtargetMap;
 
-  /// Reset internal state.
-  void reset() override;
-
 public:
   CSKYTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,

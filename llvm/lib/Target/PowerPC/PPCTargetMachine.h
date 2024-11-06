@@ -36,9 +36,6 @@ private:
 
   mutable StringMap<std::unique_ptr<PPCSubtarget>> SubtargetMap;
 
-  /// Reset internal state.
-  void reset() override;
-
 public:
   PPCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,

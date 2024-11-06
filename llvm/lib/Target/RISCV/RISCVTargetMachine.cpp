@@ -274,8 +274,6 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
   return true;
 }
 
-void RISCVTargetMachine::reset() { SubtargetMap.clear(); }
-
 namespace {
 
 class RVVRegisterRegAlloc : public RegisterRegAllocBase<RVVRegisterRegAlloc> {

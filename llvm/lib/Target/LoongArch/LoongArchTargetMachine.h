@@ -23,9 +23,6 @@ class LoongArchTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<LoongArchSubtarget>> SubtargetMap;
 
-  /// Reset internal state.
-  void reset() override;
-
 public:
   LoongArchTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,

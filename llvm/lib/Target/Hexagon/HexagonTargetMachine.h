@@ -26,9 +26,6 @@ class HexagonTargetMachine : public LLVMTargetMachine {
   HexagonSubtarget Subtarget;
   mutable StringMap<std::unique_ptr<HexagonSubtarget>> SubtargetMap;
 
-  /// Reset internal state.
-  void reset() override;
-
 public:
   HexagonTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,

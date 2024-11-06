@@ -81,9 +81,6 @@ class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<GCNSubtarget>> SubtargetMap;
 
-  /// Reset internal state.
-  void reset() override;
-
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,

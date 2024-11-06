@@ -410,8 +410,6 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void PPCTargetMachine::reset() { SubtargetMap.clear(); }
-
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//

@@ -953,8 +953,6 @@ bool AMDGPUTargetMachine::splitModule(
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
 
-void GCNTargetMachine::reset() { SubtargetMap.clear(); };
-
 GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
