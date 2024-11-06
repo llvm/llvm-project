@@ -95,9 +95,47 @@ public:
   }
 };
 
+struct ModuleFile;
+
+// ReusablePrerequisiteModules - stands for PrerequisiteModules for which all
+// the required modules are built successfully. All the module files
+// are owned by the modules builder.
+class ReusablePrerequisiteModules : public PrerequisiteModules {
+public:
+  ReusablePrerequisiteModules() = default;
+
+  ReusablePrerequisiteModules(const ReusablePrerequisiteModules &Other) =
+      default;
+  ReusablePrerequisiteModules &
+  operator=(const ReusablePrerequisiteModules &) = default;
+  ReusablePrerequisiteModules(ReusablePrerequisiteModules &&) = delete;
+  ReusablePrerequisiteModules
+  operator=(ReusablePrerequisiteModules &&) = delete;
+
+  ~ReusablePrerequisiteModules() override = default;
+
+  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override;
+
+  bool canReuse(const CompilerInvocation &CI,
+                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override;
+
+  bool isModuleUnitBuilt(llvm::StringRef ModuleName) const {
+    return BuiltModuleNames.contains(ModuleName);
+  }
+
+  void addModuleFile(std::shared_ptr<const ModuleFile> ModuleFile);
+
+private:
+  llvm::SmallVector<std::shared_ptr<const ModuleFile>, 8> RequiredModules;
+  // A helper class to speedup the query if a module is built.
+  llvm::StringSet<> BuiltModuleNames;
+};
+
 struct ModuleFile {
-  ModuleFile(StringRef ModuleName, PathRef ModuleFilePath)
-      : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()) {}
+  ModuleFile(StringRef ModuleName, PathRef ModuleFilePath,
+             const ReusablePrerequisiteModules &RequiredModuleFiles)
+      : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()),
+        RequiredModuleFiles(RequiredModuleFiles) {}
 
   ModuleFile() = delete;
 
@@ -133,7 +171,26 @@ struct ModuleFile {
 private:
   std::string ModuleName;
   std::string ModuleFilePath;
+
+  // The required module files. We need to share the ownership for required
+  // module files.
+  ReusablePrerequisiteModules RequiredModuleFiles;
 };
+
+void ReusablePrerequisiteModules::adjustHeaderSearchOptions(
+    HeaderSearchOptions &Options) const {
+  // Appending all built module files.
+  for (const auto &RequiredModule : RequiredModules)
+    Options.PrebuiltModuleFiles.insert_or_assign(
+        RequiredModule->getModuleName().str(),
+        RequiredModule->getModuleFilePath().str());
+}
+
+void ReusablePrerequisiteModules::addModuleFile(
+    std::shared_ptr<const ModuleFile> ModuleFile) {
+  BuiltModuleNames.insert(ModuleFile->getModuleName());
+  RequiredModules.emplace_back(std::move(ModuleFile));
+}
 
 bool IsModuleFileUpToDate(PathRef ModuleFilePath,
                           const PrerequisiteModules &RequisiteModules,
@@ -199,48 +256,6 @@ bool IsModuleFilesUpToDate(
       });
 }
 
-// ReusablePrerequisiteModules - stands for PrerequisiteModules for which all
-// the required modules are built successfully. All the module files
-// are owned by the modules builder.
-class ReusablePrerequisiteModules : public PrerequisiteModules {
-public:
-  ReusablePrerequisiteModules() = default;
-
-  ReusablePrerequisiteModules(const ReusablePrerequisiteModules &) = delete;
-  ReusablePrerequisiteModules
-  operator=(const ReusablePrerequisiteModules &) = delete;
-  ReusablePrerequisiteModules(ReusablePrerequisiteModules &&) = delete;
-  ReusablePrerequisiteModules
-  operator=(ReusablePrerequisiteModules &&) = delete;
-
-  ~ReusablePrerequisiteModules() override = default;
-
-  void adjustHeaderSearchOptions(HeaderSearchOptions &Options) const override {
-    // Appending all built module files.
-    for (auto &RequiredModule : RequiredModules)
-      Options.PrebuiltModuleFiles.insert_or_assign(
-          RequiredModule->getModuleName().str(),
-          RequiredModule->getModuleFilePath().str());
-  }
-
-  bool canReuse(const CompilerInvocation &CI,
-                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override;
-
-  bool isModuleUnitBuilt(llvm::StringRef ModuleName) const {
-    return BuiltModuleNames.contains(ModuleName);
-  }
-
-  void addModuleFile(std::shared_ptr<ModuleFile> BMI) {
-    BuiltModuleNames.insert(BMI->getModuleName());
-    RequiredModules.emplace_back(std::move(BMI));
-  }
-
-private:
-  llvm::SmallVector<std::shared_ptr<ModuleFile>, 8> RequiredModules;
-  // A helper class to speedup the query if a module is built.
-  llvm::StringSet<> BuiltModuleNames;
-};
-
 /// Build a module file for module with `ModuleName`. The information of built
 /// module file are stored in \param BuiltModuleFiles.
 llvm::Expected<ModuleFile>
@@ -294,7 +309,7 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
   if (Clang->getDiagnostics().hasErrorOccurred())
     return llvm::createStringError("Compilation failed");
 
-  return ModuleFile{ModuleName, Inputs.CompileCommand.Output};
+  return ModuleFile{ModuleName, Inputs.CompileCommand.Output, BuiltModuleFiles};
 }
 
 bool ReusablePrerequisiteModules::canReuse(
@@ -319,13 +334,13 @@ public:
                        ReusablePrerequisiteModules &RequiredModules);
   const GlobalCompilationDatabase &getCDB() const { return CDB; }
 
-  std::shared_ptr<ModuleFile>
+  std::shared_ptr<const ModuleFile>
   getValidModuleFile(StringRef ModuleName, ProjectModules &MDB,
                      const ThreadsafeFS &TFS,
                      PrerequisiteModules &BuiltModuleFiles);
 
-  void add(StringRef ModuleName, std::shared_ptr<ModuleFile> ModuleFile) {
-    std::lock_guard<std::mutex> _(ModuleFilesMutex);
+  void add(StringRef ModuleName, std::shared_ptr<const ModuleFile> ModuleFile) {
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
 
     ModuleFiles.insert_or_assign(ModuleName, ModuleFile);
   }
@@ -333,7 +348,7 @@ public:
 private:
   const GlobalCompilationDatabase &CDB;
 
-  llvm::StringMap<std::shared_ptr<ModuleFile>> ModuleFiles;
+  llvm::StringMap<std::weak_ptr<const ModuleFile>> ModuleFiles;
   // Mutex to guard accesses to ModuleFiles.
   std::mutex ModuleFilesMutex;
 };
@@ -341,8 +356,10 @@ private:
 /// Collect the directly and indirectly required module names for \param
 /// ModuleName. The \param ModuleName is guaranteed to be the first element in
 /// \param ModuleNames.
-void getAllRequiredModules(ProjectModules &MDB, StringRef ModuleName,
-                           llvm::SmallVector<StringRef> &ModuleNames) {
+llvm::SmallVector<StringRef> getAllRequiredModules(ProjectModules &MDB,
+                                                   StringRef ModuleName) {
+  llvm::SmallVector<StringRef> ModuleNames;
+
   std::queue<StringRef> Worklist;
   llvm::StringSet<> ModuleNamesSet;
   Worklist.push(ModuleName);
@@ -361,46 +378,60 @@ void getAllRequiredModules(ProjectModules &MDB, StringRef ModuleName,
       if (!ModuleNamesSet.contains(RequiredModuleName))
         Worklist.push(RequiredModuleName);
   }
+
+  return ModuleNames;
 }
 
-std::shared_ptr<ModuleFile>
+std::shared_ptr<const ModuleFile>
 ModuleFileCache::getValidModuleFile(StringRef ModuleName, ProjectModules &MDB,
                                     const ThreadsafeFS &TFS,
                                     PrerequisiteModules &BuiltModuleFiles) {
   {
-    std::lock_guard<std::mutex> _(ModuleFilesMutex);
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
 
-    if (ModuleFiles.find(ModuleName) == ModuleFiles.end())
+    auto Iter = ModuleFiles.find(ModuleName);
+    if (Iter == ModuleFiles.end())
       return nullptr;
+
+    if (Iter->second.expired()) {
+      ModuleFiles.erase(Iter);
+      return nullptr;
+    }
   }
 
-  llvm::SmallVector<StringRef> ModuleNames;
-  getAllRequiredModules(MDB, ModuleName, ModuleNames);
+  llvm::SmallVector<StringRef> ModuleNames =
+      getAllRequiredModules(MDB, ModuleName);
 
-  llvm::SmallVector<std::shared_ptr<ModuleFile>> RequiredModuleFiles;
+  llvm::SmallVector<std::shared_ptr<const ModuleFile>> RequiredModuleFiles;
 
   {
-    std::lock_guard<std::mutex> _(ModuleFilesMutex);
+    std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
 
     for (StringRef ModuleName : ModuleNames) {
       auto Iter = ModuleFiles.find(ModuleName);
       if (Iter == ModuleFiles.end())
         return nullptr;
 
-      RequiredModuleFiles.push_back(Iter->second);
+      if (Iter->second.expired()) {
+        ModuleFiles.erase(Iter);
+        return nullptr;
+      }
+
+      RequiredModuleFiles.push_back(Iter->second.lock());
     }
   }
 
-  if (RequiredModuleFiles.empty())
+  assert(!RequiredModuleFiles.empty());
+
+  if (llvm::any_of(RequiredModuleFiles,
+                   [&](std::shared_ptr<const ModuleFile> MF) {
+                     return !IsModuleFileUpToDate(MF->getModuleFilePath(),
+                                                  BuiltModuleFiles,
+                                                  TFS.view(std::nullopt));
+                   }))
     return nullptr;
 
-  if (llvm::all_of(RequiredModuleFiles, [&](auto MF) {
-        return IsModuleFileUpToDate(MF->getModuleFilePath(), BuiltModuleFiles,
-                                    TFS.view(std::nullopt));
-      }))
-    return RequiredModuleFiles[0];
-
-  return nullptr;
+  return RequiredModuleFiles[0];
 }
 } // namespace
 
@@ -443,7 +474,7 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
       return llvm::createStringError(
           llvm::formatv("Failed to build module {0}", RequiredModuleName));
 
-  if (std::shared_ptr<ModuleFile> Cached =
+  if (std::shared_ptr<const ModuleFile> Cached =
           Cache.getValidModuleFile(ModuleName, MDB, TFS, BuiltModuleFiles)) {
     log("Reusing module {0} from {1}", ModuleName, Cached->getModuleFilePath());
     BuiltModuleFiles.addModuleFile(Cached);
@@ -462,7 +493,7 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     return Err;
 
   log("Built module {0} to {1}", ModuleName, MF->getModuleFilePath());
-  auto BuiltModuleFile = std::make_shared<ModuleFile>(std::move(*MF));
+  auto BuiltModuleFile = std::make_shared<const ModuleFile>(std::move(*MF));
   Cache.add(ModuleName, BuiltModuleFile);
   BuiltModuleFiles.addModuleFile(std::move(BuiltModuleFile));
 
