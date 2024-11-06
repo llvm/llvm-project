@@ -42,6 +42,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #endif
 
 #include <fcntl.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -614,6 +615,104 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
+// I/O Multiplexing
+
+INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
+  __rtsan_notify_intercepted_call("poll");
+  return REAL(poll)(fds, nfds, timeout);
+}
+
+#if !SANITIZER_APPLE
+// FIXME: This should work on all unix systems, even Mac, but currently
+// it is showing some weird error while linking
+// error: declaration of 'select' has a different language linkage
+INTERCEPTOR(int, select, int nfds, fd_set *readfds, fd_set *writefds,
+            fd_set *exceptfds, struct timeval *timeout) {
+  __rtsan_notify_intercepted_call("select");
+  return REAL(select)(nfds, readfds, writefds, exceptfds, timeout);
+}
+#define RTSAN_MAYBE_INTERCEPT_SELECT INTERCEPT_FUNCTION(select)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SELECT
+#endif // !SANITIZER_APPLE
+
+INTERCEPTOR(int, pselect, int nfds, fd_set *readfds, fd_set *writefds,
+            fd_set *exceptfds, const struct timespec *timeout,
+            const sigset_t *sigmask) {
+  __rtsan_notify_intercepted_call("pselect");
+  return REAL(pselect)(nfds, readfds, writefds, exceptfds, timeout, sigmask);
+}
+
+#if SANITIZER_INTERCEPT_EPOLL
+INTERCEPTOR(int, epoll_create, int size) {
+  __rtsan_notify_intercepted_call("epoll_create");
+  return REAL(epoll_create)(size);
+}
+
+INTERCEPTOR(int, epoll_create1, int flags) {
+  __rtsan_notify_intercepted_call("epoll_create1");
+  return REAL(epoll_create1)(flags);
+}
+
+INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd,
+            struct epoll_event *event) {
+  __rtsan_notify_intercepted_call("epoll_ctl");
+  return REAL(epoll_ctl)(epfd, op, fd, event);
+}
+
+INTERCEPTOR(int, epoll_wait, int epfd, struct epoll_event *events,
+            int maxevents, int timeout) {
+  __rtsan_notify_intercepted_call("epoll_wait");
+  return REAL(epoll_wait)(epfd, events, maxevents, timeout);
+}
+
+INTERCEPTOR(int, epoll_pwait, int epfd, struct epoll_event *events,
+            int maxevents, int timeout, const sigset_t *sigmask) {
+  __rtsan_notify_intercepted_call("epoll_pwait");
+  return REAL(epoll_pwait)(epfd, events, maxevents, timeout, sigmask);
+}
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE INTERCEPT_FUNCTION(epoll_create)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE1 INTERCEPT_FUNCTION(epoll_create1)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CTL INTERCEPT_FUNCTION(epoll_ctl)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT INTERCEPT_FUNCTION(epoll_wait)
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT INTERCEPT_FUNCTION(epoll_pwait)
+#else
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE1
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_CTL
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT
+#define RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT
+#endif // SANITIZER_INTERCEPT_EPOLL
+
+#if SANITIZER_INTERCEPT_KQUEUE
+INTERCEPTOR(int, kqueue, void) {
+  __rtsan_notify_intercepted_call("kqueue");
+  return REAL(kqueue)();
+}
+
+INTERCEPTOR(int, kevent, int kq, const struct kevent *changelist, int nchanges,
+            struct kevent *eventlist, int nevents,
+            const struct timespec *timeout) {
+  __rtsan_notify_intercepted_call("kevent");
+  return REAL(kevent)(kq, changelist, nchanges, eventlist, nevents, timeout);
+}
+
+INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
+            int nchanges, struct kevent64_s *eventlist, int nevents,
+            unsigned int flags, const struct timespec *timeout) {
+  __rtsan_notify_intercepted_call("kevent64");
+  return REAL(kevent64)(kq, changelist, nchanges, eventlist, nevents, flags,
+                        timeout);
+}
+#define RTSAN_MAYBE_INTERCEPT_KQUEUE INTERCEPT_FUNCTION(kqueue)
+#define RTSAN_MAYBE_INTERCEPT_KEVENT INTERCEPT_FUNCTION(kevent)
+#define RTSAN_MAYBE_INTERCEPT_KEVENT64 INTERCEPT_FUNCTION(kevent64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_KQUEUE
+#define RTSAN_MAYBE_INTERCEPT_KEVENT
+#define RTSAN_MAYBE_INTERCEPT_KEVENT64
+#endif
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -698,6 +797,18 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sendto);
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
+
+  RTSAN_MAYBE_INTERCEPT_SELECT;
+  INTERCEPT_FUNCTION(pselect);
+  INTERCEPT_FUNCTION(poll);
+  RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_CREATE1;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_CTL;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
+  RTSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
+  RTSAN_MAYBE_INTERCEPT_KQUEUE;
+  RTSAN_MAYBE_INTERCEPT_KEVENT;
+  RTSAN_MAYBE_INTERCEPT_KEVENT64;
 }
 
 #endif // SANITIZER_POSIX
