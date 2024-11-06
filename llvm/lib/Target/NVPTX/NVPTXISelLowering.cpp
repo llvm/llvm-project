@@ -3340,23 +3340,6 @@ bool NVPTXTargetLowering::splitValueIntoRegisterParts(
   return false;
 }
 
-bool llvm::NVPTXTargetLowering::isTruncateFree(EVT FromVT, EVT ToVT) const {
-  if (FromVT.isVector() || ToVT.isVector() || !FromVT.isInteger() ||
-      !ToVT.isInteger()) {
-    return false;
-  }
-
-  return FromVT.getSizeInBits() == 64 && ToVT.getSizeInBits() == 32;
-}
-
-bool llvm::NVPTXTargetLowering::isZExtFree(EVT FromVT, EVT ToVT) const {
-  return false;
-}
-
-bool llvm::NVPTXTargetLowering::isZExtFree(Type *SrcTy, Type *DstTy) const {
-  return false;
-}
-
 // This creates target external symbol for a function parameter.
 // Name of the symbol is composed from its index and the function name.
 // Negative index corresponds to special parameter (unsized array) used for
