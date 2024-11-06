@@ -231,7 +231,7 @@ but the following example shows how it can be used by a standard user.
   }
 
   // Routines to allocate mapped memory that both the host and the device can
-  // access asychonrously to communicate with eachother.
+  // access asychonrously to communicate with each other.
   void *alloc_host(size_t size, void *) {
     void *sharable_ptr;
     if (cudaError_t err = cudaMallocHost(&sharable_ptr, sizeof(void *)))
