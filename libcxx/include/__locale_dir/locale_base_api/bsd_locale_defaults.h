@@ -17,7 +17,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <wchar.h>
 #endif
 
@@ -40,7 +40,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __libcpp_mb_cur_max_l(locale_t __loc) { return MB_CUR_MAX_L(__loc); }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI wint_t __libcpp_btowc_l(int __c, locale_t __loc) { return ::btowc_l(__c, __loc); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_wctob_l(wint_t __c, locale_t __loc) { return ::wctob_l(__c, __loc); }
@@ -71,11 +71,11 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mbtowc_l(wchar_t* __pwc, const char* _
 inline _LIBCPP_HIDE_FROM_ABI size_t __libcpp_mbrlen_l(const char* __s, size_t __n, mbstate_t* __ps, locale_t __loc) {
   return ::mbrlen_l(__s, __n, __ps, __loc);
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t& __loc) { return ::localeconv_l(__loc); }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __libcpp_mbsrtowcs_l(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, locale_t __loc) {
   return ::mbsrtowcs_l(__dest, __src, __len, __ps, __loc);

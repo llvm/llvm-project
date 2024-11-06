@@ -124,7 +124,7 @@ template <class Mutex>
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 #  include <__chrono/duration.h>
 #  include <__chrono/steady_clock.h>
@@ -455,7 +455,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <system_error>

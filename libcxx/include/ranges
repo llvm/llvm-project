@@ -415,7 +415,7 @@ namespace std {
 #  include <__ranges/view_interface.h>
 #  include <__ranges/views.h>
 
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_LOCALIZATION
 #    include <__ranges/istream_view.h>
 #  endif
 #endif

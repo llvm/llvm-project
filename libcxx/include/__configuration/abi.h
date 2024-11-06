@@ -23,11 +23,11 @@
 // that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
 // and allow the user to explicitly specify the ABI to handle cases where this
 // heuristic falls short.
-#if defined(_LIBCPP_ABI_FORCE_ITANIUM) && defined(_LIBCPP_ABI_FORCE_MICROSOFT)
-#  error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be defined"
-#elif defined(_LIBCPP_ABI_FORCE_ITANIUM)
+#if _LIBCPP_ABI_FORCE_ITANIUM && _LIBCPP_ABI_FORCE_MICROSOFT
+#  error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be true"
+#elif _LIBCPP_ABI_FORCE_ITANIUM
 #  define _LIBCPP_ABI_ITANIUM
-#elif defined(_LIBCPP_ABI_FORCE_MICROSOFT)
+#elif _LIBCPP_ABI_FORCE_MICROSOFT
 #  define _LIBCPP_ABI_MICROSOFT
 #else
 #  if defined(_WIN32) && defined(_MSC_VER)
