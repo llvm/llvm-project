@@ -2386,6 +2386,9 @@ public:
     /// the whole vector (it is mixed with constants or loop invariant values).
     /// Note: This modifies the 'IsUsed' flag, so a cleanUsed() must follow.
     bool shouldBroadcast(Value *Op, unsigned OpIdx, unsigned Lane) {
+      // Small number of loads - try load matching.
+      if (isa<LoadInst>(Op) && getNumLanes() == 2 && getNumOperands() == 2)
+        return false;
       bool OpAPO = getData(OpIdx, Lane).APO;
       bool IsInvariant = L && L->isLoopInvariant(Op);
       unsigned Cnt = 0;
@@ -2511,23 +2514,23 @@ public:
         Value *OpLane0 = getValue(OpIdx, FirstLane);
         // Keep track if we have instructions with all the same opcode on one
         // side.
-        if (isa<LoadInst>(OpLane0))
-          ReorderingModes[OpIdx] = ReorderingMode::Load;
-        else if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
+        if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
           // Check if OpLane0 should be broadcast.
           if (shouldBroadcast(OpLane0, OpIdx, FirstLane) ||
               !canBeVectorized(OpILane0, OpIdx, FirstLane))
             ReorderingModes[OpIdx] = ReorderingMode::Splat;
+          else if (isa<LoadInst>(OpILane0))
+            ReorderingModes[OpIdx] = ReorderingMode::Load;
           else
             ReorderingModes[OpIdx] = ReorderingMode::Opcode;
-        } else if (isa<Constant>(OpLane0))
+        } else if (isa<Constant>(OpLane0)) {
           ReorderingModes[OpIdx] = ReorderingMode::Constant;
-        else if (isa<Argument>(OpLane0))
+        } else if (isa<Argument>(OpLane0)) {
           // Our best hope is a Splat. It may save some cost in some cases.
           ReorderingModes[OpIdx] = ReorderingMode::Splat;
-        else
-          // NOTE: This should be unreachable.
-          ReorderingModes[OpIdx] = ReorderingMode::Failed;
+        } else {
+          llvm_unreachable("Unexpected value kind.");
+        }
       }
 
       // Check that we don't have same operands. No need to reorder if operands
