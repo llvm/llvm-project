@@ -12,7 +12,7 @@
 //
 // In this analysis we track a set of passes S for each function with the
 // following transition rules:
-//   1. If pass P make changes, set S = {P}.
+//   1. If pass P makes changes, set S = {P}.
 //   2. If pass P doesn't make changes, set S = S + {P}.
 //
 // Before running a pass P which satisfies P(P(x)) == P(x), we check if P is in
