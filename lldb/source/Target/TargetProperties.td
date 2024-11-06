@@ -252,6 +252,13 @@ let Definition = "target" in {
   def EnableTrampolineSupport: Property<"enable-trampoline-support", "Boolean">,
     Global, DefaultTrue,
     Desc<"Enable trampoline support in LLDB. Trampoline support includes stepping through trampolines directly to their targets, stepping out of trampolines directly to their callers, and automatically filtering out trampolines as possible breakpoint locations when set by name.">;
+  def LaunchWorkingDir: Property<"launch-working-dir", "String">,
+    DefaultStringValue<"">,
+    Desc<"A default value for the working directory to use when launching processes. "
+         "It is ignored when empty. This setting is only used when the target is "
+         "launched. If you change this setting, the new value will only apply to "
+         "subsequent launches. Commands that take an explicit working directory "
+         "will override this setting.">;
 }
 
 let Definition = "process_experimental" in {
