@@ -1170,8 +1170,8 @@ body:             |
     ; MUBUF-NEXT: {{  $}}
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__kernel_fi_offset72__sgpr_live_after
@@ -1179,22 +1179,22 @@ body:             |
     ; MUBUFW32-NEXT: {{  $}}
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__kernel_fi_offset72__sgpr_live_after
     ; FLATSCRW64: liveins: $sgpr8
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__kernel_fi_offset72__sgpr_live_after
     ; FLATSCRW32: liveins: $sgpr8
     ; FLATSCRW32-NEXT: {{  $}}
-    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     renamable $vgpr0 = V_ADD_U32_e32 renamable $sgpr8, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0, implicit $sgpr8
@@ -1220,9 +1220,8 @@ body:             |
     ; MUBUF-NEXT: {{  $}}
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
     ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr1, 0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $sgpr8, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__kernel_fi_offset72__sgpr_live_after
@@ -1236,9 +1235,8 @@ body:             |
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__kernel_fi_offset72__sgpr_live_after
     ; FLATSCRW64: liveins: $sgpr8
     ; FLATSCRW64-NEXT: {{  $}}
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
     ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr1, 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $sgpr8, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__kernel_fi_offset72__sgpr_live_after

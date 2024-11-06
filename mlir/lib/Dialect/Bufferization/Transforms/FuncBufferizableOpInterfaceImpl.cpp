@@ -207,11 +207,18 @@ struct CallOpInterface
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
 
-    // The callee was already bufferized, so we can directly take the type from
+    // If the callee was already bufferized, we can directly take the type from
     // its signature.
     FunctionType funcType = funcOp.getFunctionType();
-    return cast<BaseMemRefType>(
-        funcType.getResult(cast<OpResult>(value).getResultNumber()));
+    Type resultType =
+        funcType.getResult(cast<OpResult>(value).getResultNumber());
+    if (auto bufferizedType = dyn_cast<BaseMemRefType>(resultType))
+      return bufferizedType;
+
+    // Otherwise, call the type converter to compute the bufferized type.
+    auto tensorType = cast<TensorType>(resultType);
+    return options.functionArgTypeConverterFn(
+        tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
   }
 
   /// All function arguments are writable. It is the responsibility of the
@@ -261,6 +268,18 @@ struct CallOpInterface
 
       // Caller / callee type mismatch is handled with castOrReallocMemRefValue.
       auto memRefType = funcType.getInput(opOperand.getOperandNumber());
+      if (!isa<BaseMemRefType>(memRefType)) {
+        // The called function was not bufferized yet. This can happen when
+        // there cycles in the function call graph. Compute the bufferized
+        // result type.
+        FailureOr<BaseMemRefType> maybeMemRefType =
+            bufferization::getBufferType(
+                funcOp.getArgument(opOperand.getOperandNumber()), options);
+        if (failed(maybeMemRefType))
+          return failure();
+        memRefType = *maybeMemRefType;
+      }
+
       // Since we don't yet have a clear layout story, to_memref may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast

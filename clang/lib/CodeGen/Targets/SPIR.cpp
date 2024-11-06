@@ -52,6 +52,10 @@ public:
 
   unsigned getOpenCLKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
+  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty) const override;
+  llvm::Type *getSPIRVImageTypeFromHLSLResource(
+      const HLSLAttributedResourceType::Attributes &attributes,
+      llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -321,6 +325,81 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getOpenCLType(CodeGenModule &CGM,
   }
 
   return nullptr;
+}
+
+llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
+                                                     const Type *Ty) const {
+  auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
+  if (!ResType)
+    return nullptr;
+
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+  const HLSLAttributedResourceType::Attributes &ResAttrs = ResType->getAttrs();
+  switch (ResAttrs.ResourceClass) {
+  case llvm::dxil::ResourceClass::UAV:
+  case llvm::dxil::ResourceClass::SRV: {
+    // TypedBuffer and RawBuffer both need element type
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull())
+      return nullptr;
+
+    assert(!ResAttrs.RawBuffer &&
+           "Raw buffers handles are not implemented for SPIR-V yet");
+    assert(!ResAttrs.IsROV &&
+           "Rasterizer order views not implemented for SPIR-V yet");
+
+    // convert element type
+    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
+  }
+  case llvm::dxil::ResourceClass::CBuffer:
+    llvm_unreachable("CBuffer handles are not implemented for SPIR-V yet");
+    break;
+  case llvm::dxil::ResourceClass::Sampler:
+    return llvm::TargetExtType::get(Ctx, "spirv.Sampler");
+  }
+  return nullptr;
+}
+
+llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
+    const HLSLAttributedResourceType::Attributes &attributes,
+    llvm::Type *ElementType, llvm::LLVMContext &Ctx) const {
+
+  if (ElementType->isVectorTy())
+    ElementType = ElementType->getScalarType();
+
+  assert((ElementType->isIntegerTy() || ElementType->isFloatingPointTy()) &&
+         "The element type for a SPIR-V resource must be a scalar integer or "
+         "floating point type.");
+
+  // These parameters correspond to the operands to the OpTypeImage SPIR-V
+  // instruction. See
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
+  SmallVector<unsigned, 6> IntParams(6, 0);
+
+  // Dim
+  // For now we assume everything is a buffer.
+  IntParams[0] = 5;
+
+  // Depth
+  // HLSL does not indicate if it is a depth texture or not, so we use unknown.
+  IntParams[1] = 2;
+
+  // Arrayed
+  IntParams[2] = 0;
+
+  // MS
+  IntParams[3] = 0;
+
+  // Sampled
+  IntParams[4] =
+      attributes.ResourceClass == llvm::dxil::ResourceClass::UAV ? 2 : 1;
+
+  // Image format.
+  // Setting to unknown for now.
+  IntParams[5] = 0;
+
+  return llvm::TargetExtType::get(Ctx, "spirv.Image", {ElementType}, IntParams);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

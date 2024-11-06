@@ -1038,7 +1038,7 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
   else if (D->BitField)
     Record.AddStmt(D->getBitWidth());
 
-  if (!D->getDeclName())
+  if (!D->getDeclName() || D->isPlaceholderVar(Writer.getLangOpts()))
     Record.AddDeclRef(Context.getInstantiatedFromUnnamedFieldDecl(D));
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&

@@ -1698,6 +1698,8 @@ bool ScopDetection::hasPossiblyDistributableLoop(
     DetectionContext &Context) const {
   for (auto *BB : Context.CurRegion.blocks()) {
     auto *L = LI.getLoopFor(BB);
+    if (!L)
+      continue;
     if (!Context.CurRegion.contains(L))
       continue;
     if (Context.BoxedLoopsSet.count(L))
