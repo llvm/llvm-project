@@ -3039,6 +3039,66 @@ public:
   }
 };
 
+class CIRAssumeLowering
+    : public mlir::OpConversionPattern<mlir::cir::AssumeOp> {
+public:
+  using OpConversionPattern<mlir::cir::AssumeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AssumeOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto cond = rewriter.create<mlir::LLVM::TruncOp>(
+        op.getLoc(), rewriter.getI1Type(), adaptor.getPredicate());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+    return mlir::success();
+  }
+};
+
+class CIRAssumeAlignedLowering
+    : public mlir::OpConversionPattern<mlir::cir::AssumeAlignedOp> {
+public:
+  using OpConversionPattern<mlir::cir::AssumeAlignedOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AssumeAlignedOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    SmallVector<mlir::Value, 3> opBundleArgs{adaptor.getPointer()};
+
+    auto alignment = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), rewriter.getI64Type(), op.getAlignment());
+    opBundleArgs.push_back(alignment);
+
+    if (mlir::Value offset = adaptor.getOffset())
+      opBundleArgs.push_back(offset);
+
+    auto cond = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), rewriter.getI1Type(), 1);
+    rewriter.create<mlir::LLVM::AssumeOp>(op.getLoc(), cond, "align",
+                                          opBundleArgs);
+    rewriter.replaceAllUsesWith(op, op.getPointer());
+    rewriter.eraseOp(op);
+
+    return mlir::success();
+  }
+};
+
+class CIRAssumeSepStorageLowering
+    : public mlir::OpConversionPattern<mlir::cir::AssumeSepStorageOp> {
+public:
+  using OpConversionPattern<mlir::cir::AssumeSepStorageOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AssumeSepStorageOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto cond = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), rewriter.getI1Type(), 1);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
+        op, cond, "separate_storage",
+        mlir::ValueRange{adaptor.getPtr1(), adaptor.getPtr2()});
+    return mlir::success();
+  }
+};
+
 static mlir::Value createLLVMBitOp(mlir::Location loc,
                                    const llvm::Twine &llvmIntrinBaseName,
                                    mlir::Type resultTy, mlir::Value operand,
@@ -4315,6 +4375,7 @@ void populateCIRToLLVMConversionPatterns(
       CIRClearCacheOpLowering, CIREhTypeIdOpLowering, CIRCatchParamOpLowering,
       CIRResumeOpLowering, CIRAllocExceptionOpLowering,
       CIRFreeExceptionOpLowering, CIRThrowOpLowering, CIRIntrinsicCallLowering,
+      CIRAssumeLowering, CIRAssumeAlignedLowering, CIRAssumeSepStorageLowering,
       CIRBaseClassAddrOpLowering, CIRDerivedClassAddrOpLowering,
       CIRVTTAddrPointOpLowering, CIRIsFPClassOpLowering, CIRAbsOpLowering,
       CIRMemMoveOpLowering, CIRMemsetOpLowering
