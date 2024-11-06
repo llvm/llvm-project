@@ -1297,7 +1297,6 @@ protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
   SchedBoundary Bot;
-  MachineSchedPolicy RegionPolicy;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
