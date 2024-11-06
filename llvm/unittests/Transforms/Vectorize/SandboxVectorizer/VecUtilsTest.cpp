@@ -389,13 +389,13 @@ define <4 x float> @foo(float %v, <2 x float> %v2, <4 x float> %ret, ptr %ptr) {
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
   EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S0->getValueOperand()->getType()),
             1u);
-  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S0), 1);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S0), 1u);
   EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S1->getValueOperand()->getType()),
             2u);
-  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S1), 2);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S1), 2u);
   EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Ret->getReturnValue()->getType()),
             4u);
-  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Ret), 4);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Ret), 4u);
 
   SmallVector<sandboxir::Value *> Bndl({S0, S1, Ret});
   EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Bndl), 7u);
