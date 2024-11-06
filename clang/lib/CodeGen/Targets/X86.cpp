@@ -606,7 +606,8 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
   unsigned StackAlign = getTypeStackAlignInBytes(Ty, TypeAlign);
   if (StackAlign == 0)
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), 0, /*ByVal=*/true);
+    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), 0,
+                                   /*ByVal=*/true);
 
   // If the stack alignment is less than the type alignment, realign the
   // argument.
