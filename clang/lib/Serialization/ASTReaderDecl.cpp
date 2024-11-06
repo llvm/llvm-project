@@ -1547,7 +1547,8 @@ void ASTDeclReader::VisitFieldDecl(FieldDecl *FD) {
   else if (Bits & 1)
     FD->setBitWidth(Record.readExpr());
 
-  if (!FD->getDeclName()) {
+  if (!FD->getDeclName() ||
+      FD->isPlaceholderVar(Reader.getContext().getLangOpts())) {
     if (auto *Tmpl = readDeclAs<FieldDecl>())
       Reader.getContext().setInstantiatedFromUnnamedFieldDecl(FD, Tmpl);
   }
