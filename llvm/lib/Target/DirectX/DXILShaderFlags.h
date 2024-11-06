@@ -74,6 +74,7 @@ struct ComputedShaderFlags {
 };
 
 struct DXILModuleShaderFlagsInfo {
+  bool initialize(const Module &M);
   Expected<const ComputedShaderFlags &>
   getShaderFlagsMask(const Function *Func) const;
   bool hasShaderFlagsMask(const Function *Func) const;
@@ -90,6 +91,7 @@ private:
   // of the functions in the module. Shader Flags of each function are those
   // represented using the macro SHADER_FEATURE_FLAG.
   SmallVector<std::pair<Function const *, ComputedShaderFlags>> FunctionFlags;
+  void updateFuctionFlags(ComputedShaderFlags &CSF, const Instruction &I);
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {

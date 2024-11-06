@@ -47,7 +47,8 @@ public:
 };
 } // namespace
 
-static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
+void DXILModuleShaderFlagsInfo::updateFuctionFlags(ComputedShaderFlags &CSF,
+                                                   const Instruction &I) {
   if (!CSF.Doubles) {
     CSF.Doubles = I.getType()->isDoubleTy();
   }
@@ -70,30 +71,20 @@ static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
   }
 }
 
-static DXILModuleShaderFlagsInfo computeFlags(const Module &M) {
-  // Construct a sorted list of functions in the module. Walk the sorted list to
-  // create a list of <Function, Shader Flags Mask> pairs. This list is thus
-  // sorted at construction time and may be looked up using binary search.
-  SmallVector<const Function *> FuncList;
+bool DXILModuleShaderFlagsInfo::initialize(const Module &M) {
+  // Collect shader flags for each of the functions
   for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
-    FuncList.push_back(&F);
-  }
-  llvm::sort(FuncList);
-
-  DXILModuleShaderFlagsInfo MSFI;
-
-  // Collect shader flags for each of the functions
-  for (const Function *F : FuncList) {
     ComputedShaderFlags CSF{};
-    for (const auto &BB : *F)
+    for (const auto &BB : F)
       for (const auto &I : BB)
-        updateFlags(CSF, I);
+        updateFuctionFlags(CSF, I);
     // Insert shader flag mask for function F
-    MSFI.insertInorderFunctionFlags(F, CSF);
+    FunctionFlags.push_back({&F, CSF});
   }
-  return MSFI;
+  llvm::sort(FunctionFlags);
+  return true;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -134,7 +125,7 @@ const ComputedShaderFlags &DXILModuleShaderFlagsInfo::getModuleFlags() const {
 Expected<const ComputedShaderFlags &>
 DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
   std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
-  const auto *Iter = llvm::lower_bound(FunctionFlags, V);
+  const auto Iter = llvm::lower_bound(FunctionFlags, V);
   if (Iter == FunctionFlags.end() || Iter->first != Func) {
     return createStringError("Shader Flags information of Function '" +
                              Func->getName() + "' not found");
@@ -146,11 +137,13 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 
 DXILModuleShaderFlagsInfo ShaderFlagsAnalysis::run(Module &M,
                                                    ModuleAnalysisManager &AM) {
-  return computeFlags(M);
+  DXILModuleShaderFlagsInfo MSFI;
+  MSFI.initialize(M);
+  return MSFI;
 }
 
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
-  MSFI = computeFlags(M);
+  MSFI.initialize(M);
   return false;
 }
 
