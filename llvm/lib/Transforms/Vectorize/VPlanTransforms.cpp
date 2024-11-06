@@ -554,15 +554,27 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
           Op0 = MulAcc->getVecOp0();
           Op1 = MulAcc->getVecOp1();
         }
+        VPSingleDefRecipe *VecOp;
         Instruction *MulInstr = MulAcc->getMulInstr();
         SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
         auto *Mul = new VPWidenRecipe(*MulInstr,
                                       make_range(MulOps.begin(), MulOps.end()));
+        if (auto *OuterExtInstr = MulAcc->getExtInstr()) {
+          // dbgs() <<"\n!!!"<< *OuterExtInstr << " " << MulAcc->getExtOpcode()
+          // << "\n";
+          VecOp = new VPWidenCastRecipe(
+              MulAcc->getExtOpcode(), Mul,
+              MulAcc->getRecurrenceDescriptor().getRecurrenceType(),
+              *OuterExtInstr);
+        } else
+          VecOp = Mul;
         auto *Red = new VPReductionRecipe(
             MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),
-            MulAcc->getChainOp(), Mul, MulAcc->getCondOp(),
+            MulAcc->getChainOp(), VecOp, MulAcc->getCondOp(),
             MulAcc->isOrdered());
         Mul->insertBefore(MulAcc);
+        if (VecOp != Mul)
+          VecOp->insertBefore(MulAcc);
         Red->insertBefore(MulAcc);
         MulAcc->replaceAllUsesWith(Red);
         MulAcc->eraseFromParent();

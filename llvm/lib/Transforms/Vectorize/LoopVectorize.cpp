@@ -7396,6 +7396,19 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
       if (Instruction *UI = GetInstructionForCost(&R))
         SeenInstrs.insert(UI);
+      // VPExtendedReductionRecipe contains a folded extend instruction.
+      if (auto *ExtendedRed = dyn_cast<VPExtendedReductionRecipe>(&R))
+        SeenInstrs.insert(ExtendedRed->getExtInstr());
+      // VPMulAccRecupe constians a mul and otional extend instructions.
+      else if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
+        SeenInstrs.insert(MulAcc->getMulInstr());
+        if (MulAcc->isExtended()) {
+          SeenInstrs.insert(MulAcc->getExt0Instr());
+          SeenInstrs.insert(MulAcc->getExt1Instr());
+          if (auto *Ext = MulAcc->getExtInstr())
+            SeenInstrs.insert(Ext);
+        }
+      }
     }
   }
 
@@ -9408,6 +9421,38 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
               RdxDesc, CurrentLinkI, PreviousLink, CondOp,
               CM.useOrderedReductions(RdxDesc),
               cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
+        }
+      } else if (RdxDesc.getOpcode() == Instruction::Add &&
+                 match(VecOp,
+                       m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue(A)),
+                                          m_ZExtOrSExt(m_VPValue(B)))))) {
+        VPWidenCastRecipe *Ext =
+            dyn_cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
+        VPWidenRecipe *Mul =
+            dyn_cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+        if (Mul && match(Mul, m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                    m_ZExtOrSExt(m_VPValue())))) {
+          VPWidenRecipe *Mul =
+              cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+          VPWidenCastRecipe *Ext0 =
+              cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
+          VPWidenCastRecipe *Ext1 =
+              cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
+          if (Ext->getOpcode() == Ext0->getOpcode() &&
+              Ext0->getOpcode() == Ext1->getOpcode()) {
+            RedRecipe = new VPMulAccRecipe(
+                RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+                CM.useOrderedReductions(RdxDesc),
+                cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe()), Mul,
+                cast<VPWidenCastRecipe>(Ext0), cast<VPWidenCastRecipe>(Ext1));
+          } else
+            RedRecipe = new VPExtendedReductionRecipe(
+                RdxDesc, CurrentLinkI,
+                cast<CastInst>(
+                    cast<VPWidenCastRecipe>(VecOp)->getUnderlyingInstr()),
+                PreviousLink, cast<VPWidenCastRecipe>(VecOp)->getOperand(0),
+                CondOp, CM.useOrderedReductions(RdxDesc),
+                cast<VPWidenCastRecipe>(VecOp)->getResultType());
         }
       }
       // VPWidenCastRecipes can folded into VPReductionRecipe

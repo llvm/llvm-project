@@ -2381,8 +2381,8 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 
 InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
-  Type *ElementTy =
-      IsExtended ? getResultType() : Ctx.Types.inferScalarType(getVecOp0());
+  Type *ElementTy = IsExtended ? RdxDesc.getRecurrenceType()
+                               : Ctx.Types.inferScalarType(getVecOp0());
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
@@ -2443,7 +2443,7 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
         RHSInfo, Operands, MulInstr, &Ctx.TLI);
   }
 
-  // ExtendedReduction Cost
+  // MulAccReduction Cost
   VectorType *SrcVecTy =
       cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
   InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
