@@ -3033,8 +3033,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
                CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-               !Ops.hasWrappingOperand() &&
-               !excludeOverflowPattern &&
+               !Ops.hasWrappingOperand() && !excludeOverflowPattern &&
                !CGF.getContext().isTypeIgnoredBySanitizer(
                    SanitizerKind::UnsignedIntegerOverflow, E->getType())) {
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(

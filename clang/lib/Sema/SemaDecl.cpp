@@ -24,13 +24,14 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/MangleNumberingContext.h"
+#include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -56,7 +57,6 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
-#include "clang/Basic/NoSanitizeList.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -6713,9 +6713,10 @@ Sema::CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *NewTD) {
   }
 }
 
-NamedDecl*
-Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
-                           LookupResult &Previous, bool &Redeclaration) {
+NamedDecl *Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC,
+                                      TypedefNameDecl *NewTD,
+                                      LookupResult &Previous,
+                                      bool &Redeclaration) {
   // Find the shadowed declaration before filtering for scope.
   NamedDecl *ShadowedDecl = getShadowedDeclaration(NewTD, Previous);
 

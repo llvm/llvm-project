@@ -4866,7 +4866,6 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
     setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
   if (hasNonWrappingOperand(Ctx))
     setType(Ctx.getAttributedType(attr::NoWraps, getType(), getType()));
-
 }
 
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
@@ -4889,7 +4888,6 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
     setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
   if (hasNonWrappingOperand(Ctx))
     setType(Ctx.getAttributedType(attr::NoWraps, getType(), getType()));
-
 }
 
 BinaryOperator *BinaryOperator::CreateEmpty(const ASTContext &C,
