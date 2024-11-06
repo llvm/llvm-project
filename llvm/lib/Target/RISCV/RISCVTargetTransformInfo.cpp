@@ -2495,9 +2495,13 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  Options.AllowOverlappingLoads =
-      ST->enableUnalignedScalarMem() &&
-      (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp);
+  // TODO: Enable expansion when unaligned access is not supported after we fix
+  // issues in ExpandMemcmp.
+  if (!(ST->enableUnalignedScalarMem() &&
+        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+    return Options;
+
+  Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   if (ST->is64Bit())
