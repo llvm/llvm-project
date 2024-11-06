@@ -122,13 +122,14 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           ; yields i32:%1
+    %1 = add i32 %0, %0           /* yields i32:%1 */
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
 lexical features of LLVM:
 
 #. Comments are delimited with a '``;``' and go until the end of line.
+   Alternatively, comments can start with ``/*`` and terminate with ``*/``.
 #. Unnamed temporaries are created when the result of a computation is
    not assigned to a named value.
 #. By default, unnamed temporaries are numbered sequentially (using a

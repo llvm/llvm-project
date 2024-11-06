@@ -501,13 +501,30 @@ bool SymbolTable::resolveRemainingUndefines() {
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
     if (name.starts_with("__imp_")) {
-      Symbol *imp = find(name.substr(strlen("__imp_")));
-      if (imp) {
-        // The unprefixed symbol might come later in symMap, so handle it now
-        // so that the condition below can be appropriately applied.
-        auto *undef = dyn_cast<Undefined>(imp);
-        if (undef) {
-          undef->resolveWeakAlias();
+      auto findLocalSym = [&](StringRef n) {
+        Symbol *sym = find(n);
+        if (auto undef = dyn_cast_or_null<Undefined>(sym)) {
+          // The unprefixed symbol might come later in symMap, so handle it now
+          // if needed.
+          if (!undef->resolveWeakAlias())
+            sym = nullptr;
+        }
+        return sym;
+      };
+
+      StringRef impName = name.substr(strlen("__imp_"));
+      Symbol *imp = findLocalSym(impName);
+      if (!imp && isArm64EC(ctx.config.machine)) {
+        // Try to use the mangled symbol on ARM64EC.
+        std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(impName);
+        if (mangledName)
+          imp = findLocalSym(*mangledName);
+        if (!imp && impName.consume_front("aux_")) {
+          // If it's a __imp_aux_ symbol, try skipping the aux_ prefix.
+          imp = findLocalSym(impName);
+          if (!imp && (mangledName = getArm64ECMangledFunctionName(impName)))
+            imp = findLocalSym(*mangledName);
         }
       }
       if (imp && imp->isLazy()) {
