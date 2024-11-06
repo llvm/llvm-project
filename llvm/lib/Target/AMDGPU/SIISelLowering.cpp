@@ -14011,7 +14011,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
   Src0s.push_back(
       {*Src0.Src,
        ((Src0.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
-       Src1.SrcOffset / 4});
+       Src0.SrcOffset / 4});
   Src1s.push_back(
       {*Src1.Src,
        ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
