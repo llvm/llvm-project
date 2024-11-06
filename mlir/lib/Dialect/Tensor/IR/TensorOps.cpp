@@ -4780,6 +4780,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
       } else {
         int64_t tileSize = getConstantIntValue(std::get<1>(it)).value();
         assert(tileSize == shape && "tile size and dim size don't match!");
+        (void)tileSize;
         newMixedTileSizes.push_back(
             (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
       }
