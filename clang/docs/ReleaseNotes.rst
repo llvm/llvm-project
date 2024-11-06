@@ -888,6 +888,7 @@ OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
+- Added support for allocator-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^
