@@ -1152,8 +1152,8 @@ public:
               break;
             }
             // Don't care about other unreachable statements.
-            }
           }
+        }
           // If there are no unreachable statements, this may be a special
           // case in CFG:
           // case X: {
@@ -1163,7 +1163,7 @@ public:
           // // <<<< This place is represented by a 'hanging' CFG block.
           // case Y:
           continue;
-        }
+      }
 
         const Stmt *LastStmt = getLastStmt(*P);
         if (const AttributedStmt *AS = asFallThroughAttr(LastStmt)) {
@@ -1180,20 +1180,20 @@ public:
         }
 
         ++UnannotatedCnt;
-      }
+    }
       return !!UnannotatedCnt;
-    }
+  }
 
-    bool VisitAttributedStmt(AttributedStmt *S) override {
-      if (asFallThroughAttr(S))
-        FallthroughStmts.insert(S);
-      return true;
-    }
+  bool VisitAttributedStmt(AttributedStmt *S) override {
+    if (asFallThroughAttr(S))
+      FallthroughStmts.insert(S);
+    return true;
+  }
 
-    bool VisitSwitchStmt(SwitchStmt *S) override {
-      FoundSwitchStatements = true;
-      return true;
-    }
+  bool VisitSwitchStmt(SwitchStmt *S) override {
+    FoundSwitchStatements = true;
+    return true;
+  }
 
     // We don't want to traverse local type declarations. We analyze their
     // methods separately.
