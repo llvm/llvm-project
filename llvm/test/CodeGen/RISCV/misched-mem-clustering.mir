@@ -12,6 +12,8 @@
 # RUN:     -start-before=machine-scheduler -stop-after=postmisched -o - 2>&1 < %s \
 # RUN:   | FileCheck -check-prefix=MEMCLUSTER %s
 
+# REQUIRES: asserts
+
 ...
 ---
 name:            mem_clustering_1
