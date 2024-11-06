@@ -6270,6 +6270,30 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     Ops.push_back(Src);
     return true;
   }
+  case ISD::SHL:
+  case ISD::SRL: {
+    // We can only decode 'whole byte' bit shifts as shuffles.
+    std::optional<uint64_t> Amt = DAG.getValidShiftAmount(N, DemandedElts);
+    if (!Amt || (*Amt % 8) != 0)
+      return false;
+
+    uint64_t ByteShift = *Amt / 8;
+    Ops.push_back(N.getOperand(0));
+
+    // Clear mask to all zeros and insert the shifted byte indices.
+    Mask.append(NumSizeInBytes, SM_SentinelZero);
+
+    if (ISD::SHL == Opcode) {
+      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
+        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
+          Mask[i + j] = i + j - ByteShift;
+    } else {
+      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
+        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
+          Mask[i + j - ByteShift] = i + j;
+    }
+    return true;
+  }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     uint64_t ShiftVal = N.getConstantOperandVal(1);
@@ -18831,44 +18855,66 @@ X86TargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false);
 }
 
-static SDValue
-GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
-           SDValue *InGlue, const EVT PtrVT, unsigned ReturnReg,
-           unsigned char OperandFlags, bool LocalDynamic = false) {
+static SDValue GetTLSADDR(SelectionDAG &DAG, GlobalAddressSDNode *GA,
+                          const EVT PtrVT, unsigned ReturnReg,
+                          unsigned char OperandFlags,
+                          bool LoadGlobalBaseReg = false,
+                          bool LocalDynamic = false) {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA;
   bool UseTLSDESC = DAG.getTarget().useTLSDESC();
+  SDValue Chain = DAG.getEntryNode();
+  SDValue Ret;
   if (LocalDynamic && UseTLSDESC) {
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
     auto UI = TGA->use_begin();
     // Reuse existing GetTLSADDR node if we can find it.
-    if (UI != TGA->use_end())
-      return SDValue(*UI->use_begin()->use_begin(), 0);
+    if (UI != TGA->use_end()) {
+      // TLSDESC uses TGA.
+      auto TLSDescOp = UI;
+      assert(TLSDescOp->getOpcode() == X86ISD::TLSDESC &&
+             "Unexpected TLSDESC DAG");
+      // CALLSEQ_END uses TGA via a chain and glue.
+      auto *CallSeqEndOp = TLSDescOp->getGluedUser();
+      assert(CallSeqEndOp && CallSeqEndOp->getOpcode() == ISD::CALLSEQ_END &&
+             "Unexpected TLSDESC DAG");
+      // CopyFromReg uses CALLSEQ_END via a chain and glue.
+      auto *CopyFromRegOp = CallSeqEndOp->getGluedUser();
+      assert(CopyFromRegOp && CopyFromRegOp->getOpcode() == ISD::CopyFromReg &&
+             "Unexpected TLSDESC DAG");
+      Ret = SDValue(CopyFromRegOp, 0);
+    }
   } else {
     TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, GA->getValueType(0),
                                      GA->getOffset(), OperandFlags);
   }
 
-  X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
-                              : LocalDynamic ? X86ISD::TLSBASEADDR
-                                             : X86ISD::TLSADDR;
+  if (!Ret) {
+    X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
+                                : LocalDynamic ? X86ISD::TLSBASEADDR
+                                               : X86ISD::TLSADDR;
 
-  if (InGlue) {
-    SDValue Ops[] = { Chain,  TGA, *InGlue };
-    Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
-  } else {
-    SDValue Ops[]  = { Chain, TGA };
-    Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
+    if (LoadGlobalBaseReg) {
+      SDValue InGlue;
+      Chain = DAG.getCopyToReg(Chain, dl, X86::EBX,
+                               DAG.getNode(X86ISD::GlobalBaseReg, dl, PtrVT),
+                               InGlue);
+      InGlue = Chain.getValue(1);
+      Chain = DAG.getNode(CallType, dl, NodeTys, {Chain, TGA, InGlue});
+    } else {
+      Chain = DAG.getNode(CallType, dl, NodeTys, {Chain, TGA});
+    }
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
+
+    // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
+    MFI.setHasCalls(true);
+
+    SDValue Glue = Chain.getValue(1);
+    Ret = DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
   }
-
-  // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
-  MFI.setAdjustsStack(true);
-  MFI.setHasCalls(true);
-
-  SDValue Glue = Chain.getValue(1);
-  SDValue Ret = DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
 
   if (!UseTLSDESC)
     return Ret;
@@ -18887,30 +18933,22 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
 static SDValue
 LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
-  SDValue InGlue;
-  SDLoc dl(GA);  // ? function entry point might be better
-  SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
-                                   DAG.getNode(X86ISD::GlobalBaseReg,
-                                               SDLoc(), PtrVT), InGlue);
-  InGlue = Chain.getValue(1);
-
-  return GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, GA, PtrVT, X86::EAX, X86II::MO_TLSGD,
+                    /*LoadGlobalBaseReg=*/true);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit LP64
 static SDValue
 LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
-  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
-                    X86::RAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, GA, PtrVT, X86::RAX, X86II::MO_TLSGD);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit ILP32
 static SDValue
 LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                  const EVT PtrVT) {
-  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
-                    X86::EAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, GA, PtrVT, X86::EAX, X86II::MO_TLSGD);
 }
 
 static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
@@ -18919,22 +18957,20 @@ static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
   SDLoc dl(GA);
 
   // Get the start address of the TLS block for this module.
-  X86MachineFunctionInfo *MFI = DAG.getMachineFunction()
-      .getInfo<X86MachineFunctionInfo>();
+  X86MachineFunctionInfo *MFI =
+      DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
   MFI->incNumLocalDynamicTLSAccesses();
 
   SDValue Base;
   if (Is64Bit) {
     unsigned ReturnReg = Is64BitLP64 ? X86::RAX : X86::EAX;
-    Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, ReturnReg,
-                      X86II::MO_TLSLD, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, GA, PtrVT, ReturnReg, X86II::MO_TLSLD,
+                      /*LoadGlobalBaseReg=*/false,
+                      /*LocalDynamic=*/true);
   } else {
-    SDValue InGlue;
-    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
-        DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT), InGlue);
-    InGlue = Chain.getValue(1);
-    Base = GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX,
-                      X86II::MO_TLSLDM, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, GA, PtrVT, X86::EAX, X86II::MO_TLSLDM,
+                      /*LoadGlobalBaseReg=*/true,
+                      /*LocalDynamic=*/true);
   }
 
   // Note: the CleanupLocalDynamicTLSPass will remove redundant computations
@@ -36060,36 +36096,6 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredTLSAddr(MachineInstr &MI,
-                                      MachineBasicBlock *BB) const {
-  // So, here we replace TLSADDR with the sequence:
-  // adjust_stackdown -> TLSADDR -> adjust_stackup.
-  // We need this because TLSADDR is lowered into calls
-  // inside MC, therefore without the two markers shrink-wrapping
-  // may push the prologue/epilogue pass them.
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  const MIMetadata MIMD(MI);
-  MachineFunction &MF = *BB->getParent();
-
-  // Emit CALLSEQ_START right before the instruction.
-  MF.getFrameInfo().setAdjustsStack(true);
-  unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
-  MachineInstrBuilder CallseqStart =
-      BuildMI(MF, MIMD, TII.get(AdjStackDown)).addImm(0).addImm(0).addImm(0);
-  BB->insert(MachineBasicBlock::iterator(MI), CallseqStart);
-
-  // Emit CALLSEQ_END right after the instruction.
-  // We don't call erase from parent because we want to keep the
-  // original instruction around.
-  unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
-  MachineInstrBuilder CallseqEnd =
-      BuildMI(MF, MIMD, TII.get(AdjStackUp)).addImm(0).addImm(0);
-  BB->insertAfter(MachineBasicBlock::iterator(MI), CallseqEnd);
-
-  return BB;
-}
-
-MachineBasicBlock *
 X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
                                       MachineBasicBlock *BB) const {
   // This is pretty easy.  We're taking the value that we received from
@@ -37091,16 +37097,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return X86::TMM0_TMM1 + Imm / 2;
   };
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unexpected instr type to insert");
-  case X86::TLS_addr32:
-  case X86::TLS_addr64:
-  case X86::TLS_addrX32:
-  case X86::TLS_base_addr32:
-  case X86::TLS_base_addr64:
-  case X86::TLS_base_addrX32:
-  case X86::TLS_desc32:
-  case X86::TLS_desc64:
-    return EmitLoweredTLSAddr(MI, BB);
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
   case X86::INDIRECT_THUNK_CALL32:
   case X86::INDIRECT_THUNK_CALL64:
   case X86::INDIRECT_THUNK_TCRETURN32:
@@ -43401,8 +43399,9 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::VSHLI: {
     SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
 
-    unsigned ShAmt = Op.getConstantOperandVal(1);
+    unsigned ShAmt = Op1->getAsZExtVal();
     if (ShAmt >= BitWidth)
       break;
 
@@ -43443,17 +43442,30 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // Low bits known zero.
     Known.Zero.setLowBits(ShAmt);
+
+    if (!OriginalDemandedBits.isSubsetOf(Known.Zero | Known.One)) {
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+              Op0, DemandedMask, OriginalDemandedElts, TLO.DAG, Depth + 1)) {
+        SDValue NewOp =
+            TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, DemandedOp0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
     return false;
   }
   case X86ISD::VSRLI: {
-    unsigned ShAmt = Op.getConstantOperandVal(1);
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    unsigned ShAmt = Op1->getAsZExtVal();
     if (ShAmt >= BitWidth)
       break;
 
     APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
-    if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask,
-                             OriginalDemandedElts, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op0, DemandedMask, OriginalDemandedElts, Known,
+                             TLO, Depth + 1))
       return true;
 
     Known.Zero.lshrInPlace(ShAmt);
@@ -43461,6 +43473,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // High bits known zero.
     Known.Zero.setHighBits(ShAmt);
+
+    if (!OriginalDemandedBits.isSubsetOf(Known.Zero | Known.One)) {
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+              Op0, DemandedMask, OriginalDemandedElts, TLO.DAG, Depth + 1)) {
+        SDValue NewOp =
+            TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, DemandedOp0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
     return false;
   }
   case X86ISD::VSRAI: {
@@ -43478,8 +43500,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return TLO.CombineTo(Op, Op0);
 
     // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
-    if (Op0.getOpcode() == X86ISD::VSHLI &&
-        Op.getOperand(1) == Op0.getOperand(1)) {
+    if (Op0.getOpcode() == X86ISD::VSHLI && Op1 == Op0.getOperand(1)) {
       SDValue Op00 = Op0.getOperand(0);
       unsigned NumSignBits =
           TLO.DAG.ComputeNumSignBits(Op00, OriginalDemandedElts);
@@ -43509,6 +43530,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     // High bits are known one.
     if (Known.One[BitWidth - ShAmt - 1])
       Known.One.setHighBits(ShAmt);
+
+    if (!OriginalDemandedBits.isSubsetOf(Known.Zero | Known.One)) {
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+              Op0, DemandedMask, OriginalDemandedElts, TLO.DAG, Depth + 1)) {
+        SDValue NewOp =
+            TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, DemandedOp0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
     return false;
   }
   case X86ISD::BLENDV: {
@@ -56902,6 +56933,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       bool AllConstants = true;
       bool AllSubs = true;
       unsigned VecSize = VT.getSizeInBits();
+      SDValue BC0 = peekThroughBitcasts(SubOps[0].getOperand(Op));
+      if (isa<LoadSDNode>(BC0) && all_of(SubOps, [&](SDValue SubOp) {
+            return BC0 == peekThroughBitcasts(SubOp.getOperand(Op));
+          }))
+        return true;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
         SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
         unsigned SubSize = BC.getValueSizeInBits();
@@ -56916,6 +56952,26 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     };
 
     switch (Op0.getOpcode()) {
+    case ISD::VECTOR_SHUFFLE: {
+      if (NumOps == 2 && VT.is256BitVector() &&
+          (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
+          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
+        int NumSubElts = Op0.getValueType().getVectorNumElements();
+        SmallVector<int> NewMask;
+        for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
+          M = M >= NumSubElts ? M + NumSubElts : M;
+          NewMask.push_back(M);
+        }
+        for (int M : cast<ShuffleVectorSDNode>(Ops[1])->getMask()) {
+          if (0 <= M)
+            M = (M >= NumSubElts ? M + NumSubElts : M) + NumSubElts;
+          NewMask.push_back(M);
+        }
+        return DAG.getVectorShuffle(VT, DL, ConcatSubOperand(VT, Ops, 0),
+                                    ConcatSubOperand(VT, Ops, 1), NewMask);
+      }
+      break;
+    }
     case X86ISD::VBROADCAST: {
       if (!IsSplat && llvm::all_of(Ops, [](SDValue Op) {
             return Op.getOperand(0).getValueType().is128BitVector();

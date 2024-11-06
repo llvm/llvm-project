@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_UINT_H
-#define LLVM_LIBC_SRC___SUPPORT_UINT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
+#define LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h" // countl_zero
@@ -1373,4 +1373,4 @@ first_trailing_one(T value) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BIG_INT_H

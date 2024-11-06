@@ -1221,6 +1221,11 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
+void ExtractElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source) {
   result.addOperands({source});
@@ -1272,6 +1277,11 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
+
+void ExtractOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                  SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
 
 void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
                               Value source, int64_t position) {
@@ -2252,6 +2262,11 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 
+void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 /// Return the dimensions of the result vector that were formerly ones in the
 /// source tensor and thus correspond to "dim-1" broadcasting.
 static llvm::SetVector<int64_t>
@@ -2713,6 +2728,11 @@ void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // InsertElementOp
 //===----------------------------------------------------------------------===//
 
+void InsertElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                        SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
+}
+
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest) {
   build(builder, result, source, dest, {});
@@ -2761,6 +2781,11 @@ OpFoldResult vector::InsertElementOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // InsertOp
 //===----------------------------------------------------------------------===//
+
+void vector::InsertOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
+}
 
 void vector::InsertOp::build(OpBuilder &builder, OperationState &result,
                              Value source, Value dest, int64_t position) {
@@ -5277,6 +5302,11 @@ void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ShapeCastOp
 //===----------------------------------------------------------------------===//
 
+void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 /// Returns true if each element of 'a' is equal to the product of a contiguous
 /// sequence of the elements of 'b'. Returns false otherwise.
 static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
@@ -6421,6 +6451,11 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
 }
 
 //===----------------------------------------------------------------------===//

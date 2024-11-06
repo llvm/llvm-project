@@ -470,18 +470,14 @@ public:
                       ProfileSummaryInfo *PSI, GeneratedRTChecks &RTChecks,
                       VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
-        AC(AC), ORE(ORE), VF(VecWidth), UF(UnrollFactor),
+        AC(AC), ORE(ORE), VF(VecWidth),
+        MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
         PSI(PSI), RTChecks(RTChecks), Plan(Plan) {
     // Query this against the original loop and save it here because the profile
     // of the original loop header may change as the transformation happens.
     OptForSizeBasedOnProfile = llvm::shouldOptimizeForSize(
         OrigLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
-
-    if (MinProfitableTripCount.isZero())
-      this->MinProfitableTripCount = VecWidth;
-    else
-      this->MinProfitableTripCount = MinProfitableTripCount;
   }
 
   virtual ~InnerLoopVectorizer() = default;
@@ -633,10 +629,6 @@ protected:
 
   /// Middle Block between the vector and the scalar.
   BasicBlock *LoopMiddleBlock;
-
-  /// The unique ExitBlock of the scalar loop if one exists.  Note that
-  /// there can be multiple exiting edges reaching this block.
-  BasicBlock *LoopExitBlock;
 
   /// A list of all bypass blocks. The first block is the entry of the loop.
   SmallVector<BasicBlock *, 4> LoopBypassBlocks;
@@ -1365,8 +1357,8 @@ public:
     // If we might exit from anywhere but the latch, must run the exiting
     // iteration in scalar form.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
-      LLVM_DEBUG(
-          dbgs() << "LV: Loop requires scalar epilogue: multiple exits\n");
+      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: not exiting "
+                           "from latch block\n");
       return true;
     }
     if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
@@ -1508,6 +1500,18 @@ public:
   /// Returns true if the Phi is part of an inloop reduction.
   bool isInLoopReduction(PHINode *Phi) const {
     return InLoopReductions.contains(Phi);
+  }
+
+  /// Returns true if the predicated reduction select should be used to set the
+  /// incoming value for the reduction phi.
+  bool usePredicatedReductionSelect(unsigned Opcode, Type *PhiTy) const {
+    // Force to use predicated reduction select since the EVL of the
+    // second-to-last iteration might not be VF*UF.
+    if (foldTailWithEVL())
+      return true;
+    return PreferPredicatedReductionSelect ||
+           TTI.preferPredicatedReductionSelect(
+               Opcode, PhiTy, TargetTransformInfo::ReductionFlags());
   }
 
   /// Estimate cost of an intrinsic call instruction CI if it were vectorized
@@ -2048,8 +2052,7 @@ public:
   /// adjusts the branches to branch to the vector preheader or \p Bypass,
   /// depending on the generated condition.
   BasicBlock *emitSCEVChecks(BasicBlock *Bypass,
-                             BasicBlock *LoopVectorPreHeader,
-                             BasicBlock *LoopExitBlock) {
+                             BasicBlock *LoopVectorPreHeader) {
     if (!SCEVCheckCond)
       return nullptr;
 
@@ -2545,7 +2548,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   BasicBlock *const SCEVCheckBlock =
-      RTChecks.emitSCEVChecks(Bypass, LoopVectorPreHeader, LoopExitBlock);
+      RTChecks.emitSCEVChecks(Bypass, LoopVectorPreHeader);
   if (!SCEVCheckBlock)
     return nullptr;
 
@@ -2599,8 +2602,8 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
   assert(LoopVectorPreHeader && "Invalid loop structure");
-  LoopExitBlock = OrigLoop->getUniqueExitBlock(); // may be nullptr
-  assert((LoopExitBlock || Cost->requiresScalarEpilogue(VF.isVector())) &&
+  assert((OrigLoop->getUniqueExitBlock() ||
+          Cost->requiresScalarEpilogue(VF.isVector())) &&
          "multiple exit loop without required epilogue?");
 
   LoopMiddleBlock =
@@ -6460,9 +6463,11 @@ bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
     return false;
   // Consider Op invariant, if it or its operands aren't predicated
   // instruction in the loop. In that case, it is not trivially hoistable.
-  return !isa<Instruction>(Op) || !TheLoop->contains(cast<Instruction>(Op)) ||
-         (!isPredicatedInst(cast<Instruction>(Op)) &&
-          all_of(cast<Instruction>(Op)->operands(),
+  auto *OpI = dyn_cast<Instruction>(Op);
+  return !OpI || !TheLoop->contains(OpI) ||
+         (!isPredicatedInst(OpI) &&
+          (!isa<PHINode>(OpI) || OpI->getParent() != TheLoop->getHeader()) &&
+          all_of(OpI->operands(),
                  [this](Value *Op) { return shouldConsiderInvariant(Op); }));
 }
 
@@ -7997,7 +8002,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
     // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock,
+    DT->changeImmediateDominator(OrigLoop->getUniqueLatchExitBlock(),
                                  EPI.EpilogueIterationCountCheck);
 
   // Keep track of bypass blocks, as they feed start values to the induction and
@@ -9526,10 +9531,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                cast<VPInstruction>(&U)->getOpcode() ==
                    VPInstruction::ComputeReductionResult;
       });
-      if (PreferPredicatedReductionSelect ||
-          TTI.preferPredicatedReductionSelect(
-              PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy,
-              TargetTransformInfo::ReductionFlags()))
+      if (CM.usePredicatedReductionSelect(
+              PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy))
         PhiR->setOperand(1, NewExitingVPV);
     }
 

@@ -26,7 +26,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace {
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 //  GLIBC also uses 1024 as the maximum buffer size internally.
 constexpr size_t strerror_buff_size = 1024;
@@ -92,7 +92,7 @@ string do_strerror_r(int ev) {
 }
 #  endif
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 string make_error_str(const error_code& ec, string what_arg) {
   if (ec) {
@@ -113,7 +113,7 @@ string make_error_str(const error_code& ec) {
 } // namespace
 
 string __do_message::message(int ev) const {
-#if defined(_LIBCPP_HAS_NO_THREADS)
+#if !_LIBCPP_HAS_THREADS
   return string(::strerror(ev));
 #else
   return do_strerror_r(ev);

@@ -4495,7 +4495,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
   // compatible with gas.
   StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
   if (UnsizedMemOp) {
-    static const char *const PtrSizedInstrs[] = {"call", "jmp", "push"};
+    static const char *const PtrSizedInstrs[] = {"call", "jmp", "push", "pop"};
     for (const char *Instr : PtrSizedInstrs) {
       if (Mnemonic == Instr) {
         UnsizedMemOp->Mem.Size = getPointerWidth();

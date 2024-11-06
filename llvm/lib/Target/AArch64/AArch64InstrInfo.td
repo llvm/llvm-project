@@ -5372,7 +5372,7 @@ let isPseudo = 1 in {
 //===----------------------------------------------------------------------===//
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1, isPseudo = 1 in {
-   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret)]>, Sched<[]>;
+   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret bb)]>, Sched<[]>;
    let usesCustomInserter = 1 in
      def CATCHRET : Pseudo<(outs), (ins am_brcond:$dst, am_brcond:$src), [(catchret bb:$dst, bb:$src)]>,
                     Sched<[]>;
