@@ -19,7 +19,7 @@
 define void @RWBufferLoad_Vec4_I32() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_24(
+      @llvm.spv.handle.fromBinding.tspirv.Image_i32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
 
 ; CHECK: OpImageRead [[v4_int]] [[buffer]] [[zero]]
@@ -34,7 +34,7 @@ define void @RWBufferLoad_Vec4_I32() #0 {
 define void @RWBufferLoad_I32() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer1 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_24(
+      @llvm.spv.handle.fromBinding.tspirv.Image_i32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
 
 ; CHECK: [[V:%[0-9]+]] = OpImageRead [[v4_int]] [[buffer]] [[zero]]
@@ -50,7 +50,7 @@ define void @RWBufferLoad_I32() #0 {
 define void @RWBufferLoad_Vec2_I32() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_24(
+      @llvm.spv.handle.fromBinding.tspirv.Image_i32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
 
 ; CHECK: [[V:%[0-9]+]] = OpImageRead [[v4_int]] [[buffer]] [[zero]]
