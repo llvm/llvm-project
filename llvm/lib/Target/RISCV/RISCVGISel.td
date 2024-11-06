@@ -100,6 +100,8 @@ def gi_zexti32 : GIComplexOperandMatcher<s64, "selectZExtBits<32>">,
                  GIComplexPatternEquiv<zexti32>;
 def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,
                  GIComplexPatternEquiv<zexti16>;
+def gi_zexti8  : GIComplexOperandMatcher<s32, "selectZExtBits<8>">,
+                 GIComplexPatternEquiv<zexti8>;
 
 // FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
 def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
