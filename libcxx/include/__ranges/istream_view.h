@@ -99,7 +99,7 @@ private:
 template <class _Val>
 using istream_view = basic_istream_view<_Val, char>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Val>
 using wistream_view = basic_istream_view<_Val, wchar_t>;
 #  endif
