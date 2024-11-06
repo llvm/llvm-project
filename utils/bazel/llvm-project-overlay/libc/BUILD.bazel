@@ -3648,7 +3648,6 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
-    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [
@@ -3685,7 +3684,6 @@ libc_function(
     name = "mempcpy",
     srcs = ["src/string/mempcpy.cpp"],
     hdrs = ["src/string/mempcpy.h"],
-    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [
