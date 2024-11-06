@@ -714,7 +714,7 @@ bool GlobalMergeImpl::run(Module &M) {
     // Ignore all "required" globals:
     if (isMustKeepGlobalVariable(&GV))
       continue;
-    auto checkUsers = [] (const GlobalVariable *GV) {
+    auto checkUsers = [](const GlobalVariable *GV) {
       for (const User *CurrentUser : GV->users()) {
         auto *I = dyn_cast<Instruction>(CurrentUser);
         if (!I)
