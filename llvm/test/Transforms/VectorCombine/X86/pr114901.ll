@@ -29,3 +29,30 @@ define i1 @PR114901(<4 x i32> %a) {
   %r = ashr i1 %cmp3, %cmp1
   ret i1 %r
 }
+
+define i1 @PR114901_flip(<4 x i32> %a) {
+; SSE-LABEL: define i1 @PR114901_flip(
+; SSE-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; SSE-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[A]], i32 3
+; SSE-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[E1]], -8
+; SSE-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[E3]], 42
+; SSE-NEXT:    [[R:%.*]] = ashr i1 [[CMP1]], [[CMP3]]
+; SSE-NEXT:    ret i1 [[R]]
+;
+; AVX-LABEL: define i1 @PR114901_flip(
+; AVX-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; AVX-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[A]], i32 3
+; AVX-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[E1]], -8
+; AVX-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[E3]], 42
+; AVX-NEXT:    [[R:%.*]] = ashr i1 [[CMP1]], [[CMP3]]
+; AVX-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x i32> %a, i32 1
+  %e3 = extractelement <4 x i32> %a, i32 3
+  %cmp1 = icmp sgt i32 %e1, 4294967288
+  %cmp3 = icmp sgt i32 %e3, 42
+  %r = ashr i1 %cmp1, %cmp3
+  ret i1 %r
+}
