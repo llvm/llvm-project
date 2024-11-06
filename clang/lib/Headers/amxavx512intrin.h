@@ -18,7 +18,7 @@
   __attribute__((__always_inline__, __nodebug__, __target__("amx-avx512")))
 
 /// Moves a row from a tile register to a zmm destination register, converting
-///    the int32 source elements to fp32. The row of the tile is selected by an
+///    the int32 source elements to fp32. The row of the tile is selected by a
 ///    32b GPR.
 ///
 /// \headerfile <x86intrin.h>
@@ -46,7 +46,7 @@
 /// This intrinsic corresponds to the \c TCVTROWD2PS instruction.
 ///
 /// \param tsrc
-///    The 1st source tile. Max size is 1024 Bytes.
+///    The source tile. Max size is 1024 Bytes.
 /// \param row
 ///    The row of the source tile
 #define _tile_cvtrowd2ps(tsrc, row) __builtin_ia32_tcvtrowd2ps(tsrc, row)
@@ -54,7 +54,7 @@
 /// Moves a row from a tile register to a zmm destination register, converting
 ///    the fp32 source elements to bf16. It places the resulting bf16 elements
 ///    in the high 16 bits within each dword. The row of the tile is selected
-///    by an 32b GPR.
+///    by a 32b GPR.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -91,7 +91,7 @@
 /// Moves a row from a tile register to a zmm destination register, converting
 ///    the fp32 source elements to bf16. It places the resulting bf16 elements
 ///    in the low 16 bits within each dword. The row of the tile is selected
-///    by an 32b GPR.
+///    by a 32b GPR.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -128,7 +128,7 @@
 /// Moves a row from a tile register to a zmm destination register, converting
 ///    the fp32 source elements to fp16. It places the resulting fp16 elements
 ///    in the high 16 bits within each dword. The row of the tile is selected
-///    by an 32b GPR.
+///    by a 32b GPR.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -164,7 +164,7 @@
 /// Moves a row from a tile register to a zmm destination register, converting
 ///    the fp32 source elements to fp16. It places the resulting fp16 elements
 ///    in the low 16 bits within each dword. The row of the tile is selected
-///    by an 32b GPR.
+///    by a 32b GPR.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -275,7 +275,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS_AVX512 _tile_movrow_internal(
 /// \param src0
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
-///    The 1st source r32. Size is 4 Bytes.
+///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v16f32 data. Size is 64 Bytes.
 __DEFAULT_FN_ATTRS_AVX512
@@ -294,7 +294,7 @@ static __m512 __tile_cvtrowd2ps(__tile1024i src0, unsigned src1) {
 /// \param src0
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
-///    The 1st source r32. Size is 4 Bytes.
+///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32bf16 data. Size is 64 Bytes.
 __DEFAULT_FN_ATTRS_AVX512
@@ -313,7 +313,7 @@ static __m512bh __tile_cvtrowps2pbf16h(__tile1024i src0, unsigned src1) {
 /// \param src0
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
-///    The 1st source r32. Size is 4 Bytes.
+///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32bf16 data. Size is 64 Bytes.
 __DEFAULT_FN_ATTRS_AVX512
@@ -332,7 +332,7 @@ static __m512bh __tile_cvtrowps2pbf16l(__tile1024i src0, unsigned src1) {
 /// \param src0
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
-///    The 1st source r32. Size is 4 Bytes.
+///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32fp16 data. Size is 64 Bytes.
 __DEFAULT_FN_ATTRS_AVX512
@@ -351,7 +351,7 @@ static __m512h __tile_cvtrowps2phh(__tile1024i src0, unsigned src1) {
 /// \param src0
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
-///    The 1st source r32. Size is 4 Bytes.
+///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32fp16 data. Size is 64 Bytes.
 __DEFAULT_FN_ATTRS_AVX512
@@ -369,7 +369,7 @@ static __m512h __tile_cvtrowps2phl(__tile1024i src0, unsigned src1) {
 /// \param src0
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
-///    The 1st source r32. Size is 4 Bytes.
+///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v16i32 data. Size is 64 Bytes.
 __DEFAULT_FN_ATTRS_AVX512

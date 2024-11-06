@@ -619,7 +619,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       Opc = X86::TILEMOVROWrri;
       break;
     default:
-      llvm_unreachable("Impossible Opcode!");
+      llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
     return true;
@@ -770,7 +770,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    default: llvm_unreachable("Impossible Opcode!");
+    default: llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);
