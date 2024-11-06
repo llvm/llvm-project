@@ -61,7 +61,9 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Func>
-_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) { return f; }
+_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) {
+  return f;
+}
 
 template <auto _Func>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
@@ -69,25 +71,27 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
 _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
-#  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist) \
-  extern "C" type symbol##_impl__ arglist; \
-  __asm__(".globl _" _LIBCPP_TOSTRING(symbol)); \
-  __asm__(".set _" _LIBCPP_TOSTRING(symbol) ", _" _LIBCPP_TOSTRING(symbol##_impl__)); \
-  extern __typeof(symbol##_impl__) name __attribute__((weak_import)); \
-  _LIBCPP_BEGIN_NAMESPACE_STD \
-  template <> \
-  constexpr bool __is_function_overridden<__overload_of<type arglist>(name)>() { \
-    return __overload_of<type arglist>(name) != symbol##_impl__; \
-  } \
-  _LIBCPP_END_NAMESPACE_STD \
-  type symbol##_impl__ arglist
+#  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
+    extern "C" type symbol##_impl__ arglist;                                                                           \
+    __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
+    __asm__(".set _" _LIBCPP_TOSTRING(symbol) ", _" _LIBCPP_TOSTRING(symbol##_impl__));                                \
+    extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
+    _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
+    template <>                                                                                                        \
+    constexpr bool __is_function_overridden<__overload_of<type arglist>(name)>() {                                     \
+      return __overload_of<type arglist>(name) != symbol##_impl__;                                                     \
+    }                                                                                                                  \
+    _LIBCPP_END_NAMESPACE_STD                                                                                          \
+    type symbol##_impl__ arglist
 
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Func>
-_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) { return f; }
+_LIBCPP_HIDE_FROM_ABI constexpr _Func* __overload_of(_Func* f) {
+  return f;
+}
 
 template <auto _Func>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
@@ -95,22 +99,21 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __is_function_overridden();
 _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
-#  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist) \
-  extern "C" type symbol##_impl__ arglist; \
-  [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist; \
-  _LIBCPP_BEGIN_NAMESPACE_STD \
-  template <> \
-  constexpr bool __is_function_overridden<__overload_of<type arglist>(name)>() { \
-    return __overload_of<type arglist>(name) != symbol##_impl__; \
-  } \
-  _LIBCPP_END_NAMESPACE_STD \
-  type symbol##_impl__ arglist
+#  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
+    extern "C" type symbol##_impl__ arglist;                                                                           \
+    [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
+    _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
+    template <>                                                                                                        \
+    constexpr bool __is_function_overridden<__overload_of<type arglist>(name)>() {                                     \
+      return __overload_of<type arglist>(name) != symbol##_impl__;                                                     \
+    }                                                                                                                  \
+    _LIBCPP_END_NAMESPACE_STD                                                                                          \
+    type symbol##_impl__ arglist
 
 #else
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 0
-#  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist) \
-  _LIBCPP_WEAK type name arglist
+#  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist) _LIBCPP_WEAK type name arglist
 
 #endif
 
