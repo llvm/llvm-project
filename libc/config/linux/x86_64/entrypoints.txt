@@ -778,6 +778,23 @@ if(LIBC_TYPES_HAS_FLOAT128)
 endif()
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
+  if(LIBC_COMPILER_HAS_PADDING_ON_UNSIGNED_FIXED_POINT)
+    list(APPEND TARGET_LIBM_ENTRYPOINTS
+      libc.src.stdfix.countlshk_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlshr_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsk_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlslk_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlslr_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsr_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsuhk_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsuhr_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsuk_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsulk_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsulr_padding_on_unsigned_fixed_point
+      libc.src.stdfix.countlsur_padding_on_unsigned_fixed_point
+    )
+  endif()
+
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints
     libc.src.stdfix.countlshk

@@ -54,6 +54,22 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
+
+  if(LIBC_COMPILER_HAS_PADDING_ON_UNSIGNED_FIXED_POINT)
+    add_entrypoint_object(
+      countls${suffix}_padding_on_unsigned_fixed_point
+      HDRS
+        countls${suffix}.h
+      SRCS
+        countls${suffix}.cpp
+      COMPILE_OPTIONS
+        -O3
+        -Xclang=-fpadding-on-unsigned-fixed-point
+      DEPENDS
+        libc.src.__support.fixed_point.fx_bits
+    )
+  endif()
+  
 endforeach()
 
 add_entrypoint_object(

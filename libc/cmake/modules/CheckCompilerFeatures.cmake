@@ -13,6 +13,7 @@ set(
     "float16_conversion"
     "float128"
     "fixed_point"
+    "padding_on_unsigned_fixed_point"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -62,6 +63,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
+  elseif(${feature} STREQUAL "padding_on_unsigned_fixed_point")
+    list(APPEND compile_options "-Xclang=-fpadding-on-unsigned-fixed-point")
   elseif(${feature} MATCHES "^builtin_" OR
          ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
@@ -110,6 +113,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_TYPES_HAS_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
+    elseif(${feature} STREQUAL "padding_on_unsigned_fixed_point")
+      set(LIBC_COMPILER_HAS_PADDING_ON_UNSIGNED_FIXED_POINT TRUE)
     elseif(${feature} STREQUAL "builtin_ceil_floor_rint_trunc")
       set(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC TRUE)
     elseif(${feature} STREQUAL "builtin_fmax_fmin")
@@ -140,3 +145,4 @@ check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 
 # clang-3.0+
 check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
