@@ -208,6 +208,8 @@ public:
 } // end namespace sema
 } // end namespace clang
 
+SemaASTMutator::SemaASTMutator(Sema &SemaRef) : SemaRef(SemaRef) {}
+
 const unsigned Sema::MaxAlignmentExponent;
 const uint64_t Sema::MaximumAlignment;
 
@@ -221,7 +223,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      ASTMutator(*this), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -2797,4 +2799,11 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   }
 
   return CreateAnnotationAttr(AL, Str, Args);
+}
+
+void SemaASTMutator::InstantiateFunctionDefinition(
+    SourceLocation PointOfInstantiation, FunctionDecl *Function, bool Recursive,
+    bool DefinitionRequired, bool AtEndOfTU) {
+  SemaRef.InstantiateFunctionDefinition(
+      PointOfInstantiation, Function, Recursive, DefinitionRequired, AtEndOfTU);
 }

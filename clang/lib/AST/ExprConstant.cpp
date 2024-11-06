@@ -1004,6 +1004,11 @@ namespace {
       EM_IgnoreSideEffects,
     } EvalMode;
 
+    /// Implementation of an interface for AST mutation.
+    /// Basically something backed by Sema,
+    /// or nullptr if Sema is not available.
+    EvalASTMutator *ASTMutator;
+
     /// Are we checking whether the expression is a potential constant
     /// expression?
     bool checkingPotentialConstantExpression() const override  {
@@ -1017,7 +1022,8 @@ namespace {
       return CheckingForUndefinedBehavior;
     }
 
-    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
+    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode,
+             EvalASTMutator *ASTMutator = nullptr)
         : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
@@ -1027,13 +1033,15 @@ namespace {
                       /*CallExpr=*/nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
           EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false), EvalMode(Mode) {}
+          HasFoldFailureDiagnostic(false), EvalMode(Mode),
+          ASTMutator(ASTMutator) {}
 
     ~EvalInfo() {
       discardCleanups();
     }
 
     ASTContext &getASTContext() const override { return Ctx; }
+    EvalASTMutator *getASTMutator() const { return ASTMutator; }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -8328,6 +8336,12 @@ public:
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
+    if (!Definition && FD->getTemplateInstantiationPattern()) {
+      Info.getASTMutator()->InstantiateFunctionDefinition(
+          E->getExprLoc(), const_cast<FunctionDecl *>(FD),
+          /*Recursive=*/true, /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
+      Body = FD->getBody(Definition);
+    }
 
     if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body) ||
         !HandleFunctionCall(E->getExprLoc(), Definition, This, E, Args, Call,
@@ -16669,7 +16683,8 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                                  const VarDecl *VD,
                                  SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                 bool IsConstantInitialization) const {
+                                 bool IsConstantInitialization,
+                                 EvalASTMutator *ASTMutator) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -16687,7 +16702,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                 (IsConstantInitialization &&
                  (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
-                    : EvalInfo::EM_ConstantFold);
+                    : EvalInfo::EM_ConstantFold,
+                ASTMutator);
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 

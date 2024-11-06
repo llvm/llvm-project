@@ -153,6 +153,7 @@ enum class OverloadCandidateParamOrder : char;
 enum OverloadCandidateRewriteKind : unsigned;
 class OverloadCandidateSet;
 class Preprocessor;
+class Sema;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -350,6 +351,15 @@ struct SkipBodyInfo {
   bool CheckSameAsPrevious = false;
   NamedDecl *Previous = nullptr;
   NamedDecl *New = nullptr;
+};
+
+/// Implementation of EvalASTMutator interface that enables constant evaluator
+/// to modify AST, e.g. to instantiate templates.
+struct SemaASTMutator : EvalASTMutator {
+  Sema &SemaRef;
+  SemaASTMutator(Sema &SemaRef) void InstantiateFunctionDefinition(
+      SourceLocation PointOfInstantiation, FunctionDecl *Function,
+      bool Recursive, bool DefinitionRequired, bool AtEndOfTU) override;
 };
 
 /// Describes the result of template argument deduction.
@@ -1042,6 +1052,9 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  /// Get a Sema implementation of EvalASTMutator interface.
+  SemaASTMutator *getASTMutator() { return &ASTMutator; }
+
   SemaAMDGPU &AMDGPU() {
     assert(AMDGPUPtr);
     return *AMDGPUPtr;
@@ -1198,6 +1211,10 @@ private:
   Scope *CurScope;
 
   mutable IdentifierInfo *Ident_super;
+
+  /// EvalASTMutator implementation that can be passed to constant evaluator
+  /// to enable it to do AST mutations, e.g. template instantiation.
+  SemaASTMutator ASTMutator;
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
   std::unique_ptr<SemaARM> ARMPtr;

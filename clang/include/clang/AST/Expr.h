@@ -734,7 +734,8 @@ public:
   bool EvaluateAsInitializer(APValue &Result, const ASTContext &Ctx,
                              const VarDecl *VD,
                              SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                             bool IsConstantInitializer) const;
+                             bool IsConstantInitializer,
+                             EvalASTMutator *ASTMutator = nullptr) const;
 
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an

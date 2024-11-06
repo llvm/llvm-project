@@ -3258,7 +3258,7 @@ public:
   ///
   /// \returns true if the function/var must be CodeGen'ed/deserialized even if
   /// it is not used.
-  bool DeclMustBeEmitted(const Decl *D);
+  bool DeclMustBeEmitted(const Decl *D, EvalASTMutator *ASTMutator = nullptr);
 
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.

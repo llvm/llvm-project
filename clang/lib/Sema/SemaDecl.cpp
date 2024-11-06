@@ -14441,7 +14441,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       }
     } else {
       // Evaluate the initializer to see if it's a constant initializer.
-      HasConstInit = var->checkForConstantInitialization(Notes);
+      HasConstInit =
+          var->checkForConstantInitialization(Notes, getASTMutator());
     }
 
     if (HasConstInit) {
@@ -14549,7 +14550,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // If this variable must be emitted, add it as an initializer for the current
   // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+  if (Context.DeclMustBeEmitted(var, getASTMutator()) && !ModuleScopes.empty())
     Context.addModuleInitializer(ModuleScopes.back().Module, var);
 
   // Build the bindings if this is a structured binding declaration.

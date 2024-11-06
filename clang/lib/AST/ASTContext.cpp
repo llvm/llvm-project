@@ -12522,7 +12522,7 @@ GVALinkage ASTContext::GetGVALinkageForVariable(const VarDecl *VD) const {
              basicGVALinkageForVariable(*this, VD)));
 }
 
-bool ASTContext::DeclMustBeEmitted(const Decl *D) {
+bool ASTContext::DeclMustBeEmitted(const Decl *D, EvalASTMutator *ASTMutator) {
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->isFileVarDecl())
       return false;
@@ -12627,7 +12627,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   // Variables that have initialization with side-effects are required.
   if (VD->getInit() && VD->getInit()->HasSideEffects(*this) &&
       // We can get a value-dependent initializer during error recovery.
-      (VD->getInit()->isValueDependent() || !VD->evaluateValue()))
+      (VD->getInit()->isValueDependent() || !VD->evaluateValue(ASTMutator)))
     return true;
 
   // Likewise, variables with tuple-like bindings are required if their
