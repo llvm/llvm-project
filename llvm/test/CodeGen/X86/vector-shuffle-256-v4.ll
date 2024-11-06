@@ -1810,40 +1810,12 @@ define <4 x double> @broadcast_v4f64_0000_from_v2i64(<2 x i64> %a0) {
 
 ; PR114959
 define <4 x double> @concat_v4f64_0213_broadcasts(ptr %src) {
-; AVX1OR2-LABEL: concat_v4f64_0213_broadcasts:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovups (%rdi), %xmm0
-; AVX1OR2-NEXT:    vmovups 32(%rdi), %xmm1
-; AVX1OR2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX1OR2-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX1OR2-NEXT:    retq
-;
-; AVX512VL-SLOW-LABEL: concat_v4f64_0213_broadcasts:
-; AVX512VL-SLOW:       # %bb.0:
-; AVX512VL-SLOW-NEXT:    vmovups (%rdi), %xmm0
-; AVX512VL-SLOW-NEXT:    vmovups 32(%rdi), %xmm1
-; AVX512VL-SLOW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512VL-SLOW-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX512VL-SLOW-NEXT:    retq
-;
-; AVX512VL-FAST-ALL-LABEL: concat_v4f64_0213_broadcasts:
-; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vmovupd (%rdi), %xmm1
-; AVX512VL-FAST-ALL-NEXT:    vmovupd 32(%rdi), %xmm2
-; AVX512VL-FAST-ALL-NEXT:    vmovapd {{.*#+}} ymm0 = [0,4,1,5]
-; AVX512VL-FAST-ALL-NEXT:    vpermi2pd %ymm2, %ymm1, %ymm0
-; AVX512VL-FAST-ALL-NEXT:    retq
-;
-; AVX512VL-FAST-PERLANE-LABEL: concat_v4f64_0213_broadcasts:
-; AVX512VL-FAST-PERLANE:       # %bb.0:
-; AVX512VL-FAST-PERLANE-NEXT:    vmovups (%rdi), %xmm0
-; AVX512VL-FAST-PERLANE-NEXT:    vmovups 32(%rdi), %xmm1
-; AVX512VL-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512VL-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512VL-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX512VL-FAST-PERLANE-NEXT:    retq
+; ALL-LABEL: concat_v4f64_0213_broadcasts:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
+; ALL-NEXT:    retq
   %src.hi = getelementptr inbounds i8, ptr %src, i64 32
   %lo = load <2 x double>, ptr %src, align 1
   %hi = load <2 x double>, ptr %src.hi, align 1
