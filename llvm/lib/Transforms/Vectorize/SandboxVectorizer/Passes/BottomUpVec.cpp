@@ -54,6 +54,7 @@ getInsertPointAfterInstrs(ArrayRef<Value *> Instrs) {
 
 Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
                                       ArrayRef<Value *> Operands) {
+  Change = true;
   assert(all_of(Bndl, [](auto *V) { return isa<Instruction>(V); }) &&
          "Expect Instructions!");
   auto &Ctx = Bndl[0]->getContext();
@@ -181,8 +182,6 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
     }
     NewVec = createVectorInstr(Bndl, VecOperands);
 
-    // TODO: Notify DAG/Scheduler about new instruction
-
     // TODO: Collect potentially dead instructions.
     break;
   }
@@ -194,11 +193,15 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
   return NewVec;
 }
 
-void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
+bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
+  vectorizeRec(Bndl);
+  return Change;
+}
 
 bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
   Legality = std::make_unique<LegalityAnalysis>(
-      A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout());
+      A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
+      F.getContext());
   Change = false;
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
@@ -208,7 +211,7 @@ bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
     // TODO: If vectorization succeeds, run the RegionPassManager on the
     // resulting region.
     if (Seeds.size() >= 2)
-      tryVectorize(Seeds);
+      Change |= tryVectorize(Seeds);
   }
   return Change;
 }
