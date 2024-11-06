@@ -205,6 +205,10 @@ and shouldn't be featured in the baseline tests
 - Updated Comgr HIP test to not rely on HIP\_COMPILER being set, or a valid HIP
 installation. We can test the functionality of Comgr HIP compilation without
 directly relying on HIP
+- Added framework for Comgr lit tests. These tests will allow us to easily
+validate generated artifacts with command-line tools like llvm-dis,
+llvm-objdump, etc. Moving forward, most new Comgr tests should be written as
+lit tests, and tests in comgr/test should be transitioned to comgr/test-lit.
 
 New Targets
 -----------
