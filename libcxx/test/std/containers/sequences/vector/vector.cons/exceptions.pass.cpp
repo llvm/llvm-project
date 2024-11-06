@@ -49,13 +49,14 @@ struct ThrowingT {
     --throw_after_n;
   }
 
-  ThrowingT(const ThrowingT&) {
+  ThrowingT(const ThrowingT& rhs) : throw_after_n_(rhs.throw_after_n_) {
     if (throw_after_n_ == nullptr || *throw_after_n_ == 0)
       throw 1;
     --*throw_after_n_;
   }
 
-  ThrowingT& operator=(const ThrowingT&) {
+  ThrowingT& operator=(const ThrowingT& rhs) {
+    throw_after_n_ = rhs.throw_after_n_;
     if (throw_after_n_ == nullptr || *throw_after_n_ == 0)
       throw 1;
     --*throw_after_n_;
