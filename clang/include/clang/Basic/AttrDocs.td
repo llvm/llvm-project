@@ -7670,6 +7670,26 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def VkExtBuiltinInputDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``vk::ext_builtin_input`` attribute applies to HLSL global variables.
+The ``BuiltIn`` value is the ID of the BuiltIn in the SPIR-V specification.
+
+The full documentation is available here: https://microsoft.github.io/hlsl-specs/proposals/0011-inline-spirv.html
+  }];
+}
+
+def VkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``vk::ext_builtin_output`` attribute applies to HLSL global variables.
+The ``BuiltIn`` value is the ID of the BuiltIn in the SPIR-V specification.
+
+The full documentation is available here: https://microsoft.github.io/hlsl-specs/proposals/0011-inline-spirv.html
+  }];
+}
+
 def HLSLSV_ShaderTypeAttrDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -7825,6 +7845,17 @@ data binding to map the group index to the specified parameter. This attribute
 is only supported in compute shaders.
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
+  }];
+}
+
+def HLSLSV_GroupIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies a
+data binding to map the group index to the specified parameter. This attribute
+is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
   }];
 }
 

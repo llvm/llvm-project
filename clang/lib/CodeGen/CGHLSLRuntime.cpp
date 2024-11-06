@@ -375,10 +375,43 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
   return B.CreateCall(F, {B.getInt32(0)});
 }
 
+llvm::Value *CGHLSLRuntime::emitInputBuiltin(IRBuilder<> &B,
+                                             const ParmVarDecl &D,
+                                             llvm::Type *Ty, unsigned BuiltInID,
+                                             LangAS AddressSpace) {
+  LLVMContext &Ctx = CGM.getLLVMContext();
+  // FIXME: keep track of which global is created, and reuse them.
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      CGM.getModule(), Ty,
+      /* isConstant= */ false, GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr,
+      /* Name= */ D.getName(),
+      /* InsertBefore= */ nullptr,
+      /* ThreadLocalMode= */ GlobalValue::NotThreadLocal,
+      /* AddressSpace */ CGM.getTarget().getTargetAddressSpace(AddressSpace));
+
+  MDNode *Decoration =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(11 /* BuiltIn */)),
+                        ConstantAsMetadata::get(B.getInt32(BuiltInID))});
+  MDNode *Val = MDNode::get(Ctx, {Decoration});
+  GV->setMetadata("spirv.Decorations", Val);
+  return B.CreateLoad(Ty, GV);
+}
+
 llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               const ParmVarDecl &D,
                                               llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
+
+  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+    if (getArch() == llvm::Triple::spirv)
+      return emitInputBuiltin(B, D, Ty, /* WorkgroupID */ 26,
+                              LangAS::vulkan_input);
+    else
+      // FIXME: getIntrinsic(getGroupIDIntrinsic())
+      return nullptr;
+  }
+
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
     llvm::Function *DxGroupIndex =
         CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
@@ -525,6 +558,29 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
 
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
+
+  if (HLSLVkExtBuiltinInputAttr *BuiltinAttr =
+          VD->getAttr<HLSLVkExtBuiltinInputAttr>()) {
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    IRBuilder<> B(Ctx);
+    MDNode *Decoration = MDNode::get(
+        Ctx, {ConstantAsMetadata::get(B.getInt32(11 /* BuiltIn */)),
+              ConstantAsMetadata::get(B.getInt32(BuiltinAttr->getBuiltIn()))});
+    MDNode *Val = MDNode::get(Ctx, {Decoration});
+    GV->setMetadata("spirv.Decorations", Val);
+  }
+
+  if (HLSLVkExtBuiltinOutputAttr *BuiltinAttr =
+          VD->getAttr<HLSLVkExtBuiltinOutputAttr>()) {
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    IRBuilder<> B(Ctx);
+    MDNode *Decoration = MDNode::get(
+        Ctx, {ConstantAsMetadata::get(B.getInt32(11 /* BuiltIn */)),
+              ConstantAsMetadata::get(B.getInt32(BuiltinAttr->getBuiltIn()))});
+    MDNode *Val = MDNode::get(Ctx, {Decoration});
+    GV->setMetadata("spirv.Decorations", Val);
+  }
+
   // If the global variable has resource binding, add it to the list of globals
   // that need resource binding initialization.
   const HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();

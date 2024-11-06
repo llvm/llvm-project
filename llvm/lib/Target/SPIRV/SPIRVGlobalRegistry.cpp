@@ -689,7 +689,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   if (IsConst && ST.isOpenCLEnv())
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Constant, {});
 
-  if (GVar && GVar->getAlign().valueOrOne().value() != 1) {
+  if (ST.isOpenCLEnv() && GVar && GVar->getAlign().valueOrOne().value() != 1) {
     unsigned Alignment = (unsigned)GVar->getAlign().valueOrOne().value();
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Alignment, {Alignment});
   }

@@ -2545,6 +2545,10 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+  case LangAS::vulkan_input:
+    return "Input";
+  case LangAS::vulkan_output:
+    return "Output";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

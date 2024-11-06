@@ -6987,11 +6987,20 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinInput:
+    S.HLSL().handleVkExtBuiltinInput(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
+    S.HLSL().handleVkExtBuiltinOutput(D, AL);
+    break;
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupID:
+    handleSimpleAttribute<HLSLSV_GroupIDAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     handleSimpleAttribute<HLSLGroupSharedAddressSpaceAttr>(S, D, AL);
