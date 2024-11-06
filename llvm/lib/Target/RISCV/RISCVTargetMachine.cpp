@@ -99,6 +99,11 @@ static cl::opt<bool> EnableMISchedLoadStoreClustering(
     cl::desc("Enable load and store clustering in the machine scheduler"),
     cl::init(true));
 
+static cl::opt<bool> EnablePostMISchedLoadStoreClustering(
+    "riscv-postmisched-load-store-clustering", cl::Hidden,
+    cl::desc("Enable PostRA load and store clustering in the machine scheduler"),
+    cl::init(true));
+
 static cl::opt<bool>
     EnableVLOptimizer("riscv-enable-vl-optimizer",
                       cl::desc("Enable the RISC-V VL Optimizer pass"),
@@ -360,6 +365,19 @@ public:
     return DAG;
   }
 
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override {
+    ScheduleDAGMI *DAG = nullptr;
+    if (EnablePostMISchedLoadStoreClustering) {
+      DAG = createGenericSchedPostRA(C);
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+      DAG->addMutation(createStoreClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+    }
+    return DAG;
+  }
+  
   void addIRPasses() override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;
