@@ -3826,7 +3826,13 @@ void SelectionDAGBuilder::visitTrunc(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
+    Flags.setNoSignedWrap(Trunc->hasNoSignedWrap());
+    Flags.setNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
+  }
+
+  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitZExt(const User &I) {
