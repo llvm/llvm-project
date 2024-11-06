@@ -15258,7 +15258,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI_m_prefetchw: {
     Value *Address = Ops[0];
     // The 'w' suffix implies write.
-    Value *RW = ConstantInt::get(Int32Ty, BuiltinID == X86::BI_m_prefetchw ? 1 : 0);
+    Value *RW =
+        ConstantInt::get(Int32Ty, BuiltinID == X86::BI_m_prefetchw ? 1 : 0);
     Value *Locality = ConstantInt::get(Int32Ty, 0x3);
     Value *Data = ConstantInt::get(Int32Ty, 1);
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
