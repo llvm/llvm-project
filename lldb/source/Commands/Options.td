@@ -703,10 +703,7 @@ let Command = "process launch" in {
   def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,
     Desc<"Name of the process plugin you want to use.">;
   def process_launch_working_dir : Option<"working-dir", "w">, Arg<"DirectoryName">,
-    Desc<"Set the current working directory to <path> when running the inferior. This option "
-         "applies only to the current `process launch` invocation. If "
-         "`target.launch-working-dir` is set and this option is given, the value of this "
-         "option will be used instead of the setting.">;
+    Desc<"Set the current working directory to <path> when running the inferior.">;
   def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
     Desc<"Set the architecture for the process to launch when ambiguous.">;
   def process_launch_environment : Option<"environment", "E">,
