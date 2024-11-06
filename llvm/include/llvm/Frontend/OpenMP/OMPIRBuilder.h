@@ -2861,8 +2861,8 @@ private:
   /// and whether the \a MapType instructs to delete this section. If \a IsInit
   /// is true, and \a MapType indicates to not delete this array, array
   /// initialization code is generated. If \a IsInit is false, and \a MapType
-  /// indicates to not this array, array deletion code is generated.
-  void emitUDMapperArrayInitOrDel(Function *MapperFn, llvm::Value *Handle,
+  /// indicates to delete this array, array deletion code is generated.
+  void emitUDMapperArrayInitOrDel(Function *MapperFn, llvm::Value *MapperHandle,
                                   llvm::Value *Base, llvm::Value *Begin,
                                   llvm::Value *Size, llvm::Value *MapType,
                                   llvm::Value *MapName, TypeSize ElementSize,

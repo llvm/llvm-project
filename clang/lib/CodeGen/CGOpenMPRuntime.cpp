@@ -9098,9 +9098,9 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
 
-  auto *newFn = OMPBuilder.emitUserDefinedMapper(PrivatizeAndGenMapInfoCB,
+  auto *NewFn = OMPBuilder.emitUserDefinedMapper(PrivatizeAndGenMapInfoCB,
                                                  ElemTy, Name, CustomMapperCB);
-  UDMMap.try_emplace(D, newFn);
+  UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
 }

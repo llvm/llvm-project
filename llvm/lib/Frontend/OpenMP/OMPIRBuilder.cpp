@@ -7706,9 +7706,9 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
 }
 
 void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
-    Function *MapperFn, Value *Handle, Value *Base, Value *Begin, Value *Size,
-    Value *MapType, Value *MapName, TypeSize ElementSize, BasicBlock *ExitBB,
-    bool IsInit) {
+    Function *MapperFn, Value *MapperHandle, Value *Base, Value *Begin,
+    Value *Size, Value *MapType, Value *MapName, TypeSize ElementSize,
+    BasicBlock *ExitBB, bool IsInit) {
   StringRef Prefix = IsInit ? ".init" : ".del";
 
   // Evaluate if this is an array section.
@@ -7767,8 +7767,8 @@ void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
 
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
   // data structure.
-  Value *OffloadingArgs[] = {Handle,    Base,       Begin,
-                             ArraySize, MapTypeArg, MapName};
+  Value *OffloadingArgs[] = {MapperHandle, Base,       Begin,
+                             ArraySize,    MapTypeArg, MapName};
   Builder.CreateCall(
       getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
       OffloadingArgs);
@@ -7811,7 +7811,7 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
   auto SavedIP = Builder.saveIP();
   Builder.SetInsertPoint(EntryBB);
 
-  Value *Handle = MapperFn->getArg(0);
+  Value *MapperHandle = MapperFn->getArg(0);
   Value *BaseIn = MapperFn->getArg(1);
   Value *BeginIn = MapperFn->getArg(2);
   Value *Size = MapperFn->getArg(3);
@@ -7829,8 +7829,9 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
   // Emit array initiation if this is an array section and \p MapType indicates
   // that memory allocation is required.
   BasicBlock *HeadBB = BasicBlock::Create(M.getContext(), "omp.arraymap.head");
-  emitUDMapperArrayInitOrDel(MapperFn, Handle, BaseIn, BeginIn, Size, MapType,
-                             MapName, ElementSize, HeadBB, /*IsInit=*/true);
+  emitUDMapperArrayInitOrDel(MapperFn, MapperHandle, BaseIn, BeginIn, Size,
+                             MapType, MapName, ElementSize, HeadBB,
+                             /*IsInit=*/true);
 
   // Emit a for loop to iterate through SizeArg of elements and map all of them.
 
@@ -7855,7 +7856,7 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
 
   // Call the runtime API __tgt_mapper_num_components to get the number of
   // pre-existing components.
-  Value *OffloadingArgs[] = {Handle};
+  Value *OffloadingArgs[] = {MapperHandle};
   Value *PreviousSize = Builder.CreateCall(
       getOrCreateRuntimeFunction(M, OMPRTL___tgt_mapper_num_components),
       OffloadingArgs);
@@ -7956,8 +7957,8 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    Value *OffloadingArgs[] = {Handle,     CurBaseArg, CurBeginArg,
-                               CurSizeArg, CurMapType, CurNameArg};
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
+                               CurSizeArg,   CurMapType, CurNameArg};
     Function *ChildMapperFn = nullptr;
     if (CustomMapperCB && CustomMapperCB(I, &ChildMapperFn)) {
       // Call the corresponding mapper function.
@@ -7983,8 +7984,9 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
   emitBlock(ExitBB, MapperFn);
   // Emit array deletion if this is an array section and \p MapType indicates
   // that deletion is required.
-  emitUDMapperArrayInitOrDel(MapperFn, Handle, BaseIn, BeginIn, Size, MapType,
-                             MapName, ElementSize, DoneBB, /*IsInit=*/false);
+  emitUDMapperArrayInitOrDel(MapperFn, MapperHandle, BaseIn, BeginIn, Size,
+                             MapType, MapName, ElementSize, DoneBB,
+                             /*IsInit=*/false);
 
   // Emit the function exit block.
   emitBlock(DoneBB, MapperFn, /*IsFinished=*/true);
