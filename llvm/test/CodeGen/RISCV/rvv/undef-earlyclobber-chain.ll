@@ -23,6 +23,7 @@ define dso_local signext i32 @undef_early_clobber_chain() {
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, sp, 400
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %dst = alloca [100 x float], align 8
