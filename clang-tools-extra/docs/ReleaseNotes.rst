@@ -177,6 +177,10 @@ Changes in existing checks
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
   subtracting from a pointer directly or when used to scale a numeric value.
 
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` by fixing a false positive
+  when using non-static member initializers and a constructor.
+
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
   `bsl::optional` and `bdlb::NullableValue` from
