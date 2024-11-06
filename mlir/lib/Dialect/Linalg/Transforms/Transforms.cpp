@@ -27,7 +27,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -1194,7 +1193,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   // 2. Transpose the tile to match the inner tile order:
   //    %init = tensor.empty()
   //    %transposed_tile = linalg.transpose ins(%extracted_tile), outs(%init)
-  //  NOTE: Outer dims are 1 and hence effectively ignored.
+  // NOTE: Outer dims are 1 and hence effectively ignored.
   SmallVector<int64_t> perm = getPackUnpackRankReducedPerm(
       inputShape, packOp.getInnerDimsPos(), packOp.getOuterDimsPerm());
 
@@ -1202,19 +1201,19 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
              llvm::interleaveComma(perm, DBGS() << "perm: "); DBGSNL(););
 
   // 2.1 Create tensor.empty (init value for TransposeOp)
-  SmallVector<OpFoldResult> transShapeForEmptyOpDynamic;
+  SmallVector<OpFoldResult> transShapeForEmptyOp;
 
   // Acquire tensor shape required to create EmptyOp. This will match the inner
   // tile sizes.
   size_t idx = numTiles;
   while (idx != 0) {
-    transShapeForEmptyOpDynamic.push_back(extractSliceSizes[srcRank - idx]);
+    transShapeForEmptyOp.push_back(extractSliceSizes[srcRank - idx]);
     idx--;
   }
 
-  applyPermutationToVector<OpFoldResult>(transShapeForEmptyOpDynamic, perm);
-  Value empty = rewriter.create<tensor::EmptyOp>(
-      loc, transShapeForEmptyOpDynamic, elemType);
+  applyPermutationToVector<OpFoldResult>(transShapeForEmptyOp, perm);
+  Value empty =
+      rewriter.create<tensor::EmptyOp>(loc, transShapeForEmptyOp, elemType);
 
   // 2.2 Create linalg.transpose
   auto transposedOp =
