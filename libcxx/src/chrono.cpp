@@ -152,7 +152,7 @@ system_clock::time_point system_clock::from_time_t(time_t t) noexcept { return s
 //  instead.
 //
 
-#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
 
 #  if defined(__APPLE__)
 
@@ -230,7 +230,7 @@ const bool steady_clock::is_steady;
 
 steady_clock::time_point steady_clock::now() noexcept { return __libcpp_steady_clock_now(); }
 
-#endif // !_LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#endif // _LIBCPP_HAS_MONOTONIC_CLOCK
 
 } // namespace chrono
 

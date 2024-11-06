@@ -791,7 +791,12 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
-/// Return true if the instruction doesn't potentially cross vector lanes.
+/// Return true if the instruction doesn't potentially cross vector lanes. This
+/// condition is weaker than checking that the instruction is lanewise: lanewise
+/// means that the same operation is splatted across all lanes, but we also
+/// include the case where there is a different operation on each lane, as long
+/// as the operation only uses data from that lane. An example of an operation
+/// that is not lanewise, but doesn't cross vector lanes is insertelement.
 bool isNotCrossLaneOperation(const Instruction *I);
 
 /// Return true if the instruction does not have any effects besides
