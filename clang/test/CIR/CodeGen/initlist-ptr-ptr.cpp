@@ -21,8 +21,8 @@ void test() {
 // CIR: cir.store %arg0, [[LOCAL]] : [[INITLIST_TYPE]], !cir.ptr<[[INITLIST_TYPE]]>
 // CIR: cir.return
 
-// CIR: cir.global "private" constant internal dsolocal [[STR_XY:@.*]] = #cir.const_array<"xy\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>
-// CIR: cir.global "private" constant internal dsolocal [[STR_UV:@.*]] = #cir.const_array<"uv\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>
+// CIR: cir.global "private" constant cir_private dsolocal [[STR_XY:@.*]] = #cir.const_array<"xy\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>
+// CIR: cir.global "private" constant cir_private dsolocal [[STR_UV:@.*]] = #cir.const_array<"uv\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>
 
 // CIR: cir.func @_ZSt4testv()
 // CIR: cir.scope {
@@ -53,8 +53,8 @@ void test() {
 
 // LLVM: %"class.std::initializer_list<const char *>" = type { ptr, ptr }
 
-// LLVM: @.str = internal constant [3 x i8] c"xy\00"
-// LLVM: @.str1 = internal constant [3 x i8] c"uv\00"
+// LLVM: @.str = private constant [3 x i8] c"xy\00"
+// LLVM: @.str1 = private constant [3 x i8] c"uv\00"
 
 // LLVM: define linkonce_odr void @_ZSt1fIPKcEvSt16initializer_listIT_E(%"class.std::initializer_list<const char *>" [[ARG0:%.*]])
 // LLVM: [[LOCAL_PTR:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8, 
