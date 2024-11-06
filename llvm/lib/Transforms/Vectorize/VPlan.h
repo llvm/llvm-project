@@ -1672,6 +1672,12 @@ public:
                          !Attrs.hasFnAttr(Attribute::WillReturn);
   }
 
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         std::initializer_list<VPValue *> CallArguments,
+                         Type *Ty, DebugLoc DL = {})
+      : VPWidenIntrinsicRecipe(VectorIntrinsicID,
+                               ArrayRef<VPValue *>(CallArguments), Ty, DL) {}
+
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
@@ -3830,6 +3836,10 @@ public:
   VPBasicBlock *getMiddleBlock() {
     return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
   }
+
+  /// Return the exit blocks of the VPlan, that is leaf nodes except the scalar
+  /// header.
+  auto getExitBlocks();
 
   /// The trip count of the original loop.
   VPValue *getTripCount() const {

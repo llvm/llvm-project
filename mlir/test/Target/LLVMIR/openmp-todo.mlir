@@ -4,12 +4,12 @@
 llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
   // expected-warning@below {{hint clause discarded}}
   omp.atomic.capture hint(uncontended) {
-    omp.atomic.read %x = %v : !llvm.ptr, i32
+    omp.atomic.read %x = %v : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.write %v = %expr : !llvm.ptr, i32
   }
 
   // expected-warning@below {{hint clause discarded}}
-  omp.atomic.read %x = %v hint(contended) : !llvm.ptr, i32
+  omp.atomic.read %x = %v hint(contended) : !llvm.ptr, !llvm.ptr, i32
 
   // expected-warning@below {{hint clause discarded}}
   omp.atomic.write %v = %expr hint(nonspeculative) : !llvm.ptr, i32
@@ -462,23 +462,6 @@ llvm.func @task_priority(%x : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause priority in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
   omp.task priority(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
-llvm.func @task_private(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return

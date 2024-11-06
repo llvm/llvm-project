@@ -564,6 +564,30 @@ def CountBits :  DXILOp<31, unaryBits> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def FirstbitHi :  DXILOp<33, unaryBits> {
+  let Doc = "Returns the location of the first set bit starting from "
+            "the highest order bit and working downward.";
+  let LLVMIntrinsic = int_dx_firstbituhigh;
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def FirstbitSHi :  DXILOp<34, unaryBits> {
+  let Doc = "Returns the location of the first set bit from "
+            "the highest order bit based on the sign.";
+  let LLVMIntrinsic = int_dx_firstbitshigh;
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FMax :  DXILOp<35, binary> {
   let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_maxnum;
@@ -786,6 +810,16 @@ def SplitDouble :  DXILOp<102, splitDouble> {
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
+  let Doc = "signed dot product of 4 x i8 vectors packed into i32, with "
+            "accumulate to i32";
+  let LLVMIntrinsic = int_dx_dot4add_i8packed;
+  let arguments = [Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def AnnotateHandle : DXILOp<216, annotateHandle> {
