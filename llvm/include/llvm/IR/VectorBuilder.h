@@ -99,11 +99,11 @@ public:
                                  const Twine &Name = Twine());
 
   /// Emit a VP reduction intrinsic call for recurrence kind.
-  /// \param ID          The intrinsic ID of call Intrinsic
+  /// \param RdxID       The intrinsic ID of llvm.vector.reduce.*
   /// \param ValTy       The type of operand which the reduction operation is
   ///                    performed.
   /// \param VecOpArray  The operand list.
-  Value *createSimpleIntrinsic(Intrinsic::ID ID, Type *ValTy,
+  Value *createSimpleReduction(Intrinsic::ID RdxID, Type *ValTy,
                                ArrayRef<Value *> VecOpArray,
                                const Twine &Name = Twine());
 };

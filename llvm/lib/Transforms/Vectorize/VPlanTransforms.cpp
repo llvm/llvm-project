@@ -1504,12 +1504,19 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               .Case<VPWidenCastRecipe>(
                   [&](VPWidenCastRecipe *CInst) -> VPRecipeBase * {
                     auto *CI = cast<CastInst>(CInst->getUnderlyingInstr());
-                    SmallVector<VPValue *> Ops(CInst->operands());
-                    Ops.push_back(&EVL);
                     Intrinsic::ID VPID =
                         VPIntrinsic::getForOpcode(CI->getOpcode());
                     if (VPID == Intrinsic::not_intrinsic)
                       return nullptr;
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    if (VPIntrinsic::getMaskParamPos(VPID)) {
+                      VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                          IntegerType::getInt1Ty(CI->getContext())));
+                      Ops.push_back(Mask);
+                    }
+                    if (VPIntrinsic::getVectorLengthParamPos(VPID)) {
+                      Ops.push_back(&EVL);
+                    }
                     return new VPWidenIntrinsicRecipe(
                         *CI, VPID, Ops, CI->getType(), CI->getDebugLoc());
                   })
