@@ -1049,7 +1049,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
 
   Register SrcReg = MI.getOperand(1).getReg();
   auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
-  if (!LoadDef || !MRI.hasOneNonDBGUse(DstReg))
+  if (!LoadDef || !MRI.hasOneNonDBGUse(SrcReg))
     return false;
 
   uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();

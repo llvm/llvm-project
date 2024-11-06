@@ -797,6 +797,16 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op.getOperand(1);
     break;
   }
+  case ISD::ADD: {
+    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (RHSKnown.isZero())
+      return Op.getOperand(0);
+
+    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (LHSKnown.isZero())
+      return Op.getOperand(1);
+    break;
+  }
   case ISD::SHL: {
     // If we are only demanding sign bits then we can use the shift source
     // directly.

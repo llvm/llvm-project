@@ -145,7 +145,9 @@ static omp::PrivateClauseOp findPrivatizer(Operation *from,
 ///          given operation.
 static LogicalResult checkImplementationStatus(Operation &op) {
   auto todo = [&op](StringRef clauseName) {
-    return op.emitError(clauseName + " clause not yet supported");
+    return op.emitError() << "not yet implemented: Unhandled clause "
+                          << clauseName << " in " << op.getName()
+                          << " operation";
   };
 
   auto checkAligned = [&todo](auto op, LogicalResult &result) {
@@ -301,8 +303,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
               result = todo("firstprivate");
 
             if (!privatizer.getDeallocRegion().empty())
-              result =
-                  op.emitError("privatization of structures not yet supported");
+              result = op.emitError("not yet implemented: privatization of "
+                                    "structures in omp.target operation");
           }
         }
         checkThreadLimit(op, result);
@@ -4091,8 +4093,7 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
             return success();
           })
       .Default([&](Operation *inst) {
-        return inst->emitError("unsupported OpenMP operation: ")
-               << inst->getName();
+        return inst->emitError() << "not yet implemented: " << inst->getName();
       });
 }
 

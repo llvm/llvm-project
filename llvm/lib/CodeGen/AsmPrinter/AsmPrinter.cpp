@@ -91,6 +91,7 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -164,6 +165,13 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
+
+// This isn't turned on by default, since several of the scheduling models are
+// not completely accurate, and we don't want to be misleading.
+static cl::opt<bool> PrintLatency(
+    "asm-print-latency",
+    cl::desc("Print instruction latencies as verbose asm comments"), cl::Hidden,
+    cl::init(false));
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -1084,7 +1092,8 @@ void AsmPrinter::emitFunctionEntryLabel() {
 }
 
 /// emitComments - Pretty-print comments for instructions.
-static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
+static void emitComments(const MachineInstr &MI, const MCSubtargetInfo *STI,
+                         raw_ostream &CommentOS) {
   const MachineFunction *MF = MI.getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
@@ -1112,6 +1121,17 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   // Check for spill-induced copies
   if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse))
     CommentOS << " Reload Reuse\n";
+
+  if (PrintLatency) {
+    const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+    const MCSchedModel &SCModel = STI->getSchedModel();
+    int Latency = SCModel.computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                              InstrItineraryData, MachineInstr>(
+        *STI, *TII, MI);
+    // Report only interesting latencies.
+    if (1 < Latency)
+      CommentOS << " Latency: " << Latency << "\n";
+  }
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -1772,6 +1792,12 @@ void AsmPrinter::emitFunctionBody() {
   int NumInstsInFunction = 0;
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
+  const MCSubtargetInfo *STI = nullptr;
+  if (this->MF)
+    STI = &getSubtargetInfo();
+  else
+    STI = TM.getMCSubtargetInfo();
+
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   // Create a slot for the entry basic block section so that the section
   // order is preserved when iterating over MBBSectionRanges.
@@ -1801,7 +1827,7 @@ void AsmPrinter::emitFunctionBody() {
         Handler->beginInstruction(&MI);
 
       if (isVerbose())
-        emitComments(MI, OutStreamer->getCommentOS());
+        emitComments(MI, STI, OutStreamer->getCommentOS());
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:

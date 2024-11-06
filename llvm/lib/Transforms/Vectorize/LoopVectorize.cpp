@@ -470,18 +470,14 @@ public:
                       ProfileSummaryInfo *PSI, GeneratedRTChecks &RTChecks,
                       VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
-        AC(AC), ORE(ORE), VF(VecWidth), UF(UnrollFactor),
+        AC(AC), ORE(ORE), VF(VecWidth),
+        MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
         PSI(PSI), RTChecks(RTChecks), Plan(Plan) {
     // Query this against the original loop and save it here because the profile
     // of the original loop header may change as the transformation happens.
     OptForSizeBasedOnProfile = llvm::shouldOptimizeForSize(
         OrigLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
-
-    if (MinProfitableTripCount.isZero())
-      this->MinProfitableTripCount = VecWidth;
-    else
-      this->MinProfitableTripCount = MinProfitableTripCount;
   }
 
   virtual ~InnerLoopVectorizer() = default;
@@ -1486,6 +1482,18 @@ public:
   /// Returns true if the Phi is part of an inloop reduction.
   bool isInLoopReduction(PHINode *Phi) const {
     return InLoopReductions.contains(Phi);
+  }
+
+  /// Returns true if the predicated reduction select should be used to set the
+  /// incoming value for the reduction phi.
+  bool usePredicatedReductionSelect(unsigned Opcode, Type *PhiTy) const {
+    // Force to use predicated reduction select since the EVL of the
+    // second-to-last iteration might not be VF*UF.
+    if (foldTailWithEVL())
+      return true;
+    return PreferPredicatedReductionSelect ||
+           TTI.preferPredicatedReductionSelect(
+               Opcode, PhiTy, TargetTransformInfo::ReductionFlags());
   }
 
   /// Estimate cost of an intrinsic call instruction CI if it were vectorized
@@ -9457,10 +9465,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                cast<VPInstruction>(&U)->getOpcode() ==
                    VPInstruction::ComputeReductionResult;
       });
-      if (PreferPredicatedReductionSelect ||
-          TTI.preferPredicatedReductionSelect(
-              PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy,
-              TargetTransformInfo::ReductionFlags()))
+      if (CM.usePredicatedReductionSelect(
+              PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy))
         PhiR->setOperand(1, NewExitingVPV);
     }
 
