@@ -356,6 +356,33 @@ VPInstruction::VPInstruction(unsigned Opcode,
   assert(isFPMathOp() && "this op can't take fast-math flags");
 }
 
+InstructionCost VPInstruction::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  switch (getOpcode()) {
+  case VPInstruction::ActiveLaneMask: {
+    Type *ArgTy = Ctx.Types.inferScalarType(getOperand(1));
+    Type *RetTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    IntrinsicCostAttributes Attrs(
+        Intrinsic::get_active_lane_mask, RetTy,
+        {PoisonValue::get(ArgTy), PoisonValue::get(ArgTy)});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  }
+  case VPInstruction::ExplicitVectorLength: {
+    Type *I32Ty = Type::getInt32Ty(Ctx.LLVMCtx);
+    Type *I1Ty = Type::getInt1Ty(Ctx.LLVMCtx);
+    IntrinsicCostAttributes Attrs(
+        Intrinsic::experimental_get_vector_length, I32Ty,
+        {PoisonValue::get(I32Ty), PoisonValue::get(I1Ty)});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  }
+  default:
+    // TODO: Fill out other opcodes!
+    return 0;
+  }
+}
+
 bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
 }

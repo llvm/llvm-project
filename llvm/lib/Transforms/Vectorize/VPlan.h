@@ -1378,6 +1378,10 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Return the cost of this VPWidenRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during

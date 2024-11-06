@@ -5577,6 +5577,34 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     Cost += BlockCost;
   }
 
+#ifndef NDEBUG
+  // TODO: We're effectively having to duplicate the code from
+  // VPInstruction::computeCost, which is ugly. This isn't meant to be a fully
+  // accurate representation of the cost of tail-folding - it exists purely to
+  // stop asserts firing when the legacy cost doesn't match the VPlan cost.
+  if (!VF.isScalar() && foldTailByMasking()) {
+    TailFoldingStyle Style = getTailFoldingStyle();
+    LLVMContext &Context = TheLoop->getHeader()->getContext();
+    Type *I1Ty = IntegerType::getInt1Ty(Context);
+    Type *IndTy = Legal->getWidestInductionType();
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    if (Style == TailFoldingStyle::DataWithEVL) {
+      Type *I32Ty = IntegerType::getInt32Ty(Context);
+      IntrinsicCostAttributes Attrs(
+          Intrinsic::experimental_get_vector_length, I32Ty,
+          {PoisonValue::get(IndTy), PoisonValue::get(I32Ty),
+           PoisonValue::get(I1Ty)});
+      Cost += TTI.getIntrinsicInstrCost(Attrs, CostKind);
+    } else if (useActiveLaneMask(Style)) {
+      VectorType *RetTy = VectorType::get(I1Ty, VF);
+      IntrinsicCostAttributes Attrs(
+          Intrinsic::get_active_lane_mask, RetTy,
+          {PoisonValue::get(IndTy), PoisonValue::get(IndTy)});
+      Cost += TTI.getIntrinsicInstrCost(Attrs, CostKind);
+    }
+  }
+#endif
+
   return Cost;
 }
 
