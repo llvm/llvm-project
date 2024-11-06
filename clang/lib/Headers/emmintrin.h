@@ -4778,7 +4778,8 @@ _mm_castpd_si128(__m128d __a) {
 ///    A 128-bit floating-point vector of [4 x float].
 /// \returns A 128-bit floating-point vector of [2 x double] containing the same
 ///    bitwise pattern as the parameter.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castps_pd(__m128 __a) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_castps_pd(__m128 __a) {
   return (__m128d)__a;
 }
 
@@ -4793,7 +4794,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castps_pd(__m128 __a) {
 ///    A 128-bit floating-point vector of [4 x float].
 /// \returns A 128-bit integer vector containing the same bitwise pattern as the
 ///    parameter.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_castps_si128(__m128 __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_castps_si128(__m128 __a) {
   return (__m128i)__a;
 }
 
@@ -4808,7 +4810,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_castps_si128(__m128 __a) {
 ///    A 128-bit integer vector.
 /// \returns A 128-bit floating-point vector of [4 x float] containing the same
 ///    bitwise pattern as the parameter.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_castsi128_ps(__m128i __a) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_castsi128_ps(__m128i __a) {
   return (__m128)__a;
 }
 
@@ -4823,7 +4826,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_castsi128_ps(__m128i __a) {
 ///    A 128-bit integer vector.
 /// \returns A 128-bit floating-point vector of [2 x double] containing the same
 ///    bitwise pattern as the parameter.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_castsi128_pd(__m128i __a) {
   return (__m128d)__a;
 }
 
