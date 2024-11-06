@@ -49,8 +49,7 @@ llvm_config.with_system_environment(
     ]
 )
 
-# Enable sanitizer runtime flags.
-if "Address" in config.llvm_use_sanitizer:
+if config.llvm_use_sanitizer:
     # Begin Swift mod.
     # Swift's libReflection builds without ASAN, which causes a known
     # false positive in std::vector. We also want to support testing a sanitized
@@ -64,12 +63,8 @@ if "Address" in config.llvm_use_sanitizer:
     # poisoning.
     config.environment['ASAN_OPTIONS'] += ':' + 'allow_user_poisoning=0'
     # End Swift mod.
-    if platform.system() == "Darwin":
-        config.environment["MallocNanoZone"] = "0"
-
-if "Thread" in config.llvm_use_sanitizer:
     config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
-
+    config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
     if re.match(r".*-linux.*", config.target_triple):

@@ -35,8 +35,10 @@ llvm_config.with_system_environment(
 llvm_config.with_environment("PATH", os.path.dirname(sys.executable), append_path=True)
 
 # Enable sanitizer runtime flags.
-config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+if config.llvm_use_sanitizer:
+    config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
+    config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+    config.environment["MallocNanoZone"] = "0"
 
 # Begin Swift mod.
 # Swift's libReflection builds without ASAN, which causes a known
