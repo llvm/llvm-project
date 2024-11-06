@@ -801,7 +801,7 @@ static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
   if (lowering.empty()) {
     return ABIArgInfo::getIgnore();
   } else if (lowering.shouldPassIndirectly(forReturn)) {
-    return ABIArgInfo::getIndirect(alignmentForIndirect, /*byval*/ false);
+    return ABIArgInfo::getIndirect(alignmentForIndirect, 0, /*byval*/ false);
   } else {
     auto types = lowering.getCoerceAndExpandTypes();
     return ABIArgInfo::getCoerceAndExpand(types.first, types.second);
@@ -815,7 +815,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
-      return ABIArgInfo::getIndirect(layout.getAlignment(), /*byval*/ false);
+      return ABIArgInfo::getIndirect(layout.getAlignment(), 0, /*byval*/ false);
 
     SwiftAggLowering lowering(CGM);
     lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);

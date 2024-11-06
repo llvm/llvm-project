@@ -174,7 +174,7 @@ bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
 ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByVal,
                                             bool Realign,
                                             llvm::Type *Padding) const {
-  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty), ByVal,
+  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty), 0, ByVal,
                                  Realign, Padding);
 }
 

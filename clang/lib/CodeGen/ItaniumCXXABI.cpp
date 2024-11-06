@@ -1351,7 +1351,7 @@ bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   // If C++ prohibits us from making a copy, return by address.
   if (!RD->canPassInRegisters()) {
     auto Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, 0, /*ByVal=*/false);
     return true;
   }
   return false;

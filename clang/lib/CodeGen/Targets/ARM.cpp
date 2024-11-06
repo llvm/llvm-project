@@ -397,7 +397,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     // bigger than 128-bits, they get placed in space allocated by the caller,
     // and a pointer is passed.
     return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8), false);
+        CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8), 0, false);
   }
 
   // Support byval for ARM.
@@ -415,7 +415,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   }
   if (getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(64)) {
     assert(getABIKind() != ARMABIKind::AAPCS16_VFP && "unexpected byval");
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
+    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign), 0,
                                    /*ByVal=*/true,
                                    /*Realign=*/TyAlign > ABIAlign);
   }

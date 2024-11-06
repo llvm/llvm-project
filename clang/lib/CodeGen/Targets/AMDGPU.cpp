@@ -105,6 +105,11 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
+  // srets / indirect returns are unconditionally in the alloca AS.
+  if (FI.getReturnInfo().isIndirect())
+    FI.getReturnInfo().setIndirectAddrSpace(
+        getDataLayout().getAllocaAddrSpace());
+
   unsigned ArgumentIndex = 0;
   const unsigned numFixedArguments = FI.getNumRequiredArgs();
 

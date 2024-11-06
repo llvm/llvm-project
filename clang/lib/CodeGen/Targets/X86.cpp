@@ -606,12 +606,12 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
   unsigned StackAlign = getTypeStackAlignInBytes(Ty, TypeAlign);
   if (StackAlign == 0)
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), /*ByVal=*/true);
+    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), 0, /*ByVal=*/true);
 
   // If the stack alignment is less than the type alignment, realign the
   // argument.
   bool Realign = TypeAlign > StackAlign;
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(StackAlign),
+  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(StackAlign), 0,
                                  /*ByVal=*/true, Realign);
 }
 
@@ -2247,7 +2247,7 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
                                                           Size));
   }
 
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align));
+  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align), 0);
 }
 
 /// The ABI specifies that a value should be passed in a full vector XMM/YMM
@@ -3304,7 +3304,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
-      return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+      return ABIArgInfo::getIndirect(Align, 0, /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
           (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
@@ -3314,7 +3314,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
-        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        return ABIArgInfo::getIndirect(Align, 0, /*ByVal=*/false);
       }
     }
   }
@@ -3350,7 +3350,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       if (IsMingw64) {
         const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
         if (LDF == &llvm::APFloat::x87DoubleExtended())
-          return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+          return ABIArgInfo::getIndirect(Align, 0, /*ByVal=*/false);
       }
       break;
 
@@ -3360,7 +3360,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
       if (!IsReturnType)
-        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        return ABIArgInfo::getIndirect(Align, 0, /*ByVal=*/false);
 
       // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
       // Clang matches them for compatibility.
@@ -3380,7 +3380,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // the power of 2.
     if (Width <= 64)
       return ABIArgInfo::getDirect();
-    return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    return ABIArgInfo::getIndirect(Align, 0, /*ByVal=*/false);
   }
 
   return ABIArgInfo::getDirect();

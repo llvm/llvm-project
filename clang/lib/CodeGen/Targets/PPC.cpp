@@ -213,7 +213,7 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     CharUnits CCAlign = getParamTypeAlignment(Ty);
     CharUnits TyAlign = getContext().getTypeAlignInChars(Ty);
 
-    return ABIArgInfo::getIndirect(CCAlign, /*ByVal*/ true,
+    return ABIArgInfo::getIndirect(CCAlign, 0, /*ByVal*/ true,
                                    /*Realign*/ TyAlign > CCAlign);
   }
 
@@ -887,7 +887,7 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
     }
 
     // All other aggregates are passed ByVal.
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
+    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign), 0,
                                    /*ByVal=*/true,
                                    /*Realign=*/TyAlign > ABIAlign);
   }
