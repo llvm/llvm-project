@@ -30,3 +30,11 @@ endif()
 if(POLICY CMP0147)
   cmake_policy(SET CMP0147 NEW)
 endif()
+
+# CMP0156: De-duplicate libraries on link lines based on linker capabilities.
+# New in CMake 3.29: https://cmake.org/cmake/help/latest/policy/CMP0156.html
+# Avoids the deluge of 'ld: warning: ignoring duplicate libraries' warnings when
+# building with the Apple linker.
+if(POLICY CMP0156)
+  cmake_policy(SET CMP0156 NEW)
+endif()
