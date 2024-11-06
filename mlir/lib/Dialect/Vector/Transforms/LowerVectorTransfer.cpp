@@ -518,7 +518,7 @@ struct VectorLoadToMemrefLoadLowering
   }
 };
 
-/// Replace a vector.store with a vector.extract + memref.store.
+/// Replace a vector.store with a vector.extractelement + memref.store.
 struct VectorStoreToMemrefStoreLowering
     : public OpRewritePattern<vector::StoreOp> {
   using OpRewritePattern::OpRewritePattern;
