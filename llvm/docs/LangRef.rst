@@ -122,13 +122,14 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           ; yields i32:%1
+    %1 = add i32 %0, %0           /* yields i32:%1 */
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
 lexical features of LLVM:
 
 #. Comments are delimited with a '``;``' and go until the end of line.
+   Alternatively, comments can start with ``/*`` and terminate with ``*/``.
 #. Unnamed temporaries are created when the result of a computation is
    not assigned to a named value.
 #. By default, unnamed temporaries are numbered sequentially (using a
@@ -4386,7 +4387,7 @@ is defined inline with other types (e.g. ``[2 x {i32, i32}]``) whereas
 identified types are always defined at the top level with a name.
 Literal types are uniqued by their contents and can never be recursive
 or opaque since there is no way to write one. Identified types can be
-recursive, can be opaqued, and are never uniqued.
+opaqued and are never uniqued. Identified types must not be recursive.
 
 :Syntax:
 

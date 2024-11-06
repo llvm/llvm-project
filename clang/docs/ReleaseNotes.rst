@@ -591,6 +591,7 @@ Bug Fixes to C++ Support
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
+- Name independent data members were not correctly initialized from default member initializers. (#GH114069)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -716,6 +717,7 @@ CUDA Support
 ^^^^^^^^^^^^
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
+- Added support for `__grid_constant__` attribute.
 
 AIX Support
 ^^^^^^^^^^^
@@ -887,6 +889,7 @@ OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
+- Added support for allocator-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^

@@ -1333,14 +1333,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // expansion to a build_vector of 0s.
         setOperationAction(ISD::UNDEF, VT, Custom);
 
-        setOperationAction({ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE,
-                            ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                            ISD::VECTOR_COMPRESS},
+        setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                            ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                            ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
+                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
-        // FIXME: mload, mstore, mgather, mscatter, vp_gather/scatter can be
+        // FIXME: mload, mstore, vp_gather/scatter can be
         // hoisted to here.
-        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        setOperationAction({ISD::LOAD, ISD::STORE, ISD::MGATHER, ISD::MSCATTER},
+                           VT, Custom);
         setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
                             ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
                             ISD::EXPERIMENTAL_VP_STRIDED_STORE},
@@ -1359,7 +1361,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               Custom);
           setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT,
                              Custom);
-          setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfhmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1384,7 +1385,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction(ISD::BITCAST, VT, Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
-          setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1406,13 +1406,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         }
 
-        setOperationAction({ISD::BUILD_VECTOR, ISD::VECTOR_SHUFFLE,
-                            ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
-                            ISD::SCALAR_TO_VECTOR},
-                           VT, Custom);
+        setOperationAction({ISD::BUILD_VECTOR, ISD::SCALAR_TO_VECTOR}, VT,
+                           Custom);
 
-        setOperationAction(
-            {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
+        setOperationAction({ISD::MLOAD, ISD::MSTORE}, VT, Custom);
 
         setOperationAction({ISD::VP_GATHER, ISD::VP_SCATTER}, VT, Custom);
 
@@ -1451,6 +1448,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       if (Subtarget.hasStdExtZfhminOrZhinxmin())
         setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+      if (Subtarget.hasStdExtZfbfmin())
+        setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
       if (Subtarget.hasStdExtFOrZfinx())
         setOperationAction(ISD::BITCAST, MVT::f32, Custom);
       if (Subtarget.hasStdExtDOrZdinx())
@@ -2210,20 +2209,12 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
     return true;
 
   // Convervatively only handle extracting half of a vector.
+  // TODO: We can do arbitrary slidedowns, but for now only support extracting
+  // the upper half of a vector until we have more test coverage.
   // TODO: For sizes which aren't multiples of VLEN sizes, this may not be
   // a cheap extract.  However, this case is important in practice for
   // shuffled extracts of longer vectors.  How resolve?
-  if ((ResElts * 2) != SrcElts)
-    return false;
-
-  // Slide can support arbitrary index, but we only treat vslidedown.vi as
-  // cheap.
-  if (Index >= 32)
-    return false;
-
-  // TODO: We can do arbitrary slidedowns, but for now only support extracting
-  // the upper half of a vector until we have more test coverage.
-  return Index == 0 || Index == ResElts;
+  return (ResElts * 2) == SrcElts && (Index == 0 || Index == ResElts);
 }
 
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
@@ -4819,6 +4810,24 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
 
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
   auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  // zvfhmin and zvfbfmin don't have vfslide1{down,up}.vf so use fmv.x.h +
+  // vslide1{down,up}.vx instead.
+  if (VT.getVectorElementType() == MVT::bf16 ||
+      (VT.getVectorElementType() == MVT::f16 &&
+       !Subtarget.hasVInstructionsF16())) {
+    MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
+    Splat =
+        DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, Subtarget.getXLenVT(), Splat);
+    V2 = DAG.getBitcast(
+        IntVT, convertToScalableVector(ContainerVT, V2, DAG, Subtarget));
+    SDValue Vec = DAG.getNode(
+        IsVSlidedown ? RISCVISD::VSLIDE1DOWN_VL : RISCVISD::VSLIDE1UP_VL, DL,
+        IntVT, DAG.getUNDEF(IntVT), V2, Splat, TrueMask, VL);
+    Vec = DAG.getBitcast(ContainerVT, Vec);
+    return convertFromScalableVector(VT, Vec, DAG, Subtarget);
+  }
+
   auto OpCode = IsVSlidedown ?
     (VT.isFloatingPoint() ? RISCVISD::VFSLIDE1DOWN_VL : RISCVISD::VSLIDE1DOWN_VL) :
     (VT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VSLIDE1UP_VL);
@@ -21576,6 +21585,8 @@ static const Intrinsic::ID FixedVlsegIntrIds[] = {
 bool RISCVTargetLowering::lowerInterleavedLoad(
     LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
+  assert(Indices.size() == Shuffles.size());
+
   IRBuilder<> Builder(LI);
 
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
@@ -21585,6 +21596,27 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     return false;
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+
+  // If the segment load is going to be performed segment at a time anyways
+  // and there's only one element used, use a strided load instead.  This
+  // will be equally fast, and create less vector register pressure.
+  if (Indices.size() == 1 && !Subtarget.hasOptimizedSegmentLoadStore(Factor)) {
+    unsigned ScalarSizeInBytes = VTy->getScalarSizeInBits() / 8;
+    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
+    Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
+    Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
+    Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
+    Value *VL = Builder.getInt32(VTy->getNumElements());
+
+    CallInst *CI =
+        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                {VTy, BasePtr->getType(), Stride->getType()},
+                                {BasePtr, Stride, Mask, VL});
+    CI->addParamAttr(
+        0, Attribute::getWithAlignment(CI->getContext(), LI->getAlign()));
+    Shuffles[0]->replaceAllUsesWith(CI);
+    return true;
+  };
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
 
