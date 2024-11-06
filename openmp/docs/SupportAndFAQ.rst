@@ -67,7 +67,7 @@ offloading as well as some extra options.
      -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
   $> ninja install
 
-To build an *effective* OpenMP offload capable compiler, only one extra CMake
+To manually build an *effective* OpenMP offload capable compiler, only one extra CMake
 option, ``LLVM_ENABLE_RUNTIMES="openmp;offload"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
 <https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
