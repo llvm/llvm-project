@@ -256,9 +256,8 @@ RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
   Register RootReg = Root.getReg();
 
   Register RegX;
-  int64_t C;
-  if (mi_match(RootReg, *MRI, m_GAnd(m_Reg(RegX), m_ICst(C))) &&
-      (uint64_t)C == maskTrailingOnes<uint64_t>(Bits)) {
+  uint64_t Mask = maskTrailingOnes<uint64_t>(Bits);
+  if (mi_match(RootReg, *MRI, m_GAnd(m_Reg(RegX), m_SpecificICst(Mask)))) {
     return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
   }
 
