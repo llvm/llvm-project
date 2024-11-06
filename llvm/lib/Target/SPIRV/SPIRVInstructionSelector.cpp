@@ -1041,16 +1041,16 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   Register MemSemReg = buildI32Constant(MemSem /*| ScSem*/, I);
 
-  bool Result = false;
+  bool Result = true;
   Register ValueReg = I.getOperand(2).getReg();
   if (NegateOpcode != 0) {
     // Translation with negative value operand is requested
     Register TmpReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-    Result |= selectUnOpWithSrc(TmpReg, ResType, I, ValueReg, NegateOpcode);
+    Result &= selectUnOpWithSrc(TmpReg, ResType, I, ValueReg, NegateOpcode);
     ValueReg = TmpReg;
   }
 
-  Result |= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
+  Result &= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
                 .addDef(ResVReg)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(Ptr)
@@ -1223,21 +1223,21 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
           .constrainAllUses(TII, TRI, RBI);
   Register CmpSuccReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
   SPIRVType *BoolTy = GR.getOrCreateSPIRVBoolType(I, TII);
-  Result |= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpIEqual))
+  Result &= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpIEqual))
                 .addDef(CmpSuccReg)
                 .addUse(GR.getSPIRVTypeID(BoolTy))
                 .addUse(ACmpRes)
                 .addUse(Cmp)
                 .constrainAllUses(TII, TRI, RBI);
   Register TmpReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-  Result |= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpCompositeInsert))
+  Result &= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpCompositeInsert))
                 .addDef(TmpReg)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(ACmpRes)
                 .addUse(GR.getOrCreateUndef(I, ResType, TII))
                 .addImm(0)
                 .constrainAllUses(TII, TRI, RBI);
-  Result |= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpCompositeInsert))
+  Result &= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpCompositeInsert))
                 .addDef(ResVReg)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(CmpSuccReg)
@@ -1743,7 +1743,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
   assert(I.getOperand(4).isReg());
   MachineBasicBlock &BB = *I.getParent();
 
-  bool Result = false;
+  bool Result = true;
 
   // Acc = C
   Register Acc = I.getOperand(4).getReg();
@@ -1755,7 +1755,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
   for (unsigned i = 0; i < 4; i++) {
     // A[i]
     Register AElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(AElt)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(I.getOperand(2).getReg())
@@ -1765,7 +1765,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // B[i]
     Register BElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(BElt)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(I.getOperand(3).getReg())
@@ -1775,7 +1775,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // A[i] * B[i]
     Register Mul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulS))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulS))
                   .addDef(Mul)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(AElt)
@@ -1784,7 +1784,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // Discard 24 highest-bits so that stored i32 register is i8 equivalent
     Register MaskMul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(MaskMul)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Mul)
@@ -1795,7 +1795,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
     // Acc = Acc + A[i] * B[i]
     Register Sum =
         i < 3 ? MRI->createVirtualRegister(&SPIRV::IDRegClass) : ResVReg;
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                   .addDef(Sum)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Acc)
@@ -1866,7 +1866,7 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
 
   if (NeedsConversion) {
     auto ConvertOpcode = IsFloatTy ? SPIRV::OpConvertFToS : SPIRV::OpSConvert;
-    Result |= BuildMI(*I.getParent(), I, DL, TII.get(ConvertOpcode))
+    Result &= BuildMI(*I.getParent(), I, DL, TII.get(ConvertOpcode))
                   .addDef(ResVReg)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(SignReg)
