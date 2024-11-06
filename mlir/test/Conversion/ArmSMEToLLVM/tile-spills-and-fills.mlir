@@ -53,6 +53,7 @@
 /// These are obviously redundant, but there's no checks to avoid this.
 func.func @use_too_many_tiles() {
   %0 = arm_sme.zero : vector<[4]x[4]xi32>
+  "test.prevent_zero_merge"() : () -> ()
   %1 = arm_sme.zero : vector<[4]x[4]xi32>
   // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %2 = arm_sme.zero : vector<[8]x[8]xi16>

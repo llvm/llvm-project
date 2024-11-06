@@ -90,6 +90,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   /* MSMode Unsupported */
   if (!LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
     return false;
+  /* HLSLMode Unsupported */
+  if (!LangOpts.HLSL && (BuiltinInfo.Langs & HLSL_LANG))
+    return false;
   /* ObjC Unsupported */
   if (!LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG)
     return false;
@@ -118,6 +121,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
     return false;
   /* CPlusPlus Unsupported */
   if (!LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
+    return false;
+  /* consteval Unsupported */
+  if (!LangOpts.CPlusPlus20 && strchr(BuiltinInfo.Attributes, 'G') != nullptr)
     return false;
   return true;
 }

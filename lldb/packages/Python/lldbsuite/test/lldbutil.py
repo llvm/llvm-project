@@ -773,9 +773,16 @@ def get_threads_stopped_at_breakpoint_id(process, bpid):
         return threads
 
     for thread in stopped_threads:
-        # Make sure we've hit our breakpoint...
-        break_id = thread.GetStopReasonDataAtIndex(0)
-        if break_id == bpid:
+        # Make sure we've hit our breakpoint.
+        # From the docs of GetStopReasonDataAtIndex: "Breakpoint stop reasons
+        # will have data that consists of pairs of breakpoint IDs followed by
+        # the breakpoint location IDs".
+        # Iterate over all such pairs looking for `bpid`.
+        break_ids = [
+            thread.GetStopReasonDataAtIndex(idx)
+            for idx in range(0, thread.GetStopReasonDataCount(), 2)
+        ]
+        if bpid in break_ids:
             threads.append(thread)
 
     return threads

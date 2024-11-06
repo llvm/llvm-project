@@ -19,6 +19,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -49,6 +50,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -130,7 +132,7 @@ public:
   ///
   /// \returns true to indicate the options are invalid or false otherwise.
   virtual bool ReadLanguageOptions(const LangOptions &LangOpts,
-                                   bool Complain,
+                                   StringRef ModuleFilename, bool Complain,
                                    bool AllowCompatibleDifferences) {
     return false;
   }
@@ -139,7 +141,8 @@ public:
   ///
   /// \returns true to indicate the target options are invalid, or false
   /// otherwise.
-  virtual bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  virtual bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                                 StringRef ModuleFilename, bool Complain,
                                  bool AllowCompatibleDifferences) {
     return false;
   }
@@ -150,7 +153,7 @@ public:
   /// otherwise.
   virtual bool
   ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        bool Complain) {
+                        StringRef ModuleFilename, bool Complain) {
     return false;
   }
 
@@ -172,6 +175,7 @@ public:
   /// \returns true to indicate the header search options are invalid, or false
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                                       StringRef ModuleFilename,
                                        StringRef SpecificModuleCachePath,
                                        bool Complain) {
     return false;
@@ -200,6 +204,7 @@ public:
   /// \returns true to indicate the preprocessor options are invalid, or false
   /// otherwise.
   virtual bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                                       StringRef ModuleFilename,
                                        bool ReadMacros, bool Complain,
                                        std::string &SuggestedPredefines) {
     return false;
@@ -262,20 +267,24 @@ public:
   bool ReadFullVersionInformation(StringRef FullVersion) override;
   void ReadModuleName(StringRef ModuleName) override;
   void ReadModuleMapFile(StringRef ModuleMapPath) override;
-  bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                         StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                             bool Complain) override;
+                             StringRef ModuleFilename, bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override;
 
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -299,16 +308,20 @@ public:
   PCHValidator(Preprocessor &PP, ASTReader &Reader)
       : PP(PP), Reader(Reader) {}
 
-  bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
-  bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+  bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                         StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                             bool Complain) override;
+                             StringRef ModuleFilename, bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                               StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -325,7 +338,8 @@ public:
   SimpleASTReaderListener(Preprocessor &PP) : PP(PP) {}
 
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool ReadMacros, bool Complain,
+                               StringRef ModuleFilename, bool ReadMacros,
+                               bool Complain,
                                std::string &SuggestedPredefines) override;
 };
 
@@ -366,6 +380,7 @@ class ASTReader
 {
 public:
   /// Types of AST files.
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTIdentifierIterator;
   friend class ASTRecordReader;
@@ -432,7 +447,7 @@ private:
   DiagnosticsEngine &Diags;
   // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
   // has its own version.
-  bool WarnedStackExhausted = false;
+  StackExhaustionHandler StackHandler;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -518,6 +533,18 @@ private:
   /// reading. So we need to apply the offset immediately after we read the
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
+
+  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
+  ///
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// It is required to have canonical declaration for lambda class from the
+  /// same module as enclosing function. This is required to correctly resolve
+  /// captured variables in the lambda. Without this, due to lazy
+  /// deserialization, canonical declarations for the function and lambdas can
+  /// be selected from different modules and DeclRefExprs may refer to the AST
+  /// nodes that don't exist in the function.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
+      FunctionToLambdasMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -634,6 +661,12 @@ private:
   /// Definitions for which we have added merged definitions but not yet
   /// performed deduplication.
   llvm::SetVector<NamedDecl *> PendingMergedDefinitionsToDeduplicate;
+
+  /// The duplicated definitions in module units which are pending to be warned.
+  /// We need to delay it to wait for the loading of definitions since we don't
+  /// want to warn for forward declarations.
+  llvm::SmallVector<std::pair<Decl *, Decl *>>
+      PendingWarningForDuplicatedDefsInModuleUnits;
 
   /// Read the record that describes the lexical contents of a DC.
   bool ReadLexicalDeclContextStorage(ModuleFile &M,
@@ -789,6 +822,11 @@ private:
   /// in the chain. The referenced declarations are deserialized and passed to
   /// the consumer eagerly.
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
+
+  /// The IDs of all vtables to emit. The referenced declarations are passed
+  /// to the consumers' HandleVTable eagerly after passing
+  /// EagerlyDeserializedDecls.
+  SmallVector<GlobalDeclID, 16> VTablesToEmit;
 
   /// The IDs of all tentative definitions stored in the chain.
   ///
@@ -947,6 +985,9 @@ private:
   ///
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<GlobalDeclID, 4> DeclsToCheckForDeferredDiags;
+
+  /// The IDs of all decls with function effects to be checked.
+  SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
 
 private:
   struct ImportedSubmodule {
@@ -1301,9 +1342,48 @@ private:
   serialization::InputFile getInputFile(ModuleFile &F, unsigned ID,
                                         bool Complain = true);
 
+  /// The buffer used as the temporary backing storage for resolved paths.
+  SmallString<0> PathBuf;
+
+  /// A wrapper around StringRef that temporarily borrows the underlying buffer.
+  class TemporarilyOwnedStringRef {
+    StringRef String;
+    llvm::SaveAndRestore<SmallString<0>> UnderlyingBuffer;
+
+  public:
+    TemporarilyOwnedStringRef(StringRef S, SmallString<0> &UnderlyingBuffer)
+        : String(S), UnderlyingBuffer(UnderlyingBuffer, {}) {}
+
+    /// Return the wrapped \c StringRef that must be outlived by \c this.
+    const StringRef *operator->() const & { return &String; }
+    const StringRef &operator*() const & { return String; }
+
+    /// Make it harder to get a \c StringRef that outlives \c this.
+    const StringRef *operator->() && = delete;
+    const StringRef &operator*() && = delete;
+  };
+
 public:
-  void ResolveImportedPath(ModuleFile &M, std::string &Filename);
-  static void ResolveImportedPath(std::string &Filename, StringRef Prefix);
+  /// Get the buffer for resolving paths.
+  SmallString<0> &getPathBuf() { return PathBuf; }
+
+  /// Resolve \c Path in the context of module file \c M. The return value
+  /// must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory. The return
+  /// value must go out of scope before the next call to \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix);
+
+  /// Resolve \c Path in the context of module file \c M.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    ModuleFile &ModF);
+  /// Resolve \c Path in the context of the \c Prefix directory.
+  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
+                                                    StringRef Path,
+                                                    StringRef Prefix);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
@@ -1361,10 +1441,12 @@ private:
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
                                  unsigned ClientLoadCapabilities);
-  static ASTReadResult ReadOptionsBlock(
-      llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
-      bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-      std::string &SuggestedPredefines);
+  static ASTReadResult
+  ReadOptionsBlock(llvm::BitstreamCursor &Stream, StringRef Filename,
+                   unsigned ClientLoadCapabilities,
+                   bool AllowCompatibleConfigurationMismatch,
+                   ASTReaderListener &Listener,
+                   std::string &SuggestedPredefines);
 
   /// Read the unhashed control block.
   ///
@@ -1373,12 +1455,11 @@ private:
   ASTReadResult readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
                                          unsigned ClientLoadCapabilities);
 
-  static ASTReadResult
-  readUnhashedControlBlockImpl(ModuleFile *F, llvm::StringRef StreamData,
-                               unsigned ClientLoadCapabilities,
-                               bool AllowCompatibleConfigurationMismatch,
-                               ASTReaderListener *Listener,
-                               bool ValidateDiagnosticOptions);
+  static ASTReadResult readUnhashedControlBlockImpl(
+      ModuleFile *F, llvm::StringRef StreamData, StringRef Filename,
+      unsigned ClientLoadCapabilities,
+      bool AllowCompatibleConfigurationMismatch, ASTReaderListener *Listener,
+      bool ValidateDiagnosticOptions);
 
   llvm::Error ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   llvm::Error ReadExtensionBlock(ModuleFile &F);
@@ -1391,21 +1472,26 @@ private:
                                        unsigned ClientLoadCapabilities);
   llvm::Error ReadSubmoduleBlock(ModuleFile &F,
                                  unsigned ClientLoadCapabilities);
-  static bool ParseLanguageOptions(const RecordData &Record, bool Complain,
+  static bool ParseLanguageOptions(const RecordData &Record,
+                                   StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
                                    bool AllowCompatibleDifferences);
-  static bool ParseTargetOptions(const RecordData &Record, bool Complain,
+  static bool ParseTargetOptions(const RecordData &Record,
+                                 StringRef ModuleFilename, bool Complain,
                                  ASTReaderListener &Listener,
                                  bool AllowCompatibleDifferences);
-  static bool ParseDiagnosticOptions(const RecordData &Record, bool Complain,
+  static bool ParseDiagnosticOptions(const RecordData &Record,
+                                     StringRef ModuleFilename, bool Complain,
                                      ASTReaderListener &Listener);
   static bool ParseFileSystemOptions(const RecordData &Record, bool Complain,
                                      ASTReaderListener &Listener);
-  static bool ParseHeaderSearchOptions(const RecordData &Record, bool Complain,
+  static bool ParseHeaderSearchOptions(const RecordData &Record,
+                                       StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener);
   static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
                                      ASTReaderListener &Listener);
-  static bool ParsePreprocessorOptions(const RecordData &Record, bool Complain,
+  static bool ParsePreprocessorOptions(const RecordData &Record,
+                                       StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);
 
@@ -1500,6 +1586,7 @@ private:
   bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
+  void PassVTableToConsumer(CXXRecordDecl *RD);
 
   void finishPendingActions();
   void diagnoseOdrViolations();
@@ -1534,6 +1621,9 @@ private:
   /// array and the corresponding module file.
   std::pair<ModuleFile *, unsigned>
   translateTypeIDToIndex(serialization::TypeID ID) const;
+
+  /// Get a predefined Decl from ASTContext.
+  Decl *getPredefinedDecl(PredefinedDeclIDs ID);
 
 public:
   /// Load the AST file and validate its contents against the given
@@ -2115,7 +2205,7 @@ public:
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
 
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);
@@ -2131,7 +2221,8 @@ public:
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
 
-  void warnStackExhausted(SourceLocation Loc);
+  void runWithSufficientStackSpace(SourceLocation Loc,
+                                   llvm::function_ref<void()> Fn);
 
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 
@@ -2284,6 +2375,8 @@ public:
   /// Translate a FileID from another module file's FileID space into ours.
   FileID TranslateFileID(ModuleFile &F, FileID FID) const {
     assert(FID.ID >= 0 && "Reading non-local FileID.");
+    if (FID.isInvalid())
+      return FID;
     return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 
@@ -2478,7 +2571,7 @@ private:
 
 inline bool shouldSkipCheckingODR(const Decl *D) {
   return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         D->isFromExplicitGlobalModule();
+         (D->isFromGlobalModule() || D->isFromHeaderUnit());
 }
 
 } // namespace clang

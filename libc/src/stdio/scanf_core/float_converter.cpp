@@ -11,13 +11,14 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/char_vector.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/converter_utils.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 // All of the floating point conversions are the same for scanf, every name will
@@ -223,4 +224,4 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
 }
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

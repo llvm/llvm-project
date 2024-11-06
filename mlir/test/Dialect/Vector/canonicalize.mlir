@@ -800,6 +800,43 @@ func.func @fold_extract_shapecast_to_shapecast(%arg0 : vector<3x4xf32>) -> vecto
 
 // -----
 
+// CHECK-LABEL: func @extract_no_fold_scalar_to_0d(
+//  CHECK-SAME:     %[[v:.*]]: vector<f32>)
+//       CHECK:   %[[extract:.*]] = vector.extract %[[v]][] : f32 from vector<f32>
+//       CHECK:   return %[[extract]]
+func.func @extract_no_fold_scalar_to_0d(%v: vector<f32>) -> f32 {
+  %0 = vector.extract %v[] : f32 from vector<f32>
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_fold_same_rank(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x2xf32>)
+//       CHECK:      %[[CST:.+]] = arith.constant
+//  CHECK-SAME:                    : vector<2x2xf32>
+//       CHECK-NOT:  vector.insert
+//       CHECK:   return %[[CST]]
+func.func @insert_fold_same_rank(%v: vector<2x2xf32>) -> vector<2x2xf32> {
+  %cst = arith.constant dense<0.000000e+00> : vector<2x2xf32>
+  %0 = vector.insert %cst, %v [] : vector<2x2xf32> into vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_no_fold_scalar_to_0d(
+//  CHECK-SAME:     %[[v:.*]]: vector<f32>)
+//       CHECK:   %[[extract:.*]] = vector.insert %{{.*}}, %[[v]] [] : f32 into vector<f32>
+//       CHECK:   return %[[extract]]
+func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = vector.insert %cst, %v [] : f32 into vector<f32>
+  return %0 : vector<f32>
+}
+
+// -----
+
 // CHECK-LABEL: dont_fold_expand_collapse
 //       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
 //       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
@@ -2471,13 +2508,15 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
 // -----
 
 // CHECK-LABEL: func @all_true_vector_mask
-//  CHECK-SAME:     %[[IN:.*]]: vector<3x4xf32>
-func.func @all_true_vector_mask(%a : vector<3x4xf32>) -> vector<3x4xf32> {
+//  CHECK-SAME:     %[[IN:.*]]: tensor<3x4xf32>
+func.func @all_true_vector_mask(%ta : tensor<3x4xf32>) -> vector<3x4xf32> {
 //   CHECK-NOT:   vector.mask
-//       CHECK:   %[[ADD:.*]] = arith.addf %[[IN]], %[[IN]] : vector<3x4xf32>
-//       CHECK:   return %[[ADD]] : vector<3x4xf32>
+//       CHECK:   %[[LD:.*]] = vector.transfer_read %[[IN]]
+//       CHECK:   return %[[LD]] : vector<3x4xf32>
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
   %all_true = vector.constant_mask [3, 4] : vector<3x4xi1>
-  %0 = vector.mask %all_true { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
+  %0 = vector.mask %all_true { vector.transfer_read %ta[%c0, %c0], %cf0 : tensor<3x4xf32>, vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
   return %0 : vector<3x4xf32>
 }
 
@@ -2604,17 +2643,6 @@ func.func @rank_1_shuffle_to_interleave(%arg0: vector<6xi32>, %arg1: vector<6xi3
 
 // -----
 
-// CHECK-LABEL: func @extract_from_0d_regression(
-//  CHECK-SAME:     %[[v:.*]]: vector<f32>)
-//       CHECK:   %[[extract:.*]] = vector.extract %[[v]][] : f32 from vector<f32>
-//       CHECK:   return %[[extract]]
-func.func @extract_from_0d_regression(%v: vector<f32>) -> f32 {
-  %0 = vector.extract %v[] : f32 from vector<f32>
-  return %0 : f32
-}
-
-// -----
-
 // CHECK-LABEL: func @extract_from_0d_splat_broadcast_regression(
 //  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: vector<f32>, %[[c:.*]]: vector<2xf32>)
 func.func @extract_from_0d_splat_broadcast_regression(%a: f32, %b: vector<f32>, %c: vector<2xf32>) -> (f32, f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>) {
@@ -2720,15 +2748,6 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
 }
 
-// -----
-
-// CHECK-LABEL: @fold_vector_step_to_constant
-// CHECK: %[[CONSTANT:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK: return %[[CONSTANT]] : vector<4xindex>
-func.func @fold_vector_step_to_constant() -> vector<4xindex> {
-  %0 = vector.step : vector<4xindex>
-  return %0 : vector<4xindex>
-}
 
 // -----
 
@@ -2739,4 +2758,53 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
   %0 = llvm.mlir.undef : vector<4xi8>
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract
+// CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0, 0] : vector<4xi32> from vector<8x1x2x1x1x4xi32>
+// CHECK-NEXT:   return %[[EXTRACT]] :  vector<4xi32>
+func.func @contiguous_extract_strided_slices_to_extract(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<4xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
+  %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<4xi32>
+  return %2 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_shorter_size_list
+// CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0] : vector<1x4xi32> from vector<8x1x2x1x1x4xi32>
+// CHECK-NEXT:   return %[[EXTRACT]] :  vector<1x4xi32>
+func.func @contiguous_extract_strided_slices_to_extract_shorter_size_list(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x4xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1], strides = [1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
+  %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<1x4xi32>
+  return %2 : vector<1x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_size
+// CHECK-NEXT:   vector.extract_strided_slice
+func.func @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<8x1x1x1x1x4xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [8, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<8x1x1x1x1x4xi32>
+  return %1 : vector<8x1x1x1x1x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_full_size
+// CHECK-NEXT:   vector.extract_strided_slice
+func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x1x1x1x2xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 2], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x2xi32>
+  return %1 : vector<1x1x1x1x1x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size
+// CHECK-NEXT:    vector.extract_strided_slice
+func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x2x1x1x1xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 2, 1, 1, 1], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x2x1x1x1xi32>
+  return %1 : vector<1x1x2x1x1x1xi32>
 }

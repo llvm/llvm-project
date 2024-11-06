@@ -394,10 +394,20 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     std::string ValueExpr;
     if (const Expr *InitExpr = E->getInitExpr())
       ValueExpr = getSourceCode(D, InitExpr->getSourceRange());
-
     SmallString<16> ValueStr;
     E->getInitVal().toString(ValueStr);
-    I.Members.emplace_back(E->getNameAsString(), ValueStr, ValueExpr);
+    I.Members.emplace_back(E->getNameAsString(), ValueStr.str(), ValueExpr);
+    ASTContext &Context = E->getASTContext();
+    if (RawComment *Comment =
+            E->getASTContext().getRawCommentForDeclNoCache(E)) {
+      CommentInfo CInfo;
+      Comment->setAttached();
+      if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
+        EnumValueInfo &Member = I.Members.back();
+        Member.Description.emplace_back();
+        parseFullComment(Fc, Member.Description.back());
+      }
+    }
   }
 }
 
@@ -566,7 +576,7 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
     return;
 
   Comment->setAttached();
-  if (comments::FullComment* fc = Comment->parse(Context, nullptr, D)) {
+  if (comments::FullComment *fc = Comment->parse(Context, nullptr, D)) {
     I.Description.emplace_back();
     parseFullComment(fc, I.Description.back());
   }

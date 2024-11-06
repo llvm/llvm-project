@@ -12,9 +12,10 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -92,9 +93,10 @@ LLVM_LIBC_FUNCTION(float, cbrtf, (float x)) {
   uint32_t x_abs = x_bits.uintval() & 0x7fff'ffff;
   uint32_t sign_bit = (x_bits.uintval() >> 31) << DoubleBits::EXP_LEN;
 
-  if (LIBC_UNLIKELY(x_abs == 0 || x_abs >= 0x7f80'0000)) {
+  if (LIBC_UNLIKELY(x == 0.0f || x_abs >= 0x7f80'0000)) {
     // x is 0, Inf, or NaN.
-    return x;
+    // Make sure it works for FTZ/DAZ modes.
+    return x + x;
   }
 
   double xd = static_cast<double>(x);
@@ -154,4 +156,4 @@ LLVM_LIBC_FUNCTION(float, cbrtf, (float x)) {
   return static_cast<float>(DoubleBits(r_bits).get_val());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

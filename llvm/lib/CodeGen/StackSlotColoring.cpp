@@ -151,15 +151,15 @@ namespace {
       AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<LiveStacks>();
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addPreserved<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreservedID(MachineDominatorsID);
 
       // In some Target's pipeline, register allocation (RA) might be
       // split into multiple phases based on register class. So, this pass
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
-      AU.addPreserved<LiveIntervals>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
       AU.addPreserved<LiveDebugVariables>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -224,13 +224,10 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
           li.incrementWeight(
               LiveIntervals::getSpillWeight(false, true, MBFI, MI));
       }
-      for (MachineInstr::mmo_iterator MMOI = MI.memoperands_begin(),
-                                      EE = MI.memoperands_end();
-           MMOI != EE; ++MMOI) {
-        MachineMemOperand *MMO = *MMOI;
+      for (MachineMemOperand *MMO : MI.memoperands()) {
         if (const FixedStackPseudoSourceValue *FSV =
-            dyn_cast_or_null<FixedStackPseudoSourceValue>(
-                MMO->getPseudoValue())) {
+                dyn_cast_or_null<FixedStackPseudoSourceValue>(
+                    MMO->getPseudoValue())) {
           int FI = FSV->getFrameIndex();
           if (FI >= 0)
             SSRefs[FI].push_back(MMO);
@@ -475,8 +472,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     MachineBasicBlock::iterator NextMI = std::next(I);
     MachineBasicBlock::iterator ProbableLoadMI = I;
 
-    unsigned LoadReg = 0;
-    unsigned StoreReg = 0;
+    Register LoadReg;
+    Register StoreReg;
     unsigned LoadSize = 0;
     unsigned StoreSize = 0;
     if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
@@ -527,7 +524,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
@@ -552,8 +549,8 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
     Next = -1;
 
   SSIntervals.clear();
-  for (unsigned i = 0, e = SSRefs.size(); i != e; ++i)
-    SSRefs[i].clear();
+  for (auto &RefMMOs : SSRefs)
+    RefMMOs.clear();
   SSRefs.clear();
   OrigAlignments.clear();
   OrigSizes.clear();

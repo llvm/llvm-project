@@ -382,7 +382,7 @@ void PrintAddressSpaceLayout() {
 
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
-  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)ASAN_SHADOW_OFFSET);
+  Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
@@ -477,9 +477,6 @@ static bool AsanInitInternal() {
   // necessary, so that it can be re-activated when requested.
   if (flags()->start_deactivated)
     AsanDeactivate();
-
-  // interceptors
-  InitTlsSize();
 
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
@@ -580,10 +577,8 @@ static void UnpoisonDefaultStack() {
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.
-    uptr tls_addr, tls_size, stack_size;
-    GetThreadStackAndTls(/*main=*/false, &bottom, &stack_size, &tls_addr,
-                         &tls_size);
-    top = bottom + stack_size;
+    uptr tls_begin, tls_end;
+    GetThreadStackAndTls(/*main=*/false, &bottom, &top, &tls_begin, &tls_end);
   }
 
   UnpoisonStack(bottom, top, "default");

@@ -46,6 +46,9 @@ Status RemoteAwarePlatform::ResolveExecutable(
 
     if (!FileSystem::Instance().Exists(resolved_file_spec))
       FileSystem::Instance().ResolveExecutableLocation(resolved_file_spec);
+  } else if (m_remote_platform_sp) {
+    return GetCachedExecutable(resolved_module_spec, exe_module_sp,
+                               module_search_paths_ptr);
   }
 
   return Platform::ResolveExecutable(resolved_module_spec, exe_module_sp,

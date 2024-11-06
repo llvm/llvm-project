@@ -2171,7 +2171,11 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
   // This could be avoided if all data segements (the wasm sense) were
   // represented as their own sections (in the llvm sense).
   // TODO(sbc): https://github.com/WebAssembly/tool-conventions/issues/138
-  if (Name == ".llvmcmd" || Name == ".llvmbc")
+  if (Name == getInstrProfSectionName(IPSK_covmap, Triple::Wasm,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == ".llvmbc" || Name == ".llvmcmd")
     Kind = SectionKind::getMetadata();
 
   StringRef Group = "";
@@ -2323,7 +2327,7 @@ bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
 
 MCSymbol *
 TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(const MachineFunction *MF) {
-  MCSymbol *EHInfoSym = MF->getMMI().getContext().getOrCreateSymbol(
+  MCSymbol *EHInfoSym = MF->getContext().getOrCreateSymbol(
       "__ehinfo." + Twine(MF->getFunctionNumber()));
   cast<MCSymbolXCOFF>(EHInfoSym)->setEHInfo();
   return EHInfoSym;

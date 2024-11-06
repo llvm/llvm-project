@@ -48,11 +48,10 @@ int (*on_finalize)(int);
 #endif
 
 #if !SANITIZER_GO && !SANITIZER_APPLE
-__attribute__((tls_model("initial-exec")))
-THREADLOCAL char cur_thread_placeholder[sizeof(ThreadState)] ALIGNED(
-    SANITIZER_CACHE_LINE_SIZE);
+alignas(SANITIZER_CACHE_LINE_SIZE) THREADLOCAL __attribute__((tls_model(
+    "initial-exec"))) char cur_thread_placeholder[sizeof(ThreadState)];
 #endif
-static char ctx_placeholder[sizeof(Context)] ALIGNED(SANITIZER_CACHE_LINE_SIZE);
+alignas(SANITIZER_CACHE_LINE_SIZE) static char ctx_placeholder[sizeof(Context)];
 Context *ctx;
 
 // Can be overriden by a front-end.
@@ -807,6 +806,7 @@ int Finalize(ThreadState *thr) {
 
 #if !SANITIZER_GO
 void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   GlobalProcessorLock();
   // Detaching from the slot makes OnUserFree skip writing to the shadow.
   // The slot will be locked so any attempts to use it will deadlock anyway.
@@ -848,6 +848,7 @@ static void ForkAfter(ThreadState* thr,
   SlotAttachAndLock(thr);
   SlotUnlock(thr);
   GlobalProcessorUnlock();
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr, false); }

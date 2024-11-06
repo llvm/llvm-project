@@ -1637,6 +1637,49 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
       });
 }
 
+TEST(TransferTest, StructModeledFieldsInTypeid) {
+  // Test that we model fields mentioned inside a `typeid()` expression only if
+  // that expression is potentially evaluated -- i.e. if the expression inside
+  // `typeid()` is a glvalue of polymorphic type (see
+  // `CXXTypeidExpr::isPotentiallyEvaluated()` and [expr.typeid]p3).
+  std::string Code = R"(
+    // Definitions needed for `typeid`.
+    namespace std {
+      class type_info {};
+      class bad_typeid {};
+    }  // namespace std
+
+    struct NonPolymorphic {};
+
+    struct Polymorphic {
+      virtual ~Polymorphic() = default;
+    };
+
+    struct S {
+      NonPolymorphic *NonPoly;
+      Polymorphic *Poly;
+    };
+
+    void target(S &s) {
+      typeid(*s.NonPoly);
+      typeid(*s.Poly);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &SLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s");
+        std::vector<const ValueDecl *> Fields;
+        for (auto [Field, _] : SLoc.children())
+          Fields.push_back(Field);
+        EXPECT_THAT(Fields,
+                    UnorderedElementsAre(findValueDecl(ASTCtx, "Poly")));
+      });
+}
+
 TEST(TransferTest, StructModeledFieldsWithComplicatedInheritance) {
   std::string Code = R"(
     struct Base1 {

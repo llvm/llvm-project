@@ -490,7 +490,7 @@ private:
   std::unordered_map<const MCSymbol *, uint32_t> SymbolIndex;
 
   /// Store all non-zero symbols in this map for a quick address lookup.
-  std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
+  std::multimap<uint64_t, llvm::object::SymbolRef> FileSymRefs;
 
   /// FILE symbols used for disambiguating split function parents.
   std::vector<ELFSymbolRef> FileSymbols;
@@ -510,12 +510,11 @@ private:
   };
 
   /// Different types of X86-64 PLT sections.
-  const PLTSectionInfo X86_64_PLTSections[4] = {
-      { ".plt", 16 },
-      { ".plt.got", 8 },
-      { ".plt.sec", 8 },
-      { nullptr, 0 }
-  };
+  const PLTSectionInfo X86_64_PLTSections[5] = {{".plt", 16},
+                                                {".plt.got", 8},
+                                                {".plt.sec", 8},
+                                                {".iplt", 16},
+                                                {nullptr, 0}};
 
   /// AArch64 PLT sections.
   const PLTSectionInfo AArch64_PLTSections[4] = {

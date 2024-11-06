@@ -386,24 +386,21 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                   std::move(Emitter));
 }
 
-static MCStreamer *createMachOStreamer(MCContext &Ctx,
-                                       std::unique_ptr<MCAsmBackend> &&TAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool DWARFMustBeAtTheEnd) {
+static MCStreamer *
+createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter), DWARFMustBeAtTheEnd,
+                             std::move(Emitter), /*ignore=*/false,
                              /*LabelSections*/ true);
 }
 
 static MCStreamer *
 createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter,
-                      bool IncrementalLinkerCompatible) {
+                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter),
-                                      IncrementalLinkerCompatible);
+                                      std::move(Emitter));
 }
 
 namespace {
@@ -450,10 +447,10 @@ public:
     const MCRegisterClass &FPR128RC =
         MRI.getRegClass(AArch64::FPR128RegClassID);
 
-    auto ClearsSuperReg = [=](unsigned RegID) {
+    auto ClearsSuperReg = [=](MCRegister Reg) {
       // An update to the lower 32 bits of a 64 bit integer register is
       // architecturally defined to zero extend the upper 32 bits on a write.
-      if (GPR32RC.contains(RegID))
+      if (GPR32RC.contains(Reg))
         return true;
       // SIMD&FP instructions operating on scalar data only acccess the lower
       // bits of a register, the upper bits are zero extended on a write. For
@@ -461,9 +458,9 @@ public:
       // register are zero extended on a write.
       // When VL is higher than 128 bits, any write to a SIMD&FP register sets
       // bits higher than 128 to zero.
-      return FPR8RC.contains(RegID) || FPR16RC.contains(RegID) ||
-             FPR32RC.contains(RegID) || FPR64RC.contains(RegID) ||
-             FPR128RC.contains(RegID);
+      return FPR8RC.contains(Reg) || FPR16RC.contains(Reg) ||
+             FPR32RC.contains(Reg) || FPR64RC.contains(Reg) ||
+             FPR128RC.contains(Reg);
     };
 
     Mask.clearAllBits();

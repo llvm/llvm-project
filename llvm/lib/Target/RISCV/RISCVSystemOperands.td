@@ -49,6 +49,7 @@ def SysRegsList : GenericTable {
 
   let PrimaryKey = [ "Encoding" ];
   let PrimaryKeyName = "lookupSysRegByEncoding";
+  let PrimaryKeyReturnRange = true;
 }
 
 def lookupSysRegByName : SearchIndex {
@@ -454,3 +455,12 @@ def : SysReg<"mnscratch", 0x740>;
 def : SysReg<"mnepc", 0x741>;
 def : SysReg<"mncause", 0x742>;
 def : SysReg<"mnstatus", 0x744>;
+
+//===-----------------------------------------------
+// Control Transfer Records CSRs
+//===-----------------------------------------------
+def : SysReg<"sctrctl", 0x14e>;
+def : SysReg<"sctrstatus", 0x14f>;
+def : SysReg<"sctrdepth", 0x15f>;
+def : SysReg<"vsctrctl", 0x24e>;
+def : SysReg<"mctrctl", 0x34e>;

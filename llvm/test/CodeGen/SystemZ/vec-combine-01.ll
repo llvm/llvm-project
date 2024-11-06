@@ -153,3 +153,13 @@ define void @f7(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
   store i8 %trunc3, ptr %ptr4
   ret void
 }
+
+; Test that a truncating store with a non-simple VT can be handled.
+define void @f8(ptr %src, ptr %dst) {
+; CHECK-LABEL: f8:
+  %1 = load <12 x i32>, ptr %src, align 64
+  %2 = extractelement <12 x i32> %1, i64 11
+  %3 = trunc i32 %2 to i16
+  store i16 %3, ptr %dst, align 2
+  ret void
+}

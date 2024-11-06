@@ -430,6 +430,20 @@ def G_FCMP : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic signed three-way comparison.
+def G_SCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+// Generic unsigned three-way comparison.
+def G_UCMP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
 // Generic select
 def G_SELECT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -755,6 +769,18 @@ def G_UITOFP : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_FPTOSI_SAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+def G_FPTOUI_SAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_FABS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
@@ -994,6 +1020,13 @@ def G_FSIN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point combined sine and cosine.
+def G_FSINCOS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst1, type0:$dst2);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point tangent of a value.
 def G_FTAN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1019,6 +1052,13 @@ def G_FASIN : GenericInstruction {
 def G_FATAN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN2 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = false;
 }
 
@@ -1297,6 +1337,8 @@ def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
+def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;
+def G_ATOMICRMW_USUB_SAT : G_ATOMICRMW_OP;
 
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
@@ -1513,7 +1555,7 @@ def G_INSERT_SUBVECTOR : GenericInstruction {
 // Generic extract subvector.
 def G_EXTRACT_SUBVECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, untyped_imm_0:$idx);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$idx);
   let hasSideEffects = false;
 }
 
@@ -1545,6 +1587,13 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$val);
+  let hasSideEffects = false;
+}
+
+// Generic masked compress.
+def G_VECTOR_COMPRESS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$mask, type0:$passthru);
   let hasSideEffects = false;
 }
 

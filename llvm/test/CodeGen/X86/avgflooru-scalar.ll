@@ -168,26 +168,14 @@ define i32 @test_ext_i32(i32 %a0, i32 %a1) nounwind {
 define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-LABEL: test_fixed_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl %esi, %ebx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    xorl %edi, %edx
-; X86-NEXT:    shrdl $1, %edx, %ebx
-; X86-NEXT:    andl %edi, %ecx
-; X86-NEXT:    shrl %edx
-; X86-NEXT:    andl %esi, %eax
-; X86-NEXT:    addl %ebx, %eax
-; X86-NEXT:    adcl %ecx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setb %dl
+; X86-NEXT:    movzbl %dl, %edx
+; X86-NEXT:    shldl $31, %eax, %edx
+; X86-NEXT:    shldl $31, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_fixed_i64:
@@ -208,26 +196,14 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-LABEL: test_ext_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl %esi, %ebx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    xorl %edi, %edx
-; X86-NEXT:    shrdl $1, %edx, %ebx
-; X86-NEXT:    andl %edi, %ecx
-; X86-NEXT:    shrl %edx
-; X86-NEXT:    andl %esi, %eax
-; X86-NEXT:    addl %ebx, %eax
-; X86-NEXT:    adcl %ecx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setb %dl
+; X86-NEXT:    movzbl %dl, %edx
+; X86-NEXT:    shldl $31, %eax, %edx
+; X86-NEXT:    shldl $31, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_ext_i64:

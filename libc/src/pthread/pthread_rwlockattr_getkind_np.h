@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_GETKIND_NP_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_GETKIND_NP_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_rwlockattr_getkind_np(const pthread_rwlockattr_t *__restrict attr,
                                   int *__restrict pref);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_GETKIND_NP_H

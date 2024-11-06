@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel -show-mc-encoding | FileCheck --check-prefix=CHECK-EL %s
-; RUN: llc < %s -march=bpfeb -show-mc-encoding | FileCheck --check-prefix=CHECK-EB %s
+; RUN: llc < %s -march=bpfel -mcpu=v1 -show-mc-encoding | FileCheck --check-prefix=CHECK-EL %s
+; RUN: llc < %s -march=bpfeb -mcpu=v1 -show-mc-encoding | FileCheck --check-prefix=CHECK-EB %s
 
 ; Function Attrs: nounwind uwtable
 define i32 @ld_b(i64 %foo, ptr nocapture %bar, ptr %ctx, ptr %ctx2) #0 {

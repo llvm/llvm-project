@@ -75,6 +75,8 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
@@ -91,7 +93,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -117,7 +119,6 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // FIXME: implement
     return TargetInfo::CharPtrBuiltinVaList;
   }
 

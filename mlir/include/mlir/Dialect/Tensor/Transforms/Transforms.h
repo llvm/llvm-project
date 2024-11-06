@@ -67,6 +67,10 @@ void populateDropRedundantInsertSliceRankExpansionPatterns(
 /// `tensor.collapse_shape` into other ops.
 void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 
+/// Populates `patterns` with patterns that bubble up `tensor.expand_shape`
+/// through `tensor.collapse_shape` ops.
+void populateBubbleUpExpandShapePatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that fold tensor.empty with its
 /// consumers.
 ///

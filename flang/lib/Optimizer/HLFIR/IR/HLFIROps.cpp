@@ -90,6 +90,62 @@ llvm::LogicalResult hlfir::AssignOp::verify() {
   return mlir::success();
 }
 
+void hlfir::AssignOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::OpOperand &rhs = getRhsMutable();
+  mlir::OpOperand &lhs = getLhsMutable();
+  mlir::Type rhsType = getRhs().getType();
+  mlir::Type lhsType = getLhs().getType();
+  if (mlir::isa<fir::RecordType>(hlfir::getFortranElementType(lhsType))) {
+    // For derived type assignments, set unknown read/write effects since it
+    // is not known here if user defined finalization is needed, and also
+    // because allocatable components may lead to "deeper" read/write effects
+    // that cannot be described with this API.
+    effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                         mlir::SideEffects::DefaultResource::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                         mlir::SideEffects::DefaultResource::get());
+  } else {
+    // Read effect when RHS is a variable.
+    if (hlfir::isFortranVariableType(rhsType)) {
+      if (hlfir::isBoxAddressType(rhsType)) {
+        // Unknown read effect if the RHS is a descriptor since the read effect
+        // on the data cannot be described.
+        effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                             mlir::SideEffects::DefaultResource::get());
+      } else {
+        effects.emplace_back(mlir::MemoryEffects::Read::get(), &rhs,
+                             mlir::SideEffects::DefaultResource::get());
+      }
+    }
+
+    // Write effects on LHS.
+    if (hlfir::isBoxAddressType(lhsType)) {
+      //  If the LHS is a descriptor, the descriptor will be read and the data
+      //  write cannot be described in this API (and the descriptor may be
+      //  written to in case of realloc, which is covered by the unknown write
+      //  effect.
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), &lhs,
+                           mlir::SideEffects::DefaultResource::get());
+      effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                           mlir::SideEffects::DefaultResource::get());
+    } else {
+      effects.emplace_back(mlir::MemoryEffects::Write::get(), &lhs,
+                           mlir::SideEffects::DefaultResource::get());
+    }
+  }
+
+  if (getRealloc()) {
+    // Reallocation of the data cannot be precisely described by this API.
+    effects.emplace_back(mlir::MemoryEffects::Free::get(),
+                         mlir::SideEffects::DefaultResource::get());
+    effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
+                         mlir::SideEffects::DefaultResource::get());
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // DeclareOp
 //===----------------------------------------------------------------------===//
@@ -360,14 +416,11 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
       return emitOpError("substring must contain 2 indices when provided");
   }
   if (getComplexPart()) {
-    if (!fir::isa_complex(outputElementType))
+    if (auto cplx = mlir::dyn_cast<mlir::ComplexType>(outputElementType))
+      outputElementType = cplx.getElementType();
+    else
       return emitOpError("memref or component must have complex type if "
                          "complex_part is provided");
-    if (auto firCplx = mlir::dyn_cast<fir::ComplexType>(outputElementType))
-      outputElementType = firCplx.getElementType();
-    else
-      outputElementType =
-          mlir::cast<mlir::ComplexType>(outputElementType).getElementType();
   }
   mlir::Type resultBaseType =
       getFortranElementOrSequenceType(getResult().getType());
@@ -383,9 +436,7 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   // length may differ because of substrings.
   if (resultElementType != outputElementType &&
       !(mlir::isa<fir::CharacterType>(resultElementType) &&
-        mlir::isa<fir::CharacterType>(outputElementType)) &&
-      !(mlir::isa<mlir::FloatType>(resultElementType) &&
-        mlir::isa<fir::RealType>(outputElementType)))
+        mlir::isa<fir::CharacterType>(outputElementType)))
     return emitOpError(
                "result element type is not consistent with operands, expected ")
            << outputElementType;

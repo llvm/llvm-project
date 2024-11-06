@@ -23,7 +23,6 @@ set(files
   __algorithm/find_if.h
   __algorithm/find_if_not.h
   __algorithm/find_segment_if.h
-  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -97,6 +96,8 @@ set(files
   __algorithm/ranges_find_first_of.h
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
+  __algorithm/ranges_find_last.h
+  __algorithm/ranges_fold.h
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_generate.h
@@ -234,6 +235,7 @@ set(files
   __bit/rotate.h
   __bit_reference
   __charconv/chars_format.h
+  __charconv/from_chars_floating_point.h
   __charconv/from_chars_integral.h
   __charconv/from_chars_result.h
   __charconv/tables.h
@@ -323,6 +325,11 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
+  __cstddef/byte.h
+  __cstddef/max_align_t.h
+  __cstddef/nullptr_t.h
+  __cstddef/ptrdiff_t.h
+  __cstddef/size_t.h
   __debug_utils/randomize_range.h
   __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
@@ -351,6 +358,8 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __flat_map/flat_map.h
+  __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -412,11 +421,13 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/byte.h
   __fwd/complex.h
   __fwd/deque.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
+  __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -433,6 +444,7 @@ set(files
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/variant.h
   __fwd/vector.h
   __hash_table
   __ios/fpos.h
@@ -482,15 +494,16 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
+  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/locale_guard.h
   __locale_dir/locale_base_api/musl.h
-  __locale_dir/locale_base_api/newlib.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
+  __locale_dir/locale_guard.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -508,6 +521,7 @@ set(files
   __math/remainder.h
   __math/roots.h
   __math/rounding_functions.h
+  __math/special_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
@@ -526,6 +540,7 @@ set(files
   __memory/allocator_arg_t.h
   __memory/allocator_destructor.h
   __memory/allocator_traits.h
+  __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
   __memory/builtin_new_allocator.h
@@ -533,6 +548,9 @@ set(files
   __memory/concepts.h
   __memory/construct_at.h
   __memory/destruct_n.h
+  __memory/inout_ptr.h
+  __memory/noexcept_move_assign_container.h
+  __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
@@ -543,9 +561,9 @@ set(files
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
+  __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
-  __memory/voidify.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -673,7 +691,6 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
-  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
@@ -710,6 +727,7 @@ set(files
   __thread/timed_backoff_policy.h
   __tree
   __tuple/find_index.h
+  __tuple/ignore.h
   __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
@@ -733,6 +751,7 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
@@ -773,11 +792,10 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
   __type_traits/is_literal_type.h
-  __type_traits/is_member_function_pointer.h
-  __type_traits/is_member_object_pointer.h
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
@@ -794,7 +812,6 @@ set(files
   __type_traits/is_referenceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
-  __type_traits/is_scoped_enum.h
   __type_traits/is_signed.h
   __type_traits/is_signed_integer.h
   __type_traits/is_specialization.h
@@ -822,7 +839,6 @@ set(files
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
-  __type_traits/noexcept_move_assign_container.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -869,6 +885,14 @@ set(files
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
+  __vector/comparison.h
+  __vector/container_traits.h
+  __vector/erase.h
+  __vector/pmr.h
+  __vector/swap.h
+  __vector/vector.h
+  __vector/vector_bool.h
+  __vector/vector_bool_formatter.h
   __verbose_abort
   algorithm
   any
@@ -899,6 +923,7 @@ set(files
   coroutine
   csetjmp
   csignal
+  cstdalign
   cstdarg
   cstdbool
   cstddef
@@ -917,7 +942,6 @@ set(files
   exception
   execution
   expected
-  experimental/__config
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
@@ -938,6 +962,7 @@ set(files
   ext/hash_set
   fenv.h
   filesystem
+  flat_map
   float.h
   format
   forward_list
@@ -956,7 +981,6 @@ set(files
   limits
   list
   locale
-  locale.h
   map
   math.h
   mdspan
@@ -987,7 +1011,6 @@ set(files
   stdbool.h
   stddef.h
   stdexcept
-  stdint.h
   stdio.h
   stdlib.h
   stop_token
@@ -1043,7 +1066,7 @@ list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
+target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.

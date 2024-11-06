@@ -30,9 +30,9 @@
 
 # DISASM:      Disassembly of section .text:
 # DISASM: 00000000010011e0 <foo>:
-# DISASM-NEXT:   bc      0, 0
+# DISASM-NEXT:   nop 0
 # DISASM: 00000000010011e4 <hid>:
-# DISASM-NEXT:   bc      0, 0
+# DISASM-NEXT:   nop 0
 # DISASM: 00000000010011e8 <ifunc>:
 # DISASM-NEXT:   br      %r14
 # DISASM: 00000000010011ea <_start>:

@@ -27,32 +27,6 @@ elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
 endif()
 
-# Identify the program used to package multiple images into a single binary.
-get_filename_component(compiler_path ${CMAKE_CXX_COMPILER} DIRECTORY)
-if(TARGET clang-offload-packager)
-  get_target_property(LIBC_CLANG_OFFLOAD_PACKAGER clang-offload-packager LOCATION)
-else()
-  find_program(LIBC_CLANG_OFFLOAD_PACKAGER
-               NAMES clang-offload-packager NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
-    message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
-                        "build")
-  endif()
-endif()
-
-# Identify llvm-link program so we can merge the output IR into a single blob.
-if(TARGET llvm-link)
-  get_target_property(LIBC_LLVM_LINK llvm-link LOCATION)
-else()
-  find_program(LIBC_LLVM_LINK
-               NAMES llvm-link NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-  if(NOT LIBC_LLVM_LINK)
-    message(FATAL_ERROR "Cannot find 'llvm-link' for the GPU build")
-  endif()
-endif()
-
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
 # This is sometimes necessary as running too many tests in parallel can cause
 # the GPU or driver to run out of resources.
@@ -77,7 +51,7 @@ if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
    AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "AMDGPU backend is not available, tests will not be built")
-elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
+elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_NVPTX
        AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "NVPTX backend is not available, tests will not be built")

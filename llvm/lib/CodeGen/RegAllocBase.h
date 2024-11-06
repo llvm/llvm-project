@@ -72,7 +72,7 @@ protected:
 
 private:
   /// Private, callees should go through shouldAllocateRegister
-  const RegClassFilterFunc ShouldAllocateClass;
+  const RegAllocFilterFunc shouldAllocateRegisterImpl;
 
 protected:
   /// Inst which is a def of an original reg and whose defs are already all
@@ -81,7 +81,8 @@ protected:
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
-  RegAllocBase(const RegClassFilterFunc F = nullptr) : ShouldAllocateClass(F) {}
+  RegAllocBase(const RegAllocFilterFunc F = nullptr)
+      : shouldAllocateRegisterImpl(F) {}
 
   virtual ~RegAllocBase() = default;
 
@@ -90,9 +91,9 @@ protected:
 
   /// Get whether a given register should be allocated
   bool shouldAllocateRegister(Register Reg) {
-    if (!ShouldAllocateClass)
+    if (!shouldAllocateRegisterImpl)
       return true;
-    return ShouldAllocateClass(*TRI, *MRI->getRegClass(Reg));
+    return shouldAllocateRegisterImpl(*TRI, *MRI, Reg);
   }
 
   // The top-level driver. The output is a VirtRegMap that us updated with

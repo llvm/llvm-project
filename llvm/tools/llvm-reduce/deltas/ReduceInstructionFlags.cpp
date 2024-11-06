@@ -20,6 +20,7 @@
 using namespace llvm;
 
 static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  // Keep this in sync with computeIRComplexityScoreImpl().
   for (Function &F : WorkItem.getModule()) {
     for (Instruction &I : instructions(F)) {
       if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {

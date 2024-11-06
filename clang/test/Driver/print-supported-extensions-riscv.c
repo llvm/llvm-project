@@ -110,6 +110,7 @@
 // CHECK-NEXT:     zvl8192b             1.0       'Zvl' (Minimum Vector Length) 8192
 // CHECK-NEXT:     zhinx                1.0       'Zhinx' (Half Float in Integer)
 // CHECK-NEXT:     zhinxmin             1.0       'Zhinxmin' (Half Float in Integer Minimal)
+// CHECK-NEXT:     sha                  1.0       'Sha' (Augmented Hypervisor)
 // CHECK-NEXT:     shcounterenw         1.0       'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     shgatpa              1.0       'Sgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)
 // CHECK-NEXT:     shtvala              1.0       'Shtvala' (htval provides all needed values)
@@ -120,6 +121,9 @@
 // CHECK-NEXT:     smcdeleg             1.0       'Smcdeleg' (Counter Delegation Machine Level)
 // CHECK-NEXT:     smcsrind             1.0       'Smcsrind' (Indirect CSR Access Machine Level)
 // CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
+// CHECK-NEXT:     smmpm                1.0       'Smmpm' (Machine-level Pointer Masking for M-mode)
+// CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
+// CHECK-NEXT:     smrnmi               1.0       'Smrnmi' (Resumable Non-Maskable Interrupts)
 // CHECK-NEXT:     smstateen            1.0       'Smstateen' (Machine-mode view of the state-enable extension)
 // CHECK-NEXT:     ssaia                1.0       'Ssaia' (Advanced Interrupt Architecture Supervisor Level)
 // CHECK-NEXT:     ssccfg               1.0       'Ssccfg' (Counter Configuration Supervisor Level)
@@ -127,18 +131,23 @@
 // CHECK-NEXT:     sscofpmf             1.0       'Sscofpmf' (Count Overflow and Mode-Based Filtering)
 // CHECK-NEXT:     sscounterenw         1.0       'Sscounterenw' (Support writeable scounteren enable bit for any hpmcounter that is not read-only zero)
 // CHECK-NEXT:     sscsrind             1.0       'Sscsrind' (Indirect CSR Access Supervisor Level)
+// CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
+// CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
+// CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
 // CHECK-NEXT:     ssstateen            1.0       'Ssstateen' (Supervisor-mode view of the state-enable extension)
 // CHECK-NEXT:     ssstrict             1.0       'Ssstrict' (No non-conforming extensions are present)
 // CHECK-NEXT:     sstc                 1.0       'Sstc' (Supervisor-mode timer interrupts)
 // CHECK-NEXT:     sstvala              1.0       'Sstvala' (stval provides all needed values)
 // CHECK-NEXT:     sstvecd              1.0       'Sstvecd' (stvec supports Direct mode)
 // CHECK-NEXT:     ssu64xl              1.0       'Ssu64xl' (UXLEN=64 supported)
+// CHECK-NEXT:     supm                 1.0       'Supm' (Indicates User-mode Pointer Masking)
 // CHECK-NEXT:     svade                1.0       'Svade' (Raise exceptions on improper A/D bits)
 // CHECK-NEXT:     svadu                1.0       'Svadu' (Hardware A/D updates)
 // CHECK-NEXT:     svbare               1.0       'Svbare' $(satp mode Bare supported)
 // CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
+// CHECK-NEXT:     svvptc               1.0       'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)
@@ -154,43 +163,42 @@
 // CHECK-NEXT:     xsfvqmaccqoq         1.0       'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))
 // CHECK-NEXT:     xsifivecdiscarddlone 1.0       'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)
 // CHECK-NEXT:     xsifivecflushdlone   1.0       'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)
-// CHECK-NEXT:     xtheadba             1.0       'xtheadba' (T-Head address calculation instructions)
-// CHECK-NEXT:     xtheadbb             1.0       'xtheadbb' (T-Head basic bit-manipulation instructions)
-// CHECK-NEXT:     xtheadbs             1.0       'xtheadbs' (T-Head single-bit instructions)
-// CHECK-NEXT:     xtheadcmo            1.0       'xtheadcmo' (T-Head cache management instructions)
-// CHECK-NEXT:     xtheadcondmov        1.0       'xtheadcondmov' (T-Head conditional move instructions)
-// CHECK-NEXT:     xtheadfmemidx        1.0       'xtheadfmemidx' (T-Head FP Indexed Memory Operations)
-// CHECK-NEXT:     xtheadmac            1.0       'xtheadmac' (T-Head Multiply-Accumulate Instructions)
-// CHECK-NEXT:     xtheadmemidx         1.0       'xtheadmemidx' (T-Head Indexed Memory Operations)
-// CHECK-NEXT:     xtheadmempair        1.0       'xtheadmempair' (T-Head two-GPR Memory Operations)
-// CHECK-NEXT:     xtheadsync           1.0       'xtheadsync' (T-Head multicore synchronization instructions)
-// CHECK-NEXT:     xtheadvdot           1.0       'xtheadvdot' (T-Head Vector Extensions for Dot)
+// CHECK-NEXT:     xtheadba             1.0       'XTHeadBa' (T-Head address calculation instructions)
+// CHECK-NEXT:     xtheadbb             1.0       'XTHeadBb' (T-Head basic bit-manipulation instructions)
+// CHECK-NEXT:     xtheadbs             1.0       'XTHeadBs' (T-Head single-bit instructions)
+// CHECK-NEXT:     xtheadcmo            1.0       'XTHeadCmo' (T-Head cache management instructions)
+// CHECK-NEXT:     xtheadcondmov        1.0       'XTHeadCondMov' (T-Head conditional move instructions)
+// CHECK-NEXT:     xtheadfmemidx        1.0       'XTHeadFMemIdx' (T-Head FP Indexed Memory Operations)
+// CHECK-NEXT:     xtheadmac            1.0       'XTHeadMac' (T-Head Multiply-Accumulate Instructions)
+// CHECK-NEXT:     xtheadmemidx         1.0       'XTHeadMemIdx' (T-Head Indexed Memory Operations)
+// CHECK-NEXT:     xtheadmempair        1.0       'XTHeadMemPair' (T-Head two-GPR Memory Operations)
+// CHECK-NEXT:     xtheadsync           1.0       'XTHeadSync' (T-Head multicore synchronization instructions)
+// CHECK-NEXT:     xtheadvdot           1.0       'XTHeadVdot' (T-Head Vector Extensions for Dot)
 // CHECK-NEXT:     xventanacondops      1.0       'XVentanaCondOps' (Ventana Conditional Ops)
+// CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     zicfilp              0.4       'Zicfilp' (Landing pad)
-// CHECK-NEXT:     zicfiss              0.4       'Zicfiss' (Shadow stack)
+// CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
+// CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
-// CHECK-NEXT:     smmpm                1.0       'Smmpm' (Machine-level Pointer Masking for M-mode)
-// CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
-// CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
-// CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
-// CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
-// CHECK-NEXT:     supm                 1.0       'Supm' (Indicates User-mode Pointer Masking)
+// CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
+// CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
+// CHECK-NEXT:     smctr                1.0       'Smctr' (Control Transfer Records Machine Level)
+// CHECK-NEXT:     ssctr                1.0       'Ssctr' (Control Transfer Records Supervisor Level)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles
 // CHECK-NEXT:     rva20s64
 // CHECK-NEXT:     rva20u64
 // CHECK-NEXT:     rva22s64
 // CHECK-NEXT:     rva22u64
-// CHECK-NEXT:     rvi20u32
-// CHECK-NEXT:     rvi20u64
-// CHECK-EMPTY:
-// CHECK-NEXT: Experimental Profiles
 // CHECK-NEXT:     rva23s64
 // CHECK-NEXT:     rva23u64
 // CHECK-NEXT:     rvb23s64
 // CHECK-NEXT:     rvb23u64
+// CHECK-NEXT:     rvi20u32
+// CHECK-NEXT:     rvi20u64
+// CHECK-EMPTY:
+// CHECK-NEXT: Experimental Profiles
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.

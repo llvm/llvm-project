@@ -97,7 +97,7 @@ namespace X86Disassembler {
 #define mmmFromEVEX2of4(evex) threeBitsFromOffset0(evex)
 #define wFromEVEX3of4(evex) bitFromOffset7(evex)
 #define vvvvFromEVEX3of4(evex) invertedFourBitsFromOffset3(evex)
-#define x2FromEVEX3of4(evex) invertedBitFromOffset2(evex)
+#define uFromEVEX3of4(evex) invertedBitFromOffset2(evex)
 #define ppFromEVEX3of4(evex) twoBitsFromOffset0(evex)
 #define oszcFromEVEX3of4(evex) fourBitsFromOffset3(evex)
 #define zFromEVEX4of4(evex) bitFromOffset7(evex)
@@ -535,6 +535,12 @@ namespace X86Disassembler {
   ENTRY(TMM6)                                                                  \
   ENTRY(TMM7)
 
+#define REGS_TMM_PAIRS                                                         \
+  ENTRY(TMM0_TMM1)                                                             \
+  ENTRY(TMM2_TMM3)                                                             \
+  ENTRY(TMM4_TMM5)                                                             \
+  ENTRY(TMM6_TMM7)
+
 #define ALL_EA_BASES                                                           \
   EA_BASES_16BIT                                                               \
   EA_BASES_32BIT                                                               \
@@ -559,6 +565,7 @@ namespace X86Disassembler {
   REGS_DEBUG                                                                   \
   REGS_CONTROL                                                                 \
   REGS_TMM                                                                     \
+  REGS_TMM_PAIRS                                                               \
   ENTRY(RIP)
 
 /// All possible values of the base field for effective-address

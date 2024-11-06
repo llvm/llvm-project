@@ -156,7 +156,7 @@ static void printNonLazyPointerSection(raw_fd_ostream &os,
 }
 
 static uint64_t getSymSizeForMap(Defined *sym) {
-  if (sym->wasIdenticalCodeFolded)
+  if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
     return 0;
   return sym->size;
 }

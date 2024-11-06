@@ -9,7 +9,7 @@
 ; GCN-DAG: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:8
 ; GCN: s_waitcnt lgkmcnt({{[0-9]+}})
-define amdgpu_kernel void @ds_combine_nodep(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
+define amdgpu_kernel void @ds_combine_nodep(ptr addrspace(1) %out, ptr addrspace(3) %inptr) #0 {
 
   %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 24
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
@@ -37,7 +37,7 @@ define amdgpu_kernel void @ds_combine_nodep(ptr addrspace(1) %out, ptr addrspace
 
 ; GCN:      ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:27
 ; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
-define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
+define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3) %inptr) #0 {
 
   %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 100
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
@@ -67,7 +67,7 @@ define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3
 ; GCN:      ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:104
-define amdgpu_kernel void @ds_combine_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
+define amdgpu_kernel void @ds_combine_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) #0 {
 
   %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 24
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
@@ -96,7 +96,7 @@ define amdgpu_kernel void @ds_combine_RAW(ptr addrspace(1) %out, ptr addrspace(3
 ; GCN:      ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:108
 ; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:104
-define amdgpu_kernel void @ds_combine_WAR_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
+define amdgpu_kernel void @ds_combine_WAR_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) #0 {
 
   %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 100
   %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
@@ -115,3 +115,5 @@ define amdgpu_kernel void @ds_combine_WAR_RAW(ptr addrspace(1) %out, ptr addrspa
   store float %sum, ptr addrspace(1) %out, align 4
   ret void
 }
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

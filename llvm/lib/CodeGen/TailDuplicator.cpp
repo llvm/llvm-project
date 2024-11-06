@@ -97,7 +97,6 @@ void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   MRI = &MF->getRegInfo();
-  MMI = &MF->getMMI();
   MBPI = MBPIin;
   MBFI = MBFIin;
   PSI = PSIin;
@@ -587,13 +586,11 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // duplicate only one, because one branch instruction can be eliminated to
   // compensate for the duplication.
   unsigned MaxDuplicateCount;
-  bool OptForSize = MF->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(&TailBB, PSI, MBFI);
   if (TailDupSize == 0)
     MaxDuplicateCount = TailDuplicateSize;
   else
     MaxDuplicateCount = TailDupSize;
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(&TailBB, PSI, MBFI))
     MaxDuplicateCount = 1;
 
   // If the block to be duplicated ends in an unanalyzable fallthrough, don't

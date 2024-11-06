@@ -1,7 +1,7 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: %libomptarget-run-generic %fcheck-generic
 
-// REQURIES: gpu
+// REQUIRES: gpu
 // UNSUPPORTED: nvidiagpu
 // UNSUPPORTED: amdgpu
 

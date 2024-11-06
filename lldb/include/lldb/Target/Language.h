@@ -363,6 +363,15 @@ public:
     return false;
   }
 
+  /// Returns a boolean indicating whether two symbol contexts are equal for the
+  /// purposes of frame comparison. If the plugin has no opinion, it should
+  /// return nullopt.
+  virtual std::optional<bool>
+  AreEqualForFrameComparison(const SymbolContext &sc1,
+                             const SymbolContext &sc2) const {
+    return {};
+  }
+
   /// Returns true if this Language supports exception breakpoints on throw via
   /// a corresponding LanguageRuntime plugin.
   virtual bool SupportsExceptionBreakpointsOnThrow() const { return false; }
@@ -370,6 +379,14 @@ public:
   /// Returns true if this Language supports exception breakpoints on catch via
   /// a corresponding LanguageRuntime plugin.
   virtual bool SupportsExceptionBreakpointsOnCatch() const { return false; }
+
+  /// Returns the keyword used for throw statements in this language, e.g.
+  /// Python uses \b raise. Defaults to \b throw.
+  virtual llvm::StringRef GetThrowKeyword() const { return "throw"; }
+
+  /// Returns the keyword used for catch statements in this language, e.g.
+  /// Python uses \b except. Defaults to \b catch.
+  virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
 
 protected:
   // Classes that inherit from Language can see and modify these

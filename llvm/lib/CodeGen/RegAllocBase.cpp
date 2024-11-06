@@ -130,7 +130,7 @@ void RegAllocBase::allocatePhysRegs() {
         MI->emitError("inline assembly requires more registers than available");
       } else if (MI) {
         LLVMContext &Context =
-            MI->getParent()->getParent()->getMMI().getModule()->getContext();
+            MI->getParent()->getParent()->getFunction().getContext();
         Context.emitError("ran out of registers during register allocation");
       } else {
         report_fatal_error("ran out of registers during register allocation");

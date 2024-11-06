@@ -556,16 +556,13 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     return false;
 
   const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
-  const MCSymbol &SA = A->getSymbol();
+  const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
   if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
     return false;
 
-  auto *Writer = Asm.getWriterPtr();
-  if (!Writer)
-    return false;
-
-  bool IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(
-      Asm, SA, *AUIPCDF, false, true);
+  bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
+                    SA.getBinding() == ELF::STB_LOCAL &&
+                    SA.getType() != ELF::STT_GNU_IFUNC;
   if (!IsResolved)
     return false;
 

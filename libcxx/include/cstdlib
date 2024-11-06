@@ -82,6 +82,7 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 */
 
 #include <__config>
+#include <__cstddef/size_t.h>
 
 #include <stdlib.h>
 
@@ -99,7 +100,6 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::size_t _LIBCPP_USING_IF_EXISTS;
 using ::div_t _LIBCPP_USING_IF_EXISTS;
 using ::ldiv_t _LIBCPP_USING_IF_EXISTS;
 using ::lldiv_t _LIBCPP_USING_IF_EXISTS;
@@ -135,7 +135,7 @@ using ::div _LIBCPP_USING_IF_EXISTS;
 using ::ldiv _LIBCPP_USING_IF_EXISTS;
 using ::lldiv _LIBCPP_USING_IF_EXISTS;
 using ::mblen _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 using ::mbtowc _LIBCPP_USING_IF_EXISTS;
 using ::wctomb _LIBCPP_USING_IF_EXISTS;
 using ::mbstowcs _LIBCPP_USING_IF_EXISTS;

@@ -18,6 +18,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -117,7 +118,9 @@ struct AArch64OutgoingValueAssigner
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    bool IsCalleeWin = Subtarget.isCallingConvWin64(State.getCallingConv());
+    const Function &F = State.getMachineFunction().getFunction();
+    bool IsCalleeWin =
+        Subtarget.isCallingConvWin64(State.getCallingConv(), F.isVarArg());
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
     bool Res;
@@ -391,8 +394,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       // i1 is a special case because SDAG i1 true is naturally zero extended
       // when widened using ANYEXT. We need to do it explicitly here.
       auto &Flags = CurArgInfo.Flags[0];
-      if (MRI.getType(CurVReg).getSizeInBits() == 1 && !Flags.isSExt() &&
-          !Flags.isZExt()) {
+      if (MRI.getType(CurVReg).getSizeInBits() == TypeSize::getFixed(1) &&
+          !Flags.isSExt() && !Flags.isZExt()) {
         CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {
@@ -557,8 +560,8 @@ void AArch64CallLowering::saveVarArgRegisters(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  bool IsWin64CC =
-      Subtarget.isCallingConvWin64(CCInfo.getCallingConv());
+  bool IsWin64CC = Subtarget.isCallingConvWin64(CCInfo.getCallingConv(),
+                                                MF.getFunction().isVarArg());
   const LLT p0 = LLT::pointer(0, 64);
   const LLT s64 = LLT::scalar(64);
 
@@ -653,7 +656,9 @@ bool AArch64CallLowering::lowerFormalArguments(
       F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
     return false;
 
-  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv()) && !Subtarget.isWindowsArm64EC();
+  bool IsWin64 =
+      Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg()) &&
+      !Subtarget.isWindowsArm64EC();
 
   SmallVector<ArgInfo, 8> SplitArgs;
   SmallVector<std::pair<Register, Register>> BoolArgs;
@@ -1446,7 +1451,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!determineAndHandleAssignments(
             UsingReturnedArg ? ReturnedArgHandler : Handler, Assigner, InArgs,
             MIRBuilder, Info.CallConv, Info.IsVarArg,
-            UsingReturnedArg ? ArrayRef(OutArgs[0].Regs) : std::nullopt))
+            UsingReturnedArg ? ArrayRef(OutArgs[0].Regs)
+                             : ArrayRef<Register>()))
       return false;
   }
 

@@ -283,7 +283,7 @@ define float @v_bfi_single_constant_as_partition(float %x, float %y, float %z) {
 define amdgpu_kernel void @v_bfi_dont_applied_for_scalar_ops(ptr addrspace(1) %out, i16 %a, i32 %b) {
 ; GCN-LABEL: v_bfi_dont_applied_for_scalar_ops:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s3, s3, 0xffff0000

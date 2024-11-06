@@ -20,9 +20,12 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -35,6 +38,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -219,10 +223,15 @@ namespace {
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
 
+    // Flag to indicate that we already parsed a HLSL parameter modifier
+    // attribute. This prevents double-mutating the type.
+    bool ParsedHLSLParamMod;
+
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false) {}
+          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
+          ParsedHLSLParamMod(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -280,7 +289,7 @@ namespace {
     QualType getAttributedType(Attr *A, QualType ModifiedType,
                                QualType EquivType) {
       QualType T =
-          sema.Context.getAttributedType(A->getKind(), ModifiedType, EquivType);
+          sema.Context.getAttributedType(A, ModifiedType, EquivType);
       AttrsForTypes.push_back({cast<AttributedType>(T.getTypePtr()), A});
       AttrsForTypesSorted = false;
       return T;
@@ -348,6 +357,10 @@ namespace {
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
 
     bool didParseNoDeref() const { return parsedNoDeref; }
+
+    void setParsedHLSLParamMod(bool Parsed) { ParsedHLSLParamMod = Parsed; }
+
+    bool didParseHLSLParamMod() const { return ParsedHLSLParamMod; }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -790,7 +803,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
       /*NumExceptions=*/0,
       /*NoexceptExpr=*/nullptr,
       /*ExceptionSpecTokens=*/nullptr,
-      /*DeclsInPrototype=*/std::nullopt, loc, loc, declarator));
+      /*DeclsInPrototype=*/{}, loc, loc, declarator));
 
   // For consistency, make sure the state still has us as processing
   // the decl spec.
@@ -1357,6 +1370,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
 
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.SingletonId;                                              \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
   case DeclSpec::TST_error:
     Result = Context.IntTy;
     declarator.setInvalidType(true);
@@ -1537,6 +1556,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     else
       Result = Qualified;
   }
+
+  if (S.getLangOpts().HLSL)
+    Result = S.HLSL().ProcessResourceTypeAttributes(Result);
 
   assert(!Result.isNull() && "This function should not return a null type");
   return Result;
@@ -2373,7 +2395,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // on bitvectors, and we have no well-defined ABI for bitvectors, so vectors
   // of bool aren't allowed.
   //
-  // We explictly allow bool elements in ext_vector_type for C/C++.
+  // We explicitly allow bool elements in ext_vector_type for C/C++.
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
@@ -2565,6 +2587,8 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
     switch (EPI.ExtParameterInfos[paramIndex].getABI()) {
     // Nothing interesting to check for orindary-ABI parameters.
     case ParameterABI::Ordinary:
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
       continue;
 
     // swift_indirect_result parameters must be a prefix of the function
@@ -3011,7 +3035,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     } else {
       // The 'auto' appears in the decl-specifiers; we've not finished forming
@@ -3048,7 +3074,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             /*FoundDecl=*/
             USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     }
   }
@@ -3710,12 +3738,12 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   } else if (S.getLangOpts().CUDA) {
-    // If we're compiling CUDA/HIP code and targeting SPIR-V we need to make
+    // If we're compiling CUDA/HIP code and targeting HIPSPV we need to make
     // sure the kernels will be marked with the right calling convention so that
-    // they will be visible by the APIs that ingest SPIR-V.
+    // they will be visible by the APIs that ingest SPIR-V. We do not do this
+    // when targeting AMDGCNSPIRV, as it does not rely on OpenCL.
     llvm::Triple Triple = S.Context.getTargetInfo().getTriple();
-    if (Triple.getArch() == llvm::Triple::spirv32 ||
-        Triple.getArch() == llvm::Triple::spirv64) {
+    if (Triple.isSPIRV() && Triple.getVendor() != llvm::Triple::AMD) {
       for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
         if (AL.getKind() == ParsedAttr::AT_CUDAGlobal) {
           CC = CC_OpenCLKernel;
@@ -4762,6 +4790,61 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
+        auto IsClassType = [&](CXXScopeSpec &SS) {
+          // If there already was an problem with the scope, don’t issue another
+          // error about the explicit object parameter.
+          return SS.isInvalid() ||
+                 isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+        };
+
+        // C++23 [dcl.fct]p6:
+        //
+        // An explicit-object-parameter-declaration is a parameter-declaration
+        // with a this specifier. An explicit-object-parameter-declaration shall
+        // appear only as the first parameter-declaration of a
+        // parameter-declaration-list of one of:
+        //
+        // - a declaration of a member function or member function template
+        //   ([class.mem]), or
+        //
+        // - an explicit instantiation ([temp.explicit]) or explicit
+        //   specialization ([temp.expl.spec]) of a templated member function,
+        //   or
+        //
+        // - a lambda-declarator [expr.prim.lambda].
+        DeclaratorContext C = D.getContext();
+        ParmVarDecl *First =
+            FTI.NumParams
+                ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
+                : nullptr;
+
+        bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
+        if (First && First->isExplicitObjectParameter() &&
+            C != DeclaratorContext::LambdaExpr &&
+
+            // Either not a member or nested declarator in a member.
+            //
+            // Note that e.g. 'static' or 'friend' declarations are accepted
+            // here; we diagnose them later when we build the member function
+            // because it's easier that way.
+            (C != DeclaratorContext::Member || !IsFunctionDecl) &&
+
+            // Allow out-of-line definitions of member functions.
+            !IsClassType(D.getCXXScopeSpec())) {
+          if (IsFunctionDecl)
+            S.Diag(First->getBeginLoc(),
+                   diag::err_explicit_object_parameter_nonmember)
+                << /*non-member*/ 2 << /*function*/ 0
+                << First->getSourceRange();
+          else
+            S.Diag(First->getBeginLoc(),
+                   diag::err_explicit_object_parameter_invalid)
+                << First->getSourceRange();
+
+          D.setInvalidType();
+          AreDeclaratorChunksValid = false;
+        }
+
         // trailing-return-type is only required if we're declaring a function,
         // and not, for instance, a pointer to a function.
         if (D.getDeclSpec().hasAutoTypeSpec() &&
@@ -5086,6 +5169,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               // Reject, but continue to parse 'float(const void)'.
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
+
+              // Reject, but continue to parse 'float(this void)' as
+              // 'float(void)'.
+              if (Param->isExplicitObjectParameter()) {
+                S.Diag(Param->getLocation(),
+                       diag::err_void_explicit_object_param);
+                Param->setExplicitObjectParameterLoc(SourceLocation());
+              }
 
               // Do not add 'void' to the list.
               break;
@@ -5720,6 +5811,14 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
   TL.setAttr(State.takeAttrForAttributedType(TL.getTypePtr()));
 }
 
+static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
+                                              TypeProcessingState &State) {
+  HLSLAttributedResourceLocInfo LocInfo =
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr());
+  TL.setSourceRange(LocInfo.Range);
+  TL.setContainedTypeSourceInfo(LocInfo.ContainedTyInfo);
+}
+
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
                               const ParsedAttributesView &Attrs) {
   for (const ParsedAttr &AL : Attrs) {
@@ -5753,6 +5852,10 @@ namespace {
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
+    }
+    void VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL) {
+      Visit(TL.getWrappedLoc());
+      fillHLSLAttributedResourceTypeLoc(TL, State);
     }
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
@@ -6308,11 +6411,10 @@ TypeResult Sema::ActOnTypeName(Declarator &D) {
     CheckExtraCXXDefaultArguments(D);
   }
 
-  if (const AutoType *AutoT = T->getAs<AutoType>())
-    CheckConstrainedAuto(
-        AutoT,
-        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
-
+  if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc()) {
+    const AutoType *AT = TL.getTypePtr();
+    CheckConstrainedAuto(AT, TL.getConceptNameLoc());
+  }
   return CreateParsedType(T, TInfo);
 }
 
@@ -6401,6 +6503,15 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
+  // such that it handles type attributes, and then call that from
+  // processTypeAttrs() instead of one-off checks like this.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
 
   // Check the number of attribute arguments.
   if (Attr.getNumArgs() != 1) {
@@ -7005,7 +7116,7 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
     else if (Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
   } else if (PtrWidth == 64 && Attrs[attr::Ptr32]) {
-    if (Attrs[attr::UPtr])
+    if (S.Context.getTargetInfo().getTriple().isOSzOS() || Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
     else
       ASIdx = LangAS::ptr32_sptr;
@@ -7050,6 +7161,60 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
   return false;
 }
 
+static void HandleSwiftAttr(TypeProcessingState &State, TypeAttrLocation TAL,
+                            QualType &QT, ParsedAttr &PAttr) {
+  if (TAL == TAL_DeclName)
+    return;
+
+  Sema &S = State.getSema();
+  auto &D = State.getDeclarator();
+
+  // If the attribute appears in declaration specifiers
+  // it should be handled as a declaration attribute,
+  // unless it's associated with a type or a function
+  // prototype (i.e. appears on a parameter or result type).
+  if (State.isProcessingDeclSpec()) {
+    if (!(D.isPrototypeContext() ||
+          D.getContext() == DeclaratorContext::TypeName))
+      return;
+
+    if (auto *chunk = D.getInnermostNonParenChunk()) {
+      moveAttrFromListToList(PAttr, State.getCurrentAttributes(),
+                             const_cast<DeclaratorChunk *>(chunk)->getAttrs());
+      return;
+    }
+  }
+
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(PAttr, 0, Str)) {
+    PAttr.setInvalid();
+    return;
+  }
+
+  // If the attribute as attached to a paren move it closer to
+  // the declarator. This can happen in block declarations when
+  // an attribute is placed before `^` i.e. `(__attribute__((...)) ^)`.
+  //
+  // Note that it's actually invalid to use GNU style attributes
+  // in a block but such cases are currently handled gracefully
+  // but the parser and behavior should be consistent between
+  // cases when attribute appears before/after block's result
+  // type and inside (^).
+  if (TAL == TAL_DeclChunk) {
+    auto chunkIdx = State.getCurrentChunkIndex();
+    if (chunkIdx >= 1 &&
+        D.getTypeObject(chunkIdx).Kind == DeclaratorChunk::Paren) {
+      moveAttrFromListToList(PAttr, State.getCurrentAttributes(),
+                             D.getTypeObject(chunkIdx - 1).getAttrs());
+      return;
+    }
+  }
+
+  auto *A = ::new (S.Context) SwiftAttrAttr(S.Context, PAttr, Str);
+  QT = State.getAttributedType(A, QT, QT);
+  PAttr.setUsedAsTypeAttr();
+}
+
 /// Rebuild an attributed type without the nullability attribute on it.
 static QualType rebuildAttributedTypeWithoutNullability(ASTContext &Ctx,
                                                         QualType Type) {
@@ -7066,7 +7231,8 @@ static QualType rebuildAttributedTypeWithoutNullability(ASTContext &Ctx,
       Ctx, Attributed->getModifiedType());
   assert(Modified.getTypePtr() != Attributed->getModifiedType().getTypePtr());
   return Ctx.getAttributedType(Attributed->getAttrKind(), Modified,
-                               Attributed->getEquivalentType());
+                               Attributed->getEquivalentType(),
+                               Attributed->getAttr());
 }
 
 /// Map a nullability attribute kind to a nullability kind.
@@ -7195,8 +7361,7 @@ static bool CheckNullabilityTypeSpecifier(
     Attr *A = createNullabilityAttr(S.Context, *PAttr, Nullability);
     QT = State->getAttributedType(A, QT, QT);
   } else {
-    attr::Kind attrKind = AttributedType::getNullabilityAttrKind(Nullability);
-    QT = S.Context.getAttributedType(attrKind, QT, QT);
+    QT = S.Context.getAttributedType(Nullability, QT, QT);
   }
   return false;
 }
@@ -8295,14 +8460,28 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
     NumElts = VecSize / S.Context.getCharWidth();
-    VecKind = VectorKind::RVVFixedLengthMask;
+    if (!NumElts) {
+      NumElts = 1;
+      switch (VecSize) {
+      case 1:
+        VecKind = VectorKind::RVVFixedLengthMask_1;
+        break;
+      case 2:
+        VecKind = VectorKind::RVVFixedLengthMask_2;
+        break;
+      case 4:
+        VecKind = VectorKind::RVVFixedLengthMask_4;
+        break;
+      }
+    } else
+      VecKind = VectorKind::RVVFixedLengthMask;
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
   }
 
   // The attribute vector size must match -mrvv-vector-bits.
-  if (ExpectedSize % 8 != 0 || VecSize != ExpectedSize) {
+  if (VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
         << VecSize << ExpectedSize;
     Attr.setInvalid();
@@ -8427,15 +8606,19 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
-static void HandleHLSLParamModifierAttr(QualType &CurType,
+static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
+                                        QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
   // Don't apply this attribute to template dependent types. It is applied on
-  // substitution during template instantiation.
-  if (CurType->isDependentType())
+  // substitution during template instantiation. Also skip parsing this if we've
+  // already modified the type based on an earlier attribute.
+  if (CurType->isDependentType() || State.didParseHLSLParamMod())
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
-      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out)
-    CurType = S.getASTContext().getLValueReferenceType(CurType);
+      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
+    CurType = S.HLSL().getInoutParameterType(CurType);
+    State.setParsedHLSLParamMod(true);
+  }
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
@@ -8615,8 +8798,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
 
     case ParsedAttr::AT_HLSLParamModifier: {
-      HandleHLSLParamModifierAttr(type, attr, state.getSema());
+      HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
+      break;
+    }
+
+    case ParsedAttr::AT_SwiftAttr: {
+      HandleSwiftAttr(state, TAL, type, attr);
       break;
     }
 
@@ -8725,6 +8913,18 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_AnnotateType: {
       HandleAnnotateTypeAttr(state, type, attr);
       attr.setUsedAsTypeAttr();
+      break;
+    }
+    case ParsedAttr::AT_HLSLResourceClass:
+    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLRawBuffer:
+    case ParsedAttr::AT_HLSLContainedType: {
+      // Only collect HLSL resource type attributes that are in
+      // decl-specifier-seq; do not collect attributes on declarations or those
+      // that get to slide after declaration name.
+      if (TAL == TAL_DeclSpec &&
+          state.getSema().HLSL().handleResourceTypeAttr(type, attr))
+        attr.setUsedAsTypeAttr();
       break;
     }
     }

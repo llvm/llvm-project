@@ -4,7 +4,6 @@
 // CHECK: __AARCH64EL__ 1
 // CHECK: __ARM_64BIT_STATE 1
 // CHECK-NOT: __ARM_32BIT_STATE
-// CHECK: __ARM_ACLE 200
 // CHECK: __ARM_ALIGN_MAX_STACK_PWR 4
 // CHECK: __ARM_ARCH 8
 // CHECK: __ARM_ARCH_ISA_A64 1
@@ -214,6 +213,7 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
@@ -235,6 +235,15 @@
 // CHECK-SVE2SM4: __ARM_FEATURE_SVE2_SM4 1
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p1 %s
+// CHECK-SVE2p1: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-SVE2p1: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-SVE2p1: __ARM_FEATURE_SVE2 1
+// CHECK-SVE2p1: __ARM_FEATURE_SVE2p1 1
+// CHECK-SVE2p1: __ARM_NEON 1
+// CHECK-SVE2p1: __ARM_NEON_FP 0xE
+// CHECK-SVE2p1: __ARM_NEON_SVE_BRIDGE 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
@@ -663,6 +672,7 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
@@ -694,3 +704,25 @@
 // CHECK-SME2: __ARM_FEATURE_LOCALLY_STREAMING 1
 // CHECK-SME2: __ARM_FEATURE_SME 1
 // CHECK-SME2: __ARM_FEATURE_SME2 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2p1 %s
+// CHECK-SME2p1: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2p1: __ARM_FEATURE_SME 1
+// CHECK-SME2p1: __ARM_FEATURE_SME2 1
+// CHECK-SME2p1: __ARM_FEATURE_SME2p1 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sve-b16b16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVEB16B16 %s
+// CHECK-SVEB16B16: __ARM_FEATURE_SVE_B16B16 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme-f16f16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEF16F16 %s
+// CHECK-SMEF16F16: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SMEF16F16: __ARM_FEATURE_SME 1
+// CHECK-SMEF16F16: __ARM_FEATURE_SME2 1
+// CHECK-SMEF16F16: __ARM_FEATURE_SME_F16F16 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme-b16b16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SMEB16B16 %s
+// CHECK-SMEB16B16: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SMEB16B16: __ARM_FEATURE_SME 1
+// CHECK-SMEB16B16: __ARM_FEATURE_SME2 1
+// CHECK-SMEB16B16: __ARM_FEATURE_SME_B16B16 1
+// CHECK-SMEB16B16: __ARM_FEATURE_SVE_B16B16 1

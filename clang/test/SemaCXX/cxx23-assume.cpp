@@ -158,3 +158,12 @@ foo (int x, int y)
   return x + y;
 }
 }
+
+// Do not crash when assumptions are unreachable.
+namespace gh106898 {
+int foo () { 
+    while(1);
+    int a = 0, b = 1;
+    __attribute__((assume (a < b)));
+}
+}

@@ -149,6 +149,14 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
+
+  // If IRTranslator chose to drop the ptrauth info, we can turn this into
+  // a direct call.
+  if (!PAI && CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    CalleeV = cast<ConstantPtrAuth>(CalleeV)->getPointer();
+    assert(isa<Function>(CalleeV));
+  }
+
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
       LLT Ty = getLLTForType(*F->getType(), DL);
@@ -428,7 +436,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
 
   if (PartLLT.isVector()) {
     assert(OrigRegs.size() == 1);
-    SmallVector<Register> CastRegs(Regs.begin(), Regs.end());
+    SmallVector<Register> CastRegs(Regs);
 
     // If PartLLT is a mismatched vector in both number of elements and element
     // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
@@ -1026,7 +1034,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   unsigned AS = DL.getAllocaAddrSpace();
-  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getPointerTo(AS)), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getContext(), AS), DL);
 
   MachinePointerInfo PtrInfo(AS);
 

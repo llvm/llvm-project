@@ -148,12 +148,12 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define internal void @[[OMP_OUTLINED_FN_NUM_THREADS_3_1]]
   // CHECK: call void @__kmpc_barrier
 
-// CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_VAR_1:.*]])
+// CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_EXPR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
   %0 = llvm.mlir.constant(0 : index) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
-// CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_VAR_1]], 0
+// CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_EXPR_1]], 0
 
 
 // CHECK: %[[GTN_IF_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[SI_VAR_IF_1:.*]])
@@ -310,6 +310,26 @@ llvm.func @test_omp_master() -> () {
 
 // -----
 
+// CHECK-LABEL: define void @test_omp_masked({{.*}})
+llvm.func @test_omp_masked(%arg0: i32)-> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @{{.*}})
+// CHECK: omp.par.region1:
+  omp.parallel {
+    omp.masked filter(%arg0: i32) {
+// CHECK: [[OMP_THREAD_3_4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
+// CHECK: {{[0-9]+}} = call i32 @__kmpc_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]], i32 %{{[0-9]+}})
+// CHECK: omp.masked.region
+// CHECK: call void @__kmpc_end_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]])
+// CHECK: br label %omp_region.end
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 // CHECK: %struct.ident_t = type
 // CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
 // CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
@@ -331,7 +351,6 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
         llvm.store %3, %4 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
       // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
     }) : () -> ()
     omp.terminator
@@ -354,7 +373,6 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }) : () -> ()
   llvm.return
 }
@@ -374,7 +392,6 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }) : () -> ()
   llvm.return
 }
@@ -392,7 +409,6 @@ llvm.func @test_omp_wsloop_static_defchunk(%lb : i32, %ub : i32, %step : i32) ->
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -411,7 +427,6 @@ llvm.func @test_omp_wsloop_static_1(%lb : i32, %ub : i32, %step : i32) -> () {
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -430,7 +445,6 @@ llvm.func @test_omp_wsloop_static_2(%lb : i32, %ub : i32, %step : i32) -> () {
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -449,7 +463,6 @@ llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -469,7 +482,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_const(%lb : i64, %ub : i64, %step : i64
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -492,7 +504,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_var(%lb : i32, %ub : i32, %step : i32) 
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -515,7 +526,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_var2(%lb : i32, %ub : i32, %step : i32)
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -534,7 +544,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_var3(%lb : i32, %ub : i32, %step : i32,
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -553,7 +562,6 @@ llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -572,7 +580,6 @@ llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -591,7 +598,6 @@ llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -610,7 +616,6 @@ llvm.func @test_omp_wsloop_dynamic_nonmonotonic(%lb : i64, %ub : i64, %step : i6
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -629,7 +634,6 @@ llvm.func @test_omp_wsloop_dynamic_monotonic(%lb : i64, %ub : i64, %step : i64) 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -648,7 +652,6 @@ llvm.func @test_omp_wsloop_runtime_simd(%lb : i64, %ub : i64, %step : i64) -> ()
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -667,7 +670,6 @@ llvm.func @test_omp_wsloop_guided_simd(%lb : i64, %ub : i64, %step : i64) -> () 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -686,7 +688,6 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
     }
-    "omp.terminator"() : () -> ()
   }) : () -> ()
 
   llvm.return
@@ -726,7 +727,6 @@ llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -750,7 +750,6 @@ llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -771,7 +770,6 @@ llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -791,7 +789,6 @@ llvm.func @simd_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 :
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -820,7 +817,6 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
       llvm.store %arg2, %1 : i32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -841,7 +837,6 @@ llvm.func @simd_order() {
       llvm.store %arg0, %2 : i64, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -865,7 +860,6 @@ llvm.func @test_omp_wsloop_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -885,7 +879,6 @@ llvm.func @test_omp_wsloop_static_ordered(%lb : i64, %ub : i64, %step : i64) -> 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -906,7 +899,6 @@ llvm.func @test_omp_wsloop_static_chunk_ordered(%lb : i32, %ub : i32, %step : i3
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -926,7 +918,6 @@ llvm.func @test_omp_wsloop_dynamic_ordered(%lb : i64, %ub : i64, %step : i64) ->
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -946,7 +937,6 @@ llvm.func @test_omp_wsloop_auto_ordered(%lb : i64, %ub : i64, %step : i64) -> ()
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -966,7 +956,6 @@ llvm.func @test_omp_wsloop_runtime_ordered(%lb : i64, %ub : i64, %step : i64) ->
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -986,7 +975,6 @@ llvm.func @test_omp_wsloop_guided_ordered(%lb : i64, %ub : i64, %step : i64) -> 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1006,7 +994,6 @@ llvm.func @test_omp_wsloop_dynamic_nonmonotonic_ordered(%lb : i64, %ub : i64, %s
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1026,7 +1013,6 @@ llvm.func @test_omp_wsloop_dynamic_monotonic_ordered(%lb : i64, %ub : i64, %step
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1203,7 +1189,6 @@ llvm.func @collapse_wsloop(
         llvm.store %34, %20 : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -1266,7 +1251,6 @@ llvm.func @collapse_wsloop_dynamic(
         llvm.store %34, %20 : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -1300,7 +1284,6 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       }
       omp.yield
     }
-    omp.terminator
   }
 
   omp.wsloop ordered(1) {
@@ -1310,18 +1293,17 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP2:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR]], i64 0, i64 0
       // CHECK: [[OMP_THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_wait(ptr @[[GLOB3]], i32 [[OMP_THREAD2]], ptr [[TMP2]])
-      omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {doacross_num_loops = 1 : i64}
 
       // CHECK: [[TMP3:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR3]], i64 0, i64 0
       // CHECK: store i64 [[ARG0]], ptr [[TMP3]], align 8
       // CHECK: [[TMP4:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR3]], i64 0, i64 0
       // CHECK: [[OMP_THREAD4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB5:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_post(ptr @[[GLOB5]], i32 [[OMP_THREAD4]], ptr [[TMP4]])
-      omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {doacross_num_loops = 1 : i64}
 
       omp.yield
     }
-    omp.terminator
   }
 
   omp.wsloop ordered(2) {
@@ -1340,7 +1322,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP10:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR7]], i64 0, i64 0
       // CHECK: [[OMP_THREAD8:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB7]])
       // CHECK: call void @__kmpc_doacross_wait(ptr @[[GLOB7]], i32 [[OMP_THREAD8]], ptr [[TMP10]])
-      omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {doacross_num_loops = 2 : i64}
 
       // CHECK: [[TMP11:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR9]], i64 0, i64 0
       // CHECK: store i64 [[ARG0]], ptr [[TMP11]], align 8
@@ -1349,11 +1331,10 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP13:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR9]], i64 0, i64 0
       // CHECK: [[OMP_THREAD10:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB9:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_post(ptr @[[GLOB9]], i32 [[OMP_THREAD10]], ptr [[TMP13]])
-      omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {num_loops_val = 2 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {doacross_num_loops = 2 : i64}
 
       omp.yield
     }
-    omp.terminator
   }
 
   llvm.return
@@ -1367,21 +1348,21 @@ llvm.func @omp_atomic_read(%arg0 : !llvm.ptr, %arg1 : !llvm.ptr) -> () {
 
   // CHECK: %[[X1:.*]] = load atomic i32, ptr %[[ARG0]] monotonic, align 4
   // CHECK: store i32 %[[X1]], ptr %[[ARG1]], align 4
-  omp.atomic.read %arg1 = %arg0 : !llvm.ptr, i32
+  omp.atomic.read %arg1 = %arg0 : !llvm.ptr, !llvm.ptr, i32
 
   // CHECK: %[[X2:.*]] = load atomic i32, ptr %[[ARG0]] seq_cst, align 4
   // CHECK: call void @__kmpc_flush(ptr @{{.*}})
   // CHECK: store i32 %[[X2]], ptr %[[ARG1]], align 4
-  omp.atomic.read %arg1 = %arg0 memory_order(seq_cst) : !llvm.ptr, i32
+  omp.atomic.read %arg1 = %arg0 memory_order(seq_cst) : !llvm.ptr, !llvm.ptr, i32
 
   // CHECK: %[[X3:.*]] = load atomic i32, ptr %[[ARG0]] acquire, align 4
   // CHECK: call void @__kmpc_flush(ptr @{{.*}})
   // CHECK: store i32 %[[X3]], ptr %[[ARG1]], align 4
-  omp.atomic.read %arg1 = %arg0 memory_order(acquire) : !llvm.ptr, i32
+  omp.atomic.read %arg1 = %arg0 memory_order(acquire) : !llvm.ptr, !llvm.ptr, i32
 
   // CHECK: %[[X4:.*]] = load atomic i32, ptr %[[ARG0]] monotonic, align 4
   // CHECK: store i32 %[[X4]], ptr %[[ARG1]], align 4
-  omp.atomic.read %arg1 = %arg0 memory_order(relaxed) : !llvm.ptr, i32
+  omp.atomic.read %arg1 = %arg0 memory_order(relaxed) : !llvm.ptr, !llvm.ptr, i32
   llvm.return
 }
 
@@ -1426,6 +1407,142 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
     omp.yield(%newval : i32)
   }
   llvm.return
+}
+
+// -----
+
+//CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
+//CHECK: {{.*}} = alloca { float, float }, i64 1, align 8
+//CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
+
+//CHECK: br label %entry
+
+//CHECK: entry:
+//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+//CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+//CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+//CHECK: br label %.atomic.cont
+
+//CHECK: .atomic.cont
+//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+//CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
+//CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
+//CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00
+//CHECK: %[[VAL_8:.*]] = fadd contract float %[[VAL_6]], 1.000000e+00
+//CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
+//CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
+//CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
+
+llvm.func @_QPomp_atomic_update_complex() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %5 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %6 = llvm.insertvalue %4, %5[0] : !llvm.struct<(f32, f32)>
+    %7 = llvm.insertvalue %4, %6[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.update %3 : !llvm.ptr {
+    ^bb0(%arg0: !llvm.struct<(f32, f32)>):
+      %8 = llvm.extractvalue %arg0[0] : !llvm.struct<(f32, f32)>
+      %9 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
+      %10 = llvm.extractvalue %7[0] : !llvm.struct<(f32, f32)>
+      %11 = llvm.extractvalue %7[1] : !llvm.struct<(f32, f32)>
+      %12 = llvm.fadd %8, %10  {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %13 = llvm.fadd %9, %11  {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %14 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+      %15 = llvm.insertvalue %12, %14[0] : !llvm.struct<(f32, f32)>
+      %16 = llvm.insertvalue %13, %15[1] : !llvm.struct<(f32, f32)>
+      omp.yield(%16 : !llvm.struct<(f32, f32)>)
+    }
+   llvm.return
+}
+
+// -----
+
+//CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
+//CHECK: %[[VAL_1:.*]] = alloca { float, float }, i64 1, align 8
+//CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
+//CHECK: store { float, float } { float 2.000000e+00, float 2.000000e+00 }, ptr %[[ORIG_VAL]], align 4
+//CHECK: br label %entry
+
+//CHECK: entry:							; preds = %0
+//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+//CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+//CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+//CHECK: br label %.atomic.cont
+
+//CHECK: .atomic.cont
+//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+//CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
+//CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
+//CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00
+//CHECK: %[[VAL_8:.*]] = fadd contract float %[[VAL_6]], 1.000000e+00
+//CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
+//CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4 
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
+//CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
+//CHECK: .atomic.exit
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[VAL_1]], align 4
+
+llvm.func @_QPomp_atomic_capture_complex() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %5 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    %6 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %7 = llvm.insertvalue %5, %6[0] : !llvm.struct<(f32, f32)>
+    %8 = llvm.insertvalue %5, %7[1] : !llvm.struct<(f32, f32)>
+    llvm.store %8, %3 : !llvm.struct<(f32, f32)>, !llvm.ptr
+    %9 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %10 = llvm.insertvalue %4, %9[0] : !llvm.struct<(f32, f32)>
+    %11 = llvm.insertvalue %4, %10[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.capture {
+      omp.atomic.update %3 : !llvm.ptr {
+      ^bb0(%arg0: !llvm.struct<(f32, f32)>):
+        %12 = llvm.extractvalue %arg0[0] : !llvm.struct<(f32, f32)>
+        %13 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
+        %14 = llvm.extractvalue %11[0] : !llvm.struct<(f32, f32)>
+        %15 = llvm.extractvalue %11[1] : !llvm.struct<(f32, f32)>
+        %16 = llvm.fadd %12, %14  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %17 = llvm.fadd %13, %15  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %18 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+        %19 = llvm.insertvalue %16, %18[0] : !llvm.struct<(f32, f32)>
+        %20 = llvm.insertvalue %17, %19[1] : !llvm.struct<(f32, f32)>
+        omp.yield(%20 : !llvm.struct<(f32, f32)>)
+      }
+      omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+    }
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @omp_atomic_read_complex() {
+llvm.func @omp_atomic_read_complex(){
+
+// CHECK: %[[a:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[b:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+// CHECK: call void @__atomic_load(i64 8, ptr %[[b]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+// CHECK: %[[LOADED_VAL:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+// CHECK: store { float, float } %[[LOADED_VAL]], ptr %[[a]], align 4
+// CHECK: ret void
+// CHECK: }
+
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+    llvm.return
 }
 
 // -----
@@ -1529,7 +1646,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[res:.*]] = atomicrmw sub ptr %[[x]], i32 %[[expr]] monotonic
@@ -1541,7 +1658,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.sub %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[res:.*]] = atomicrmw and ptr %[[x]], i32 %[[expr]] monotonic
@@ -1553,7 +1670,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.and %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[res:.*]] = atomicrmw or ptr %[[x]], i32 %[[expr]] monotonic
@@ -1565,7 +1682,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.or %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[res:.*]] = atomicrmw xor ptr %[[x]], i32 %[[expr]] monotonic
@@ -1577,7 +1694,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.xor %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1592,7 +1709,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.mul %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1607,7 +1724,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.sdiv %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1622,7 +1739,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.udiv %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1637,7 +1754,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.shl %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1652,7 +1769,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.lshr %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1667,7 +1784,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.ashr %xval, %expr : i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1682,7 +1799,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = "llvm.intr.smax"(%xval, %expr) : (i32, i32) -> i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1697,7 +1814,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = "llvm.intr.smin"(%xval, %expr) : (i32, i32) -> i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1712,7 +1829,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = "llvm.intr.umax"(%xval, %expr) : (i32, i32) -> i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1727,7 +1844,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = "llvm.intr.umin"(%xval, %expr) : (i32, i32) -> i32
       omp.yield(%newval : i32)
     }
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1742,7 +1859,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.fadd %xval, %exprf : f32
       omp.yield(%newval : f32)
     }
-    omp.atomic.read %vf = %xf : !llvm.ptr, f32
+    omp.atomic.read %vf = %xf : !llvm.ptr, !llvm.ptr, f32
   }
 
   // CHECK: %[[xval:.*]] = phi i32
@@ -1757,7 +1874,7 @@ llvm.func @omp_atomic_capture_prefix_update(
       %newval = llvm.fsub %xval, %exprf : f32
       omp.yield(%newval : f32)
     }
-    omp.atomic.read %vf = %xf : !llvm.ptr, f32
+    omp.atomic.read %vf = %xf : !llvm.ptr, !llvm.ptr, f32
   }
 
   llvm.return
@@ -1773,7 +1890,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %[[res:.*]] = atomicrmw add ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -1784,7 +1901,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %[[res:.*]] = atomicrmw sub ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.sub %xval, %expr : i32
@@ -1795,7 +1912,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %[[res:.*]] = atomicrmw and ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.and %xval, %expr : i32
@@ -1806,7 +1923,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %[[res:.*]] = atomicrmw or ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.or %xval, %expr : i32
@@ -1817,7 +1934,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %[[res:.*]] = atomicrmw xor ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.xor %xval, %expr : i32
@@ -1832,7 +1949,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.mul %xval, %expr : i32
@@ -1847,7 +1964,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.sdiv %xval, %expr : i32
@@ -1862,7 +1979,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.udiv %xval, %expr : i32
@@ -1877,7 +1994,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.shl %xval, %expr : i32
@@ -1892,7 +2009,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.lshr %xval, %expr : i32
@@ -1907,7 +2024,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.ashr %xval, %expr : i32
@@ -1922,7 +2039,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = "llvm.intr.smax"(%xval, %expr) : (i32, i32) -> i32
@@ -1937,7 +2054,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = "llvm.intr.smin"(%xval, %expr) : (i32, i32) -> i32
@@ -1952,7 +2069,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = "llvm.intr.umax"(%xval, %expr) : (i32, i32) -> i32
@@ -1967,7 +2084,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK-NEXT: %{{.*}} = cmpxchg ptr %[[x]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = "llvm.intr.umin"(%xval, %expr) : (i32, i32) -> i32
@@ -1983,7 +2100,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %{{.*}} = cmpxchg ptr %[[xf]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store float %[[xvalf]], ptr %[[vf]]
   omp.atomic.capture {
-    omp.atomic.read %vf = %xf : !llvm.ptr, f32
+    omp.atomic.read %vf = %xf : !llvm.ptr, !llvm.ptr, f32
     omp.atomic.update %xf : !llvm.ptr {
     ^bb0(%xval: f32):
       %newval = llvm.fadd %xval, %exprf : f32
@@ -1999,7 +2116,7 @@ llvm.func @omp_atomic_capture_postfix_update(
   // CHECK: %{{.*}} = cmpxchg ptr %[[xf]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store float %[[xvalf]], ptr %[[vf]]
   omp.atomic.capture {
-    omp.atomic.read %vf = %xf : !llvm.ptr, f32
+    omp.atomic.read %vf = %xf : !llvm.ptr, !llvm.ptr, f32
     omp.atomic.update %xf : !llvm.ptr {
     ^bb0(%xval: f32):
       %newval = llvm.fsub %xval, %exprf : f32
@@ -2019,7 +2136,7 @@ llvm.func @omp_atomic_capture_misc(
   // CHECK: %[[xval:.*]] = atomicrmw xchg ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[xval]], ptr %[[v]]
   omp.atomic.capture{
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.write %x = %expr : !llvm.ptr, i32
   }
 
@@ -2030,14 +2147,14 @@ llvm.func @omp_atomic_capture_misc(
   // CHECK: %{{.*}} = cmpxchg ptr %[[xf]], i32 %[[xval]], i32 %[[newval_]] monotonic monotonic
   // CHECK: store float %[[xvalf]], ptr %[[vf]]
   omp.atomic.capture{
-    omp.atomic.read %vf = %xf : !llvm.ptr, f32
+    omp.atomic.read %vf = %xf : !llvm.ptr, !llvm.ptr, f32
     omp.atomic.write %xf = %exprf : !llvm.ptr, f32
   }
 
   // CHECK: %[[res:.*]] = atomicrmw add ptr %[[x]], i32 %[[expr]] seq_cst
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -2048,7 +2165,7 @@ llvm.func @omp_atomic_capture_misc(
   // CHECK: %[[res:.*]] = atomicrmw add ptr %[[x]], i32 %[[expr]] acquire
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture memory_order(acquire) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -2059,7 +2176,7 @@ llvm.func @omp_atomic_capture_misc(
   // CHECK: %[[res:.*]] = atomicrmw add ptr %[[x]], i32 %[[expr]] release
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture memory_order(release) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -2070,7 +2187,7 @@ llvm.func @omp_atomic_capture_misc(
   // CHECK: %[[res:.*]] = atomicrmw add ptr %[[x]], i32 %[[expr]] monotonic
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture memory_order(relaxed) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -2081,7 +2198,7 @@ llvm.func @omp_atomic_capture_misc(
   // CHECK: %[[res:.*]] = atomicrmw add ptr %[[x]], i32 %[[expr]] acq_rel
   // CHECK: store i32 %[[res]], ptr %[[v]]
   omp.atomic.capture memory_order(acq_rel) {
-    omp.atomic.read %v = %x : !llvm.ptr, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -2099,6 +2216,8 @@ llvm.func @omp_sections_empty() -> () {
   omp.sections {
     omp.terminator
   }
+  // CHECK-NEXT: br label %entry
+  // CHECK: entry:
   // CHECK-NEXT: ret void
   llvm.return
 }
@@ -2251,7 +2370,6 @@ llvm.func @repeated_successor(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
     ^bb1(%0: i64):  // 2 preds: ^bb0, ^bb0
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -2448,12 +2566,12 @@ llvm.func @omp_task_attrs() -> () attributes {
 // CHECK-SAME: (ptr %[[zaddr:.+]])
 // CHECK:  %[[dep_arr_addr:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 // CHECK:  %[[dep_arr_addr_0:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[dep_arr_addr]], i64 0, i64 0
-// CHECK:  %[[dep_arr_addr_0_val:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 0
+// CHECK:  %[[dep_arr_addr_0_val:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 0
 // CHECK:  %[[dep_arr_addr_0_val_int:.+]] = ptrtoint ptr %0 to i64
 // CHECK:  store i64 %[[dep_arr_addr_0_val_int]], ptr %[[dep_arr_addr_0_val]], align 4
-// CHECK:  %[[dep_arr_addr_0_size:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 1
+// CHECK:  %[[dep_arr_addr_0_size:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 1
 // CHECK:  store i64 8, ptr %[[dep_arr_addr_0_size]], align 4
-// CHECK:  %[[dep_arr_addr_0_kind:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 2
+// CHECK:  %[[dep_arr_addr_0_kind:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 2
 // CHECK: store i8 1, ptr %[[dep_arr_addr_0_kind]], align 1
 llvm.func @omp_task_with_deps(%zaddr: !llvm.ptr) {
   // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
@@ -2653,12 +2771,12 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 llvm.func @omp_opaque_pointers(%arg0 : !llvm.ptr, %arg1: !llvm.ptr, %expr: i32) -> () {
   // CHECK: %[[X1:.*]] = load atomic i32, ptr %[[ARG0]] monotonic, align 4
   // CHECK: store i32 %[[X1]], ptr %[[ARG1]], align 4
-  omp.atomic.read %arg1 = %arg0 : !llvm.ptr, i32
+  omp.atomic.read %arg1 = %arg0 : !llvm.ptr, !llvm.ptr, i32
 
   // CHECK: %[[RES:.*]] = atomicrmw add ptr %[[ARG1]], i32 %[[EXPR]] acq_rel
   // CHECK: store i32 %[[RES]], ptr %[[ARG0]]
   omp.atomic.capture memory_order(acq_rel) {
-    omp.atomic.read %arg0 = %arg1 : !llvm.ptr, i32
+    omp.atomic.read %arg0 = %arg1 : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.update %arg1 : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32

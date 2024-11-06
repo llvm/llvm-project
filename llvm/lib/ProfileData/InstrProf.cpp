@@ -437,13 +437,31 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
   return VarName;
 }
 
+bool isGPUProfTarget(const Module &M) {
+  const auto &T = Triple(M.getTargetTriple());
+  return T.isAMDGPU() || T.isNVPTX();
+}
+
+void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
+  // If the target is a GPU, make the symbol protected so it can
+  // be read from the host device
+  if (isGPUProfTarget(M))
+    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
+  // Hide the symbol so that we correctly get a copy for each executable.
+  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
+}
+
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
+  // Ensure profiling variables on GPU are visible to be read from host
+  if (isGPUProfTarget(M))
+    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  if (Linkage == GlobalValue::ExternalWeakLinkage)
+  else if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -457,10 +475,7 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
                          getPGOFuncNameVarName(PGOFuncName, Linkage));
 
-  // Hide the symbol so that we correctly get a copy for each executable.
-  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
-    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
-
+  setPGOFuncVisibility(M, FuncNameVar);
   return FuncNameVar;
 }
 
@@ -998,18 +1013,22 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
 }
 
 void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
-                                   InstrProfValueData *VData, uint32_t N,
+                                   ArrayRef<InstrProfValueData> VData,
                                    InstrProfSymtab *ValueMap) {
-  for (uint32_t I = 0; I < N; I++) {
-    VData[I].Value = remapValue(VData[I].Value, ValueKind, ValueMap);
+  // Remap values.
+  std::vector<InstrProfValueData> RemappedVD;
+  RemappedVD.reserve(VData.size());
+  for (const auto &V : VData) {
+    uint64_t NewValue = remapValue(V.Value, ValueKind, ValueMap);
+    RemappedVD.push_back({NewValue, V.Count});
   }
+
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
   assert(ValueSites.size() == Site);
-  if (N == 0)
-    ValueSites.emplace_back();
-  else
-    ValueSites.emplace_back(VData, VData + N);
+
+  // Add a new value site with remapped value profiling data.
+  ValueSites.emplace_back(std::move(RemappedVD));
 }
 
 void TemporalProfTraceTy::createBPFunctionNodes(
@@ -1143,7 +1162,8 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
   InstrProfValueData *ValueData = getValueProfRecordValueData(this);
   for (uint64_t VSite = 0; VSite < NumValueSites; ++VSite) {
     uint8_t ValueDataCount = this->SiteCountArray[VSite];
-    Record.addValueData(Kind, VSite, ValueData, ValueDataCount, SymTab);
+    ArrayRef<InstrProfValueData> VDs(ValueData, ValueDataCount);
+    Record.addValueData(Kind, VSite, VDs, SymTab);
     ValueData += ValueDataCount;
   }
 }

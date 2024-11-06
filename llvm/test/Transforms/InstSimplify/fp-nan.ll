@@ -237,8 +237,7 @@ define <2 x double> @unary_fneg_nan_2(<2 x double> %x) {
 ; FIXME: This doesn't behave the same way as the fixed-length vectors above
 define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_0() {
 ; CHECK-LABEL: @unary_fneg_nan_2_scalable_vec_0(
-; CHECK-NEXT:    [[R:%.*]] = fneg <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0xFFF1234567890ABC, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 1 x double> [[R]]
+; CHECK-NEXT:    ret <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0x7FF1234567890ABC, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
 ;
   %r = fneg <vscale x 1 x double> splat (double 0xFFF1234567890ABC)
   ret <vscale x 1 x double> %r
@@ -247,8 +246,7 @@ define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_0() {
 ; FIXME: This doesn't behave the same way as the fixed-length vectors above
 define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_1() {
 ; CHECK-LABEL: @unary_fneg_nan_2_scalable_vec_1(
-; CHECK-NEXT:    [[R:%.*]] = fneg <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0x7FF0000000000001, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 1 x double> [[R]]
+; CHECK-NEXT:    ret <vscale x 1 x double> shufflevector (<vscale x 1 x double> insertelement (<vscale x 1 x double> poison, double 0xFFF0000000000001, i64 0), <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer)
 ;
   %r = fneg <vscale x 1 x double> splat (double 0x7FF0000000000001)
   ret <vscale x 1 x double> %r

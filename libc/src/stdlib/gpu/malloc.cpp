@@ -10,11 +10,12 @@
 
 #include "src/__support/GPU/allocator.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, malloc, (size_t size)) {
   return gpu::allocate(size);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

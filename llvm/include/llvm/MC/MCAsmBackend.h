@@ -50,8 +50,10 @@ public:
 
   const llvm::endianness Endian;
 
-  /// Fixup kind used for linker relaxation. Currently only used by RISC-V.
+  /// Fixup kind used for linker relaxation. Currently only used by RISC-V
+  /// and LoongArch.
   const unsigned RelaxFixupKind;
+  bool allowLinkerRelaxation() const { return RelaxFixupKind != MaxFixupKind; }
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
@@ -224,7 +226,7 @@ public:
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 
   /// Generate the compact unwind encoding for the CFI instructions.
-  virtual uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {
     return 0;
   }

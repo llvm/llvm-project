@@ -35,8 +35,8 @@ void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator Position,
                                  const DebugLoc &DL,
                                  MCRegister DestinationRegister,
-                                 MCRegister SourceRegister,
-                                 bool KillSource) const {
+                                 MCRegister SourceRegister, bool KillSource,
+                                 bool RenamableDest, bool RenamableSrc) const {
   if (!Lanai::GPRRegClass.contains(DestinationRegister, SourceRegister)) {
     llvm_unreachable("Impossible reg-to-reg copy");
   }
@@ -483,7 +483,7 @@ static MachineInstr *canFoldIntoSelect(Register Reg,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-  if (!MI->isSafeToMove(/*AliasAnalysis=*/nullptr, DontMoveAcrossStores))
+  if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
 }

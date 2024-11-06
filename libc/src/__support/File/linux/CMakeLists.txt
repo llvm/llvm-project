@@ -5,9 +5,9 @@ add_object_library(
     file.cpp
   HDRS
     file.h
+    lseekImpl.h
   DEPENDS
-    libc.include.fcntl
-    libc.include.stdio
+    libc.hdr.fcntl_macros
     libc.include.sys_syscall
     libc.include.sys_stat
     libc.src.__support.CPP.new
@@ -15,6 +15,9 @@ add_object_library(
     libc.src.errno.errno
     libc.src.__support.error_or
     libc.src.__support.File.file
+    libc.hdr.types.off_t
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
 )
 
 add_object_library(
@@ -23,6 +26,8 @@ add_object_library(
     stdout.cpp
   DEPENDS
     .file
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
 )
 
 add_object_library(
@@ -31,6 +36,8 @@ add_object_library(
     stdin.cpp
   DEPENDS
     .file
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
 )
 
 add_object_library(
@@ -39,6 +46,8 @@ add_object_library(
     stderr.cpp
   DEPENDS
     .file
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
 )
 
 add_object_library(
@@ -46,7 +55,7 @@ add_object_library(
   SRCS
     dir.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.error_or

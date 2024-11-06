@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/auxv/getauxval.h"
-#include "config/linux/app.h"
+#include "config/app.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <linux/auxvec.h>
 
@@ -35,7 +36,7 @@
 extern "C" [[gnu::weak]] int __cxa_atexit(void (*callback)(void *),
                                           void *payload, void *);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 constexpr static size_t MAX_AUXV_ENTRIES = 64;
 
@@ -154,7 +155,7 @@ static void initialize_auxv_once(void) {
 
 static AuxEntry read_entry(int fd) {
   AuxEntry buf;
-  ssize_t size = sizeof(AuxEntry);
+  size_t size = sizeof(AuxEntry);
   char *ptr = reinterpret_cast<char *>(&buf);
   while (size > 0) {
     ssize_t ret = read(fd, ptr, size);
@@ -214,4 +215,4 @@ LLVM_LIBC_FUNCTION(unsigned long, getauxval, (unsigned long id)) {
   errno_guard.mark_failure();
   return AT_NULL;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

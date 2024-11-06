@@ -800,7 +800,7 @@ define i32 @sub_abs_wrong_pred(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:

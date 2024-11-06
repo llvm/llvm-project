@@ -80,7 +80,6 @@ TailMergeThreshold("tail-merge-threshold",
           cl::init(150), cl::Hidden);
 
 // Heuristic for tail merging (and, inversely, tail duplication).
-// TODO: This should be replaced with a target query.
 static cl::opt<unsigned>
 TailMergeSize("tail-merge-size",
               cl::desc("Min number of instructions to consider tail merging"),
@@ -98,7 +97,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
@@ -130,7 +129,7 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
   bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
                          PassConfig->getEnableTailMerge();
   MBFIWrapper MBBFreqInfo(
-      getAnalysis<MachineBlockFrequencyInfo>());
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   BranchFolder Folder(
       EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
       getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI(),
@@ -145,8 +144,6 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
                            ProfileSummaryInfo *PSI, unsigned MinTailLength)
     : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
       MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
-  if (MinCommonTailLength == 0)
-    MinCommonTailLength = TailMergeSize;
   switch (FlagEnableTailMerge) {
   case cl::BOU_UNSET:
     EnableTailMerge = DefaultEnableTailMerge;
@@ -194,6 +191,12 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   TRI = tri;
   MLI = mli;
   this->MRI = &MRI;
+
+  if (MinCommonTailLength == 0) {
+    MinCommonTailLength = TailMergeSize.getNumOccurrences() > 0
+                              ? TailMergeSize
+                              : TII->getTailMergeSize(MF);
+  }
 
   UpdateLiveIns = MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF);
   if (!UpdateLiveIns)
@@ -642,11 +645,8 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // we don't have to split a block.  At worst we will be introducing 1 new
   // branch instruction, which is likely to be smaller than the 2
   // instructions that would be deleted in the merge.
-  MachineFunction *MF = MBB1->getParent();
-  bool OptForSize =
-      MF->getFunction().hasOptSize() ||
-      (llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
-       llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo));
+  bool OptForSize = llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
+                    llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo);
   return EffectiveTailLen >= 2 && OptForSize &&
          (FullBlockTail1 || FullBlockTail2);
 }
@@ -1888,7 +1888,7 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
   // Also avoid moving code above predicated instruction since it's hard to
   // reason about register liveness with predicated instruction.
   bool DontMoveAcrossStore = true;
-  if (!PI->isSafeToMove(nullptr, DontMoveAcrossStore) || TII->isPredicated(*PI))
+  if (!PI->isSafeToMove(DontMoveAcrossStore) || TII->isPredicated(*PI))
     return MBB->end();
 
   // Find out what registers are live. Note this routine is ignoring other live
@@ -2012,7 +2012,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       break;
 
     bool DontMoveAcrossStore = true;
-    if (!TIB->isSafeToMove(nullptr, DontMoveAcrossStore))
+    if (!TIB->isSafeToMove(DontMoveAcrossStore))
       break;
 
     // Remove kills from ActiveDefsSet, these registers had short live ranges.

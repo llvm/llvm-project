@@ -138,7 +138,7 @@ class DINode : public MDNode {
 
 protected:
   DINode(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt)
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {})
       : MDNode(C, ID, Storage, Ops1, Ops2) {
     assert(Tag < 1u << 16);
     SubclassData16 = Tag;
@@ -311,7 +311,7 @@ class DIAssignID : public MDNode {
   friend class MDNode;
 
   DIAssignID(LLVMContext &C, StorageType Storage)
-      : MDNode(C, DIAssignIDKind, Storage, std::nullopt) {}
+      : MDNode(C, DIAssignIDKind, Storage, {}) {}
 
   ~DIAssignID() { dropAllReferences(); }
 
@@ -2730,7 +2730,7 @@ class DIExpression : public MDNode {
   std::vector<uint64_t> Elements;
 
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
-      : MDNode(C, DIExpressionKind, Storage, std::nullopt),
+      : MDNode(C, DIExpressionKind, Storage, {}),
         Elements(Elements.begin(), Elements.end()) {}
   ~DIExpression() = default;
 
@@ -3083,6 +3083,43 @@ public:
     else
       return 0;
   }
+
+  /// Computes a fragment, bit-extract operation if needed, and new constant
+  /// offset to describe a part of a variable covered by some memory.
+  ///
+  /// The memory region starts at:
+  ///   \p SliceStart + \p SliceOffsetInBits
+  /// And is size:
+  ///   \p SliceSizeInBits
+  ///
+  /// The location of the existing variable fragment \p VarFrag is:
+  ///   \p DbgPtr + \p DbgPtrOffsetInBits + \p DbgExtractOffsetInBits.
+  ///
+  /// It is intended that these arguments are derived from a debug record:
+  /// - \p DbgPtr is the (single) DIExpression operand.
+  /// - \p DbgPtrOffsetInBits is the constant offset applied to \p DbgPtr.
+  /// - \p DbgExtractOffsetInBits is the offset from a
+  ///   DW_OP_LLVM_bit_extract_[sz]ext operation.
+  ///
+  /// Results and return value:
+  /// - Return false if the result can't be calculated for any reason.
+  /// - \p Result is set to nullopt if the intersect equals \p VarFarg.
+  /// - \p Result contains a zero-sized fragment if there's no intersect.
+  /// - \p OffsetFromLocationInBits is set to the difference between the first
+  ///   bit of the variable location and the first bit of the slice. The
+  ///   magnitude of a negative value therefore indicates the number of bits
+  ///   into the variable fragment that the memory region begins.
+  ///
+  /// We don't pass in a debug record directly to get the constituent parts
+  /// and offsets because different debug records store the information in
+  /// different places (dbg_assign has two DIExpressions - one contains the
+  /// fragment info for the entire intrinsic).
+  static bool calculateFragmentIntersect(
+      const DataLayout &DL, const Value *SliceStart, uint64_t SliceOffsetInBits,
+      uint64_t SliceSizeInBits, const Value *DbgPtr, int64_t DbgPtrOffsetInBits,
+      int64_t DbgExtractOffsetInBits, DIExpression::FragmentInfo VarFrag,
+      std::optional<DIExpression::FragmentInfo> &Result,
+      int64_t &OffsetFromLocationInBits);
 
   using ExtOps = std::array<uint64_t, 6>;
 
@@ -3739,8 +3776,7 @@ class DIMacroNode : public MDNode {
 
 protected:
   DIMacroNode(LLVMContext &C, unsigned ID, StorageType Storage, unsigned MIType,
-              ArrayRef<Metadata *> Ops1,
-              ArrayRef<Metadata *> Ops2 = std::nullopt)
+              ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {})
       : MDNode(C, ID, Storage, Ops1, Ops2) {
     assert(MIType < 1u << 16);
     SubclassData16 = MIType;
@@ -3909,7 +3945,7 @@ class DIArgList : public Metadata, ReplaceableMetadataImpl {
 
   DIArgList(LLVMContext &Context, ArrayRef<ValueAsMetadata *> Args)
       : Metadata(DIArgListKind, Uniqued), ReplaceableMetadataImpl(Context),
-        Args(Args.begin(), Args.end()) {
+        Args(Args) {
     track();
   }
   ~DIArgList() { untrack(); }

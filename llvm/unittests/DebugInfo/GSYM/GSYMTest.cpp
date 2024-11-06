@@ -3802,7 +3802,6 @@ TEST(GSYMTest, TestRangeWarnings) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4005,7 +4004,6 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4158,7 +4156,6 @@ TEST(GSYMTest, TestEmptyLinkageName) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4320,7 +4317,6 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4641,7 +4637,6 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4857,7 +4852,6 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;

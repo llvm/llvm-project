@@ -17,7 +17,9 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/linux/raw_mutex.h"
@@ -36,7 +38,7 @@
 #include "src/__support/time/linux/monotonicity.h"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Forward declaration of the RwLock class.
 class RwLock;
 // A namespace to rwlock specific utilities.
@@ -335,8 +337,6 @@ private:
   LIBC_INLINE Role get_preference() const {
     return static_cast<Role>(preference);
   }
-  // TODO: use cached thread id once implemented.
-  LIBC_INLINE static pid_t gettid() { return syscall_impl<pid_t>(SYS_gettid); }
 
   template <Role role> LIBC_INLINE LockResult try_lock(RwState &old) {
     if constexpr (role == Role::Reader) {
@@ -358,7 +358,7 @@ private:
         if (LIBC_LIKELY(old.compare_exchange_weak_with(
                 state, old.set_writer_bit(), cpp::MemoryOrder::ACQUIRE,
                 cpp::MemoryOrder::RELAXED))) {
-          writer_tid.store(gettid(), cpp::MemoryOrder::RELAXED);
+          writer_tid.store(internal::gettid(), cpp::MemoryOrder::RELAXED);
           return LockResult::Success;
         }
         // Notice that old is updated by the compare_exchange_weak_with
@@ -393,7 +393,7 @@ private:
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
     // A deadlock happens if this is a RAW/WAW lock in the same thread.
-    if (writer_tid.load(cpp::MemoryOrder::RELAXED) == gettid())
+    if (writer_tid.load(cpp::MemoryOrder::RELAXED) == internal::gettid())
       return LockResult::Deadlock;
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
@@ -519,7 +519,7 @@ public:
     if (old.has_active_writer()) {
       // The lock is held by a writer.
       // Check if we are the owner of the lock.
-      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != gettid())
+      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != internal::gettid())
         return LockResult::PermissionDenied;
       // clear writer tid.
       writer_tid.store(0, cpp::MemoryOrder::RELAXED);
@@ -553,6 +553,6 @@ public:
     return LockResult::Success;
   }
 };
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_RWLOCK_H

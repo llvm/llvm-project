@@ -1884,6 +1884,7 @@ def LegalOpA : TEST_Op<"legal_op_a">,
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
+def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
@@ -2041,6 +2042,18 @@ def GraphRegionOp : TEST_Op<"graph_region",  [
   let summary =  "operation with a graph region";
   let description = [{
     Test op that defines a graph region.
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
+def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>,
+    IsolatedFromAbove]> {
+  let summary =  "isolated from above operation with a graph region";
+  let description = [{
+    Test op that defines a graph region which is isolated from above.
   }];
 
   let regions = (region AnyRegion:$region);
@@ -2768,11 +2781,21 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 //===----------------------------------------------------------------------===//
 // Test InferIntRangeInterface
 //===----------------------------------------------------------------------===//
-def InferIntRangeType : AnyTypeOf<[AnyInteger, Index]>;
+def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOf<[AnyInteger, Index]>]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
+  let description = [{
+    Creates a value with specified [min, max] range for integer range analysis.
+
+    Example:
+
+    ```mlir
+    %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
+    ```
+  }];
+
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
                        APIntAttr:$smin,
@@ -2806,6 +2829,18 @@ def TestIncrementOp : TEST_Op<"increment",
 def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                           AllTypesMatch<["value", "result"]>]> {
+  let description = [{
+    Integer range analysis will update this op to reflect inferred integer range
+    of the input, so it can be checked with FileCheck
+
+    Example:
+
+    ```mlir
+    CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+    %1 = test.reflect_bounds %0 : index
+    ```
+  }];
+
   let arguments = (ins InferIntRangeType:$value,
                        OptionalAttr<APIntAttr>:$umin,
                        OptionalAttr<APIntAttr>:$umax,
@@ -2947,11 +2982,18 @@ def TestVersionedOpC : TEST_Op<"versionedC"> {
 
 // Op with a properties struct defined inline.
 def TestOpWithProperties : TEST_Op<"with_properties"> {
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = [{
+    `a` `=` $a `,`
+    `b` `=` $b `,`
+    `c` `=` $c `,`
+    `flag` `=` $flag `,`
+    `array` `=` $array attr-dict}];
   let arguments = (ins
-    IntProperty<"int64_t">:$a,
+    I64Property:$a,
     StrAttr:$b, // Attributes can directly be used here.
-    ArrayProperty<"int64_t", 4>:$array // example of an array
+    StringProperty:$c,
+    BoolProperty:$flag,
+    IntArrayProperty<"int64_t">:$array // example of an array
   );
 }
 
@@ -2974,7 +3016,7 @@ def TestOpWithPropertiesAndInferredType
 
 // Demonstrate how to wrap an existing C++ class named MyPropStruct.
 def MyStructProperty : Property<"MyPropStruct"> {
-  let convertToAttribute = "$_storage.asAttribute($_ctxt)";
+  let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
   let convertFromAttribute = "return MyPropStruct::setFromAttr($_storage, $_attr, $_diag);";
   let hashProperty = "$_storage.hash();";
 }
@@ -2986,16 +3028,21 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   );
 }
 
+def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins);
+}
+
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
-  let arguments = (ins ArrayProperty<"int64_t", 3>:$prop);
+  let arguments = (ins IntArrayProperty<"int64_t">:$prop);
 }
 
 def TestOpUsingPropertyInCustomAndOther
   : TEST_Op<"using_property_in_custom_and_other"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) prop-dict attr-dict";
   let arguments = (ins
-    ArrayProperty<"int64_t", 3>:$prop,
+    IntArrayProperty<"int64_t">:$prop,
     IntProperty<"int64_t">:$other
   );
 }
@@ -3021,7 +3068,7 @@ def TestOpUsingIntPropertyWithWorseBytecode
 
 def PropertiesWithCustomPrint : Property<"PropertiesWithCustomPrint"> {
   let convertToAttribute = [{
-    getPropertiesAsAttribute($_ctxt, $_storage)
+    return getPropertiesAsAttribute($_ctxt, $_storage);
   }];
   let convertFromAttribute = [{
     return setPropertiesFromAttribute($_storage, $_attr, $_diag);
@@ -3085,7 +3132,7 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
 
 def VersionedProperties : Property<"VersionedProperties"> {
   let convertToAttribute = [{
-      getPropertiesAsAttribute($_ctxt, $_storage)
+    return getPropertiesAsAttribute($_ctxt, $_storage);
   }];
   let convertFromAttribute = [{
     return setPropertiesFromAttribute($_storage, $_attr, $_diag);
@@ -3131,13 +3178,65 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
 }
 
 def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
-  let assemblyFormat = "prop-dict attr-dict";
-  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
+  let assemblyFormat = [{
+    ($a^) : (`na`)?
+    ($b^)?
+    ($c^)?
+    ($unit^)?
+    attr-dict
+  }];
+  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a,
+    DefaultValuedProperty<StringProperty, "\"\"">:$b,
+    DefaultValuedProperty<IntProperty<"int32_t">, "-1">:$c,
+    UnitProperty:$unit);
 }
 
 def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
-  let assemblyFormat = "prop-dict attr-dict";
-  let arguments = (ins OptionalAttr<I32Attr>:$a, OptionalAttr<I32Attr>:$b);
+  let assemblyFormat = [{
+    (`anAttr` `=` $anAttr^)?
+    (`simple` `=` $simple^)?
+    (`nonTrivialStorage` `=` $nonTrivialStorage^)?
+    (`hasDefault` `=` $hasDefault^)?
+    (`nested` `=` $nested^)?
+    (`longSyntax` `=` $longSyntax^)?
+    (`hasUnit` $hasUnit^)?
+    (`maybeUnit` `=` $maybeUnit^)?
+    attr-dict
+  }];
+  let arguments = (ins
+    OptionalAttr<I32Attr>:$anAttr,
+    OptionalProperty<I64Property>:$simple,
+    OptionalProperty<StringProperty>:$nonTrivialStorage,
+    // Confirm that properties with default values now default to nullopt and have
+    // the long syntax.
+    OptionalProperty<DefaultValuedProperty<I64Property, "0">>:$hasDefault,
+    OptionalProperty<OptionalProperty<I64Property>>:$nested,
+    OptionalProperty<StringProperty, 0>:$longSyntax,
+    UnitProperty:$hasUnit,
+    OptionalProperty<UnitProperty>:$maybeUnit);
+}
+
+def TestOpWithArrayProperties : TEST_Op<"with_array_properties"> {
+  let assemblyFormat = [{
+    `ints` `=` $ints
+    `strings` `=` $strings
+    `nested` `=` $nested
+    `opt` `=` $opt
+    `explicitOptions` `=` $explicitOptions
+    `explicitUnits` `=` $explicitUnits
+    ($hasDefault^ `thats_has_default`)?
+    attr-dict
+  }];
+  let arguments = (ins
+    ArrayProperty<I64Property>:$ints,
+    ArrayProperty<StringProperty>:$strings,
+    ArrayProperty<ArrayProperty<I32Property>>:$nested,
+    OptionalProperty<ArrayProperty<I32Property>>:$opt,
+    ArrayProperty<OptionalProperty<I64Property>>:$explicitOptions,
+    ArrayProperty<UnitProperty>:$explicitUnits,
+    DefaultValuedProperty<ArrayProperty<I64Property>,
+      "::llvm::ArrayRef<int64_t>{}", "::llvm::SmallVector<int64_t>{}">:$hasDefault
+  );
 }
 
 //===----------------------------------------------------------------------===//

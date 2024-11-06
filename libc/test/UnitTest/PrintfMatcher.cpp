@@ -9,6 +9,7 @@
 #include "PrintfMatcher.h"
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include "test/UnitTest/StringUtils.h"
@@ -16,7 +17,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 using printf_core::FormatFlags;
@@ -100,4 +101,4 @@ void FormatSectionMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

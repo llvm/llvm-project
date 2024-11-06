@@ -15,11 +15,11 @@
 #include "llvm/Support/RISCVISAUtils.h"
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 namespace llvm {
-void riscvExtensionsHelp(StringMap<StringRef> DescMap);
 
 class RISCVISAInfo {
 public:
@@ -74,6 +74,18 @@ public:
   static bool isSupportedExtension(StringRef Ext, unsigned MajorVersion,
                                    unsigned MinorVersion);
   static std::string getTargetFeatureForExtension(StringRef Ext);
+
+  static void printSupportedExtensions(StringMap<StringRef> &DescMap);
+  static void printEnabledExtensions(bool IsRV64,
+                                     std::set<StringRef> &EnabledFeatureNames,
+                                     StringMap<StringRef> &DescMap);
+
+  /// Return the group id and bit position of __riscv_feature_bits.  Returns
+  /// <-1, -1> if not supported.
+  static std::pair<int, int> getRISCVFeaturesBitsInfo(StringRef Ext);
+
+  // The maximum value of the group ID obtained from getRISCVFeaturesBitsInfo.
+  static constexpr unsigned FeatureBitSize = 2;
 
 private:
   RISCVISAInfo(unsigned XLen) : XLen(XLen) {}

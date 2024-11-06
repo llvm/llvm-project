@@ -505,7 +505,7 @@ define i2 @ashr_2_add_zext_basic(i1 %a, i1 %b) {
 define i32 @lshr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
@@ -566,7 +566,7 @@ define i32 @lshr_16_add_not_known_16_leading_zeroes(i32 %a, i32 %b) {
 define i64 @lshr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lshr_32_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i32 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -623,7 +623,7 @@ define i64 @lshr_33_i32_add_zext_basic(i32 %a, i32 %b) {
 define i64 @lshr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_to_64_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -668,7 +668,7 @@ define i64 @lshr_32_add_not_known_32_leading_zeroes(i64 %a, i64 %b) {
 define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
@@ -682,7 +682,7 @@ define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ashr_32_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i32 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -696,7 +696,7 @@ define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 define i64 @ashr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_to_64_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;

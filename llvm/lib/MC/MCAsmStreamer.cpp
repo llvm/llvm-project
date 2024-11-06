@@ -55,9 +55,9 @@ class MCAsmStreamer final : public MCStreamer {
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
 
-  unsigned IsVerboseAsm : 1;
-  unsigned ShowInst : 1;
-  unsigned UseDwarfDirectory : 1;
+  bool IsVerboseAsm = false;
+  bool ShowInst = false;
+  bool UseDwarfDirectory = false;
 
   void EmitRegisterName(int64_t Register);
   void PrintQuotedString(StringRef Data, raw_ostream &OS) const;
@@ -72,24 +72,40 @@ class MCAsmStreamer final : public MCStreamer {
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
-                bool isVerboseAsm, bool useDwarfDirectory,
                 MCInstPrinter *printer, std::unique_ptr<MCCodeEmitter> emitter,
-                std::unique_ptr<MCAsmBackend> asmbackend, bool showInst)
+                std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
         MAI(Context.getAsmInfo()), InstPrinter(printer),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
                          : nullptr)),
-        CommentStream(CommentToEmit), IsVerboseAsm(isVerboseAsm),
-        ShowInst(showInst), UseDwarfDirectory(useDwarfDirectory) {
+        CommentStream(CommentToEmit) {
     assert(InstPrinter);
-    if (IsVerboseAsm)
-        InstPrinter->setCommentStream(CommentStream);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
 
     Context.setUseNamesOnTempLabels(true);
+
+    auto *TO = Context.getTargetOptions();
+    if (!TO)
+      return;
+    IsVerboseAsm = TO->AsmVerbose;
+    if (IsVerboseAsm)
+      InstPrinter->setCommentStream(CommentStream);
+    ShowInst = TO->ShowMCInst;
+    switch (TO->MCUseDwarfDirectory) {
+    case MCTargetOptions::DisableDwarfDirectory:
+      UseDwarfDirectory = false;
+      break;
+    case MCTargetOptions::EnableDwarfDirectory:
+      UseDwarfDirectory = true;
+      break;
+    case MCTargetOptions::DefaultDwarfDirectory:
+      UseDwarfDirectory =
+          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
+      break;
+    }
   }
 
   MCAssembler &getAssembler() { return *Assembler; }
@@ -153,8 +169,8 @@ public:
 
   void emitGNUAttribute(unsigned Tag, unsigned Value) override;
 
-  StringRef getMnemonic(MCInst &MI) override {
-    auto [Ptr, Bits] = InstPrinter->getMnemonic(&MI);
+  StringRef getMnemonic(const MCInst &MI) const override {
+    auto [Ptr, Bits] = InstPrinter->getMnemonic(MI);
     assert((Bits != 0 || Ptr == nullptr) &&
            "Invalid char pointer for instruction with no mnemonic");
     return Ptr;
@@ -254,7 +270,7 @@ public:
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
 
-  void emitAlignmentDirective(unsigned ByteAlignment,
+  void emitAlignmentDirective(uint64_t ByteAlignment,
                               std::optional<int64_t> Value, unsigned ValueSize,
                               unsigned MaxBytesToEmit);
 
@@ -285,6 +301,8 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator,
                              StringRef FileName) override;
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
   bool emitCVFileDirective(unsigned FileNo, StringRef Filename,
@@ -355,6 +373,7 @@ public:
                        SMLoc Loc) override;
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
+  void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
 
@@ -413,7 +432,8 @@ public:
 
   void emitDwarfLineStartLabel(MCSymbol *StartSym) override;
 
-  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) override;
+  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                             MCSymbol *EndLabel = nullptr) override;
 
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
@@ -475,7 +495,7 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(MAI->getCommentString());
     // drop //
-    ExplicitCommentToEmit.append(c.slice(2, c.size()).str());
+    ExplicitCommentToEmit.append(c.substr(2).str());
   } else if (c.starts_with(StringRef("/*"))) {
     size_t p = 2, len = c.size() - 2;
     // emit each line in comment as separate newline.
@@ -496,7 +516,7 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
 
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(MAI->getCommentString());
-    ExplicitCommentToEmit.append(c.slice(1, c.size()).str());
+    ExplicitCommentToEmit.append(c.substr(1).str());
   } else
     assert(false && "Unexpected Assembly Comment");
   // full line comments immediately output
@@ -1478,23 +1498,23 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
+void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
                                            std::optional<int64_t> Value,
                                            unsigned ValueSize,
                                            unsigned MaxBytesToEmit) {
   if (MAI->useDotAlignForAlignment()) {
-    if (!isPowerOf2_32(ByteAlignment))
+    if (!isPowerOf2_64(ByteAlignment))
       report_fatal_error("Only power-of-two alignments are supported "
                          "with .align.");
     OS << "\t.align\t";
-    OS << Log2_32(ByteAlignment);
+    OS << Log2_64(ByteAlignment);
     EmitEOL();
     return;
   }
 
   // Some assemblers don't support non-power of two alignments, so we always
   // emit alignments as a power of two if possible.
-  if (isPowerOf2_32(ByteAlignment)) {
+  if (isPowerOf2_64(ByteAlignment)) {
     switch (ValueSize) {
     default:
       llvm_unreachable("Invalid size for machine code value!");
@@ -1511,7 +1531,7 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
       llvm_unreachable("Unsupported alignment size!");
     }
 
-    OS << Log2_32(ByteAlignment);
+    OS << Log2_64(ByteAlignment);
 
     if (Value.has_value() || MaxBytesToEmit) {
       if (Value.has_value()) {
@@ -1751,6 +1771,12 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           Discriminator, FileName);
 }
 
+void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  MCStreamer::emitDwarfLocLabelDirective(Loc, Name);
+  OS << ".loc_label\t" << Name;
+  EmitEOL();
+}
+
 MCSymbol *MCAsmStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   // Always use the zeroth line table, since asm syntax only supports one line
   // table for now.
@@ -1955,7 +1981,7 @@ void MCAsmStreamer::EmitRegisterName(int64_t Register) {
     // just ones that map to LLVM register numbers and have known names.
     // Fall back to using the original number directly if no name is known.
     const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-    if (std::optional<unsigned> LLVMRegister =
+    if (std::optional<MCRegister> LLVMRegister =
             MRI->getLLVMRegNum(Register, true)) {
       InstPrinter->printRegName(OS, *LLVMRegister);
       return;
@@ -2117,6 +2143,12 @@ void MCAsmStreamer::emitCFIWindowSave(SMLoc Loc) {
 void MCAsmStreamer::emitCFINegateRAState(SMLoc Loc) {
   MCStreamer::emitCFINegateRAState(Loc);
   OS << "\t.cfi_negate_ra_state";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
+  MCStreamer::emitCFINegateRAStateWithPC(Loc);
+  OS << "\t.cfi_negate_ra_state_with_pc";
   EmitEOL();
 }
 
@@ -2563,7 +2595,8 @@ void MCAsmStreamer::emitDwarfLineStartLabel(MCSymbol *StartSym) {
 }
 
 void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
-                                          MCSymbol *LastLabel) {
+                                          MCSymbol *LastLabel,
+                                          MCSymbol *EndLabel) {
   // If the targets write the raw debug line data for assembly output (We can
   // not switch to Section and add the end symbol there for assembly output)
   // we currently use the .text end label as any section end. This will not
@@ -2580,9 +2613,10 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
   MCSection *TextSection = Ctx.getObjectFileInfo()->getTextSection();
   assert(TextSection->hasEnded() && ".text section is not end!");
 
-  MCSymbol *SectionEnd = TextSection->getEndSymbol(Ctx);
+  if (!EndLabel)
+    EndLabel = TextSection->getEndSymbol(Ctx);
   const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
-  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
+  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
                            AsmInfo->getCodePointerSize());
 }
 
@@ -2641,12 +2675,9 @@ void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                    bool isVerboseAsm, bool useDwarfDirectory,
                                     MCInstPrinter *IP,
                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                    std::unique_ptr<MCAsmBackend> &&MAB,
-                                    bool ShowInst) {
-  return new MCAsmStreamer(Context, std::move(OS), isVerboseAsm,
-                           useDwarfDirectory, IP, std::move(CE), std::move(MAB),
-                           ShowInst);
+                                    std::unique_ptr<MCAsmBackend> &&MAB) {
+  return new MCAsmStreamer(Context, std::move(OS), IP, std::move(CE),
+                           std::move(MAB));
 }

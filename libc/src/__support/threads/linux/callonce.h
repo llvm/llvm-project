@@ -8,9 +8,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CALLONCE_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CALLONCE_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 using CallOnceFlag = Futex;
 
 namespace callonce_impl {
@@ -27,5 +28,5 @@ LIBC_INLINE bool callonce_fastpath(CallOnceFlag *flag) {
 }
 } // namespace callonce_impl
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_CALLONCE_H

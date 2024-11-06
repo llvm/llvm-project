@@ -1134,7 +1134,6 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
       *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
       CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCState.get());
   MappingGen.emitCounterMapping(D, OS);
-  OS.flush();
 
   if (CoverageMapping.empty())
     return;
@@ -1155,7 +1154,6 @@ CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
                                 CGM.getContext().getSourceManager(),
                                 CGM.getLangOpts());
   MappingGen.emitEmptyMapping(D, OS);
-  OS.flush();
 
   if (CoverageMapping.empty())
     return;
@@ -1195,22 +1193,25 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
 
   unsigned Counter = (*RegionCounterMap)[S];
 
-  llvm::Value *Args[] = {FuncNameVar,
-                         Builder.getInt64(FunctionHash),
-                         Builder.getInt32(NumRegionCounters),
-                         Builder.getInt32(Counter), StepV};
+  // Make sure that pointer to global is passed in with zero addrspace
+  // This is relevant during GPU profiling
+  auto *NormalizedFuncNameVarPtr =
+      llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          FuncNameVar, llvm::PointerType::get(CGM.getLLVMContext(), 0));
+
+  llvm::Value *Args[] = {
+      NormalizedFuncNameVarPtr, Builder.getInt64(FunctionHash),
+      Builder.getInt32(NumRegionCounters), Builder.getInt32(Counter), StepV};
 
   if (llvm::EnableSingleByteCoverage)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
                        ArrayRef(Args, 4));
-  else {
-    if (!StepV)
-      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                         ArrayRef(Args, 4));
-    else
-      Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
-  }
+  else if (!StepV)
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
+                       ArrayRef(Args, 4));
+  else
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
 }
 
 bool CodeGenPGO::canEmitMCDCCoverage(const CGBuilderTy &Builder) {

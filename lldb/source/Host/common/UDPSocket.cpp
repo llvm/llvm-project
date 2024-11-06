@@ -40,15 +40,11 @@ size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
 }
 
 Status UDPSocket::Connect(llvm::StringRef name) {
-  return Status("%s", g_not_supported_error);
+  return Status::FromErrorStringWithFormat("%s", g_not_supported_error);
 }
 
 Status UDPSocket::Listen(llvm::StringRef name, int backlog) {
-  return Status("%s", g_not_supported_error);
-}
-
-Status UDPSocket::Accept(Socket *&socket) {
-  return Status("%s", g_not_supported_error);
+  return Status::FromErrorStringWithFormat("%s", g_not_supported_error);
 }
 
 llvm::Expected<std::unique_ptr<UDPSocket>>
@@ -75,7 +71,7 @@ UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit) {
   int err = ::getaddrinfo(host_port->hostname.c_str(), std::to_string(host_port->port).c_str(), &hints,
                           &service_info_list);
   if (err != 0) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
 #if defined(_WIN32) && defined(UNICODE)
         "getaddrinfo(%s, %d, &hints, &info) returned error %i (%S)",
 #else
@@ -113,7 +109,7 @@ UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit) {
                                      : bind_addr.SetToAnyAddress(kDomain, host_port->port);
 
   if (!bind_addr_success) {
-    error.SetErrorString("Failed to get hostspec to bind for");
+    error = Status::FromErrorString("Failed to get hostspec to bind for");
     return error.ToError();
   }
 

@@ -327,6 +327,11 @@ void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
     Triple.setEnvironment(isHardFloat ? llvm::Triple::GNUEABIHF
                                       : llvm::Triple::GNUEABI);
     break;
+  case llvm::Triple::GNUEABIT64:
+  case llvm::Triple::GNUEABIHFT64:
+    Triple.setEnvironment(isHardFloat ? llvm::Triple::GNUEABIHFT64
+                                      : llvm::Triple::GNUEABIT64);
+    break;
   case llvm::Triple::EABI:
   case llvm::Triple::EABIHF:
     Triple.setEnvironment(isHardFloat ? llvm::Triple::EABIHF
@@ -414,10 +419,12 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
       return FloatABI::Soft;
     switch (Triple.getEnvironment()) {
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
       return FloatABI::Hard;
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::EABI:
       // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
@@ -591,11 +598,9 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
 
   // Add CPU features for generic CPUs
   if (CPUName == "native") {
-    llvm::StringMap<bool> HostFeatures;
-    if (llvm::sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.push_back(
-            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+    for (auto &F : llvm::sys::getHostCPUFeatures())
+      Features.push_back(
+          Args.MakeArgString((F.second ? "+" : "-") + F.first()));
   } else if (!CPUName.empty()) {
     // This sets the default features for the specified CPU. We certainly don't
     // want to override the features that have been explicitly specified on the

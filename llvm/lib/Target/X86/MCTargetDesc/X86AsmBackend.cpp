@@ -262,7 +262,7 @@ static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
   if (MemoryOperand < 0)
     return false;
   unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
-  unsigned BaseReg = MI.getOperand(BaseRegNum).getReg();
+  MCRegister BaseReg = MI.getOperand(BaseRegNum).getReg();
   return (BaseReg == X86::RIP);
 }
 
@@ -302,7 +302,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   if (MemoryOperand != -1)
     MemoryOperand += X86II::getOperandBias(Desc);
 
-  unsigned SegmentReg = 0;
+  MCRegister SegmentReg;
   if (MemoryOperand >= 0) {
     // Check for explicit segment override on memory operand.
     SegmentReg = Inst.getOperand(MemoryOperand + X86::AddrSegmentReg).getReg();
@@ -330,7 +330,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   }
   }
 
-  if (SegmentReg != 0)
+  if (SegmentReg)
     return X86::getSegmentOverridePrefixForReg(SegmentReg);
 
   if (STI.hasFeature(X86::Is64Bit))
@@ -338,7 +338,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
 
   if (MemoryOperand >= 0) {
     unsigned BaseRegNum = MemoryOperand + X86::AddrBaseReg;
-    unsigned BaseReg = Inst.getOperand(BaseRegNum).getReg();
+    MCRegister BaseReg = Inst.getOperand(BaseRegNum).getReg();
     if (BaseReg == X86::ESP || BaseReg == X86::EBP)
       return X86::SS_Encoding;
   }
@@ -437,8 +437,6 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
     return cast<MCDataFragment>(*F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(*F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
   }
 }
 
@@ -631,15 +629,19 @@ std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
 
 const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
+      // clang-format off
       {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_movq_load_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_relax_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_signed_4byte", 0, 32, 0},
       {"reloc_signed_4byte_relax", 0, 32, 0},
       {"reloc_global_offset_table", 0, 32, 0},
       {"reloc_global_offset_table8", 0, 64, 0},
       {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      // clang-format on
   };
 
   // Fixup kinds from .reloc directive are like R_386_NONE/R_X86_64_NONE. They
@@ -680,7 +682,9 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
   case X86::reloc_riprel_4byte_relax_rex:
+  case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
+  case X86::reloc_riprel_4byte_movq_load_rex2:
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
@@ -884,9 +888,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
       if (LabeledFragments.count(&F))
         Relaxable.clear();
 
-      if (F.getKind() == MCFragment::FT_Data ||
-          F.getKind() == MCFragment::FT_CompactEncodedInst)
-        // Skip and ignore
+      if (F.getKind() == MCFragment::FT_Data) // Skip and ignore
         continue;
 
       if (F.getKind() == MCFragment::FT_Relaxable) {
@@ -1328,7 +1330,7 @@ public:
 
   /// Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
-  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty()) return 0;
@@ -1343,13 +1345,13 @@ public:
     bool HasFP = false;
 
     // Encode that we are using EBP/RBP as the frame pointer.
-    uint32_t CompactUnwindEncoding = 0;
+    uint64_t CompactUnwindEncoding = 0;
 
     unsigned SubtractInstrIdx = Is64Bit ? 3 : 2;
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
-    unsigned StackSize = 0;
-    int MinAbsOffset = std::numeric_limits<int>::max();
+    uint64_t StackSize = 0;
+    int64_t MinAbsOffset = std::numeric_limits<int64_t>::max();
 
     for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
@@ -1376,7 +1378,7 @@ public:
         memset(SavedRegs, 0, sizeof(SavedRegs));
         StackAdjust = 0;
         SavedRegIdx = 0;
-        MinAbsOffset = std::numeric_limits<int>::max();
+        MinAbsOffset = std::numeric_limits<int64_t>::max();
         InstrOffset += MoveInstrSize;
         break;
       }
@@ -1416,10 +1418,10 @@ public:
           // unwind encoding.
           return CU::UNWIND_MODE_DWARF;
 
-        unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
+        MCRegister Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
-        MinAbsOffset = std::min(MinAbsOffset, abs(Inst.getOffset()));
+        MinAbsOffset = std::min(MinAbsOffset, std::abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);
         break;
       }

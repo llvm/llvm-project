@@ -118,9 +118,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  //   v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
-  //             v       v       v       v       v
-  //           v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  // v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //                   v       v       v       v       v
+  //                 v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -161,14 +161,10 @@ struct CpuInfo {
   StringRef Name; // Name, as written for -mcpu.
   const ArchInfo &Arch;
   AArch64::ExtensionBitset
-      DefaultExtensions; // Default extensions for this CPU. These will be
-                         // ORd with the architecture defaults.
+      DefaultExtensions; // Default extensions for this CPU.
 
   AArch64::ExtensionBitset getImpliedExtensions() const {
-    AArch64::ExtensionBitset ImpliedExts;
-    ImpliedExts |= DefaultExtensions;
-    ImpliedExts |= Arch.DefaultExts;
-    return ImpliedExts;
+    return DefaultExtensions;
   }
 };
 

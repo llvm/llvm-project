@@ -14,10 +14,6 @@
 
 #include <immintrin.h>
 
-#if !defined(__SCE__) || __has_feature(modules) || defined(__3dNOW__)
-#include <mm3dnow.h>
-#endif
-
 #if !defined(__SCE__) || __has_feature(modules) || defined(__PRFCHW__)
 #include <prfchwintrin.h>
 #endif

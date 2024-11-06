@@ -331,6 +331,12 @@ module AtomicRMWBinOp : sig
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
+  | USub_Cond
+  | USub_Sat
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -690,7 +696,7 @@ val named_struct_type : llcontext -> string -> lltype
 
 (** [struct_set_body ty elts ispacked] sets the body of the named struct [ty]
     to the [elts] elements.
-    See the moethd [llvm::StructType::setBody]. *)
+    See the method [llvm::StructType::setBody]. *)
 val struct_set_body : lltype -> lltype array -> bool -> unit
 
 (** [struct_element_types sty] returns the constituent types of the struct type
@@ -759,10 +765,6 @@ val void_type : llcontext -> lltype
 (** [label_type c] creates a type of a basic block in the context [c]. See
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
-
-(** [x86_mmx_type c] returns the x86 64-bit MMX register type in the
-    context [c]. See [llvm::Type::X86_MMXTy]. *)
-val x86_mmx_type : llcontext -> lltype
 
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.

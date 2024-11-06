@@ -48,17 +48,17 @@
 ;    }
 ;  }
 
-; CHECK: Run stale profile matching for bar
-
-; CHECK: Run stale profile matching for foo
-; CHECK: Callsite with callee:bar is matched from 1.15 to 1.15
-; CHECK: Callsite with callee:bar is matched from 2 to 2
-
 ; CHECK: Run stale profile matching for main
 ; CHECK: Callsite with callee:foo is matched from 4 to 2
 ; CHECK: Callsite with callee:bar is matched from 5 to 3
 ; CHECK: Callsite with callee:foo is matched from 8 to 4
 ; CHECK: Callsite with callee:bar is matched from 9 to 5
+
+; CHECK: Run stale profile matching for foo
+; CHECK: Callsite with callee:bar is matched from 1.15 to 1.15
+; CHECK: Callsite with callee:bar is matched from 2 to 2
+
+; CHECK: Run stale profile matching for bar
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

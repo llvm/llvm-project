@@ -16,15 +16,15 @@
 namespace lld::elf {
 class InputFile;
 class OutputSection;
-void copySectionsIntoPartitions();
-template <class ELFT> void writeResult();
+void copySectionsIntoPartitions(Ctx &ctx);
+template <class ELFT> void writeResult(Ctx &ctx);
 
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be
 // placed in it.
 struct PhdrEntry {
-  PhdrEntry(unsigned type, unsigned flags)
-      : p_align(type == llvm::ELF::PT_LOAD ? config->maxPageSize : 0),
+  PhdrEntry(Ctx &ctx, unsigned type, unsigned flags)
+      : p_align(type == llvm::ELF::PT_LOAD ? ctx.arg.maxPageSize : 0),
         p_type(type), p_flags(flags) {}
   void add(OutputSection *sec);
 
@@ -44,18 +44,9 @@ struct PhdrEntry {
   uint64_t lmaOffset = 0;
 };
 
-void addReservedSymbols();
-bool includeInSymtab(const Symbol &b);
-unsigned getSectionRank(OutputSection &osec);
-
-template <class ELFT> uint32_t calcMipsEFlags();
-
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
-
-bool isMipsN32Abi(const InputFile *f);
-bool isMicroMips();
-bool isMipsR6();
+void addReservedSymbols(Ctx &ctx);
+bool includeInSymtab(Ctx &, const Symbol &);
+unsigned getSectionRank(Ctx &, OutputSection &osec);
 
 } // namespace lld::elf
 

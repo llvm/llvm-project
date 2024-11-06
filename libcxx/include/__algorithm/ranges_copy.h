@@ -37,8 +37,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __copy {
-struct __fn {
+struct __copy {
   template <input_iterator _InIter, sentinel_for<_InIter> _Sent, weakly_incrementable _OutIter>
     requires indirectly_copyable<_InIter, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_result<_InIter, _OutIter>
@@ -55,10 +54,9 @@ struct __fn {
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 };
-} // namespace __copy
 
 inline namespace __cpo {
-inline constexpr auto copy = __copy::__fn{};
+inline constexpr auto copy = __copy{};
 } // namespace __cpo
 } // namespace ranges
 

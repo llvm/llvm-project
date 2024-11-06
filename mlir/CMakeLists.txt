@@ -16,7 +16,7 @@ endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 
 if(MLIR_STANDALONE_BUILD)
   find_package(LLVM CONFIG REQUIRED)
@@ -84,13 +84,20 @@ check_c_compiler_flag("-Werror=mismatched-tags" C_SUPPORTS_WERROR_MISMATCHED_TAG
 append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_C_FLAGS)
 append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_CXX_FLAGS)
 
-# Silence a false positive GCC -Wunused-but-set-parameter warning in constexpr
-# cases, by marking SelectedCase as used. See
-# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827 for details. The issue is
-# fixed in GCC 10.
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")
-  check_cxx_compiler_flag("-Wno-unused-but-set-parameter" CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER)
-  append_if(CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER "-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  # Silence a false positive GCC -Wunused-but-set-parameter warning in
+  # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
+  # for details
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+    check_cxx_compiler_flag("-Wno-unused-but-set-parameter" CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER)
+    append_if(CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER "-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+  endif()
+  # Silence a false positive GCC -Wdeprecated-copy warning in cases where
+  # a copy operator is defined through "using" a base class copy operator.
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0")
+    check_cxx_compiler_flag("-Wno-deprecated-copy" CXX_SUPPORTS_WNO_DEPRECTAED_COPY)
+    append_if(CXX_SUPPORTS_WNO_DEPRECTAED_COPY "-Wno-deprecated-copy" CMAKE_CXX_FLAGS)
+  endif()
 endif()
 
 # Installing the headers and docs needs to depend on generating any public

@@ -3245,7 +3245,7 @@ static kmp_task_t *__kmp_steal_task(kmp_int32 victim_tid, kmp_int32 gtid,
   threads_data = task_team->tt.tt_threads_data;
   KMP_DEBUG_ASSERT(threads_data != NULL); // Caller should check this condition
   KMP_DEBUG_ASSERT(victim_tid >= 0);
-  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_nproc);
+  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_max_threads);
 
   victim_td = &threads_data[victim_tid];
   victim_thr = victim_td->td.td_thr;
@@ -5276,7 +5276,7 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   switch (sched) {
   case 0: // no schedule clause specified, we can choose the default
     // let's try to schedule (team_size*10) tasks
-    grainsize = thread->th.th_team_nproc * 10;
+    grainsize = thread->th.th_team_nproc * static_cast<kmp_uint64>(10);
     KMP_FALLTHROUGH();
   case 2: // num_tasks provided
     if (grainsize > tc) {
@@ -5491,7 +5491,8 @@ static kmp_tdg_info_t *__kmp_find_tdg(kmp_int32 tdg_id) {
 
 // __kmp_print_tdg_dot: prints the TDG to a dot file
 // tdg:    ID of the TDG
-void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg) {
+// gtid:   Global Thread ID
+void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
   kmp_int32 tdg_id = tdg->tdg_id;
   KA_TRACE(10, ("__kmp_print_tdg_dot(enter): T#%d tdg_id=%d \n", gtid, tdg_id));
 
@@ -5693,7 +5694,7 @@ void __kmp_end_record(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
   KMP_ATOMIC_ST_RLX(&__kmp_tdg_task_id, 0);
 
   if (__kmp_tdg_dot)
-    __kmp_print_tdg_dot(tdg);
+    __kmp_print_tdg_dot(tdg, gtid);
 }
 
 // __kmpc_end_record_task: wrapper around __kmp_end_record to mark

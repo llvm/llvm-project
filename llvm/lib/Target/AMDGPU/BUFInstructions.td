@@ -139,6 +139,7 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -355,6 +356,7 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let LGKM_CNT             = ps.LGKM_CNT;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -981,15 +983,20 @@ defm BUFFER_LOAD_LDS_U16 : MUBUF_Pseudo_Loads_LDSOpc <
 >;
 
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_zext_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_16_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_zext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i16, atomic_load_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, extloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, zextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, extloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, zextloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, sextloadi16_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, atomic_load_sext_16_global>;
 
 foreach vt = Reg32Types.types in {
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORD", vt, load_global>;
@@ -1130,7 +1137,7 @@ let OtherPredicates = [HasGFX10_BEncoding] in {
   >;
 }
 
-let SubtargetPredicate = isGFX8GFX9 in {
+let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1212,7 +1219,7 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let SubtargetPredicate = isNotGFX12Plus in
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1 : MUBUF_Invalidate <
   "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
 >;
@@ -1295,6 +1302,7 @@ let SubtargetPredicate = isGFX7Plus in {
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
 
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
 
@@ -1312,14 +1320,16 @@ let SubtargetPredicate = isGFX90APlus in {
   }
 } // End SubtargetPredicate = isGFX90APlus
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
   defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", VReg_64, f64>;
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
+let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   // Note the names can be buffer_atomic_fmin_x2/buffer_atomic_fmax_x2
   // depending on some subtargets.
   defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", VReg_64, f64>;
   defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", VReg_64, f64>;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+}
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
   let SubtargetPredicate = isGFX940Plus;
@@ -1579,9 +1589,8 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst, bit isInt
   defm : BufferAtomicPat_Common<OpPrefix, vt, Inst # "_VBUFFER", isIntr>;
 }
 
-multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> {
-  defm : BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
-}
+multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> :
+  BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
 
 multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string Inst> {
   foreach RtnMode = ["ret", "noret"] in {
@@ -1836,9 +1845,9 @@ let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16", ["ret"]>;
 } // End SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
 let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f64, "BUFFER_ATOMIC_MIN_F64">;
@@ -2433,6 +2442,7 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let MTBUF              = ps.MTBUF;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
+  let isConvergent       = ps.isConvergent;
 
   bits<24> offset;
   bits<8>  vaddr;
@@ -2536,11 +2546,9 @@ multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, bit hasTFE,
     defm _TFE : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, bit hasTFE,
-                                               string real_name> {
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, string real_name> {
   defm NAME : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
-  if hasTFE then
-    defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
+  defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
 }
 
 // Non-renamed, non-atomic gfx11/gfx12 mubuf instructions.
@@ -2549,7 +2557,7 @@ multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op, bit hasTFE = 1> :
 
 multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op,
                                  string real_name = get_BUF_ps<NAME>.Mnemonic> :
-  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, /*hasTFE=*/1, real_name> {
+  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, real_name> {
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
     def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
@@ -19,7 +20,7 @@
 #include "generic/utils.h"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace gpu {
 /// Get the first active thread inside the lane.
 LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
@@ -51,6 +52,6 @@ LIBC_INLINE uint32_t scan(uint64_t lane_mask, uint32_t x) {
 }
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_GPU_UTILS_H

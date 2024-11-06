@@ -301,6 +301,7 @@ define <16 x i32> @test13(<16 x float>%a, <16 x float>%b)
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqps %zmm1, %zmm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x48,0xc2,0xc9,0x00]
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; AVX512-NEXT:    ## zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vpsrld $31, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7d,0x48,0x72,0xd0,0x1f]
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
@@ -520,6 +521,7 @@ define <8 x i32>@test28(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1
 ; AVX512-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1 ## encoding: [0x62,0xf2,0xed,0x48,0x37,0xcb]
 ; AVX512-NEXT:    kxnorw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc9]
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; AVX512-NEXT:    ## zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
@@ -544,6 +546,7 @@ define <16 x i8>@test29(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32>
 ; KNL-NEXT:    vpcmpgtd %zmm3, %zmm2, %k1 ## encoding: [0x62,0xf1,0x6d,0x48,0x66,0xcb]
 ; KNL-NEXT:    kxorw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x47,0xc9]
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; KNL-NEXT:    ## zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0 ## encoding: [0x62,0xf2,0x7e,0x48,0x31,0xc0]
 ; KNL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; KNL-NEXT:    retq ## encoding: [0xc3]
@@ -1233,6 +1236,7 @@ define <16 x i8> @test47(<16 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k1 ## encoding: [0x62,0xf2,0x7e,0x48,0x27,0xc8]
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; KNL-NEXT:    ## zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0 ## encoding: [0x62,0xf2,0x7e,0x48,0x31,0xc0]
 ; KNL-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0 ## encoding: [0xc4,0xe3,0x69,0x4c,0xc1,0x00]
 ; KNL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
@@ -1264,6 +1268,7 @@ define <16 x i16> @test48(<16 x i32> %a, <16 x i16> %b, <16 x i16> %c) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k1 ## encoding: [0x62,0xf2,0x7e,0x48,0x27,0xc8]
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; KNL-NEXT:    ## zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0 ## encoding: [0x62,0xf2,0x7e,0x48,0x33,0xc0]
 ; KNL-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0 ## encoding: [0xc4,0xe3,0x6d,0x4c,0xc1,0x00]
 ; KNL-NEXT:    retq ## encoding: [0xc3]
@@ -1292,6 +1297,7 @@ define <8 x i16> @test49(<8 x i64> %a, <8 x i16> %b, <8 x i16> %c) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vptestnmq %zmm0, %zmm0, %k1 ## encoding: [0x62,0xf2,0xfe,0x48,0x27,0xc8]
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; KNL-NEXT:    ## zmm0 {%k1} {z} = -1
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0 ## encoding: [0x62,0xf2,0x7e,0x48,0x33,0xc0]
 ; KNL-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0 ## encoding: [0xc4,0xe3,0x69,0x4c,0xc1,0x00]
 ; KNL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
@@ -1408,6 +1414,7 @@ define <4 x i32> @zext_bool_logic(<4 x i64> %cond1, <4 x i64> %cond2, <4 x i32> 
 ; AVX512-NEXT:    vptestnmq %zmm1, %zmm1, %k1 ## encoding: [0x62,0xf2,0xf6,0x48,0x27,0xc9]
 ; AVX512-NEXT:    korw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x45,0xc9]
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; AVX512-NEXT:    ## zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vpsubd %xmm0, %xmm2, %xmm0 ## encoding: [0xc5,0xe9,0xfa,0xc0]
 ; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512-NEXT:    retq ## encoding: [0xc3]

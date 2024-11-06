@@ -329,6 +329,17 @@
 # LIT-NEXT: Contents of (__TEXT,__literals) section
 # LIT-NEXT: ef be ad de {{$}}
 
+## Ensure that addrsig metadata does not keep unreferenced functions alive.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/addrsig.s -o %t/addrsig.o
+# RUN: %lld -lSystem -dead_strip --icf=safe %t/addrsig.o -o %t/addrsig
+# RUN: llvm-objdump --syms %t/addrsig | \
+# RUN:     FileCheck --check-prefix=ADDSIG --implicit-check-not _addrsig %s
+# ADDSIG-LABEL: SYMBOL TABLE:
+# ADDSIG-NEXT:   g F __TEXT,__text _main
+# ADDSIG-NEXT:   g F __TEXT,__text __mh_execute_header
+# ADDSIG-NEXT:   *UND* dyld_stub_binder
+
 ## Duplicate symbols that will be dead stripped later should not fail when using
 ## the --dead-stripped-duplicates flag
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
@@ -988,3 +999,16 @@ _more_data:
 _main:
   callq _ref_undef_fun
 .subsections_via_symbols
+
+#--- addrsig.s
+.globl _main, _addrsig
+_main:
+  retq
+
+_addrsig:
+  retq
+
+.subsections_via_symbols
+
+.addrsig
+.addrsig_sym _addrsig

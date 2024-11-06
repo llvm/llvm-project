@@ -152,7 +152,7 @@ void PrintAddressSpaceLayout() {
 
   Printf("SHADOW_SCALE: %d\n", (int)SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)SHADOW_GRANULARITY);
-  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)SHADOW_OFFSET);
+  Printf("SHADOW_OFFSET: %p\n", (void *)SHADOW_OFFSET);
   CHECK(SHADOW_SCALE >= 3 && SHADOW_SCALE <= 7);
 }
 
@@ -212,9 +212,6 @@ static void MemprofInitInternal() {
     Atexit(memprof_atexit);
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
-
-  // interceptors
-  InitTlsSize();
 
   // Create main thread.
   MemprofThread *main_thread = CreateMainThread();

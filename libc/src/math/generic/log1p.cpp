@@ -15,11 +15,12 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "common_constants.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -926,8 +927,8 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
       //   log(1 + x) = nextafter(x, -inf) for FE_DOWNWARD, or
       //                                       FE_TOWARDZERO and x > 0,
       //              = x                  otherwise.
-      if (LIBC_UNLIKELY(xbits.is_zero()))
-        return x;
+      if (x == 0.0)
+        return x + x; // Handle FTZ/DAZ correctly.
 
       volatile float tp = 1.0f;
       volatile float tn = -1.0f;
@@ -942,7 +943,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
         return FPBits_t(x_u + 1).get_val();
       }
 
-      return x;
+      return (x + x == 0.0) ? x + x : x;
     }
     x_dd = fputil::exact_add(1.0, x);
   }
@@ -1041,4 +1042,4 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   return log1p_accurate(x_e, idx, v_dd);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

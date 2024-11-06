@@ -83,8 +83,8 @@ int TgKill(pid_t pid, tid_t tid, int sig);
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size);
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end);
 
 // Memory management
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
@@ -177,7 +177,7 @@ bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
 void RunMallocHooks(void *ptr, uptr size);
-void RunFreeHooks(void *ptr);
+int RunFreeHooks(void *ptr);
 
 class ReservedAddressRange {
  public:
@@ -239,13 +239,15 @@ void RemoveANSIEscapeSequencesFromString(char *buffer);
 void Printf(const char *format, ...) FORMAT(1, 2);
 void Report(const char *format, ...) FORMAT(1, 2);
 void SetPrintfAndReportCallback(void (*callback)(const char *));
-#define VReport(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Report(__VA_ARGS__); \
+#define VReport(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Report(__VA_ARGS__);                      \
   } while (0)
-#define VPrintf(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Printf(__VA_ARGS__); \
+#define VPrintf(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Printf(__VA_ARGS__);                      \
   } while (0)
 
 // Lock sanitizer error reporting and protects against nested errors.
@@ -266,7 +268,15 @@ class ScopedErrorReportLock {
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;
 
+// Returns true if the entire range can be read.
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
+// Attempts to copy `n` bytes from memory range starting at `src` to `dest`.
+// Returns true if the entire range can be read. Returns `false` if any part of
+// the source range cannot be read, in which case the contents of `dest` are
+// undefined.
+bool TryMemCpy(void *dest, const void *src, uptr n);
+// Copies accessible memory, and zero fill inaccessible.
+void MemCpyAccessible(void *dest, const void *src, uptr n);
 
 // Error report formatting.
 const char *StripPathPrefix(const char *filepath,

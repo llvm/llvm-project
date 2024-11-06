@@ -10,13 +10,14 @@
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, tcsendbreak, (int fd, int /* unused duration */)) {
   // POSIX leaves the behavior for non-zero duration implementation dependent.
@@ -30,4 +31,4 @@ LLVM_LIBC_FUNCTION(pid_t, tcsendbreak, (int fd, int /* unused duration */)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -1287,7 +1287,7 @@ unsigned HexagonEvaluator::getNextPhysReg(unsigned PReg, unsigned Width) const {
 }
 
 unsigned HexagonEvaluator::getVirtRegFor(unsigned PReg) const {
-  for (std::pair<unsigned,unsigned> P : MRI.liveins())
+  for (std::pair<MCRegister, Register> P : MRI.liveins())
     if (P.first == PReg)
       return P.second;
   return 0;

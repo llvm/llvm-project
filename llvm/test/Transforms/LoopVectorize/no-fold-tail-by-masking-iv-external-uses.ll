@@ -42,9 +42,6 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw i64 [[TMP13]], -1
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i32 0
@@ -54,8 +51,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[CMO:%.*]] = sub i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = add i64 1, [[CMO]]
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOAD_VAL:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]

@@ -13,11 +13,13 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Target/TimeoutResumeAll.h"
 
 namespace lldb_private {
 
 class ThreadPlanStepOverRange : public ThreadPlanStepRange,
-                                ThreadPlanShouldStopHere {
+                                ThreadPlanShouldStopHere,
+                                TimeoutResumeAll {
 public:
   ThreadPlanStepOverRange(Thread &thread, const AddressRange &range,
                           const SymbolContext &addr_context,
@@ -27,7 +29,9 @@ public:
   ~ThreadPlanStepOverRange() override;
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
+  void SetStopOthers(bool new_value) override;
   bool ShouldStop(Event *event_ptr) override;
+  void DidPush() override;
 
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
@@ -44,6 +48,7 @@ private:
   bool IsEquivalentContext(const SymbolContext &context);
 
   bool m_first_resume;
+  lldb::RunMode m_run_mode;
 
   ThreadPlanStepOverRange(const ThreadPlanStepOverRange &) = delete;
   const ThreadPlanStepOverRange &

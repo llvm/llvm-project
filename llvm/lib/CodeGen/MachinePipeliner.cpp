@@ -236,7 +236,7 @@ INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
 
@@ -437,7 +437,8 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
 
 void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  SlotIndexes &Slots = *getAnalysis<LiveIntervals>().getSlotIndexes();
+  SlotIndexes &Slots =
+      *getAnalysis<LiveIntervalsWrapperPass>().getLIS().getSlotIndexes();
 
   for (MachineInstr &PI : B.phis()) {
     MachineOperand &DefOp = PI.getOperand(0);
@@ -472,8 +473,9 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
-  SwingSchedulerDAG SMS(*this, L, getAnalysis<LiveIntervals>(), RegClassInfo,
-                        II_setByPragma, LI.LoopPipelinerInfo.get());
+  SwingSchedulerDAG SMS(
+      *this, L, getAnalysis<LiveIntervalsWrapperPass>().getLIS(), RegClassInfo,
+      II_setByPragma, LI.LoopPipelinerInfo.get());
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -501,7 +503,7 @@ void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<LiveIntervals>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -514,7 +516,7 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   Context.MDT = MDT;
   Context.PassConfig = &getAnalysis<TargetPassConfig>();
   Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  Context.LIS = &getAnalysis<LiveIntervals>();
+  Context.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   Context.RegClassInfo->runOnMachineFunction(*MF);
   WindowScheduler WS(&Context, L);
   return WS.run();
@@ -526,8 +528,16 @@ bool MachinePipeliner::useSwingModuloScheduler() {
 }
 
 bool MachinePipeliner::useWindowScheduler(bool Changed) {
-  // WindowScheduler does not work when it is off or when SwingModuloScheduler
-  // is successfully scheduled.
+  // WindowScheduler does not work for following cases:
+  // 1. when it is off.
+  // 2. when SwingModuloScheduler is successfully scheduled.
+  // 3. when pragma II is enabled.
+  if (II_setByPragma) {
+    LLVM_DEBUG(dbgs() << "Window scheduling is disabled when "
+                         "llvm.loop.pipeline.initiationinterval is set.\n");
+    return false;
+  }
+
   return WindowSchedulingOption == WindowSchedulingFlag::WS_Force ||
          (WindowSchedulingOption == WindowSchedulingFlag::WS_On && !Changed);
 }
@@ -997,8 +1007,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
         RemoveDeps.push_back(PI);
       }
     }
-    for (int i = 0, e = RemoveDeps.size(); i != e; ++i)
-      I.removePred(RemoveDeps[i]);
+    for (const SDep &D : RemoveDeps)
+      I.removePred(D);
   }
 }
 
@@ -1039,18 +1049,18 @@ void SwingSchedulerDAG::changeDependences() {
     for (const SDep &P : I.Preds)
       if (P.getSUnit() == DefSU)
         Deps.push_back(P);
-    for (int i = 0, e = Deps.size(); i != e; i++) {
-      Topo.RemovePred(&I, Deps[i].getSUnit());
-      I.removePred(Deps[i]);
+    for (const SDep &D : Deps) {
+      Topo.RemovePred(&I, D.getSUnit());
+      I.removePred(D);
     }
     // Remove the chain dependence between the instructions.
     Deps.clear();
     for (auto &P : LastSU->Preds)
       if (P.getSUnit() == &I && P.getKind() == SDep::Order)
         Deps.push_back(P);
-    for (int i = 0, e = Deps.size(); i != e; i++) {
-      Topo.RemovePred(LastSU, Deps[i].getSUnit());
-      LastSU->removePred(Deps[i]);
+    for (const SDep &D : Deps) {
+      Topo.RemovePred(LastSU, D.getSUnit());
+      LastSU->removePred(D);
     }
 
     // Add a dependence between the new instruction and the instruction
@@ -1334,9 +1344,11 @@ private:
     LLVM_DEBUG({
       for (auto Reg : FixedRegs) {
         dbgs() << printReg(Reg, TRI, 0, &MRI) << ": [";
-        const int *Sets = TRI->getRegUnitPressureSets(Reg);
-        for (; *Sets != -1; Sets++) {
-          dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+        for (MCRegUnit Unit : TRI->regunits(Reg)) {
+          const int *Sets = TRI->getRegUnitPressureSets(Unit);
+          for (; *Sets != -1; Sets++) {
+            dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+          }
         }
         dbgs() << "]\n";
       }
@@ -1345,15 +1357,18 @@ private:
     for (auto Reg : FixedRegs) {
       LLVM_DEBUG(dbgs() << "fixed register: " << printReg(Reg, TRI, 0, &MRI)
                         << "\n");
-      auto PSetIter = MRI.getPressureSets(Reg);
-      unsigned Weight = PSetIter.getWeight();
-      for (; PSetIter.isValid(); ++PSetIter) {
-        unsigned &Limit = PressureSetLimit[*PSetIter];
-        assert(Limit >= Weight &&
-               "register pressure limit must be greater than or equal weight");
-        Limit -= Weight;
-        LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
-                          << " (decreased by " << Weight << ")\n");
+      for (MCRegUnit Unit : TRI->regunits(Reg)) {
+        auto PSetIter = MRI.getPressureSets(Unit);
+        unsigned Weight = PSetIter.getWeight();
+        for (; PSetIter.isValid(); ++PSetIter) {
+          unsigned &Limit = PressureSetLimit[*PSetIter];
+          assert(
+              Limit >= Weight &&
+              "register pressure limit must be greater than or equal weight");
+          Limit -= Weight;
+          LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
+                            << " (decreased by " << Weight << ")\n");
+        }
       }
     }
   }
@@ -1400,14 +1415,12 @@ private:
         auto Reg = Use.RegUnit;
         if (!TargetRegs.contains(Reg))
           continue;
-        auto Ite = LastUseMI.find(Reg);
-        if (Ite == LastUseMI.end()) {
-          LastUseMI[Reg] = MI;
-        } else {
+        auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
+        if (!Inserted) {
           MachineInstr *Orig = Ite->second;
           MachineInstr *New = MI;
           if (InstrScore(Orig) < InstrScore(New))
-            LastUseMI[Reg] = New;
+            Ite->second = New;
         }
       }
     }
@@ -1696,6 +1709,7 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
 /// Identify an elementary circuit in the dependence graph starting at the
 /// specified node.
 bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
+                                          const SwingSchedulerDAG *DAG,
                                           bool HasBackedge) {
   SUnit *SV = &SUnits[V];
   bool F = false;
@@ -1709,12 +1723,13 @@ bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
       continue;
     if (W == S) {
       if (!HasBackedge)
-        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end()));
+        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end(), DAG));
       F = true;
       ++NumPaths;
       break;
-    } else if (!Blocked.test(W)) {
-      if (circuit(W, S, NodeSets,
+    }
+    if (!Blocked.test(W)) {
+      if (circuit(W, S, NodeSets, DAG,
                   Node2Idx->at(W) < Node2Idx->at(V) ? true : HasBackedge))
         F = true;
     }
@@ -1757,9 +1772,9 @@ void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
   Circuits Cir(SUnits, Topo);
   // Create the adjacency structure.
   Cir.createAdjacencyStructure(this);
-  for (int i = 0, e = SUnits.size(); i != e; ++i) {
+  for (int I = 0, E = SUnits.size(); I != E; ++I) {
     Cir.reset();
-    Cir.circuit(i, i, NodeSets);
+    Cir.circuit(I, I, NodeSets, this);
   }
 
   // Change the dependences back so that we've created a DAG again.
@@ -2555,7 +2570,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
-bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
+bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
@@ -2709,7 +2724,7 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 /// potentially. A dependence is loop carried if the destination defines a value
 /// that may be used or defined by the source in a subsequent iteration.
 bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
-                                         bool isSucc) {
+                                         bool isSucc) const {
   if ((Dep.getKind() != SDep::Order && Dep.getKind() != SDep::Output) ||
       Dep.isArtificial() || Dep.getSUnit()->isBoundaryNode())
     return false;
@@ -3039,9 +3054,10 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
           MoveUse = Pos;
       }
       // We did not handle HW dependences in previous for loop,
-      // and we normally set Latency = 0 for Anti deps,
-      // so may have nodes in same cycle with Anti denpendent on HW regs.
-      else if (S.getKind() == SDep::Anti && stageScheduled(*I) == StageInst1) {
+      // and we normally set Latency = 0 for Anti/Output deps,
+      // so may have nodes in same cycle with Anti/Output dependent on HW regs.
+      else if ((S.getKind() == SDep::Anti || S.getKind() == SDep::Output) &&
+               stageScheduled(*I) == StageInst1) {
         OrderBeforeUse = true;
         if ((MoveUse == 0) || (Pos < MoveUse))
           MoveUse = Pos;
@@ -3050,7 +3066,9 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
     for (auto &P : SU->Preds) {
       if (P.getSUnit() != *I)
         continue;
-      if (P.getKind() == SDep::Order && stageScheduled(*I) == StageInst1) {
+      if ((P.getKind() == SDep::Order || P.getKind() == SDep::Anti ||
+           P.getKind() == SDep::Output) &&
+          stageScheduled(*I) == StageInst1) {
         OrderAfterDef = true;
         MoveDef = Pos;
       }

@@ -84,7 +84,7 @@ static MCSubtargetInfo *createMipsMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
                                       const Triple &TT,
                                       const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new MipsMCAsmInfo(TT, Options);
+  MCAsmInfo *MAI = new MipsELFMCAsmInfo(TT, Options);
 
   unsigned SP = MRI.getDwarfRegNum(Mips::SP, true);
   MCCFIInstruction Inst = MCCFIInstruction::createDefCfaRegister(nullptr, SP);
@@ -117,8 +117,7 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
 
 static MCTargetStreamer *createMipsAsmTargetStreamer(MCStreamer &S,
                                                      formatted_raw_ostream &OS,
-                                                     MCInstPrinter *InstPrint,
-                                                     bool isVerboseAsm) {
+                                                     MCInstPrinter *InstPrint) {
   return new MipsTargetAsmStreamer(S, OS);
 }
 

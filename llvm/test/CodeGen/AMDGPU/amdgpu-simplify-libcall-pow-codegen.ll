@@ -215,7 +215,7 @@ define half @test_powr_fast_f16(half %x, half %y) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_log_f16_e32 v0, v0
-; CHECK-NEXT:    v_mul_f16_e32 v0, v0, v1
+; CHECK-NEXT:    v_mul_f16_e32 v0, v1, v0
 ; CHECK-NEXT:    v_exp_f16_e32 v0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %powr = tail call fast half @_Z4powrDhDh(half %x, half %y)
@@ -236,11 +236,11 @@ define float @test_powr_fast_f32(float %x, float %y) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
 ; CHECK-NEXT:    v_sub_f32_e32 v0, v0, v2
-; CHECK-NEXT:    v_mul_f32_e32 v2, v0, v1
+; CHECK-NEXT:    v_mul_f32_e32 v2, v1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x42800000
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v2
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
-; CHECK-NEXT:    v_fma_f32 v0, v0, v1, v2
+; CHECK-NEXT:    v_fma_f32 v0, v1, v0, v2
 ; CHECK-NEXT:    v_exp_f32_e32 v0, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x1f800000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
@@ -296,7 +296,7 @@ define double @test_powr_fast_f64(double %x, double %y) {
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_mul_f64 v[0:1], v[0:1], v[40:41]
+; CHECK-NEXT:    v_mul_f64 v[0:1], v[40:41], v[0:1]
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, _Z4exp2d@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, _Z4exp2d@gotpcrel32@hi+12
@@ -634,11 +634,11 @@ define half @test_pown_fast_f16_known_odd(half %x, i32 %y.arg) {
 ; CHECK-NEXT:    v_or_b32_e32 v1, 1, v1
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; CHECK-NEXT:    v_log_f16_e64 v2, |v0|
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
+; CHECK-NEXT:    s_movk_i32 s4, 0x7fff
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CHECK-NEXT:    v_mul_f16_e32 v1, v2, v1
 ; CHECK-NEXT:    v_exp_f16_e32 v1, v1
-; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
+; CHECK-NEXT:    v_bfi_b32 v0, s4, v1, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %y = or i32 %y.arg, 1
   %call = tail call fast half @_Z4pownDhi(half %x, i32 %y)
@@ -669,9 +669,9 @@ define float @test_pown_fast_f32_known_odd(float %x, i32 %y.arg) {
 ; CHECK-NEXT:    v_exp_f32_e32 v1, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x1f800000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; CHECK-NEXT:    s_brev_b32 s4, 1
+; CHECK-NEXT:    s_brev_b32 s4, -2
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v2
-; CHECK-NEXT:    v_and_or_b32 v0, v0, s4, v1
+; CHECK-NEXT:    v_bfi_b32 v0, s4, v1, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %y = or i32 %y.arg, 1
   %call = tail call fast float @_Z4pownfi(float %x, i32 %y)

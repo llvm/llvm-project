@@ -18,13 +18,18 @@
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/duration.h>
+#  include <__chrono/sys_info.h>
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_zone.h>
 #  include <__chrono/tzdb_list.h>
+#  include <__concepts/constructible.h>
 #  include <__config>
-#  include <__fwd/string_view.h>
 #  include <__type_traits/common_type.h>
+#  include <__type_traits/conditional.h>
+#  include <__type_traits/remove_cvref.h>
+#  include <__utility/declval.h>
 #  include <__utility/move.h>
+#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -35,8 +40,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&   \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 namespace chrono {
 
@@ -147,18 +151,73 @@ public:
     } && is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>)
       : zoned_time{__traits::locate_zone(__name), __zt, __c} {}
 
+  _LIBCPP_HIDE_FROM_ABI zoned_time& operator=(const sys_time<_Duration>& __tp) {
+    __tp_ = __tp;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time& operator=(const local_time<_Duration>& __tp) {
+    // TODO TZDB This seems wrong.
+    // Assigning a non-existent or ambiguous time will throw and not satisfy
+    // the post condition. This seems quite odd; I constructed an object with
+    // choose::earliest and that choice is not respected.
+    // what did LEWG do with this.
+    // MSVC STL and libstdc++ behave the same
+    __tp_ = __zone_->to_sys(__tp);
+    return *this;
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI operator sys_time<duration>() const { return get_sys_time(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit operator local_time<duration>() const { return get_local_time(); }
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _TimeZonePtr get_time_zone() const { return __zone_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI local_time<duration> get_local_time() const { return __zone_->to_local(__tp_); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_time<duration> get_sys_time() const { return __tp_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_info get_info() const { return __zone_->get_info(__tp_); }
 
 private:
   _TimeZonePtr __zone_;
   sys_time<duration> __tp_;
 };
 
+zoned_time() -> zoned_time<seconds>;
+
+template <class _Duration>
+zoned_time(sys_time<_Duration>) -> zoned_time<common_type_t<_Duration, seconds>>;
+
+template <class _TimeZonePtrOrName>
+using __time_zone_representation =
+    conditional_t<is_convertible_v<_TimeZonePtrOrName, string_view>,
+                  const time_zone*,
+                  remove_cvref_t<_TimeZonePtrOrName>>;
+
+template <class _TimeZonePtrOrName>
+zoned_time(_TimeZonePtrOrName&&) -> zoned_time<seconds, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _TimeZonePtrOrName, class _Duration>
+zoned_time(_TimeZonePtrOrName&&, sys_time<_Duration>)
+    -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _TimeZonePtrOrName, class _Duration>
+zoned_time(_TimeZonePtrOrName&&, local_time<_Duration>, choose = choose::earliest)
+    -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _Duration, class _TimeZonePtrOrName, class _TimeZonePtr2>
+zoned_time(_TimeZonePtrOrName&&, zoned_time<_Duration, _TimeZonePtr2>, choose = choose::earliest)
+    -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
+
+using zoned_seconds = zoned_time<seconds>;
+
+template <class _Duration1, class _Duration2, class _TimeZonePtr>
+_LIBCPP_HIDE_FROM_ABI bool
+operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_Duration2, _TimeZonePtr>& __rhs) {
+  return __lhs.get_time_zone() == __rhs.get_time_zone() && __lhs.get_sys_time() == __rhs.get_sys_time();
+}
+
 } // namespace chrono
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
-         // && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
+         // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_END_NAMESPACE_STD
 

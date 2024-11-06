@@ -47,9 +47,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexesWrapperPass>();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -107,11 +107,10 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
   }
   // Re-compute liveness
   if (Changed) {
-    LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+    LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
     SlotIndexes *SI = LIS.getSlotIndexes();
     SI->reanalyze(Fn);
-    LIS.releaseMemory();
-    LIS.runOnMachineFunction(Fn);
+    LIS.reanalyze(Fn);
   }
   return Changed;
 }
@@ -250,8 +249,7 @@ void HexagonCopyHoisting::moveCopyInstr(MachineBasicBlock *DestBB,
   DestBB->splice(FirstTI, MI->getParent(), MI);
 
   addMItoCopyList(MI);
-  for (auto I = ++(DestBB->succ_begin()), E = DestBB->succ_end(); I != E; ++I) {
-    MachineBasicBlock *SuccBB = *I;
+  for (MachineBasicBlock *SuccBB : drop_begin(DestBB->successors())) {
     auto &BBCopyInst = CopyMIList[SuccBB->getNumber()];
     MachineInstr *SuccMI = BBCopyInst[Key];
     SuccMI->eraseFromParent();

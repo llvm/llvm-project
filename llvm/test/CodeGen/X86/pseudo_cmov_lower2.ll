@@ -200,6 +200,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; minus the DEBUG_VALUE line and changes in labels..
 define double @foo1_g(float %p1, double %p2, double %p3) nounwind !dbg !4 {
 ; CHECK-LABEL: foo1_g:
+; CHECK:       .file   1 "." "test.c"
+; CHECK-NEXT:  .loc    1 3 0
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0

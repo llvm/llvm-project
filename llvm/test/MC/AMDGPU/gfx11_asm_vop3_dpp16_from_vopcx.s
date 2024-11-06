@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
 
 v_cmpx_class_f16_e64_dpp v1, v2 quad_perm:[3,2,1,0]

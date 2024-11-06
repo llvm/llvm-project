@@ -1,6 +1,18 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a %s -o - \
 // RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mbranch-target-enforce %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mguarded-control-stack %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -msign-return-address=non-leaf -msign-return-address-key=a_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -msign-return-address=all -msign-return-address-key=b_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mbranch-protection-pauth-lr -msign-return-address=all -msign-return-address-key=a_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mguarded-control-stack -mbranch-target-enforce -mbranch-protection-pauth-lr -msign-return-address=all -msign-return-address-key=a_key %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
 
 __attribute__ ((target("branch-protection=none")))
 void none() {}
@@ -67,29 +79,28 @@ __attribute__ ((target("branch-protection=gcs")))
 void gcs() {}
 // CHECK: define{{.*}} void @gcs() #[[#GCS:]]
 
-// CHECK-DAG: attributes #[[#NONE]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#NONE]] = { {{.*}}
 
-// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="true" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement" "guarded-control-stack" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="false" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"
 
-// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PACBKEY]] = { {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
+// CHECK-DAG: attributes #[[#PACBKEY]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
-// CHECK-DAG: attributes #[[#PACBKEYLEAF]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="b_key"
+// CHECK-DAG: attributes #[[#PACBKEYLEAF]] = { {{.*}} "sign-return-address"="all" "sign-return-address-key"="b_key"
 
-// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}}"branch-target-enforcement"="true" "guarded-control-stack"="false" {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}} "branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
 
+// CHECK-DAG: attributes #[[#PAUTHLR]] = { {{.*}} "branch-protection-pauth-lr" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAUTHLR_BKEY]] = { {{.*}} "branch-protection-pauth-lr" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR_BKEY]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
+// CHECK-DAG: attributes #[[#PAUTHLR_LEAF]] = { {{.*}} "branch-protection-pauth-lr" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR_LEAF]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAUTHLR_BTI]] = { {{.*}} "branch-protection-pauth-lr" {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR_BTI]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="true" "guarded-control-stack"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
-
-// CHECK-DAG: attributes #[[#GCS]] = { {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="true" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#GCS]] = { {{.*}} "guarded-control-stack"

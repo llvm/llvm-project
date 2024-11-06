@@ -32,7 +32,7 @@ LLVM_DUMP_METHOD void CommonTypeInfo::dump(llvm::raw_ostream &OS) const {
   OS << '\n';
 }
 
-LLVM_DUMP_METHOD void ObjCContextInfo::dump(llvm::raw_ostream &OS) {
+LLVM_DUMP_METHOD void ContextInfo::dump(llvm::raw_ostream &OS) {
   static_cast<CommonTypeInfo &>(*this).dump(OS);
   if (HasDefaultNullability)
     OS << "DefaultNullability: " << DefaultNullability << ' ';
@@ -65,6 +65,8 @@ LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const VariableInfo &>(*this).dump(OS);
   if (NoEscapeSpecified)
     OS << (NoEscape ? "[NoEscape] " : "");
+  if (LifetimeboundSpecified)
+    OS << (Lifetimebound ? "[Lifetimebound] " : "");
   OS << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   OS << '\n';
 }

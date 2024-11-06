@@ -6,17 +6,20 @@
 ; GCN: define amdgpu_kernel void @caller(ptr addrspace(1) nocapture %p) local_unnamed_addr #1 {
 ; GCN: %mul.i = fmul float %load, 1.500000e+01
 
-; UNSAFE: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "unsafe-fp-math"="true" }
-; UNSAFE: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #0 = { nounwind "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #1 = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 
-; NOINFS: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-infs-fp-math"="true" }
-; NOINFS: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "unsafe-fp-math"="false" }
+; NOINFS: attributes #0 = { nounwind "amdgpu-waves-per-eu"="4,10" "no-infs-fp-math"="true" "uniform-work-group-size"="false" }
+; NOINFS: attributes #1 = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="false" }
 
-; NONANS: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-nans-fp-math"="true" }
-; NONANS: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "unsafe-fp-math"="false" }
+; NONANS: attributes #0 = { nounwind "amdgpu-waves-per-eu"="4,10" "no-nans-fp-math"="true" "uniform-work-group-size"="false" }
+; NONANS: attributes #1 = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="false" }
+
+declare void @extern() #0
 
 define float @foo(float %x) #0 {
 entry:
+  call void @extern()
   %mul = fmul float %x, 1.500000e+01
   ret float %mul
 }
@@ -24,7 +27,7 @@ entry:
 define amdgpu_kernel void @caller(ptr addrspace(1) %p) #1 {
 entry:
   %load = load float, ptr addrspace(1) %p, align 4
-  %call = call fast float @foo(float %load) #0
+  %call = call fast float @foo(float %load)
   store float %call, ptr addrspace(1) %p, align 4
   ret void
 }

@@ -10,12 +10,13 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_UTILS_H
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 LIBC_INLINE uintmax_t apply_length_modifier(uintmax_t num,
@@ -69,6 +70,6 @@ LIBC_INLINE uintmax_t apply_length_modifier(uintmax_t num,
 enum class RoundDirection { Up, Down, Even };
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_UTILS_H

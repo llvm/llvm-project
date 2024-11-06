@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_BIT_WIDTH_UC_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_BIT_WIDTH_UC_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_bit_width_uc(unsigned char value);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_BIT_WIDTH_UC_H

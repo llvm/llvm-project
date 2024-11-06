@@ -23,8 +23,10 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalCalc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -40,24 +42,27 @@ namespace llvm {
 extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
 class BitVector;
-class LiveIntervalCalc;
 class MachineBlockFrequencyInfo;
 class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
+class ProfileSummaryInfo;
 class raw_ostream;
 class TargetInstrInfo;
 class VirtRegMap;
 
-class LiveIntervals : public MachineFunctionPass {
+class LiveIntervals {
+  friend class LiveIntervalsAnalysis;
+  friend class LiveIntervalsWrapperPass;
+
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   SlotIndexes *Indexes = nullptr;
   MachineDominatorTree *DomTree = nullptr;
-  LiveIntervalCalc *LICalc = nullptr;
+  std::unique_ptr<LiveIntervalCalc> LICalc;
 
   /// Special pool allocator for VNInfo's (LiveInterval val#).
   VNInfo::Allocator VNInfoAllocator;
@@ -93,21 +98,34 @@ class LiveIntervals : public MachineFunctionPass {
   /// interference.
   SmallVector<LiveRange *, 0> RegUnitRanges;
 
+  // Can only be created from pass manager.
+  LiveIntervals() = default;
+  LiveIntervals(MachineFunction &MF, SlotIndexes &SI, MachineDominatorTree &DT)
+      : Indexes(&SI), DomTree(&DT) {
+    analyze(MF);
+  }
+
+  void analyze(MachineFunction &MF);
+
+  void clear();
+
 public:
-  static char ID;
-
-  LiveIntervals();
-  ~LiveIntervals() override;
+  LiveIntervals(LiveIntervals &&) = default;
+  ~LiveIntervals();
 
   /// Calculate the spill weight to assign to a single instruction.
+  /// If \p PSI is provided the calculation is altered for optsize functions.
   static float getSpillWeight(bool isDef, bool isUse,
                               const MachineBlockFrequencyInfo *MBFI,
-                              const MachineInstr &MI);
+                              const MachineInstr &MI,
+                              ProfileSummaryInfo *PSI = nullptr);
 
   /// Calculate the spill weight to assign to a single instruction.
+  /// If \p PSI is provided the calculation is altered for optsize functions.
   static float getSpillWeight(bool isDef, bool isUse,
                               const MachineBlockFrequencyInfo *MBFI,
-                              const MachineBasicBlock *MBB);
+                              const MachineBasicBlock *MBB,
+                              ProfileSummaryInfo *PSI = nullptr);
 
   LiveInterval &getInterval(Register Reg) {
     if (hasInterval(Reg))
@@ -279,14 +297,17 @@ public:
 
   VNInfo::Allocator &getVNInfoAllocator() { return VNInfoAllocator; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-
-  /// Pass entry point; Calculates LiveIntervals.
-  bool runOnMachineFunction(MachineFunction &) override;
-
   /// Implement the dump method.
-  void print(raw_ostream &O, const Module * = nullptr) const override;
+  void print(raw_ostream &O) const;
+  void dump() const;
+
+  // For legacy pass to recompute liveness.
+  void reanalyze(MachineFunction &MF) {
+    clear();
+    analyze(MF);
+  }
+
+  MachineDominatorTree &getDomTree() { return *DomTree; }
 
   /// If LI is confined to a single basic block, return a pointer to that
   /// block.  If LI is live in to or out of any block, return NULL.
@@ -478,6 +499,48 @@ private:
                            LaneBitmask LaneMask = LaneBitmask::getAll());
 
   class HMEditor;
+};
+
+class LiveIntervalsAnalysis : public AnalysisInfoMixin<LiveIntervalsAnalysis> {
+  friend AnalysisInfoMixin<LiveIntervalsAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = LiveIntervals;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+class LiveIntervalsPrinterPass
+    : public PassInfoMixin<LiveIntervalsPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit LiveIntervalsPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class LiveIntervalsWrapperPass : public MachineFunctionPass {
+  LiveIntervals LIS;
+
+public:
+  static char ID;
+
+  LiveIntervalsWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void releaseMemory() override { LIS.clear(); }
+
+  /// Pass entry point; Calculates LiveIntervals.
+  bool runOnMachineFunction(MachineFunction &) override;
+
+  /// Implement the dump method.
+  void print(raw_ostream &O, const Module * = nullptr) const override {
+    LIS.print(O);
+  }
+
+  LiveIntervals &getLIS() { return LIS; }
 };
 
 } // end namespace llvm

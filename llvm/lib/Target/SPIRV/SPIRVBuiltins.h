@@ -19,6 +19,8 @@
 
 namespace llvm {
 namespace SPIRV {
+/// Parses the name part of the demangled builtin call.
+std::string lookupBuiltinNameHelper(StringRef DemangledCall);
 /// Lowers a builtin function call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 ///

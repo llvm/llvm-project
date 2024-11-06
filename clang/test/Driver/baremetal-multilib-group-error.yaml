@@ -1,14 +1,6 @@
 # UNSUPPORTED: system-windows
 
-# RUN: rm -rf %t
-
-# RUN: mkdir -p %t/baremetal_multilib/bin
-# RUN: ln -s %clang %t/baremetal_multilib/bin/clang
-
-# RUN: mkdir -p %t/baremetal_multilib/lib/clang-runtimes
-# RUN: ln -s %s %t/baremetal_multilib/lib/clang-runtimes/multilib.yaml
-
-# RUN: %t/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
 # RUN: FileCheck %s < %t.err
 
 ---

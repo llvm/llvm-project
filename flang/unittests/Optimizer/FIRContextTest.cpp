@@ -34,6 +34,7 @@ public:
       "i10:80,l3:24,a1:8,r54:Double,r62:X86_FP80,r11:PPC_FP128";
   std::string target = "powerpc64le-unknown-linux-gnu";
   std::string targetCPU = "gfx90a";
+  std::string tuneCPU = "generic";
   std::string targetFeatures = "+gfx9-insts,+wavefrontsize64";
   mlir::ModuleOp mod;
 };
@@ -42,6 +43,7 @@ TEST_F(StringAttributesTests, moduleStringAttrTest) {
   setTargetTriple(mod, target);
   setKindMapping(mod, *kindMap);
   setTargetCPU(mod, targetCPU);
+  setTuneCPU(mod, tuneCPU);
   setTargetFeatures(mod, targetFeatures);
 
   auto triple = getTargetTriple(mod);
@@ -61,6 +63,7 @@ TEST_F(StringAttributesTests, moduleStringAttrTest) {
   EXPECT_TRUE(mapStr.find("r62:X86_FP80") != std::string::npos);
 
   EXPECT_EQ(getTargetCPU(mod), targetCPU);
+  EXPECT_EQ(getTuneCPU(mod), tuneCPU);
 
   auto features = getTargetFeatures(mod);
   auto featuresList = features.getFeatures();
