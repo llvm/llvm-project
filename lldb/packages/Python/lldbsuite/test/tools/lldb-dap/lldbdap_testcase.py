@@ -30,11 +30,18 @@ class DAPTestCaseBase(TestBase):
         )
 
     def build_and_create_debug_adaptor(
-        self, lldbDAPEnv=None, lldbDAPLaunch=True, lldbDAPPort=None, lldbDAPUnixSocket=None
+        self,
+        lldbDAPEnv=None,
+        lldbDAPLaunch=True,
+        lldbDAPPort=None,
+        lldbDAPUnixSocket=None,
     ):
         self.build()
         self.create_debug_adaptor(
-            lldbDAPEnv, launch=lldbDAPLaunch, port=lldbDAPPort, unix_socket=lldbDAPUnixSocket
+            env=lldbDAPEnv,
+            launch=lldbDAPLaunch,
+            port=lldbDAPPort,
+            unix_socket=lldbDAPUnixSocket,
         )
 
     def set_source_breakpoints(self, source_path, lines, data=None):
@@ -489,7 +496,12 @@ class DAPTestCaseBase(TestBase):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
         """
-        self.build_and_create_debug_adaptor(lldbDAPEnv=lldbDAPEnv, lldbDAPLaunch=lldbDAPLaunch, lldbDAPPort=lldbDAPPort, lldbDAPUnixSocket=lldbDAPUnixSocket)
+        self.build_and_create_debug_adaptor(
+            lldbDAPEnv=lldbDAPEnv,
+            lldbDAPLaunch=lldbDAPLaunch,
+            lldbDAPPort=lldbDAPPort,
+            lldbDAPUnixSocket=lldbDAPUnixSocket,
+        )
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(

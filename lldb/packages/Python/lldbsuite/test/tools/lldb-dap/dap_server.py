@@ -1164,7 +1164,11 @@ class DebugAdaptorServer(DebugCommunication):
         self.process = None
         if launch:
             self.process = DebugAdaptorServer.launch(
-                executable, port=port, unix_socket=unix_socket, log_file=log_file, env=env
+                executable,
+                port=port,
+                unix_socket=unix_socket,
+                log_file=log_file,
+                env=env,
             )
 
         if port:
