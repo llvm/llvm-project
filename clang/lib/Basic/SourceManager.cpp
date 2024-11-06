@@ -2227,7 +2227,13 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   }
 }
 
-static std::string NumberToHumanString(uint64_t Number) {
+// 123 -> "123".
+// 1234 -> "1.23k".
+// 123456 -> "123.46k".
+// 1234567 -> "1.23M".
+// 1234567890 -> "1.23G".
+// 1234567890123 -> "1.23T".
+static std::string humanizeNumber(uint64_t Number) {
   static constexpr std::array<std::pair<uint64_t, char>, 4> Units = {
       {{1'000'000'000'000UL, 'T'},
        {1'000'000'000UL, 'G'},
@@ -2318,9 +2324,9 @@ void SourceManager::noteSLocAddressSpaceUsage(
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
   Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-      << LocalUsage << NumberToHumanString(LocalUsage) << LoadedUsage
-      << NumberToHumanString(LoadedUsage) << (LocalUsage + LoadedUsage)
-      << NumberToHumanString(LocalUsage + LoadedUsage) << UsagePercent;
+      << LocalUsage << humanizeNumber(LocalUsage) << LoadedUsage
+      << humanizeNumber(LoadedUsage) << (LocalUsage + LoadedUsage)
+      << humanizeNumber(LocalUsage + LoadedUsage) << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;
@@ -2328,9 +2334,9 @@ void SourceManager::noteSLocAddressSpaceUsage(
        llvm::make_range(SortedUsage.begin(), SortedEnd)) {
     Diag.Report(FileInfo.Loc, diag::note_file_sloc_usage)
         << FileInfo.Inclusions << FileInfo.DirectSize
-        << NumberToHumanString(FileInfo.DirectSize)
+        << humanizeNumber(FileInfo.DirectSize)
         << (FileInfo.TotalSize - FileInfo.DirectSize)
-        << NumberToHumanString(FileInfo.TotalSize - FileInfo.DirectSize);
+        << humanizeNumber(FileInfo.TotalSize - FileInfo.DirectSize);
     ReportedSize += FileInfo.TotalSize;
   }
 
@@ -2338,7 +2344,7 @@ void SourceManager::noteSLocAddressSpaceUsage(
   if (ReportedSize != CountedSize) {
     Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
         << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize
-        << NumberToHumanString(CountedSize - ReportedSize);
+        << humanizeNumber(CountedSize - ReportedSize);
   }
 }
 
