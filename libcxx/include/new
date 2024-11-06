@@ -90,8 +90,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <__cstddef/size_t.h>
 #include <__exception/exception.h>
 #include <__type_traits/is_function.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_cv.h>
+#include <__type_traits/is_void.h>
 #include <__verbose_abort>
 #include <version>
 
@@ -342,7 +341,7 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_deallocate_unsized(void* __ptr, size_
 template <class _Tp>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT {
   static_assert(!(is_function<_Tp>::value), "can't launder functions");
-  static_assert(!(is_same<void, __remove_cv_t<_Tp> >::value), "can't launder cv-void");
+  static_assert(!is_void<_Tp>::value, "can't launder cv-void");
   return __builtin_launder(__p);
 }
 

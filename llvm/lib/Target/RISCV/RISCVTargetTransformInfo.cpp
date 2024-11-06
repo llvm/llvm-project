@@ -737,9 +737,9 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
 
-        // Most available hardware today optimizes NF=2 as as one wide memory op
-        // + Factor * LMUL shuffle ops.
-        if (Factor == 2) {
+        // Some processors optimize segment loads/stores as one wide memory op +
+        // Factor * LMUL shuffle ops.
+        if (ST->hasOptimizedSegmentLoadStore(Factor)) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
@@ -1583,6 +1583,11 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
+    // We can't promote f16/bf16 fadd reductions.
+    if ((LT.second.getVectorElementType() == MVT::f16 &&
+         !ST->hasVInstructionsF16()) ||
+        LT.second.getVectorElementType() == MVT::bf16)
+      return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
     if (TTI::requiresOrderedReduction(FMF)) {
       Opcodes.push_back(RISCV::VFMV_S_F);
       for (unsigned i = 0; i < LT.first.getValue(); i++)
@@ -1590,11 +1595,6 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
       Opcodes.push_back(RISCV::VFMV_F_S);
       return getRISCVInstructionCost(Opcodes, LT.second, CostKind);
     }
-    // We can't promote f16/bf16 fadd reductions.
-    if ((LT.second.getVectorElementType() == MVT::f16 &&
-         !ST->hasVInstructionsF16()) ||
-        LT.second.getVectorElementType() == MVT::bf16)
-      return InstructionCost::getInvalid();
     SplitOp = RISCV::VFADD_VV;
     Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
     break;
@@ -2298,6 +2298,23 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }
 
+bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
+  auto *VTy = dyn_cast<VectorType>(DataTy);
+  if (!VTy || VTy->isScalableTy())
+    return false;
+
+  if (!isLegalMaskedLoadStore(DataTy, Alignment))
+    return false;
+
+  // FIXME: If it is an i8 vector and the element count exceeds 256, we should
+  // scalarize these types with LMUL >= maximum fixed-length LMUL.
+  if (VTy->getElementType()->isIntegerTy(8))
+    if (VTy->getElementCount().getFixedValue() > 256)
+      return VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen() <
+             ST->getMaxLMULForFixedLengthVectors();
+  return true;
+}
+
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   auto *VTy = dyn_cast<VectorType>(DataTy);
   if (!VTy || VTy->isScalableTy())
@@ -2496,10 +2513,14 @@ RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   // Here we assume that a core that has implemented unaligned vector access
-  // should also have implemented scalar vector access.
-  Options.AllowOverlappingLoads =
-      (ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem()) &&
-      (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp);
+  // should also have implemented unaligned scalar access.
+  // TODO: Enable expansion when unaligned access is not supported after we fix
+  // issues in ExpandMemcmp.
+  if (!((ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem()) &&
+        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+    return Options;
+
+  Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   if (ST->is64Bit())
@@ -2510,8 +2531,8 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     unsigned RealMinVLen = ST->getRealMinVLen();
     // Support Fractional LMULs if the lengths are larger than XLen.
     // TODO: Support non-power-of-2 types.
-    for (unsigned LMUL = 8; LMUL >= 2; LMUL /= 2) {
-      unsigned Len = RealMinVLen / LMUL;
+    for (unsigned FLMUL = 8; FLMUL >= 2; FLMUL /= 2) {
+      unsigned Len = RealMinVLen / FLMUL;
       if (Len > ST->getXLen())
         Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
     }

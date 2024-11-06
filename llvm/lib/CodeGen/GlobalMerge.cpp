@@ -202,12 +202,13 @@ public:
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
-                       bool MergeConstantGlobals)
+                       bool MergeConstantGlobals, bool MergeConstAggressive)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
+    Opt.MergeConstAggressive = MergeConstAggressive;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -268,7 +269,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
       });
 
   // If we want to just blindly group all globals together, do so.
-  if (!GlobalMergeGroupByUse || (GlobalMergeAllConst && isConst)) {
+  if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
     BitVector AllGlobals(Globals.size());
     AllGlobals.set();
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
@@ -758,10 +759,14 @@ bool GlobalMergeImpl::run(Module &M) {
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
                                   bool MergeExternalByDefault,
-                                  bool MergeConstantByDefault) {
+                                  bool MergeConstantByDefault,
+                                  bool MergeConstAggressiveByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
+  bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
+                                  ? GlobalMergeAllConst
+                                  : MergeConstAggressiveByDefault;
   return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
-                         MergeConstant);
+                         MergeConstant, MergeConstAggressive);
 }

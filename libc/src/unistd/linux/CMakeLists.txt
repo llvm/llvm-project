@@ -179,7 +179,6 @@ add_entrypoint_object(
   HDRS
     ../getcwd.h
   DEPENDS
-    libc.include.stdlib
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
