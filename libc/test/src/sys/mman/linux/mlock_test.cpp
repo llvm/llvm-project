@@ -20,7 +20,6 @@
 #include "src/sys/resource/getrlimit.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <linux/capability.h>

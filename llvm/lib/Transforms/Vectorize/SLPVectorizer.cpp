@@ -7046,7 +7046,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 OrdersType Order;
                 SmallVector<Value *> PointerOps;
                 // Segmented load detected - vectorize at maximum vector factor.
-                if (TTI.isLegalInterleavedAccessType(
+                if (InterleaveFactor <= Slice.size() &&
+                    TTI.isLegalInterleavedAccessType(
                         getWidenedType(Slice.front()->getType(), VF),
                         InterleaveFactor,
                         cast<LoadInst>(Slice.front())->getAlign(),
