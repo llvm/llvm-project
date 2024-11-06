@@ -1602,21 +1602,11 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         if (PTy) {
           O << "\t.param .u" << PTySizeInBits << " .ptr ";
 
-          switch (PTy->getAddressSpace()) {
-          default:
-            break;
-          case ADDRESS_SPACE_GLOBAL:
-            O << ".global ";
-            break;
-          case ADDRESS_SPACE_SHARED:
-            O << ".shared ";
-            break;
-          case ADDRESS_SPACE_CONST:
-            O << ".const ";
-            break;
-          case ADDRESS_SPACE_LOCAL:
-            O << ".local ";
-            break;
+          const unsigned AddrSpace = PTy->getAddressSpace();
+          if (AddrSpace != ADDRESS_SPACE_GENERIC) {
+            O << ".";
+            emitPTXAddressSpace(AddrSpace, O);
+            O << " ";
           }
 
           const bool IsCUDA =
