@@ -1139,37 +1139,14 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
   return perm;
 }
 
-// A helper function to generate a dim-and-size pair for Ops like
-// ExtractSliceOp that require both:
-//  * dims to specify the output shape, and
-//  * sizes for the sizes attribute (or similar).
-// For dynamic sizes, if the corresponding size is a compile time constant:
-//  * the return size becomes the attribute encapsulating the known size, and
-//  * dim is updated from kDynamic to its actual known value.
-static std::pair<int64_t, OpFoldResult>
-getSimplifiedDimSizePair(OpFoldResult tileSizeOfr, Builder &b) {
-  int64_t tileSizeForShape =
-      getConstantIntValue(tileSizeOfr).value_or(ShapedType::kDynamic);
-
-  OpFoldResult tileSizeOfrSimplified;
-  if (tileSizeForShape != ShapedType::kDynamic) {
-    tileSizeOfrSimplified = b.getIndexAttr(tileSizeForShape);
-  } else {
-    tileSizeOfrSimplified = tileSizeOfr;
-  }
-
-  return std::pair<int64_t, OpFoldResult>(tileSizeForShape,
-                                          tileSizeOfrSimplified);
-}
-
 LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
     tensor::PackOp packOp, PatternRewriter &rewriter) const {
   // TODO: support the case that outer dimensions are not all 1s. A
   // tensor.expand_shape will be generated in this case.
-  if (llvm::any_of(packOp.getTiledOuterDims(),
+  if (llvm::any_of(packOp.getAllOuterDims(),
                    [](int64_t dim) { return dim != 1; })) {
     return rewriter.notifyMatchFailure(
-        packOp, "require the tiled outer dimensions of the result are all 1s");
+        packOp, "not all outer dimensions of the result are 1s");
   }
 
   Attribute zeroIdxAttr = rewriter.getIndexAttr(0);
@@ -1202,7 +1179,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   for (auto i : llvm::seq<unsigned>(0, srcRank)) {
     if (dimAndTileMapping.count(i)) {
       auto [tileSize, tileSizeOfr] =
-          getSimplifiedDimSizePair(dimAndTileMapping[i], rewriter);
+          getSimplifiedOfrAndStaticSizePair(dimAndTileMapping[i], rewriter);
       extractSliceSizes.push_back(tileSizeOfr);
       outputShapeForExtractSlice.push_back(tileSize);
     }
@@ -1236,8 +1213,8 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   }
 
   applyPermutationToVector<OpFoldResult>(transShapeForEmptyOpDynamic, perm);
-  Value empty =  rewriter.create<tensor::EmptyOp>(
-                          loc, transShapeForEmptyOpDynamic, elemType);
+  Value empty = rewriter.create<tensor::EmptyOp>(
+      loc, transShapeForEmptyOpDynamic, elemType);
 
   // 2.2 Create linalg.transpose
   auto transposedOp =
@@ -1254,7 +1231,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
   for (auto tileSize : packOp.getMixedTiles()) {
     auto [tileSizeStatic, tileSizeOfr] =
-        getSimplifiedDimSizePair(tileSize, rewriter);
+        getSimplifiedOfrAndStaticSizePair(tileSize, rewriter);
     writeSizes.push_back(tileSizeOfr);
     writeShape.push_back(tileSizeStatic);
   }
