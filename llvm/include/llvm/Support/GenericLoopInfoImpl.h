@@ -163,7 +163,7 @@ template <class BlockT, class LoopT>
 BlockT *LoopBase<BlockT, LoopT>::getUniqueLatchExitBlock() const {
   BlockT *Latch = getLoopLatch();
   assert(Latch && "Latch block must exists");
-  auto IsExitBlock = [&](BlockT *BB, bool AllowRepeats) -> BlockT * {
+  auto IsExitBlock = [this](BlockT *BB, bool AllowRepeats) -> BlockT * {
     assert(!AllowRepeats && "Unexpected parameter value.");
     return !contains(BB) ? BB : nullptr;
   };
