@@ -29,8 +29,6 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-static ExitOnError ExitOnErr;
-
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   SizeString = SizeString.trim();
 
@@ -76,8 +74,12 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
 
-  if (!SlabAllocateSizeString.empty())
-    SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
+  if (!SlabAllocateSizeString.empty()) {
+    if (auto S = getSlabAllocSize(SlabAllocateSizeString))
+      SlabSize = *S;
+    else
+      return S.takeError();
+  }
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
       SlabSize, SREPC, SAs);
