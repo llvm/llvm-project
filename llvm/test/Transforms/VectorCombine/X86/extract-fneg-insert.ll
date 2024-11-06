@@ -18,6 +18,19 @@ define <4 x float> @ext0_v4f32(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %r
 }
 
+define <4 x float> @ext0_v2f32v4f32(<2 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @ext0_v2f32v4f32(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[N]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %e = extractelement <2 x float> %x, i32 0
+  %n = fneg float %e
+  %r = insertelement <4 x float> %y, float %n, i32 0
+  ret <4 x float> %r
+}
+
 ; Eliminating extract/insert is profitable.
 
 define <4 x float> @ext2_v4f32(<4 x float> %x, <4 x float> %y) {
@@ -27,6 +40,19 @@ define <4 x float> @ext2_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %e = extractelement <4 x float> %x, i32 2
+  %n = fneg float %e
+  %r = insertelement <4 x float> %y, float %n, i32 2
+  ret <4 x float> %r
+}
+
+define <4 x float> @ext2_v2f32v4f32(<2 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @ext2_v2f32v4f32(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[N]], i32 2
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %e = extractelement <2 x float> %x, i32 2
   %n = fneg float %e
   %r = insertelement <4 x float> %y, float %n, i32 2
   ret <4 x float> %r
@@ -46,6 +72,19 @@ define <2 x double> @ext1_v2f64(<2 x double> %x, <2 x double> %y) {
   ret <2 x double> %r
 }
 
+define <4 x double> @ext1_v2f64v4f64(<2 x double> %x, <4 x double> %y) {
+; CHECK-LABEL: @ext1_v2f64v4f64(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x double> [[Y:%.*]], double [[N]], i32 1
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %e = extractelement <2 x double> %x, i32 1
+  %n = fneg nsz double %e
+  %r = insertelement <4 x double> %y, double %n, i32 1
+  ret <4 x double> %r
+}
+
 ; The vector fneg would cost twice as much as the scalar op with SSE,
 ; so we don't transform there (the shuffle would also be more expensive).
 
@@ -62,6 +101,19 @@ define <8 x float> @ext7_v8f32(<8 x float> %x, <8 x float> %y) {
 ; AVX-NEXT:    ret <8 x float> [[R]]
 ;
   %e = extractelement <8 x float> %x, i32 7
+  %n = fneg float %e
+  %r = insertelement <8 x float> %y, float %n, i32 7
+  ret <8 x float> %r
+}
+
+define <8 x float> @ext7_v4f32v8f32(<4 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @ext7_v4f32v8f32(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 7
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %e = extractelement <4 x float> %x, i32 3
   %n = fneg float %e
   %r = insertelement <8 x float> %y, float %n, i32 7
   ret <8 x float> %r
@@ -91,6 +143,21 @@ define <8 x float> @ext7_v8f32_use1(<8 x float> %x, <8 x float> %y) {
   ret <8 x float> %r
 }
 
+define <8 x float> @ext7_v4f32v8f32_use1(<4 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @ext7_v4f32v8f32_use1(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; CHECK-NEXT:    call void @use(float [[E]])
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 3
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %e = extractelement <4 x float> %x, i32 3
+  call void @use(float %e)
+  %n = fneg float %e
+  %r = insertelement <8 x float> %y, float %n, i32 3
+  ret <8 x float> %r
+}
+
 ; Negative test - the transform is likely not profitable if the fneg has another use.
 
 define <8 x float> @ext7_v8f32_use2(<8 x float> %x, <8 x float> %y) {
@@ -102,6 +169,21 @@ define <8 x float> @ext7_v8f32_use2(<8 x float> %x, <8 x float> %y) {
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %e = extractelement <8 x float> %x, i32 3
+  %n = fneg float %e
+  call void @use(float %n)
+  %r = insertelement <8 x float> %y, float %n, i32 3
+  ret <8 x float> %r
+}
+
+define <8 x float> @ext7_v4f32v8f32_use2(<4 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @ext7_v4f32v8f32_use2(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    call void @use(float [[N]])
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x float> [[Y:%.*]], float [[N]], i32 3
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %e = extractelement <4 x float> %x, i32 3
   %n = fneg float %e
   call void @use(float %n)
   %r = insertelement <8 x float> %y, float %n, i32 3
@@ -123,6 +205,19 @@ define <2 x double> @ext_index_var_v2f64(<2 x double> %x, <2 x double> %y, i32 %
   ret <2 x double> %r
 }
 
+define <4 x double> @ext_index_var_v2f64v4f64(<2 x double> %x, <4 x double> %y, i32 %index) {
+; CHECK-LABEL: @ext_index_var_v2f64v4f64(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x double> [[Y:%.*]], double [[N]], i32 [[INDEX]]
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %e = extractelement <2 x double> %x, i32 %index
+  %n = fneg nsz double %e
+  %r = insertelement <4 x double> %y, double %n, i32 %index
+  ret <4 x double> %r
+}
+
 ; Negative test - require same extract/insert index for simple shuffle.
 ; TODO: We could handle this by adjusting the cost calculation.
 
@@ -139,6 +234,19 @@ define <2 x double> @ext1_v2f64_ins0(<2 x double> %x, <2 x double> %y) {
   ret <2 x double> %r
 }
 
+define <4 x double> @ext1_v2f64v4f64_ins0(<2 x double> %x, <4 x double> %y) {
+; CHECK-LABEL: @ext1_v2f64v4f64_ins0(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x double> [[Y:%.*]], double [[N]], i32 0
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %e = extractelement <2 x double> %x, i32 1
+  %n = fneg nsz double %e
+  %r = insertelement <4 x double> %y, double %n, i32 0
+  ret <4 x double> %r
+}
+
 ; Negative test - avoid changing poison ops
 
 define <4 x float> @ext12_v4f32(<4 x float> %x, <4 x float> %y) {
@@ -149,6 +257,19 @@ define <4 x float> @ext12_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %e = extractelement <4 x float> %x, i32 12
+  %n = fneg float %e
+  %r = insertelement <4 x float> %y, float %n, i32 12
+  ret <4 x float> %r
+}
+
+define <4 x float> @ext12_v2f32v4f32(<2 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @ext12_v2f32v4f32(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[X:%.*]], i32 6
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[N]], i32 12
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %e = extractelement <2 x float> %x, i32 6
   %n = fneg float %e
   %r = insertelement <4 x float> %y, float %n, i32 12
   ret <4 x float> %r
@@ -180,4 +301,17 @@ define <2 x float> @ext1_v2f32_fsub_fmf(<2 x float> %x, <2 x float> %y) {
   %s = fsub nsz nnan float 0.0, %e
   %r = insertelement <2 x float> %y, float %s, i32 1
   ret <2 x float> %r
+}
+
+define <4 x float> @ext1_v2f32v4f32_fsub_fmf(<2 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @ext1_v2f32v4f32_fsub_fmf(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[S:%.*]] = fsub nnan nsz float 0.000000e+00, [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[S]], i32 1
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %e = extractelement <2 x float> %x, i32 1
+  %s = fsub nsz nnan float 0.0, %e
+  %r = insertelement <4 x float> %y, float %s, i32 1
+  ret <4 x float> %r
 }
