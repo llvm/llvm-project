@@ -385,6 +385,10 @@ static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
           SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
               op, cast<SymbolRefAttr>(opSym));
       privateOp.walk([&](omp::YieldOp yieldOp) {
+        // TODO Extend alias analysis if omp.yield points to
+        // block argument value
+        if (!yieldOp.getResults()[0].getDefiningOp())
+          return;
         llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
             .template Case<fir::DeclareOp, hlfir::DeclareOp>(
                 [&](auto declOp) { privateArg = declOp.getMemref(); });
