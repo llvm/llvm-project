@@ -6,12 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements pattern to decompose the operand of a GenericOp that
-// has `transpose+broadcast` juxtaposed via its affine map into separate
-// transpose and broadcast ops.
-//
-//===----------------------------------------------------------------------===//
-//
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include <utility>
 
@@ -26,11 +20,16 @@ using namespace mlir::linalg;
 
 namespace {
 
-/// Projected permutation are effectively folding in of a mixture of
-/// transpose and broadcast into the affine map of the operand.
-/// While folding of transpose and broadcast into the affine map of the
-/// linalg.generic operand is a very effective optimization, sometimes
-/// we may want to unfold that, for instance when recognizing named ops.
+/// This file implements pattern to decompose the input operand(s) of a
+/// linalg.generic that has a `transpose`, `broadcast` or a mixture of two,
+/// into explicit transpose and broadcast. Having them folded into the
+/// linalg.generic is a good optimization but sometimes we may want to unwrap
+/// i.e. `unfold` them as explicit transpose and broadcast. This rewrite
+/// pattern helps do it for each input operand. This is useful for instance
+/// when trying to recognize named ops.
+///
+/// The transpose, broadcast, or mixture of both, are expressed in the affine
+/// map of the operand. Technically it is essentially `projected permutation`.
 ///
 ///  Example
 ///
@@ -69,45 +68,21 @@ namespace {
 ///           outs(%arg2 : tensor<5x9x7x8x10xf32>) -> tensor<5x9x7x8x10xf32>
 ///
 /// Note that linalg.generic has been 'specialized' to linalg.div.
+///
 /// To unfold it is more effective to transpose first and then do the broadcast.
 /// However, if transpose is done first, the permutation map needs to be
 /// expressed in terms of reduced dimension (as broadcast hasn't happened yet).
 /// Also, the broadcast dimensions in a linalg.generic come from other operands
 /// (those not broadcasted along that particular dimension). We work this out
-/// by computing the polytope shape of the linalg.gneric from shapes of all the
-/// operands (inputs and outputs).
-
+/// by computing the convex-polyhedron shape of the linalg.gneric iteration
+/// space from shapes of all the operands (inputs and outputs).
+///
 struct UnfoldProjectedPermutation : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override;
 };
-
-/// Calculate shape (dimensions) of the iteration space polytope.
-/// This is calculated by concatenating the indexing maps of all operands
-/// of the generic; inverting the concatenation; concatenating all the
-/// shapes of the operands; and then doing `apply map` to those two.
-SmallVector<int64_t> getPolytopeDims(GenericOp op) {
-  assert(op.hasPureTensorSemantics() && "works only on tensors");
-
-  /// Concat indexing maps of all operands and invert the mapping.
-  auto maps = op.getIndexingMapsArray();
-  auto concat = concatAffineMaps(maps);
-  auto inverse = inversePermutation(concat);
-
-  /// Concat the size of each dims of all operands.
-  SmallVector<int64_t> dims;
-  for (auto &operand : op->getOpOperands()) {
-    auto rankedType = cast<RankedTensorType>(operand.get().getType());
-    for (auto size : rankedType.getShape())
-      dims.push_back(size);
-  }
-
-  /// Match the inverse map with dims to get polytope dimensions.
-  /// Note that some maybe 'kDynamic'.
-  return applyPermutationMap<int64_t>(inverse, dims);
-}
 
 /// For the given `map` determine what dimensions are transposed
 /// and what dimensions are broadcasted.
@@ -118,11 +93,8 @@ SmallVector<int64_t> getPolytopeDims(GenericOp op) {
 std::tuple<bool, bool, SmallVector<int64_t>, SmallVector<int64_t>>
 computeTransposeBroadcast(AffineMap &map) {
   assert(map.isProjectedPermutation(false) && "not a projection");
-
-  // Dimensions that don't appear on result are broadcast.
   int64_t minorSize = map.getNumResults();
 
-  // Convert affine expr to int64_t.
   SmallVector<int64_t> minorResult;
   for (int64_t i = 0; i < minorSize; ++i) {
     auto expr = cast<AffineDimExpr>(map.getResults()[i]);
@@ -130,21 +102,21 @@ computeTransposeBroadcast(AffineMap &map) {
   }
 
   // If dims are not monotonically increasing then transpose is present.
-  SmallVector<int64_t> sorted(minorResult);
-  std::sort(sorted.begin(), sorted.end());
+  SmallVector<int64_t> sortedResMap(minorResult);
+  std::sort(sortedResMap.begin(), sortedResMap.end());
   bool hasTranspose = !std::equal(minorResult.begin(), minorResult.end(),
-                                  sorted.begin(), sorted.end());
+                                  sortedResMap.begin(), sortedResMap.end());
 
   // Walk the sorted map result to determine which dimensions are broadcasted.
   SmallVector<int64_t> broadcast;
   for (int64_t i = 0, j = 0; i < map.getNumInputs(); ++i) {
-    if (j < minorSize && sorted[j] == i) {
+    if (j < minorSize && sortedResMap[j] == i) {
       j++;
       continue;
     }
     broadcast.push_back(i);
   }
-  bool hasBroadcast = broadcast.size();
+  bool hasBroadcast = !broadcast.empty();
 
   /// Consider an operand `x : tensor<7x8x9>` of a genericOp that has
   /// affine map `affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d1)>`
@@ -155,7 +127,7 @@ computeTransposeBroadcast(AffineMap &map) {
   /// that they start from d0.
   std::map<int64_t, int64_t> minorMap;
   for (int64_t i = 0; i < minorSize; ++i)
-    minorMap.insert({sorted[i], i});
+    minorMap.insert({sortedResMap[i], i});
 
   // Re-map the dimensions.
   SmallVector<int64_t> remappedResult(minorSize);
@@ -187,14 +159,13 @@ UnfoldProjectedPermutation::matchAndRewrite(GenericOp op,
 
   // Currently we handle only static shapes.
   for (auto &operand : op->getOpOperands()) {
-    auto rankedType = cast<RankedTensorType>(operand.get().getType());
-    for (auto size : rankedType.getShape())
+    auto opType = cast<RankedTensorType>(operand.get().getType());
+    for (auto size : opType.getShape())
       if (size == ShapedType::kDynamic)
         return failure();
   }
 
-  // Calculate polytope bounds from affine maps and operand(s) shapes.
-  auto polytope = getPolytopeDims(op);
+  auto outputShape = op.getStaticLoopRanges();
 
   auto loc = op.getLoc();
   bool isChanged = false;
@@ -235,7 +206,7 @@ UnfoldProjectedPermutation::matchAndRewrite(GenericOp op,
     if (hasBroadcast) {
       assert(broadcastedDims.size() && "should have non size broadcast");
       Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-          loc, polytope, inputRTType.getElementType());
+          loc, outputShape, inputRTType.getElementType());
 
       auto broadcastOp = rewriter.create<linalg::BroadcastOp>(
           loc, newInitValues[i], emptyTensor, broadcastedDims);
