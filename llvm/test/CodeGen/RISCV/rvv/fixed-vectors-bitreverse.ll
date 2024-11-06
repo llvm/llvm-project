@@ -176,6 +176,7 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vor.vv v8, v9, v8
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitreverse_v2i64:
@@ -427,6 +428,7 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vor.vv v8, v10, v8
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitreverse_v4i64:

@@ -16,8 +16,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/AttrKinds.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -146,16 +144,9 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
-    return IntegerLiteral::Create(
-        AST,
-        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
-                    static_cast<uint8_t>(RC)),
-        AST.UnsignedCharTy, SourceLocation());
-  }
-
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(ResourceClass RC) {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor() {
+    if (Record->isCompleteDefinition())
+      return *this;
     ASTContext &AST = Record->getASTContext();
 
     QualType ConstructorType =
@@ -668,7 +659,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV, bool RawBuffer) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addHandleMember(RC, RK, IsROV, RawBuffer)
-      .addDefaultHandleConstructor(RC);
+      .addDefaultHandleConstructor();
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
@@ -721,8 +712,17 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
 
-  // FIXME: Also add Increment/DecrementCounter to
-  // RasterizerOrderedStructuredBuffer when llvm/llvm-project/#113648 is merged.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
+                                "RasterizerOrderedStructuredBuffer")
+             .addSimpleTemplateParams({"element_type"})
+             .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+                    ResourceKind::TypedBuffer, /*IsROV=*/true,
+                    /*RawBuffer=*/true)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
