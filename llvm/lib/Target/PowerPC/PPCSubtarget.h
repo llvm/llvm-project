@@ -191,7 +191,7 @@ public:
   }
 
   unsigned  getRedZoneSize() const {
-    if (isPPC64())
+    if (IsPPC64)
       // 288 bytes = 18*8 (FPRs) + 18*8 (GPRs, GPR13 reserved)
       return 288;
 
@@ -216,8 +216,8 @@ public:
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
 
-  bool is64BitELFABI() const { return  isSVR4ABI() && isPPC64(); }
-  bool is32BitELFABI() const { return  isSVR4ABI() && !isPPC64(); }
+  bool is64BitELFABI() const { return  isSVR4ABI() && IsPPC64; }
+  bool is32BitELFABI() const { return  isSVR4ABI() && !IsPPC64; }
   bool isUsingPCRelativeCalls() const;
 
   /// Originally, this function return hasISEL(). Now we always enable it,
