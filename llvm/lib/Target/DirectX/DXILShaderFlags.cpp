@@ -69,16 +69,6 @@ static void updateResourceFlags(ComputedShaderFlags &Flags, Module &M,
       break;
     }
   }
-
-  if (Flags.EnableRawAndStructuredBuffers) {
-    const dxil::ModuleMetadataInfo &MMDI =
-        AM->getResult<DXILMetadataAnalysis>(M);
-    VersionTuple SM = MMDI.ShaderModelVersion;
-    Triple::EnvironmentType SP = MMDI.ShaderProfile;
-
-    Flags.ComputeShadersPlusRawAndStructuredBuffers =
-        (SP == Triple::EnvironmentType::Compute && SM.getMajor() == 4);
-  }
 }
 
 ComputedShaderFlags
