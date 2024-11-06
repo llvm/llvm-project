@@ -749,7 +749,10 @@ const llvm::fltSemantics &FP80Type::getFloatSemantics() const {
 llvm::TypeSize
 FP80Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                             mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(16);
+  // The size of FP80Type should be 16 bytes, or 128 bits. The lower 80 bits
+  // take part in the value representation and the higher 48 bits are just
+  // paddings.
+  return llvm::TypeSize::getFixed(128);
 }
 
 uint64_t FP80Type::getABIAlignment(const mlir::DataLayout &dataLayout,
@@ -770,7 +773,7 @@ const llvm::fltSemantics &FP128Type::getFloatSemantics() const {
 llvm::TypeSize
 FP128Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                              mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(16);
+  return llvm::TypeSize::getFixed(128);
 }
 
 uint64_t FP128Type::getABIAlignment(const mlir::DataLayout &dataLayout,
