@@ -95,7 +95,7 @@
 // CHECK: -plugin-opt=-enable-jmc-instrument
 
 // Check the default library name.
-// CHECK-LIB: "--whole-archive" "-lSceJmc_nosubmission" "--no-whole-archive"
+// CHECK-LIB: "--push-state" "--whole-archive" "-lSceJmc_nosubmission" "--pop-state"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.
 
