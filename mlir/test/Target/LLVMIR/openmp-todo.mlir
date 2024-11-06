@@ -4,12 +4,12 @@
 llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
   // expected-warning@below {{hint clause discarded}}
   omp.atomic.capture hint(uncontended) {
-    omp.atomic.read %x = %v : !llvm.ptr, i32
+    omp.atomic.read %x = %v : !llvm.ptr, !llvm.ptr, i32
     omp.atomic.write %v = %expr : !llvm.ptr, i32
   }
 
   // expected-warning@below {{hint clause discarded}}
-  omp.atomic.read %x = %v hint(contended) : !llvm.ptr, i32
+  omp.atomic.read %x = %v hint(contended) : !llvm.ptr, !llvm.ptr, i32
 
   // expected-warning@below {{hint clause discarded}}
   omp.atomic.write %v = %expr hint(nonspeculative) : !llvm.ptr, i32

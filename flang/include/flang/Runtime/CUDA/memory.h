@@ -35,11 +35,6 @@ void RTDECL(CUFMemsetDescriptor)(Descriptor *desc, void *value,
 void RTDECL(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
-/// Data transfer from a pointer to a descriptor.
-void RTDECL(CUFDataTransferDescPtr)(Descriptor *dst, void *src,
-    std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
-    int sourceLine = 0);
-
 /// Data transfer from a descriptor to a pointer.
 void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
     std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,

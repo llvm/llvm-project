@@ -8,8 +8,7 @@
 // RUN: %llvm_xray account --format=csv --sort=funcid "`ls basic-mode-dso-* | head -1`" | FileCheck --check-prefix=ACCOUNT %s
 // RUN: rm basic-mode-dso-*
 
-// REQUIRES: target={{(aarch64|x86_64)-.*}}
-// REQUIRES: built-in-llvm-tree
+// REQUIRES: target=x86_64{{.*}}
 
 //--- main.cpp
 
