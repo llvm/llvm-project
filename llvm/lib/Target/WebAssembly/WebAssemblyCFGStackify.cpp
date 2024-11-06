@@ -87,9 +87,8 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
                           const MachineBasicBlock *MBB);
   unsigned getDelegateDepth(const SmallVectorImpl<EndMarkerInfo> &Stack,
                             const MachineBasicBlock *MBB);
-  unsigned
-  getRethrowDepth(const SmallVectorImpl<EndMarkerInfo> &Stack,
-                  const SmallVectorImpl<const MachineBasicBlock *> &EHPadStack);
+  unsigned getRethrowDepth(const SmallVectorImpl<EndMarkerInfo> &Stack,
+                           const MachineBasicBlock *EHPadToRethrow);
   void rewriteDepthImmediates(MachineFunction &MF);
   void fixEndsAtEndOfFunction(MachineFunction &MF);
   void cleanupFunctionData(MachineFunction &MF);
@@ -1612,34 +1611,13 @@ unsigned WebAssemblyCFGStackify::getDelegateDepth(
 
 unsigned WebAssemblyCFGStackify::getRethrowDepth(
     const SmallVectorImpl<EndMarkerInfo> &Stack,
-    const SmallVectorImpl<const MachineBasicBlock *> &EHPadStack) {
+    const MachineBasicBlock *EHPadToRethrow) {
   unsigned Depth = 0;
-  // In our current implementation, rethrows always rethrow the exception caught
-  // by the innermost enclosing catch. This means while traversing Stack in the
-  // reverse direction, when we encounter END_TRY, we should check if the
-  // END_TRY corresponds to the current innermost EH pad. For example:
-  // try
-  //   ...
-  // catch         ;; (a)
-  //   try
-  //     rethrow 1 ;; (b)
-  //   catch       ;; (c)
-  //     rethrow 0 ;; (d)
-  //   end         ;; (e)
-  // end           ;; (f)
-  //
-  // When we are at 'rethrow' (d), while reversely traversing Stack the first
-  // 'end' we encounter is the 'end' (e), which corresponds to the 'catch' (c).
-  // And 'rethrow' (d) rethrows the exception caught by 'catch' (c), so we stop
-  // there and the depth should be 0. But when we are at 'rethrow' (b), it
-  // rethrows the exception caught by 'catch' (a), so when traversing Stack
-  // reversely, we should skip the 'end' (e) and choose 'end' (f), which
-  // corresponds to 'catch' (a).
   for (auto X : reverse(Stack)) {
     const MachineInstr *End = X.second;
     if (End->getOpcode() == WebAssembly::END_TRY) {
       auto *EHPad = TryToEHPad[EndToBegin[End]];
-      if (EHPadStack.back() == EHPad)
+      if (EHPadToRethrow == EHPad)
         break;
     }
     ++Depth;
@@ -1651,7 +1629,6 @@ unsigned WebAssemblyCFGStackify::getRethrowDepth(
 void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   // Now rewrite references to basic blocks to be depth immediates.
   SmallVector<EndMarkerInfo, 8> Stack;
-  SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   for (auto &MBB : reverse(MF)) {
     for (MachineInstr &MI : llvm::reverse(MBB)) {
       switch (MI.getOpcode()) {
@@ -1669,29 +1646,12 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         break;
 
       case WebAssembly::END_BLOCK:
+      case WebAssembly::END_TRY:
         Stack.push_back(std::make_pair(&MBB, &MI));
         break;
-
-      case WebAssembly::END_TRY: {
-        // We handle DELEGATE in the default level, because DELEGATE has
-        // immediate operands to rewrite.
-        Stack.push_back(std::make_pair(&MBB, &MI));
-        auto *EHPad = TryToEHPad[EndToBegin[&MI]];
-        EHPadStack.push_back(EHPad);
-        break;
-      }
 
       case WebAssembly::END_LOOP:
         Stack.push_back(std::make_pair(EndToBegin[&MI]->getParent(), &MI));
-        break;
-
-      case WebAssembly::CATCH:
-      case WebAssembly::CATCH_ALL:
-        EHPadStack.pop_back();
-        break;
-
-      case WebAssembly::RETHROW:
-        MI.getOperand(0).setImm(getRethrowDepth(Stack, EHPadStack));
         break;
 
       default:
@@ -1705,6 +1665,9 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
               if (MI.getOpcode() == WebAssembly::DELEGATE)
                 MO = MachineOperand::CreateImm(
                     getDelegateDepth(Stack, MO.getMBB()));
+              else if (MI.getOpcode() == WebAssembly::RETHROW)
+                MO = MachineOperand::CreateImm(
+                    getRethrowDepth(Stack, MO.getMBB()));
               else
                 MO = MachineOperand::CreateImm(
                     getBranchDepth(Stack, MO.getMBB()));

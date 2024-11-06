@@ -245,11 +245,39 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       Changed = true;
       break;
     }
+    case WebAssembly::RETHROW:
+      // These RETHROWs here were lowered from llvm.wasm.rethrow() intrinsics,
+      // generated in Clang for when an exception is not caught by the given
+      // type (e.g. catch (int)).
+      //
+      // RETHROW's BB argument is the EH pad where the exception to rethrow has
+      // been caught. (Until this point, RETHROW has just a '0' as a placeholder
+      // argument.) For these llvm.wasm.rethrow()s, we can safely assume the
+      // exception comes from the nearest dominating EH pad, because catch.start
+      // EH pad is structured like this:
+      //
+      // catch.start:
+      //   catchpad ...
+      //   %matches = compare ehselector with typeid
+      //   br i1 %matches, label %catch, label %rethrow
+      //
+      // rethrow:
+      //   ;; rethrows the exception caught in 'catch.start'
+      //   call @llvm.wasm.rethrow()
+      TI->removeOperand(0);
+      TI->addOperand(MachineOperand::CreateMBB(getMatchingEHPad(TI)));
+      Changed = true;
+      break;
     case WebAssembly::CLEANUPRET: {
-      // Replace a cleanupret with a rethrow. For C++ support, currently
-      // rethrow's immediate argument is always 0 (= the latest exception).
+      // CLEANUPRETs have the EH pad BB the exception to rethrow has been caught
+      // as an argument. Use it and change the instruction opcode to 'RETHROW'
+      // to make rethrowing instructions consistent.
+      //
+      // This is because we cannot safely assume that it is always the nearest
+      // dominating EH pad, in case there are code transformations such as
+      // inlining.
       BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW))
-          .addImm(0);
+          .addMBB(TI->getOperand(0).getMBB());
       TI->eraseFromParent();
       Changed = true;
       break;

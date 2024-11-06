@@ -132,11 +132,9 @@ let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 defm THROW : I<(outs), (ins tag_op:$tag, variable_ops),
                (outs), (ins tag_op:$tag), [],
                "throw   \t$tag", "throw   \t$tag", 0x08>;
-defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
+// $ehpad is the EH pad where the exception to rethrow has been caught.
+defm RETHROW : NRI<(outs), (ins bb_op:$ehpad), [], "rethrow \t$ehpad", 0x09>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
-// The depth argument will be computed in CFGStackify. We set it to 0 here for
-// now.
-def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
 
 // Region within which an exception is caught: try / end_try
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
@@ -160,7 +158,8 @@ defm DELEGATE : NRI<(outs), (ins bb_op:$dst), [], "delegate \t $dst", 0x18>;
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isPseudo = 1, isEHScopeReturn = 1 in {
-  defm CLEANUPRET : NRI<(outs), (ins), [(cleanupret)], "cleanupret", 0>;
+  defm CLEANUPRET : NRI<(outs), (ins bb_op:$ehpad), [(cleanupret bb:$ehpad)],
+                        "cleanupret", 0>;
   defm CATCHRET : NRI<(outs), (ins bb_op:$dst, bb_op:$from),
                       [(catchret bb:$dst, bb:$from)], "catchret", 0>;
 } // isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,

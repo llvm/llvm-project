@@ -195,7 +195,8 @@ def EH_RETURN64   : I<0xC3, RawFrm, (outs), (ins GR64:$addr),
 
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1 in {
-  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET", [(cleanupret)]>;
+  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET",
+                     [(cleanupret bb)]>;
 
   // CATCHRET needs a custom inserter for SEH.
   let usesCustomInserter = 1 in
