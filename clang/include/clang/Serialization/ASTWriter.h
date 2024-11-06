@@ -551,7 +551,7 @@ private:
   void WriteControlBlock(Preprocessor &PP, StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
-  void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
+  void writeUnhashedControlBlock(Preprocessor &PP);
   ASTFileSignature backpatchSignature();
 
   /// Calculate hash of the pcm content.
