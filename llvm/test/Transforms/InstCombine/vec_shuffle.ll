@@ -2377,3 +2377,71 @@ define <2 x i32> @not_splat_shuffle2(i32 %x) {
   %shuf = shufflevector <2 x i32> %vec, <2 x i32> undef, <2 x i32> <i32 1, i32 3>
   ret <2 x i32> %shuf
 }
+define <2 x i32> @foldselect0(i1 %c) {
+; CHECK-LABEL: @foldselect0(
+; CHECK-NEXT:    [[SHUF:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 7, i32 42>, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+  %sel = select i1 %c, <2 x i32> <i32 42, i32 7>, <2 x i32> <i32 0, i32 1>
+  %shuf = shufflevector <2 x i32> %sel, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  ret <2 x i32> %shuf
+}
+
+; Make sure we do not crash in this case.
+define <4 x float> @shuf_larger_length_vec_select(<2 x i1> %cond) {
+; CHECK-LABEL: @shuf_larger_length_vec_select(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> zeroinitializer, <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[SEL]], <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[SHUF]]
+;
+  %sel = select <2 x i1> %cond, <2 x float> zeroinitializer, <2 x float> splat(float 1.000000e+00)
+  %shuf = shufflevector <2 x float> %sel, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %shuf
+}
+
+; Make sure we do not fold in this case.
+define <4 x i32> @shuf_same_length_vec_select(<4 x i1> %cond) {
+; CHECK-LABEL: @shuf_same_length_vec_select(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> <i32 poison, i32 1, i32 2, i32 3>, <4 x i32> <i32 poison, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SEL]], <4 x i32> <i32 poison, i32 9, i32 poison, i32 poison>, <4 x i32> <i32 2, i32 1, i32 3, i32 5>
+; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+;
+  %sel = select <4 x i1> %cond, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shuf = shufflevector <4 x i32> %sel, <4 x i32> <i32 8, i32 9, i32 10, i32 11>, <4 x i32> <i32 2, i32 1, i32 3, i32 5>
+  ret <4 x i32> %shuf
+}
+
+declare i1 @cond()
+declare <4 x i32> @value()
+
+define <4 x i32> @foldphi1() {
+; CHECK-LABEL: @foldphi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[V:%.*]] = phi <4 x i32> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[XOR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = call <4 x i32> @value()
+; CHECK-NEXT:    [[XOR]] = xor <4 x i32> [[V]], [[VAL]]
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SHUF1:%.*]] = shufflevector <4 x i32> [[XOR]], <4 x i32> poison, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[SHUF1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %v = phi <4 x i32> [zeroinitializer, %entry], [%shuf1, %loop]
+
+  %shuf0 = shufflevector <4 x i32> %v, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  %val = call <4 x i32> @value()
+  %xor = xor <4 x i32> %shuf0, %val
+  %shuf1 = shufflevector <4 x i32> %xor, <4 x i32> poison, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret <4 x i32> %shuf1
+}

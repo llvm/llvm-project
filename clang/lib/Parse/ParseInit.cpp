@@ -487,7 +487,7 @@ ExprResult Parser::ParseBraceInitializer() {
                           : diag::ext_c_empty_initializer);
     }
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, {}, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.

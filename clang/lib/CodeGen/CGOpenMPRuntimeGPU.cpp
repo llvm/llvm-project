@@ -985,8 +985,8 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
     getDistributeLastprivateVars(CGM.getContext(), D, LastPrivatesReductions);
     if (!LastPrivatesReductions.empty()) {
       GlobalizedRD = ::buildRecordForGlobalizedVars(
-          CGM.getContext(), std::nullopt, LastPrivatesReductions,
-          MappedDeclsFields, WarpSize);
+          CGM.getContext(), {}, LastPrivatesReductions, MappedDeclsFields,
+          WarpSize);
     }
   } else if (!LastPrivatesReductions.empty()) {
     assert(!TeamAndReductions.first &&
@@ -1681,7 +1681,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
     ++Cnt;
   }
   const RecordDecl *ReductionRec = ::buildRecordForGlobalizedVars(
-      CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap, 1);
+      CGM.getContext(), PrivatesReductions, {}, VarFieldMap, 1);
 
   if (TeamsReduction)
     TeamsReductions.push_back(ReductionRec);
@@ -1753,11 +1753,14 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
-  CGF.Builder.restoreIP(OMPBuilder.createReductionsGPU(
-      OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-      DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-      CGF.getTarget().getGridValue(), C.getLangOpts().OpenMPCUDAReductionBufNum,
-      RTLoc));
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      OMPBuilder.createReductionsGPU(
+          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
+          DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          CGF.getTarget().getGridValue(),
+          C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc);
+  assert(AfterIP && "unexpected error creating GPU reductions");
+  CGF.Builder.restoreIP(*AfterIP);
   return;
 }
 
@@ -2345,11 +2348,11 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {
   const char *LocSize = "__kmpc_get_hardware_num_threads_in_block";
   llvm::Function *F = M->getFunction(LocSize);
   if (!F) {
-    F = llvm::Function::Create(
-        llvm::FunctionType::get(CGF.Int32Ty, std::nullopt, false),
-        llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
+    F = llvm::Function::Create(llvm::FunctionType::get(CGF.Int32Ty, {}, false),
+                               llvm::GlobalVariable::ExternalLinkage, LocSize,
+                               &CGF.CGM.getModule());
   }
-  return Bld.CreateCall(F, std::nullopt, "nvptx_num_threads");
+  return Bld.CreateCall(F, {}, "nvptx_num_threads");
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUThreadID(CodeGenFunction &CGF) {

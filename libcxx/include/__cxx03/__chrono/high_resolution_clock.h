@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___CHRONO_HIGH_RESOLUTION_CLOCK_H
 #define _LIBCPP___CHRONO_HIGH_RESOLUTION_CLOCK_H
 
-#include <__chrono/steady_clock.h>
-#include <__chrono/system_clock.h>
-#include <__config>
+#include <__cxx03/__chrono/steady_clock.h>
+#include <__cxx03/__chrono/system_clock.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

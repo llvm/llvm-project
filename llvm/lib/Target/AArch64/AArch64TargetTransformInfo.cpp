@@ -10,6 +10,7 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64PerfectShuffle.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"

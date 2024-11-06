@@ -270,7 +270,12 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+    return TLI->isLegalElementTypeForRVV(ElemType) ||
+           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
+            ST->hasVInstructionsBF16Minimal()) ||
+           (DataTypeVT.getVectorElementType() == MVT::f16 &&
+            ST->hasVInstructionsF16Minimal());
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) {
@@ -300,6 +305,8 @@ public:
     return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
                                              DL);
   }
+
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment);
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
@@ -427,6 +434,9 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
+
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const;
 };
 
 } // end namespace llvm

@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___CHARCONV_FROM_CHARS_RESULT_H
 #define _LIBCPP___CHARCONV_FROM_CHARS_RESULT_H
 
-#include <__config>
-#include <__system_error/errc.h>
+#include <__cxx03/__config>
+#include <__cxx03/__system_error/errc.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

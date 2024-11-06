@@ -22,9 +22,9 @@ Macros:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <errno.h>
+#include <__cxx03/errno.h>
 
 #ifndef _LIBCPP_ERRNO_H
 #   error <cerrno> tried including <errno.h> but didn't find libc++'s <errno.h> header. \

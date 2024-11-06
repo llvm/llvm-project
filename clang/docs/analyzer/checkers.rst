@@ -3447,37 +3447,6 @@ Limitations:
 
      More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
 
-.. _alpha-nondeterminism-PointerIteration:
-
-alpha.nondeterminism.PointerIteration (C++)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for non-determinism caused by iterating unordered containers of pointers.
-
-.. code-block:: c
-
- void test() {
-  int a = 1, b = 2;
-  std::unordered_set<int *> UnorderedPtrSet = {&a, &b};
-
-  for (auto i : UnorderedPtrSet) // warn
-    f(i);
- }
-
-.. _alpha-nondeterminism-PointerSorting:
-
-alpha.nondeterminism.PointerSorting (C++)
-"""""""""""""""""""""""""""""""""""""""""
-Check for non-determinism caused by sorting of pointers.
-
-.. code-block:: c
-
- void test() {
-  int a = 1, b = 2;
-  std::vector<int *> V = {&a, &b};
-  std::sort(V.begin(), V.end()); // warn
- }
-
-
 alpha.WebKit
 ^^^^^^^^^^^^
 
@@ -3490,8 +3459,8 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 .. code-block:: cpp
 
  struct CheckableObj {
-   void incrementPtrCount() {}
-   void decrementPtrCount() {}
+   void incrementCheckedPtrCount() {}
+   void decrementCheckedPtrCount() {}
  };
 
  struct Foo {
@@ -3615,7 +3584,7 @@ These are examples of cases that we consider safe:
       RefCountable* uncounted = this; // ok
     }
 
-Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that an argument is safe or it's considered if not a bug then bug-prone.
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
 
   .. code-block:: cpp
 
@@ -3634,11 +3603,48 @@ Here are some examples of situations that we warn about as they *might* be poten
       RefCountable* uncounted = counted.get(); // warn
     }
 
-We don't warn about these cases - we don't consider them necessarily safe but since they are very common and usually safe we'd introduce a lot of false positives otherwise:
-- variable defined in condition part of an ```if``` statement
-- variable defined in init statement condition of a ```for``` statement
+alpha.webkit.UncheckedLocalVarsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any unchecked local variable is backed by a CheckedPtr or CheckedRef with lifetime that is strictly larger than the scope of the unchecked local variable. To be on the safe side we require the scope of an unchecked variable to be embedded in the scope of CheckedPtr/CheckRef object that backs it.
 
-For the time being we also don't warn about uninitialized uncounted local variables.
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      CheckedPtr<RefCountable> counted;
+      // The scope of uncounted is EMBEDDED in the scope of counted.
+      {
+        RefCountable* uncounted = counted.get(); // ok
+      }
+    }
+
+    void foo2(CheckedPtr<RefCountable> counted_param) {
+      RefCountable* uncounted = counted_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      RefCountable* uncounted = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RefCountable* uncounted = new RefCountable; // warn
+    }
+
+    RefCountable* global_uncounted;
+    void foo2() {
+      RefCountable* uncounted = global_uncounted; // warn
+    }
+
+    void foo3() {
+      RefPtr<RefCountable> counted;
+      // The scope of uncounted is not EMBEDDED in the scope of counted.
+      RefCountable* uncounted = counted.get(); // warn
+    }
 
 Debug Checkers
 ---------------

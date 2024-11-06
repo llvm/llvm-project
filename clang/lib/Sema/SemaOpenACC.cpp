@@ -1224,6 +1224,36 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
   if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
     return isNotImplemented();
 
+  // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
+  // directive that has a gang clause and is within a compute construct that has
+  // a num_gangs clause with more than one explicit argument.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop &&
+      SemaRef.getActiveComputeConstructInfo().Kind !=
+          OpenACCDirectiveKind::Invalid) {
+    // num_gangs clause on the active compute construct.
+    auto *NumGangsClauseItr =
+        llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                      llvm::IsaPred<OpenACCNumGangsClause>);
+
+    auto *ReductionClauseItr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
+
+    if (ReductionClauseItr != ExistingClauses.end() &&
+        NumGangsClauseItr !=
+            SemaRef.getActiveComputeConstructInfo().Clauses.end() &&
+        cast<OpenACCNumGangsClause>(*NumGangsClauseItr)->getIntExprs().size() >
+            1) {
+      SemaRef.Diag(Clause.getBeginLoc(),
+                   diag::err_acc_gang_reduction_numgangs_conflict)
+          << OpenACCClauseKind::Gang << OpenACCClauseKind::Reduction;
+      SemaRef.Diag((*ReductionClauseItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      SemaRef.Diag((*NumGangsClauseItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return nullptr;
+    }
+  }
+
   llvm::SmallVector<OpenACCGangKind> GangKinds;
   llvm::SmallVector<Expr *> IntExprs;
 
@@ -1316,9 +1346,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
     return nullptr;
   }
 
-  return OpenACCGangClause::Create(Ctx, Clause.getBeginLoc(),
-                                   Clause.getLParenLoc(), GangKinds, IntExprs,
-                                   Clause.getEndLoc());
+  return SemaRef.CheckGangClause(ExistingClauses, Clause.getBeginLoc(),
+                                 Clause.getLParenLoc(), GangKinds, IntExprs,
+                                 Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
@@ -1367,8 +1397,56 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   // Restrictions only properly implemented on 'compute' constructs, and
   // 'compute' constructs are the only construct that can do anything with
   // this yet, so skip/treat as unimplemented in this case.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+      Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
     return isNotImplemented();
+
+  // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
+  // directive that has a gang clause and is within a compute construct that has
+  // a num_gangs clause with more than one explicit argument.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop &&
+      SemaRef.getActiveComputeConstructInfo().Kind !=
+          OpenACCDirectiveKind::Invalid) {
+    // num_gangs clause on the active compute construct.
+    auto *NumGangsClauseItr =
+        llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                      llvm::IsaPred<OpenACCNumGangsClause>);
+
+    auto *GangClauseItr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
+
+    if (GangClauseItr != ExistingClauses.end() &&
+        NumGangsClauseItr !=
+            SemaRef.getActiveComputeConstructInfo().Clauses.end() &&
+        cast<OpenACCNumGangsClause>(*NumGangsClauseItr)->getIntExprs().size() >
+            1) {
+      SemaRef.Diag(Clause.getBeginLoc(),
+                   diag::err_acc_gang_reduction_numgangs_conflict)
+          << OpenACCClauseKind::Reduction << OpenACCClauseKind::Gang;
+      SemaRef.Diag((*GangClauseItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      SemaRef.Diag((*NumGangsClauseItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return nullptr;
+    }
+  }
+
+  // OpenACC3.3 Section 2.9.11: If a variable is involved in a reduction that
+  // spans multiple nested loops where two or more of those loops have
+  // associated loop directives, a reduction clause containing that variable
+  // must appear on each of those loop directives.
+  //
+  // This can't really be implemented in the CFE, as this requires a level of
+  // rechability/useage analysis that we're not really wanting to get into.
+  // Additionally, I'm alerted that this restriction is one that the middle-end
+  // can just 'figure out' as an extension and isn't really necessary.
+  //
+  // OpenACC3.3 Section 2.9.11: Every 'var' in a reduction clause appearing on
+  // an orphaned loop construct must be private.
+  //
+  // This again is something we cannot really diagnose, as it requires we see
+  // all the uses/scopes of all variables referenced.  The middle end/MLIR might
+  // be able to diagnose this.
 
   // OpenACC 3.3 Section 2.5.4:
   // A reduction clause may not appear on a parallel construct with a
@@ -1394,15 +1472,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   SmallVector<Expr *> ValidVars;
 
   for (Expr *Var : Clause.getVarList()) {
-    ExprResult Res = SemaRef.CheckReductionVar(Var);
+    ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
+                                               Clause.getReductionOp(), Var);
 
     if (Res.isUsable())
       ValidVars.push_back(Res.get());
   }
 
-  return OpenACCReductionClause::Create(
-      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getReductionOp(),
-      ValidVars, Clause.getEndLoc());
+  return SemaRef.CheckReductionClause(
+      ExistingClauses, Clause.getDirectiveKind(), Clause.getBeginLoc(),
+      Clause.getLParenLoc(), Clause.getReductionOp(), ValidVars,
+      Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
@@ -1425,6 +1505,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
                                        LoopCount.get(), Clause.getEndLoc());
 }
 
+void CollectActiveReductionClauses(
+    llvm::SmallVector<OpenACCReductionClause *> &ActiveClauses,
+    ArrayRef<OpenACCClause *> CurClauses) {
+  for (auto *CurClause : CurClauses) {
+    if (auto *RedClause = dyn_cast<OpenACCReductionClause>(CurClause);
+        RedClause && !RedClause->getVarList().empty())
+      ActiveClauses.push_back(RedClause);
+  }
+}
+
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -1437,11 +1527,14 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
       DirKind(DK), OldLoopGangClauseOnKernelLoc(S.LoopGangClauseOnKernelLoc),
       OldLoopWorkerClauseLoc(S.LoopWorkerClauseLoc),
       OldLoopVectorClauseLoc(S.LoopVectorClauseLoc),
+      ActiveReductionClauses(S.ActiveReductionClauses),
       LoopRAII(SemaRef, /*PreserveDepth=*/false) {
+
   // Compute constructs end up taking their 'loop'.
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
+    CollectActiveReductionClauses(S.ActiveReductionClauses, Clauses);
     SemaRef.ActiveComputeConstructInfo.Kind = DirKind;
     SemaRef.ActiveComputeConstructInfo.Clauses = Clauses;
     SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
@@ -1456,6 +1549,7 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     SemaRef.LoopWorkerClauseLoc = {};
     SemaRef.LoopVectorClauseLoc = {};
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
+    CollectActiveReductionClauses(S.ActiveReductionClauses, Clauses);
     SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
     SetTileInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
 
@@ -1559,6 +1653,7 @@ SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
   SemaRef.LoopGangClauseOnKernelLoc = OldLoopGangClauseOnKernelLoc;
   SemaRef.LoopWorkerClauseLoc = OldLoopWorkerClauseLoc;
   SemaRef.LoopVectorClauseLoc = OldLoopVectorClauseLoc;
+  SemaRef.ActiveReductionClauses.swap(ActiveReductionClauses);
 
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
@@ -1610,6 +1705,68 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 
 }
 
+namespace {
+// Return true if the two vars refer to the same variable, for the purposes of
+// equality checking.
+bool areVarsEqual(Expr *VarExpr1, Expr *VarExpr2) {
+  if (VarExpr1->isInstantiationDependent() ||
+      VarExpr2->isInstantiationDependent())
+    return false;
+
+  VarExpr1 = VarExpr1->IgnoreParenCasts();
+  VarExpr2 = VarExpr2->IgnoreParenCasts();
+
+  // Legal expressions can be: Scalar variable reference, sub-array, array
+  // element, or composite variable member.
+
+  // Sub-array.
+  if (isa<ArraySectionExpr>(VarExpr1)) {
+    auto *Expr2AS = dyn_cast<ArraySectionExpr>(VarExpr2);
+    if (!Expr2AS)
+      return false;
+
+    auto *Expr1AS = cast<ArraySectionExpr>(VarExpr1);
+
+    if (!areVarsEqual(Expr1AS->getBase(), Expr2AS->getBase()))
+      return false;
+    // We could possibly check to see if the ranges aren't overlapping, but it
+    // isn't clear that the rules allow this.
+    return true;
+  }
+
+  // Array-element.
+  if (isa<ArraySubscriptExpr>(VarExpr1)) {
+    auto *Expr2AS = dyn_cast<ArraySubscriptExpr>(VarExpr2);
+    if (!Expr2AS)
+      return false;
+
+    auto *Expr1AS = cast<ArraySubscriptExpr>(VarExpr1);
+
+    if (!areVarsEqual(Expr1AS->getBase(), Expr2AS->getBase()))
+      return false;
+
+    // We could possibly check to see if the elements referenced aren't the
+    // same, but it isn't clear by reading of the standard that this is allowed
+    // (and that the 'var' refered to isn't the array).
+    return true;
+  }
+
+  // Scalar variable reference, or composite variable.
+  if (isa<DeclRefExpr>(VarExpr1)) {
+    auto *Expr2DRE = dyn_cast<DeclRefExpr>(VarExpr2);
+    if (!Expr2DRE)
+      return false;
+
+    auto *Expr1DRE = cast<DeclRefExpr>(VarExpr1);
+
+    return Expr1DRE->getDecl()->getMostRecentDecl() ==
+           Expr2DRE->getDecl()->getMostRecentDecl();
+  }
+
+  llvm_unreachable("Unknown variable type encountered");
+}
+} // namespace
+
 /// OpenACC 3.3 section 2.5.15:
 /// At a mininmum, the supported data types include ... the numerical data types
 /// in C, C++, and Fortran.
@@ -1617,7 +1774,9 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 /// If the reduction var is a composite variable, each
 /// member of the composite variable must be a supported datatype for the
 /// reduction operation.
-ExprResult SemaOpenACC::CheckReductionVar(Expr *VarExpr) {
+ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
+                                          OpenACCReductionOperator ReductionOp,
+                                          Expr *VarExpr) {
   VarExpr = VarExpr->IgnoreParenCasts();
 
   auto TypeIsValid = [](QualType Ty) {
@@ -1665,6 +1824,28 @@ ExprResult SemaOpenACC::CheckReductionVar(Expr *VarExpr) {
     Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_type)
         << VarExpr->getType() << /*Sub array base type*/ 0;
     return ExprError();
+  }
+
+  // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
+  // reduction 'var' must have the same reduction operator.
+  if (!VarExpr->isInstantiationDependent()) {
+
+    for (const OpenACCReductionClause *RClause : ActiveReductionClauses) {
+      if (RClause->getReductionOp() == ReductionOp)
+        break;
+
+      for (Expr *OldVarExpr : RClause->getVarList()) {
+        if (OldVarExpr->isInstantiationDependent())
+          continue;
+
+        if (areVarsEqual(VarExpr, OldVarExpr)) {
+          Diag(VarExpr->getExprLoc(), diag::err_reduction_op_mismatch)
+              << ReductionOp << RClause->getReductionOp();
+          Diag(OldVarExpr->getExprLoc(), diag::note_acc_previous_clause_here);
+          return ExprError();
+        }
+      }
+    }
   }
 
   return VarExpr;
@@ -1986,8 +2167,7 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
     // Fill in a dummy 'length' so that when we instantiate this we don't
     // double-diagnose here.
     ExprResult Recovery = SemaRef.CreateRecoveryExpr(
-        ColonLoc, SourceLocation(), ArrayRef<Expr *>{std::nullopt},
-        Context.IntTy);
+        ColonLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
     Length = Recovery.isUsable() ? Recovery.get() : nullptr;
   }
 
@@ -2222,6 +2402,81 @@ ExprResult SemaOpenACC::CheckGangExpr(OpenACCGangKind GK, Expr *E) {
   }
 
   llvm_unreachable("Compute construct directive not handled?");
+}
+
+OpenACCClause *
+SemaOpenACC::CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                             SourceLocation BeginLoc, SourceLocation LParenLoc,
+                             ArrayRef<OpenACCGangKind> GangKinds,
+                             ArrayRef<Expr *> IntExprs, SourceLocation EndLoc) {
+  // OpenACC 3.3 2.9.11: A reduction clause may not appear on a loop directive
+  // that has a gang clause with a dim: argument whose value is greater than 1.
+
+  const auto *ReductionItr =
+      llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
+
+  if (ReductionItr != ExistingClauses.end()) {
+    const auto GangZip = llvm::zip_equal(GangKinds, IntExprs);
+    const auto GangItr = llvm::find_if(GangZip, [](const auto &Tuple) {
+      return std::get<0>(Tuple) == OpenACCGangKind::Dim;
+    });
+
+    if (GangItr != GangZip.end()) {
+      const Expr *DimExpr = std::get<1>(*GangItr);
+
+      assert(
+          (DimExpr->isInstantiationDependent() || isa<ConstantExpr>(DimExpr)) &&
+          "Improperly formed gang argument");
+      if (const auto *DimVal = dyn_cast<ConstantExpr>(DimExpr);
+          DimVal && DimVal->getResultAsAPSInt() > 1) {
+        Diag(DimVal->getBeginLoc(), diag::err_acc_gang_reduction_conflict)
+            << /*gang/reduction=*/0;
+        Diag((*ReductionItr)->getBeginLoc(),
+             diag::note_acc_previous_clause_here);
+        return nullptr;
+      }
+    }
+  }
+
+  return OpenACCGangClause::Create(getASTContext(), BeginLoc, LParenLoc,
+                                   GangKinds, IntExprs, EndLoc);
+}
+
+OpenACCClause *SemaOpenACC::CheckReductionClause(
+    ArrayRef<const OpenACCClause *> ExistingClauses,
+    OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
+    SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
+    ArrayRef<Expr *> Vars, SourceLocation EndLoc) {
+  if (DirectiveKind == OpenACCDirectiveKind::Loop) {
+    // OpenACC 3.3 2.9.11: A reduction clause may not appear on a loop directive
+    // that has a gang clause with a dim: argument whose value is greater
+    // than 1.
+    const auto *GangItr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
+
+    while (GangItr != ExistingClauses.end()) {
+      auto *GangClause = cast<OpenACCGangClause>(*GangItr);
+      for (unsigned I = 0; I < GangClause->getNumExprs(); ++I) {
+        std::pair<OpenACCGangKind, const Expr *> EPair = GangClause->getExpr(I);
+        // We know there is only 1 on this gang, so move onto the next gang.
+        if (EPair.first != OpenACCGangKind::Dim)
+          break;
+
+        if (const auto *DimVal = dyn_cast<ConstantExpr>(EPair.second);
+            DimVal && DimVal->getResultAsAPSInt() > 1) {
+          Diag(BeginLoc, diag::err_acc_gang_reduction_conflict)
+              << /*reduction/gang=*/1;
+          Diag((*GangItr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+          return nullptr;
+        }
+      }
+      ++GangItr;
+    }
+  }
+
+  auto *Ret = OpenACCReductionClause::Create(
+      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, EndLoc);
+  return Ret;
 }
 
 ExprResult SemaOpenACC::CheckTileSizeExpr(Expr *SizeExpr) {

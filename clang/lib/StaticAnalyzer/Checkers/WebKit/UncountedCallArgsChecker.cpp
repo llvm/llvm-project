@@ -96,6 +96,9 @@ public:
           auto name = safeGetName(MD);
           if (name == "ref" || name == "deref")
             return;
+          if (name == "incrementCheckedPtrCount" ||
+              name == "decrementCheckedPtrCount")
+            return;
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
         QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();

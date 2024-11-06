@@ -80,7 +80,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 #include <map>
 #include <optional>
 #include <utility>
@@ -2482,6 +2481,7 @@ bool DSEState::eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper) {
                       << *KillingLocWrapper.MemDef << " ("
                       << *KillingLocWrapper.DefInst << ")\n");
     auto [Changed, DeletedKillingLoc] = eliminateDeadDefs(KillingLocWrapper);
+    MadeChange |= Changed;
 
     // Check if the store is a no-op.
     if (!DeletedKillingLoc && storeIsNoop(KillingLocWrapper.MemDef,

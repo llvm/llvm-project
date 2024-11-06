@@ -51,6 +51,8 @@ SandboxVectorizerPass::~SandboxVectorizerPass() = default;
 PreservedAnalyses SandboxVectorizerPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   TTI = &AM.getResult<TargetIRAnalysis>(F);
+  AA = &AM.getResult<AAManager>(F);
+  SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
 
   bool Changed = runImpl(F);
   if (!Changed)
@@ -82,5 +84,6 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   // Create SandboxIR for LLVMF and run BottomUpVec on it.
   sandboxir::Context Ctx(LLVMF.getContext());
   sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
-  return FPM.runOnFunction(F);
+  sandboxir::Analyses A(*AA, *SE);
+  return FPM.runOnFunction(F, A);
 }

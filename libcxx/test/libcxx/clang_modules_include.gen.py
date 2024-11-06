@@ -17,12 +17,21 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
@@ -41,9 +50,11 @@ for header in public_headers:
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
-""")
+"""
+    )
 
 print(
     f"""\
@@ -51,6 +62,10 @@ print(
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
 // REQUIRES: clang-modules-build
+
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc

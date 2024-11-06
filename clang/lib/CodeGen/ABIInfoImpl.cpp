@@ -80,16 +80,6 @@ RValue DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
       Slot);
 }
 
-ABIArgInfo CodeGen::coerceToIntArray(QualType Ty, ASTContext &Context,
-                                     llvm::LLVMContext &LLVMContext) {
-  // Alignment and Size are measured in bits.
-  const uint64_t Size = Context.getTypeSize(Ty);
-  const uint64_t Alignment = Context.getTypeAlign(Ty);
-  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Alignment);
-  const uint64_t NumElements = (Size + Alignment - 1) / Alignment;
-  return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
-}
-
 void CodeGen::AssignToArrayRange(CodeGen::CGBuilderTy &Builder,
                                  llvm::Value *Array, llvm::Value *Value,
                                  unsigned FirstIndex, unsigned LastIndex) {

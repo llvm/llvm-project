@@ -96,15 +96,6 @@ def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
 def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
                       GIComplexPatternEquiv<sh3add_uw_op>;
 
-// FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
-def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
-          (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
-
-let Predicates = [IsRV64] in {
-def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-}
-
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
 

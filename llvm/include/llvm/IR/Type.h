@@ -206,6 +206,7 @@ public:
   bool isScalableTargetExtTy() const;
 
   /// Return true if this is a type whose size is a known multiple of vscale.
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   bool isScalableTy() const;
 
   /// Return true if this is a FP type or a vector of FP.

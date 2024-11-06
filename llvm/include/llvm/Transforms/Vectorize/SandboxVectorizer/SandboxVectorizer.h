@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/SandboxIR/PassManager.h"
 
@@ -19,6 +21,8 @@ class TargetTransformInfo;
 
 class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
+  AAResults *AA = nullptr;
+  ScalarEvolution *SE = nullptr;
 
   // A pipeline of SandboxIR function passes run by the vectorizer.
   sandboxir::FunctionPassManager FPM;

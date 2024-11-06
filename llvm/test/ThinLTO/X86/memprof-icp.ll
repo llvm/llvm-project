@@ -186,7 +186,11 @@
 ; REMARKS-MAIN: created clone _ZN2B03barEj.memprof.1
 ; REMARKS-MAIN: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
 ; REMARKS-MAIN: call in clone _ZN2B03barEj.memprof.1 marked with memprof allocation attribute cold
+; REMARKS-MAIN: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
+; REMARKS-MAIN: call in clone _ZN2B03barEj.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS-MAIN: created clone _ZN1B3barEj.memprof.1
+; REMARKS-MAIN: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
+; REMARKS-MAIN: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS-MAIN: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
 ; REMARKS-MAIN: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS-FOO: created clone _Z3fooR2B0j.memprof.1
@@ -208,10 +212,10 @@
 ; REMARKS-FOO: call in clone _ZN1B3barEj marked with memprof allocation attribute notcold
 ; REMARKS-FOO: call in clone _ZN1B3barEj.memprof.1 marked with memprof allocation attribute cold
 
-; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during whole program analysis
-; STATS-BE: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
-; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during whole program analysis
-; STATS-BE: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during whole program analysis
+; STATS-BE: 8 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during whole program analysis
+; STATS-BE: 8 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
 ; STATS-BE: 5 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
 
@@ -247,8 +251,8 @@
 ; IR: attributes #[[NOTCOLD]] = {{.*}} "memprof"="notcold"
 ; IR: attributes #[[COLD]] = {{.*}} "memprof"="cold"
 
-; STATS-BE-DISTRIB: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
-; STATS-BE-DISTRIB: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE-DISTRIB: 4 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE-DISTRIB: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS-BE-DISTRIB: 3 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
 
 ;--- foo.ll
@@ -298,6 +302,9 @@ declare i32 @_Z3fooR2B0j(ptr, i32)
 define i32 @_ZN2B03barEj(ptr %this, i32 %s) {
 entry:
   %call = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !33, !callsite !38
+  ;; Second allocation in this function, to ensure that indirect edges to the
+  ;; same callee are partitioned correctly.
+  %call2 = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !45, !callsite !50
   store volatile i32 0, ptr %call, align 4
   ret i32 0
 }
@@ -311,6 +318,9 @@ declare void @_ZdlPvm()
 define i32 @_ZN1B3barEj(ptr %this, i32 %s) {
 entry:
   %call = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !39, !callsite !44
+  ;; Second allocation in this function, to ensure that indirect edges to the
+  ;; same callee are partitioned correctly.
+  %call2 = tail call ptr @_Znwm(i64 noundef 4) #0, !memprof !51, !callsite !56
   store volatile i32 0, ptr %call, align 4
   ret i32 0
 }
@@ -367,3 +377,15 @@ attributes #0 = { builtin allocsize(0) }
 !42 = !{!43, !"cold"}
 !43 = !{i64 4457553070050523782, i64 -2101080423462424381, i64 -6490791336773930154}
 !44 = !{i64 4457553070050523782}
+!45 = !{!46, !48}
+!46 = !{!47, !"notcold"}
+!47 = !{i64 456, i64 -2101080423462424381, i64 5188446645037944434}
+!48 = !{!49, !"cold"}
+!49 = !{i64 456, i64 -2101080423462424381, i64 5583420417449503557}
+!50 = !{i64 456}
+!51 = !{!52, !54}
+!52 = !{!53, !"notcold"}
+!53 = !{i64 789, i64 -2101080423462424381, i64 132626519179914298}
+!54 = !{!55, !"cold"}
+!55 = !{i64 789, i64 -2101080423462424381, i64 -6490791336773930154}
+!56 = !{i64 789}
