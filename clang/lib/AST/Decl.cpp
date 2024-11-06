@@ -2709,7 +2709,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
       if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
-        while (!VTD->isMemberSpecialization()) {
+        while (!VTD->hasMemberSpecialization()) {
           if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
             VTD = NewVTD;
           else
@@ -2719,7 +2719,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-        while (!VTPSD->isMemberSpecialization()) {
+        while (!VTPSD->hasMemberSpecialization()) {
           if (auto *NewVTPSD = VTPSD->getInstantiatedFromMember())
             VTPSD = NewVTPSD;
           else
@@ -2733,7 +2733,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   // If this is the pattern of a variable template, find where it was
   // instantiated from. FIXME: Is this necessary?
   if (VarTemplateDecl *VTD = VD->getDescribedVarTemplate()) {
-    while (!VTD->isMemberSpecialization()) {
+    while (!VTD->hasMemberSpecialization()) {
       if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
         VTD = NewVTD;
       else
@@ -4154,7 +4154,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   if (FunctionTemplateDecl *Primary = getPrimaryTemplate()) {
     // If we hit a point where the user provided a specialization of this
     // template, we're done looking.
-    while (!ForDefinition || !Primary->isMemberSpecialization()) {
+    while (!ForDefinition || !Primary->hasMemberSpecialization()) {
       if (auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate())
         Primary = NewPrimary;
       else
@@ -4171,7 +4171,7 @@ FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
   if (FunctionTemplateSpecializationInfo *Info
         = TemplateOrSpecialization
             .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
-    return Info->getTemplate()->getMostRecentDecl();
+    return Info->getTemplate();
   }
   return nullptr;
 }
