@@ -970,7 +970,8 @@ std::optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
     return eti->getCases()[case_index].Name;
 
-  LogUnimplementedTypeKind(__FUNCTION__, type);
+  // TODO: uncomment this after fixing projection for every type: rdar://138424904
+  // LogUnimplementedTypeKind(__FUNCTION__, type);
   return {};
 }
 
