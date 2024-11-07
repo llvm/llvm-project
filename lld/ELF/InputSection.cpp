@@ -39,6 +39,11 @@ std::string lld::toString(const InputSectionBase *sec) {
   return (toString(sec->file) + ":(" + sec->name + ")").str();
 }
 
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     const InputSectionBase *sec) {
+  return s << toString(sec);
+}
+
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
                                             const typename ELFT::Shdr &hdr) {
@@ -65,7 +70,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // no alignment constraints.
   uint32_t v = std::max<uint32_t>(addralign, 1);
   if (!isPowerOf2_64(v))
-    fatal(toString(this) + ": sh_addralign is not a power of 2");
+    Fatal(ctx) << this << ": sh_addralign is not a power of 2";
   this->addralign = v;
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
@@ -98,7 +103,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
   if (hdr.sh_addralign > UINT32_MAX)
-    fatal(toString(&file) + ": section sh_addralign is too large");
+    Fatal(ctx) << &file << ": section sh_addralign is too large";
 }
 
 size_t InputSectionBase::getSize() const {
@@ -116,8 +121,8 @@ static void decompressAux(const InputSectionBase &sec, uint8_t *out,
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
-    fatal(toString(&sec) +
-          ": decompress failed: " + llvm::toString(std::move(e)));
+    Fatal(ctx) << &sec
+               << ": decompress failed: " << llvm::toString(std::move(e));
 }
 
 void InputSectionBase::decompress() const {
@@ -621,7 +626,8 @@ static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
 static uint64_t getARMStaticBase(const Symbol &sym) {
   OutputSection *os = sym.getOutputSection();
   if (!os || !os->ptLoad || !os->ptLoad->firstSec)
-    fatal("SBREL relocation to " + sym.getName() + " without static base");
+    Fatal(ctx) << "SBREL relocation to " << sym.getName()
+               << " without static base";
   return os->ptLoad->firstSec->addr;
 }
 
@@ -1269,8 +1275,8 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
                       : compression::zstd::decompress(compressed, buf, size))
-      fatal(toString(this) +
-            ": decompress failed: " + llvm::toString(std::move(e)));
+      Fatal(ctx) << this
+                 << ": decompress failed: " << llvm::toString(std::move(e));
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(ctx, buf, bufEnd);
     return;
@@ -1394,7 +1400,7 @@ void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
   const bool live = !(flags & SHF_ALLOC) || !getCtx().arg.gcSections;
   const char *p = s.data(), *end = s.data() + s.size();
   if (!std::all_of(end - entSize, end, [](char c) { return c == 0; }))
-    fatal(toString(this) + ": string is not null terminated");
+    Fatal(ctx) << this << ": string is not null terminated";
   if (entSize == 1) {
     // Optimize the common case.
     do {
@@ -1454,7 +1460,7 @@ void MergeInputSection::splitIntoPieces() {
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   if (content().size() <= offset)
-    fatal(toString(this) + ": offset is outside the section");
+    Fatal(ctx) << this << ": offset is outside the section";
   return partition_point(
       pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
 }
