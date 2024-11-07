@@ -1042,8 +1042,9 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (sym.scriptDefined)
       return true;
 
-  error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
-        toString(sym) + getLocation(ctx, *sec, sym, relOff));
+  Err(ctx) << "relocation " << type
+           << " cannot refer to absolute symbol: " << &sym
+           << getLocation(ctx, *sec, sym, relOff);
   return true;
 }
 
@@ -1218,10 +1219,9 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // Produce a copy relocation.
       if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
         if (!ctx.arg.zCopyreloc)
-          error("unresolvable relocation " + toString(type) +
-                " against symbol '" + toString(*ss) +
-                "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-                getLocation(ctx, *sec, sym, offset));
+          Err(ctx) << "unresolvable relocation " << type << " against symbol '"
+                   << ss << "'; recompile with -fPIC or remove '-z nocopyreloc'"
+                   << getLocation(ctx, *sec, sym, offset);
         sym.setFlags(NEEDS_COPY);
       }
       sec->addReloc({expr, type, offset, addend, &sym});

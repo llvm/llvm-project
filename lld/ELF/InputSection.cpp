@@ -64,7 +64,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // sections are smaller than 4 GiB, which is not an unreasonable
   // assumption as of 2017.
   if (sectionKind == SectionBase::Merge && content().size() > UINT32_MAX)
-    error(toString(this) + ": section too large");
+    ErrAlways(ctx) << this << ": section too large";
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraints.
@@ -256,22 +256,24 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
 
   // New-style header
   if (content().size() < sizeof(typename ELFT::Chdr)) {
-    error(toString(this) + ": corrupted compressed section");
+    ErrAlways(ctx) << this << ": corrupted compressed section";
     return;
   }
 
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content().data());
   if (hdr->ch_type == ELFCOMPRESS_ZLIB) {
     if (!compression::zlib::isAvailable())
-      error(toString(this) + " is compressed with ELFCOMPRESS_ZLIB, but lld is "
-                             "not built with zlib support");
+      ErrAlways(ctx) << this
+                     << " is compressed with ELFCOMPRESS_ZLIB, but lld is "
+                        "not built with zlib support";
   } else if (hdr->ch_type == ELFCOMPRESS_ZSTD) {
     if (!compression::zstd::isAvailable())
-      error(toString(this) + " is compressed with ELFCOMPRESS_ZSTD, but lld is "
-                             "not built with zstd support");
+      ErrAlways(ctx) << this
+                     << " is compressed with ELFCOMPRESS_ZSTD, but lld is "
+                        "not built with zstd support";
   } else {
-    error(toString(this) + ": unsupported compression type (" +
-          Twine(hdr->ch_type) + ")");
+    ErrAlways(ctx) << this << ": unsupported compression type ("
+                   << Twine(hdr->ch_type) << ")";
     return;
   }
 
@@ -1157,8 +1159,8 @@ static void switchMorestackCallsToMorestackNonSplit(
   // __morestack_non_split.
   Symbol *moreStackNonSplit = ctx.symtab->find("__morestack_non_split");
   if (!moreStackNonSplit) {
-    error("mixing split-stack objects requires a definition of "
-          "__morestack_non_split");
+    ErrAlways(ctx) << "mixing split-stack objects requires a definition of "
+                      "__morestack_non_split";
     return;
   }
 
@@ -1235,9 +1237,10 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
                                                        f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        error(lld::toString(this) + ": " + f->getName() +
-              " (with -fsplit-stack) calls " + rel.sym->getName() +
-              " (without -fsplit-stack), but couldn't adjust its prologue");
+        ErrAlways(ctx)
+            << lld::toString(this) << ": " << f->getName()
+            << " (with -fsplit-stack) calls " << rel.sym->getName()
+            << " (without -fsplit-stack), but couldn't adjust its prologue";
     }
   }
 

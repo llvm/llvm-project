@@ -700,6 +700,11 @@ inline const ELFSyncStream &operator<<(const ELFSyncStream &s, const char *v) {
   return s;
 }
 
+inline const ELFSyncStream &operator<<(const ELFSyncStream &s, Error v) {
+  s.os << llvm::toString(std::move(v));
+  return s;
+}
+
 // Report a log if --verbose is specified.
 ELFSyncStream Log(Ctx &ctx);
 
