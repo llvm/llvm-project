@@ -2429,6 +2429,10 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   return VectorTripCount;
 }
 
+/// Helper to connect both the vector and scalar preheaders to the vector
+/// preheader's predecessor. This is used when adjusting \p Plan during skeleton
+/// creation, i.e. adjusting the plan after introducing an initial runtime
+/// check.
 static void connectScalarPreheaderInVPlan(VPlan &Plan) {
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
