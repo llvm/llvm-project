@@ -150,10 +150,10 @@ MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
                       MachineBranchProbabilityPrinterPass(dbgs()))
+MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
                       MachineDominatorTreePrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(dbgs()))
-MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(dbgs()))
