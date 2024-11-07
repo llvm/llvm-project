@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___RANDOM_RANLUX_H
 #define _LIBCPP___RANDOM_RANLUX_H
 
-#include <__config>
-#include <__random/discard_block_engine.h>
-#include <__random/subtract_with_carry_engine.h>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/__random/discard_block_engine.h>
+#include <__cxx03/__random/subtract_with_carry_engine.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

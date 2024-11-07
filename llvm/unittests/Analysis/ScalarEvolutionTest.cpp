@@ -139,7 +139,7 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   auto *Ty = Type::getInt32Ty(Context);
   auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
-  PN->addIncoming(UndefValue::get(Ty), LoopBB);
+  PN->addIncoming(PoisonValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S1 = SE.getSCEV(PN);
   const SCEV *S2 = SE.getSCEV(PN);

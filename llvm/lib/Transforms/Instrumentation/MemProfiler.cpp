@@ -680,7 +680,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
 }
 
 static void addCallsiteMetadata(Instruction &I,
-                                std::vector<uint64_t> &InlinedCallStack,
+                                ArrayRef<uint64_t> InlinedCallStack,
                                 LLVMContext &Ctx) {
   I.setMetadata(LLVMContext::MD_callsite,
                 buildCallstackMetadata(InlinedCallStack, Ctx));
@@ -754,7 +754,7 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
-static bool isAllocationWithHotColdVariant(Function *Callee,
+static bool isAllocationWithHotColdVariant(const Function *Callee,
                                            const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;
@@ -905,7 +905,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         continue;
       // List of call stack ids computed from the location hashes on debug
       // locations (leaf to inlined at root).
-      std::vector<uint64_t> InlinedCallStack;
+      SmallVector<uint64_t, 8> InlinedCallStack;
       // Was the leaf location found in one of the profile maps?
       bool LeafFound = false;
       // If leaf was found in a map, iterators pointing to its location in both

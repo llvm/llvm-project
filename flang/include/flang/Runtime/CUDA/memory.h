@@ -28,17 +28,12 @@ void RTDECL(CUFMemFree)(void *devicePtr, unsigned type,
 /// Set value to the data hold by a descriptor. The \p value pointer must be
 /// addressable to the same amount of bytes specified by the element size of
 /// the descriptor \p desc.
-void RTDECL(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
+void RTDECL(CUFMemsetDescriptor)(Descriptor *desc, void *value,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Data transfer from a pointer to a pointer.
 void RTDECL(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
-
-/// Data transfer from a pointer to a descriptor.
-void RTDECL(CUFDataTransferDescPtr)(Descriptor *dst, void *src,
-    std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
-    int sourceLine = 0);
 
 /// Data transfer from a descriptor to a pointer.
 void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
@@ -47,6 +42,14 @@ void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
 
 /// Data transfer from a descriptor to a descriptor.
 void RTDECL(CUFDataTransferDescDesc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Data transfer from a descriptor to a descriptor.
+void RTDECL(CUFDataTransferDescDescNoRealloc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Data transfer from a descriptor to a global descriptor.
+void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dst, Descriptor *src,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
 } // extern "C"

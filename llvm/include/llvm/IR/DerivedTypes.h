@@ -33,6 +33,7 @@ class Value;
 class APInt;
 class LLVMContext;
 template <typename T> class Expected;
+class Error;
 
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
@@ -317,8 +318,17 @@ public:
   /// suffix if there is a collision. Do not call this on an literal type.
   void setName(StringRef Name);
 
-  /// Specify a body for an opaque identified type.
+  /// Specify a body for an opaque identified type, which must not make the type
+  /// recursive.
   void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
+
+  /// Specify a body for an opaque identified type or return an error if it
+  /// would make the type recursive.
+  Error setBodyOrError(ArrayRef<Type *> Elements, bool isPacked = false);
+
+  /// Return an error if the body for an opaque identified type would make it
+  /// recursive.
+  Error checkBody(ArrayRef<Type *> Elements);
 
   template <typename... Tys>
   std::enable_if_t<are_base_of<Type, Tys...>::value, void>

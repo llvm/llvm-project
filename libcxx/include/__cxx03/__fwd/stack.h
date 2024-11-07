@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___FWD_STACK_H
 #define _LIBCPP___FWD_STACK_H
 
-#include <__config>
-#include <__fwd/deque.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/deque.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

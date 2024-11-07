@@ -9,14 +9,14 @@
 #ifndef _LIBCPP___MUTEX_UNIQUE_LOCK_H
 #define _LIBCPP___MUTEX_UNIQUE_LOCK_H
 
-#include <__chrono/duration.h>
-#include <__chrono/time_point.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__mutex/tag_types.h>
-#include <__system_error/system_error.h>
-#include <__utility/swap.h>
-#include <cerrno>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__mutex/tag_types.h>
+#include <__cxx03/__system_error/system_error.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/cerrno>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

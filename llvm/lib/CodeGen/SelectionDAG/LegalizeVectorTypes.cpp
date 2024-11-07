@@ -1381,16 +1381,14 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
   unsigned IncrementSize = MemVT.getSizeInBits().getKnownMinValue() / 8;
 
   if (MemVT.isScalableVector()) {
-    SDNodeFlags Flags;
     SDValue BytesIncrement = DAG.getVScale(
         DL, Ptr.getValueType(),
         APInt(Ptr.getValueSizeInBits().getFixedValue(), IncrementSize));
     MPI = MachinePointerInfo(N->getPointerInfo().getAddrSpace());
-    Flags.setNoUnsignedWrap(true);
     if (ScaledOffset)
       *ScaledOffset += IncrementSize;
     Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement,
-                      Flags);
+                      SDNodeFlags::NoUnsignedWrap);
   } else {
     MPI = N->getPointerInfo().getWithOffset(IncrementSize);
     // Increment the pointer to the other half.

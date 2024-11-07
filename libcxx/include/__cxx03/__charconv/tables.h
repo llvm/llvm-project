@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___CHARCONV_TABLES
 #define _LIBCPP___CHARCONV_TABLES
 
-#include <__config>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

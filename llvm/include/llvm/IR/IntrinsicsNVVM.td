@@ -567,6 +567,52 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
+class CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // dst_smem_ptr
+                           llvm_shared_ptr_ty,  // mbarrier_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                           Im2ColOffsetsTy,     // im2col offsets
+                          [llvm_i16_ty,         // cta_mask
+                           llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty,          // Flag for cta_mask
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 5);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>,
+        ImmArg<ArgIndex<!add(FlagsStartIdx, 1)>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim # "d";
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -1092,6 +1138,14 @@ let TargetPrefix = "nvvm" in {
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
         [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
+//
+// FLO - Find Leading One
+//
+  foreach sign = ["s", "u"] in
+    def int_nvvm_flo_ # sign :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+        [llvm_anyint_ty, llvm_i1_ty],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
 //
 // Convert
@@ -4838,5 +4892,17 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
 // Exit
 def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
+
+// Intrinsics for Tensor Copy using TMA
+// G2S -> From Global to Shared memory variants
+// S2G -> From Shared to Global memory variants
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach g2s = [CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, mode>] in
+      def g2s.Name : DefaultAttrsIntrinsic<[], g2s.ArgsTy, g2s.IntrProp>;
+    foreach s2g = [CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, mode>] in
+      def s2g.Name : DefaultAttrsIntrinsic<[], s2g.ArgsTy, s2g.IntrProp>;
+  }
+}
 
 } // let TargetPrefix = "nvvm"

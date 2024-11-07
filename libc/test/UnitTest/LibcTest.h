@@ -165,7 +165,7 @@ protected:
   // Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
   template <typename ValType,
             cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
-  bool test(TestCond Cond, ValType LHS, std::nullptr_t, const char *LHSStr,
+  bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
   }

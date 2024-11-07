@@ -59,7 +59,7 @@ protected:
 
 // Check that we don't accept egregiously incorrect prototypes.
 TEST_F(TargetLibraryInfoTest, InvalidProto) {
-  parseAssembly("%foo = type { %foo }\n");
+  parseAssembly("%foo = type opaque\n");
 
   auto *StructTy = StructType::getTypeByName(Context, "foo");
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
@@ -249,6 +249,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare %struct* @getpwnam(i8*)\n"
       "declare i8* @gets(i8*)\n"
       "declare i32 @gettimeofday(%struct*, i8*)\n"
+      "declare double @hypot(double, double)\n"
+      "declare float @hypotf(float, float)\n"
+      "declare x86_fp80 @hypotl(x86_fp80, x86_fp80)\n"
       "declare i32 @_Z7isasciii(i32)\n"
       "declare i32 @_Z7isdigiti(i32)\n"
       "declare i64 @labs(i64)\n"

@@ -1269,8 +1269,7 @@ ASTFileSignature ASTWriter::backpatchSignature() {
   return Signature;
 }
 
-void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
-                                          ASTContext &Context) {
+void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
   using namespace llvm;
 
   // Flush first to prepare the PCM hash (signature).
@@ -1323,7 +1322,7 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   const auto &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // Diagnostic options.
-  const auto &Diags = Context.getDiagnostics();
+  const auto &Diags = PP.getDiagnostics();
   const DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
   if (!HSOpts.ModulesSkipDiagnosticOptions) {
 #define DIAGOPT(Name, Bits, Default) Record.push_back(DiagOpts.Name);
@@ -1403,9 +1402,11 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
 }
 
 /// Write the control block.
-void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                                  StringRef isysroot) {
+void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   using namespace llvm;
+
+  SourceManager &SourceMgr = PP.getSourceManager();
+  FileManager &FileMgr = PP.getFileManager();
 
   Stream.EnterSubblock(CONTROL_BLOCK_ID, 5);
   RecordData Record;
@@ -1454,14 +1455,12 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     SmallString<128> BaseDir;
     if (PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) {
       // Use the current working directory as the base path for all inputs.
-      auto CWD =
-          Context.getSourceManager().getFileManager().getOptionalDirectoryRef(
-              ".");
+      auto CWD = FileMgr.getOptionalDirectoryRef(".");
       BaseDir.assign(CWD->getName());
     } else {
       BaseDir.assign(WritingModule->Directory->getName());
     }
-    cleanPathForOutput(Context.getSourceManager().getFileManager(), BaseDir);
+    cleanPathForOutput(FileMgr, BaseDir);
 
     // If the home of the module is the current working directory, then we
     // want to pick up the cwd of the build process loading the module, not
@@ -1554,7 +1553,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Language options.
   Record.clear();
-  const LangOptions &LangOpts = Context.getLangOpts();
+  const LangOptions &LangOpts = PP.getLangOpts();
 #define LANGOPT(Name, Bits, Default, Description) \
   Record.push_back(LangOpts.Name);
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
@@ -1591,7 +1590,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Target options.
   Record.clear();
-  const TargetInfo &Target = Context.getTargetInfo();
+  const TargetInfo &Target = PP.getTargetInfo();
   const TargetOptions &TargetOpts = Target.getTargetOpts();
   AddString(TargetOpts.Triple, Record);
   AddString(TargetOpts.CPU, Record);
@@ -1609,8 +1608,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // File system options.
   Record.clear();
-  const FileSystemOptions &FSOpts =
-      Context.getSourceManager().getFileManager().getFileSystemOpts();
+  const FileSystemOptions &FSOpts = FileMgr.getFileSystemOpts();
   AddString(FSOpts.WorkingDir, Record);
   Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
 
@@ -1675,8 +1673,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Stream.ExitBlock();
 
   // Original file name and file ID
-  SourceManager &SM = Context.getSourceManager();
-  if (auto MainFile = SM.getFileEntryRefForID(SM.getMainFileID())) {
+  if (auto MainFile =
+          SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID())) {
     auto FileAbbrev = std::make_shared<BitCodeAbbrev>();
     FileAbbrev->Add(BitCodeAbbrevOp(ORIGINAL_FILE));
     FileAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File ID
@@ -1685,16 +1683,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
     Record.clear();
     Record.push_back(ORIGINAL_FILE);
-    AddFileID(SM.getMainFileID(), Record);
+    AddFileID(SourceMgr.getMainFileID(), Record);
     EmitRecordWithPath(FileAbbrevCode, Record, MainFile->getName());
   }
 
   Record.clear();
-  AddFileID(SM.getMainFileID(), Record);
+  AddFileID(SourceMgr.getMainFileID(), Record);
   Stream.EmitRecord(ORIGINAL_FILE_ID, Record);
 
-  WriteInputFiles(Context.SourceMgr,
-                  PP.getHeaderSearchInfo().getHeaderSearchOpts());
+  WriteInputFiles(SourceMgr, PP.getHeaderSearchInfo().getHeaderSearchOpts());
   Stream.ExitBlock();
 }
 
@@ -1958,10 +1955,6 @@ namespace {
   class HeaderFileInfoTrait {
     ASTWriter &Writer;
 
-    // Keep track of the framework names we've used during serialization.
-    SmallString<128> FrameworkStringData;
-    llvm::StringMap<unsigned> FrameworkNameOffset;
-
   public:
     HeaderFileInfoTrait(ASTWriter &Writer) : Writer(Writer) {}
 
@@ -2005,7 +1998,7 @@ namespace {
     std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
       unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
-      unsigned DataLen = 1 + sizeof(IdentifierID) + 4;
+      unsigned DataLen = 1 + sizeof(IdentifierID);
       for (auto ModInfo : Data.KnownHeaders)
         if (Writer.getLocalOrImportedSubmoduleID(ModInfo.getModule()))
           DataLen += 4;
@@ -2036,8 +2029,7 @@ namespace {
                           | (Data.HFI.isImport << 5)
                           | (Writer.isWritingStdCXXNamedModules() ? 0 :
                              Data.HFI.isPragmaOnce << 4)
-                          | (Data.HFI.DirInfo << 1)
-                          | Data.HFI.IndexHeaderMapHeader;
+                          | (Data.HFI.DirInfo << 1);
       LE.write<uint8_t>(Flags);
 
       if (Data.HFI.LazyControllingMacro.isID())
@@ -2045,22 +2037,6 @@ namespace {
       else
         LE.write<IdentifierID>(
             Writer.getIdentifierRef(Data.HFI.LazyControllingMacro.getPtr()));
-
-      unsigned Offset = 0;
-      if (!Data.HFI.Framework.empty()) {
-        // If this header refers into a framework, save the framework name.
-        llvm::StringMap<unsigned>::iterator Pos
-          = FrameworkNameOffset.find(Data.HFI.Framework);
-        if (Pos == FrameworkNameOffset.end()) {
-          Offset = FrameworkStringData.size() + 1;
-          FrameworkStringData.append(Data.HFI.Framework);
-          FrameworkStringData.push_back(0);
-
-          FrameworkNameOffset[Data.HFI.Framework] = Offset;
-        } else
-          Offset = Pos->second;
-      }
-      LE.write<uint32_t>(Offset);
 
       auto EmitModule = [&](Module *M, ModuleMap::ModuleHeaderRole Role) {
         if (uint32_t ModID = Writer.getLocalOrImportedSubmoduleID(M)) {
@@ -2077,9 +2053,6 @@ namespace {
 
       assert(Out.tell() - Start == DataLen && "Wrong data length");
     }
-
-    const char *strings_begin() const { return FrameworkStringData.begin(); }
-    const char *strings_end() const { return FrameworkStringData.end(); }
   };
 
 } // namespace
@@ -2214,7 +2187,6 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
   // Write the header search table
   RecordData::value_type Record[] = {HEADER_SEARCH_TABLE, BucketOffset,
                                      NumHeaderSearchEntries, TableData.size()};
-  TableData.append(GeneratorTrait.strings_begin(),GeneratorTrait.strings_end());
   Stream.EmitRecordWithBlob(TableAbbrev, Record, TableData);
 
   // Free all of the strings we had to duplicate.
@@ -2259,8 +2231,7 @@ static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
 /// entries for files that we actually need. In the common case (no
 /// errors), we probably won't have to create file entries for any of
 /// the files in the AST.
-void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
-                                        const Preprocessor &PP) {
+void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
   RecordData Record;
 
   // Enter the source manager block.
@@ -2348,8 +2319,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         // We add one to the size so that we capture the trailing NULL
         // that is required by llvm::MemoryBuffer::getMemBuffer (on
         // the reader side).
-        std::optional<llvm::MemoryBufferRef> Buffer =
-            Content->getBufferOrNone(PP.getDiagnostics(), PP.getFileManager());
+        std::optional<llvm::MemoryBufferRef> Buffer = Content->getBufferOrNone(
+            SourceMgr.getDiagnostics(), SourceMgr.getFileManager());
         StringRef Name = Buffer ? Buffer->getBufferIdentifier() : "";
         Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
                                   StringRef(Name.data(), Name.size() + 1));
@@ -2359,8 +2330,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       if (EmitBlob) {
         // Include the implicit terminating null character in the on-disk buffer
         // if we're writing it uncompressed.
-        std::optional<llvm::MemoryBufferRef> Buffer =
-            Content->getBufferOrNone(PP.getDiagnostics(), PP.getFileManager());
+        std::optional<llvm::MemoryBufferRef> Buffer = Content->getBufferOrNone(
+            SourceMgr.getDiagnostics(), SourceMgr.getFileManager());
         if (!Buffer)
           Buffer = llvm::MemoryBufferRef("<<<INVALID BUFFER>>>", "");
         StringRef Blob(Buffer->getBufferStart(), Buffer->getBufferSize() + 1);
@@ -5396,7 +5367,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // SourceLocations or FileIDs depends on it.
   computeNonAffectingInputFiles();
 
-  writeUnhashedControlBlock(PP, Context);
+  writeUnhashedControlBlock(PP);
 
   // Don't reuse type ID and Identifier ID from readers for C++ standard named
   // modules since we want to support no-transitive-change model for named
@@ -5458,7 +5429,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   PrepareWritingSpecialDecls(SemaRef);
 
   // Write the control block
-  WriteControlBlock(PP, Context, isysroot);
+  WriteControlBlock(PP, isysroot);
 
   // Write the remaining AST contents.
   Stream.FlushToWord();
@@ -5551,7 +5522,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteDeclAndTypes(Context);
 
   WriteFileDeclIDsMap();
-  WriteSourceManagerBlock(Context.getSourceManager(), PP);
+  WriteSourceManagerBlock(PP.getSourceManager());
   WriteComments();
   WritePreprocessor(PP, isModule);
   WriteHeaderSearch(PP.getHeaderSearchInfo());
@@ -7644,6 +7615,7 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
 
 void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getAllocatorModifier());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddStmt(C->getAllocator());
