@@ -300,9 +300,9 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
           scanRes.off = branchOff;
           scanRes.instr = instr2;
         } else {
-          warn(toString(isec->file) +
-               ": skipping cortex-a8 657417 erratum sequence, section " +
-               isec->name + " is too large to patch");
+          Warn(ctx) << isec->file
+                    << ": skipping cortex-a8 657417 erratum sequence, section "
+                    << isec->name << " is too large to patch";
         }
       }
     }

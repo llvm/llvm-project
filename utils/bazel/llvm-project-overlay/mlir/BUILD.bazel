@@ -2337,6 +2337,7 @@ td_library(
     srcs = ["include/mlir/Dialect/AMX/AMX.td"],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":LLVMOpsTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -2358,6 +2359,20 @@ gentbl_cc_library(
                 "-dialect=amx",
             ],
             "include/mlir/Dialect/AMX/AMXDialect.cpp.inc",
+        ),
+        (
+            [
+                "-gen-typedef-decls",
+                "-typedefs-dialect=amx",
+            ],
+            "include/mlir/Dialect/AMX/AMXTypes.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "-typedefs-dialect=amx",
+            ],
+            "include/mlir/Dialect/AMX/AMXTypes.cpp.inc",
         ),
         (
             ["-gen-op-decls"],
@@ -2388,6 +2403,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":SideEffectInterfaces",
+        "//llvm:Support",
     ],
 )
 
@@ -2398,6 +2414,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMXDialect",
+        ":ConvertToLLVMInterface",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",

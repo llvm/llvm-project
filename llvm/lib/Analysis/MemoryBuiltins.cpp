@@ -25,6 +25,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -589,19 +590,28 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const TargetLibraryInfo *TLI,
                                  bool MustSucceed) {
   return lowerObjectSizeCall(ObjectSize, DL, TLI, /*AAResults=*/nullptr,
-                             MustSucceed);
+                             /*DT=*/nullptr, MustSucceed);
 }
 
 Value *llvm::lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
     SmallVectorImpl<Instruction *> *InsertedInstructions) {
+  return lowerObjectSizeCall(ObjectSize, DL, TLI, AA, /*DT=*/nullptr,
+                             MustSucceed, InsertedInstructions);
+}
+
+Value *llvm::lowerObjectSizeCall(
+    IntrinsicInst *ObjectSize, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
+    bool MustSucceed, SmallVectorImpl<Instruction *> *InsertedInstructions) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
   bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(1))->isZero();
   ObjectSizeOpts EvalOptions;
   EvalOptions.AA = AA;
+  EvalOptions.DT = DT;
 
   // Unless we have to fold this to something, try to be as accurate as
   // possible.
@@ -708,14 +718,46 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   // readjust the APInt as we pass it upwards in order for the APInt to match
   // the type the caller passed in.
   APInt Offset(InitialIntTyBits, 0);
+
+  // External Analysis used to compute the Min/Max value of individual Offsets
+  // within a GEP.
+  auto OffsetRangeAnalysis = [this, V](Value &VOffset, APInt &Offset) {
+    if (auto *C = dyn_cast<ConstantInt>(&VOffset)) {
+      Offset = C->getValue();
+      return true;
+    }
+    if (Options.EvalMode != ObjectSizeOpts::Mode::Min &&
+        Options.EvalMode != ObjectSizeOpts::Mode::Max) {
+      return false;
+    }
+    ConstantRange CR = computeConstantRange(
+        &VOffset, /*ForSigned*/ true, /*UseInstrInfo*/ true, /*AC=*/nullptr,
+        /*CtxtI=*/dyn_cast<Instruction>(V), /*DT=*/Options.DT);
+    if (CR.isFullSet())
+      return false;
+
+    if (Options.EvalMode == ObjectSizeOpts::Mode::Min) {
+      Offset = CR.getSignedMax();
+      // Upper bound actually unknown.
+      if (Offset.isMaxSignedValue())
+        return false;
+    } else {
+      Offset = CR.getSignedMin();
+      // Lower bound actually unknown.
+      if (Offset.isMinSignedValue())
+        return false;
+    }
+    return true;
+  };
+
   V = V->stripAndAccumulateConstantOffsets(
-      DL, Offset, /* AllowNonInbounds */ true, /* AllowInvariantGroup */ true);
+      DL, Offset, /* AllowNonInbounds */ true, /* AllowInvariantGroup */ true,
+      /*ExternalAnalysis=*/OffsetRangeAnalysis);
 
   // Later we use the index type size and zero but it will match the type of the
   // value that is passed to computeImpl.
   IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
   Zero = APInt::getZero(IntTyBits);
-
   OffsetSpan ORT = computeValue(V);
 
   bool IndexTypeSizeChanged = InitialIntTyBits != IntTyBits;
@@ -793,6 +835,26 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
     Size = Size.umul_ov(NumElems, Overflow);
     return Overflow ? ObjectSizeOffsetVisitor::unknown()
                     : OffsetSpan(Zero, align(Size, I.getAlign()));
+  } else {
+    ConstantRange CR =
+        computeConstantRange(ArraySize, /*ForSigned*/ false,
+                             /*UseInstrInfo*/ true, /*AC=*/nullptr,
+                             /*CtxtI=*/&I, /*DT=*/Options.DT);
+    if (CR.isFullSet())
+      return ObjectSizeOffsetVisitor::unknown();
+    APInt Bound;
+    if (Options.EvalMode == ObjectSizeOpts::Mode::Max) {
+      Bound = CR.getUnsignedMax();
+      // Upper bound actually unknown.
+      if (Bound.isMaxValue())
+        return ObjectSizeOffsetVisitor::unknown();
+    } else {
+      Bound = CR.getUnsignedMin();
+      // Lower bound actually unknown.
+      if (Bound.isMinValue())
+        return ObjectSizeOffsetVisitor::unknown();
+    }
+    return OffsetSpan(Zero, align(Bound, I.getAlign()));
   }
   return ObjectSizeOffsetVisitor::unknown();
 }
@@ -810,7 +872,32 @@ OffsetSpan ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  if (std::optional<APInt> Size = getAllocSize(&CB, TLI))
+  if (std::optional<APInt> Size =
+          getAllocSize(&CB, TLI, [&CB, this](const Value *V) -> const Value * {
+            if (!V->getType()->isIntegerTy())
+              return V;
+            if (isa<ConstantInt>(V))
+              return V;
+            ConstantRange CR = computeConstantRange(
+                V, /*ForSigned*/ false, /*UseInstrInfo*/ true, /*AC=*/nullptr,
+                /*CtxtI=*/&CB, /*DT=*/Options.DT);
+            if (CR.isFullSet())
+              return V;
+
+            APInt Bound;
+            if (Options.EvalMode == ObjectSizeOpts::Mode::Max) {
+              Bound = CR.getUnsignedMax();
+              // Upper bound actually unknown.
+              if (Bound.isMaxValue())
+                return V;
+            } else {
+              Bound = CR.getUnsignedMin();
+              // Lower bound actually unknown.
+              if (Bound.isMinValue())
+                return V;
+            }
+            return ConstantInt::get(V->getType(), Bound);
+          }))
     return OffsetSpan(Zero, *Size);
   return ObjectSizeOffsetVisitor::unknown();
 }

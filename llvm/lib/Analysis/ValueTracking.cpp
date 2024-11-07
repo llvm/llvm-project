@@ -1565,20 +1565,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Skip direct self references.
         if (IncValue == P) continue;
 
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
-        // TODO: See if we can base recursion limiter on number of incoming phi
-        // edges so we don't overly clamp analysis.
-        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
-
         // If the Use is a select of this phi, use the knownbit of the other
         // operand to break the recursion.
         if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
-          if (SI->getTrueValue() == P || SI->getFalseValue() == P) {
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
             IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
                                                : SI->getTrueValue();
-            IncDepth = Depth + 1;
-          }
         }
 
         // Change the context instruction to the "edge" that flows into the
@@ -1589,7 +1581,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
-        computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
+
+        // Recurse, but cap the recursion to one level, because we don't
+        // want to waste time spinning around in loops.
+        // TODO: See if we can base recursion limiter on number of incoming phi
+        // edges so we don't overly clamp analysis.
+        computeKnownBits(IncValue, DemandedElts, Known2,
+                         MaxAnalysisRecursionDepth - 1, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
@@ -6713,11 +6711,11 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 }
 
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
-  if (!V->getType()->isPointerTy())
-    return V;
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       V = GEP->getPointerOperand();
+      if (!V->getType()->isPointerTy()) // Only handle scalar pointer base.
+        return nullptr;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
