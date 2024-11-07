@@ -2210,42 +2210,33 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
     return false;
   }
 
-  llvm::SmallVector<QualType, 4> QTTypes;
-  BuildFlattenedTypeList(QT, QTTypes);
-
-  // empty element type is not typed resource element compatible
-  if (QTTypes.size() == 0)
-    return false;
-
-  QualType FirstQT = SemaRef.Context.getCanonicalType(QTTypes[0]);
-
-  // element count cannot exceed 4
-  if (QTTypes.size() > 4)
-    return false;
-
-  for (QualType TempQT : QTTypes) {
-    // ensure homogeneity
-    if (!getASTContext().hasSameUnqualifiedType(FirstQT, TempQT))
-      return false;
-  }
-
-  if (const BuiltinType *BT = FirstQT->getAs<BuiltinType>()) {
+  // the only other valid builtin types are scalars or vectors
+  if (const BuiltinType *BT = CanonicalType->getAs<BuiltinType>()) {
     if (BT->isBooleanType() || BT->isEnumeralType())
       return false;
 
-    // Check if it is an array type.
-    if (FirstQT->isArrayType())
+    int TotalSizeInBytes = SemaRef.Context.getTypeSize(BT) / 8;
+
+    if (TotalSizeInBytes > 16)
       return false;
+    return true;
   }
 
-  // if the loop above completes without returning, then
-  // we've guaranteed homogeneity
-  int TotalSizeInBytes =
-      (SemaRef.Context.getTypeSize(FirstQT) / 8) * QTTypes.size();
-  if (TotalSizeInBytes > 16)
-    return false;
+  if (const VectorType *VT = CanonicalType->getAs<VectorType>()) {
+    int ArraySize = VT->getNumElements();
 
-  return true;
+    if (ArraySize > 4)
+      return false;
+
+    QualType ElTy = VT->getElementType();
+    int TotalSizeInBytes = (SemaRef.Context.getTypeSize(ElTy) / 8) * ArraySize;
+
+    if (TotalSizeInBytes > 16)
+      return false;
+    return true;
+  }
+
+  return false;
 }
 
 bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
