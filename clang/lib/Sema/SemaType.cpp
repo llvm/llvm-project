@@ -6541,6 +6541,11 @@ static void handleWrapsAttr(QualType &Type, const ParsedAttr &Attr,
   Sema &S = State.getSema();
   ASTContext &Ctx = S.Context;
 
+  // wraps and no_wraps are most useful and consistent when used with C. Other
+  // languages have better alternatives within their type systems.
+  if (S.LangOpts.CPlusPlus || S.LangOpts.ObjC)
+    return;
+
   if (!Type->isIntegerType()) {
     S.Diag(Attr.getLoc(), diag::warn_wraps_attr_var_decl_type_not_integer)
         << (int)NoWraps << Type.getAsString();
