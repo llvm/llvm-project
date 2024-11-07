@@ -21512,7 +21512,12 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
   if (!isTypeLegal(VT))
     return false;
 
-  if (!isLegalElementTypeForRVV(VT.getScalarType()) ||
+  // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+  if (!(isLegalElementTypeForRVV(VT.getScalarType()) ||
+        (VT.getScalarType() == MVT::bf16 &&
+         Subtarget.hasVInstructionsBF16Minimal()) ||
+        (VT.getScalarType() == MVT::f16 &&
+         Subtarget.hasVInstructionsF16Minimal())) ||
       !allowsMemoryAccessForAlignment(VTy->getContext(), DL, VT, AddrSpace,
                                       Alignment))
     return false;
