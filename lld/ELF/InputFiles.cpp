@@ -247,7 +247,7 @@ std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
 #endif
   }
 
-  log(path);
+  Log(ctx) << path;
   ctx.arg.dependencyFiles.insert(llvm::CachedHashString(path));
 
   auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,

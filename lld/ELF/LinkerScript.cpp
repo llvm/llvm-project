@@ -752,7 +752,7 @@ void LinkerScript::processSectionCommands() {
     if (auto *osd = dyn_cast<OutputDesc>(base)) {
       OutputSection *osec = &osd->osec;
       if (OutputDesc *overwrite = map.lookup(CachedHashStringRef(osec->name))) {
-        log(overwrite->osec.location + " overwrites " + osec->name);
+        Log(ctx) << overwrite->osec.location << " overwrites " << osec->name;
         overwrite->osec.sectionIndex = i++;
         base = overwrite;
       } else if (process(osec)) {
