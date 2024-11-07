@@ -11,8 +11,6 @@
 
 #include "DAPForward.h"
 
-#include "llvm/Support/JSON.h"
-
 #include <string>
 
 namespace lldb_dap {

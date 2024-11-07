@@ -9,17 +9,24 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
-#include "BreakpointBase.h"
 #include "DAPForward.h"
 
-#include "lldb/API/SBModule.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBType.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 

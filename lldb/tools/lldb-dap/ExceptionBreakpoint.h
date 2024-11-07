@@ -12,8 +12,10 @@
 #include "DAPForward.h"
 
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <string>
+#include <utility>
 
 namespace lldb_dap {
 

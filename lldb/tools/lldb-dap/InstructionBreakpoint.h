@@ -13,6 +13,7 @@
 #include "Breakpoint.h"
 #include "DAPForward.h"
 
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
 #include <cstdint>

@@ -8,7 +8,10 @@
 
 #include "ExceptionBreakpoint.h"
 
+#include "BreakpointBase.h"
 #include "DAP.h"
+
+#include "lldb/API/SBTarget.h"
 
 namespace lldb_dap {
 

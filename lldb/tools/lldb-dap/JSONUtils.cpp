@@ -8,25 +8,53 @@
 
 #include "JSONUtils.h"
 
+#include "BreakpointBase.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
 
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFunction.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBModule.h"
+#include "lldb/API/SBQueue.h"
+#include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 
+#include <chrono>
 #include <iomanip>
 #include <optional>
 #include <sstream>
+#include <string>
 #include <string.h>
+#include <sys/syslimits.h>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 

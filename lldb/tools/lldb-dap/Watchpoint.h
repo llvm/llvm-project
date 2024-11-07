@@ -10,10 +10,14 @@
 #define LLDB_TOOLS_LLDB_DAP_WATCHPOINT_H
 
 #include "BreakpointBase.h"
+#include "DAPForward.h"
 
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBWatchpoint.h"
 #include "lldb/API/SBWatchpointOptions.h"
+#include "lldb/lldb-types.h"
+
+#include <cstddef>
 
 namespace lldb_dap {
 

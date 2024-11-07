@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINT_H
 
 #include "BreakpointBase.h"
+#include "DAPForward.h"
 
 #include "lldb/API/SBBreakpoint.h"
 

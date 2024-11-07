@@ -10,6 +10,8 @@
 
 #include "JSONUtils.h"
 
+#include "llvm/ADT/StringRef.h"
+
 using namespace lldb_dap;
 
 BreakpointBase::BreakpointBase(DAP &d, const llvm::json::Object &obj)

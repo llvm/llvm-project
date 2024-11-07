@@ -12,6 +12,11 @@
 #include "DAP.h"
 #include "JSONUtils.h"
 
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBTarget.h"
+
+#include "llvm/ADT/StringRef.h"
+
 namespace lldb_dap {
 
 // Instruction Breakpoint
