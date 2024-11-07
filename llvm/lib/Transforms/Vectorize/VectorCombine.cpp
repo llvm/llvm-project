@@ -405,13 +405,15 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
                                           const Instruction &I,
                                           ExtractElementInst *&ConvertToShuffle,
                                           unsigned PreferredExtractIndex) {
-  auto *Ext0IndexC = dyn_cast<ConstantInt>(Ext0->getOperand(1));
-  auto *Ext1IndexC = dyn_cast<ConstantInt>(Ext1->getOperand(1));
+  auto *Ext0IndexC = dyn_cast<ConstantInt>(Ext0->getIndexOperand());
+  auto *Ext1IndexC = dyn_cast<ConstantInt>(Ext1->getIndexOperand());
   assert(Ext0IndexC && Ext1IndexC && "Expected constant extract indexes");
 
   unsigned Opcode = I.getOpcode();
+  Value *Ext0Src = Ext0->getVectorOperand();
+  Value *Ext1Src = Ext1->getVectorOperand();
   Type *ScalarTy = Ext0->getType();
-  auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
+  auto *VecTy = cast<VectorType>(Ext0Src->getType());
   InstructionCost ScalarOpCost, VectorOpCost;
 
   // Get cost estimates for scalar and vector versions of the operation.
@@ -452,7 +454,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // Extra uses of the extracts mean that we include those costs in the
   // vector total because those instructions will not be eliminated.
   InstructionCost OldCost, NewCost;
-  if (Ext0->getOperand(0) == Ext1->getOperand(0) && Ext0Index == Ext1Index) {
+  if (Ext0Src == Ext1Src && Ext0Index == Ext1Index) {
     // Handle a special case. If the 2 extracts are identical, adjust the
     // formulas to account for that. The extra use charge allows for either the
     // CSE'd pattern or an unoptimized form with identical values:
@@ -513,12 +515,12 @@ static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
                                             unsigned NewIndex,
                                             IRBuilder<> &Builder) {
   // Shufflevectors can only be created for fixed-width vectors.
-  if (!isa<FixedVectorType>(ExtElt->getOperand(0)->getType()))
+  Value *X = ExtElt->getVectorOperand();
+  if (!isa<FixedVectorType>(X->getType()))
     return nullptr;
 
   // If the extract can be constant-folded, this code is unsimplified. Defer
   // to other passes to handle that.
-  Value *X = ExtElt->getVectorOperand();
   Value *C = ExtElt->getIndexOperand();
   assert(isa<ConstantInt>(C) && "Expected a constant index operand");
   if (isa<Constant>(X))

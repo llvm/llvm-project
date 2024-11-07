@@ -6018,6 +6018,17 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     } else {
       assert(Param && "can't use default arguments without a known callee");
 
+      // FIXME: We don't track member specialization info for non-defining
+      // friend declarations, so we will not be able to later find the function
+      // pattern. As a workaround, don't instantiate the default argument in
+      // this case. This is correct per wording and only an error recovery
+      // issue, as per [dcl.fct.default]p4:
+      //   if a friend declaration D specifies a default argument expression,
+      //   that declaration shall be a definition.
+      if (FDecl->getFriendObjectKind() != Decl::FOK_None &&
+          FDecl->getMemberSpecializationInfo() == nullptr)
+        return true;
+
       ExprResult ArgExpr = BuildCXXDefaultArgExpr(CallLoc, FDecl, Param);
       if (ArgExpr.isInvalid())
         return true;
