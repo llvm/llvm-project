@@ -2139,9 +2139,15 @@ void CIRGenModule::buildAliasForGlobal(StringRef mangledName,
                                        mlir::cir::GlobalLinkageKind linkage) {
   auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
   assert(aliasFD && "expected FunctionDecl");
-  auto alias =
-      createCIRFunction(getLoc(aliasGD.getDecl()->getSourceRange()),
-                        mangledName, aliasee.getFunctionType(), aliasFD);
+
+  // The aliasee function type is different from the alias one, this difference
+  // is specific to CIR because in LLVM the ptr types are already erased at this
+  // point.
+  auto &fnInfo = getTypes().arrangeCXXStructorDeclaration(aliasGD);
+  auto fnType = getTypes().GetFunctionType(fnInfo);
+
+  auto alias = createCIRFunction(getLoc(aliasGD.getDecl()->getSourceRange()),
+                                 mangledName, fnType, aliasFD);
   alias.setAliasee(aliasee.getName());
   alias.setLinkage(linkage);
   // Declarations cannot have public MLIR visibility, just mark them private

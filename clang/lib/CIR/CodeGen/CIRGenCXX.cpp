@@ -174,7 +174,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     llvm_unreachable("NYI");
 
   // Create the alias with no name.
-  buildAliasForGlobal("", Entry, AliasDecl, Aliasee, Linkage);
+  buildAliasForGlobal(MangledName, Entry, AliasDecl, Aliasee, Linkage);
   return false;
 }
 
