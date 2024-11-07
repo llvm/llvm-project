@@ -53,9 +53,6 @@ module;
 #  if __has_include(<debugging>)
 #    error "please update the header information for <debugging> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<debugging>)
-#  if __has_include(<flat_map>)
-#    error "please update the header information for <flat_map> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<flat_map>)
 #  if __has_include(<flat_set>)
 #    error "please update the header information for <flat_set> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<flat_set>)

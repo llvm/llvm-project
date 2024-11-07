@@ -478,6 +478,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    OpdsMapping[0] = getVRBValueMapping(MRI.getType(MI.getOperand(0).getReg())
+                                            .getSizeInBits()
+                                            .getKnownMinValue());
+
+    LLT ScalarTy = MRI.getType(MI.getOperand(1).getReg());
+    MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if ((GPRSize == 32 && ScalarTy.getSizeInBits() == 64) ||
+        onlyDefinesFP(*DefMI, MRI, TRI)) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits());
+    } else
+      OpdsMapping[1] = GPRValueMapping;
+    break;
+  }
   default:
     // By default map all scalars to GPR.
     for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {

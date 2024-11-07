@@ -130,6 +130,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
   bool HasMOVBE = false;
+  bool HasMOVRS = false;
   bool HasPREFETCHI = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
@@ -210,7 +211,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;

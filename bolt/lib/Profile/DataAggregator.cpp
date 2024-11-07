@@ -638,8 +638,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
                                             : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    if (getBranchData(BF) || getFuncSampleData(BF.getNames()))
+    FuncBranchData *FBD = getBranchData(BF);
+    if (FBD || getFuncSampleData(BF.getNames())) {
       BF.markProfiled(Flags);
+      if (FBD)
+        BF.RawBranchCount = FBD->getNumExecutedBranches();
+    }
   }
 
   for (auto &FuncBranches : NamesToBranches)
@@ -783,13 +787,9 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                : isReturn(Func.disassembleInstructionAtOffset(Offset));
   };
 
-  // Returns whether \p Offset in \p Func corresponds to a call continuation
-  // fallthrough block excluding externally-reachable entry points (secondary
-  // entries and landing pads).
+  // Returns whether \p Offset in \p Func may be a call continuation excluding
+  // entry points and landing pads.
   auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    // Note the use of MCInstrAnalysis: no call continuation for a tail call.
-    auto isCall = [&](auto MI) { return MI && BC->MIA->isCall(*MI); };
-
     // No call continuation at a function start.
     if (!Offset)
       return false;
@@ -801,15 +801,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
 
     // The offset should not be an entry point or a landing pad.
     const BinaryBasicBlock *ContBB = Func.getBasicBlockAtOffset(Offset);
-    if (!ContBB || ContBB->isEntryPoint() || ContBB->isLandingPad())
-      return false;
-
-    // Check that preceding instruction is a call.
-    const BinaryBasicBlock *CallBB =
-        Func.getBasicBlockContainingOffset(Offset - 1);
-    if (!CallBB || CallBB == ContBB)
-      return false;
-    return isCall(CallBB->getLastNonPseudoInstr());
+    return ContBB && !ContBB->isEntryPoint() && !ContBB->isLandingPad();
   };
 
   // Mutates \p Addr to an offset into the containing function, performing BAT
@@ -899,6 +891,12 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
     return false;
   }
 
+  // Set ParentFunc to BAT parent function or FromFunc itself.
+  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
+  if (!ParentFunc)
+    ParentFunc = FromFunc;
+  ParentFunc->SampleCountInBytes += Count * (Second.From - First.To);
+
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
                                         Second.From)
@@ -918,13 +916,12 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
   for (auto [From, To] : *FTs) {
     if (BAT) {
       From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
       To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
     }
-    doIntraBranch(ParentFunc ? *ParentFunc : *FromFunc, From, To, Count, false);
+    doIntraBranch(*ParentFunc, From, To, Count, false);
   }
 
   return true;
@@ -2098,7 +2095,8 @@ std::error_code DataAggregator::parseMMapEvents() {
             // size of the mapping, but we know it should not exceed the segment
             // alignment value. Hence we are performing an approximate check.
             return SegInfo.Address >= MMapInfo.MMapAddress &&
-                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment;
+                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment &&
+                   SegInfo.IsExecutable;
           });
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse

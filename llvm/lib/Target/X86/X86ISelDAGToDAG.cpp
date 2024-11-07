@@ -1975,6 +1975,16 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
       AM.Scale == 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr &&
       AM.SymbolFlags == X86II::MO_NO_FLAG && AM.hasSymbolicDisplacement()) {
+    // However, when GV is a local function symbol and in the same section as
+    // the current instruction, and AM.Disp is negative and near INT32_MIN,
+    // referencing GV+Disp generates a relocation referencing the section symbol
+    // with an even smaller offset, which might underflow. We should bail out if
+    // the negative offset is too close to INT32_MIN. Actually, we are more
+    // conservative here, using a smaller magic number also used by
+    // isOffsetSuitableForCodeModel.
+    if (isa_and_nonnull<Function>(AM.GV) && AM.Disp < -16 * 1024 * 1024)
+      return true;
+
     AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
   }
 

@@ -429,7 +429,6 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.BBSections =
       llvm::StringSwitch<llvm::BasicBlockSection>(CodeGenOpts.BBSections)
           .Case("all", llvm::BasicBlockSection::All)
-          .Case("labels", llvm::BasicBlockSection::Labels)
           .StartsWith("list=", llvm::BasicBlockSection::List)
           .Case("none", llvm::BasicBlockSection::None)
           .Default(llvm::BasicBlockSection::None);
@@ -509,6 +508,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();
+  if (CodeGenOpts.OutputAsmVariant != 3) // 3 (default): not specified
+    Options.MCOptions.OutputAsmVariant = CodeGenOpts.OutputAsmVariant;
   Options.MCOptions.ABIName = TargetOpts.ABI;
   for (const auto &Entry : HSOpts.UserEntries)
     if (!Entry.IsFramework &&
@@ -1323,7 +1324,8 @@ static void runThinLTOBackend(
   if (Error E =
           thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
                       ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-                      /* ModuleMap */ nullptr, CGOpts.CmdArgs)) {
+                      /*ModuleMap=*/nullptr, Conf.CodeGenOnly,
+                      /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });

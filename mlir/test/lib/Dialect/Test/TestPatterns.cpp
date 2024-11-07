@@ -1140,9 +1140,8 @@ struct TestTypeConverter : public TypeConverter {
 
   /// Hook for materializing a conversion. This is necessary because we generate
   /// 1->N type mappings.
-  static std::optional<Value> materializeCast(OpBuilder &builder,
-                                              Type resultType,
-                                              ValueRange inputs, Location loc) {
+  static Value materializeCast(OpBuilder &builder, Type resultType,
+                               ValueRange inputs, Location loc) {
     return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
   }
 };

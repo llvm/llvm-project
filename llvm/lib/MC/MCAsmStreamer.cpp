@@ -373,6 +373,7 @@ public:
                        SMLoc Loc) override;
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
+  void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
 
@@ -2142,6 +2143,12 @@ void MCAsmStreamer::emitCFIWindowSave(SMLoc Loc) {
 void MCAsmStreamer::emitCFINegateRAState(SMLoc Loc) {
   MCStreamer::emitCFINegateRAState(Loc);
   OS << "\t.cfi_negate_ra_state";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
+  MCStreamer::emitCFINegateRAStateWithPC(Loc);
+  OS << "\t.cfi_negate_ra_state_with_pc";
   EmitEOL();
 }
 

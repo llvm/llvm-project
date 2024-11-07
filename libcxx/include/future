@@ -500,7 +500,7 @@ public:
 
 // Declared above std::future_error
 void __throw_future_error(future_errc __ev) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw future_error(make_error_code(__ev));
 #  else
   (void)__ev;
@@ -594,7 +594,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void set_value_at_thread_exit(_Arg&& __arg);
 
   _LIBCPP_HIDE_FROM_ABI _Rp move();
-  _LIBCPP_HIDE_FROM_ABI __add_lvalue_reference_t<_Rp> copy();
+  _LIBCPP_HIDE_FROM_ABI _Rp& copy();
 };
 
 template <class _Rp>
@@ -636,7 +636,7 @@ _Rp __assoc_state<_Rp>::move() {
 }
 
 template <class _Rp>
-__add_lvalue_reference_t<_Rp> __assoc_state<_Rp>::copy() {
+_Rp& __assoc_state<_Rp>::copy() {
   unique_lock<mutex> __lk(this->__mut_);
   this->__sub_wait(__lk);
   if (this->__exception_ != nullptr)
@@ -779,15 +779,15 @@ inline __deferred_assoc_state<_Rp, _Fp>::__deferred_assoc_state(_Fp&& __f) : __f
 
 template <class _Rp, class _Fp>
 void __deferred_assoc_state<_Rp, _Fp>::__execute() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     this->set_value(__func_());
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     this->set_exception(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _Fp>
@@ -809,16 +809,16 @@ inline __deferred_assoc_state<void, _Fp>::__deferred_assoc_state(_Fp&& __f) : __
 
 template <class _Fp>
 void __deferred_assoc_state<void, _Fp>::__execute() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     __func_();
     this->set_value();
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     this->set_exception(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _Rp, class _Fp>
@@ -840,15 +840,15 @@ inline __async_assoc_state<_Rp, _Fp>::__async_assoc_state(_Fp&& __f) : __func_(s
 
 template <class _Rp, class _Fp>
 void __async_assoc_state<_Rp, _Fp>::__execute() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     this->set_value(__func_());
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     this->set_exception(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _Rp, class _Fp>
@@ -876,16 +876,16 @@ inline __async_assoc_state<void, _Fp>::__async_assoc_state(_Fp&& __f) : __func_(
 
 template <class _Fp>
 void __async_assoc_state<void, _Fp>::__execute() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     __func_();
     this->set_value();
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     this->set_exception(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _Fp>
@@ -1656,15 +1656,15 @@ void packaged_task<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __args) {
     __throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
     __throw_future_error(future_errc::promise_already_satisfied);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     __p_.set_value(__f_(std::forward<_ArgTypes>(__args)...));
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __p_.set_exception(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _Rp, class... _ArgTypes>
@@ -1673,15 +1673,15 @@ void packaged_task<_Rp(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __
     __throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
     __throw_future_error(future_errc::promise_already_satisfied);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     __p_.set_value_at_thread_exit(__f_(std::forward<_ArgTypes>(__args)...));
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __p_.set_exception_at_thread_exit(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _Rp, class... _ArgTypes>
@@ -1758,16 +1758,16 @@ void packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args) {
     __throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
     __throw_future_error(future_errc::promise_already_satisfied);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     __f_(std::forward<_ArgTypes>(__args)...);
     __p_.set_value();
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __p_.set_exception(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class... _ArgTypes>
@@ -1776,16 +1776,16 @@ void packaged_task<void(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... _
     __throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
     __throw_future_error(future_errc::promise_already_satisfied);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   try {
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
     __f_(std::forward<_ArgTypes>(__args)...);
     __p_.set_value_at_thread_exit();
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __p_.set_exception_at_thread_exit(current_exception());
   }
-#  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class... _ArgTypes>
@@ -1857,13 +1857,13 @@ async(launch __policy, _Fp&& __f, _Args&&... __args) {
   typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
   typedef typename _BF::_Rp _Rp;
 
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif
     if (__does_policy_contain(__policy, launch::async))
       return std::__make_async_assoc_state<_Rp>(
           _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     if (__policy == launch::async)
       throw;

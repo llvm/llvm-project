@@ -893,7 +893,7 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 
-#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID) \
+#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID, WIDTH, ALIGN) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AMDGPUTypes.def"
 

@@ -1,8 +1,8 @@
 RUN: rm -rf %t && split-file %s %t && cd %t
-RUN: %clang_pgogen -fPIC foo.c -c -Xclang -fprofile-instrument-path="default_foo_%m.profraw"
-RUN: %clang_pgogen -fPIC foo2.c -c -Xclang -fprofile-instrument-path="default_foo2_%m.profraw"
-RUN: %clang_pgogen -shared foo.o -o shr_foo.o %if target={{.*aix.*}} %{ -bcdtors:mbr %}
-RUN: %clang_pgogen -shared foo2.o -o shr_foo2.o
+RUN: %clang_pgogen -fprofile-update=atomic -fPIC foo.c -c -Xclang -fprofile-instrument-path="default_foo_%m.profraw"
+RUN: %clang_pgogen -fprofile-update=atomic -fPIC foo2.c -c -Xclang -fprofile-instrument-path="default_foo2_%m.profraw"
+RUN: %clang_pgogen -fprofile-update=atomic -shared foo.o -o shr_foo.o %if target={{.*aix.*}} %{ -bcdtors:mbr %}
+RUN: %clang_pgogen -fprofile-update=atomic -shared foo2.o -o shr_foo2.o
 
 RUN: %clang_pgogen common.c -c
 

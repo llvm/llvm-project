@@ -21,6 +21,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -81,8 +82,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          NewRecipe = new VPWidenCallRecipe(
-              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+          NewRecipe = new VPWidenIntrinsicRecipe(
+              *CI, getVectorIntrinsicIDForCall(CI, &TLI),
+              {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
               CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
@@ -509,7 +511,7 @@ static bool isDeadRecipe(VPRecipeBase &R) {
                 [](VPValue *V) { return V->getNumUsers() == 0; });
 }
 
-static void removeDeadRecipes(VPlan &Plan) {
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
@@ -592,12 +594,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
           nullptr, StartV, StepV, Builder);
 
-      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
-                                       {PtrIV->getStartValue(), Steps},
-                                       PtrIV->getDebugLoc(), "next.gep");
+      VPValue *PtrAdd = Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
+                                             PtrIV->getDebugLoc(), "next.gep");
 
-      Recipe->insertAfter(Steps);
-      PtrIV->replaceAllUsesWith(Recipe);
+      PtrIV->replaceAllUsesWith(PtrAdd);
       continue;
     }
 
@@ -772,6 +772,105 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
   return true;
 }
 
+/// Try to hoist \p Previous and its operands before all users of \p FOR.
+static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
+                                        VPRecipeBase *Previous,
+                                        VPDominatorTree &VPDT) {
+  if (Previous->mayHaveSideEffects() || Previous->mayReadFromMemory())
+    return false;
+
+  // Collect recipes that need hoisting.
+  SmallVector<VPRecipeBase *> HoistCandidates;
+  SmallPtrSet<VPRecipeBase *, 8> Visited;
+  VPRecipeBase *HoistPoint = nullptr;
+  // Find the closest hoist point by looking at all users of FOR and selecting
+  // the recipe dominating all other users.
+  for (VPUser *U : FOR->users()) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    if (!R)
+      continue;
+    if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
+      HoistPoint = R;
+  }
+  assert(all_of(FOR->users(),
+                [&VPDT, HoistPoint](VPUser *U) {
+                  auto *R = dyn_cast<VPRecipeBase>(U);
+                  return !R || HoistPoint == R ||
+                         VPDT.properlyDominates(HoistPoint, R);
+                }) &&
+         "HoistPoint must dominate all users of FOR");
+
+  auto NeedsHoisting = [HoistPoint, &VPDT,
+                        &Visited](VPValue *HoistCandidateV) -> VPRecipeBase * {
+    VPRecipeBase *HoistCandidate = HoistCandidateV->getDefiningRecipe();
+    if (!HoistCandidate)
+      return nullptr;
+    VPRegionBlock *EnclosingLoopRegion =
+        HoistCandidate->getParent()->getEnclosingLoopRegion();
+    assert((!HoistCandidate->getParent()->getParent() ||
+            HoistCandidate->getParent()->getParent() == EnclosingLoopRegion) &&
+           "CFG in VPlan should still be flat, without replicate regions");
+    // Hoist candidate was already visited, no need to hoist.
+    if (!Visited.insert(HoistCandidate).second)
+      return nullptr;
+
+    // Candidate is outside loop region or a header phi, dominates FOR users w/o
+    // hoisting.
+    if (!EnclosingLoopRegion || isa<VPHeaderPHIRecipe>(HoistCandidate))
+      return nullptr;
+
+    // If we reached a recipe that dominates HoistPoint, we don't need to
+    // hoist the recipe.
+    if (VPDT.properlyDominates(HoistCandidate, HoistPoint))
+      return nullptr;
+    return HoistCandidate;
+  };
+  auto CanHoist = [&](VPRecipeBase *HoistCandidate) {
+    // Avoid hoisting candidates with side-effects, as we do not yet analyze
+    // associated dependencies.
+    return !HoistCandidate->mayHaveSideEffects();
+  };
+
+  if (!NeedsHoisting(Previous->getVPSingleValue()))
+    return true;
+
+  // Recursively try to hoist Previous and its operands before all users of FOR.
+  HoistCandidates.push_back(Previous);
+
+  for (unsigned I = 0; I != HoistCandidates.size(); ++I) {
+    VPRecipeBase *Current = HoistCandidates[I];
+    assert(Current->getNumDefinedValues() == 1 &&
+           "only recipes with a single defined value expected");
+    if (!CanHoist(Current))
+      return false;
+
+    for (VPValue *Op : Current->operands()) {
+      // If we reach FOR, it means the original Previous depends on some other
+      // recurrence that in turn depends on FOR. If that is the case, we would
+      // also need to hoist recipes involving the other FOR, which may break
+      // dependencies.
+      if (Op == FOR)
+        return false;
+
+      if (auto *R = NeedsHoisting(Op))
+        HoistCandidates.push_back(R);
+    }
+  }
+
+  // Order recipes to hoist by dominance so earlier instructions are processed
+  // first.
+  sort(HoistCandidates, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+    return VPDT.properlyDominates(A, B);
+  });
+
+  for (VPRecipeBase *HoistCandidate : HoistCandidates) {
+    HoistCandidate->moveBefore(*HoistPoint->getParent(),
+                               HoistPoint->getIterator());
+  }
+
+  return true;
+}
+
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT;
@@ -795,7 +894,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT))
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
       return false;
 
     // Introduce a recipe to combine the incoming and previous values of a
@@ -973,9 +1073,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *Preheader =
-      cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
+  VPBasicBlock *Preheader = Plan.getVectorPreheader();
 
   // Return true if we do not know how to (mechanically) hoist a given recipe
   // out of a loop region. Does not address legality concerns such as aliasing
@@ -989,6 +1087,7 @@ static void licm(VPlan &Plan) {
   // Hoist any loop invariant recipes from the vector loop region to the
   // preheader. Preform a shallow traversal of the vector loop region, to
   // exclude recipes in replicate regions.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -1033,7 +1132,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
-  VPBasicBlock *PH = Plan.getEntry();
+  VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -1158,7 +1257,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   removeRedundantInductionCasts(Plan);
 
   simplifyRecipes(Plan);
-  licm(Plan);
   legalizeAndOptimizeInductions(Plan);
   removeDeadRecipes(Plan);
 
@@ -1166,6 +1264,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
+  licm(Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
@@ -1217,7 +1316,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
-  auto *VecPreheader = cast<VPBasicBlock>(TopRegion->getSinglePredecessor());
+  auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
 
   // Create the ActiveLaneMask instruction using the correct start values.
@@ -1353,6 +1452,7 @@ void VPlanTransforms::addActiveLaneMask(
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
@@ -1384,6 +1484,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
+              .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
+                SmallVector<VPValue *> Ops(Sel->operands());
+                Ops.push_back(&EVL);
+                return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
+                                                  TypeInfo.inferScalarType(Sel),
+                                                  Sel->getDebugLoc());
+              })
+
               .Default([&](VPRecipeBase *R) { return nullptr; });
 
       if (!NewRecipe)
@@ -1424,12 +1532,30 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 /// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
 ///                                               [ %NextEVLIV, %vector.body ]
-/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
+/// %AVL = sub original TC, %EVLPhi
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %AVL
 /// ...
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
+/// If MaxSafeElements is provided, the function adds the following recipes:
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %AVL = sub original TC, %EVLPhi
+/// %cmp = cmp ult %AVL, MaxSafeElements
+/// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
+/// ...
+/// %NextEVLIV = add IVSize (cast i32 %VPEVL to IVSize), %EVLPhi
+/// ...
+///
+bool VPlanTransforms::tryAddExplicitVectorLength(
+    VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
@@ -1454,9 +1580,19 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
-                                  {EVLPhi, Plan.getTripCount()});
-  VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  // Compute original TC - IV as the AVL (application vector length).
+  VPValue *AVL = Builder.createNaryOp(
+      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+  if (MaxSafeElements) {
+    // Support for MaxSafeDist for correct loop emission.
+    VPValue *AVLSafe = Plan.getOrAddLiveIn(
+        ConstantInt::get(CanonicalIVPHI->getScalarType(), *MaxSafeElements));
+    VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
+    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc(), "safe_avl");
+  }
+  auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
+                                     DebugLoc());
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
@@ -1585,14 +1721,19 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
 }
 
 void VPlanTransforms::createInterleaveGroups(
-    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+    VPlan &Plan,
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+        &InterleaveGroups,
     VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+  if (InterleaveGroups.empty())
+    return;
+
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
   for (const auto *IG : InterleaveGroups) {
-    auto *Recipe =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
@@ -1602,9 +1743,45 @@ void VPlanTransforms::createInterleaveGroups(
 
     bool NeedsMaskForGaps =
         IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed;
-    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                                        Recipe->getMask(), NeedsMaskForGaps);
-    VPIG->insertBefore(Recipe);
+
+    Instruction *IRInsertPos = IG->getInsertPos();
+    auto *InsertPos =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
+
+    // Get or create the start address for the interleave group.
+    auto *Start =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
+    VPValue *Addr = Start->getAddr();
+    VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
+    if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {
+      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
+      // InsertPos or sink loads above zero members to join it.
+      bool InBounds = false;
+      if (auto *Gep = dyn_cast<GetElementPtrInst>(
+              getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
+        InBounds = Gep->isInBounds();
+
+      // We cannot re-use the address of member zero because it does not
+      // dominate the insert position. Instead, use the address of the insert
+      // position and create a PtrAdd adjusting it to the address of member
+      // zero.
+      assert(IG->getIndex(IRInsertPos) != 0 &&
+             "index of insert position shouldn't be zero");
+      auto &DL = IRInsertPos->getDataLayout();
+      APInt Offset(32,
+                   DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
+                       IG->getIndex(IRInsertPos),
+                   /*IsSigned=*/true);
+      VPValue *OffsetVPV = Plan.getOrAddLiveIn(
+          ConstantInt::get(IRInsertPos->getParent()->getContext(), -Offset));
+      VPBuilder B(InsertPos);
+      Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
+                      : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+    }
+    auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
+                                        InsertPos->getMask(), NeedsMaskForGaps);
+    VPIG->insertBefore(InsertPos);
+
     unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {

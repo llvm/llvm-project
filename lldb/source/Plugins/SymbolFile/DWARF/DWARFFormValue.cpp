@@ -25,7 +25,7 @@ using namespace lldb_private::plugin::dwarf;
 void DWARFFormValue::Clear() {
   m_unit = nullptr;
   m_form = dw_form_t(0);
-  m_value = ValueTypeTag();
+  m_value = ValueType();
 }
 
 bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
@@ -44,68 +44,68 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     switch (m_form) {
     case DW_FORM_addr:
       assert(m_unit);
-      m_value.value.uval =
+      m_value.uval =
           data.GetMaxU64(offset_ptr, DWARFUnit::GetAddressByteSize(m_unit));
       break;
     case DW_FORM_block1:
-      m_value.value.uval = data.GetU8(offset_ptr);
+      m_value.uval = data.GetU8(offset_ptr);
       is_block = true;
       break;
     case DW_FORM_block2:
-      m_value.value.uval = data.GetU16(offset_ptr);
+      m_value.uval = data.GetU16(offset_ptr);
       is_block = true;
       break;
     case DW_FORM_block4:
-      m_value.value.uval = data.GetU32(offset_ptr);
+      m_value.uval = data.GetU32(offset_ptr);
       is_block = true;
       break;
     case DW_FORM_data16:
-      m_value.value.uval = 16;
+      m_value.uval = 16;
       is_block = true;
       break;
     case DW_FORM_exprloc:
     case DW_FORM_block:
-      m_value.value.uval = data.GetULEB128(offset_ptr);
+      m_value.uval = data.GetULEB128(offset_ptr);
       is_block = true;
       break;
     case DW_FORM_string:
-      m_value.value.cstr = data.GetCStr(offset_ptr);
+      m_value.cstr = data.GetCStr(offset_ptr);
       break;
     case DW_FORM_sdata:
-      m_value.value.sval = data.GetSLEB128(offset_ptr);
+      m_value.sval = data.GetSLEB128(offset_ptr);
       break;
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
-      m_value.value.uval = data.GetMaxU64(offset_ptr, 4);
+      m_value.uval = data.GetMaxU64(offset_ptr, 4);
       break;
     case DW_FORM_addrx1:
     case DW_FORM_strx1:
     case DW_FORM_ref1:
     case DW_FORM_data1:
     case DW_FORM_flag:
-      m_value.value.uval = data.GetU8(offset_ptr);
+      m_value.uval = data.GetU8(offset_ptr);
       break;
     case DW_FORM_addrx2:
     case DW_FORM_strx2:
     case DW_FORM_ref2:
     case DW_FORM_data2:
-      m_value.value.uval = data.GetU16(offset_ptr);
+      m_value.uval = data.GetU16(offset_ptr);
       break;
     case DW_FORM_addrx3:
     case DW_FORM_strx3:
-      m_value.value.uval = data.GetMaxU64(offset_ptr, 3);
+      m_value.uval = data.GetMaxU64(offset_ptr, 3);
       break;
     case DW_FORM_addrx4:
     case DW_FORM_strx4:
     case DW_FORM_ref4:
     case DW_FORM_data4:
-      m_value.value.uval = data.GetU32(offset_ptr);
+      m_value.uval = data.GetU32(offset_ptr);
       break;
     case DW_FORM_data8:
     case DW_FORM_ref8:
     case DW_FORM_ref_sig8:
-      m_value.value.uval = data.GetU64(offset_ptr);
+      m_value.uval = data.GetU64(offset_ptr);
       break;
     case DW_FORM_addrx:
     case DW_FORM_loclistx:
@@ -115,7 +115,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_ref_udata:
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_addr_index:
-      m_value.value.uval = data.GetULEB128(offset_ptr);
+      m_value.uval = data.GetULEB128(offset_ptr);
       break;
     case DW_FORM_ref_addr:
       assert(m_unit);
@@ -123,14 +123,14 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
         ref_addr_size = m_unit->GetAddressByteSize();
       else
         ref_addr_size = 4;
-      m_value.value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
+      m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:
       m_form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
       indirect = true;
       break;
     case DW_FORM_flag_present:
-      m_value.value.uval = 1;
+      m_value.uval = 1;
       break;
     default:
       return false;
@@ -138,9 +138,9 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
   } while (indirect);
 
   if (is_block) {
-    m_value.data = data.PeekData(*offset_ptr, m_value.value.uval);
+    m_value.data = data.PeekData(*offset_ptr, m_value.uval);
     if (m_value.data != nullptr) {
-      *offset_ptr += m_value.value.uval;
+      *offset_ptr += m_value.uval;
     }
   }
 
@@ -461,23 +461,23 @@ const char *DWARFFormValue::AsCString() const {
   DWARFContext &context = m_unit->GetSymbolFileDWARF().GetDWARFContext();
 
   if (m_form == DW_FORM_string)
-    return m_value.value.cstr;
+    return m_value.cstr;
   if (m_form == DW_FORM_strp)
-    return context.getOrLoadStrData().PeekCStr(m_value.value.uval);
+    return context.getOrLoadStrData().PeekCStr(m_value.uval);
 
   if (m_form == DW_FORM_GNU_str_index || m_form == DW_FORM_strx ||
       m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
       m_form == DW_FORM_strx3 || m_form == DW_FORM_strx4) {
 
     std::optional<uint64_t> offset =
-        m_unit->GetStringOffsetSectionItem(m_value.value.uval);
+        m_unit->GetStringOffsetSectionItem(m_value.uval);
     if (!offset)
       return nullptr;
     return context.getOrLoadStrData().PeekCStr(*offset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return context.getOrLoadLineStrData().PeekCStr(m_value.value.uval);
+    return context.getOrLoadLineStrData().PeekCStr(m_value.uval);
 
   return nullptr;
 }
@@ -495,14 +495,14 @@ dw_addr_t DWARFFormValue::Address() const {
 
   uint32_t index_size = m_unit->GetAddressByteSize();
   dw_offset_t addr_base = m_unit->GetAddrBase();
-  lldb::offset_t offset = addr_base + m_value.value.uval * index_size;
+  lldb::offset_t offset = addr_base + m_value.uval * index_size;
   return symbol_file.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
       &offset, index_size);
 }
 
 std::pair<DWARFUnit *, uint64_t>
 DWARFFormValue::ReferencedUnitAndOffset() const {
-  uint64_t value = m_value.value.uval;
+  uint64_t value = m_value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
@@ -550,7 +550,7 @@ DWARFDIE DWARFFormValue::Reference() const {
 }
 
 uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
-  uint64_t value = m_value.value.uval;
+  uint64_t value = m_value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:

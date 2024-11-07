@@ -124,7 +124,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   bool parseDirectiveAttribute(SMLoc L);
 
-  bool RegisterMatchesArch(unsigned MatchNum) const;
+  bool RegisterMatchesArch(MCRegister MatchNum) const;
 
   bool matchBundleOptions();
   bool handleNoncontigiousRegister(bool Contigious, SMLoc &Loc);
@@ -145,10 +145,10 @@ class HexagonAsmParser : public MCTargetAsmParser {
   int processInstruction(MCInst &Inst, OperandVector const &Operands,
                          SMLoc IDLoc);
 
-  unsigned matchRegister(StringRef Name);
+  MCRegister matchRegister(StringRef Name);
 
-/// @name Auto-generated Match Functions
-/// {
+  /// @name Auto-generated Match Functions
+  /// {
 
 #define GET_ASSEMBLER_HEADER
 #include "HexagonGenAsmMatcher.inc"
@@ -205,7 +205,7 @@ struct HexagonOperand : public MCParsedAsmOperand {
   };
 
   struct RegTy {
-    unsigned RegNum;
+    MCRegister RegNum;
   };
 
   struct ImmTy {
@@ -434,9 +434,9 @@ public:
   }
 
   static std::unique_ptr<HexagonOperand>
-  CreateReg(MCContext &Context, unsigned RegNum, SMLoc S, SMLoc E) {
+  CreateReg(MCContext &Context, MCRegister Reg, SMLoc S, SMLoc E) {
     HexagonOperand *Op = new HexagonOperand(Register, Context);
-    Op->Reg.RegNum = RegNum;
+    Op->Reg.RegNum = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return std::unique_ptr<HexagonOperand>(Op);
@@ -867,7 +867,7 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 }
 
 // validate register against architecture
-bool HexagonAsmParser::RegisterMatchesArch(unsigned MatchNum) const {
+bool HexagonAsmParser::RegisterMatchesArch(MCRegister MatchNum) const {
   if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
     if (!getSTI().hasFeature(Hexagon::ArchV62))
       return false;
@@ -929,7 +929,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
   MCAsmLexer &Lexer = getLexer();
   if (!parseRegister(Register, Begin, End)) {
     if (!ErrorMissingParenthesis)
-      switch (Register) {
+      switch (Register.id()) {
       default:
         break;
       case Hexagon::P0:
@@ -1054,8 +1054,8 @@ ParseStatus HexagonAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   llvm::erase_if(Collapsed, isSpace);
   StringRef FullString = Collapsed;
   std::pair<StringRef, StringRef> DotSplit = FullString.split('.');
-  unsigned DotReg = matchRegister(DotSplit.first.lower());
-  if (DotReg != Hexagon::NoRegister && RegisterMatchesArch(DotReg)) {
+  MCRegister DotReg = matchRegister(DotSplit.first.lower());
+  if (DotReg && RegisterMatchesArch(DotReg)) {
     if (DotSplit.second.empty()) {
       Reg = DotReg;
       EndLoc = Lexer.getLoc();
@@ -1074,8 +1074,8 @@ ParseStatus HexagonAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
     }
   }
   std::pair<StringRef, StringRef> ColonSplit = StringRef(FullString).split(':');
-  unsigned ColonReg = matchRegister(ColonSplit.first.lower());
-  if (ColonReg != Hexagon::NoRegister && RegisterMatchesArch(DotReg)) {
+  MCRegister ColonReg = matchRegister(ColonSplit.first.lower());
+  if (ColonReg && RegisterMatchesArch(DotReg)) {
     do {
       Lexer.UnLex(Lookahead.pop_back_val());
     } while (!Lookahead.empty() && !Lexer.is(AsmToken::Colon));
@@ -1358,13 +1358,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
     return std::make_pair(matchRegister(R1), matchRegister(R2));
   };
-  auto GetScalarRegs = [RI, GetRegPair](unsigned RegPair) {
+  auto GetScalarRegs = [RI, GetRegPair](MCRegister RegPair) {
     const unsigned Lower = RI->getEncodingValue(RegPair);
     const RegPairVals RegPair_ = std::make_pair(Lower + 1, Lower);
 
     return GetRegPair(RegPair_);
   };
-  auto GetVecRegs = [GetRegPair](unsigned VecRegPair) {
+  auto GetVecRegs = [GetRegPair](MCRegister VecRegPair) {
     const RegPairVals RegPair =
         HexagonMCInstrInfo::GetVecRegPairIndices(VecRegPair);
 
@@ -1461,7 +1461,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
   case Hexagon::A2_tfrp: {
     MCOperand &MO = Inst.getOperand(1);
-    const std::pair<unsigned, unsigned> RegPair = GetScalarRegs(MO.getReg());
+    const std::pair<MCRegister, MCRegister> RegPair =
+        GetScalarRegs(MO.getReg());
     MO.setReg(RegPair.first);
     Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode(Hexagon::A2_combinew);
@@ -1471,7 +1472,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrpt:
   case Hexagon::A2_tfrpf: {
     MCOperand &MO = Inst.getOperand(2);
-    const std::pair<unsigned, unsigned> RegPair = GetScalarRegs(MO.getReg());
+    const std::pair<MCRegister, MCRegister> RegPair =
+        GetScalarRegs(MO.getReg());
     MO.setReg(RegPair.first);
     Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrpt)
@@ -1482,7 +1484,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrptnew:
   case Hexagon::A2_tfrpfnew: {
     MCOperand &MO = Inst.getOperand(2);
-    const std::pair<unsigned, unsigned> RegPair = GetScalarRegs(MO.getReg());
+    const std::pair<MCRegister, MCRegister> RegPair =
+        GetScalarRegs(MO.getReg());
     MO.setReg(RegPair.first);
     Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrptnew)
@@ -1494,7 +1497,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   // Translate a "$Vdd = $Vss" to "$Vdd = vcombine($Vs, $Vt)"
   case Hexagon::V6_vassignp: {
     MCOperand &MO = Inst.getOperand(1);
-    const std::pair<unsigned, unsigned> RegPair = GetVecRegs(MO.getReg());
+    const std::pair<MCRegister, MCRegister> RegPair = GetVecRegs(MO.getReg());
     MO.setReg(RegPair.first);
     Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode(Hexagon::V6_vcombine);
@@ -2051,8 +2054,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   return Match_Success;
 }
 
-unsigned HexagonAsmParser::matchRegister(StringRef Name) {
-  if (unsigned Reg = MatchRegisterName(Name))
+MCRegister HexagonAsmParser::matchRegister(StringRef Name) {
+  if (MCRegister Reg = MatchRegisterName(Name))
     return Reg;
   return MatchRegisterAltName(Name);
 }

@@ -429,9 +429,8 @@ define <2 x i32> @test31(<2 x i32> %x) {
 
 define i32 @test32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test32(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[B:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL]], 2
-; CHECK-NEXT:    [[DIV2:%.*]] = udiv i32 [[A:%.*]], [[DIV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[DIV2:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[DIV2]]
 ;
   %shl = shl i32 2, %b
@@ -1831,4 +1830,42 @@ define i32 @fold_disjoint_or_over_udiv(i32 %x) {
   %or = or disjoint i32 %mul, 81
   %r = udiv i32 %or, 9
   ret i32 %r
+}
+
+define i8 @udiv_trunc_shl(i32 %x) {
+; CHECK-LABEL: @udiv_trunc_shl(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[UDIV1:%.*]] = lshr i8 8, [[TMP1]]
+; CHECK-NEXT:    ret i8 [[UDIV1]]
+;
+  %lshr = shl i32 1, %x
+  %trunc = trunc i32 %lshr to i8
+  %div = udiv i8 8, %trunc
+  ret i8 %div
+}
+
+define i32 @zext_udiv_trunc_lshr(i32 %x) {
+; CHECK-LABEL: @zext_udiv_trunc_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 5, [[TMP1]]
+; CHECK-NEXT:    [[UDIV1:%.*]] = lshr i8 8, [[TMP2]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[UDIV1]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %lshr = lshr i32 32, %x
+  %trunc = trunc i32 %lshr to i8
+  %div = udiv i8 8, %trunc
+  %zext = zext i8 %div to i32
+  ret i32 %zext
+}
+
+define i32 @udiv_and_shl(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @udiv_and_shl(
+; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[C:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV1]]
+;
+  %shl = shl i32 1, %a
+  %and = and i32 %b, %shl
+  %div = udiv i32 %c, %and
+  ret i32 %div
 }

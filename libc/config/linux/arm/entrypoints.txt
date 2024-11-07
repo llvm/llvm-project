@@ -189,6 +189,13 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # malloc.h external entrypoints
+    libc.src.stdlib.mallopt
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept

@@ -186,6 +186,9 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
+  // Other drivers typically add library search paths (`-L`) here via
+  // TC.AddFilePathLibArgs(). We don't do that on PS4 as the PS4 linker
+  // searches those locations by default.
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
 
@@ -226,6 +229,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
 
+  const bool Relocatable = Args.hasArg(options::OPT_r);
+  const bool Shared = Args.hasArg(options::OPT_shared);
+  const bool Static = Args.hasArg(options::OPT_static);
+
   // Silence warning for "clang -g foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_g_Group);
   // and "clang -emit-llvm foo.o -o foo"
@@ -238,16 +245,51 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
   // Default to PIE for non-static executables.
-  const bool PIE =
-      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  const bool PIE = !Relocatable && !Shared && !Static;
   if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
     CmdArgs.push_back("-pie");
 
-  if (Args.hasArg(options::OPT_static))
+  if (!Relocatable) {
+    CmdArgs.push_back("--eh-frame-hdr");
+    CmdArgs.push_back("--hash-style=sysv");
+
+    // Add a build-id by default to allow the PlayStation symbol server to
+    // index the symbols. `uuid` is the cheapest fool-proof method.
+    // (The non-determinism and alternative methods are noted in the downstream
+    // PlayStation docs).
+    CmdArgs.push_back("--build-id=uuid");
+
+    // All references are expected to be resolved at static link time for both
+    // executables and dynamic libraries. This has been the default linking
+    // behaviour for numerous PlayStation generations.
+    CmdArgs.push_back("--unresolved-symbols=report-all");
+
+    // Lazy binding of PLTs is not supported on PlayStation. They are placed in
+    // the RelRo segment.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("now");
+
+    // Don't export linker-generated __start/stop... section bookends.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("start-stop-visibility=hidden");
+
+    // Patch relocated regions of DWARF whose targets are eliminated at link
+    // time with specific tombstones, such that they're recognisable by the
+    // PlayStation debugger.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back(
+        "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe");
+  }
+
+  if (Static)
     CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
-  if (Args.hasArg(options::OPT_shared))
+  if (Shared)
     CmdArgs.push_back("--shared");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
@@ -290,6 +332,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
+  TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
 
@@ -338,7 +381,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   }
 
   // Allow --sysroot= to override the root directory for header and library
-  // search, and -sysroot to override header search. If both are specified,
+  // search, and -isysroot to override header search. If both are specified,
   // -isysroot overrides --sysroot for header search.
   auto OverrideRoot = [&](const options::ID &Opt, std::string &Root,
                           StringRef Default) {
@@ -382,11 +425,12 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
     llvm::sys::path::append(Dir, "target/include");
     CheckSDKPartExists(Dir, "system headers");
   }
+
+  getFilePaths().push_back(".");
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
-    const ArgList &DriverArgs,
-    ArgStringList &CC1Args) const {
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
   if (DriverArgs.hasArg(options::OPT_nostdinc))

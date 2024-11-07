@@ -3006,6 +3006,11 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   );
 }
 
+def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins);
+}
+
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
   let arguments = (ins IntArrayProperty<"int64_t">:$prop);

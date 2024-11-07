@@ -367,6 +367,11 @@ SYMBOL(any_cast, std::, <any>)
 SYMBOL(div, std::, <cstdlib>)
 SYMBOL(abort, std::, <cstdlib>)
 
+SYMBOL(binary_search, std::ranges::, <algorithm>)
+SYMBOL(equal_range, std::ranges::, <algorithm>)
+SYMBOL(lower_bound, std::ranges::, <algorithm>)
+SYMBOL(upper_bound, std::ranges::, <algorithm>)
+
 // These are C symbols that are not under std namespace.
 SYMBOL(localtime_r, None, <ctime>)
 SYMBOL(localtime_r, None, <time.h>)

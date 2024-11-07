@@ -48,6 +48,65 @@ bool isRefcountedStringsHack(const VarDecl *V) {
   return false;
 }
 
+struct GuardianVisitor : public RecursiveASTVisitor<GuardianVisitor> {
+  using Base = RecursiveASTVisitor<GuardianVisitor>;
+
+  const VarDecl *Guardian{nullptr};
+
+public:
+  explicit GuardianVisitor(const VarDecl *Guardian) : Guardian(Guardian) {
+    assert(Guardian);
+  }
+
+  bool VisitBinaryOperator(const BinaryOperator *BO) {
+    if (BO->isAssignmentOp()) {
+      if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+        if (VarRef->getDecl() == Guardian)
+          return false;
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    if (auto *Ctor = CE->getConstructor()) {
+      if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
+        auto *Arg = CE->getArg(0)->IgnoreParenCasts();
+        if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
+          if (VarRef->getDecl() == Guardian)
+            return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+    auto MethodName = safeGetName(MCE->getMethodDecl());
+    if (MethodName == "swap" || MethodName == "leakRef" ||
+        MethodName == "releaseNonNull") {
+      auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+        if (VarRef->getDecl() == Guardian)
+          return false;
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (OCE->isAssignmentOp()) {
+      assert(OCE->getNumArgs() == 2);
+      auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
+      if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
+        if (VarRef->getDecl() == Guardian)
+          return false;
+      }
+    }
+    return true;
+  }
+};
+
 bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
                                            const VarDecl *MaybeGuardian) {
   assert(Guarded);
@@ -81,7 +140,7 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
 
   // We need to skip the first CompoundStmt to avoid situation when guardian is
   // defined in the same scope as guarded variable.
-  bool HaveSkippedFirstCompoundStmt = false;
+  const CompoundStmt *FirstCompondStmt = nullptr;
   for (DynTypedNodeList guardedVarAncestors = ctx.getParents(*Guarded);
        !guardedVarAncestors.empty();
        guardedVarAncestors = ctx.getParents(
@@ -90,12 +149,15 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   ) {
     for (auto &guardedVarAncestor : guardedVarAncestors) {
       if (auto *CStmtAncestor = guardedVarAncestor.get<CompoundStmt>()) {
-        if (!HaveSkippedFirstCompoundStmt) {
-          HaveSkippedFirstCompoundStmt = true;
+        if (!FirstCompondStmt) {
+          FirstCompondStmt = CStmtAncestor;
           continue;
         }
-        if (CStmtAncestor == guardiansClosestCompStmtAncestor)
-          return true;
+        if (CStmtAncestor == guardiansClosestCompStmtAncestor) {
+          GuardianVisitor guardianVisitor(MaybeGuardian);
+          auto *GuardedScope = const_cast<CompoundStmt *>(FirstCompondStmt);
+          return guardianVisitor.TraverseCompoundStmt(GuardedScope);
+        }
       }
     }
   }
@@ -121,6 +183,7 @@ public:
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
       const UncountedLocalVarsChecker *Checker;
+      Decl *DeclWithIssue{nullptr};
 
       TrivialFunctionAnalysis TFA;
 
@@ -134,10 +197,17 @@ public:
       bool shouldVisitTemplateInstantiations() const { return true; }
       bool shouldVisitImplicitCode() const { return false; }
 
+      bool TraverseDecl(Decl *D) {
+        llvm::SaveAndRestore SavedDecl(DeclWithIssue);
+        if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
+          DeclWithIssue = D;
+        return Base::TraverseDecl(D);
+      }
+
       bool VisitVarDecl(VarDecl *V) {
         auto *Init = V->getInit();
         if (Init && V->isLocalVarDecl())
-          Checker->visitVarDecl(V, Init);
+          Checker->visitVarDecl(V, Init, DeclWithIssue);
         return true;
       }
 
@@ -145,7 +215,7 @@ public:
         if (BO->isAssignmentOp()) {
           if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
             if (auto *V = dyn_cast<VarDecl>(VarRef->getDecl()))
-              Checker->visitVarDecl(V, BO->getRHS());
+              Checker->visitVarDecl(V, BO->getRHS(), DeclWithIssue);
           }
         }
         return true;
@@ -186,15 +256,12 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitVarDecl(const VarDecl *V, const Expr *Value) const {
+  void visitVarDecl(const VarDecl *V, const Expr *Value,
+                    const Decl *DeclWithIssue) const {
     if (shouldSkipVarDecl(V))
       return;
 
-    const auto *ArgType = V->getType().getTypePtr();
-    if (!ArgType)
-      return;
-
-    std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
+    std::optional<bool> IsUncountedPtr = isUncountedPtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
@@ -222,6 +289,7 @@ public:
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
                             (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))
@@ -240,7 +308,7 @@ public:
               }))
         return;
 
-      reportBug(V, Value);
+      reportBug(V, Value, DeclWithIssue);
     }
   }
 
@@ -249,7 +317,8 @@ public:
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
-  void reportBug(const VarDecl *V, const Expr *Value) const {
+  void reportBug(const VarDecl *V, const Expr *Value,
+                 const Decl *DeclWithIssue) const {
     assert(V);
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -278,6 +347,7 @@ public:
       PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
       Report->addRange(V->getSourceRange());
+      Report->setDeclWithIssue(DeclWithIssue);
       BR->emitReport(std::move(Report));
     }
   }

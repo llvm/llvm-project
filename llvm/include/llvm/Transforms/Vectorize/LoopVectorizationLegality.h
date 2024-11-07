@@ -224,6 +224,18 @@ private:
   Instruction *ExactFPMathInst = nullptr;
 };
 
+/// This holds details about a histogram operation -- a load -> update -> store
+/// sequence where each lane in a vector might be updating the same element as
+/// another lane.
+struct HistogramInfo {
+  LoadInst *Load;
+  Instruction *Update;
+  StoreInst *Store;
+
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
+      : Load(Load), Update(Update), Store(Store) {}
+};
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -377,19 +389,19 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
-  /// Returns true if the loop has a speculative early exit, i.e. an
+  /// Returns true if the loop has an uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
-  bool hasSpeculativeEarlyExit() const { return HasSpeculativeEarlyExit; }
+  bool hasUncountableEarlyExit() const { return HasUncountableEarlyExit; }
 
-  /// Returns the speculative early exiting block.
-  BasicBlock *getSpeculativeEarlyExitingBlock() const {
+  /// Returns the uncountable early exiting block.
+  BasicBlock *getUncountableEarlyExitingBlock() const {
     assert(getUncountableExitingBlocks().size() == 1 &&
            "Expected only a single uncountable exiting block");
     return getUncountableExitingBlocks()[0];
   }
 
-  /// Returns the destination of a speculative early exiting block.
-  BasicBlock *getSpeculativeEarlyExitBlock() const {
+  /// Returns the destination of an uncountable early exiting block.
+  BasicBlock *getUncountableEarlyExitBlock() const {
     assert(getUncountableExitBlocks().size() == 1 &&
            "Expected only a single uncountable exit block");
     return getUncountableExitBlocks()[0];
@@ -407,6 +419,20 @@ public:
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
+
+  /// Returns a HistogramInfo* for the given instruction if it was determined
+  /// to be part of a load -> update -> store sequence where multiple lanes
+  /// may be working on the same memory address.
+  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+    for (const HistogramInfo &HGram : Histograms)
+      if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
+        return &HGram;
+
+    return std::nullopt;
+  }
+
+  /// Returns a list of all known histogram operations in the loop.
+  bool hasHistograms() const { return !Histograms.empty(); }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -471,6 +497,11 @@ private:
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
   bool canVectorizeMemory();
+
+  /// If LAA cannot determine whether all dependences are safe, we may be able
+  /// to further analyse some IndirectUnsafe dependences and if they match a
+  /// certain pattern (like a histogram) then we may still be able to vectorize.
+  bool canVectorizeIndirectUnsafeDependences();
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
@@ -593,6 +624,11 @@ private:
   /// conditional assumes.
   SmallPtrSet<const Instruction *, 8> MaskedOp;
 
+  /// Contains all identified histogram operations, which are sequences of
+  /// load -> update -> store instructions where multiple lanes in a vector
+  /// may work on the same memory location.
+  SmallVector<HistogramInfo, 1> Histograms;
+
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
@@ -603,15 +639,17 @@ private:
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
 
-  /// Indicates whether this loop has a speculative early exit, i.e. an
+  /// Indicates whether this loop has an uncountable early exit, i.e. an
   /// uncountable exiting block that is not the latch.
-  bool HasSpeculativeEarlyExit = false;
+  bool HasUncountableEarlyExit = false;
 
-  /// Keep track of all the loop exiting blocks.
+  /// Keep track of all the countable and uncountable exiting blocks if
+  /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
   SmallVector<BasicBlock *, 4> UncountableExitingBlocks;
 
-  /// Keep track of the destinations of all uncountable exits.
+  /// Keep track of the destinations of all uncountable exits if the
+  /// exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> UncountableExitBlocks;
 };
 

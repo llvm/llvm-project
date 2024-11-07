@@ -610,7 +610,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       if (dir.IsAnythingLeft(++j)) {
         if (prescanner.features().ShouldWarn(
                 common::UsageWarning::Portability)) {
-          prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+          prescanner.Say(common::UsageWarning::Portability,
+              dir.GetIntervalProvenanceRange(j, tokens - j),
               "#undef: excess tokens at end of directive"_port_en_US);
         }
       } else {
@@ -627,7 +628,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       if (dir.IsAnythingLeft(++j)) {
         if (prescanner.features().ShouldWarn(
                 common::UsageWarning::Portability)) {
-          prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+          prescanner.Say(common::UsageWarning::Portability,
+              dir.GetIntervalProvenanceRange(j, tokens - j),
               "#%s: excess tokens at end of directive"_port_en_US, dirName);
         }
       }
@@ -649,7 +651,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
   } else if (dirName == "else") {
     if (dir.IsAnythingLeft(j)) {
       if (prescanner.features().ShouldWarn(common::UsageWarning::Portability)) {
-        prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+        prescanner.Say(common::UsageWarning::Portability,
+            dir.GetIntervalProvenanceRange(j, tokens - j),
             "#else: excess tokens at end of directive"_port_en_US);
       }
     } else if (ifStack_.empty()) {
@@ -678,7 +681,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
   } else if (dirName == "endif") {
     if (dir.IsAnythingLeft(j)) {
       if (prescanner.features().ShouldWarn(common::UsageWarning::Portability)) {
-        prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+        prescanner.Say(common::UsageWarning::Portability,
+            dir.GetIntervalProvenanceRange(j, tokens - j),
             "#endif: excess tokens at end of directive"_port_en_US);
       }
     } else if (ifStack_.empty()) {
@@ -729,7 +733,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       if (k >= pathTokens) {
         if (prescanner.features().ShouldWarn(
                 common::UsageWarning::Portability)) {
-          prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+          prescanner.Say(common::UsageWarning::Portability,
+              dir.GetIntervalProvenanceRange(j, tokens - j),
               "#include: expected '>' at end of included file"_port_en_US);
         }
       }
@@ -758,7 +763,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     k = path.SkipBlanks(k + 1);
     if (k < pathTokens && path.TokenAt(k).ToString() != "!") {
       if (prescanner.features().ShouldWarn(common::UsageWarning::Portability)) {
-        prescanner.Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+        prescanner.Say(common::UsageWarning::Portability,
+            dir.GetIntervalProvenanceRange(j, tokens - j),
             "#include: extra stuff ignored after file name"_port_en_US);
       }
     }

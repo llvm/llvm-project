@@ -144,9 +144,9 @@ public:
   virtual void emitPersonality(const MCSymbol *Personality);
   virtual void emitPersonalityIndex(unsigned Index);
   virtual void emitHandlerData();
-  virtual void emitSetFP(unsigned FpReg, unsigned SpReg,
+  virtual void emitSetFP(MCRegister FpReg, MCRegister SpReg,
                          int64_t Offset = 0);
-  virtual void emitMovSP(unsigned Reg, int64_t Offset = 0);
+  virtual void emitMovSP(MCRegister Reg, int64_t Offset = 0);
   virtual void emitPad(int64_t Offset);
   virtual void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                            bool isVector);
@@ -1022,6 +1022,7 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());

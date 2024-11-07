@@ -136,7 +136,6 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   if (!dtv || dtv->beg)
     return nullptr;
   CHECK_LE(static_tls_begin, static_tls_end);
-  uptr tls_size = 0;
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
   VReport(2,
           "__tls_get_addr: %p {0x%zx,0x%zx} => %p; tls_beg: %p; sp: %p "
@@ -148,17 +147,29 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
-    tls_size = 0;
-  } else {
-    tls_size = __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg));
-    if (!tls_size) {
-      VReport(2, "__tls_get_addr: Can't guess glibc version\n");
-      // This may happen inside the DTOR of main thread, so just ignore it.
-    }
+    dtv->beg = tls_beg;
+    dtv->size = 0;
+    return nullptr;
   }
+  if (uptr tls_size =
+          __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg))) {
+    dtv->beg = tls_beg;
+    dtv->size = tls_size;
+    return dtv;
+  }
+  VReport(2, "__tls_get_addr: Can't guess glibc version\n");
+  // This may happen inside the DTOR a thread, or async signal handlers before
+  // thread initialization, so just ignore it.
+  //
+  // If the unknown block is dynamic TLS, unlikely we will be able to recognize
+  // it in future, mark it as done with '{tls_beg, 0}'.
+  //
+  // If the block is static TLS, possible reason of failed detection is nullptr
+  // in `static_tls_begin`. Regardless of reasons, the future handling of static
+  // TLS is still '{tls_beg, 0}'.
   dtv->beg = tls_beg;
-  dtv->size = tls_size;
-  return dtv;
+  dtv->size = 0;
+  return nullptr;
 }
 
 DTLS *DTLS_Get() { return &dtls; }

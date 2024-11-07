@@ -162,22 +162,18 @@ define void @test_shrink_zext_in_preheader(ptr noalias %src, ptr noalias %dst, i
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[A]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[TMP1]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i16> poison, i16 [[B]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <16 x i16> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <16 x i16> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr <16 x i16> [[TMP5]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr <16 x i16> [[TMP6]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc nuw <16 x i16> [[TMP7]] to <16 x i8>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc nuw <16 x i16> [[TMP8]] to <16 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <16 x i16> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr <16 x i16> [[TMP5]], <i16 8, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc <16 x i16> [[TMP7]] to <16 x i8>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i8> [[TMP9]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 16
-; CHECK-NEXT:    store <16 x i8> [[TMP9]], ptr [[TMP12]], align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP10]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    store <16 x i8> [[TMP10]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
@@ -244,15 +240,11 @@ define void @test_shrink_select(ptr noalias %src, ptr noalias %dst, i32 %A, i1 %
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[A]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[TMP1]], <16 x i16> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <16 x i16> [[TMP2]], <i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i16> [[TMP2]], <i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99, i16 99>
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <16 x i16> [[TMP3]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr <16 x i16> [[TMP4]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C]], <16 x i16> [[TMP5]], <16 x i16> [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[C]], <16 x i16> [[TMP6]], <16 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <16 x i16> [[TMP1]],  <i16 99, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[TMP3]], <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <16 x i16> [[TMP4]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C]], <16 x i16> [[TMP5]], <16 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc <16 x i16> [[TMP7]] to <16 x i8>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i16> [[TMP8]] to <16 x i8>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

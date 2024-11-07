@@ -32,8 +32,6 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
       ^bb2:
         %0 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]} %arg1, %0 {
         ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
@@ -63,8 +61,6 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
       ^bb2:  // pred: ^bb0
         %1 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]} %arg1, %1 {
         ^bb0(%arg3: f32, %arg4: f32):
@@ -143,8 +139,6 @@ def OwnershipBasedBufferDeallocation : Pass<
       ^bb2:
         %0 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]}
         outs(%arg1, %0 : memref<2xf32>, memref<2xf32>) {
@@ -179,7 +173,6 @@ def OwnershipBasedBufferDeallocation : Pass<
           indexing_maps = [#map, #map],
           iterator_types = ["parallel"]}
         outs(%arg1, %alloc : memref<2xf32>, memref<2xf32>)
-        attrs =  {args_in = 1 : i64, args_out = 1 : i64} {
         ^bb0(%out: f32, %out_0: f32):
           %2 = math.exp %out : f32
           linalg.yield %2, %out_0 : f32, f32
@@ -543,6 +536,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
            /*default=*/"\"fully-dynamic-layout-map\"",
            "Controls layout maps for non-inferrable memref types.">,
+    Option<"bufferAlignment", "buffer-alignment", "uint64_t", /*default=*/"64",
+           "Sets the alignment of newly allocated buffers.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 

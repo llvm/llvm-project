@@ -16,6 +16,7 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -86,6 +87,7 @@ enum class FloatModeKind {
 struct TransferrableTargetInfo {
   unsigned char PointerWidth, PointerAlign;
   unsigned char BoolWidth, BoolAlign;
+  unsigned char ShortWidth, ShortAlign;
   unsigned char IntWidth, IntAlign;
   unsigned char HalfWidth, HalfAlign;
   unsigned char BFloat16Width, BFloat16Align;
@@ -259,9 +261,6 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasBuiltinMSVaList : 1;
-
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsRenderScriptTarget : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
@@ -496,13 +495,10 @@ public:
   unsigned getCharWidth() const { return 8; } // FIXME
   unsigned getCharAlign() const { return 8; } // FIXME
 
-  /// Return the size of 'signed short' and 'unsigned short' for this
-  /// target, in bits.
-  unsigned getShortWidth() const { return 16; } // FIXME
-
-  /// Return the alignment of 'signed short' and 'unsigned short' for
-  /// this target.
-  unsigned getShortAlign() const { return 16; } // FIXME
+  /// getShortWidth/Align - Return the size of 'signed short' and
+  /// 'unsigned short' for this target, in bits.
+  unsigned getShortWidth() const { return ShortWidth; }
+  unsigned getShortAlign() const { return ShortAlign; }
 
   /// getIntWidth/Align - Return the size of 'signed int' and 'unsigned int' for
   /// this target, in bits.
@@ -1031,9 +1027,6 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
-
-  /// Returns true for RenderScript.
-  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
 
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
@@ -1727,6 +1720,13 @@ public:
   virtual bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
+  /// Get the target default CFBranchLabelScheme scheme
+  virtual CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const;
+
+  virtual bool
+  checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
+                                    DiagnosticsEngine &Diags) const;
+
   /// Check if the target supports CFProtection return.
   virtual bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
@@ -1852,11 +1852,9 @@ protected:
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
-  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const {
-    return std::nullopt;
-  }
+  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const { return {}; }
 
- private:
+private:
   // Assert the values for the fractional and integral bits for each fixed point
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;

@@ -137,7 +137,7 @@ void LoopVersioning::addPHINodes(
     // original loop.
     for (auto I = PHIBlock->begin(); (PN = dyn_cast<PHINode>(I)); ++I) {
       if (PN->getIncomingValue(0) == Inst) {
-        SE->forgetValue(PN);
+        SE->forgetLcssaPhiWithNewPredecessor(VersionedLoop, PN);
         break;
       }
     }

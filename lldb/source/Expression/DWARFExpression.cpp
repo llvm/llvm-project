@@ -860,10 +860,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   // TODO: Implement a real typed stack, and store the genericness of the value
   // there.
   auto to_generic = [&](auto v) {
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
     bool is_signed = std::is_signed<decltype(v)>::value;
-    return Scalar(llvm::APSInt(
-        llvm::APInt(8 * opcodes.GetAddressByteSize(), v, is_signed),
-        !is_signed));
+    return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
+                                           is_signed, /*implicitTrunc=*/true),
+                               !is_signed));
   };
 
   // The default kind is a memory location. This is updated by any
@@ -1780,14 +1782,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (exe_ctx) {
         if (frame) {
           Scalar value;
-          Status fb_err;
-          if (frame->GetFrameBaseValue(value, &fb_err)) {
-            int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
-            value += fbreg_offset;
-            stack.push_back(value);
-            stack.back().SetValueType(Value::ValueType::LoadAddress);
-          } else
-            return fb_err.ToError();
+          if (llvm::Error err = frame->GetFrameBaseValue(value))
+            return err;
+          int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
+          value += fbreg_offset;
+          stack.push_back(value);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else {
           return llvm::createStringError(
               "invalid stack frame in context for DW_OP_fbreg opcode");

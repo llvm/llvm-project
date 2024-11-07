@@ -231,7 +231,10 @@ static void instantiateDependentAnnotationAttr(
     ActualArgs.insert(ActualArgs.begin(), Args.begin() + 1, Args.end());
     std::swap(Args, ActualArgs);
   }
-  S.AddAnnotationAttr(New, *Attr, Str, Args);
+  auto *AA = S.CreateAnnotationAttr(*Attr, Str, Args);
+  if (AA) {
+    New->addAttr(AA);
+  }
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(
@@ -285,8 +288,7 @@ static void instantiateDependentDiagnoseIfAttr(
   if (Cond)
     New->addAttr(new (S.getASTContext()) DiagnoseIfAttr(
         S.getASTContext(), *DIA, Cond, DIA->getMessage(),
-        DIA->getDefaultSeverity(), DIA->getWarningGroup(),
-        DIA->getArgDependent(), New));
+        DIA->getDiagnosticType(), DIA->getArgDependent(), New));
 }
 
 // Constructs and adds to New a new instance of CUDALaunchBoundsAttr using
@@ -2235,7 +2237,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
         D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
-        DGuide->getDeductionCandidateKind());
+        DGuide->getDeductionCandidateKind(), TrailingRequiresClause);
     Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(
@@ -5016,6 +5018,16 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       Function->setInstantiationIsPending(true);
       PendingInstantiations.push_back(
         std::make_pair(Function, PointOfInstantiation));
+
+      if (llvm::isTimeTraceVerbose()) {
+        llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
+          std::string Name;
+          llvm::raw_string_ostream OS(Name);
+          Function->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                         /*Qualified=*/true);
+          return Name;
+        });
+      }
     } else if (TSK == TSK_ImplicitInstantiation) {
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&
           !getSourceManager().isInSystemHeader(PatternDecl->getBeginLoc())) {

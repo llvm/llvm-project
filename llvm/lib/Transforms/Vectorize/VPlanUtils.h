@@ -54,6 +54,13 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(const VPValue *V, VPlan &Plan);
+
+/// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
+/// as such if it is either loop invariant (defined outside the vector region)
+/// or its operand is known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or VPCanonicalIVPHI).
+bool isUniformAcrossVFsAndUFs(VPValue *V);
+
 } // end namespace llvm::vputils
 
 #endif

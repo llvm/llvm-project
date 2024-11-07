@@ -74,19 +74,25 @@ std::string lld::toString(const coff::InputFile *file) {
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
 static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
-                                 Symbol *source, Symbol *target) {
+                                 Symbol *source, Symbol *target,
+                                 bool isAntiDep) {
   if (auto *u = dyn_cast<Undefined>(source)) {
     if (u->weakAlias && u->weakAlias != target) {
-      // Weak aliases as produced by GCC are named in the form
-      // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
-      // of another symbol emitted near the weak symbol.
-      // Just use the definition from the first object file that defined
-      // this weak symbol.
-      if (ctx.config.allowDuplicateWeak)
+      // Ignore duplicated anti-dependency symbols.
+      if (isAntiDep)
         return;
-      ctx.symtab.reportDuplicate(source, f);
+      if (!u->isAntiDep) {
+        // Weak aliases as produced by GCC are named in the form
+        // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
+        // of another symbol emitted near the weak symbol.
+        // Just use the definition from the first object file that defined
+        // this weak symbol.
+        if (ctx.config.allowDuplicateWeak)
+          return;
+        ctx.symtab.reportDuplicate(source, f);
+      }
     }
-    u->weakAlias = target;
+    u->setWeakAlias(target, isAntiDep);
   }
 }
 
@@ -436,7 +442,8 @@ void ObjFile::initializeSymbols() {
   uint32_t numSymbols = coffObj->getNumberOfSymbols();
   symbols.resize(numSymbols);
 
-  SmallVector<std::pair<Symbol *, uint32_t>, 8> weakAliases;
+  SmallVector<std::pair<Symbol *, const coff_aux_weak_external *>, 8>
+      weakAliases;
   std::vector<uint32_t> pendingIndexes;
   pendingIndexes.reserve(numSymbols);
 
@@ -448,11 +455,35 @@ void ObjFile::initializeSymbols() {
     COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
     bool prevailingComdat;
     if (coffSym.isUndefined()) {
-      symbols[i] = createUndefined(coffSym);
+      symbols[i] = createUndefined(coffSym, false);
     } else if (coffSym.isWeakExternal()) {
-      symbols[i] = createUndefined(coffSym);
-      uint32_t tagIndex = coffSym.getAux<coff_aux_weak_external>()->TagIndex;
-      weakAliases.emplace_back(symbols[i], tagIndex);
+      auto aux = coffSym.getAux<coff_aux_weak_external>();
+      bool overrideLazy = true;
+
+      // On ARM64EC, external function calls emit a pair of weak-dependency
+      // aliases: func to #func and #func to the func guess exit thunk
+      // (instead of a single undefined func symbol, which would be emitted on
+      // other targets). Allow such aliases to be overridden by lazy archive
+      // symbols, just as we would for undefined symbols.
+      if (isArm64EC(getMachineType()) &&
+          aux->Characteristics == IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY) {
+        COFFSymbolRef targetSym = check(coffObj->getSymbol(aux->TagIndex));
+        if (!targetSym.isAnyUndefined()) {
+          // If the target is defined, it may be either a guess exit thunk or
+          // the actual implementation. If it's the latter, consider the alias
+          // to be part of the implementation and override potential lazy
+          // archive symbols.
+          StringRef targetName = check(coffObj->getSymbolName(targetSym));
+          StringRef name = check(coffObj->getSymbolName(coffSym));
+          std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name);
+          overrideLazy = mangledName == targetName;
+        } else {
+          overrideLazy = false;
+        }
+      }
+      symbols[i] = createUndefined(coffSym, overrideLazy);
+      weakAliases.emplace_back(symbols[i], aux);
     } else if (std::optional<Symbol *> optSym =
                    createDefined(coffSym, comdatDefs, prevailingComdat)) {
       symbols[i] = *optSym;
@@ -491,17 +522,19 @@ void ObjFile::initializeSymbols() {
 
   for (auto &kv : weakAliases) {
     Symbol *sym = kv.first;
-    uint32_t idx = kv.second;
-    checkAndSetWeakAlias(ctx, this, sym, symbols[idx]);
+    const coff_aux_weak_external *aux = kv.second;
+    checkAndSetWeakAlias(ctx, this, sym, symbols[aux->TagIndex],
+                         aux->Characteristics ==
+                             IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
   }
 
   // Free the memory used by sparseChunks now that symbol loading is finished.
   decltype(sparseChunks)().swap(sparseChunks);
 }
 
-Symbol *ObjFile::createUndefined(COFFSymbolRef sym) {
+Symbol *ObjFile::createUndefined(COFFSymbolRef sym, bool overrideLazy) {
   StringRef name = check(coffObj->getSymbolName(sym));
-  return ctx.symtab.addUndefined(name, this, sym.isWeakExternal());
+  return ctx.symtab.addUndefined(name, this, overrideLazy);
 }
 
 static const coff_aux_section_definition *findSectionDef(COFFObjectFile *obj,
@@ -1202,7 +1235,7 @@ void BitcodeFile::parse() {
       sym = ctx.symtab.addUndefined(symName, this, true);
       std::string fallback = std::string(objSym.getCOFFWeakExternalFallback());
       Symbol *alias = ctx.symtab.addUndefined(saver.save(fallback));
-      checkAndSetWeakAlias(ctx, this, sym, alias);
+      checkAndSetWeakAlias(ctx, this, sym, alias, false);
     } else if (comdatIndex != -1) {
       if (symName == obj->getComdatTable()[comdatIndex].first) {
         sym = comdat[comdatIndex].first;

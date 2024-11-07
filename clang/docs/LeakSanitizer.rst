@@ -43,6 +43,14 @@ To use LeakSanitizer in stand-alone mode, link your program with
 link step, so that it would link in proper LeakSanitizer run-time library
 into the final executable.
 
+Security Considerations
+=======================
+
+LeakSanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+LeakSanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Supported Platforms
 ===================
 

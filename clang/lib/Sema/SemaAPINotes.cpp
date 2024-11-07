@@ -913,7 +913,15 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      std::string LookupName = Tag->getName().str();
+      // Determine the name of the entity to search for. If this is an
+      // anonymous tag that gets its linked name from a typedef, look for the
+      // typedef name. This allows tag-specific information to be added
+      // to the declaration.
+      std::string LookupName;
+      if (auto typedefName = Tag->getTypedefNameForAnonDecl())
+        LookupName = typedefName->getName().str();
+      else
+        LookupName = Tag->getName().str();
 
       // Use the source location to discern if this Tag is an OPTIONS macro.
       // For now we would like to limit this trick of looking up the APINote tag

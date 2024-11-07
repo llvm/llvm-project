@@ -576,6 +576,8 @@ void RemoveDeadValues::runOnOperation() {
   // all symbol ops present in the IR are function-like, and all symbol user ops
   // present in the IR are call-like.
   WalkResult acceptableIR = module->walk([&](Operation *op) {
+    if (op == module)
+      return WalkResult::advance();
     if (isa<BranchOpInterface>(op) ||
         (isa<SymbolOpInterface>(op) && !isa<FunctionOpInterface>(op)) ||
         (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {
@@ -587,7 +589,7 @@ void RemoveDeadValues::runOnOperation() {
   });
 
   if (acceptableIR.wasInterrupted())
-    return;
+    return signalPassFailure();
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {

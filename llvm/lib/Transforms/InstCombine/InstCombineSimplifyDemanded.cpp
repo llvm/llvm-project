@@ -104,14 +104,14 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
     return true;
   }
 
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
   Instruction *VInst = dyn_cast<Instruction>(V);
   if (!VInst) {
     llvm::computeKnownBits(V, Known, Depth, Q);
     return false;
   }
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
 
   Value *NewVal;
   if (VInst->hasOneUse()) {
@@ -592,6 +592,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     if (DemandedFromOps.isOne() && DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
+    // Canonicalize sub mask, X -> ~X
+    const APInt *LHSC;
+    if (match(I->getOperand(0), m_LowBitMask(LHSC)) &&
+        DemandedFromOps.isSubsetOf(*LHSC)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+      return Builder.CreateNot(I->getOperand(1));
+    }
+
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
@@ -858,37 +867,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
   }
   case Instruction::SRem: {
     const APInt *Rem;
-    if (match(I->getOperand(1), m_APInt(Rem))) {
-      // X % -1 demands all the bits because we don't want to introduce
-      // INT_MIN % -1 (== undef) by accident.
-      if (Rem->isAllOnes())
-        break;
-      APInt RA = Rem->abs();
-      if (RA.isPowerOf2()) {
-        if (DemandedMask.ult(RA))    // srem won't affect demanded bits
-          return I->getOperand(0);
+    if (match(I->getOperand(1), m_APInt(Rem)) && Rem->isPowerOf2()) {
+      if (DemandedMask.ult(*Rem)) // srem won't affect demanded bits
+        return I->getOperand(0);
 
-        APInt LowBits = RA - 1;
-        APInt Mask2 = LowBits | APInt::getSignMask(BitWidth);
-        if (SimplifyDemandedBits(I, 0, Mask2, LHSKnown, Depth + 1, Q))
-          return I;
-
-        // The low bits of LHS are unchanged by the srem.
-        Known.Zero = LHSKnown.Zero & LowBits;
-        Known.One = LHSKnown.One & LowBits;
-
-        // If LHS is non-negative or has all low bits zero, then the upper bits
-        // are all zero.
-        if (LHSKnown.isNonNegative() || LowBits.isSubsetOf(LHSKnown.Zero))
-          Known.Zero |= ~LowBits;
-
-        // If LHS is negative and not all low bits are zero, then the upper bits
-        // are all one.
-        if (LHSKnown.isNegative() && LowBits.intersects(LHSKnown.One))
-          Known.One |= ~LowBits;
-
-        break;
-      }
+      APInt LowBits = *Rem - 1;
+      APInt Mask2 = LowBits | APInt::getSignMask(BitWidth);
+      if (SimplifyDemandedBits(I, 0, Mask2, LHSKnown, Depth + 1, Q))
+        return I;
+      Known = KnownBits::srem(LHSKnown, KnownBits::makeConstant(*Rem));
+      break;
     }
 
     llvm::computeKnownBits(I, Known, Depth, Q);
@@ -910,7 +898,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         Value *X;
         if (DemandedMask == 1 && VTy->getScalarSizeInBits() % 2 == 0 &&
             match(II->getArgOperand(0), m_Not(m_Value(X)))) {
-          Function *Ctpop = Intrinsic::getDeclaration(
+          Function *Ctpop = Intrinsic::getOrInsertDeclaration(
               II->getModule(), Intrinsic::ctpop, VTy);
           return InsertNewInstWith(CallInst::Create(Ctpop, {X}), I->getIterator());
         }
@@ -1931,17 +1919,23 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 /// For floating-point classes that resolve to a single bit pattern, return that
 /// value.
 static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
+  if (Mask == fcNone)
+    return PoisonValue::get(Ty);
+
+  if (Mask == fcPosZero)
+    return Constant::getNullValue(Ty);
+
+  // TODO: Support aggregate types that are allowed by FPMathOperator.
+  if (Ty->isAggregateType())
+    return nullptr;
+
   switch (Mask) {
-  case fcPosZero:
-    return ConstantFP::getZero(Ty);
   case fcNegZero:
     return ConstantFP::getZero(Ty, true);
   case fcPosInf:
     return ConstantFP::getInfinity(Ty);
   case fcNegInf:
     return ConstantFP::getInfinity(Ty, true);
-  case fcNone:
-    return PoisonValue::get(Ty);
   default:
     return nullptr;
   }

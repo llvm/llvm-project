@@ -177,12 +177,12 @@ define i8 @test13(ptr %0, i64 %1) {
 ; RV64I-NEXT:    li a2, 1
 ; RV64I-NEXT:    subw a2, a2, a1
 ; RV64I-NEXT:    add a2, a0, a2
-; RV64I-NEXT:    lbu a2, 0(a2)
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    subw a3, a3, a1
 ; RV64I-NEXT:    add a0, a0, a3
+; RV64I-NEXT:    lbu a1, 0(a2)
 ; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    add a0, a2, a0
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %3 = mul i64 %1, -4294967296
   %4 = add i64 %3, 4294967296 ; 1 << 32

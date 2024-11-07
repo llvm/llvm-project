@@ -112,7 +112,7 @@ static uint8_t byteFromBitsInit(const BitsInit *B) {
 
   uint8_t Value = 0;
   for (unsigned I = 0; I != N; ++I) {
-    BitInit *Bit = cast<BitInit>(B->getBit(I));
+    const BitInit *Bit = cast<BitInit>(B->getBit(I));
     Value |= Bit->getValue() << I;
   }
   return Value;
@@ -215,7 +215,7 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     StringRef Name = Rec->getName();
     const CodeGenInstruction *NewInst = nullptr;
     if (ManualMap.find(Name) != ManualMap.end()) {
-      Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      const Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       NewInst = &Target.getInstruction(NewRec);
     } else if (Name.ends_with("_EVEX")) {

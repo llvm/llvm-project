@@ -15,7 +15,6 @@
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;

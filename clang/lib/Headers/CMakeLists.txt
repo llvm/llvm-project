@@ -120,6 +120,7 @@ set(ppc_htm_files
 
 set(riscv_files
   riscv_bitmanip.h
+        riscv_corev_alu.h
   riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
@@ -220,6 +221,8 @@ set(x86_files
   mm3dnow.h
   mmintrin.h
   movdirintrin.h
+  movrs_avx10_2_512intrin.h
+  movrs_avx10_2intrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h
@@ -240,6 +243,7 @@ set(x86_files
   shaintrin.h
   sm3intrin.h
   sm4intrin.h
+  sm4evexintrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h

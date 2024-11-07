@@ -78,8 +78,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
-                             /*DestroyToplevelScope=*/Kind ==
-                                 ConstantExprKind::ClassTemplateArgument);
+                             /*DestroyToplevelScope=*/true);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -197,6 +196,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
+
+  if (T->isFixedPointType())
+    return PT_FixedPoint;
 
   return std::nullopt;
 }

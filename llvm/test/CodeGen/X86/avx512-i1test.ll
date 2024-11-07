@@ -15,7 +15,7 @@ define void @func() {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %bb56
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb33
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al

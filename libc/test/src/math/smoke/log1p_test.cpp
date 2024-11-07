@@ -13,7 +13,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcLog1pTest = LIBC_NAMESPACE::testing::FPTest<double>;
@@ -28,3 +27,27 @@ TEST_F(LlvmLibcLog1pTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log1p(-1.0),
                               FE_DIVBYZERO);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcLog1pTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::log1p(min_denormal));
+}
+
+TEST_F(LlvmLibcLog1pTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::log1p(min_denormal));
+}
+
+TEST_F(LlvmLibcLog1pTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::log1p(min_denormal));
+}
+
+#endif

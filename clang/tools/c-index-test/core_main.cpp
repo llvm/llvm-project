@@ -274,12 +274,12 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
-  std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(modulePath), *pchRdr, ASTUnit::LoadASTOnly, Diags,
-      FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
-      /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
-      /*AllowASTWithCompilerErrors=*/true,
-      /*UserFilesAreVolatile=*/false);
+  std::unique_ptr<ASTUnit> AU =
+      ASTUnit::LoadFromASTFile(modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
+                               FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
+                               /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
+                               /*AllowASTWithCompilerErrors=*/true,
+                               /*UserFilesAreVolatile=*/false);
   if (!AU) {
     errs() << "failed to create TU for: " << modulePath << '\n';
     return true;

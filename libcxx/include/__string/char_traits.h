@@ -257,7 +257,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, w
 };
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
@@ -277,7 +277,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
   }
 };
 
-#endif // _LIBCPP_HAS_NO_CHAR8_T
+#endif // _LIBCPP_HAS_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>

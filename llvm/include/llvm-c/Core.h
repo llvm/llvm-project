@@ -395,6 +395,9 @@ typedef enum {
                                when incremented above input value */
   LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
                                the input value when decremented below zero */
+  LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
+                                 overflow */
+  LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -2792,7 +2795,7 @@ void LLVMSetPersonalityFn(LLVMValueRef Fn, LLVMValueRef PersonalityFn);
 /**
  * Obtain the intrinsic ID number which matches the given function name.
  *
- * @see llvm::Function::lookupIntrinsicID()
+ * @see llvm::Intrinsic::lookupIntrinsicID()
  */
 unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 
@@ -2804,10 +2807,10 @@ unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Create or insert the declaration of an intrinsic.  For overloaded intrinsics,
+ * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
  * parameter types must be provided to uniquely identify an overload.
  *
- * @see llvm::Intrinsic::getDeclaration()
+ * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                          unsigned ID,
@@ -4523,6 +4526,9 @@ LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  const char *Name);
 LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
                                    const char *Name);
+/**
+ * Deprecated: Use LLVMBuildGlobalString instead, which has identical behavior.
+ */
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name);
 LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);

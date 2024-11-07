@@ -624,7 +624,7 @@ iterates over the pairs in the returned array.
 
 .. code-block:: text
 
-  ArrayRef<std::pair<Record *, SMRange>>
+  ArrayRef<std::pair<const Record *, SMRange>>
       Superclasses = Prototype->getSuperClasses();
   for (const auto &SuperPair : Superclasses) {
     ...

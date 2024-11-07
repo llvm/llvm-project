@@ -812,6 +812,16 @@ void DelayLoadContents::create(Defined *h) {
         s->loadThunkSym =
             cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
       }
+
+      if (s->file->impECSym) {
+        auto chunk = make<AuxImportChunk>(s->file);
+        auxIat.push_back(chunk);
+        s->file->impECSym->setLocation(chunk);
+
+        chunk = make<AuxImportChunk>(s->file);
+        auxIatCopy.push_back(chunk);
+        s->file->auxImpCopySym->setLocation(chunk);
+      }
     }
     thunks.push_back(tm);
     if (pdataChunk)
@@ -822,6 +832,10 @@ void DelayLoadContents::create(Defined *h) {
     // Terminate with null values.
     addresses.push_back(make<NullChunk>(8));
     names.push_back(make<NullChunk>(8));
+    if (ctx.config.machine == ARM64EC) {
+      auxIat.push_back(make<NullChunk>(8));
+      auxIatCopy.push_back(make<NullChunk>(8));
+    }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
       syms[i]->setLocation(addresses[base + i]);
@@ -845,6 +859,7 @@ void DelayLoadContents::create(Defined *h) {
 Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergeChunkX64>(dir, helper);
   case I386:
     return make<TailMergeChunkX86>(ctx, dir, helper);
@@ -880,6 +895,7 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
                                         Chunk *tailMerge) {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<ThunkChunkX64>(s, tailMerge);
   case I386:
     return make<ThunkChunkX86>(ctx, s, tailMerge);

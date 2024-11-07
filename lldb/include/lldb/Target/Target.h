@@ -1391,8 +1391,7 @@ public:
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
     StructuredDataImpl m_extra_args;
-    /// This holds the python callback object.
-    StructuredData::GenericSP m_implementation_sp;
+    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     /// and fill it with commands, and SetSpecifier to set the specifier shared

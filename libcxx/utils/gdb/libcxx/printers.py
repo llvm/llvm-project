@@ -173,7 +173,7 @@ class StdTuplePrinter(object):
             field_name = next(self.child_iter)
             child = self.val["__base_"][field_name]["__value_"]
             self.count += 1
-            return ("[%d]" % self.count, child)
+            return ("[%d]" % (self.count - 1), child)
 
         next = __next__  # Needed for GDB built against Python 2.7.
 
@@ -331,7 +331,7 @@ class StdVectorPrinter(object):
             if self.offset >= self.bits_per_word:
                 self.item += 1
                 self.offset = 0
-            return ("[%d]" % self.count, outbit)
+            return ("[%d]" % (self.count - 1), outbit)
 
         next = __next__  # Needed for GDB built against Python 2.7.
 
@@ -352,7 +352,7 @@ class StdVectorPrinter(object):
                 raise StopIteration
             entry = self.item.dereference()
             self.item += 1
-            return ("[%d]" % self.count, entry)
+            return ("[%d]" % (self.count - 1), entry)
 
         next = __next__  # Needed for GDB built against Python 2.7.
 

@@ -41,13 +41,6 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[STEP_ADD8:%.*]] = add <2 x i64> [[STEP_ADD7]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[STEP_ADD9:%.*]] = add <2 x i64> [[STEP_ADD8]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 10
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 14
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2

@@ -4168,8 +4168,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   D->setDeclContext(Context.getTranslationUnitDecl());
 
   // Reading some declarations can result in deep recursion.
-  clang::runWithSufficientStackSpace([&] { warnStackExhausted(DeclLoc); },
-                                     [&] { Reader.Visit(D); });
+  runWithSufficientStackSpace(DeclLoc, [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
@@ -4350,6 +4349,16 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
           Update.Mod, Update.Data,
           reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
     DC->setHasExternalVisibleStorage(true);
+  }
+
+  // Load any pending lambdas for the function.
+  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->isCanonicalDecl()) {
+    if (auto IT = FunctionToLambdasMap.find(ID);
+        IT != FunctionToLambdasMap.end()) {
+      for (auto LID : IT->second)
+        GetDecl(LID);
+      FunctionToLambdasMap.erase(IT);
+    }
   }
 }
 

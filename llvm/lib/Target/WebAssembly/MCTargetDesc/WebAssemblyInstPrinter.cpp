@@ -38,8 +38,7 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
                                                const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
-void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
-                                          MCRegister Reg) const {
+void WebAssemblyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   assert(Reg.id() != WebAssembly::UnusedReg);
   // Note that there's an implicit local.get/local.set here!
   OS << "$" << Reg.id();

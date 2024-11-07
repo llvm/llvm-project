@@ -770,7 +770,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           if (It != LastValueMap.end())
             Incoming = It->second;
           PHI.addIncoming(Incoming, New);
-          SE->forgetValue(&PHI);
+          SE->forgetLcssaPhiWithNewPredecessor(L, &PHI);
         }
       }
       // Keep track of new headers and latches as we create them, so that

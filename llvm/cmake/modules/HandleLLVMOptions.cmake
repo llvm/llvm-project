@@ -196,6 +196,16 @@ else()
   message(FATAL_ERROR "Unknown value for LLVM_ABI_BREAKING_CHECKS: \"${LLVM_ABI_BREAKING_CHECKS}\"!")
 endif()
 
+string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
+
+if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
+  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
+  # The DISABLED setting is default and requires no additional defines.
+else()
+  message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
+endif()
+
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
@@ -321,6 +331,12 @@ endif()
 function(append value)
   foreach(variable ${ARGN})
     set(${variable} "${${variable}} ${value}" PARENT_SCOPE)
+  endforeach(variable)
+endfunction()
+
+function(prepend value)
+  foreach(variable ${ARGN})
+    set(${variable} "${value} ${${variable}}" PARENT_SCOPE)
   endforeach(variable)
 endfunction()
 
@@ -526,7 +542,7 @@ if(MSVC)
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/STACK:10000000")
 elseif(MINGW OR CYGWIN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
@@ -575,7 +591,7 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     # Enable standards-conforming preprocessor.
     # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
     append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -1196,7 +1212,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   endif()
   file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
   get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
-  append("/libpath:\"${clang_runtime_dir}\""
+  prepend("/libpath:\"${clang_runtime_dir}\""
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)

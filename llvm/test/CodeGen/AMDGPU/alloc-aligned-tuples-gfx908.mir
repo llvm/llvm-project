@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -start-before=greedy,0 -stop-after=virtregrewriter,1 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN,GFX908 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -start-before=greedy,0 -stop-after=virtregrewriter,2 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN,GFX908 %s
 
 ---
 # GCN-LABEL: name: alloc_vgpr_64

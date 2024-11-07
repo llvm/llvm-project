@@ -236,6 +236,10 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
         // v*i8 are formally lowered as v4i8
         EltVT = MVT::v4i8;
         NumElts = (NumElts + 3) / 4;
+      } else if (EltVT.getSimpleVT() == MVT::i8 && NumElts == 2) {
+        // v2i8 is promoted to v2i16
+        NumElts = 1;
+        EltVT = MVT::v2i16;
       }
       for (unsigned j = 0; j != NumElts; ++j) {
         ValueVTs.push_back(EltVT);
@@ -594,20 +598,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
 
-  // TODO: we may consider expanding ROTL/ROTR on older GPUs.  Currently on GPUs
-  // that don't have h/w rotation we lower them to multi-instruction assembly.
-  // See ROT*_sw in NVPTXIntrInfo.td
-  setOperationAction(ISD::ROTL, MVT::i64, Legal);
-  setOperationAction(ISD::ROTR, MVT::i64, Legal);
-  setOperationAction(ISD::ROTL, MVT::i32, Legal);
-  setOperationAction(ISD::ROTR, MVT::i32, Legal);
+  setOperationAction({ISD::ROTL, ISD::ROTR},
+                     {MVT::i8, MVT::i16, MVT::v2i16, MVT::i32, MVT::i64},
+                     Expand);
 
-  setOperationAction(ISD::ROTL, MVT::i16, Expand);
-  setOperationAction(ISD::ROTL, MVT::v2i16, Expand);
-  setOperationAction(ISD::ROTR, MVT::i16, Expand);
-  setOperationAction(ISD::ROTR, MVT::v2i16, Expand);
-  setOperationAction(ISD::ROTL, MVT::i8, Expand);
-  setOperationAction(ISD::ROTR, MVT::i8, Expand);
+  if (STI.hasHWROT32())
+    setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i32, Legal);
+
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
 
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
@@ -952,14 +949,12 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::ProxyReg)
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LDGV2)
-    MAKE_CASE(NVPTXISD::LDGV4)
     MAKE_CASE(NVPTXISD::LDUV2)
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
     MAKE_CASE(NVPTXISD::StoreV4)
-    MAKE_CASE(NVPTXISD::FUN_SHFL_CLAMP)
-    MAKE_CASE(NVPTXISD::FUN_SHFR_CLAMP)
+    MAKE_CASE(NVPTXISD::FSHL_CLAMP)
+    MAKE_CASE(NVPTXISD::FSHR_CLAMP)
     MAKE_CASE(NVPTXISD::IMAD)
     MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
@@ -1340,8 +1335,6 @@ NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
       VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
-  if (Isv2x16VT(VT))
-    return TypeLegal;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
@@ -2490,8 +2483,8 @@ SDValue NVPTXTargetLowering::LowerShiftRightParts(SDValue Op,
     //   dLo = shf.r.clamp aLo, aHi, Amt
 
     SDValue Hi = DAG.getNode(Opc, dl, VT, ShOpHi, ShAmt);
-    SDValue Lo = DAG.getNode(NVPTXISD::FUN_SHFR_CLAMP, dl, VT, ShOpLo, ShOpHi,
-                             ShAmt);
+    SDValue Lo =
+        DAG.getNode(NVPTXISD::FSHR_CLAMP, dl, VT, ShOpHi, ShOpLo, ShAmt);
 
     SDValue Ops[2] = { Lo, Hi };
     return DAG.getMergeValues(Ops, dl);
@@ -2549,8 +2542,8 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
     //   dHi = shf.l.clamp aLo, aHi, Amt
     //   dLo = aLo << Amt
 
-    SDValue Hi = DAG.getNode(NVPTXISD::FUN_SHFL_CLAMP, dl, VT, ShOpLo, ShOpHi,
-                             ShAmt);
+    SDValue Hi =
+        DAG.getNode(NVPTXISD::FSHL_CLAMP, dl, VT, ShOpHi, ShOpLo, ShAmt);
     SDValue Lo = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ShAmt);
 
     SDValue Ops[2] = { Lo, Hi };
@@ -4777,26 +4770,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 
     return true;
   }
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_p: {
-    auto &DL = I.getDataLayout();
-
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    if (Intrinsic == Intrinsic::nvvm_ldg_global_i)
-      Info.memVT = getValueType(DL, I.getType());
-    else if(Intrinsic == Intrinsic::nvvm_ldg_global_p)
-      Info.memVT = getPointerTy(DL);
-    else
-      Info.memVT = getValueType(DL, I.getType());
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad;
-    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
-
-    return true;
-  }
-
   case Intrinsic::nvvm_tex_1d_v4f32_s32:
   case Intrinsic::nvvm_tex_1d_v4f32_f32:
   case Intrinsic::nvvm_tex_1d_level_v4f32_f32:
@@ -6311,9 +6284,6 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   switch (IntrinNo) {
   default:
     return;
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_p:
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
@@ -6342,37 +6312,11 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       default:
         return;
       case 2:
-        switch (IntrinNo) {
-        default:
-          return;
-        case Intrinsic::nvvm_ldg_global_i:
-        case Intrinsic::nvvm_ldg_global_f:
-        case Intrinsic::nvvm_ldg_global_p:
-          Opcode = NVPTXISD::LDGV2;
-          break;
-        case Intrinsic::nvvm_ldu_global_i:
-        case Intrinsic::nvvm_ldu_global_f:
-        case Intrinsic::nvvm_ldu_global_p:
-          Opcode = NVPTXISD::LDUV2;
-          break;
-        }
+        Opcode = NVPTXISD::LDUV2;
         LdResVTs = DAG.getVTList(EltVT, EltVT, MVT::Other);
         break;
       case 4: {
-        switch (IntrinNo) {
-        default:
-          return;
-        case Intrinsic::nvvm_ldg_global_i:
-        case Intrinsic::nvvm_ldg_global_f:
-        case Intrinsic::nvvm_ldg_global_p:
-          Opcode = NVPTXISD::LDGV4;
-          break;
-        case Intrinsic::nvvm_ldu_global_i:
-        case Intrinsic::nvvm_ldu_global_f:
-        case Intrinsic::nvvm_ldu_global_p:
-          Opcode = NVPTXISD::LDUV4;
-          break;
-        }
+        Opcode = NVPTXISD::LDUV4;
         EVT ListVTs[] = { EltVT, EltVT, EltVT, EltVT, MVT::Other };
         LdResVTs = DAG.getVTList(ListVTs);
         break;

@@ -142,11 +142,11 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
     unique_ptr<__merge_range_t[], decltype(__destroy)> __ranges(
         [&]() -> __merge_range_t* {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
           try {
 #  endif
             return std::allocator<__merge_range_t>().allocate(__n_ranges);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
           } catch (const std::bad_alloc&) {
             return nullptr;
           }

@@ -234,6 +234,27 @@ def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float4E2M1FNType
+
+def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN"> {
+  let summary = "4-bit floating point with 2-bit exponent and 1-bit mantissa";
+  let description = [{
+    An 4-bit floating point type with 1 sign bit, 2 bits exponent and 1 bit
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S1E2M1
+      * exponent bias: 1
+      * infinities: Not supported
+      * NaNs: Not supported
+      * denormals when exponent is 0
+
+    Open Compute Project (OCP) microscaling formats (MX) specification:
+    https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Float6E2M3FNType
 
 def Builtin_Float6E2M3FN : Builtin_FloatType<"Float6E2M3FN", "f6E2M3FN"> {
@@ -269,6 +290,29 @@ def Builtin_Float6E3M2FN : Builtin_FloatType<"Float6E3M2FN", "f6E3M2FN"> {
       * infinities: Not supported
       * NaNs: Not supported
       * denormals when exponent is 0
+
+    Open Compute Project (OCP) microscaling formats (MX) specification:
+    https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Float8E8M0FNUType
+
+def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
+  let summary = "8-bit floating point with 8-bit exponent, no mantissa or sign";
+  let description = [{
+    An 8-bit floating point type with no sign bit, 8 bits exponent and no
+    mantissa. This is not a standard type as defined by IEEE-754; it is intended
+    to be used for representing scaling factors, so it cannot represent zeros
+    and negative numbers. The values it can represent are powers of two in the
+    range [-127,127] and NaN.
+
+      * bit encoding: S0E8M0
+      * exponent bias: 127
+      * infinities: Not supported
+      * NaNs: Supported with all bits set to 1
+      * denormals: Not supported
 
     Open Compute Project (OCP) microscaling formats (MX) specification:
     https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
@@ -1232,7 +1276,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
     }
 
     /// Get the number of scalable dimensions.
-    int64_t getNumScalableDims() const {
+    size_t getNumScalableDims() const {
       return llvm::count(getScalableDims(), true);
     }
 

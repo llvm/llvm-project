@@ -2357,8 +2357,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildSelect(DefRegs[0], CondRegs[0], Src1Regs[0], Src2Regs[0]);
-    B.buildSelect(DefRegs[1], CondRegs[0], Src1Regs[1], Src2Regs[1]);
+    auto Flags = MI.getFlags();
+    B.buildSelect(DefRegs[0], CondRegs[0], Src1Regs[0], Src2Regs[0], Flags);
+    B.buildSelect(DefRegs[1], CondRegs[0], Src1Regs[1], Src2Regs[1], Flags);
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
@@ -2440,8 +2441,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]});
-    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]});
+    auto Flags = MI.getFlags();
+    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]}, Flags);
+    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]}, Flags);
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
@@ -4911,12 +4913,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_global_atomic_csub:
-    case Intrinsic::amdgcn_global_atomic_fmin:
-    case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
-    case Intrinsic::amdgcn_flat_atomic_fmin:
-    case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmin_num:
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:

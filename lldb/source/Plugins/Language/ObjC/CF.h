@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_CF_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_CF_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {

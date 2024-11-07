@@ -102,6 +102,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  StringRef getRegAsmName(MCRegister Reg) const override;
+
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
   }

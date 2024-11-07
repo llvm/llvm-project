@@ -198,6 +198,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
+  setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
+
+  // On P10, the default lowering generates better code using the
+  // setbc instruction.
+  if (!Subtarget.hasP10Vector() && isPPC64)
+    setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
@@ -11593,6 +11600,15 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
 
   MachineFunction &MF = DAG.getMachineFunction();
   SDValue Op0 = Op.getOperand(0);
+  EVT ValVT = Op0.getValueType();
+  unsigned EltSize = Op.getValueType().getScalarSizeInBits();
+  if (isa<ConstantSDNode>(Op0) && EltSize <= 32) {
+    int64_t IntVal = Op.getConstantOperandVal(0);
+    if (IntVal >= -16 && IntVal <= 15)
+      return getCanonicalConstSplat(IntVal, EltSize / 8, Op.getValueType(), DAG,
+                                    dl);
+  }
+
   ReuseLoadInfo RLI;
   if (Subtarget.hasLFIWAX() && Subtarget.hasVSX() &&
       Op.getValueType() == MVT::v4i32 && Op0.getOpcode() == ISD::LOAD &&
@@ -11617,7 +11633,6 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
   SDValue Val = Op0;
-  EVT ValVT = Val.getValueType();
   // P10 hardware store forwarding requires that a single store contains all
   // the data for the load. P10 is able to merge a pair of adjacent stores. Try
   // to avoid load hit store on P10 when running binaries compiled for older
@@ -11967,11 +11982,81 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("ERROR:Should return for all cases within swtich.");
 }
 
+SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
+  // Default to target independent lowering if there is a logical user of the
+  // carry-bit.
+  for (SDNode *U : Op->uses()) {
+    if (U->getOpcode() == ISD::SELECT)
+      return SDValue();
+    if (ISD::isBitwiseLogicOp(U->getOpcode())) {
+      for (unsigned i = 0, ie = U->getNumOperands(); i != ie; ++i) {
+        if (U->getOperand(i).getOpcode() != ISD::UADDO &&
+            U->getOperand(i).getOpcode() != ISD::MERGE_VALUES)
+          return SDValue();
+      }
+    }
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDLoc dl(Op);
+
+  // Default to target independent lowering for special cases handled there.
+  if (isOneConstant(RHS) || isAllOnesConstant(RHS))
+    return SDValue();
+
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue ADDC;
+  SDValue Overflow;
+  SDVTList VTs = Op.getNode()->getVTList();
+
+  ADDC = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(VT, MVT::Glue), LHS, RHS);
+  Overflow = DAG.getNode(ISD::ADDE, dl, DAG.getVTList(VT, MVT::Glue),
+                         DAG.getConstant(0, dl, VT), DAG.getConstant(0, dl, VT),
+                         ADDC.getValue(1));
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+  SDValue Res =
+      DAG.getNode(ISD::MERGE_VALUES, dl, VTs, ADDC.getValue(0), OverflowTrunc);
+  return Res;
+}
+
+SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+
+  SDValue LHS64 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Op.getOperand(0));
+  SDValue RHS64 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Op.getOperand(1));
+
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i64, LHS64, RHS64);
+
+  SDValue Extsw = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i64, Sub,
+                              DAG.getValueType(MVT::i32));
+
+  SDValue Xor = DAG.getNode(ISD::XOR, dl, MVT::i64, Extsw, Sub);
+
+  SDValue Addic = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(MVT::i64, MVT::Glue),
+                              Xor, DAG.getConstant(-1, dl, MVT::i64));
+
+  SDValue Overflow =
+      DAG.getNode(ISD::SUBE, dl, DAG.getVTList(MVT::i64, MVT::Glue), Xor, Addic,
+                  Addic.getValue(1));
+
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+  SDValue SubTrunc =
+      (Sub->getValueType(0) != Op.getNode()->getValueType(0))
+          ? DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(0), Sub)
+          : Sub;
+  return DAG.getMergeValues({SubTrunc, OverflowTrunc}, dl);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Wasn't expecting to be able to lower this!");
+  case ISD::UADDO:              return LowerUaddo(Op, DAG);
   case ISD::FPOW:               return lowerPow(Op, DAG);
   case ISD::FSIN:               return lowerSin(Op, DAG);
   case ISD::FCOS:               return lowerCos(Op, DAG);
@@ -11988,6 +12073,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::SSUBO:
+    return LowerSSUBO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
@@ -12180,9 +12267,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //===----------------------------------------------------------------------===//
 
 static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getDeclaration(M, Id);
-  return Builder.CreateCall(Func, {});
+  return Builder.CreateIntrinsic(Id, {}, {});
 }
 
 // The mappings for emitLeading/TrailingFence is taken from
@@ -12205,11 +12290,8 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
     if (isa<LoadInst>(Inst))
-      return Builder.CreateCall(
-          Intrinsic::getDeclaration(
-              Builder.GetInsertBlock()->getParent()->getParent(),
-              Intrinsic::ppc_cfence, {Inst->getType()}),
-          {Inst});
+      return Builder.CreateIntrinsic(Intrinsic::ppc_cfence, {Inst->getType()},
+                                     {Inst});
     // FIXME: Can use isync for rmw operation.
     return callIntrinsic(Builder, Intrinsic::ppc_lwsync);
   }
@@ -17322,25 +17404,33 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
   return FrameAddr;
 }
 
-// FIXME? Maybe this could be a TableGen attribute on some registers and
-// this table could be generated automatically from RegInfo.
-Register PPCTargetLowering::getRegisterByName(const char* RegName, LLT VT,
-                                              const MachineFunction &MF) const {
-  bool isPPC64 = Subtarget.isPPC64();
+#define GET_REGISTER_MATCHER
+#include "PPCGenAsmMatcher.inc"
 
-  bool is64Bit = isPPC64 && VT == LLT::scalar(64);
-  if (!is64Bit && VT != LLT::scalar(32))
+Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
+                                              const MachineFunction &MF) const {
+  bool IsPPC64 = Subtarget.isPPC64();
+
+  bool Is64Bit = IsPPC64 && VT == LLT::scalar(64);
+  if (!Is64Bit && VT != LLT::scalar(32))
     report_fatal_error("Invalid register global variable type");
 
-  Register Reg = StringSwitch<Register>(RegName)
-                     .Case("r1", is64Bit ? PPC::X1 : PPC::R1)
-                     .Case("r2", isPPC64 ? Register() : PPC::R2)
-                     .Case("r13", (is64Bit ? PPC::X13 : PPC::R13))
-                     .Default(Register());
+  Register Reg = MatchRegisterName(RegName);
+  if (!Reg)
+    report_fatal_error(
+        Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
 
-  if (Reg)
-    return Reg;
-  report_fatal_error("Invalid register name global variable");
+  // FIXME: Unable to generate code for `-O2` but okay for `-O0`.
+  // Need followup investigation as to why.
+  if ((IsPPC64 && Reg == PPC::R2) || Reg == PPC::R0)
+    report_fatal_error(Twine("Trying to reserve an invalid register \"" +
+                             StringRef(RegName) + "\"."));
+
+  // Convert GPR to GP8R register for 64bit.
+  if (Is64Bit && StringRef(RegName).starts_with_insensitive("r"))
+    Reg = Reg.id() - PPC::R0 + PPC::X0;
+
+  return Reg;
 }
 
 bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
@@ -17889,10 +17979,10 @@ SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 }
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
-bool PPCTargetLowering::useLoadStackGuardNode() const {
-  if (!Subtarget.isTargetLinux())
-    return TargetLowering::useLoadStackGuardNode();
-  return true;
+bool PPCTargetLowering::useLoadStackGuardNode(const Module &M) const {
+  if (M.getStackProtectorGuard() == "tls" || Subtarget.isTargetLinux())
+    return true;
+  return TargetLowering::useLoadStackGuardNode(M);
 }
 
 // Override to disable global variable loading on Linux and insert AIX canary
@@ -19005,13 +19095,13 @@ Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Type *ValTy = Incr->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
-  Function *RMW = Intrinsic::getDeclaration(
-      M, getIntrinsicForAtomicRMWBinOp128(AI->getOperation()));
   Type *Int64Ty = Type::getInt64Ty(M->getContext());
   Value *IncrLo = Builder.CreateTrunc(Incr, Int64Ty, "incr_lo");
   Value *IncrHi =
       Builder.CreateTrunc(Builder.CreateLShr(Incr, 64), Int64Ty, "incr_hi");
-  Value *LoHi = Builder.CreateCall(RMW, {AlignedAddr, IncrLo, IncrHi});
+  Value *LoHi = Builder.CreateIntrinsic(
+      getIntrinsicForAtomicRMWBinOp128(AI->getOperation()), {},
+      {AlignedAddr, IncrLo, IncrHi});
   Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
   Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
   Lo = Builder.CreateZExt(Lo, ValTy, "lo64");
@@ -19028,7 +19118,7 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Type *ValTy = CmpVal->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *IntCmpXchg =
-      Intrinsic::getDeclaration(M, Intrinsic::ppc_cmpxchg_i128);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::ppc_cmpxchg_i128);
   Type *Int64Ty = Type::getInt64Ty(M->getContext());
   Value *CmpLo = Builder.CreateTrunc(CmpVal, Int64Ty, "cmp_lo");
   Value *CmpHi =

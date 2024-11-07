@@ -39,7 +39,7 @@ class EnumPropertyType<string typeName = ""> : PropertyType<typeName> {}
 /// Supports optional values by using the null representation.
 class RefPropertyType<string className> : PropertyType<className # "*"> {
   let PackOptional =
-    "value ? *value : nullptr";
+    "value.value_or(nullptr)";
   let UnpackOptional =
     "value ? std::optional<" # CXXName # ">(value) : std::nullopt";
 }

@@ -281,6 +281,12 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }
 
+// Provide a LocationAttrDef for dialects to provide their own locations
+// that subclass LocationAttr.
+class LocationAttrDef<Dialect dialect, string name, list<Trait> traits = []>
+    : AttrDef<dialect, name, traits # [NativeAttrTrait<"IsLocation">],
+              "::mlir::LocationAttr">;
+
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.
 class TypeDef<Dialect dialect, string name, list<Trait> traits = [],

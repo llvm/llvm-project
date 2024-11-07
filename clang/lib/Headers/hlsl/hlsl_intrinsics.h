@@ -379,6 +379,22 @@ template <typename T> constexpr float asfloat(T F) {
 }
 
 //===----------------------------------------------------------------------===//
+// asint builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn int asint(T Val)
+/// \brief Interprets the bit pattern of x as an integer.
+/// \param Val The input value.
+
+template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
+  return __detail::bit_cast<int, T, N>(V);
+}
+
+template <typename T> constexpr int asint(T F) {
+  return __detail::bit_cast<int, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
 // asin builtins
 //===----------------------------------------------------------------------===//
 
@@ -423,6 +439,24 @@ template <typename T> constexpr uint asuint(T F) {
 }
 
 //===----------------------------------------------------------------------===//
+// asuint splitdouble builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void asuint(double D, out uint lowbits, out int highbits)
+/// \brief Split and interprets the lowbits and highbits of double D into uints.
+/// \param D The input double.
+/// \param lowbits The output lowbits of D.
+/// \param highbits The output highbits of D.
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double, out uint, out uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double2, out uint2, out uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double3, out uint3, out uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double4, out uint4, out uint4);
+
+//===----------------------------------------------------------------------===//
 // atan builtins
 //===----------------------------------------------------------------------===//
 
@@ -449,6 +483,36 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 float3 atan(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 float4 atan(float4);
+
+//===----------------------------------------------------------------------===//
+// atan2 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T atan2(T y, T x)
+/// \brief Returns the arctangent of y/x, using the signs of the arguments to
+/// determine the correct quadrant.
+/// \param y The y-coordinate.
+/// \param x The x-coordinate.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half atan2(half y, half x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half2 atan2(half2 y, half2 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half3 atan2(half3 y, half3 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half4 atan2(half4 y, half4 x);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float atan2(float y, float x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float2 atan2(float2 y, float2 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float3 atan2(float3 y, float3 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float4 atan2(float4 y, float4 x);
 
 //===----------------------------------------------------------------------===//
 // ceil builtins
@@ -659,66 +723,118 @@ float4 cosh(float4);
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int16_t countbits(int16_t);
+const inline uint countbits(int16_t x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int16_t2 countbits(int16_t2);
+const inline uint2 countbits(int16_t2 x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int16_t3 countbits(int16_t3);
+const inline uint3 countbits(int16_t3 x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int16_t4 countbits(int16_t4);
+const inline uint4 countbits(int16_t4 x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint16_t countbits(uint16_t);
+const inline uint countbits(uint16_t x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint16_t2 countbits(uint16_t2);
+const inline uint2 countbits(uint16_t2 x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint16_t3 countbits(uint16_t3);
+const inline uint3 countbits(uint16_t3 x) {
+  return __builtin_elementwise_popcount(x);
+}
 _HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint16_t4 countbits(uint16_t4);
+const inline uint4 countbits(uint16_t4 x) {
+  return __builtin_elementwise_popcount(x);
+}
 #endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int countbits(int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int2 countbits(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int3 countbits(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int4 countbits(int4);
+const inline uint countbits(int x) { return __builtin_elementwise_popcount(x); }
+const inline uint2 countbits(int2 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint3 countbits(int3 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint4 countbits(int4 x) {
+  return __builtin_elementwise_popcount(x);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint countbits(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint2 countbits(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint3 countbits(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint4 countbits(uint4);
+const inline uint countbits(uint x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint2 countbits(uint2 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint3 countbits(uint3 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint4 countbits(uint4 x) {
+  return __builtin_elementwise_popcount(x);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int64_t countbits(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int64_t2 countbits(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int64_t3 countbits(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-int64_t4 countbits(int64_t4);
+const inline uint countbits(int64_t x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint2 countbits(int64_t2 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint3 countbits(int64_t3 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint4 countbits(int64_t4 x) {
+  return __builtin_elementwise_popcount(x);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint64_t countbits(uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint64_t2 countbits(uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint64_t3 countbits(uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
-uint64_t4 countbits(uint64_t4);
+const inline uint countbits(uint64_t x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint2 countbits(uint64_t2 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint3 countbits(uint64_t3 x) {
+  return __builtin_elementwise_popcount(x);
+}
+const inline uint4 countbits(uint64_t4 x) {
+  return __builtin_elementwise_popcount(x);
+}
+
+//===----------------------------------------------------------------------===//
+// degrees builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T degrees(T x)
+/// \brief Converts the specified value from radians to degrees.
+/// \param x The specified input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half degrees(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half2 degrees(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half3 degrees(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half4 degrees(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float degrees(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float2 degrees(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float3 degrees(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float4 degrees(float4);
 
 //===----------------------------------------------------------------------===//
 // dot product builtins
@@ -912,6 +1028,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float3 floor(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
+
+//===----------------------------------------------------------------------===//
+// fmod builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T fmod(T x, T y)
+/// \brief Returns the linear interpolation of x to y.
+/// \param x [in] The dividend.
+/// \param y [in] The divisor.
+///
+/// Return the floating-point remainder of the x parameter divided by the y
+/// parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half fmod(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half2 fmod(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half3 fmod(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half4 fmod(half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float fmod(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float2 fmod(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float3 fmod(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float4 fmod(float4, float4);
 
 //===----------------------------------------------------------------------===//
 // frac builtins
@@ -1563,6 +1713,28 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// cross builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T cross(T x, T y)
+/// \brief Returns the cross product of two floating-point, 3D vectors.
+/// \param x [in] The first floating-point, 3D vector.
+/// \param y [in] The second floating-point, 3D vector.
+///
+/// Result is the cross product of x and y, i.e., the resulting
+/// components are, in order :
+/// x[1] * y[2] - y[1] * x[2]
+/// x[2] * y[0] - y[2] * x[0]
+/// x[0] * y[1] - y[0] * x[1]
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
+half3 cross(half3, half3);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
+float3 cross(float3, float3);
+
+//===----------------------------------------------------------------------===//
 // rcp builtins
 //===----------------------------------------------------------------------===//
 
@@ -1966,6 +2138,86 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
 
 //===----------------------------------------------------------------------===//
+// WaveReadLaneAt builtins
+//===----------------------------------------------------------------------===//
+
+// \brief Returns the value of the expression for the given lane index within
+// the specified wave.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool WaveReadLaneAt(bool, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool2 WaveReadLaneAt(bool2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool3 WaveReadLaneAt(bool3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool4 WaveReadLaneAt(bool4, int32_t);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t WaveReadLaneAt(int16_t, int32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t2 WaveReadLaneAt(int16_t2, int32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t3 WaveReadLaneAt(int16_t3, int32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t4 WaveReadLaneAt(int16_t4, int32_t);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half WaveReadLaneAt(half, int32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half2 WaveReadLaneAt(half2, int32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half3 WaveReadLaneAt(half3, int32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half4 WaveReadLaneAt(half4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int WaveReadLaneAt(int, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int2 WaveReadLaneAt(int2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int3 WaveReadLaneAt(int3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int4 WaveReadLaneAt(int4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float WaveReadLaneAt(float, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float2 WaveReadLaneAt(float2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float3 WaveReadLaneAt(float3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float4 WaveReadLaneAt(float4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t WaveReadLaneAt(int64_t, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t2 WaveReadLaneAt(int64_t2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t3 WaveReadLaneAt(int64_t3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t4 WaveReadLaneAt(int64_t4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double WaveReadLaneAt(double, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double2 WaveReadLaneAt(double2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double3 WaveReadLaneAt(double3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double4 WaveReadLaneAt(double4, int32_t);
+
+//===----------------------------------------------------------------------===//
 // sign builtins
 //===----------------------------------------------------------------------===//
 
@@ -1986,6 +2238,19 @@ int3 sign(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(uint16_t4);
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
@@ -2011,6 +2276,15 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(int4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int sign(float);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int2 sign(float2);
@@ -2029,6 +2303,15 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(int64_t4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int sign(double);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int2 sign(double2);
@@ -2036,5 +2319,35 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int3 sign(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(double4);
+
+//===----------------------------------------------------------------------===//
+// radians builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T radians(T Val)
+/// \brief Converts the specified value from degrees to radians.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half radians(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half2 radians(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half3 radians(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half4 radians(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float radians(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float2 radians(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float3 radians(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float4 radians(float4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

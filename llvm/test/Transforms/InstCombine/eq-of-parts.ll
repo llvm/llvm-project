@@ -1438,3 +1438,103 @@ define i1 @ne_optimized_highbits_cmp_todo_overlapping(i32 %x, i32 %y) {
   %r = or i1 %cmp_hi, %cmp_lo
   ret i1 %r
 }
+
+define i1 @and_trunc_i1(i8 %a1, i8 %a2) {
+; CHECK-LABEL: @and_trunc_i1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[XOR]], 2
+; CHECK-NEXT:    [[LOBIT:%.*]] = trunc i8 [[XOR]] to i1
+; CHECK-NEXT:    [[LOBIT_INV:%.*]] = xor i1 [[LOBIT]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[LOBIT_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %xor = xor i8 %a1, %a2
+  %cmp = icmp ult i8 %xor, 2
+  %lobit = trunc i8 %xor to i1
+  %lobit.inv = xor i1 %lobit, true
+  %and = and i1 %cmp, %lobit.inv
+  ret i1 %and
+}
+
+define i1 @and_trunc_i1_wrong_const(i8 %a1, i8 %a2) {
+; CHECK-LABEL: @and_trunc_i1_wrong_const(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[XOR]], 4
+; CHECK-NEXT:    [[LOBIT:%.*]] = trunc i8 [[XOR]] to i1
+; CHECK-NEXT:    [[LOBIT_INV:%.*]] = xor i1 [[LOBIT]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[LOBIT_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %xor = xor i8 %a1, %a2
+  %cmp = icmp ult i8 %xor, 4
+  %lobit = trunc i8 %xor to i1
+  %lobit.inv = xor i1 %lobit, true
+  %and = and i1 %cmp, %lobit.inv
+  ret i1 %and
+}
+
+define i1 @and_trunc_i1_wrong_operands(i8 %a1, i8 %a2, i8 %a3) {
+; CHECK-LABEL: @and_trunc_i1_wrong_operands(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A1:%.*]], [[A2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[XOR]], 2
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[A1]], [[A3:%.*]]
+; CHECK-NEXT:    [[LOBIT:%.*]] = trunc i8 [[XOR2]] to i1
+; CHECK-NEXT:    [[LOBIT_INV:%.*]] = xor i1 [[LOBIT]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[LOBIT_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %xor = xor i8 %a1, %a2
+  %cmp = icmp ult i8 %xor, 2
+  %xor2 = xor i8 %a1, %a3
+  %lobit = trunc i8 %xor2 to i1
+  %lobit.inv = xor i1 %lobit, true
+  %and = and i1 %cmp, %lobit.inv
+  ret i1 %and
+}
+
+define i1 @or_trunc_i1(i64 %a1, i64 %a2) {
+; CHECK-LABEL: @or_trunc_i1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[XOR]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[XOR]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %xor = xor i64 %a2, %a1
+  %cmp = icmp ugt i64 %xor, 1
+  %trunc = trunc i64 %xor to i1
+  %or = or i1 %cmp, %trunc
+  ret i1 %or
+}
+
+define i1 @or_trunc_i1_wrong_const(i64 %a1, i64 %a2) {
+; CHECK-LABEL: @or_trunc_i1_wrong_const(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[XOR]], 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[XOR]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %xor = xor i64 %a2, %a1
+  %cmp = icmp ugt i64 %xor, 2
+  %trunc = trunc i64 %xor to i1
+  %or = or i1 %cmp, %trunc
+  ret i1 %or
+}
+
+define i1 @or_trunc_i1_wrong_operands(i64 %a1, i64 %a2, i64 %a3) {
+; CHECK-LABEL: @or_trunc_i1_wrong_operands(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[XOR]], 1
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i64 [[A3:%.*]], [[A1]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[XOR2]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %xor = xor i64 %a2, %a1
+  %cmp = icmp ugt i64 %xor, 1
+  %xor2 = xor i64 %a3, %a1
+  %trunc = trunc i64 %xor2 to i1
+  %or = or i1 %cmp, %trunc
+  ret i1 %or
+}

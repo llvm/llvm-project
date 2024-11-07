@@ -146,7 +146,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
-      SE.forgetValue(&PN);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PN);
     }
   }
 

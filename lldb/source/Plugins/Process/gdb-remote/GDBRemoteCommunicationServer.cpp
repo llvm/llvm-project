@@ -155,7 +155,6 @@ GDBRemoteCommunicationServer::SendJSONResponse(const json::Value &value) {
   std::string json_string;
   raw_string_ostream os(json_string);
   os << value;
-  os.flush();
   StreamGDBRemote escaped_response;
   escaped_response.PutEscapedBytes(json_string.c_str(), json_string.size());
   return SendPacketNoLock(escaped_response.GetString());

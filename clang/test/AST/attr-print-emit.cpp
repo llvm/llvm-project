@@ -78,6 +78,9 @@ class C {
 ANNOTATE_ATTR int annotated_attr ANNOTATE_ATTR = 0;
 // CHECK: __attribute__((annotate("Annotated"))) int annotated_attr __attribute__((annotate("Annotated"))) = 0;
 
+void increment() { [[clang::annotate("Annotated")]] annotated_attr++; }
+// CHECK: {{\[\[}}clang::annotate("Annotated")]] annotated_attr++;
+
 // FIXME: We do not print the attribute as written after the type specifier.
 int ANNOTATE_ATTR annotated_attr_fixme = 0;
 // CHECK: __attribute__((annotate("Annotated"))) int annotated_attr_fixme = 0;

@@ -3294,6 +3294,12 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   return IndirectlyCallableFunctions;
 }
 
+std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
+  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+    return 0;
+  return std::nullopt;
+}
+
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA,
                                   DepClassTy DepClass) {

@@ -330,6 +330,10 @@ void LLVMContext::getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const {
   pImpl->getSyncScopeNames(SSNs);
 }
 
+std::optional<StringRef> LLVMContext::getSyncScopeName(SyncScope::ID Id) const {
+  return pImpl->getSyncScopeName(Id);
+}
+
 void LLVMContext::setGC(const Function &Fn, std::string GCName) {
   pImpl->GCNames[&Fn] = std::move(GCName);
 }
@@ -375,14 +379,6 @@ const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {
 
 std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
-}
-
-void LLVMContext::setOpaquePointers(bool Enable) const {
-  assert(Enable && "Cannot disable opaque pointers");
-}
-
-bool LLVMContext::supportsTypedPointers() const {
-  return false;
 }
 
 StringRef LLVMContext::getDefaultTargetCPU() {

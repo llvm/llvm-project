@@ -24,8 +24,8 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Pipe.h"
-#include "lldb/Host/Socket.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -202,10 +202,21 @@ void ConnectToRemote(MainLoop &mainloop,
   std::string url;
 
   if (connection_fd != SharedSocket::kInvalidFD) {
+#ifdef _WIN32
+    NativeSocket sockfd;
+    error = SharedSocket::GetNativeSocket(connection_fd, sockfd);
+    if (error.Fail()) {
+      llvm::errs() << llvm::formatv("error: GetNativeSocket failed: {0}\n",
+                                    error.AsCString());
+      exit(-1);
+    }
+    connection_up =
+        std::unique_ptr<Connection>(new ConnectionFileDescriptor(new TCPSocket(
+            sockfd, /*should_close=*/true, /*child_processes_inherit=*/false)));
+#else
     url = llvm::formatv("fd://{0}", connection_fd).str();
 
     // Create the connection.
-#if LLDB_ENABLE_POSIX && !defined _WIN32
     ::fcntl(connection_fd, F_SETFD, FD_CLOEXEC);
 #endif
   } else if (!host_and_port.empty()) {

@@ -174,11 +174,11 @@ static bool splitGlobals(Module &M) {
   // llvm.type.checked.load intrinsics, which indicates that splitting globals
   // may be beneficial.
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      &M, Intrinsic::type_checked_load_relative);
   if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
       (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()) &&
       (!TypeCheckedLoadRelativeFunc ||
