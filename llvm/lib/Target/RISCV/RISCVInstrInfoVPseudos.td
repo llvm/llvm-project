@@ -1150,7 +1150,6 @@ class VPseudoUnaryNoMaskGPROut :
 class VPseudoUnaryMaskGPROut :
       Pseudo<(outs GPR:$rd),
              (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
-      RISCVMaskedPseudo<MaskIdx=1>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1984,6 +1983,7 @@ multiclass VPseudoVPOP_M {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
     }
   }
@@ -1996,6 +1996,7 @@ multiclass VPseudoV1ST_M {
       def "_M_" #mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
     }
   }
