@@ -3861,22 +3861,21 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
     Names.erase(llvm::unique(Names), Names.end());
 
     for (const auto &[Idx, FS] : enumerate(Spellings)) {
-      if (Names.size() == 1) {
-        OS << "    if (";
-      } else {
+      OS << "    if (";
+      if (Names.size() > 1) {
         SmallVector<StringRef, 6> SameLenNames;
         llvm::copy_if(
             Names, std::back_inserter(SameLenNames),
             [&](StringRef N) { return N.size() == FS.name().size(); });
 
         if (SameLenNames.size() == 1) {
-          OS << "    if (Name.size() == " << FS.name().size() << " && ";
+          OS << "Name.size() == " << FS.name().size() << " && ";
         } else {
           // FIXME: We currently fall back to comparing entire strings if there
           // are 2 or more spelling names with the same length. This can be
           // optimized to check only for the the first differing character
           // between them instead.
-          OS << "    if (Name == \"" << FS.name() << "\""
+          OS << "Name == \"" << FS.name() << "\""
              << " && ";
         }
       }

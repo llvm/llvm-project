@@ -155,20 +155,24 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
-const llvm::StringMap<AttributeCommonInfo::Scope> ScopeMap = {
-    {"", AttributeCommonInfo::Scope::NONE},
-    {"clang", AttributeCommonInfo::Scope::CLANG},
-    {"gnu", AttributeCommonInfo::Scope::GNU},
-    {"msvc", AttributeCommonInfo::Scope::MSVC},
-    {"omp", AttributeCommonInfo::Scope::OMP},
-    {"hlsl", AttributeCommonInfo::Scope::HLSL},
-    {"gsl", AttributeCommonInfo::Scope::GSL},
-    {"riscv", AttributeCommonInfo::Scope::RISCV}};
+// Sorted list of attribute scope names
+static constexpr std::pair<StringRef, AttributeCommonInfo::Scope> ScopeList[] =
+    {{"", AttributeCommonInfo::Scope::NONE},
+     {"clang", AttributeCommonInfo::Scope::CLANG},
+     {"gnu", AttributeCommonInfo::Scope::GNU},
+     {"gsl", AttributeCommonInfo::Scope::GSL},
+     {"hlsl", AttributeCommonInfo::Scope::HLSL},
+     {"msvc", AttributeCommonInfo::Scope::MSVC},
+     {"omp", AttributeCommonInfo::Scope::OMP},
+     {"riscv", AttributeCommonInfo::Scope::RISCV}};
 
 AttributeCommonInfo::Scope
 getScopeFromNormalizedScopeName(StringRef ScopeName) {
-  auto It = ScopeMap.find(ScopeName);
-  assert(It != ScopeMap.end());
+  auto It = std::lower_bound(
+      std::begin(ScopeList), std::end(ScopeList), ScopeName,
+      [](const std::pair<StringRef, AttributeCommonInfo::Scope> &Element,
+         StringRef Value) { return Element.first < Value; });
+  assert(It != std::end(ScopeList));
 
   return It->second;
 }
