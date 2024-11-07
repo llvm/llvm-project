@@ -371,7 +371,7 @@ def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
 
 def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
   "FEAT_SVE_AES, FEAT_SVE_PMULL128",
-  "Enable SVE AES and quadword PMULL instructions", [FeatureAES]>;
+  "Enable SVE AES and quadword SVE polynomial multiply instructions", [FeatureAES]>;
 
 def AliasSVE2AES : ExtensionWithMArch<"sve2-aes", "ALIAS_SVE2AES", "",
   "An alias of +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
@@ -551,7 +551,7 @@ def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
   "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
 
 def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
-  "Enable Armv9.6-A SVE multi-vector AES and quadword PMULL instructions">;
+  "Enable Armv9.6-A SVE multi-vector AES and multi-vector quadword polynomial multiply instructions">;
 
 def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
   "Enable Armv9.6-A SVE BFloat16 scaling instructions">;
