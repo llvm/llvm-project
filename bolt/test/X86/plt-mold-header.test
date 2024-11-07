@@ -1,0 +1,7 @@
+# RUN: yaml2obj %p/Inputs/plt-mold-header.yaml &> %t.exe
+# RUN: llvm-bolt -use-mold %t.exe --print-cfg --print-only=main.* -o %t.out | FileCheck %s
+
+## Check that llvm-bolt correctly parses PLT header created by mold linker.
+## Without the '-use-mold' option, "BOLT-ERROR: unable to disassemble instruction in PLT section .plt at offset 0x10" will be reported.
+## The only call instruction in main() should be a call to printf() in PLT.
+CHECK:  callq "printf$plt

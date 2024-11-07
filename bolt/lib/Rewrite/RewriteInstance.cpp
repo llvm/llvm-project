@@ -1672,7 +1672,35 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
 
-  for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= SectionSize;
+  uint64_t EntryStartOffset = 0;
+  if (opts::UseMold) {
+    // The mold linker (https://github.com/rui314/mold/blob/v2.34.1/src/arch-x86-64.cc#L50)
+    // generates a unique format for the PLT.
+    // The first entry of the mold-style PLT is 32 bytes long, while the remaining entries
+    // are 16 bytes long. We need to parse the first entry with a special offset limit setting.
+    uint64_t HeaderSize = 32;
+    outs() << "BOLT-INFO: parsing PLT header for mold\n";
+    MCInst Instruction;
+    uint64_t InstrSize, InstrOffset = EntryStartOffset;
+    while (InstrOffset < HeaderSize) {
+      disassemblePLTInstruction(Section, InstrOffset, Instruction, InstrSize);
+      if (BC->MIB->isIndirectBranch(Instruction))
+        break;
+      InstrOffset += InstrSize;
+    }
+    uint64_t TargetAddress;
+    if (!BC->MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
+                                            SectionAddress + InstrOffset,
+                                            InstrSize)) {
+      errs() << "BOLT-ERROR: error evaluating PLT instruction for the mold header at offset 0x"
+                  << Twine::utohexstr(SectionAddress + InstrOffset) << '\n';
+      exit(1);
+    }
+    createPLTBinaryFunction(TargetAddress, SectionAddress, HeaderSize);
+    EntryStartOffset += HeaderSize;
+  }
+
+  for (uint64_t EntryOffset = EntryStartOffset; EntryOffset + EntrySize <= SectionSize;
        EntryOffset += EntrySize) {
     MCInst Instruction;
     uint64_t InstrSize, InstrOffset = EntryOffset;
