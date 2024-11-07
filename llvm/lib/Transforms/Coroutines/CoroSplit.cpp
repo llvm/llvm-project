@@ -2088,9 +2088,9 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
 
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
 
-  bool shouldCreateNoAllocVariant = !isNoSuspendCoroutine &&
-                                    Shape.ABI == coro::ABI::Switch &&
-                                    hasSafeElideCaller(F);
+  bool shouldCreateNoAllocVariant =
+      !isNoSuspendCoroutine && Shape.ABI == coro::ABI::Switch &&
+      hasSafeElideCaller(F) && !F.hasFnAttribute(llvm::Attribute::NoInline);
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.
