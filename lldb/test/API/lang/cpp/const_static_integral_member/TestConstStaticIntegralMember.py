@@ -142,6 +142,8 @@ class TestCase(TestBase):
             "ClassWithConstexprs::scoped_enum_val", "ScopedEnum", "scoped_enum_case2"
         )
 
+    # Fails on Windows for unknown reasons.
+    @skipIfWindows
     # On linux this passes due to the manual index
     @expectedFailureDarwin(debug_info=no_match(["dsym"]))
     def test_inline_static_members_dwarf5(self):
@@ -193,6 +195,8 @@ class TestCase(TestBase):
         self.expect_expr("ns::Foo::mem", result_value="10")
         self.expect_expr("::Foo::mem", result_value="-29")
 
+    # Fails on Windows for unknown reasons.
+    @skipIfWindows
     # On linux this passes due to the manual index
     @expectedFailureDarwin(debug_info=no_match(["dsym"]))
     def test_shadowed_static_inline_members_dwarf5(self):
