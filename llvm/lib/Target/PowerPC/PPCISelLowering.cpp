@@ -5713,8 +5713,8 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
                   SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass,
                   SDValue Glue, SDValue Chain, SDValue &Callee, int SPDiff,
                   const PPCSubtarget &Subtarget) {
-  // MVT for a general purpose register.
   const bool IsPPC64 = Subtarget.isPPC64();
+  // MVT for a general purpose register.
   const MVT RegVT = Subtarget.getScalarIntVT();
 
   // First operand is always the chain.
