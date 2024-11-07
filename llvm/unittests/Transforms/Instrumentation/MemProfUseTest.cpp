@@ -18,6 +18,10 @@
 
 namespace {
 using namespace llvm;
+using namespace llvm::memprof;
+using testing::FieldsAre;
+using testing::Pair;
+using testing::SizeIs;
 
 TEST(MemProf, ExtractDirectCallsFromIR) {
   // The following IR is generated from:
@@ -76,28 +80,25 @@ declare !dbg !19 void @_Z2f3v()
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   ASSERT_TRUE(M);
 
-  auto Calls = memprof::extractCallsFromIR(*M);
+  auto Calls = extractCallsFromIR(*M);
 
   // Expect exactly one caller.
-  ASSERT_THAT(Calls, testing::SizeIs(1));
+  ASSERT_THAT(Calls, SizeIs(1));
 
   auto It = Calls.begin();
   ASSERT_NE(It, Calls.end());
 
   const auto &[CallerGUID, CallSites] = *It;
-  EXPECT_EQ(CallerGUID, memprof::IndexedMemProfRecord::getGUID("_Z3foov"));
-  ASSERT_THAT(CallSites, testing::SizeIs(3));
+  EXPECT_EQ(CallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
+  ASSERT_THAT(CallSites, SizeIs(3));
 
   // Verify that call sites show up in the ascending order of their source
   // locations.
   EXPECT_THAT(CallSites[0],
-              testing::Pair(testing::FieldsAre(1U, 3U),
-                            memprof::IndexedMemProfRecord::getGUID("_Z2f1v")));
+              Pair(FieldsAre(1U, 3U), IndexedMemProfRecord::getGUID("_Z2f1v")));
   EXPECT_THAT(CallSites[1],
-              testing::Pair(testing::FieldsAre(2U, 3U),
-                            memprof::IndexedMemProfRecord::getGUID("_Z2f2v")));
+              Pair(FieldsAre(2U, 3U), IndexedMemProfRecord::getGUID("_Z2f2v")));
   EXPECT_THAT(CallSites[2],
-              testing::Pair(testing::FieldsAre(2U, 9U),
-                            memprof::IndexedMemProfRecord::getGUID("_Z2f3v")));
+              Pair(FieldsAre(2U, 9U), IndexedMemProfRecord::getGUID("_Z2f3v")));
 }
 } // namespace

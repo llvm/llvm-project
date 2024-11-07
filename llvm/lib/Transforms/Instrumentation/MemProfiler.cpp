@@ -819,6 +819,7 @@ memprof::extractCallsFromIR(Module &M) {
 
         auto *CB = dyn_cast<CallBase>(&I);
         auto *CalledFunction = CB->getCalledFunction();
+        // Disregard indirect calls and intrinsics.
         if (!CalledFunction || CalledFunction->isIntrinsic())
           continue;
 
