@@ -13,24 +13,20 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_addc_u32 s25, s25, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s2, 0
-; CHECK-NEXT:    s_cselect_b64 s[16:17], -1, 0
+; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s2, 8
-; CHECK-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s2, 16
-; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 24
 ; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; CHECK-NEXT:    s_xor_b64 s[4:5], s[8:9], -1
+; CHECK-NEXT:    s_bitcmp1_b32 s2, 16
+; CHECK-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s0, 24
+; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; CHECK-NEXT:    s_xor_b64 s[2:3], s[6:7], -1
 ; CHECK-NEXT:    s_bitcmp1_b32 s1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[12:13], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s14, 8
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[16:17]
 ; CHECK-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[10:11]
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
+; CHECK-NEXT:    s_and_b64 s[0:1], exec, s[2:3]
+; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
@@ -41,88 +37,103 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:  .LBB0_2: ; %Flow7
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[22:23]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_12
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_13
 ; CHECK-NEXT:  .LBB0_3: ; %bb7
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[2:3]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
+; CHECK-NEXT:    s_and_b64 s[16:17], s[10:11], exec
+; CHECK-NEXT:    s_cselect_b32 s16, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s16, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.4: ; %bb8
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    s_mov_b64 vcc, s[4:5]
+; CHECK-NEXT:    s_mov_b64 vcc, s[0:1]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_6
 ; CHECK-NEXT:  ; %bb.5: ; %bb9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[16:17], 0
 ; CHECK-NEXT:    s_mov_b64 s[18:19], -1
-; CHECK-NEXT:    s_mov_b64 s[22:23], s[10:11]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_7
-; CHECK-NEXT:    s_branch .LBB0_8
+; CHECK-NEXT:    s_mov_b64 s[22:23], s[8:9]
+; CHECK-NEXT:    s_branch .LBB0_7
 ; CHECK-NEXT:  .LBB0_6: ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[16:17], -1
 ; CHECK-NEXT:    s_mov_b64 s[18:19], 0
 ; CHECK-NEXT:    s_mov_b64 s[22:23], 0
-; CHECK-NEXT:  .LBB0_7: ; %bb10
+; CHECK-NEXT:  .LBB0_7: ; %Flow8
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    s_and_b64 s[20:21], s[16:17], exec
+; CHECK-NEXT:    s_cselect_b32 s20, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s20, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_9
+; CHECK-NEXT:  ; %bb.8: ; %bb10
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[18:19], -1
 ; CHECK-NEXT:    s_mov_b64 s[16:17], 0
 ; CHECK-NEXT:    s_mov_b64 s[22:23], s[14:15]
-; CHECK-NEXT:  .LBB0_8: ; %Flow9
+; CHECK-NEXT:  .LBB0_9: ; %Flow9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    s_and_b64 s[22:23], s[22:23], exec
+; CHECK-NEXT:    s_cselect_b32 s22, 1, 0
 ; CHECK-NEXT:    s_mov_b64 s[20:21], -1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[22:23]
+; CHECK-NEXT:    s_cmp_lg_u32 s22, 1
 ; CHECK-NEXT:    s_mov_b64 s[22:23], -1
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
-; CHECK-NEXT:  ; %bb.9: ; %bb13
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
+; CHECK-NEXT:  ; %bb.10: ; %bb13
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[16:17], 0
 ; CHECK-NEXT:    s_mov_b64 s[20:21], 0
-; CHECK-NEXT:    s_mov_b64 vcc, s[6:7]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
-; CHECK-NEXT:  ; %bb.10: ; %bb16
+; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_12
+; CHECK-NEXT:  ; %bb.11: ; %bb16
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[20:21], -1
 ; CHECK-NEXT:    s_mov_b64 s[22:23], s[12:13]
-; CHECK-NEXT:  .LBB0_11: ; %Flow11
+; CHECK-NEXT:  .LBB0_12: ; %Flow11
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[18:19], 0
 ; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_12: ; %loop.exit.guard6
+; CHECK-NEXT:  .LBB0_13: ; %loop.exit.guard6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_xor_b64 s[22:23], s[20:21], -1
 ; CHECK-NEXT:    s_mov_b64 s[20:21], -1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[22:23]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_16
-; CHECK-NEXT:  ; %bb.13: ; %bb14
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_17
+; CHECK-NEXT:  ; %bb.14: ; %bb14
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_15
-; CHECK-NEXT:  ; %bb.14: ; %bb15
+; CHECK-NEXT:    s_and_b64 s[20:21], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s20, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s20, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_16
+; CHECK-NEXT:  ; %bb.15: ; %bb15
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[24:27], 0
-; CHECK-NEXT:  .LBB0_15: ; %Flow
+; CHECK-NEXT:  .LBB0_16: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[20:21], 0
-; CHECK-NEXT:  .LBB0_16: ; %Flow13
+; CHECK-NEXT:  .LBB0_17: ; %Flow13
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_3
-; CHECK-NEXT:  ; %bb.17: ; %loop.exit.guard
+; CHECK-NEXT:    s_and_b64 s[20:21], s[20:21], exec
+; CHECK-NEXT:    s_cselect_b32 s20, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s20, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3
+; CHECK-NEXT:  ; %bb.18: ; %loop.exit.guard
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[16:17]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_22
-; CHECK-NEXT:  ; %bb.18: ; %loop.exit.guard5
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[18:19]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_23
-; CHECK-NEXT:  ; %bb.19: ; %bb17
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_21
-; CHECK-NEXT:  ; %bb.20: ; %bb19
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; CHECK-NEXT:  ; %bb.19: ; %loop.exit.guard5
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[18:19]
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_24
+; CHECK-NEXT:  ; %bb.20: ; %bb17
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_22
-; CHECK-NEXT:  .LBB0_21: ; %bb18
+; CHECK-NEXT:  ; %bb.21: ; %bb19
+; CHECK-NEXT:    s_and_b64 s[0:1], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_23
+; CHECK-NEXT:  .LBB0_22: ; %bb18
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB0_22: ; %bb20
-; CHECK-NEXT:  .LBB0_23: ; %bb12
+; CHECK-NEXT:  .LBB0_23: ; %bb20
+; CHECK-NEXT:  .LBB0_24: ; %bb12
 bb:
   br label %bb6
 

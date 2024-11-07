@@ -47,7 +47,7 @@ declare float @llvm.amdgcn.rcp.f32(float)
 ; GCN-LABEL: {{^}}undef_v6f32:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v6f32(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -66,7 +66,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v6i32:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v6i32(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -86,7 +86,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v5f32:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v5f32(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -105,7 +105,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v5i32:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v5i32(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -125,7 +125,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v3f64:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v3f64(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -144,7 +144,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v3i64:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v3i64(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -164,7 +164,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v4f16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v4f16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -183,7 +183,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v4i16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v4i16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -203,7 +203,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v2f16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v2f16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -222,7 +222,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v2i16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v2i16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -262,7 +262,7 @@ define void @inf_loop_undef_vector(<6 x float> %arg, float %arg1, i64 %arg2) {
 ; GCN-LABEL: {{^}}undef_bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -284,7 +284,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v2bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v2bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -306,7 +306,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v3bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v3bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -328,7 +328,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v4bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v4bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -350,7 +350,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v6bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v6bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -372,7 +372,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v8bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v8bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -394,7 +394,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v16bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v16bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop
@@ -416,7 +416,7 @@ ret:
 ; GCN-LABEL: {{^}}undef_v32bf16:
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 define amdgpu_kernel void @undef_v32bf16(ptr addrspace(3) %ptr, i1 %cond) {
 entry:
   br label %loop

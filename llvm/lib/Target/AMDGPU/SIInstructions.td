@@ -2343,14 +2343,30 @@ def : GCNPat <
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), i1:$src0)
 >;
 
-class Ext32Pat <SDNode ext> : GCNPat <
-  (i32 (ext i1:$src0)),
-  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                     /*src1mod*/(i32 0), /*src1*/(i32 1), i1:$src0)
+
+class UniformExt32<SDNode ext> : PatFrag<
+  (ops node:$src),
+  (i32 (ext $src)),
+  [{ return !N->isDivergent(); }]>;
+
+class DivergentExt32<SDNode ext> : PatFrag<
+  (ops node:$src),
+  (i32 (ext $src))>; 
+
+class UniformExt32Pat<SDNode ext> : GCNPat<
+  (UniformExt32<ext> SCC), 
+  (S_CSELECT_B32 (i32 1), (i32 0))  
 >;
 
-def : Ext32Pat <zext>;
-def : Ext32Pat <anyext>;
+class DivergentExt32Pat<SDNode ext> : GCNPat<
+  (DivergentExt32<ext> i1:$src),
+  (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                     /*src1mod*/(i32 0), /*src1*/(i32 1), i1:$src)>;
+
+def : UniformExt32Pat<zext>;
+def : UniformExt32Pat<anyext>;
+def : DivergentExt32Pat<zext>;
+def : DivergentExt32Pat<anyext>;
 
 // The multiplication scales from [0,1) to the unsigned integer range,
 // rounding down a bit to avoid unwanted overflow.

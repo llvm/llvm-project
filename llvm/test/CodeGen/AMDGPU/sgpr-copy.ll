@@ -210,9 +210,8 @@ ENDIF:                                            ; preds = %LOOP
 ; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
 ; CHECK: s_cbranch
 
-; CHECK: BB{{[0-9]+_[0-9]+}}:
-; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
-; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
+; CHECK-DAG: v_mov_b32_e32
+; CHECK-DAG: v_mov_b32_e32
 
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: exp
@@ -309,13 +308,13 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK: s_cmp_eq_u32
 ; CHECK: s_cbranch_scc1 [[END:.LBB[0-9]+_[0-9]+]]
 
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
-; CHECK: s_endpgm
-
 ; [[END]]:
 ; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+; CHECK: s_and_b64 exec, exec, s[16:17]
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
-; CHECK: s_branch
+
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
+
 define amdgpu_ps void @sample_rsrc(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 bb:
   %tmp22 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !3

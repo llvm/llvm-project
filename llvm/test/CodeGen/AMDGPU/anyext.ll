@@ -15,8 +15,8 @@ define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GCN-NEXT:    s_cselect_b32 s4, 1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -28,10 +28,9 @@ define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX8-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GFX8-NEXT:    v_not_b32_e32 v0, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX8-NEXT:    s_andn2_b32 s4, 1, s4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -43,10 +42,9 @@ define amdgpu_kernel void @anyext_i1_i32(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GFX9-NEXT:    v_not_b32_e32 v0, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX9-NEXT:    s_andn2_b32 s4, 1, s4
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 entry:
@@ -155,7 +153,9 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x8001, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GCN-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GCN-NEXT:    s_cselect_b32 s0, 1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;

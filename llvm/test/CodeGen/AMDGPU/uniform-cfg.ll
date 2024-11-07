@@ -505,9 +505,9 @@ define amdgpu_kernel void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, p
 ; SI-NEXT:  .LBB9_2: ; %bb9
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB9_3: ; %bb7
-; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xb
-; SI-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
+; SI-NEXT:    s_cselect_b32 s4, 1, 0
+; SI-NEXT:    v_subrev_i32_e32 v0, vcc, s4, v0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -528,9 +528,9 @@ define amdgpu_kernel void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, p
 ; VI-NEXT:  .LBB9_2: ; %bb9
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB9_3: ; %bb7
-; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x2c
-; VI-NEXT:    v_sub_u32_e32 v0, vcc, v0, v1
+; VI-NEXT:    s_cselect_b32 s4, 1, 0
+; VI-NEXT:    v_subrev_u32_e32 v0, vcc, s4, v0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)

@@ -27,11 +27,20 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:  ; %bb.2: ; %loop-memcpy-residual-header
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; CHECK-NEXT:    s_branch .LBB0_5
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
+; CHECK-NEXT:    s_branch .LBB0_7
 ; CHECK-NEXT:  .LBB0_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[6:7], 6, v[2:3]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_7
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_7
 ; CHECK-NEXT:  .LBB0_5: ; %loop-memcpy-residual.preheader
 ; CHECK-NEXT:    v_or_b32_e32 v2, 32, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v5
@@ -66,8 +75,10 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:  .LBB0_9: ; %Flow16
 ; CHECK-NEXT:    ; in Loop: Header=BB0_10 Depth=1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_18
+; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
+; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_18
 ; CHECK-NEXT:  .LBB0_10: ; %while.cond
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_12 Depth 2
@@ -155,11 +166,20 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_4
 ; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    s_mov_b64 s[6:7], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; CHECK-NEXT:    s_branch .LBB1_5
+; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_5
+; CHECK-NEXT:    s_branch .LBB1_8
 ; CHECK-NEXT:  .LBB1_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
-; CHECK-NEXT:    s_cbranch_execnz .LBB1_8
+; CHECK-NEXT:    s_mov_b64 s[6:7], 0
+; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_8
 ; CHECK-NEXT:  .LBB1_5: ; %loop-memcpy-residual.preheader
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
