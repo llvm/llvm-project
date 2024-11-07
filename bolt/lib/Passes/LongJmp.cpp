@@ -877,6 +877,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
                << " of " << BF << " in " << NumIterations << " iterations\n";
       }
     });
+    (void)NumIterations;
   }
 
   // Add trampoline blocks from all fragments to the layout.
