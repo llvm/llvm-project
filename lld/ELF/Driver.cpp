@@ -88,7 +88,7 @@ void elf::errorOrWarn(const Twine &msg) {
   if (ctx.arg.noinhibitExec)
     warn(msg);
   else
-    error(msg);
+    ErrAlways(ctx) << msg;
 }
 
 ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
@@ -235,7 +235,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
-    error("unknown emulation: " + emul);
+    ErrAlways(ctx) << "unknown emulation: " << emul;
   if (ret.second == EM_MSP430)
     osabi = ELFOSABI_STANDALONE;
   else if (ret.second == EM_AMDGPU)
@@ -355,7 +355,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   }
   case file_magic::elf_shared_object: {
     if (ctx.arg.isStatic) {
-      error("attempted static link of dynamic object " + path);
+      ErrAlways(ctx) << "attempted static link of dynamic object " << path;
       return;
     }
 
@@ -407,106 +407,109 @@ static void checkOptions(Ctx &ctx) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (ctx.arg.emachine == EM_MIPS && ctx.arg.gnuHash)
-    error("the .gnu.hash section is not compatible with the MIPS target");
+    ErrAlways(ctx)
+        << "the .gnu.hash section is not compatible with the MIPS target";
 
   if (ctx.arg.emachine == EM_ARM) {
     if (!ctx.arg.cmseImplib) {
       if (!ctx.arg.cmseInputLib.empty())
-        error("--in-implib may not be used without --cmse-implib");
+        ErrAlways(ctx) << "--in-implib may not be used without --cmse-implib";
       if (!ctx.arg.cmseOutputLib.empty())
-        error("--out-implib may not be used without --cmse-implib");
+        ErrAlways(ctx) << "--out-implib may not be used without --cmse-implib";
     }
   } else {
     if (ctx.arg.cmseImplib)
-      error("--cmse-implib is only supported on ARM targets");
+      ErrAlways(ctx) << "--cmse-implib is only supported on ARM targets";
     if (!ctx.arg.cmseInputLib.empty())
-      error("--in-implib is only supported on ARM targets");
+      ErrAlways(ctx) << "--in-implib is only supported on ARM targets";
     if (!ctx.arg.cmseOutputLib.empty())
-      error("--out-implib is only supported on ARM targets");
+      ErrAlways(ctx) << "--out-implib is only supported on ARM targets";
   }
 
   if (ctx.arg.fixCortexA53Errata843419 && ctx.arg.emachine != EM_AARCH64)
-    error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
+    ErrAlways(ctx)
+        << "--fix-cortex-a53-843419 is only supported on AArch64 targets";
 
   if (ctx.arg.fixCortexA8 && ctx.arg.emachine != EM_ARM)
-    error("--fix-cortex-a8 is only supported on ARM targets");
+    ErrAlways(ctx) << "--fix-cortex-a8 is only supported on ARM targets";
 
   if (ctx.arg.armBe8 && ctx.arg.emachine != EM_ARM)
-    error("--be8 is only supported on ARM targets");
+    ErrAlways(ctx) << "--be8 is only supported on ARM targets";
 
   if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
-    error("--fix-cortex-a8 is not supported on big endian targets");
+    ErrAlways(ctx) << "--fix-cortex-a8 is not supported on big endian targets";
 
   if (ctx.arg.tocOptimize && ctx.arg.emachine != EM_PPC64)
-    error("--toc-optimize is only supported on PowerPC64 targets");
+    ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
 
   if (ctx.arg.pcRelOptimize && ctx.arg.emachine != EM_PPC64)
-    error("--pcrel-optimize is only supported on PowerPC64 targets");
+    ErrAlways(ctx) << "--pcrel-optimize is only supported on PowerPC64 targets";
 
   if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
-    error("--relax-gp is only supported on RISC-V targets");
+    ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
 
   if (ctx.arg.pie && ctx.arg.shared)
-    error("-shared and -pie may not be used together");
+    ErrAlways(ctx) << "-shared and -pie may not be used together";
 
   if (!ctx.arg.shared && !ctx.arg.filterList.empty())
-    error("-F may not be used without -shared");
+    ErrAlways(ctx) << "-F may not be used without -shared";
 
   if (!ctx.arg.shared && !ctx.arg.auxiliaryList.empty())
-    error("-f may not be used without -shared");
+    ErrAlways(ctx) << "-f may not be used without -shared";
 
   if (ctx.arg.strip == StripPolicy::All && ctx.arg.emitRelocs)
-    error("--strip-all and --emit-relocs may not be used together");
+    ErrAlways(ctx) << "--strip-all and --emit-relocs may not be used together";
 
   if (ctx.arg.zText && ctx.arg.zIfuncNoplt)
-    error("-z text and -z ifunc-noplt may not be used together");
+    ErrAlways(ctx) << "-z text and -z ifunc-noplt may not be used together";
 
   if (ctx.arg.relocatable) {
     if (ctx.arg.shared)
-      error("-r and -shared may not be used together");
+      ErrAlways(ctx) << "-r and -shared may not be used together";
     if (ctx.arg.gdbIndex)
-      error("-r and --gdb-index may not be used together");
+      ErrAlways(ctx) << "-r and --gdb-index may not be used together";
     if (ctx.arg.icf != ICFLevel::None)
-      error("-r and --icf may not be used together");
+      ErrAlways(ctx) << "-r and --icf may not be used together";
     if (ctx.arg.pie)
-      error("-r and -pie may not be used together");
+      ErrAlways(ctx) << "-r and -pie may not be used together";
     if (ctx.arg.exportDynamic)
-      error("-r and --export-dynamic may not be used together");
+      ErrAlways(ctx) << "-r and --export-dynamic may not be used together";
     if (ctx.arg.debugNames)
-      error("-r and --debug-names may not be used together");
+      ErrAlways(ctx) << "-r and --debug-names may not be used together";
     if (!ctx.arg.zSectionHeader)
-      error("-r and -z nosectionheader may not be used together");
+      ErrAlways(ctx) << "-r and -z nosectionheader may not be used together";
   }
 
   if (ctx.arg.executeOnly) {
     if (ctx.arg.emachine != EM_AARCH64)
-      error("--execute-only is only supported on AArch64 targets");
+      ErrAlways(ctx) << "--execute-only is only supported on AArch64 targets";
 
     if (ctx.arg.singleRoRx && !ctx.script->hasSectionsCommand)
-      error("--execute-only and --no-rosegment cannot be used together");
+      ErrAlways(ctx)
+          << "--execute-only and --no-rosegment cannot be used together";
   }
 
   if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
-    error("-z force-ibt may not be used with -z retpolineplt");
+    ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
 
   if (ctx.arg.emachine != EM_AARCH64) {
     if (ctx.arg.zPacPlt)
-      error("-z pac-plt only supported on AArch64");
+      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
     if (ctx.arg.zForceBti)
-      error("-z force-bti only supported on AArch64");
+      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
     if (ctx.arg.zBtiReport != "none")
-      error("-z bti-report only supported on AArch64");
+      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
     if (ctx.arg.zPauthReport != "none")
-      error("-z pauth-report only supported on AArch64");
+      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
     if (ctx.arg.zGcsReport != "none")
-      error("-z gcs-report only supported on AArch64");
+      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
-      error("-z gcs only supported on AArch64");
+      ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
       ctx.arg.zCetReport != "none")
-    error("-z cet-report only supported on X86 and X86_64");
+    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
@@ -589,8 +592,8 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
       else if (kv.second == "protected")
         ret = STV_PROTECTED;
       else
-        error("unknown -z start-stop-visibility= value: " +
-              StringRef(kv.second));
+        ErrAlways(ctx) << "unknown -z start-stop-visibility= value: "
+                       << StringRef(kv.second);
     }
   }
   return ret;
@@ -609,7 +612,7 @@ static GcsPolicy getZGcs(opt::InputArgList &args) {
       else if (kv.second == "always")
         ret = GcsPolicy::Always;
       else
-        error("unknown -z gcs= value: " + kv.second);
+        ErrAlways(ctx) << "unknown -z gcs= value: " << kv.second;
     }
   }
   return ret;
@@ -680,7 +683,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       if (!ltoSampleProfile.empty())
         readFile(ctx, ltoSampleProfile);
     } else {
-      error("--reproduce: " + toString(errOrWriter.takeError()));
+      ErrAlways(ctx) << "--reproduce: " << toString(errOrWriter.takeError());
     }
   }
 
@@ -755,7 +758,7 @@ static void setUnresolvedSymbolPolicy(Ctx &ctx, opt::InputArgList &args) {
         diagRegular = true;
         diagShlib = true;
       } else {
-        error("unknown --unresolved-symbols value: " + s);
+        ErrAlways(ctx) << "unknown --unresolved-symbols value: " << s;
       }
       break;
     }
@@ -794,7 +797,7 @@ static Target2Policy getTarget2(opt::InputArgList &args) {
     return Target2Policy::Abs;
   if (s == "got-rel")
     return Target2Policy::GotRel;
-  error("unknown --target2 option: " + s);
+  ErrAlways(ctx) << "unknown --target2 option: " << s;
   return Target2Policy::GotRel;
 }
 
@@ -803,7 +806,7 @@ static bool isOutputFormatBinary(opt::InputArgList &args) {
   if (s == "binary")
     return true;
   if (!s.starts_with("elf"))
-    error("unknown --oformat value: " + s);
+    ErrAlways(ctx) << "unknown --oformat value: " << s;
   return false;
 }
 
@@ -850,8 +853,8 @@ static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
   if (memtagModeArg == "none")
     return ELF::NT_MEMTAG_LEVEL_NONE;
 
-  error("unknown --android-memtag-mode value: \"" + memtagModeArg +
-        "\", should be one of {async, sync, none}");
+  ErrAlways(ctx) << "unknown --android-memtag-mode value: \"" << memtagModeArg
+                 << "\", should be one of {async, sync, none}";
   return ELF::NT_MEMTAG_LEVEL_NONE;
 }
 
@@ -883,7 +886,7 @@ static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
   uint64_t va = 0;
   s.consume_front("0x");
   if (!to_integer(s, va, 16))
-    error("invalid argument: " + arg.getAsString(args));
+    ErrAlways(ctx) << "invalid argument: " << arg.getAsString(args);
   return va;
 }
 
@@ -912,7 +915,7 @@ static SortSectionPolicy getSortSection(opt::InputArgList &args) {
   if (s == "name")
     return SortSectionPolicy::Name;
   if (!s.empty())
-    error("unknown --sort-section rule: " + s);
+    ErrAlways(ctx) << "unknown --sort-section rule: " << s;
   return SortSectionPolicy::Default;
 }
 
@@ -923,7 +926,7 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
   if (s == "error")
     return OrphanHandlingPolicy::Error;
   if (s != "place")
-    error("unknown --orphan-handling mode: " + s);
+    ErrAlways(ctx) << "unknown --orphan-handling mode: " << s;
   return OrphanHandlingPolicy::Place;
 }
 
@@ -949,7 +952,7 @@ getBuildId(opt::InputArgList &args) {
     return {BuildIdKind::Hexstring, parseHex(s.substr(2))};
 
   if (s != "none")
-    error("unknown --build-id style: " + s);
+    ErrAlways(ctx) << "unknown --build-id style: " << s;
   return {BuildIdKind::None, {}};
 }
 
@@ -963,7 +966,7 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &args) {
     return {true, true};
 
   if (s != "none")
-    error("unknown --pack-dyn-relocs format: " + s);
+    ErrAlways(ctx) << "unknown --pack-dyn-relocs format: " << s;
   return {false, false};
 }
 
@@ -994,7 +997,7 @@ static void readCallGraph(Ctx &ctx, MemoryBufferRef mb) {
     uint64_t count;
 
     if (fields.size() != 3 || !to_integer(fields[2], count)) {
-      error(mb.getBufferIdentifier() + ": parse error");
+      ErrAlways(ctx) << mb.getBufferIdentifier() << ": parse error";
       return;
     }
 
@@ -1125,12 +1128,14 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
   for (auto *arg : args.filtered(OPT_lto_known_safe_vtables)) {
     StringRef knownSafeName = arg->getValue();
     if (!knownSafeName.consume_front("_ZTV"))
-      error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
-            "but got " +
-            knownSafeName);
+      ErrAlways(ctx)
+          << "--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
+             "but got "
+          << knownSafeName;
     Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
     if (!pat)
-      error("--lto-known-safe-vtables=: " + toString(pat.takeError()));
+      ErrAlways(ctx) << "--lto-known-safe-vtables=: "
+                     << toString(pat.takeError());
     vtableSymbolsWithNoRTTI.remove_if(
         [&](StringRef s) { return pat->match(s); });
   }
@@ -1152,7 +1157,7 @@ static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
   if (s == "cdsort")
     return CGProfileSortKind::Cdsort;
   if (s != "none")
-    error("unknown --call-graph-profile-sort= value: " + s);
+    ErrAlways(ctx) << "unknown --call-graph-profile-sort= value: " << s;
   return CGProfileSortKind::None;
 }
 
@@ -1163,10 +1168,10 @@ static DebugCompressionType getCompressionType(StringRef s, StringRef option) {
                                   .Default(DebugCompressionType::None);
   if (type == DebugCompressionType::None) {
     if (s != "none")
-      error("unknown " + option + " value: " + s);
+      ErrAlways(ctx) << "unknown " << option << " value: " << s;
   } else if (const char *reason = compression::getReasonIfUnsupported(
                  compression::formatFor(type))) {
-    error(option + ": " + reason);
+    ErrAlways(ctx) << option << ": " << reason;
   }
   return type;
 }
@@ -1186,7 +1191,8 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
   StringRef s = arg->getValue();
   std::pair<StringRef, StringRef> ret = s.split(';');
   if (ret.second.empty())
-    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
+    ErrAlways(ctx) << getAliasSpelling(arg)
+                   << " expects 'old;new' format, but got " << s;
   return ret;
 }
 
@@ -1235,7 +1241,7 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  error(msg + ": " + StringRef(err).trim());
+  ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
 
 // Checks the parameter of the bti-report and cet-report options.
@@ -1248,7 +1254,7 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   SmallVector<StringRef, 0> fields;
   line.split(fields, '=');
   if (fields.size() != 2 || fields[1].empty()) {
-    error(location + ": parse error, not 'from-glob=to-file'");
+    ErrAlways(ctx) << location << ": parse error, not 'from-glob=to-file'";
     return true;
   }
   if (!hasWildcard(fields[0]))
@@ -1256,7 +1262,8 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   else if (Expected<GlobPattern> pat = GlobPattern::create(fields[0]))
     ctx.arg.remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
   else {
-    error(location + ": " + toString(pat.takeError()) + ": " + fields[0]);
+    ErrAlways(ctx) << location << ": " << toString(pat.takeError()) << ": "
+                   << fields[0];
     return true;
   }
   return false;
@@ -1367,13 +1374,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                    OPT_no_lto_validate_all_vtables_have_type_infos, false);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
-    error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
+    ErrAlways(ctx) << "invalid optimization level for LTO: "
+                   << Twine(ctx.arg.ltoo);
   unsigned ltoCgo =
       args::getInteger(args, OPT_lto_CGO, args::getCGOptLevel(ctx.arg.ltoo));
   if (auto level = CodeGenOpt::getLevel(ltoCgo))
     ctx.arg.ltoCgo = *level;
   else
-    error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
+    ErrAlways(ctx) << "invalid codegen optimization level for LTO: "
+                   << Twine(ltoCgo);
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
@@ -1403,8 +1412,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
     auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
     if (!resultOrErr)
-      error(arg->getSpelling() + ": invalid argument '" + arg->getValue() +
-            "', only integer or 'auto' is supported");
+      ErrAlways(ctx) << arg->getSpelling() << ": invalid argument '"
+                     << arg->getValue()
+                     << "', only integer or 'auto' is supported";
     else
       ctx.arg.optRemarksHotnessThreshold = *resultOrErr;
   }
@@ -1442,7 +1452,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (llvm::is_contained(saveTempsValues, s))
         ctx.arg.saveTempsArgs.insert(s);
       else
-        error("unknown --save-temps value: " + s);
+        ErrAlways(ctx) << "unknown --save-temps value: " << s;
     }
   }
 
@@ -1478,16 +1488,17 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
   if (ctx.arg.thinLTOEmitIndexFiles && !ctx.arg.thinLTOIndexOnly) {
     if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
-      error("--thinlto-object-suffix-replace is not supported with "
-            "--thinlto-emit-index-files");
+      ErrAlways(ctx) << "--thinlto-object-suffix-replace is not supported with "
+                        "--thinlto-emit-index-files";
     else if (args.hasArg(OPT_thinlto_prefix_replace_eq))
-      error("--thinlto-prefix-replace is not supported with "
-            "--thinlto-emit-index-files");
+      ErrAlways(ctx) << "--thinlto-prefix-replace is not supported with "
+                        "--thinlto-emit-index-files";
   }
   if (!ctx.arg.thinLTOPrefixReplaceNativeObject.empty() &&
       ctx.arg.thinLTOIndexOnlyArg.empty()) {
-    error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
-          "--thinlto-index-only=");
+    ErrAlways(ctx)
+        << "--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
+           "--thinlto-index-only=";
   }
   ctx.arg.thinLTOModulesToCompile =
       args::getStrings(args, OPT_thinlto_single_module_eq);
@@ -1568,18 +1579,20 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     constexpr StringRef errPrefix = "--shuffle-sections=: ";
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first.empty() || kv.second.empty()) {
-      error(errPrefix + "expected <section_glob>=<seed>, but got '" +
-            arg->getValue() + "'");
+      ErrAlways(ctx) << errPrefix << "expected <section_glob>=<seed>, but got '"
+                     << arg->getValue() << "'";
       continue;
     }
     // Signed so that <section_glob>=-1 is allowed.
     int64_t v;
     if (!to_integer(kv.second, v))
-      error(errPrefix + "expected an integer, but got '" + kv.second + "'");
+      ErrAlways(ctx) << errPrefix << "expected an integer, but got '"
+                     << kv.second << "'";
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       ctx.arg.shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
     else
-      error(errPrefix + toString(pat.takeError()) + ": " + kv.first);
+      ErrAlways(ctx) << errPrefix << toString(pat.takeError()) << ": "
+                     << kv.first;
   }
 
   auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
@@ -1594,8 +1607,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        error(Twine("-z ") + reportArg.first + "= parameter " + option.second +
-              " is not recognized");
+        ErrAlways(ctx) << Twine("-z ") << reportArg.first << "= parameter "
+                       << option.second << " is not recognized";
         continue;
       }
       *reportArg.second = option.second;
@@ -1606,8 +1619,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     SmallVector<StringRef, 0> fields;
     StringRef(arg->getValue()).split(fields, '=');
     if (fields.size() != 2 || fields[1].empty()) {
-      error(arg->getSpelling() +
-            ": parse error, not 'section-glob=[none|zlib|zstd]'");
+      ErrAlways(ctx) << arg->getSpelling()
+                     << ": parse error, not 'section-glob=[none|zlib|zstd]'";
       continue;
     }
     auto [typeStr, levelStr] = fields[1].split(':');
@@ -1615,14 +1628,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     unsigned level = 0;
     if (fields[1].size() != typeStr.size() &&
         !llvm::to_integer(levelStr, level)) {
-      error(arg->getSpelling() +
-            ": expected a non-negative integer compression level, but got '" +
-            levelStr + "'");
+      ErrAlways(ctx)
+          << arg->getSpelling()
+          << ": expected a non-negative integer compression level, but got '"
+          << levelStr << "'";
     }
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
       ctx.arg.compressSections.emplace_back(std::move(*pat), type, level);
     } else {
-      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      ErrAlways(ctx) << arg->getSpelling() << ": " << toString(pat.takeError());
       continue;
     }
   }
@@ -1636,17 +1650,18 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     constexpr StringRef errPrefix = "-z dead-reloc-in-nonalloc=: ";
     std::pair<StringRef, StringRef> kv = option.second.split('=');
     if (kv.first.empty() || kv.second.empty()) {
-      error(errPrefix + "expected <section_glob>=<value>");
+      ErrAlways(ctx) << errPrefix << "expected <section_glob>=<value>";
       continue;
     }
     uint64_t v;
     if (!to_integer(kv.second, v))
-      error(errPrefix + "expected a non-negative integer, but got '" +
-            kv.second + "'");
+      ErrAlways(ctx) << errPrefix
+                     << "expected a non-negative integer, but got '"
+                     << kv.second << "'";
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       ctx.arg.deadRelocInNonAlloc.emplace_back(std::move(*pat), v);
     else
-      error(errPrefix + toString(pat.takeError()) + ": " + kv.first);
+      ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
   cl::ResetAllOptionOccurrences();
@@ -1667,8 +1682,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
     StringRef v(arg->getValue());
     if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
-      error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
-            "'");
+      ErrAlways(ctx) << arg->getSpelling() << ": unknown plugin option '"
+                     << arg->getValue() << "'";
   }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
@@ -1689,7 +1704,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (s == "default")
       ctx.arg.ltoKind = LtoKind::Default;
     else
-      error("unknown LTO mode: " + s);
+      ErrAlways(ctx) << "unknown LTO mode: " << s;
   }
 
   // --threads= takes a positive integer and provides the default value for
@@ -1700,8 +1715,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
     if (!llvm::to_integer(v, threads, 0) || threads == 0)
-      error(arg->getSpelling() + ": expected a positive integer, but got '" +
-            arg->getValue() + "'");
+      ErrAlways(ctx) << arg->getSpelling()
+                     << ": expected a positive integer, but got '"
+                     << arg->getValue() << "'";
     parallel::strategy = hardware_concurrency(threads);
     ctx.arg.thinLTOJobs = v;
   } else if (parallel::strategy.compute_thread_count() > 16) {
@@ -1713,20 +1729,22 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.threadCount = parallel::strategy.compute_thread_count();
 
   if (ctx.arg.ltoPartitions == 0)
-    error("--lto-partitions: number of threads must be > 0");
+    ErrAlways(ctx) << "--lto-partitions: number of threads must be > 0";
   if (!get_threadpool_strategy(ctx.arg.thinLTOJobs))
-    error("--thinlto-jobs: invalid job count: " + ctx.arg.thinLTOJobs);
+    ErrAlways(ctx) << "--thinlto-jobs: invalid job count: "
+                   << ctx.arg.thinLTOJobs;
 
   if (ctx.arg.splitStackAdjustSize < 0)
-    error("--split-stack-adjust-size: size must be >= 0");
+    ErrAlways(ctx) << "--split-stack-adjust-size: size must be >= 0";
 
   // The text segment is traditionally the first segment, whose address equals
   // the base address. However, lld places the R PT_LOAD first. -Ttext-segment
   // is an old-fashioned option that does not play well with lld's layout.
   // Suggest --image-base as a likely alternative.
   if (args.hasArg(OPT_Ttext_segment))
-    error("-Ttext-segment is not supported. Use --image-base if you "
-          "intend to set the base address");
+    ErrAlways(ctx)
+        << "-Ttext-segment is not supported. Use --image-base if you "
+           "intend to set the base address";
 
   // Parse ELF{32,64}{LE,BE} and CPU type.
   if (auto *arg = args.getLastArg(OPT_m)) {
@@ -1748,7 +1766,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (s == "both")
       ctx.arg.sysvHash = ctx.arg.gnuHash = true;
     else
-      error("unknown --hash-style: " + s);
+      ErrAlways(ctx) << "unknown --hash-style: " << s;
   }
 
   if (args.hasArg(OPT_print_map))
@@ -1772,8 +1790,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   if (auto *arg = args.getLastArg(OPT_symbol_ordering_file)){
     if (args.hasArg(OPT_call_graph_ordering_file))
-      error("--symbol-ordering-file and --call-graph-order-file "
-            "may not be used together");
+      ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
+                        "may not be used together";
     if (std::optional<MemoryBufferRef> buffer =
             readFile(ctx, arg->getValue())) {
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
@@ -1805,8 +1823,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
       ctx.arg.warnBackrefsExclude.push_back(std::move(*pat));
     else
-      error(arg->getSpelling() + ": " + toString(pat.takeError()) + ": " +
-            pattern);
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError() << ": "
+                     << pattern;
   }
 
   // For -no-pie and -pie, --export-dynamic-symbol specifies defined symbols
@@ -1834,7 +1852,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (std::optional<MemoryBufferRef> buffer = readFile(ctx, *path))
         readVersionScript(ctx, *buffer);
     } else {
-      error(Twine("cannot find version script ") + arg->getValue());
+      ErrAlways(ctx) << Twine("cannot find version script ") << arg->getValue();
     }
 }
 
@@ -1917,13 +1935,14 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   {
     llvm::TimeTraceScope timeScope("Create output files");
     if (auto e = tryCreateFile(ctx.arg.outputFile))
-      error("cannot open output file " + ctx.arg.outputFile + ": " +
-            e.message());
+      ErrAlways(ctx) << "cannot open output file " << ctx.arg.outputFile << ": "
+                     << e.message();
     if (auto e = tryCreateFile(ctx.arg.mapFile))
-      error("cannot open map file " + ctx.arg.mapFile + ": " + e.message());
+      ErrAlways(ctx) << "cannot open map file " << ctx.arg.mapFile << ": "
+                     << e.message();
     if (auto e = tryCreateFile(ctx.arg.whyExtract))
-      error("cannot open --why-extract= file " + ctx.arg.whyExtract + ": " +
-            e.message());
+      ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
+                     << ": " << e.message();
   }
 }
 
@@ -1932,8 +1951,8 @@ static bool isFormatBinary(StringRef s) {
     return true;
   if (s == "elf" || s == "default")
     return false;
-  error("unknown --format value: " + s +
-        " (supported formats: elf, default, binary)");
+  ErrAlways(ctx) << "unknown --format value: " << s
+                 << " (supported formats: elf, default, binary)";
   return false;
 }
 
@@ -1978,7 +1997,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
         }
         break;
       }
-      error(Twine("cannot find linker script ") + arg->getValue());
+      ErrAlways(ctx) << Twine("cannot find linker script ") << arg->getValue();
       break;
     case OPT_as_needed:
       ctx.arg.asNeeded = true;
@@ -2012,33 +2031,33 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_in_implib:
       if (armCmseImpLib)
-        error("multiple CMSE import libraries not supported");
+        ErrAlways(ctx) << "multiple CMSE import libraries not supported";
       else if (std::optional<MemoryBufferRef> mb =
                    readFile(ctx, arg->getValue()))
         armCmseImpLib = createObjFile(ctx, *mb);
       break;
     case OPT_start_group:
       if (isInGroup)
-        error("nested --start-group");
+        ErrAlways(ctx) << "nested --start-group";
       isInGroup = true;
       break;
     case OPT_end_group:
       if (!isInGroup)
-        error("stray --end-group");
+        ErrAlways(ctx) << "stray --end-group";
       isInGroup = false;
       ++nextGroupId;
       break;
     case OPT_start_lib:
       if (inLib)
-        error("nested --start-lib");
+        ErrAlways(ctx) << "nested --start-lib";
       if (isInGroup)
-        error("may not nest --start-lib in --start-group");
+        ErrAlways(ctx) << "may not nest --start-lib in --start-group";
       inLib = true;
       isInGroup = true;
       break;
     case OPT_end_lib:
       if (!inLib)
-        error("stray --end-lib");
+        ErrAlways(ctx) << "stray --end-lib";
       inLib = false;
       isInGroup = false;
       ++nextGroupId;
@@ -2048,7 +2067,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_pop_state:
       if (stack.empty()) {
-        error("unbalanced --push-state/--pop-state");
+        ErrAlways(ctx) << "unbalanced --push-state/--pop-state";
         break;
       }
       std::tie(ctx.arg.asNeeded, ctx.arg.isStatic, inWholeArchive) =
@@ -2061,7 +2080,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   if (defaultScript && !hasScript)
     readLinkerScript(ctx, *defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
-    error("no input files");
+    ErrAlways(ctx) << "no input files";
 }
 
 // If -m <machine_type> was not given, infer it from object files.
@@ -2084,7 +2103,8 @@ void LinkerDriver::inferMachineType() {
       return;
   }
   if (!inferred)
-    error("target emulation unknown: -m or at least one .o file required");
+    ErrAlways(ctx)
+        << "target emulation unknown: -m or at least one .o file required";
 }
 
 // Parse -z max-page-size=<value>. The default value is defined by
@@ -2093,7 +2113,7 @@ static uint64_t getMaxPageSize(Ctx &ctx, opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "max-page-size",
                                        ctx.target->defaultMaxPageSize);
   if (!isPowerOf2_64(val)) {
-    error("max-page-size: value isn't a power of 2");
+    ErrAlways(ctx) << "max-page-size: value isn't a power of 2";
     return ctx.target->defaultMaxPageSize;
   }
   if (ctx.arg.nmagic || ctx.arg.omagic) {
@@ -2110,7 +2130,7 @@ static uint64_t getCommonPageSize(Ctx &ctx, opt::InputArgList &args) {
   uint64_t val = args::getZOptionValue(args, OPT_z, "common-page-size",
                                        ctx.target->defaultCommonPageSize);
   if (!isPowerOf2_64(val)) {
-    error("common-page-size: value isn't a power of 2");
+    ErrAlways(ctx) << "common-page-size: value isn't a power of 2";
     return ctx.target->defaultCommonPageSize;
   }
   if (ctx.arg.nmagic || ctx.arg.omagic) {
@@ -2135,7 +2155,7 @@ static std::optional<uint64_t> getImageBase(Ctx &ctx, opt::InputArgList &args) {
   StringRef s = arg->getValue();
   uint64_t v;
   if (!to_integer(s, v)) {
-    error("--image-base: number expected, but got " + s);
+    ErrAlways(ctx) << "--image-base: number expected, but got " << s;
     return 0;
   }
   if ((v % ctx.arg.maxPageSize) != 0)
@@ -2209,7 +2229,7 @@ static void handleUndefined(Ctx &ctx, Symbol *sym, const char *option) {
 static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
   Expected<GlobPattern> pat = GlobPattern::create(arg);
   if (!pat) {
-    error("--undefined-glob: " + toString(pat.takeError()) + ": " + arg);
+    ErrAlways(ctx) << "--undefined-glob: " << pat.takeError() << ": " << arg;
     return;
   }
 
@@ -2240,8 +2260,8 @@ static void writeArchiveStats(Ctx &ctx) {
   std::error_code ec;
   raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.printArchiveStats, ec);
   if (ec) {
-    error("--print-archive-stats=: cannot open " + ctx.arg.printArchiveStats +
-          ": " + ec.message());
+    ErrAlways(ctx) << "--print-archive-stats=: cannot open "
+                   << ctx.arg.printArchiveStats << ": " << ec.message();
     return;
   }
 
@@ -2270,8 +2290,8 @@ static void writeWhyExtract(Ctx &ctx) {
   std::error_code ec;
   raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.whyExtract, ec);
   if (ec) {
-    error("cannot open --why-extract= file " + ctx.arg.whyExtract + ": " +
-          ec.message());
+    ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
+                   << ": " << ec.message();
     return;
   }
 
@@ -2329,7 +2349,8 @@ static void writeDependencyFile(Ctx &ctx) {
   std::error_code ec;
   raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.dependencyFile, ec);
   if (ec) {
-    error("cannot open " + ctx.arg.dependencyFile + ": " + ec.message());
+    ErrAlways(ctx) << "cannot open " << ctx.arg.dependencyFile << ": "
+                   << ec.message();
     return;
   }
 
@@ -2492,16 +2513,17 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   // from being used together with various linker features that assume a single
   // set of output sections.
   if (ctx.script->hasSectionsCommand)
-    error(toString(s->file) +
-          ": partitions cannot be used with the SECTIONS command");
+    ErrAlways(ctx) << s->file
+                   << ": partitions cannot be used with the SECTIONS command";
   if (ctx.script->hasPhdrsCommands())
-    error(toString(s->file) +
-          ": partitions cannot be used with the PHDRS command");
+    ErrAlways(ctx) << s->file
+                   << ": partitions cannot be used with the PHDRS command";
   if (!ctx.arg.sectionStartMap.empty())
-    error(toString(s->file) + ": partitions cannot be used with "
-                              "--section-start, -Ttext, -Tdata or -Tbss");
+    ErrAlways(ctx) << s->file
+                   << ": partitions cannot be used with "
+                      "--section-start, -Ttext, -Tdata or -Tbss";
   if (ctx.arg.emachine == EM_MIPS)
-    error(toString(s->file) + ": partitions cannot be used on this target");
+    ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
 
   // Impose a limit of no more than 254 partitions. This limit comes from the
   // sizes of the Partition fields in InputSectionBase and Symbol, as well as
@@ -2725,7 +2747,7 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
 
 static void reportMissingFeature(StringRef config, const Twine &report) {
   if (config == "error")
-    error(report);
+    ErrAlways(ctx) << report;
   else if (config == "warning")
     warn(report);
 }

@@ -78,8 +78,8 @@ static lto::Config createConfig(Ctx &ctx) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
           MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
       if (!MBOrErr) {
-        error("cannot open " + ctx.arg.ltoBasicBlockSections + ":" +
-              MBOrErr.getError().message());
+        ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
+                       << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
       }
