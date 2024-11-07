@@ -245,7 +245,6 @@ template <> struct FXRep<long accum> {
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = LACCUM_FBIT;
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
       SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
-  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return LACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return LACCUM_MAX; }
