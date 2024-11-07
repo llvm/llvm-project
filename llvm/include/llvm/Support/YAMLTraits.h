@@ -2087,7 +2087,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   }                                                                            \
   }
 
-#define LLVM_YAML_DECLARE_MAPPING_TRAITS_NOEXPORT(Type)                        \
+#define LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(Type)                         \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
   template <> struct MappingTraits<Type> {                                     \
