@@ -1738,7 +1738,6 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
-
   NamedType StructLconv = NamedType<"struct lconv">;
   PtrType StructLconvPtr = PtrType<StructLconv>;
 
