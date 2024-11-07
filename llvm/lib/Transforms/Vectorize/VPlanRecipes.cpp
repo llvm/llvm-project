@@ -270,7 +270,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     UI = &WidenMem->getIngredient();
 
   InstructionCost RecipeCost;
-  if ((UI && Ctx.skipCostComputation(UI, VF.isVector()))) {
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector())) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
@@ -2413,18 +2413,20 @@ void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
-  O << " +";
+  O << " + ";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
-  O << " mul ";
+  if (IsOuterExtended)
+    O << " (";
+  O << "reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  O << "mul ";
   if (IsExtended)
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
   if (IsExtended)
-    O << " extended to " << *getResultType() << ")";
-  if (IsExtended)
-    O << "(";
+    O << " extended to " << *getResultType() << "), (";
+  else
+    O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
   if (IsExtended)
     O << " extended to " << *getResultType() << ")";
@@ -2433,6 +2435,8 @@ void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
+  if (IsOuterExtended)
+    O << " extended to " << *RdxDesc.getRecurrenceType() << ")";
   if (RdxDesc.IntermediateStore)
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
