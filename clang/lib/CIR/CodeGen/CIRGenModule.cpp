@@ -1536,7 +1536,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
     SmallString<256> StringNameBuffer = Name;
     llvm::raw_svector_ostream Out(StringNameBuffer);
     if (StringLiteralCnt)
-      Out << StringLiteralCnt;
+      Out << '.' << StringLiteralCnt;
     Name = Out.str();
     StringLiteralCnt++;
 

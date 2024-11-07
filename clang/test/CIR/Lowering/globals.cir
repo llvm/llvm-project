@@ -41,8 +41,8 @@ module {
   // MLIR:   %0 = llvm.mlir.addressof @a : !llvm.ptr
   // MLIR:   llvm.return %0 : !llvm.ptr
   // MLIR: }
-  cir.global "private" constant internal @".str1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
-  cir.global external @s1 = #cir.global_view<@".str1"> : !cir.ptr<!s8i>
+  cir.global "private" constant internal @".str.1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
+  cir.global external @s1 = #cir.global_view<@".str.1"> : !cir.ptr<!s8i>
   cir.global external @s2 = #cir.global_view<@".str"> : !cir.ptr<!s8i>
   cir.func @_Z10use_globalv() {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["li", init] {alignment = 4 : i64}

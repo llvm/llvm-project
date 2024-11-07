@@ -54,7 +54,7 @@ void test() {
 // LLVM: %"class.std::initializer_list<const char *>" = type { ptr, ptr }
 
 // LLVM: @.str = private constant [3 x i8] c"xy\00"
-// LLVM: @.str1 = private constant [3 x i8] c"uv\00"
+// LLVM: @.str.1 = private constant [3 x i8] c"uv\00"
 
 // LLVM: define linkonce_odr void @_ZSt1fIPKcEvSt16initializer_listIT_E(%"class.std::initializer_list<const char *>" [[ARG0:%.*]])
 // LLVM: [[LOCAL_PTR:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8, 
@@ -70,7 +70,7 @@ void test() {
 // LLVM:  [[PTR_FIRST_ELEM:%.*]] = getelementptr ptr, ptr [[ELEM_ARRAY_PTR]], i32 0,
 // LLVM:  store ptr @.str, ptr [[PTR_FIRST_ELEM]], align 8,
 // LLVM:  [[PTR_SECOND_ELEM:%.*]] = getelementptr ptr, ptr [[PTR_FIRST_ELEM]], i64 1,
-// LLVM:  store ptr @.str1, ptr [[PTR_SECOND_ELEM]], align 8,
+// LLVM:  store ptr @.str.1, ptr [[PTR_SECOND_ELEM]], align 8,
 // LLVM:  [[INIT_START_FLD_PTR:%.*]] = getelementptr %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], i32 0, i32 0,
 // LLVM:  [[INIT_END_FLD_PTR:%.*]] = getelementptr %"class.std::initializer_list<const char *>", ptr [[INIT_STRUCT]], i32 0, i32 1,
 // LLVM:  [[ELEM_ARRAY_END:%.*]] = getelementptr [2 x ptr], ptr [[ELEM_ARRAY_PTR]], i64 2,

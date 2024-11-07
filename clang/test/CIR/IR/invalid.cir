@@ -352,7 +352,7 @@ module {
 
 module {
   // expected-error@+1 {{expected type declaration for string literal}}
-  cir.global "private" constant external @".str2" = #cir.const_array<"example\00"> {alignment = 1 : i64}
+  cir.global "private" constant external @".str.2" = #cir.const_array<"example\00"> {alignment = 1 : i64}
 }
 
 // -----

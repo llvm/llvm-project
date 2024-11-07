@@ -24,7 +24,7 @@ void dtor1() {
 
 // DTOR_BODY: cir.func linkonce_odr @_ZN1CD2Ev{{.*}}{
 // DTOR_BODY:   %2 = cir.get_global @printf
-// DTOR_BODY:   %3 = cir.get_global @".str2"
+// DTOR_BODY:   %3 = cir.get_global @".str.2"
 // DTOR_BODY:   %4 = cir.cast(array_to_ptrdecay, %3
 // DTOR_BODY:   %5 = cir.call @printf(%4)
 // DTOR_BODY:   cir.return

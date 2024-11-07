@@ -52,8 +52,8 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global "private" constant cir_private dsolocal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
 // CHECK-NEXT: cir.global external @s = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 
-// CHECK-NEXT: cir.global "private" constant cir_private dsolocal @".str1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
-// CHECK-NEXT: cir.global external @s1 = #cir.global_view<@".str1"> : !cir.ptr<!s8i>
+// CHECK-NEXT: cir.global "private" constant cir_private dsolocal @".str.1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
+// CHECK-NEXT: cir.global external @s1 = #cir.global_view<@".str.1"> : !cir.ptr<!s8i>
 
 // CHECK-NEXT: cir.global external @s2 = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 
