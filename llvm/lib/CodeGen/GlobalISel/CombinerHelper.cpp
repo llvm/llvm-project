@@ -1049,7 +1049,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
 
   Register SrcReg = MI.getOperand(1).getReg();
   auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
-  if (!LoadDef || !MRI.hasOneNonDBGUse(DstReg))
+  if (!LoadDef || !MRI.hasOneNonDBGUse(SrcReg))
     return false;
 
   uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
@@ -7695,4 +7695,34 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
   };
 
   return false;
+}
+
+bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) {
+
+  bool Changed = false;
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  ArrayRef<int> OrigMask = Shuffle.getMask();
+  SmallVector<int, 16> NewMask;
+  const LLT SrcTy = MRI.getType(Shuffle.getSrc1Reg());
+  const unsigned NumSrcElems = SrcTy.isVector() ? SrcTy.getNumElements() : 1;
+  const unsigned NumDstElts = OrigMask.size();
+  for (unsigned i = 0; i != NumDstElts; ++i) {
+    int Idx = OrigMask[i];
+    if (Idx >= (int)NumSrcElems) {
+      Idx = -1;
+      Changed = true;
+    }
+    NewMask.push_back(Idx);
+  }
+
+  if (!Changed)
+    return false;
+
+  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+    B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
+                         NewMask);
+  };
+
+  return true;
 }

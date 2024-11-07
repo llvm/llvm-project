@@ -1755,6 +1755,21 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                 : VSrc_b32);
 }
 
+// Returns the vreg register class to use for sources of VOP3 instructions for the
+// given VT.
+class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+   RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 16)  : !if(IsTrue16,
+                                 !if(IsFake16, RegisterOperand<VGPR_32>,
+                                               RegisterOperand<VGPR_16>),
+                                 RegisterOperand<VGPR_32>),
+         1                 : RegisterOperand<VGPR_32>);
+}
+
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =

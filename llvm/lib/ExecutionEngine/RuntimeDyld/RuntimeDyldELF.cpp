@@ -675,6 +675,10 @@ void RuntimeDyldELF::resolveLoongArch64Branch(unsigned SectionID,
                                               relocation_iterator RelI,
                                               StubMap &Stubs) {
   LLVM_DEBUG(dbgs() << "\t\tThis is an LoongArch64 branch relocation.\n");
+
+  if (resolveLoongArch64ShortBranch(SectionID, RelI, Value))
+    return;
+
   SectionEntry &Section = Sections[SectionID];
   uint64_t Offset = RelI->getOffset();
   unsigned RelType = RelI->getType();
@@ -685,39 +689,38 @@ void RuntimeDyldELF::resolveLoongArch64Branch(unsigned SectionID,
                       (uint64_t)Section.getAddressWithOffset(i->second),
                       RelType, 0);
     LLVM_DEBUG(dbgs() << " Stub function found\n");
-  } else if (!resolveLoongArch64ShortBranch(SectionID, RelI, Value)) {
-    // Create a new stub function.
-    LLVM_DEBUG(dbgs() << " Create a new stub function\n");
-    Stubs[Value] = Section.getStubOffset();
-    uint8_t *StubTargetAddr = createStubFunction(
-        Section.getAddressWithOffset(Section.getStubOffset()));
-    RelocationEntry LU12I_W(SectionID, StubTargetAddr - Section.getAddress(),
-                            ELF::R_LARCH_ABS_HI20, Value.Addend);
-    RelocationEntry ORI(SectionID, StubTargetAddr - Section.getAddress() + 4,
-                        ELF::R_LARCH_ABS_LO12, Value.Addend);
-    RelocationEntry LU32I_D(SectionID,
-                            StubTargetAddr - Section.getAddress() + 8,
-                            ELF::R_LARCH_ABS64_LO20, Value.Addend);
-    RelocationEntry LU52I_D(SectionID,
-                            StubTargetAddr - Section.getAddress() + 12,
-                            ELF::R_LARCH_ABS64_HI12, Value.Addend);
-    if (Value.SymbolName) {
-      addRelocationForSymbol(LU12I_W, Value.SymbolName);
-      addRelocationForSymbol(ORI, Value.SymbolName);
-      addRelocationForSymbol(LU32I_D, Value.SymbolName);
-      addRelocationForSymbol(LU52I_D, Value.SymbolName);
-    } else {
-      addRelocationForSection(LU12I_W, Value.SectionID);
-      addRelocationForSection(ORI, Value.SectionID);
-      addRelocationForSection(LU32I_D, Value.SectionID);
-      addRelocationForSection(LU52I_D, Value.SectionID);
-    }
-    resolveRelocation(Section, Offset,
-                      reinterpret_cast<uint64_t>(Section.getAddressWithOffset(
-                          Section.getStubOffset())),
-                      RelType, 0);
-    Section.advanceStubOffset(getMaxStubSize());
+    return;
   }
+  // Create a new stub function.
+  LLVM_DEBUG(dbgs() << " Create a new stub function\n");
+  Stubs[Value] = Section.getStubOffset();
+  uint8_t *StubTargetAddr =
+      createStubFunction(Section.getAddressWithOffset(Section.getStubOffset()));
+  RelocationEntry LU12I_W(SectionID, StubTargetAddr - Section.getAddress(),
+                          ELF::R_LARCH_ABS_HI20, Value.Addend);
+  RelocationEntry ORI(SectionID, StubTargetAddr - Section.getAddress() + 4,
+                      ELF::R_LARCH_ABS_LO12, Value.Addend);
+  RelocationEntry LU32I_D(SectionID, StubTargetAddr - Section.getAddress() + 8,
+                          ELF::R_LARCH_ABS64_LO20, Value.Addend);
+  RelocationEntry LU52I_D(SectionID, StubTargetAddr - Section.getAddress() + 12,
+                          ELF::R_LARCH_ABS64_HI12, Value.Addend);
+  if (Value.SymbolName) {
+    addRelocationForSymbol(LU12I_W, Value.SymbolName);
+    addRelocationForSymbol(ORI, Value.SymbolName);
+    addRelocationForSymbol(LU32I_D, Value.SymbolName);
+    addRelocationForSymbol(LU52I_D, Value.SymbolName);
+  } else {
+    addRelocationForSection(LU12I_W, Value.SectionID);
+    addRelocationForSection(ORI, Value.SectionID);
+    addRelocationForSection(LU32I_D, Value.SectionID);
+
+    addRelocationForSection(LU52I_D, Value.SectionID);
+  }
+  resolveRelocation(Section, Offset,
+                    reinterpret_cast<uint64_t>(
+                        Section.getAddressWithOffset(Section.getStubOffset())),
+                    RelType, 0);
+  Section.advanceStubOffset(getMaxStubSize());
 }
 
 // Returns extract bits Val[Hi:Lo].

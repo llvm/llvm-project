@@ -352,7 +352,7 @@ TARGET_BUILTIN(__builtin_lsx_vrepli_d, "V2LLiIi", "nc", "lsx")
 
 TARGET_BUILTIN(__builtin_lsx_vand_v, "V16UcV16UcV16Uc", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vor_v, "V16UcV16UcV16Uc", "nc", "lsx")
-TARGET_BUILTIN(__builtin_lsx_vxor_v, "V16ScV16ScV16Sc", "nc", "lsx")
+TARGET_BUILTIN(__builtin_lsx_vxor_v, "V16UcV16UcV16Uc", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vnor_v, "V16UcV16UcV16Uc", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vandn_v, "V16UcV16UcV16Uc", "nc", "lsx")
 TARGET_BUILTIN(__builtin_lsx_vorn_v, "V16ScV16ScV16Sc", "nc", "lsx")
