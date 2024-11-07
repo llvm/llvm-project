@@ -11,7 +11,7 @@
 // UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
-// test that array<T, 0>::back() triggers an assertion
+// test that array<T, 0>::front() triggers an assertion
 
 #include <array>
 
@@ -20,14 +20,14 @@
 int main(int, char**) {
   {
     typedef std::array<int, 0> C;
-    C c = {};
+    C c         = {};
     C const& cc = c;
     TEST_LIBCPP_ASSERT_FAILURE(c.front(), "cannot call array<T, 0>::front() on a zero-sized array");
     TEST_LIBCPP_ASSERT_FAILURE(cc.front(), "cannot call array<T, 0>::front() on a zero-sized array");
   }
   {
     typedef std::array<const int, 0> C;
-    C c = {{}};
+    C c         = {{}};
     C const& cc = c;
     TEST_LIBCPP_ASSERT_FAILURE(c.front(), "cannot call array<T, 0>::front() on a zero-sized array");
     TEST_LIBCPP_ASSERT_FAILURE(cc.front(), "cannot call array<T, 0>::front() on a zero-sized array");
