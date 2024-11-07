@@ -55,7 +55,46 @@ define void @store_fpext_load(ptr %ptr) {
   ret void
 }
 
-; TODO: Test store_zext_fcmp_load once we implement scheduler callbacks and legality diamond check
+define void @store_fcmp_zext_load(ptr %ptr) {
+; CHECK-LABEL: define void @store_fcmp_zext_load(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[PTRB0:%.*]] = getelementptr i32, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTRB1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LDB0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDB1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDA0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDA1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[FCMP0:%.*]] = fcmp ogt float [[LDA0]], [[LDB0]]
+; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ogt float [[LDA1]], [[LDB1]]
+; CHECK-NEXT:    [[VCMP:%.*]] = fcmp ogt <2 x float> [[VECL]], [[VECL1]]
+; CHECK-NEXT:    [[ZEXT0:%.*]] = zext i1 [[FCMP0]] to i32
+; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i1 [[FCMP1]] to i32
+; CHECK-NEXT:    [[VCAST:%.*]] = zext <2 x i1> [[VCMP]] to <2 x i32>
+; CHECK-NEXT:    store i32 [[ZEXT0]], ptr [[PTRB0]], align 4
+; CHECK-NEXT:    store i32 [[ZEXT1]], ptr [[PTRB1]], align 4
+; CHECK-NEXT:    store <2 x i32> [[VCAST]], ptr [[PTRB0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ptrb0 = getelementptr i32, ptr %ptr, i32 0
+  %ptrb1 = getelementptr i32, ptr %ptr, i32 1
+  %ldB0 = load float, ptr %ptr0
+  %ldB1 = load float, ptr %ptr1
+  %ldA0 = load float, ptr %ptr0
+  %ldA1 = load float, ptr %ptr1
+  %fcmp0 = fcmp ogt float %ldA0, %ldB0
+  %fcmp1 = fcmp ogt float %ldA1, %ldB1
+  %zext0 = zext i1 %fcmp0 to i32
+  %zext1 = zext i1 %fcmp1 to i32
+  store i32 %zext0, ptr %ptrb0
+  store i32 %zext1, ptr %ptrb1
+  ret void
+}
 
 ; TODO: Test store_fadd_load once we implement scheduler callbacks and legality diamond check
 

@@ -95,6 +95,8 @@ class Scheduler {
   DependencyGraph DAG;
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
   SmallVector<std::unique_ptr<SchedBundle>> Bndls;
+  Context &Ctx;
+  Context::CallbackID CreateInstrCB;
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -110,8 +112,11 @@ class Scheduler {
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
-  Scheduler(AAResults &AA) : DAG(AA) {}
-  ~Scheduler() {}
+  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA), Ctx(Ctx) {
+    CreateInstrCB = Ctx.registerCreateInstrCallback(
+        [this](Instruction *I) { DAG.notifyCreateInstr(I); });
+  }
+  ~Scheduler() { Ctx.unregisterCreateInstrCallback(CreateInstrCB); }
 
   bool trySchedule(ArrayRef<Instruction *> Instrs);
 
