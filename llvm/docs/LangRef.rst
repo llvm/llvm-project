@@ -20004,18 +20004,15 @@ the follow sequence of operations:
 
 The ``mask`` operand will apply to at least the gather and scatter operations.
 
-'``llvm.experimental.vector.masked.extract.last.active``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.experimental.vector.extract.last.active``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This is an overloaded intrinsic.
 
-This intrinsic will extract the value from a single lane of a vector, based
-on a supplied mask vector.
-
 ::
 
-    declare i32 @llvm.experimental.vector.masked.extract.last.active.v4i32(<4 x i32> %data, <4 x i1> %mask, i32 %passthru)
-    declare i16 @llvm.experimental.vector.masked.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
+    declare i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> %data, <4 x i1> %mask, i32 %passthru)
+    declare i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
 
 Arguments:
 """"""""""
@@ -20030,10 +20027,10 @@ the passthru value must match that of the elements of the data vector.
 Semantics:
 """"""""""
 
-The '``llvm.experimental.vector.masked.extract.last.active``' intrinsic will
-find the index of the most significant active lane in the mask vector, and
-extract the element at that index in the corresponding data vector. If no mask
-lanes are active then the passthru value is returned instead.
+The '``llvm.experimental.vector.extract.last.active``' intrinsic will extract an
+element from the data vector at the index matching the highest active lane of
+the mask vector. If no mask lanes are active then the passthru value is
+returned instead.
 
 .. _int_vector_compress:
 
