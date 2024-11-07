@@ -2429,28 +2429,29 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   return VectorTripCount;
 }
 
-/// Helper to connect both the vector and scalar preheaders to the vector
-/// preheader's predecessor. This is used when adjusting \p Plan during skeleton
+/// Helper to connect both the vector and scalar preheaders to the Plan's
+/// entry. This is used when adjusting \p Plan during skeleton
 /// creation, i.e. adjusting the plan after introducing an initial runtime
 /// check.
 static void connectScalarPreheaderInVPlan(VPlan &Plan) {
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-  VPBlockBase *PredVPB = VectorPH->getSinglePredecessor();
-  VPBlockUtils::disconnectBlocks(Plan.getEntry(), VectorPH);
-  VPBlockUtils::connectBlocks(PredVPB, ScalarPH);
-  VPBlockUtils::connectBlocks(PredVPB, VectorPH);
+  VPBlockBase *PredVPB = Plan.getEntry();
+  VPBlockUtils::connectBlocks(PredVPB, ScalarPH, -1, 0);
+  VPBlockUtils::connectBlocks(PredVPB, VectorPH, 0, -1);
 }
 
-static void connectCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
+/// Introduces a new VPIRBasicBlock for \p CheckIRBB to \p Plan between the
+/// vector preheader and its predecessor, also connecting to the scalar
+/// preheader.
+static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
-  VPBlockBase *PredVPB = VectorPH->getSinglePredecessor();
-  VPBlockUtils::disconnectBlocks(PredVPB, VectorPH);
+  VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
-  VPBlockUtils::connectBlocks(PredVPB, CheckVPIRBB);
+  VPBlockUtils::connectBlocks(PreVectorPH, CheckVPIRBB, -1, 1);
   VPBlockUtils::connectBlocks(CheckVPIRBB, ScalarPH);
-  VPBlockUtils::connectBlocks(CheckVPIRBB, VectorPH);
+  VPBlockUtils::connectBlocks(CheckVPIRBB, VectorPH, 0, -1);
 }
 
 void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
@@ -2537,7 +2538,6 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
                                DT->getNode(Bypass)->getIDom()) &&
          "TC check is expected to dominate Bypass");
 
-  // Update dominator for Bypass & LoopExit (if needed).
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
@@ -2545,6 +2545,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
   LoopBypassBlocks.push_back(TCCheckBlock);
 
+  // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
   connectScalarPreheaderInVPlan(Plan);
 }
 
@@ -2563,7 +2564,7 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   LoopBypassBlocks.push_back(SCEVCheckBlock);
   AddedSafetyChecks = true;
 
-  connectCheckBlockInVPlan(Plan, SCEVCheckBlock);
+  introduceCheckBlockInVPlan(Plan, SCEVCheckBlock);
   return SCEVCheckBlock;
 }
 
@@ -2600,7 +2601,7 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 
   AddedSafetyChecks = true;
 
-  connectCheckBlockInVPlan(Plan, MemCheckBlock);
+  introduceCheckBlockInVPlan(Plan, MemCheckBlock);
   return MemCheckBlock;
 }
 
@@ -7909,7 +7910,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
   if (PredVPB->getNumSuccessors() == 1)
     connectScalarPreheaderInVPlan(Plan);
   else
-    connectCheckBlockInVPlan(Plan, TCCheckBlock);
+    introduceCheckBlockInVPlan(Plan, TCCheckBlock);
   return TCCheckBlock;
 }
 
@@ -7946,10 +7947,9 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
   if (EPI.SCEVSafetyCheck)
     EPI.SCEVSafetyCheck->getTerminator()->replaceUsesOfWith(
         VecEpilogueIterationCountCheck, LoopScalarPreHeader);
-  if (EPI.MemSafetyCheck) {
+  if (EPI.MemSafetyCheck)
     EPI.MemSafetyCheck->getTerminator()->replaceUsesOfWith(
         VecEpilogueIterationCountCheck, LoopScalarPreHeader);
-  }
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
                                EPI.EpilogueIterationCountCheck);
