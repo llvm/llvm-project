@@ -31,6 +31,11 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
 
+// https://github.com/llvm/llvm-project/issues/114425
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma inline_depth(0)
+#endif
+
 //===--------------------------------------------------------------------===//
 /// AArch64DAGToDAGISel - AArch64 specific code to select AArch64 machine
 /// instructions for SelectionDAG operations.
