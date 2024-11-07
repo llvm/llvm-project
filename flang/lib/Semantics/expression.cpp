@@ -3066,17 +3066,29 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
     return false;
   }};
   if (const auto &chevrons{call.chevrons}) {
-    if (auto expr{Analyze(std::get<0>(chevrons->t))};
-        expr && checkLaunchArg(*expr, "grid")) {
-      result.emplace_back(*expr);
+    auto &starOrExpr0{std::get<0>(chevrons->t)};
+    if (starOrExpr0.v) {
+      if (auto expr{Analyze(*starOrExpr0.v)};
+          expr && checkLaunchArg(*expr, "grid")) {
+        result.emplace_back(*expr);
+      } else {
+        return std::nullopt;
+      }
     } else {
-      return std::nullopt;
+      result.emplace_back(
+          AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
     }
-    if (auto expr{Analyze(std::get<1>(chevrons->t))};
-        expr && checkLaunchArg(*expr, "block")) {
-      result.emplace_back(*expr);
+    auto &starOrExpr1{std::get<1>(chevrons->t)};
+    if (starOrExpr1.v) {
+      if (auto expr{Analyze(*starOrExpr1.v)};
+          expr && checkLaunchArg(*expr, "block")) {
+        result.emplace_back(*expr);
+      } else {
+        return std::nullopt;
+      }
     } else {
-      return std::nullopt;
+      result.emplace_back(
+          AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
     }
     if (const auto &maybeExpr{std::get<2>(chevrons->t)}) {
       if (auto expr{Analyze(*maybeExpr)}) {

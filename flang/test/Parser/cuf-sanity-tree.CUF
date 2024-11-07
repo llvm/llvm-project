@@ -166,17 +166,17 @@ include "cuf-sanity-common"
 !CHECK: | | | | | Call
 !CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
 !CHECK: | | | | | Chevrons
-!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '1_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '2_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,3_4>>>()'
 !CHECK: | | | | | Call
 !CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
 !CHECK: | | | | | Chevrons
-!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '1_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '2_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
@@ -184,9 +184,9 @@ include "cuf-sanity-common"
 !CHECK: | | | | | Call
 !CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
 !CHECK: | | | | | Chevrons
-!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '1_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '2_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
