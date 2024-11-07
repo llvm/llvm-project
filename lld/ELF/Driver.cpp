@@ -2851,11 +2851,11 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      errorOrWarn("incompatible values of AArch64 PAuth core info found\n>>> " +
-                  referenceFileName + ": 0x" +
-                  toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true) +
-                  "\n>>> " + toString(f) + ": 0x" +
-                  toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true));
+      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n>>> "
+               << referenceFileName << ": 0x"
+               << toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true)
+               << "\n>>> " << f << ": 0x"
+               << toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true);
   }
 
   // Force enable Shadow Stack.

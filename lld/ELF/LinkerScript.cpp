@@ -599,12 +599,12 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     SectionClassDesc *scd =
         sectionClasses.lookup(CachedHashStringRef(cmd->classRef));
     if (!scd) {
-      errorOrWarn("undefined section class '" + cmd->classRef + "'");
+      Err(ctx) << "undefined section class '" << cmd->classRef << "'";
       return ret;
     }
     if (!scd->sc.assigned) {
-      errorOrWarn("section class '" + cmd->classRef + "' referenced by '" +
-                  outCmd.name + "' before class definition");
+      Err(ctx) << "section class '" << cmd->classRef << "' referenced by '"
+               << outCmd.name << "' before class definition";
       return ret;
     }
 
@@ -614,8 +614,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
-          errorOrWarn("section '" + sec->name +
-                      "' cannot spill from/to /DISCARD/");
+          Err(ctx) << "section '" << sec->name
+                   << "' cannot spill from/to /DISCARD/";
           continue;
         }
         if (isSpill)
@@ -796,9 +796,9 @@ void LinkerScript::processSectionCommands() {
         for (InputSectionBase *isec : isd->sectionBases)
           if (isa<PotentialSpillSection>(isec) ||
               potentialSpillLists.contains(isec))
-            errorOrWarn("section '" + isec->name +
-                        "' cannot spill from/to INSERT section '" + os->name +
-                        "'");
+            Err(ctx) << "section '" << isec->name
+                     << "' cannot spill from/to INSERT section '" << os->name
+                     << "'";
       }
     }
   }
@@ -816,8 +816,8 @@ void LinkerScript::processSectionCommands() {
     for (InputSectionDescription *isd : sc->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
         if (sec->parent && isa<SectionClass>(sec->parent)) {
-          errorOrWarn("section class '" + sec->parent->name +
-                      "' is unreferenced");
+          Err(ctx) << "section class '" << sec->parent->name
+                   << "' is unreferenced";
           goto nextClass;
         }
       }
@@ -1779,7 +1779,7 @@ static void checkMemoryRegion(const MemoryRegion *region,
 
 void LinkerScript::checkFinalScriptConditions() const {
   for (StringRef err : recordedErrors)
-    errorOrWarn(err);
+    Err(ctx) << err;
   for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);
