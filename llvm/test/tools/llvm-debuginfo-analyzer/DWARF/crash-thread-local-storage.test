@@ -16,12 +16,16 @@
 ; The llvm-debuginfo-analyzer crashes when producing a logical view for
 ; the object file generated using the following commands:
 ;
-; llvm-mc --triple=x86_64-pc-linux-gnu --filetype=obj ThreadLocalStorage.s -o ThreadLocalStorage.s.o
-; llvm-debuginfo-analyzer --attribute=location --print=symbols
+; clang++ -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes
+;         -fno-discard-value-names -emit-llvm -S -g -O0
+;         ThreadLocalStorage.cpp -o ThreadLocalStorage.ll
+; llc --filetype=obj ThreadLocalStorage.ll -o ThreadLocalStorage.o
 ;
+; llvm-debuginfo-analyzer --attribute=location --print=symbols
+;                         ThreadLocalStorage.o
 
-; RUN: llvm-mc --triple=x86_64-pc-linux-gnu --filetype=obj \
-; RUN:         %p/Inputs/ThreadLocalStorage.s -o %t.ThreadLocalStorage.o
+; RUN: llc --filetype=obj \
+; RUN:     %p/Inputs/ThreadLocalStorage.ll -o %t.ThreadLocalStorage.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=location \
 ; RUN:                         --print=symbols \
