@@ -280,6 +280,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp10m1f
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: exp10m1f16
     standards:
       - stdc
