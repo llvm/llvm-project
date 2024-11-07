@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/TLSVariableHoist.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -27,11 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/TLSVariableHoist.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
-#include <iterator>
 #include <utility>
 
 using namespace llvm;
