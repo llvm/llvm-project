@@ -1202,12 +1202,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
     assert(RedID.has_value());
     unsigned RedOp = getArithmeticReductionInstruction(*RedID);
-    if (RedOp == Instruction::FAdd || RedOp == Instruction::FMul)
-      return getArithmeticReductionCost(RedOp,
-                                        cast<VectorType>(ICA.getArgTypes()[1]),
-                                        ICA.getFlags(), CostKind);
-    return getArithmeticReductionCost(
-        RedOp, cast<VectorType>(ICA.getArgTypes()[1]), std::nullopt, CostKind);
+    return getArithmeticReductionCost(RedOp,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      ICA.getFlags(), CostKind);
   }
   case Intrinsic::vp_reduce_smax:
   case Intrinsic::vp_reduce_smin:
