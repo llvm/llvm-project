@@ -177,6 +177,11 @@ namespace llvm {
       return size() == RHS.size() && compare_insensitive(RHS) == 0;
     }
 
+    /// Check for string equality, ignoring case.
+    [[nodiscard]] bool equals(StringRef RHS) const {
+      return Length == RHS.Length && compare(RHS) == 0;
+    }
+
     /// compare - Compare two strings; the result is negative, zero, or positive
     /// if this string is lexicographically less than, equal to, or greater than
     /// the \p RHS.
