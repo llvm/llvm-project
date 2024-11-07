@@ -1032,9 +1032,11 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 /// a vector into vector operations followed by extract. Note: The SLP pass
 /// may miss this pattern because of implementation problems.
 bool VectorCombine::foldExtractedCmps(Instruction &I) {
+  auto *BI = dyn_cast<BinaryOperator>(&I);
+
   // We are looking for a scalar binop of booleans.
   // binop i1 (cmp Pred I0, C0), (cmp Pred I1, C1)
-  if (!I.isBinaryOp() || !I.getType()->isIntegerTy(1))
+  if (!BI || !I.getType()->isIntegerTy(1))
     return false;
 
   // The compare predicates should match, and each compare should have a
@@ -1060,6 +1062,8 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   ExtractElementInst *ConvertToShuf = getShuffleExtract(Ext0, Ext1);
   if (!ConvertToShuf)
     return false;
+  assert((ConvertToShuf == Ext0 || ConvertToShuf == Ext1) &&
+         "Unknown ExtractElementInst");
 
   // The original scalar pattern is:
   // binop i1 (cmp Pred (ext X, Index0), C0), (cmp Pred (ext X, Index1), C1)
@@ -1111,10 +1115,10 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   CmpC[Index0] = C0;
   CmpC[Index1] = C1;
   Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC));
-
   Value *Shuf = createShiftShuffle(VCmp, ExpensiveIndex, CheapIndex, Builder);
-  Value *VecLogic = Builder.CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
-                                        VCmp, Shuf);
+  Value *LHS = ConvertToShuf == Ext0 ? Shuf : VCmp;
+  Value *RHS = ConvertToShuf == Ext0 ? VCmp : Shuf;
+  Value *VecLogic = Builder.CreateBinOp(BI->getOpcode(), LHS, RHS);
   Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;

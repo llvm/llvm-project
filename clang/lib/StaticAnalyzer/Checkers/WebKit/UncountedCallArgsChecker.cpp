@@ -96,7 +96,8 @@ public:
           auto name = safeGetName(MD);
           if (name == "ref" || name == "deref")
             return;
-          if (name == "incrementPtrCount" || name == "decrementPtrCount")
+          if (name == "incrementCheckedPtrCount" ||
+              name == "decrementCheckedPtrCount")
             return;
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();

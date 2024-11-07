@@ -349,7 +349,6 @@ int main(int argc, char **argv) {
   initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
   initializeReplaceWithVeclibLegacyPass(*Registry);
-  initializeTLSVariableHoistLegacyPassPass(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
