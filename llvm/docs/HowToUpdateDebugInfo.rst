@@ -76,9 +76,13 @@ When to merge instruction locations
 -----------------------------------
 
 A transformation should merge instruction locations if it replaces multiple
-instructions with a single merged instruction, *and* that merged instruction
-does not correspond to any of the original instructions' locations. The API to
-use is ``Instruction::applyMergedLocation``.
+instructions with one or more new instructions, *and* the new instruction(s)
+produce the output of more than one of the original instructions. The API to
+use is ``Instruction::applyMergedLocation``, and the new location should be a
+merge of the locations of all the instructions whose output is produced in the
+new instructions; typically, this includes any instruction being RAUWed by a new
+instruction, and excludes any instruction that only produces an intermediate
+value used by the RAUWed instruction.
 
 The purpose of this rule is to ensure that a) the single merged instruction
 has a location with an accurate scope attached, and b) to prevent misleading
@@ -101,10 +105,10 @@ Examples of transformations that should follow this rule include:
 * Merging identical loop-invariant stores (see the LICM utility
   ``llvm::promoteLoopAccessesToScalars``).
 
-* Peephole optimizations which combine multiple instructions together, like
-  ``(add (mul A B) C) => llvm.fma.f32(A, B, C)``.  Note that the location of
-  the ``fma`` does not exactly correspond to the locations of either the
-  ``mul`` or the ``add`` instructions.
+* Scalar instructions being combined into a vector instruction, like
+  ``(add A1, B1), (add A2, B2) => (add (A1, A2), (B1, B2))``. As the new vector
+  ``add`` computes the result of both original ``add`` instructions
+  simultaneously, it should use a merge of the two locations.
 
 Examples of transformations for which this rule *does not* apply include:
 
@@ -112,6 +116,11 @@ Examples of transformations for which this rule *does not* apply include:
   ``(sext (zext i8 %x to i16) to i32) => (zext i8 %x to i32)``. The inner
   ``zext`` is modified but remains in its block, so the rule for
   :ref:`preserving locations<WhenToPreserveLocation>` should apply.
+
+* Peephole optimizations which combine multiple instructions together, like
+  ``(add (mul A B) C) => llvm.fma.f32(A, B, C)``. Note that the result of the
+  ``mul`` no longer appears in the program, while the result of the ``add`` is
+  now produced by the ``fma``, so the ``add``'s location should be used.
 
 * Converting an if-then-else CFG diamond into a ``select``. Preserving the
   debug locations of speculated instructions can make it seem like a condition
