@@ -163,10 +163,10 @@ MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
                       MachineBranchProbabilityPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
                       MachineDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(errs()))
-MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
