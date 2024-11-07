@@ -276,8 +276,8 @@ void SymbolTable::scanVersionScript() {
                                    pat.isExternCpp, /*hasWildCard=*/false},
                                   id, ver, /*includeNonDefault=*/true);
       if (!found && !ctx.arg.undefinedVersion)
-        errorOrWarn("version script assignment of '" + ver + "' to symbol '" +
-                    pat.name + "' failed: symbol not defined");
+        Err(ctx) << "version script assignment of '" << ver << "' to symbol '"
+                 << pat.name << "' failed: symbol not defined";
     };
     for (SymbolVersion &pat : v.nonLocalPatterns)
       if (!pat.hasWildcard)

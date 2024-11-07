@@ -1199,8 +1199,8 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
   ArrayRef<Elf_Sym> eSyms = getELFSyms<ELFT>();
   // Error for local symbols. The symbol at index 0 is LOCAL. So skip it.
   for (size_t i = 1, end = firstGlobal; i != end; ++i) {
-    errorOrWarn("CMSE symbol '" + CHECK(eSyms[i].getName(stringTable), this) +
-                "' in import library '" + toString(this) + "' is not global");
+    Err(ctx) << "CMSE symbol '" << CHECK(eSyms[i].getName(stringTable), this)
+             << "' in import library '" << this << "' is not global";
   }
 
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {

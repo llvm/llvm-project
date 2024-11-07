@@ -165,7 +165,7 @@ static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const char *error = nullptr;
   uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
   if (count > maxcount || (count == maxcount && error))
-    errorOrWarn(getErrorLoc(ctx, loc) + "extra space for uleb128");
+    Err(ctx) << getErrorLoc(ctx, loc) << "extra space for uleb128";
   uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
   encodeULEB128((orig + val) & mask, loc, count);
 }
@@ -774,10 +774,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
         remove = allBytes - curBytes;
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
-                    "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(allBytes) + " bytes available for " +
-                    "requested alignment of " + Twine(align) + " bytes");
+        Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
+                 << "insufficient padding bytes for " << lld::toString(r.type)
+                 << ": " << Twine(allBytes) << " bytes available for "
+                 << "requested alignment of " << Twine(align) << " bytes";
         remove = 0;
       }
       break;

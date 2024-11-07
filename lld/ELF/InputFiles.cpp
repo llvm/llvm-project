@@ -863,8 +863,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
         ctx.hasSympart.store(true, std::memory_order_relaxed);
       else if (ctx.arg.rejectMismatch &&
                !isKnownSpecificSectionType(type, sec.sh_flags))
-        errorOrWarn(toString(this->sections[i]) + ": unknown section type 0x" +
-                    Twine::utohexstr(type));
+        Err(ctx) << this->sections[i] << ": unknown section type 0x"
+                 << Twine::utohexstr(type);
       break;
     }
   }
@@ -1247,8 +1247,8 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     uint8_t binding = eSym.getBinding();
     if (LLVM_UNLIKELY(binding != STB_GLOBAL && binding != STB_WEAK &&
                       binding != STB_GNU_UNIQUE))
-      errorOrWarn(toString(this) + ": symbol (" + Twine(i) +
-                  ") has invalid binding: " + Twine((int)binding));
+      Err(ctx) << this << ": symbol (" << Twine(i)
+               << ") has invalid binding: " << Twine((int)binding);
 
     // st_value of STT_TLS represents the assigned offset, not the actual
     // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
@@ -1256,8 +1256,8 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     // a STT_TLS symbol is replaced by a non-STT_TLS symbol, vice versa.
     if (LLVM_UNLIKELY(sym.isTls()) && eSym.getType() != STT_TLS &&
         eSym.getType() != STT_NOTYPE)
-      errorOrWarn("TLS attribute mismatch: " + toString(sym) + "\n>>> in " +
-                  toString(sym.file) + "\n>>> in " + toString(this));
+      Err(ctx) << "TLS attribute mismatch: " << &sym << "\n>>> in " << sym.file
+               << "\n>>> in " << this;
 
     // Handle non-COMMON defined symbol below. !sym.file allows a symbol
     // assignment to redefine a symbol without an error.
@@ -1563,8 +1563,8 @@ template <class ELFT> void SharedFile::parse() {
     // symbol, that's a violation of the spec.
     StringRef name = CHECK(sym.getName(stringTable), this);
     if (sym.getBinding() == STB_LOCAL) {
-      errorOrWarn(toString(this) + ": invalid local symbol '" + name +
-                  "' in global part of symbol table");
+      Err(ctx) << this << ": invalid local symbol '" << name
+               << "' in global part of symbol table";
       continue;
     }
 

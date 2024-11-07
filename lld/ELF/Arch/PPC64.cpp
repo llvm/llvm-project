@@ -694,9 +694,9 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // to ensure we don't miss these opportunities in real code. It can be
     // removed at a later date.
     if (pcRelInsn == UINT64_C(-1)) {
-      errorOrWarn(
-          "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x" +
-          Twine::utohexstr(accessInsn));
+      Err(ctx)
+          << "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x"
+          << Twine::utohexstr(accessInsn);
       break;
     }
 
@@ -770,7 +770,7 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     } else if (locAsInt % 4 == 1) {
       write32(ctx, loc - 1, NOP);
     } else {
-      errorOrWarn("R_PPC64_TLSGD has unexpected byte alignment");
+      Err(ctx) << "R_PPC64_TLSGD has unexpected byte alignment";
     }
     break;
   }
@@ -826,7 +826,7 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     } else if (locAsInt % 4 == 1) {
       write32(ctx, loc - 1, NOP);
     } else {
-      errorOrWarn("R_PPC64_TLSLD has unexpected byte alignment");
+      Err(ctx) << "R_PPC64_TLSLD has unexpected byte alignment";
     }
     break;
   }
@@ -956,7 +956,7 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       uint32_t tlsInstr = read32(ctx, loc - 1);
       uint32_t primaryOp = getPrimaryOpCode(tlsInstr);
       if (primaryOp != 31)
-        errorOrWarn("unrecognized instruction for IE to LE R_PPC64_TLS");
+        Err(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
       uint32_t secondaryOp = (tlsInstr & 0x000007FE) >> 1; // bits 21-30
       // The add is a special case and should be turned into a nop. The paddi
       // that comes before it will already have computed the address of the
@@ -977,13 +977,13 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
         if (dFormOp == 0) { // Expecting a DS-Form instruction.
           dFormOp = getPPCDSFormOp(secondaryOp);
           if (dFormOp == 0)
-            errorOrWarn("unrecognized instruction for IE to LE R_PPC64_TLS");
+            Err(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
         }
         write32(ctx, loc - 1, (dFormOp | (tlsInstr & 0x03ff0000)));
       }
     } else {
-      errorOrWarn("R_PPC64_TLS must be either 4 byte aligned or one byte "
-                  "offset from 4 byte aligned");
+      Err(ctx) << "R_PPC64_TLS must be either 4 byte aligned or one byte "
+                  "offset from 4 byte aligned";
     }
     break;
   }
@@ -1556,7 +1556,7 @@ void PPC64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
       // bl __tls_get_addr(sym@tlsgd) --> add r3, r3, r13
       write32(ctx, loc - 1, 0x7c636a14);
     } else {
-      errorOrWarn("R_PPC64_TLSGD has unexpected byte alignment");
+      Err(ctx) << "R_PPC64_TLSGD has unexpected byte alignment";
     }
     return;
   }
@@ -1617,9 +1617,9 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
              read32(ctx, loc + 4) != 0x60000000) &&
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
-          errorOrWarn(getErrorLoc(ctx, loc) + "call to " +
-                      lld::toString(*rel.sym).substr(6) +
-                      " lacks nop, can't restore toc");
+          Err(ctx) << getErrorLoc(ctx, loc) << "call to "
+                   << lld::toString(*rel.sym).substr(6)
+                   << " lacks nop, can't restore toc";
           break;
         }
         write32(ctx, loc + 4, 0xe8410018); // ld %r2, 24(%r1)
