@@ -73,7 +73,7 @@ _LIBCPP_END_NAMESPACE_STD
     extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
-    constexpr bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                    \
+    bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                              \
       return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
@@ -94,7 +94,7 @@ _LIBCPP_END_NAMESPACE_STD
     [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
-    constexpr bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                    \
+    bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                              \
       return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
