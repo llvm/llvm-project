@@ -1426,16 +1426,23 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // this is sufficient to catch some interesting cases.
       unsigned Opcode = BO->getOpcode();
 
-      // If this is a shift recurrence, we know the bits being shifted in.
-      // We can combine that with information about the start value of the
-      // recurrence to conclude facts about the result.
       switch (Opcode) {
+      // If this is a shift recurrence, we know the bits being shifted in. We
+      // can combine that with information about the start value of the
+      // recurrence to conclude facts about the result. If this is a udiv
+      // recurrence, we know that the result can never exceed either the
+      // numerator or the start value, whichever is greater.
       case Instruction::LShr:
       case Instruction::AShr:
-      case Instruction::Shl: {
+      case Instruction::Shl:
+      case Instruction::UDiv:
         if (BO->getOperand(0) != I)
           break;
+        [[fallthrough]];
 
+      // For a urem recurrence, the result can never exceed the start value. The
+      // phi could either be the numerator or the denominator.
+      case Instruction::URem: {
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
         // %iv.next = shift_op %iv, L
@@ -1453,8 +1460,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setLowBits(Known2.countMinTrailingZeros());
           break;
         case Instruction::LShr:
-          // A lshr recurrence will preserve the leading zeros of the
-          // start value
+        case Instruction::UDiv:
+        case Instruction::URem:
+          // lshr, udiv, and urem recurrences will preserve the leading zeros of
+          // the start value.
           Known.Zero.setHighBits(Known2.countMinLeadingZeros());
           break;
         case Instruction::AShr:
@@ -1542,6 +1551,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         }
         break;
       }
+
       default:
         break;
       }
@@ -9039,12 +9049,14 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, div, gep, uaddo, etc..
+    // TODO: Expand list -- xor, gep, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
     case Instruction::Add:
     case Instruction::Sub:
+    case Instruction::UDiv:
+    case Instruction::URem:
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Mul:
