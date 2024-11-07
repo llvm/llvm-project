@@ -407,8 +407,8 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -490,9 +490,9 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, loc - 3)
+               << "R_X86_64_GOTPC32_TLSDESC must be used "
+                  "in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
@@ -532,9 +532,9 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, loc - 3)
+               << "R_X86_64_GOTPC32_TLSDESC must be used "
+                  "in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-2] = 0x8b;
@@ -582,8 +582,9 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     memcpy(inst, "\x48\xc7", 2);
     *regSlot = 0xc0 | reg;
   } else {
-    error(getErrorLoc(ctx, loc - 3) +
-          "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
+    ErrAlways(ctx)
+        << getErrorLoc(ctx, loc - 3)
+        << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
   }
 
   // The original code used a PC relative relocation.
@@ -627,8 +628,9 @@ void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     return;
   }
 
-  error(getErrorLoc(ctx, loc - 3) +
-        "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD");
+  ErrAlways(ctx)
+      << getErrorLoc(ctx, loc - 3)
+      << "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD";
 }
 
 // A JumpInstrMod at a specific offset indicates that the jump instruction
@@ -1031,7 +1033,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
   if (!ctx.arg.is64) {
-    error("target doesn't support split stacks");
+    ErrAlways(ctx) << "target doesn't support split stacks";
     return false;
   }
 

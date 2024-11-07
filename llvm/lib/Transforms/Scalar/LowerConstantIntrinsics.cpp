@@ -27,7 +27,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -144,7 +143,7 @@ bool llvm::lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
       IsConstantIntrinsicsHandled++;
       break;
     case Intrinsic::objectsize:
-      NewValue = lowerObjectSizeCall(II, DL, &TLI, true);
+      NewValue = lowerObjectSizeCall(II, DL, &TLI, /*AA=*/nullptr, DT, true);
       LLVM_DEBUG(dbgs() << "Folding " << *II << " to " << *NewValue << "\n");
       ObjectSizeIntrinsicsHandled++;
       break;

@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___FWD_STRING_VIEW_H
 #define _LIBCPP___FWD_STRING_VIEW_H
 
-#include <__config>
-#include <__fwd/string.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/string.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

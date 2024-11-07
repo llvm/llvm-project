@@ -31,7 +31,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Analysis/WithCache.h"
@@ -1565,6 +1564,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Value *IncValue = P->getIncomingValue(u);
         // Skip direct self references.
         if (IncValue == P) continue;
+
+        // If the Use is a select of this phi, use the knownbit of the other
+        // operand to break the recursion.
+        if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
+            IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
+                                               : SI->getTrueValue();
+        }
 
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
@@ -6003,14 +6010,32 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (IncValue == P)
           continue;
 
+        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
+
+        // If the Use is a select of this phi, use the fp class of the other
+        // operand to break the recursion. Same around 2-operand phi nodes
+        Value *V;
+        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
+          IncValue = V;
+        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
+                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
+          for (int Idx = 0; Idx < 2; ++Idx) {
+            if (IncPhi->getIncomingValue(Idx) == P) {
+              IncValue = IncPhi->getIncomingValue(1 - Idx);
+              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+              break;
+            }
+          }
+        }
+
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
         computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
                             PhiRecursionLimit,
-                            Q.getWithoutCondContext().getWithInstruction(
-                                P->getIncomingBlock(U)->getTerminator()));
+                            Q.getWithoutCondContext().getWithInstruction(CxtI));
 
         if (First) {
           Known = KnownSrc;
@@ -6686,11 +6711,11 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 }
 
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
-  if (!V->getType()->isPointerTy())
-    return V;
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       V = GEP->getPointerOperand();
+      if (!V->getType()->isPointerTy()) // Only handle scalar pointer base.
+        return nullptr;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);

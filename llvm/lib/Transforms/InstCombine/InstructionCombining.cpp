@@ -47,6 +47,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -3317,8 +3318,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
           SmallVector<Instruction *> InsertedInstructions;
-          Value *Result = lowerObjectSizeCall(
-              II, DL, &TLI, AA, /*MustSucceed=*/true, &InsertedInstructions);
+          Value *Result =
+              lowerObjectSizeCall(II, DL, &TLI, AA, &DT,
+                                  /*MustSucceed=*/true, &InsertedInstructions);
           for (Instruction *Inserted : InsertedInstructions)
             Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);
@@ -5545,8 +5547,15 @@ void InstCombinePass::printPipeline(
   OS << '>';
 }
 
+char InstCombinePass::ID = 0;
+
 PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
+  auto &LRT = AM.getResult<LastRunTrackingAnalysis>(F);
+  // No changes since last InstCombine pass, exit early.
+  if (LRT.shouldSkip(&ID))
+    return PreservedAnalyses::all();
+
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
@@ -5562,12 +5571,16 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, BPI, PSI, Options))
+                                       BFI, BPI, PSI, Options)) {
     // No changes, all analyses are preserved.
+    LRT.update(&ID, /*Changed=*/false);
     return PreservedAnalyses::all();
+  }
 
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
+  LRT.update(&ID, /*Changed=*/true);
+  PA.preserve<LastRunTrackingAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

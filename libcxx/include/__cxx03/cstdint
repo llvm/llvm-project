@@ -140,9 +140,9 @@ Types:
 }  // std
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <stdint.h>
+#include <__cxx03/stdint.h>
 
 #ifndef _LIBCPP_STDINT_H
 #   error <cstdint> tried including <stdint.h> but didn't find libc++'s <stdint.h> header. \

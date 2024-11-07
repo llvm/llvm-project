@@ -542,6 +542,7 @@ static void readConfigs(opt::InputArgList &args) {
   else
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 1);
@@ -569,6 +570,13 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOEmitIndexFiles = args.hasArg(OPT_thinlto_emit_index_files) ||
+                                  args.hasArg(OPT_thinlto_index_only) ||
+                                  args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   errorHandler().verbose = args.hasArg(OPT_verbose);
@@ -1378,6 +1386,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   processStubLibraries();
 
   writeWhyExtract();
+
+  // Bail out if normal linked output is skipped due to LTO.
+  if (config->thinLTOIndexOnly)
+    return;
 
   createOptionalSymbols();
 
