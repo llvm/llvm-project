@@ -745,12 +745,10 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 ======================================= ====================================================================== ==================================
          Name                            Operation                                                              Supported element types
 ======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return the largest element of the vector. If the element type is       integer and floating point types
-                                         floating point, this function has the same comparison semantics as 
-                                         ``__builtin_reduce_maximum``.
- ET __builtin_reduce_min(VT a)           return the smallest element of the vector. If the element type is      integer and floating point types
-                                         floating point, this function has the same comparison semantics as 
-                                         ``__builtin_reduce_minimum``.
+ ET __builtin_reduce_max(VT a)           return the largest element of the vector. The result will always be    integer and floating point types
+                                         a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The result will always be   integer and floating point types
+                                         a number unless all elements of the vector are NaN.
  ET __builtin_reduce_add(VT a)           \+                                                                     integer types
  ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
  ET __builtin_reduce_and(VT a)           &                                                                      integer types
