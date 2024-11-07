@@ -23,6 +23,8 @@ void quubble(extern void);       // expected-error {{invalid storage class speci
 #if __STDC_VERSION__ >= 202311L
 void quibble(constexpr void);    // expected-error {{function parameter cannot be constexpr}}
 #endif
+#if __STDC_VERSION__ >= 201112L
 void quabble(_Thread_local void); // expected-error {{'_Thread_local' is only allowed on variable declarations}}
+#endif
 void bing(void, ...);            // expected-error {{'void' must be the first and only parameter if specified}}
 
