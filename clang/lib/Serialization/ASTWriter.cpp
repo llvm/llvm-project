@@ -1412,9 +1412,11 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
 }
 
 /// Write the control block.
-void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                                  StringRef isysroot) {
+void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   using namespace llvm;
+
+  SourceManager &SourceMgr = PP.getSourceManager();
+  FileManager &FileMgr = PP.getFileManager();
 
   Stream.EnterSubblock(CONTROL_BLOCK_ID, 5);
   RecordData Record;
@@ -1463,14 +1465,12 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     SmallString<128> BaseDir;
     if (PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) {
       // Use the current working directory as the base path for all inputs.
-      auto CWD =
-          Context.getSourceManager().getFileManager().getOptionalDirectoryRef(
-              ".");
+      auto CWD = FileMgr.getOptionalDirectoryRef(".");
       BaseDir.assign(CWD->getName());
     } else {
       BaseDir.assign(WritingModule->Directory->getName());
     }
-    cleanPathForOutput(Context.getSourceManager().getFileManager(), BaseDir);
+    cleanPathForOutput(FileMgr, BaseDir);
 
     // If the home of the module is the current working directory, then we
     // want to pick up the cwd of the build process loading the module, not
@@ -1539,7 +1539,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   }
 
   // CAS include-tree id, for the scanner.
-  if (auto ID = Context.getCASIncludeTreeID()) {
+  if (auto ID = Context->getCASIncludeTreeID()) {
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(CAS_INCLUDE_TREE_ID));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
@@ -1548,7 +1548,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     Stream.EmitRecordWithBlob(AbbrevCode, Record, *ID);
   }
   // CAS filesystem root id, for the scanner.
-  if (auto ID = Context.getCASFileSystemRootID()) {
+  if (auto ID = Context->getCASFileSystemRootID()) {
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(CASFS_ROOT_ID));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
@@ -1598,7 +1598,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Language options.
   Record.clear();
-  const LangOptions &LangOpts = Context.getLangOpts();
+  const LangOptions &LangOpts = PP.getLangOpts();
 #define LANGOPT(Name, Bits, Default, Description) \
   Record.push_back(LangOpts.Name);
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
@@ -1635,7 +1635,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Target options.
   Record.clear();
-  const TargetInfo &Target = Context.getTargetInfo();
+  const TargetInfo &Target = PP.getTargetInfo();
   const TargetOptions &TargetOpts = Target.getTargetOpts();
   AddString(TargetOpts.Triple, Record);
   AddString(TargetOpts.CPU, Record);
@@ -1712,8 +1712,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Stream.ExitBlock();
 
   // Original file name and file ID
-  SourceManager &SM = Context.getSourceManager();
-  if (auto MainFile = SM.getFileEntryRefForID(SM.getMainFileID())) {
+  if (auto MainFile =
+          SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID())) {
     auto FileAbbrev = std::make_shared<BitCodeAbbrev>();
     FileAbbrev->Add(BitCodeAbbrevOp(ORIGINAL_FILE));
     FileAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File ID
@@ -1722,16 +1722,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
     Record.clear();
     Record.push_back(ORIGINAL_FILE);
-    AddFileID(SM.getMainFileID(), Record);
+    AddFileID(SourceMgr.getMainFileID(), Record);
     EmitRecordWithPath(FileAbbrevCode, Record, MainFile->getName());
   }
 
   Record.clear();
-  AddFileID(SM.getMainFileID(), Record);
+  AddFileID(SourceMgr.getMainFileID(), Record);
   Stream.EmitRecord(ORIGINAL_FILE_ID, Record);
 
-  WriteInputFiles(Context.SourceMgr,
-                  PP.getHeaderSearchInfo().getHeaderSearchOpts());
+  WriteInputFiles(SourceMgr, PP.getHeaderSearchInfo().getHeaderSearchOpts());
   Stream.ExitBlock();
 }
 
@@ -5427,7 +5426,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   PrepareWritingSpecialDecls(SemaRef);
 
   // Write the control block
-  WriteControlBlock(PP, Context, isysroot);
+  WriteControlBlock(PP, isysroot);
 
   // Write the remaining AST contents.
   Stream.FlushToWord();
