@@ -267,10 +267,6 @@ def : PatGprGpr<urem, REMUW, i32, i32>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def : PatGpr<ctlz, CLZW, i32>;
-def : PatGpr<cttz, CTZW, i32>;
-def : PatGpr<ctpop, CPOPW, i32>;
-
 def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
 def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
 
@@ -281,14 +277,6 @@ let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
 def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
-
-def : PatGprGpr<rotl, ROLW, i32, i32>;
-def : PatGprGpr<rotr, RORW, i32, i32>;
-def : Pat<(i32 (rotr GPR:$rs1, uimm5i32:$imm)),
-          (RORIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$rs2)),
-          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5i32:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {

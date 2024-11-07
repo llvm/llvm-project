@@ -1339,12 +1339,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
-        // FIXME: vp_gather/scatter can be hoisted to here.
         setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
                             ISD::MGATHER, ISD::MSCATTER},
                            VT, Custom);
-        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
-                            ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER,
+                            ISD::VP_SCATTER, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
                             ISD::EXPERIMENTAL_VP_STRIDED_STORE},
                            VT, Custom);
 
@@ -1408,8 +1407,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::BUILD_VECTOR, ISD::SCALAR_TO_VECTOR}, VT,
                            Custom);
-
-        setOperationAction({ISD::VP_GATHER, ISD::VP_SCATTER}, VT, Custom);
 
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
@@ -21512,7 +21509,12 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
   if (!isTypeLegal(VT))
     return false;
 
-  if (!isLegalElementTypeForRVV(VT.getScalarType()) ||
+  // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+  if (!(isLegalElementTypeForRVV(VT.getScalarType()) ||
+        (VT.getScalarType() == MVT::bf16 &&
+         Subtarget.hasVInstructionsBF16Minimal()) ||
+        (VT.getScalarType() == MVT::f16 &&
+         Subtarget.hasVInstructionsF16Minimal())) ||
       !allowsMemoryAccessForAlignment(VTy->getContext(), DL, VT, AddrSpace,
                                       Alignment))
     return false;
@@ -21552,7 +21554,10 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+  if (!(isLegalElementTypeForRVV(ScalarType) ||
+        (ScalarType == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal()) ||
+        (ScalarType == MVT::f16 && Subtarget.hasVInstructionsF16Minimal())))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
