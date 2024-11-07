@@ -17,20 +17,25 @@ Goal and usage
 
 Clang allows diagnostics to be configured at a translation-unit granularity.
 If a ``foo.cpp`` is compiled with ``-Wfoo``, all transitively included headers
-also need to be clean. Hence turning on new warnings in large codebases can be
-difficult today. Since it requires cleaning up all the existing warnings,
-which might not be possible when some dependencies aren't in the project owner's
-control or because new violations are creeping up quicker than the clean up.
+also need to be clean. Hence turning on new warnings in large codebases requires
+cleaning up all the existing warnings. This might not be possible when some
+dependencies aren't in the project owner's control or because new violations are
+creeping up quicker than the clean up.
 
 Warning suppression mappings aim to alleviate some of these concerns by making
 diagnostic configuration granularity finer, at a source file level.
 
-To achieve this, user can create a file that lists which diagnostic groups to
-suppress in which files or paths, and pass it as a command line argument to
-Clang with the ``--warning-suppression-mappings`` flag.
+To achieve this, user can create a file that lists which :doc:`diagnostic
+groups <DiagnosticsReference>` to suppress in which files or paths, and pass it
+as a command line argument to Clang with the ``--warning-suppression-mappings``
+flag.
 
 Note that this mechanism won't enable any diagnostics on its own. Users should
 still turn on warnings in their compilations with explicit ``-Wfoo`` flags.
+`Controlling diagnostics pragmas
+<https://clang.llvm.org/docs/UsersManual.html#controlling-diagnostics-via-pragmas>`_
+take precedence over suppression mappings. Ensuring code author's explicit
+intent is always preserved.
 
 Example
 =======
@@ -58,19 +63,18 @@ Format
 Warning suppression mappings uses the same format as
 :doc:`SanitizerSpecialCaseList`.
 
-Users can mention sections to describe which diagnostic group behaviours to
-change. Sections are denoted as ``[unused]`` in this format. Each section name
-must match a diagnostic group.
-When a diagnostic is matched by multiple groups, the latest one takes
-precendence.
+Sections describe which diagnostic group's behaviour to change, e.g.
+``[unused]``. When a diagnostic is matched by multiple sections, the latest
+section takes precedence.
 
 Afterwards in each section, users can have multiple entities that match source
 files based on the globs. These entities look like ``src:*/my/dir/*``.
 Users can also use the ``emit`` category to exclude a subdirectory from
 suppression.
-Source files are matched against these globs either as paths relative to th
+Source files are matched against these globs either as paths relative to the
 current working directory, or as absolute paths.
-When a source file matches multiple globs, the longest one takes precendence.
+When a source file matches multiple globs in a section, the longest one takes
+precedence.
 
 .. code-block:: bash
 

@@ -561,11 +561,11 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
 }
 
 void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
-  std::string Err;
-  auto WarningSuppressionList = WarningsSpecialCaseList::create(Input, Err);
+  std::string Error;
+  auto WarningSuppressionList = WarningsSpecialCaseList::create(Input, Error);
   if (!WarningSuppressionList) {
     Report(diag::err_drv_malformed_warning_suppression_mapping)
-        << Input.getBufferIdentifier() << Err;
+        << Input.getBufferIdentifier() << Error;
     return;
   }
   WarningSuppressionList->processSections(*this);
@@ -597,7 +597,7 @@ bool WarningsSpecialCaseList::globsMatches(
   bool LongestIsPositive = false;
   for (const auto &Entry : CategoriesToMatchers) {
     llvm::StringRef Category = Entry.first();
-    const auto &Matcher = Entry.second;
+    const llvm::SpecialCaseList::Matcher &Matcher = Entry.second;
     bool IsPositive = Category != "emit";
     for (const auto &[Pattern, Glob] : Matcher.Globs) {
       if (Pattern.size() < LongestMatch.size())

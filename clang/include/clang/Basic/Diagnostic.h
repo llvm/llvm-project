@@ -960,7 +960,7 @@ public:
   /// Mapping file is expected to be a special case list with sections denoting
   /// diagnostic groups and `src` entries for globs to suppress. `emit` category
   /// can be used to disable suppression. Longest glob that matches a filepath
-  /// takes precendence. For example:
+  /// takes precedence. For example:
   ///   [unused]
   ///   src:clang/*
   ///   src:clang/foo/*=emit

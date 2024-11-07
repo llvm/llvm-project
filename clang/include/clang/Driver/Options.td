@@ -9020,5 +9020,5 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
 
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
-  HelpText<"File containing diagnostic suppresion mappings. See user manual for"
-  " file format.">, Visibility<[ClangOption, CC1Option]>;
+  HelpText<"File containing diagnostic suppresion mappings. See user manual "
+  "for file format.">, Visibility<[ClangOption, CC1Option]>;
