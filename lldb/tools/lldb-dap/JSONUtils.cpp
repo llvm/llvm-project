@@ -44,12 +44,12 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
+#include <climits>
 #include <cstddef>
 #include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
-#include <sys/syslimits.h>
 #include <utility>
 #include <vector>
 
