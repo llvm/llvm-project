@@ -2522,20 +2522,7 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
 
 bool SwiftLanguageRuntime::IsABIStable() { FORWARD(IsABIStable); }
 
-namespace {
-/// The target specific register numbers used for async unwinding.
-///
-/// For UnwindPlans, these use eh_frame / dwarf register numbering.
-struct AsyncUnwindRegisterNumbers {
-  uint32_t async_ctx_regnum;
-  uint32_t fp_regnum;
-  uint32_t pc_regnum;
-
-  RegisterKind GetRegisterKind() const { return lldb::eRegisterKindDWARF; }
-};
-} // namespace
-
-static std::optional<AsyncUnwindRegisterNumbers>
+std::optional<AsyncUnwindRegisterNumbers>
 GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple) {
   switch (triple) {
   case llvm::Triple::x86_64: {
