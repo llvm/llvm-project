@@ -3272,8 +3272,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi32(__m128i __a,
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
 ///    converted value of the second operand. The upper 64 bits are copied from
 ///    the upper 64 bits of the first operand.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtsi64_sd(__m128d __a,
-                                                            long long __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi64_sd(__m128d __a, long long __b) {
   __a[0] = __b;
   return __a;
 }
