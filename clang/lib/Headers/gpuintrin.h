@@ -113,18 +113,34 @@ __gpu_is_first_in_lane(uint64_t __lane_mask) {
 
 // Gets the first floating point value from the active lanes.
 _DEFAULT_FN_ATTRS static __inline__ float
-__gpu_shuffle_idx_f32(uint64_t __lane_mask, float __x) {
+__gpu_read_first_lane_f32(uint64_t __lane_mask, float __x) {
   return __builtin_bit_cast(
-      float,
-      __gpu_shuffle_idx_u32(__lane_mask, __builtin_bit_cast(uint32_t, __x)));
+      float, __gpu_read_first_lane_u32(__lane_mask,
+                                       __builtin_bit_cast(uint32_t, __x)));
 }
 
 // Gets the first floating point value from the active lanes.
 _DEFAULT_FN_ATTRS static __inline__ double
-__gpu_shuffle_idx_f64(uint64_t __lane_mask, double __x) {
+__gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
   return __builtin_bit_cast(
-      double,
-      __gpu_shuffle_idx_u64(__lane_mask, __builtin_bit_cast(uint64_t, __x)));
+      double, __gpu_read_first_lane_u64(__lane_mask,
+                                        __builtin_bit_cast(uint64_t, __x)));
+}
+
+// Gets the first floating point value from the active lanes.
+_DEFAULT_FN_ATTRS static __inline__ float
+__gpu_shuffle_idx_f32(uint64_t __lane_mask, uint32_t __idx, float __x) {
+  return __builtin_bit_cast(
+      float, __gpu_shuffle_idx_u32(__lane_mask, __idx,
+                                   __builtin_bit_cast(uint32_t, __x)));
+}
+
+// Gets the first floating point value from the active lanes.
+_DEFAULT_FN_ATTRS static __inline__ double
+__gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x) {
+  return __builtin_bit_cast(
+      double, __gpu_shuffle_idx_u64(__lane_mask, __idx,
+                                    __builtin_bit_cast(uint64_t, __x)));
 }
 
 // Gets the sum of all lanes inside the warp or wavefront.
@@ -150,7 +166,10 @@ __DO_LANE_REDUCE(double, f64);
     for (uint32_t step = 1; step < __gpu_num_lanes(); step *= 2) {             \
       uint32_t index = __gpu_lane_id() - step;                                 \
       __bitmask_type bitmask = __gpu_lane_id() >= step;                        \
-      x += -bitmask & __gpu_shuffle_idx_##__suffix(__lane_mask, index, x);     \
+      x += __builtin_bit_cast(                                                 \
+          __type, -bitmask & __builtin_bit_cast(__bitmask_type,                \
+                                                __gpu_shuffle_idx_##__suffix(  \
+                                                    __lane_mask, index, x)));  \
     }                                                                          \
     return x;                                                                  \
   }
