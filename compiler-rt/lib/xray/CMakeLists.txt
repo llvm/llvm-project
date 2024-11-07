@@ -245,7 +245,7 @@ if (APPLE)
     if (${arch} IN_LIST XRAY_DSO_SUPPORTED_ARCH)
       add_compiler_rt_object_libraries(RTXrayDSO_${arch}
         OS ${XRAY_SUPPORTED_OS}
-        ARCHS ${XRAY_DSO_SUPPORTED_ARCH}
+        ARCHS ${arch}
         SOURCES ${${arch}_DSO_SOURCES}
         ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
         CFLAGS ${XRAY_CFLAGS}
