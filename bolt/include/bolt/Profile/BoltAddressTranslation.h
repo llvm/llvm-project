@@ -182,6 +182,9 @@ private:
   /// translation map entry
   const static uint32_t BRANCHENTRY = 0x1;
 
+  /// Identifies a landing pad in secondary entry point map entry.
+  const static uint32_t LPENTRY = 0x1;
+
 public:
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {
