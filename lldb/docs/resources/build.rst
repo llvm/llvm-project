@@ -64,7 +64,7 @@ CMake configuration error.
 +-------------------+------------------------------------------------------+--------------------------+
 | Python            | Python scripting                                     | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+------------------------------------------------------+--------------------------+
-| Lua               | Lua scripting                                        | ``LLDB_ENABLE_LUA``      |
+| Lua               | Lua scripting. Only version 5.3 is supported.        | ``LLDB_ENABLE_LUA``      |
 +-------------------+------------------------------------------------------+--------------------------+
 
 Depending on your platform and package manager, one might run any of the
