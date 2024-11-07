@@ -5242,10 +5242,10 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
 
 /// CalculateTailCallArgDest - Remember Argument for later processing. Calculate
 /// the position of the argument.
-static void
-CalculateTailCallArgDest(SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64,
-                         SDValue Arg, int SPDiff, unsigned ArgOffset,
-                     SmallVectorImpl<TailCallArgumentInfo> &TailCallArguments) {
+static void CalculateTailCallArgDest(
+    SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64, SDValue Arg,
+    int SPDiff, unsigned ArgOffset,
+    SmallVectorImpl<TailCallArgumentInfo> &TailCallArguments) {
   int Offset = ArgOffset + SPDiff;
   uint32_t OpSize = (Arg.getValueSizeInBits() + 7) / 8;
   int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
