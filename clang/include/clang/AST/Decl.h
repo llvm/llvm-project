@@ -1391,8 +1391,8 @@ public:
   /// Evaluate the initializer of this variable to determine whether it's a
   /// constant initializer. Should only be called once, after completing the
   /// definition of the variable.
-  bool
-  checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+  bool checkForConstantInitialization(
+      SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;

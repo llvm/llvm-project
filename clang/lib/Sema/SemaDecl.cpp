@@ -14441,8 +14441,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       }
     } else {
       // Evaluate the initializer to see if it's a constant initializer.
-      HasConstInit =
-          var->checkForConstantInitialization(Notes);
+      HasConstInit = var->checkForConstantInitialization(Notes);
     }
 
     if (HasConstInit) {

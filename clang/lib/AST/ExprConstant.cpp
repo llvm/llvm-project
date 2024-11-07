@@ -1004,11 +1004,6 @@ namespace {
       EM_IgnoreSideEffects,
     } EvalMode;
 
-    /// Implementation of an interface for AST mutation.
-    /// Basically something backed by Sema,
-    /// or nullptr if Sema is not available.
-    EvalASTMutator *ASTMutator;
-
     /// Are we checking whether the expression is a potential constant
     /// expression?
     bool checkingPotentialConstantExpression() const override  {
@@ -1022,8 +1017,7 @@ namespace {
       return CheckingForUndefinedBehavior;
     }
 
-    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode,
-             EvalASTMutator *ASTMutator = nullptr)
+    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
         : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
@@ -1033,15 +1027,14 @@ namespace {
                       /*CallExpr=*/nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
           EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false), EvalMode(Mode),
-          ASTMutator(ASTMutator) {}
+          HasFoldFailureDiagnostic(false), EvalMode(Mode) {}
 
     ~EvalInfo() {
       discardCleanups();
     }
 
     ASTContext &getASTContext() const override { return Ctx; }
-    EvalASTMutator *getASTMutator() const { return ASTMutator; }
+    EvalASTMutator *getASTMutator() const { return Ctx.getASTMutator(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -8336,7 +8329,8 @@ public:
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
-    if (Info.Ctx.getLangOpts().CPlusPlus26 && Info.getASTMutator() && !Definition && FD->getTemplateInstantiationPattern()) {
+    if (Info.Ctx.getLangOpts().CPlusPlus26 && Info.getASTMutator() &&
+        !Definition && FD->getTemplateInstantiationPattern()) {
       Info.getASTMutator()->InstantiateFunctionDefinition(
           E->getExprLoc(), const_cast<FunctionDecl *>(FD),
           /*Recursive=*/true, /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
@@ -16701,8 +16695,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                 (IsConstantInitialization &&
                  (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
-                    : EvalInfo::EM_ConstantFold,
-                Ctx.getASTMutator());
+                    : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 

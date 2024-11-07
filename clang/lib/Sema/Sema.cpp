@@ -305,6 +305,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
 
   CurFPFeatures.setFPEvalMethod(PP.getCurrentFPEvalMethod());
 
+  /// Initialize ASTMutator within ASTContext.
+  /// This is very intentionally not a part of public interface
+  /// of ASTContext.
   injectASTMutatorIntoASTContext(*this, Context);
 }
 

@@ -184,8 +184,7 @@ struct TypeInfoChars {
 };
 
 // Interface that allows constant evaluator to mutate AST.
-// When constant evaluation is triggered by Sema, it can supply a proper
-// implementation of this interface.
+// Sema is the only entity that can implement this.
 struct EvalASTMutator {
   virtual ~EvalASTMutator() = default;
 
@@ -684,9 +683,14 @@ private:
   /// Keeps track of the deallocated DeclListNodes for future reuse.
   DeclListNode *ListNodeFreeList = nullptr;
 
+  /// Implementation of the interface that Sema provides during its
+  /// construction.
   EvalASTMutator *ASTMutator = nullptr;
 
 public:
+  /// Returns an object that is capable of modifying AST,
+  /// or nullptr if it's not available. The latter happens when
+  /// Sema is not available.
   EvalASTMutator *getASTMutator() const { return ASTMutator; }
 
   IdentifierTable &Idents;
@@ -3526,6 +3530,9 @@ private:
 
   void ReleaseDeclContextMaps();
 
+  /// This is a function that is implemented in the Sema layer,
+  /// that needs friendship to initialize ASTMutator without this capability
+  /// being available in the public interface of ASTContext.
   friend void injectASTMutatorIntoASTContext(Sema &, ASTContext &);
 
 public:
