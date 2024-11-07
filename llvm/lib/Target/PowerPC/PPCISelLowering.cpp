@@ -5243,12 +5243,13 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
 /// CalculateTailCallArgDest - Remember Argument for later processing. Calculate
 /// the position of the argument.
 static void CalculateTailCallArgDest(
-    SelectionDAG &DAG, MachineFunction &MF, EVT VT, SDValue Arg, int SPDiff,
-    unsigned ArgOffset,
+    SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64, SDValue Arg,
+    int SPDiff, unsigned ArgOffset,
     SmallVectorImpl<TailCallArgumentInfo> &TailCallArguments) {
   int Offset = ArgOffset + SPDiff;
   uint32_t OpSize = (Arg.getValueSizeInBits() + 7) / 8;
   int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
+  EVT VT = IsPPC64 ? MVT::i64 : MVT::i32;
   SDValue FIN = DAG.getFrameIndex(FI, VT);
   TailCallArgumentInfo Info;
   Info.Arg = Arg;
@@ -5310,8 +5311,8 @@ static void LowerMemOpCallTo(
         DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
     // Calculate and remember argument location.
   } else
-    CalculateTailCallArgDest(DAG, MF, Subtarget.getScalarIntVT(), Arg, SPDiff,
-                             ArgOffset, TailCallArguments);
+    CalculateTailCallArgDest(DAG, MF, isPPC64, Arg, SPDiff, ArgOffset,
+                             TailCallArguments);
 }
 
 static void
@@ -6174,7 +6175,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
             DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
       } else {
         // Calculate and remember argument location.
-        CalculateTailCallArgDest(DAG, MF, MVT::i32, Arg, SPDiff, LocMemOffset,
+        CalculateTailCallArgDest(DAG, MF, false, Arg, SPDiff, LocMemOffset,
                                  TailCallArguments);
       }
     }
