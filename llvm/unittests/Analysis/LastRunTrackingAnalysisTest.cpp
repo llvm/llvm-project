@@ -111,7 +111,7 @@ TEST_F(LastRunTrackingAnalysisTest, SkipTest) {
   MPM.addPass(ModuleNoopPass(BitMap, 8, &PassA, false));
   MPM.run(M, MAM);
 
-  ASSERT_EQ(BitMap, 0b110101001);
+  ASSERT_EQ(BitMap, 0b110101001U);
 }
 
 } // namespace
