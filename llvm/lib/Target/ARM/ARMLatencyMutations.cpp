@@ -587,6 +587,8 @@ bool ARMOverrideBypasses::memoryRAWHazard(SUnit &ISU, SDep &Dep,
 
 namespace {
 
+std::unique_ptr<InstructionInformation> II;
+
 class CortexM7InstructionInformation : public InstructionInformation {
 public:
   CortexM7InstructionInformation(const ARMBaseInstrInfo *TII)
@@ -597,22 +599,17 @@ class CortexM7Overrides : public ARMOverrideBypasses {
 public:
   CortexM7Overrides(const ARMBaseInstrInfo *TII, AAResults *AA)
       : ARMOverrideBypasses(TII, AA) {
-    if (!DI)
-      DI.reset(new CortexM7InstructionInformation(TII));
+    if (!II)
+      II.reset(new CortexM7InstructionInformation(TII));
   }
 
   void modifyBypasses(SUnit &) override;
-
-private:
-  static std::unique_ptr<InstructionInformation> DI;
 };
-
-std::unique_ptr<InstructionInformation> CortexM7Overrides::DI;
 
 void CortexM7Overrides::modifyBypasses(SUnit &ISU) {
   const MachineInstr *SrcMI = ISU.getInstr();
   unsigned SrcOpcode = SrcMI->getOpcode();
-  bool isNSWload = DI->isNonSubwordLoad(SrcOpcode);
+  bool isNSWload = II->isNonSubwordLoad(SrcOpcode);
 
   // Walk the successors looking for latency overrides that are needed
   for (SDep &Dep : ISU.Succs) {
@@ -644,20 +641,20 @@ void CortexM7Overrides::modifyBypasses(SUnit &ISU) {
     // because we cannot easily create a read advance that is 0 from certain
     // writer classes and 1 from all the rest.
     // (The other way around would have been easy.)
-    if (isNSWload && (DI->isMultiply(DstOpcode) || DI->isDivide(DstOpcode)))
+    if (isNSWload && (II->isMultiply(DstOpcode) || II->isDivide(DstOpcode)))
       setBidirLatencies(ISU, Dep, Dep.getLatency() + 1);
 
     // Word loads into B operand of a load/store are considered cannot bypass
     // their scheduling stage. Cannot do in the .td file because
     // need to decide between -1 and -2 for ReadAdvance
-    if (isNSWload && DI->hasBRegAddr(DstOpcode) &&
+    if (isNSWload && II->hasBRegAddr(DstOpcode) &&
         DstMI->getOperand(2).getReg() == Dep.getReg())
       setBidirLatencies(ISU, Dep, Dep.getLatency() + 1);
 
     // Multiplies into any address generation cannot bypass from EX3.  Cannot do
     // in the .td file because need to decide between -1 and -2 for ReadAdvance
-    if (DI->isMultiply(SrcOpcode)) {
-      unsigned OpMask = DI->getAddressOpMask(DstOpcode) >> 1;
+    if (II->isMultiply(SrcOpcode)) {
+      unsigned OpMask = II->getAddressOpMask(DstOpcode) >> 1;
       for (unsigned i = 1; OpMask; ++i, OpMask >>= 1) {
         if ((OpMask & 1) && DstMI->getOperand(i).isReg() &&
             DstMI->getOperand(i).getReg() == Dep.getReg()) {
@@ -675,7 +672,7 @@ void CortexM7Overrides::modifyBypasses(SUnit &ISU) {
                         TII->getPredicate(*DstMI)))) {
       unsigned Lat = 1;
       // Operand A of shift+ALU is treated as an EX1 read instead of EX2.
-      if (DI->isInlineShiftALU(DstOpcode) && DstMI->getOperand(3).getImm() &&
+      if (II->isInlineShiftALU(DstOpcode) && DstMI->getOperand(3).getImm() &&
           DstMI->getOperand(1).getReg() == Dep.getReg())
         Lat = 2;
       Lat = std::min(3u, Dep.getLatency() + Lat);
@@ -693,10 +690,10 @@ void CortexM7Overrides::modifyBypasses(SUnit &ISU) {
     // REV instructions cannot bypass directly into the EX1 shifter.  The
     // code is slightly inexact as it doesn't attempt to ensure that the bypass
     // is to the shifter operands.
-    if (DI->isRev(SrcOpcode)) {
-      if (DI->isInlineShiftALU(DstOpcode))
+    if (II->isRev(SrcOpcode)) {
+      if (II->isInlineShiftALU(DstOpcode))
         setBidirLatencies(ISU, Dep, 2);
-      else if (DI->isShift(DstOpcode))
+      else if (II->isShift(DstOpcode))
         setBidirLatencies(ISU, Dep, 1);
     }
   }
@@ -714,21 +711,18 @@ class M85Overrides : public ARMOverrideBypasses {
 public:
   M85Overrides(const ARMBaseInstrInfo *t, AAResults *a)
       : ARMOverrideBypasses(t, a) {
-    if (!DI)
-      DI.reset(new M85InstructionInformation(t));
+    if (!II)
+      II.reset(new M85InstructionInformation(t));
   }
 
   void modifyBypasses(SUnit &) override;
 
 private:
-  static std::unique_ptr<InstructionInformation> DI;
   unsigned computeBypassStage(const MCSchedClassDesc *SCD);
   signed modifyMixedWidthFP(const MachineInstr *SrcMI,
                             const MachineInstr *DstMI, unsigned RegID,
                             const MCSchedClassDesc *SCD);
 };
-
-std::unique_ptr<InstructionInformation> M85Overrides::DI;
 
 unsigned M85Overrides::computeBypassStage(const MCSchedClassDesc *SCDesc) {
   auto SM = DAG->getSchedModel();
@@ -759,20 +753,20 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
                                         unsigned RegID,
                                         const MCSchedClassDesc *SCD) {
 
-  if (!DI->producesSP(SrcMI->getOpcode()) &&
-      !DI->producesDP(SrcMI->getOpcode()) &&
-      !DI->producesQP(SrcMI->getOpcode()))
+  if (!II->producesSP(SrcMI->getOpcode()) &&
+      !II->producesDP(SrcMI->getOpcode()) &&
+      !II->producesQP(SrcMI->getOpcode()))
     return 0;
 
   if (Register::isVirtualRegister(RegID)) {
-    if (DI->producesSP(SrcMI->getOpcode()) &&
-        DI->consumesDP(DstMI->getOpcode())) {
+    if (II->producesSP(SrcMI->getOpcode()) &&
+        II->consumesDP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
         if (OP.isReg() && OP.isDef() && OP.getReg() == RegID &&
             OP.getSubReg() == ARM::ssub_1)
           return 5 - computeBypassStage(SCD);
-    } else if (DI->producesSP(SrcMI->getOpcode()) &&
-               DI->consumesQP(DstMI->getOpcode())) {
+    } else if (II->producesSP(SrcMI->getOpcode()) &&
+               II->consumesQP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
         if (OP.isReg() && OP.isDef() && OP.getReg() == RegID &&
             (OP.getSubReg() == ARM::ssub_1 || OP.getSubReg() == ARM::ssub_3))
@@ -781,20 +775,20 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
                    OP.getSubReg() == ARM::ssub_3)
                       ? 1
                       : 0);
-    } else if (DI->producesDP(SrcMI->getOpcode()) &&
-               DI->consumesQP(DstMI->getOpcode())) {
+    } else if (II->producesDP(SrcMI->getOpcode()) &&
+               II->consumesQP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
         if (OP.isReg() && OP.isDef() && OP.getReg() == RegID &&
             OP.getSubReg() == ARM::ssub_1)
           return -1;
-    } else if (DI->producesDP(SrcMI->getOpcode()) &&
-               DI->consumesSP(DstMI->getOpcode())) {
+    } else if (II->producesDP(SrcMI->getOpcode()) &&
+               II->consumesSP(DstMI->getOpcode())) {
       for (auto &OP : DstMI->operands())
         if (OP.isReg() && OP.isUse() && OP.getReg() == RegID &&
             OP.getSubReg() == ARM::ssub_1)
           return 5 - computeBypassStage(SCD);
-    } else if (DI->producesQP(SrcMI->getOpcode()) &&
-               DI->consumesSP(DstMI->getOpcode())) {
+    } else if (II->producesQP(SrcMI->getOpcode()) &&
+               II->consumesSP(DstMI->getOpcode())) {
       for (auto &OP : DstMI->operands())
         if (OP.isReg() && OP.isUse() && OP.getReg() == RegID &&
             (OP.getSubReg() == ARM::ssub_1 || OP.getSubReg() == ARM::ssub_3))
@@ -803,8 +797,8 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
                    OP.getSubReg() == ARM::ssub_3)
                       ? 1
                       : 0);
-    } else if (DI->producesQP(SrcMI->getOpcode()) &&
-               DI->consumesDP(DstMI->getOpcode())) {
+    } else if (II->producesQP(SrcMI->getOpcode()) &&
+               II->consumesDP(DstMI->getOpcode())) {
       for (auto &OP : DstMI->operands())
         if (OP.isReg() && OP.isUse() && OP.getReg() == RegID &&
             OP.getSubReg() == ARM::ssub_1)
@@ -817,8 +811,8 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
     // added to the producer, and so only that producer is seen as *the*
     // single producer.  This behavior also has the unfortunate effect of
     // serializing the producers in the compiler's view of things.
-    if (DI->producesSP(SrcMI->getOpcode()) &&
-        DI->consumesDP(DstMI->getOpcode())) {
+    if (II->producesSP(SrcMI->getOpcode()) &&
+        II->consumesDP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
         if (OP.isReg() && OP.isDef() && OP.getReg() >= ARM::S1 &&
             OP.getReg() <= ARM::S31 && (OP.getReg() - ARM::S0) % 2 &&
@@ -826,8 +820,8 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
              (OP.getReg() - ARM::S0) / 2 + ARM::D0 == RegID ||
              (OP.getReg() - ARM::S0) / 4 + ARM::Q0 == RegID))
           return 5 - computeBypassStage(SCD);
-    } else if (DI->producesSP(SrcMI->getOpcode()) &&
-               DI->consumesQP(DstMI->getOpcode())) {
+    } else if (II->producesSP(SrcMI->getOpcode()) &&
+               II->consumesQP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
         if (OP.isReg() && OP.isDef() && OP.getReg() >= ARM::S1 &&
             OP.getReg() <= ARM::S31 && (OP.getReg() - ARM::S0) % 2 &&
@@ -836,25 +830,25 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
              (OP.getReg() - ARM::S0) / 4 + ARM::Q0 == RegID))
           return 5 - computeBypassStage(SCD) -
                  (((OP.getReg() - ARM::S0) / 2) % 2 ? 1 : 0);
-    } else if (DI->producesDP(SrcMI->getOpcode()) &&
-               DI->consumesQP(DstMI->getOpcode())) {
+    } else if (II->producesDP(SrcMI->getOpcode()) &&
+               II->consumesQP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
         if (OP.isReg() && OP.isDef() && OP.getReg() >= ARM::D0 &&
             OP.getReg() <= ARM::D15 && (OP.getReg() - ARM::D0) % 2 &&
             (OP.getReg() == RegID ||
              (OP.getReg() - ARM::D0) / 2 + ARM::Q0 == RegID))
           return -1;
-    } else if (DI->producesDP(SrcMI->getOpcode()) &&
-               DI->consumesSP(DstMI->getOpcode())) {
+    } else if (II->producesDP(SrcMI->getOpcode()) &&
+               II->consumesSP(DstMI->getOpcode())) {
       if (RegID >= ARM::S1 && RegID <= ARM::S31 && (RegID - ARM::S0) % 2)
         return 5 - computeBypassStage(SCD);
-    } else if (DI->producesQP(SrcMI->getOpcode()) &&
-               DI->consumesSP(DstMI->getOpcode())) {
+    } else if (II->producesQP(SrcMI->getOpcode()) &&
+               II->consumesSP(DstMI->getOpcode())) {
       if (RegID >= ARM::S1 && RegID <= ARM::S31 && (RegID - ARM::S0) % 2)
         return 5 - computeBypassStage(SCD) +
                (((RegID - ARM::S0) / 2) % 2 ? 1 : 0);
-    } else if (DI->producesQP(SrcMI->getOpcode()) &&
-               DI->consumesDP(DstMI->getOpcode())) {
+    } else if (II->producesQP(SrcMI->getOpcode()) &&
+               II->consumesDP(DstMI->getOpcode())) {
       if (RegID >= ARM::D1 && RegID <= ARM::D15 && (RegID - ARM::D0) % 2)
         return 1;
     }
@@ -865,7 +859,7 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
 void M85Overrides::modifyBypasses(SUnit &ISU) {
   const MachineInstr *SrcMI = ISU.getInstr();
   unsigned SrcOpcode = SrcMI->getOpcode();
-  bool isNSWload = DI->isNonSubwordLoad(SrcOpcode);
+  bool isNSWload = II->isNonSubwordLoad(SrcOpcode);
 
   // Walk the successors looking for latency overrides that are needed
   for (SDep &Dep : ISU.Succs) {
@@ -896,7 +890,7 @@ void M85Overrides::modifyBypasses(SUnit &ISU) {
     // scheduling stage. Cannot do in the .td file because need to decide
     // between -1 and -2 for ReadAdvance
 
-    if (isNSWload && DI->hasBRegAddrShift(DstOpcode) &&
+    if (isNSWload && II->hasBRegAddrShift(DstOpcode) &&
         DstMI->getOperand(3).getImm() != 0 && // shift operand
         DstMI->getOperand(2).getReg() == Dep.getReg())
       setBidirLatencies(ISU, Dep, Dep.getLatency() + 1);
@@ -905,8 +899,8 @@ void M85Overrides::modifyBypasses(SUnit &ISU) {
       setBidirLatencies(ISU, Dep, Dep.getLatency() + 1);
     }
 
-    if (DI->isMVEIntMAC(DstOpcode) &&
-        DI->isMVEIntMACMatched(SrcOpcode, DstOpcode) &&
+    if (II->isMVEIntMAC(DstOpcode) &&
+        II->isMVEIntMACMatched(SrcOpcode, DstOpcode) &&
         DstMI->getOperand(0).isReg() &&
         DstMI->getOperand(0).getReg() == Dep.getReg())
       setBidirLatencies(ISU, Dep, Dep.getLatency() - 1);
@@ -921,10 +915,10 @@ void M85Overrides::modifyBypasses(SUnit &ISU) {
                                          DAG->getSchedClass(&ISU)))
       setBidirLatencies(ISU, Dep, std::max(0, signed(Dep.getLatency()) + ALat));
 
-    if (DI->isRev(SrcOpcode)) {
-      if (DI->isInlineShiftALU(DstOpcode))
+    if (II->isRev(SrcOpcode)) {
+      if (II->isInlineShiftALU(DstOpcode))
         setBidirLatencies(ISU, Dep, 1);
-      else if (DI->isShift(DstOpcode))
+      else if (II->isShift(DstOpcode))
         setBidirLatencies(ISU, Dep, 1);
     }
   }
