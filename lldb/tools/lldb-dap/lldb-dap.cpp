@@ -13,7 +13,6 @@
 #include "OutputRedirector.h"
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
-
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
@@ -21,9 +20,9 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -38,16 +37,23 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
-
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <memory>
 #include <optional>
+#include <set>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <thread>
+#include <vector>
+
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
@@ -67,14 +73,6 @@
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
-
-#include <algorithm>
-#include <array>
-#include <map>
-#include <memory>
-#include <set>
-#include <thread>
-#include <vector>
 
 #if defined(_WIN32)
 #ifndef PATH_MAX
@@ -2706,16 +2704,14 @@ void request_setBreakpoints(const llvm::json::Object &request) {
       if (bp_obj) {
         SourceBreakpoint src_bp(g_dap, *bp_obj);
         request_bps.try_emplace(src_bp.line, src_bp);
-        const auto [kv, inserted] =
+        const auto [iv, inserted] =
             g_dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
         // We check if this breakpoint already exists to update it
-        if (inserted) {
-          kv->getSecond().SetBreakpoint(path.data());
-        } else {
-          kv->getSecond().UpdateBreakpoint(src_bp);
-        }
-
-        AppendBreakpoint(&kv->getSecond(), response_breakpoints, path,
+        if (inserted)
+          iv->getSecond().SetBreakpoint(path.data());
+        else
+          iv->getSecond().UpdateBreakpoint(src_bp);
+        AppendBreakpoint(&iv->getSecond(), response_breakpoints, path,
                          src_bp.line);
       }
     }
@@ -2803,14 +2799,14 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
 
   for (const auto &value : *filters) {
     const auto filter = GetAsString(value);
-    auto exc_bp = g_dap.GetExceptionBreakpoint(std::string(filter));
+    auto *exc_bp = g_dap.GetExceptionBreakpoint(std::string(filter));
     if (exc_bp) {
       exc_bp->SetBreakpoint();
       unset_filters.erase(std::string(filter));
     }
   }
   for (const auto &filter : unset_filters) {
-    auto exc_bp = g_dap.GetExceptionBreakpoint(filter);
+    auto *exc_bp = g_dap.GetExceptionBreakpoint(filter);
     if (exc_bp)
       exc_bp->ClearBreakpoint();
   }
@@ -2907,22 +2903,21 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
   // There is no call to remove function breakpoints other than calling this
   // function with a smaller or empty "breakpoints" list.
   const auto name_iter = g_dap.function_breakpoints.keys();
-  llvm::SetVector<llvm::StringRef> seen(name_iter.begin(), name_iter.end());
+  llvm::DenseSet<llvm::StringRef> seen(name_iter.begin(), name_iter.end());
   for (const auto &value : *breakpoints) {
     const auto *bp_obj = value.getAsObject();
     if (!bp_obj)
       continue;
     FunctionBreakpoint fn_bp(g_dap, *bp_obj);
-    const auto [kv, inserted] = g_dap.function_breakpoints.try_emplace(
+    const auto [it, inserted] = g_dap.function_breakpoints.try_emplace(
         fn_bp.functionName, g_dap, *bp_obj);
-    if (inserted) {
-      kv->second.SetBreakpoint();
-    } else {
-      kv->second.UpdateBreakpoint(fn_bp);
-    }
+    if (inserted)
+      it->second.SetBreakpoint();
+    else
+      it->second.UpdateBreakpoint(fn_bp);
 
-    AppendBreakpoint(&kv->second, response_breakpoints);
-    seen.remove(fn_bp.functionName);
+    AppendBreakpoint(&it->second, response_breakpoints);
+    seen.erase(fn_bp.functionName);
   }
 
   // Remove any breakpoints that are no longer in our list
@@ -3183,9 +3178,8 @@ void request_setDataBreakpoints(const llvm::json::Object &request) {
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
-      if (bp_obj) {
+      if (bp_obj)
         watchpoints.emplace_back(g_dap, *bp_obj);
-      }
     }
   }
   // If two watchpoints start at the same address, the latter overwrite the
@@ -4740,7 +4734,7 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
   // Disable any instruction breakpoints that aren't in this request.
   // There is no call to remove instruction breakpoints other than calling this
   // function with a smaller or empty "breakpoints" list.
-  llvm::SetVector<lldb::addr_t> seen;
+  llvm::DenseSet<lldb::addr_t> seen;
   for (const auto &addr : g_dap.instruction_breakpoints)
     seen.insert(addr.first);
 
@@ -4750,15 +4744,14 @@ void request_setInstructionBreakpoints(const llvm::json::Object &request) {
       continue;
     // Read instruction breakpoint request.
     InstructionBreakpoint inst_bp(g_dap, *bp_obj);
-    const auto [kv, inserted] = g_dap.instruction_breakpoints.try_emplace(
+    const auto [iv, inserted] = g_dap.instruction_breakpoints.try_emplace(
         inst_bp.instructionAddressReference, g_dap, *bp_obj);
-    if (inserted) {
-      kv->second.SetBreakpoint();
-    } else {
-      kv->second.UpdateBreakpoint(inst_bp);
-    }
-    AppendBreakpoint(&kv->second, response_breakpoints);
-    seen.remove(inst_bp.instructionAddressReference);
+    if (inserted)
+      iv->second.SetBreakpoint();
+    else
+      iv->second.UpdateBreakpoint(inst_bp);
+    AppendBreakpoint(&iv->second, response_breakpoints);
+    seen.erase(inst_bp.instructionAddressReference);
   }
 
   for (const auto &addr : seen) {

@@ -12,7 +12,6 @@
 
 #include "Breakpoint.h"
 #include "DAPForward.h"
-#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include <cstdint>
 
@@ -24,9 +23,6 @@ struct InstructionBreakpoint : public Breakpoint {
   lldb::addr_t instructionAddressReference;
   int32_t offset;
 
-  explicit InstructionBreakpoint(DAP &d)
-      : Breakpoint(d), instructionAddressReference(LLDB_INVALID_ADDRESS),
-        offset(0) {}
   InstructionBreakpoint(DAP &d, const llvm::json::Object &obj);
 
   // Set instruction breakpoint in LLDB as a new breakpoint

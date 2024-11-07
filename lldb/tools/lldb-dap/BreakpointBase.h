@@ -24,9 +24,8 @@ struct BreakpointBase {
   // ignored. The backend is expected to interpret the expression as needed
   std::string hitCondition;
 
-  BreakpointBase(DAP &d) : dap(d) {}
+  explicit BreakpointBase(DAP &d) : dap(d) {}
   BreakpointBase(DAP &d, const llvm::json::Object &obj);
-  BreakpointBase(const BreakpointBase &) = default;
   virtual ~BreakpointBase() = default;
 
   virtual void SetCondition() = 0;

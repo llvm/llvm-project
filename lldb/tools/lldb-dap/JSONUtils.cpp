@@ -12,7 +12,6 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
-
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
@@ -35,7 +34,6 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -45,13 +43,12 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include <chrono>
+#include <cstddef>
 #include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
-#include <string.h>
 #include <sys/syslimits.h>
 #include <utility>
 #include <vector>
@@ -1483,11 +1480,11 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 // Keep all the top level items from the statistics dump, except for the
 // "modules" array. It can be huge and cause delay
 // Array and dictionary value will return as <key, JSON string> pairs
-void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
-                             llvm::json::Object &out) {
-  lldb::SBStructuredData value = data.GetValueForKey(key);
+void FilterAndGetValueForKey(const lldb::SBStructuredData data,
+                             llvm::StringRef key, llvm::json::Object &out) {
+  lldb::SBStructuredData value = data.GetValueForKey(key.data());
   std::string key_utf8 = llvm::json::fixUTF8(key);
-  if (strcmp(key, "modules") == 0)
+  if (key == "modules")
     return;
   switch (value.GetType()) {
   case lldb::eStructuredDataTypeFloat:
