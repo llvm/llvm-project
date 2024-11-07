@@ -240,8 +240,8 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
     if (sym->versionId == versionId)
       continue;
 
-    warn("attempt to reassign symbol '" + ver.name + "' of " +
-         getName(sym->versionId) + " to " + getName(versionId));
+    Warn(ctx) << "attempt to reassign symbol '" << ver.name << "' of "
+              << getName(sym->versionId) << " to " << getName(versionId);
   }
   return !syms.empty();
 }
@@ -325,12 +325,14 @@ void SymbolTable::scanVersionScript() {
     if (!asteriskReported && (isLocal || ver->id > VER_NDX_LOCAL)) {
       if ((isLocal && globalAsteriskFound) ||
           (!isLocal && localAsteriskFound)) {
-        warn("wildcard pattern '*' is used for both 'local' and 'global' "
-             "scopes in version script");
+        Warn(ctx)
+            << "wildcard pattern '*' is used for both 'local' and 'global' "
+               "scopes in version script";
         asteriskReported = true;
       } else if (!isLocal && globalAsteriskFound) {
-        warn("wildcard pattern '*' is used for multiple version definitions in "
-             "version script");
+        Warn(ctx) << "wildcard pattern '*' is used for multiple version "
+                     "definitions in "
+                     "version script";
         asteriskReported = true;
       } else {
         localAsteriskFound = isLocal;

@@ -1189,7 +1189,7 @@ mergeAttributesSection(Ctx &ctx,
   for (const InputSectionBase *sec : sections) {
     RISCVAttributeParser parser;
     if (Error e = parser.parse(sec->content(), llvm::endianness::little))
-      warn(toString(sec) + ": " + llvm::toString(std::move(e)));
+      Warn(ctx) << sec << ": " << llvm::toString(std::move(e));
     for (const auto &tag : attributesTags) {
       switch (RISCVAttrs::AttrType(tag.attr)) {
         // Integer attributes.

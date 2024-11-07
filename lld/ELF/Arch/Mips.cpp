@@ -87,9 +87,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // (e.g. a table of function pointers). When we encounter this, ignore the
     // relocation and emit a warning instead.
     if (!s.isFunc() && s.type != STT_NOTYPE) {
-      warn(getErrorLoc(ctx, loc) +
-           "found R_MIPS_JALR relocation against non-function symbol " +
-           toString(s) + ". This is invalid and most likely a compiler bug.");
+      Warn(ctx) << getErrorLoc(ctx, loc)
+                << "found R_MIPS_JALR relocation against non-function symbol "
+                << &s << ". This is invalid and most likely a compiler bug.";
       return R_NONE;
     }
 

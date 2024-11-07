@@ -485,9 +485,9 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
             sec->name != ".toc") {
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
           Elf_Shdr_Impl<ELFT> sec = file->template getELFShdrs<ELFT>()[secIdx];
-          warn("relocation refers to a discarded section: " +
-               CHECK(file->getObj().getSectionName(sec), file) +
-               "\n>>> referenced by " + getObjMsg(p->r_offset));
+          Warn(ctx) << "relocation refers to a discarded section: "
+                    << CHECK(file->getObj().getSectionName(sec), file)
+                    << "\n>>> referenced by " << getObjMsg(p->r_offset);
         }
         p->setSymbolAndType(0, 0, false);
         continue;
@@ -661,9 +661,9 @@ static Relocation *getRISCVPCRelHi20(const InputSectionBase *loSec,
                 "'");
 
   if (addend != 0)
-    warn(loSec->getLocation(loReloc.offset) +
-         ": non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
-         hiSec->getObjMsg(d->value) + " is ignored");
+    Warn(ctx) << loSec->getLocation(loReloc.offset)
+              << ": non-zero addend in R_RISCV_PCREL_LO12 relocation to "
+              << hiSec->getObjMsg(d->value) << " is ignored";
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
@@ -1125,7 +1125,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
     // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
     // keep this bug-compatible code for a while.
-    warn(msg);
+    Warn(ctx) << msg;
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(ctx, addend - offset - outSecOff)));

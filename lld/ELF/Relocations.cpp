@@ -519,8 +519,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
         ri->getSymbol(ctx.arg.isMips64EL) == symIndex)
       return ctx.target->getImplicitAddend(buf + ri->r_offset, pairTy);
 
-  warn("can't find matching " + toString(pairTy) + " relocation for " +
-       toString(type));
+  Warn(ctx) << "can't find matching " << pairTy << " relocation for " << type;
   return 0;
 }
 
@@ -796,7 +795,7 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
   }
 
   if (undef.isWarning)
-    warn(msg);
+    Warn(ctx) << msg;
   else
     error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
@@ -1588,9 +1587,10 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
   if (hasGDLD) {
     sec.file->ppc64DisableTLSRelax = true;
-    warn(toString(sec.file) +
-         ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations without "
-         "R_PPC64_TLSGD/R_PPC64_TLSLD relocations");
+    Warn(ctx) << sec.file
+              << ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations "
+                 "without "
+                 "R_PPC64_TLSGD/R_PPC64_TLSLD relocations";
   }
 }
 

@@ -108,13 +108,11 @@ static uint32_t getPicFlags(ArrayRef<FileFlags> files) {
   for (const FileFlags &f : files.slice(1)) {
     bool isPic2 = f.flags & (EF_MIPS_PIC | EF_MIPS_CPIC);
     if (isPic && !isPic2)
-      warn(toString(f.file) +
-           ": linking non-abicalls code with abicalls code " +
-           toString(files[0].file));
+      Warn(ctx) << f.file << ": linking non-abicalls code with abicalls code "
+                << files[0].file;
     if (!isPic && isPic2)
-      warn(toString(f.file) +
-           ": linking abicalls code with non-abicalls code " +
-           toString(files[0].file));
+      Warn(ctx) << f.file << ": linking abicalls code with non-abicalls code "
+                << files[0].file;
   }
 
   // Compute the result PIC/non-PIC flag.
