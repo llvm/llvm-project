@@ -6715,9 +6715,10 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-      V = GEP->getPointerOperand();
-      if (!V->getType()->isPointerTy()) // Only handle scalar pointer base.
-        return nullptr;
+      const Value *PtrOp = GEP->getPointerOperand();
+      if (!PtrOp->getType()->isPointerTy()) // Only handle scalar pointer base.
+        return V;
+      V = PtrOp;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
