@@ -5,17 +5,17 @@
 
 ;.
 ; CHECK: @params.0 = internal unnamed_addr global i32 0, align 32
-; CHECK: @params.1 = internal unnamed_addr global i32 0, align 32
+; CHECK: @params.1 = internal unnamed_addr global i32 0, align 4
 ; CHECK: @params.2 = internal unnamed_addr global i32 0, align 8
-; CHECK: @params.3 = internal unnamed_addr global i32 0, align 32
+; CHECK: @params.3 = internal unnamed_addr global i32 0, align 4
 ;.
 define void @set(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: define void @set(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    store i32 [[A]], ptr @params.0, align 32
-; CHECK-NEXT:    store i32 [[B]], ptr @params.1, align 32
+; CHECK-NEXT:    store i32 [[B]], ptr @params.1, align 4
 ; CHECK-NEXT:    store i32 [[C]], ptr @params.2, align 8
-; CHECK-NEXT:    store i32 [[D]], ptr @params.3, align 32
+; CHECK-NEXT:    store i32 [[D]], ptr @params.3, align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 %a, ptr @params
@@ -31,11 +31,11 @@ define %S @get() {
 ; CHECK-LABEL: define %S @get() local_unnamed_addr {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @params.0, align 32
 ; CHECK-NEXT:    [[SA:%.*]] = insertvalue [[S:%.*]] undef, i32 [[A]], 0
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr @params.1, align 32
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr @params.1, align 4
 ; CHECK-NEXT:    [[SB:%.*]] = insertvalue [[S]] [[SA]], i32 [[B]], 1
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr @params.2, align 8
 ; CHECK-NEXT:    [[SC:%.*]] = insertvalue [[S]] [[SB]], i32 [[C]], 2
-; CHECK-NEXT:    [[D:%.*]] = load i32, ptr @params.3, align 32
+; CHECK-NEXT:    [[D:%.*]] = load i32, ptr @params.3, align 4
 ; CHECK-NEXT:    [[SD:%.*]] = insertvalue [[S]] [[SC]], i32 [[D]], 3
 ; CHECK-NEXT:    ret [[S]] [[SD]]
 ;
