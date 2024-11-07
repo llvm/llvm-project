@@ -989,13 +989,27 @@ def skipUnlessAArch64MTELinuxCompiler(func):
 
     def is_toolchain_with_mte():
         compiler_path = lldbplatformutil.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        f = tempfile.NamedTemporaryFile()
+        f_src = tempfile.NamedTemporaryFile(delete=False)
+        f_out = tempfile.NamedTemporaryFile(delete=False)
         if lldbplatformutil.getPlatform() == "windows":
             return "MTE tests are not compatible with 'windows'"
 
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
+        # Note hostos may be Windows.
+        f_src.close()
+        f_out.close()
+
+        with open(f_src.name, "w") as f:
+            f.write("int main() {}")
+        cmd = f"{compiler_path} -x c -o {f_out.name} {f_src.name}"
         if os.popen(cmd).close() is not None:
+            try:
+                os.remove(f_src.name)
+            except OSError:
+                pass
+            try:
+                os.remove(f_out.name)
+            except OSError:
+                pass
             # Cannot compile at all, don't skip the test
             # so that we report the broken compiler normally.
             return None
@@ -1010,12 +1024,21 @@ def skipUnlessAArch64MTELinuxCompiler(func):
             int main() {
                 void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
             }"""
-        cmd = "echo '%s' | %s -march=armv8.5-a+memtag -x c -o %s -" % (
-            test_src,
-            compiler_path,
-            f.name,
+        with open(f_src.name, "w") as f:
+            f.write(test_src)
+        cmd = (
+            f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f_out.name} {f_src.name}"
         )
-        if os.popen(cmd).close() is not None:
+        res = os.popen(cmd).close()
+        try:
+            os.remove(f_src.name)
+        except OSError:
+            pass
+        try:
+            os.remove(f_out.name)
+        except OSError:
+            pass
+        if res is not None:
             return "Toolchain does not support MTE"
         return None
 
