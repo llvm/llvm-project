@@ -7534,7 +7534,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
-  std::vector<CaseHandleWrapper> Cases;
+  SmallVector<CaseHandleWrapper> Cases;
   Cases.reserve(SI->getNumCases());
   for (auto &Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
