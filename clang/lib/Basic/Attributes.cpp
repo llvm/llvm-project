@@ -172,7 +172,7 @@ getScopeFromNormalizedScopeName(StringRef ScopeName) {
       std::begin(ScopeList), std::end(ScopeList), ScopeName,
       [](const std::pair<StringRef, AttributeCommonInfo::Scope> &Element,
          StringRef Value) { return Element.first < Value; });
-  assert(It != std::end(ScopeList));
+  assert(It != std::end(ScopeList) && It->first == ScopeName);
 
   return It->second;
 }
