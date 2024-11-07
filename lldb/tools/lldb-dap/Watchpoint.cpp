@@ -10,14 +10,11 @@
 
 #include "DAP.h"
 #include "JSONUtils.h"
-
 #include "lldb/API/SBTarget.h"
-#include "lldb/lldb-enumerations.h" 
-
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/ADT/StringExtras.h"
-
 #include <cstdint>
 #include <string>
 
