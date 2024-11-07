@@ -66,7 +66,7 @@ public:
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
-      byte* __allocation = static_cast<byte*>(::operator new[](sizeof(_Stored), align_val_t{alignof(_Stored)}));
+      byte* __allocation = static_cast<byte*>(std::__libcpp_allocate(sizeof(_Stored), alignof(_Stored)));
       std::construct_at(reinterpret_cast<byte**>(__buffer_), __allocation);
       return std::launder(reinterpret_cast<_Stored*>(__allocation));
     }
@@ -75,7 +75,7 @@ public:
   template <class _Stored>
   _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
-      ::operator delete[](*reinterpret_cast<void**>(__buffer_), sizeof(_Stored), align_val_t{alignof(_Stored)});
+      std::__libcpp_deallocate(*reinterpret_cast<void**>(__buffer_), sizeof(_Stored), alignof(_Stored));
   }
 
   template <class _Stored, class... _Args>
