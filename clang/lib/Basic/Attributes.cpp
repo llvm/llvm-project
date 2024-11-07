@@ -17,6 +17,8 @@
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include "llvm/ADT/StringMap.h"
+
 using namespace clang;
 
 static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
@@ -153,12 +155,37 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
+// Sorted list of attribute scope names
+static constexpr std::pair<StringRef, AttributeCommonInfo::Scope> ScopeList[] =
+    {{"", AttributeCommonInfo::Scope::NONE},
+     {"clang", AttributeCommonInfo::Scope::CLANG},
+     {"gnu", AttributeCommonInfo::Scope::GNU},
+     {"gsl", AttributeCommonInfo::Scope::GSL},
+     {"hlsl", AttributeCommonInfo::Scope::HLSL},
+     {"msvc", AttributeCommonInfo::Scope::MSVC},
+     {"omp", AttributeCommonInfo::Scope::OMP},
+     {"riscv", AttributeCommonInfo::Scope::RISCV}};
+
+AttributeCommonInfo::Scope
+getScopeFromNormalizedScopeName(StringRef ScopeName) {
+  auto It = std::lower_bound(
+      std::begin(ScopeList), std::end(ScopeList), ScopeName,
+      [](const std::pair<StringRef, AttributeCommonInfo::Scope> &Element,
+         StringRef Value) { return Element.first < Value; });
+  assert(It != std::end(ScopeList) && It->first == ScopeName);
+
+  return It->second;
+}
+
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  StringRef Scope = normalizeAttrScopeName(getScopeName(), Syntax);
-  StringRef Name = normalizeAttrName(getAttrName(), Scope, Syntax);
+  StringRef ScopeName = normalizeAttrScopeName(getScopeName(), Syntax);
+  StringRef Name = normalizeAttrName(getAttrName(), ScopeName, Syntax);
+
+  AttributeCommonInfo::Scope ComputedScope =
+      getScopeFromNormalizedScopeName(ScopeName);
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }
