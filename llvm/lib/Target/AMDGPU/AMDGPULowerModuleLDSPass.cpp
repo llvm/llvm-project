@@ -1030,8 +1030,7 @@ public:
     }
     // Also erase those special LDS variables from indirect_access.
     for (auto &K : LDSUsesInfo.indirect_access) {
-      Function *F = K.first;
-      assert(isKernelLDS(F));
+      assert(isKernelLDS(K.first));
       for (GlobalVariable *GV : K.second) {
         if (isNamedBarrier(*GV))
           K.second.erase(GV);

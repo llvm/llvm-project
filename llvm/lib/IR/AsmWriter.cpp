@@ -2168,6 +2168,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2237,6 +2238,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),

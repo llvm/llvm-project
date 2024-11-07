@@ -1875,6 +1875,7 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
+  Record.push_back(N->getNumExtraInhabitants());
 
   Stream.EmitRecord(bitc::METADATA_BASIC_TYPE, Record, Abbrev);
   Record.clear();
@@ -1958,6 +1959,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawAllocated()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawRank()));
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
+  Record.push_back(N->getNumExtraInhabitants());
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
