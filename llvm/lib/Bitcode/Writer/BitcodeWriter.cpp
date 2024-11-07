@@ -4241,7 +4241,7 @@ static void writeFunctionHeapProfileRecords(
     assert(AI.ContextSizeInfoIndices.empty() ||
            AI.ContextSizeInfoIndices.size() == AI.MIBs.size());
     if (WriteContextSizeInfoIndex && !AI.ContextSizeInfoIndices.empty()) {
-      for (auto Indices : AI.ContextSizeInfoIndices) {
+      for (auto &Indices : AI.ContextSizeInfoIndices) {
         Record.push_back(Indices.size());
         for (auto Id : Indices)
           Record.push_back(Id);
@@ -4413,17 +4413,17 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   SmallVector<uint64_t, 64> NameVals;
   if (!Index->contextSizeInfos().empty()) {
     auto ContextSizeInfoAbbv = std::make_shared<BitCodeAbbrev>();
-    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_SIZE_INFOS));
+    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_SIZE_INFO));
     // numids x (fullStackid, totalsize)
     ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
     ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
     unsigned ContextSizeInfoAbbvId =
         Stream.EmitAbbrev(std::move(ContextSizeInfoAbbv));
-    for (const auto &Info : Index->contextSizeInfos()) {
-      NameVals.push_back(Info.FullStackId);
-      NameVals.push_back(Info.TotalSize);
+    for (const auto &[FullStackId, TotalSize] : Index->contextSizeInfos()) {
+      NameVals.push_back(FullStackId);
+      NameVals.push_back(TotalSize);
     }
-    Stream.EmitRecord(bitc::FS_CONTEXT_SIZE_INFOS, NameVals,
+    Stream.EmitRecord(bitc::FS_CONTEXT_SIZE_INFO, NameVals,
                       ContextSizeInfoAbbvId);
     NameVals.clear();
   }

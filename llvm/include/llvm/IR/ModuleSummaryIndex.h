@@ -1541,7 +1541,7 @@ public:
   // construction (including while building combined index). Currently this
   // releases the temporary map used while constructing a correspondence between
   // stack ids and their index in the StackIds vector, and a similar map used
-  // while constructing a the ContextSizeInfos vector. Mostly impactful when
+  // while constructing the ContextSizeInfos vector. Mostly impactful when
   // building a large combined index.
   void releaseTemporaryMemory() {
     assert(StackIdToIndex.size() == StackIds.size());

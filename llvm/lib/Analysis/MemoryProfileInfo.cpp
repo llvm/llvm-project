@@ -135,7 +135,6 @@ void CallStackTrie::addCallStack(
   bool First = true;
   CallStackTrieNode *Curr = nullptr;
   for (auto StackId : StackIds) {
-    // errs() << StackId << " ";
     //  If this is the first stack frame, add or update alloc node.
     if (First) {
       First = false;
@@ -204,11 +203,11 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
   MIBPayload.push_back(
       MDString::get(Ctx, getAllocTypeAttributeString(AllocType)));
   if (!ContextSizeInfo.empty()) {
-    for (auto Info : ContextSizeInfo) {
+    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
       auto *FullStackIdMD = ValueAsMetadata::get(
-          ConstantInt::get(Type::getInt64Ty(Ctx), Info.FullStackId));
+          ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
       auto *TotalSizeMD = ValueAsMetadata::get(
-          ConstantInt::get(Type::getInt64Ty(Ctx), Info.TotalSize));
+          ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize));
       auto *ContextSizeMD = MDNode::get(Ctx, {FullStackIdMD, TotalSizeMD});
       MIBPayload.push_back(ContextSizeMD);
     }
@@ -220,11 +219,8 @@ void CallStackTrie::collectContextSizeInfo(
     CallStackTrieNode *Node, std::vector<ContextTotalSize> &ContextSizeInfo) {
   ContextSizeInfo.insert(ContextSizeInfo.end(), Node->ContextSizeInfo.begin(),
                          Node->ContextSizeInfo.end());
-  if (Node->Callers.empty())
-    return;
-  for (auto &Caller : Node->Callers) {
+  for (auto &Caller : Node->Callers)
     collectContextSizeInfo(Caller.second, ContextSizeInfo);
-  }
 }
 
 // Recursive helper to trim contexts and create metadata nodes.
@@ -293,11 +289,12 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
     if (MemProfReportHintedSizes) {
       std::vector<ContextTotalSize> ContextSizeInfo;
       collectContextSizeInfo(Alloc, ContextSizeInfo);
-      for (const auto &Info : ContextSizeInfo) {
-        errs() << "Total size for full allocation context hash "
-               << Info.FullStackId << " and single alloc type "
-               << getAllocTypeAttributeString((AllocationType)Alloc->AllocTypes)
-               << ": " << Info.TotalSize << "\n";
+      for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+        errs()
+            << "MemProf hinting: Total size for full allocation context hash "
+            << FullStackId << " and single alloc type "
+            << getAllocTypeAttributeString((AllocationType)Alloc->AllocTypes)
+            << ": " << TotalSize << "\n";
       }
     }
     return false;

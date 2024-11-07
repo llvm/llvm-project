@@ -325,7 +325,7 @@ enum GlobalValueSummarySymtabCodes {
   // List of all (full stack id, total size) pairs optionally referenced by
   // index from the alloc info records.
   // [n x (full stack id, total size)]
-  FS_CONTEXT_SIZE_INFOS = 31,
+  FS_CONTEXT_SIZE_INFO = 31,
 };
 
 enum MetadataCodes {

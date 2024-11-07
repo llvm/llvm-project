@@ -2847,7 +2847,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
       auto CSI = ContextIdToContextSizeInfos.find(Id);
       if (CSI != ContextIdToContextSizeInfos.end()) {
         for (auto &Info : CSI->second) {
-          OS << getAllocTypeString((uint8_t)TypeI->second)
+          OS << "MemProf hinting: "
+             << getAllocTypeString((uint8_t)TypeI->second)
              << " full allocation context " << Info.FullStackId
              << " with total size " << Info.TotalSize << " is "
              << getAllocTypeString(Node->AllocTypes) << " after cloning\n";

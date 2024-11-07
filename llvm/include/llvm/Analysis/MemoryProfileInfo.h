@@ -103,8 +103,7 @@ public:
   /// allocation call down to the bottom of the call stack (i.e. callee to
   /// caller order).
   void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
-                    std::vector<ContextTotalSize> ContextSizeInfo =
-                        std::vector<ContextTotalSize>());
+                    std::vector<ContextTotalSize> ContextSizeInfo = {});
 
   /// Add the call stack context along with its allocation type from the MIB
   /// metadata to the Trie.

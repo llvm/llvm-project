@@ -987,7 +987,7 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
-  // Saves the context total size information from the CONTEXT_SIZE_INFOS record
+  // Saves the context total size information from the CONTEXT_SIZE_INFO record
   // to consult when adding this from the lists in the alloc entries to the
   // index.
   std::vector<ContextTotalSize> ContextSizeInfos;
@@ -8002,7 +8002,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_CONTEXT_SIZE_INFOS: { // [n x (fullstackid, totalsize)]
+    case bitc::FS_CONTEXT_SIZE_INFO: { // [n x (fullstackid, totalsize)]
       // Save context size infos in the reader to consult when adding them from
       // the lists in the alloc node entries.
       for (auto R = Record.begin(); R != Record.end(); R += 2)
@@ -8075,6 +8075,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           unsigned NumContextSizeInfoEntries = Record[I++];
           assert(Record.size() - I >= NumContextSizeInfoEntries);
           std::vector<unsigned> ContextSizeIndices;
+          ContextSizeIndices.reserve(NumContextSizeInfoEntries);
           for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
             assert(Record[I] < ContextSizeInfos.size());
             ContextSizeIndices.push_back(TheIndex.addOrGetContextSizeIndex(
