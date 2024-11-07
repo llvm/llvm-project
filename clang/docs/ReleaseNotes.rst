@@ -140,8 +140,8 @@ C++ Specific Potentially Breaking Changes
     unsigned operator""_udl_name(unsigned long long);
 
 - Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
-  applied on a parameter of a function that returns void. This was previously
-  ignored and had no effect. (#GH107556)
+  applied on a parameter or an implicit object parameter of a function that
+  returns void. This was previously ignored and had no effect. (#GH107556)
 
   .. code-block:: c++
 
@@ -273,6 +273,12 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+- Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
+  case range expressions. This feature was previously supported by Clang as a
+  GNU extension, so ``-Wgnu-case-range`` no longer has effect in C modes, as
+  this is now a C2y extension in C. ``-Wgnu-case-range`` still applies in C++
+  modes.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
