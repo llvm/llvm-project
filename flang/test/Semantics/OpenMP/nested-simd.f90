@@ -166,6 +166,7 @@ SUBROUTINE NESTED_BAD(N)
       end do
       !$omp end task
       !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: If TARGET directive is nested inside TARGET SIMD region, the behaviour is unspecified
       !$omp target 
       do J = 1, N
         K = 2
