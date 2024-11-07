@@ -286,6 +286,11 @@ C2y Feature Support
   language modes but is now rejected (all of the other qualifiers and storage
   class specifiers were previously rejected).
 
+- Updated conformance for `N3364 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3364.pdf>`_
+  on floating-point translation-time initialization with signaling NaN. This
+  paper adopts Clang's existing practice, so there were no changes to compiler
+  behavior.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
