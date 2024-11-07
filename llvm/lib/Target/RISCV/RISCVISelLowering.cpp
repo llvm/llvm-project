@@ -21554,7 +21554,10 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+  if (!(isLegalElementTypeForRVV(ScalarType) ||
+        (ScalarType == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal()) ||
+        (ScalarType == MVT::f16 && Subtarget.hasVInstructionsF16Minimal())))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
