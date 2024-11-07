@@ -253,20 +253,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
-OmpTaskDependenceType::Type OmpDependClause::GetDepType() const {
-  return common::visit(
+OmpDependenceType::Type OmpDoacross::GetDepType() const {
+  return common::visit( //
       common::visitors{
-          [&](const parser::OmpDependClause::Source &) {
-            return parser::OmpTaskDependenceType::Type::Source;
+          [](const OmpDoacross::Sink &) {
+            return OmpDependenceType::Type::Sink;
           },
-          [&](const parser::OmpDependClause::Sink &) {
-            return parser::OmpTaskDependenceType::Type::Sink;
-          },
-          [&](const parser::OmpDependClause::InOut &y) {
-            return std::get<parser::OmpTaskDependenceType>(y.t).v;
+          [](const OmpDoacross::Source &) {
+            return OmpDependenceType::Type::Source;
           },
       },
       u);
+}
+
+OmpTaskDependenceType::Type OmpDependClause::TaskDep::GetTaskDepType() const {
+  return std::get<parser::OmpTaskDependenceType>(t).v;
 }
 
 } // namespace Fortran::parser

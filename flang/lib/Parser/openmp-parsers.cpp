@@ -392,12 +392,9 @@ TYPE_PARSER(construct<OmpAllocateClause>(
         ":"),
     Parser<OmpObjectList>{}))
 
-// 2.13.9 DEPEND (SOURCE | SINK : vec | (IN | OUT | INOUT) : list
-TYPE_PARSER(construct<OmpDependSinkVecLength>(
-    Parser<DefinedOperator>{}, scalarIntConstantExpr))
-
-TYPE_PARSER(
-    construct<OmpDependSinkVec>(name, maybe(Parser<OmpDependSinkVecLength>{})))
+TYPE_PARSER(construct<OmpDependenceType>(
+    "SINK" >> pure(OmpDependenceType::Type::Sink) ||
+    "SOURCE" >> pure(OmpDependenceType::Type::Source)))
 
 TYPE_PARSER(construct<OmpTaskDependenceType>(
     "DEPOBJ" >> pure(OmpTaskDependenceType::Type::Depobj) ||
@@ -405,18 +402,31 @@ TYPE_PARSER(construct<OmpTaskDependenceType>(
     "INOUT"_id >> pure(OmpTaskDependenceType::Type::Inout) ||
     "INOUTSET"_id >> pure(OmpTaskDependenceType::Type::Inoutset) ||
     "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Type::Mutexinoutset) ||
-    "OUT" >> pure(OmpTaskDependenceType::Type::Out) ||
-    "SINK" >> pure(OmpTaskDependenceType::Type::Sink) ||
-    "SOURCE" >> pure(OmpTaskDependenceType::Type::Source)))
+    "OUT" >> pure(OmpTaskDependenceType::Type::Out)))
+
+// iteration-offset -> +/- non-negative-constant-expr
+TYPE_PARSER(construct<OmpIterationOffset>(
+    Parser<DefinedOperator>{}, scalarIntConstantExpr))
+
+// iteration -> iteration-variable [+/- nonnegative-scalar-integer-constant]
+TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
+
+TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
+
+TYPE_PARSER(construct<OmpDoacross>(
+    construct<OmpDoacross>(construct<OmpDoacross::Sink>(
+        "SINK"_tok >> ":"_tok >> Parser<OmpIterationVector>{})) ||
+    construct<OmpDoacross>(construct<OmpDoacross::Source>("SOURCE"_tok))))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
-    construct<OmpDependClause>(construct<OmpDependClause::Sink>(
-        "SINK :" >> nonemptyList(Parser<OmpDependSinkVec>{}))) ||
-        construct<OmpDependClause>(
-            construct<OmpDependClause::Source>("SOURCE"_tok)) ||
-        construct<OmpDependClause>(construct<OmpDependClause::InOut>(
+    construct<OmpDependClause>(
+        construct<OmpDependClause>(construct<OmpDependClause::TaskDep>(
             maybe(Parser<OmpIteratorModifier>{} / ","_tok),
-            Parser<OmpTaskDependenceType>{} / ":", Parser<OmpObjectList>{})))
+            Parser<OmpTaskDependenceType>{} / ":", Parser<OmpObjectList>{})) ||
+        construct<OmpDependClause>(Parser<OmpDoacross>{})))
+
+TYPE_CONTEXT_PARSER("Omp Doacross clause"_en_US,
+    construct<OmpDoacrossClause>(Parser<OmpDoacross>{}))
 
 TYPE_PARSER(construct<OmpFromClause::Expectation>(
     "PRESENT" >> pure(OmpFromClause::Expectation::Present)))
@@ -465,6 +475,10 @@ TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(
     Parser<OmpObjectList>{}, maybe(":" >> scalarIntConstantExpr)))
+
+TYPE_PARSER(construct<OmpUpdateClause>(
+    construct<OmpUpdateClause>(Parser<OmpDependenceType>{}) ||
+    construct<OmpUpdateClause>(Parser<OmpTaskDependenceType>{})))
 
 // 2.9.5 ORDER ([order-modifier :]concurrent)
 TYPE_PARSER(construct<OmpOrderModifier>(
@@ -531,6 +545,8 @@ TYPE_PARSER(
     "DIST_SCHEDULE" >>
         construct<OmpClause>(construct<OmpClause::DistSchedule>(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||
+    "DOACROSS" >>
+        construct<OmpClause>(parenthesized(Parser<OmpDoacrossClause>{})) ||
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
@@ -634,7 +650,7 @@ TYPE_PARSER(
                      parenthesized(nonemptyList(name)))) ||
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
     "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
-                    parenthesized(Parser<OmpTaskDependenceType>{}))))
+                    parenthesized(Parser<OmpUpdateClause>{}))))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(
