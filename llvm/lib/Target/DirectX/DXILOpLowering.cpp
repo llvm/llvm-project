@@ -463,6 +463,28 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerUpdateCounter(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Op1 = CI->getArgOperand(1);
+
+      std::array<Value *, 2> Args{Handle, Op1};
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::UpdateCounter, Args, CI->getName());
+
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -599,6 +621,9 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_updateCounter:
+        HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when
       // https://github.com/llvm/llvm-project/issues/113192 is fixed
