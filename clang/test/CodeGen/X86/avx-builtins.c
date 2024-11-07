@@ -1496,6 +1496,7 @@ __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_set_pd(A0, A1, A2, A3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set_pd(-100.0, +90.0, -50.0, +1.0), +1.0, -50.0, +90.0, -100.0));
 
 __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_set_ps
@@ -1509,6 +1510,7 @@ __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_set_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set_ps(-1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f), +8.0f, -7.0f, +6.0f, -5.0f, +4.0f, -3.0f, +2.0f, -1.0f));
 
 __m256i test_mm256_set1_epi8(char A) {
   // CHECK-LABEL: test_mm256_set1_epi8
@@ -1598,6 +1600,7 @@ __m256d test_mm256_set1_pd(double A) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_set1_pd(A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set1_pd(+42.0), +42.0, +42.0, +42.0, +42.0));
 
 __m256 test_mm256_set1_ps(float A) {
   // CHECK-LABEL: test_mm256_set1_ps
@@ -1611,6 +1614,7 @@ __m256 test_mm256_set1_ps(float A) {
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_set1_ps(A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set1_ps(-101.0f), -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f));
 
 __m256i test_mm256_setr_epi8(char A0, char A1, char A2, char A3, char A4, char A5, char A6, char A7,
                              char A8, char A9, char A10, char A11, char A12, char A13, char A14, char A15,
@@ -1722,6 +1726,7 @@ __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_setr_pd(A0, A1, A2, A3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_setr_pd(-100.0, +90.0, -50.0, +1.0), -100.0, +90.0, -50.0, +1.0));
 
 __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_setr_ps
@@ -1735,6 +1740,7 @@ __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, floa
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_setr_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
+TEST_CONSTEXPR(match_m256(_mm256_setr_ps(-1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f), -1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f));
 
 __m256d test_mm256_setzero_pd(void) {
   // CHECK-LABEL: test_mm256_setzero_pd
