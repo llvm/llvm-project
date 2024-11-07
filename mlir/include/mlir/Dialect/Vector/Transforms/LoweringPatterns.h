@@ -237,6 +237,13 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [StepToArithConstantOp]
+/// Convert vector.step op into arith ops if not using scalable vectors
+void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
+                                        PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [FlattenGather]
 /// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.

@@ -737,9 +737,9 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
 
-        // Most available hardware today optimizes NF=2 as as one wide memory op
-        // + Factor * LMUL shuffle ops.
-        if (Factor == 2) {
+        // Some processors optimize segment loads/stores as one wide memory op +
+        // Factor * LMUL shuffle ops.
+        if (ST->hasOptimizedSegmentLoadStore(Factor)) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
@@ -2507,4 +2507,23 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&OpIdx.value());
   }
   return true;
+}
+
+RISCVTTIImpl::TTI::MemCmpExpansionOptions
+RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  // TODO: Enable expansion when unaligned access is not supported after we fix
+  // issues in ExpandMemcmp.
+  if (!(ST->enableUnalignedScalarMem() &&
+        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+    return Options;
+
+  Options.AllowOverlappingLoads = true;
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  if (ST->is64Bit())
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
+  return Options;
 }

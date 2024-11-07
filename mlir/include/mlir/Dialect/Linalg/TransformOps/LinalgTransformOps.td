@@ -418,9 +418,10 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
 
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
-  let assemblyFormat =
-      "$target attr-dict `:` "
-      "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -455,9 +456,10 @@ def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
 
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
-  let assemblyFormat =
-      "$target attr-dict `:` "
-      "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -500,7 +502,7 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   let assemblyFormat = [{
     $target
     (`iterator_interchange` `=` $iterator_interchange^)? attr-dict
-    `:` custom<SemiFunctionType>(type($target), type($transformed))
+    `:` custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
   let hasVerifier = 1;
 
@@ -1233,9 +1235,10 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
                        OptionalAttr<I64Attr>:$alignment);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat =
-    "$target attr-dict `:`"
-    "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -1269,9 +1272,10 @@ def ReplaceOp : Op<Transform_Dialect, "structured.replace",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$replacement);
   let regions = (region SizedRegion<1>:$bodyRegion);
-  let assemblyFormat =
-      "$target attr-dict-with-keyword regions `:` "
-      "custom<SemiFunctionType>(type($target), type($replacement))";
+  let assemblyFormat = [{
+      $target attr-dict-with-keyword regions `:`
+      custom<SemiFunctionType>(type($target), type($replacement), "false")
+  }];
   let hasVerifier = 1;
 }
 
@@ -1310,9 +1314,10 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$result);
 
-  let assemblyFormat =
-    "$target attr-dict `:`"
-    "custom<SemiFunctionType>(type($target), type($result))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($result), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

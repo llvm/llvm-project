@@ -140,8 +140,8 @@ C++ Specific Potentially Breaking Changes
     unsigned operator""_udl_name(unsigned long long);
 
 - Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
-  applied on a parameter of a function that returns void. This was previously
-  ignored and had no effect. (#GH107556)
+  applied on a parameter or an implicit object parameter of a function that
+  returns void. This was previously ignored and had no effect. (#GH107556)
 
   .. code-block:: c++
 
@@ -273,6 +273,30 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+- Updated conformance for `N3298 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3298.htm>`_
+  which adds the ``i`` and ``j`` suffixes for the creation of a ``_Complex``
+  constant value. Clang has always supported these suffixes as a GNU extension,
+  so ``-Wgnu-imaginary-constant`` no longer has effect in C modes, as this is
+  not a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
+  modes.
+
+- Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
+  case range expressions. This feature was previously supported by Clang as a
+  GNU extension, so ``-Wgnu-case-range`` no longer has effect in C modes, as
+  this is now a C2y extension in C. ``-Wgnu-case-range`` still applies in C++
+  modes.
+
+- Clang implemented support for `N3344 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3344.pdf>`_
+  which disallows a ``void`` parameter from having a qualifier or storage class
+  specifier. Note that ``register void`` was previously accepted in all C
+  language modes but is now rejected (all of the other qualifiers and storage
+  class specifiers were previously rejected).
+
+- Updated conformance for `N3364 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3364.pdf>`_
+  on floating-point translation-time initialization with signaling NaN. This
+  paper adopts Clang's existing practice, so there were no changes to compiler
+  behavior.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -582,6 +606,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 - Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Fixed a crash when mixture of designated and non-designated initializers in union. (#GH113855)
 - Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
@@ -591,9 +616,6 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
-- Clang now uses the correct set of template argument lists when comparing the constraints of
-  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
-  a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047), (#GH49093)
@@ -612,6 +634,10 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
+- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
+- Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Fixed an assertion failure caused by invalid default argument substitutions in non-defining
+  friend declarations. (#GH113324).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -698,6 +724,7 @@ X86 Support
 - Supported intrinsics for ``MOVRS AND AVX10.2``.
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
+- Support ISA of ``AMX-TRANSPOSE``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -736,6 +763,7 @@ CUDA Support
 ^^^^^^^^^^^^
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
+- Added support for `__grid_constant__` attribute.
 
 AIX Support
 ^^^^^^^^^^^
@@ -892,6 +920,13 @@ Sanitizers
   This new flag should allow those projects to enable integer sanitizers with
   less noise.
 
+- ``-fsanitize=signed-integer-overflow``, ``-fsanitize=unsigned-integer-overflow``,
+  ``-fsanitize=implicit-signed-integer-truncation``, ``-fsanitize=implicit-unsigned-integer-truncation``,
+  ``-fsanitize=enum`` now properly support the
+  "type" prefix within `Sanitizer Special Case Lists (SSCL)
+  <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_. See that link
+  for examples.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
@@ -900,6 +935,7 @@ OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
+- Added support for allocator-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^

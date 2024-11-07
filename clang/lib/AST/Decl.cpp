@@ -2708,21 +2708,21 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
       if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
-        while (!VTD->hasMemberSpecialization()) {
-          if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
-            VTD = NewVTD;
-          else
+        while (!VTD->isMemberSpecialization()) {
+          auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
+          if (!NewVTD)
             break;
+          VTD = NewVTD;
         }
         return getDefinitionOrSelf(VTD->getTemplatedDecl());
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-        while (!VTPSD->hasMemberSpecialization()) {
-          if (auto *NewVTPSD = VTPSD->getInstantiatedFromMember())
-            VTPSD = NewVTPSD;
-          else
+        while (!VTPSD->isMemberSpecialization()) {
+          auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
+          if (!NewVTPSD)
             break;
+          VTPSD = NewVTPSD;
         }
         return getDefinitionOrSelf<VarDecl>(VTPSD);
       }
@@ -2731,14 +2731,15 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
 
   // If this is the pattern of a variable template, find where it was
   // instantiated from. FIXME: Is this necessary?
-  if (VarTemplateDecl *VTD = VD->getDescribedVarTemplate()) {
-    while (!VTD->hasMemberSpecialization()) {
-      if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
-        VTD = NewVTD;
-      else
+  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
+    while (!VarTemplate->isMemberSpecialization()) {
+      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
+      if (!NewVT)
         break;
+      VarTemplate = NewVT;
     }
-    return getDefinitionOrSelf(VTD->getTemplatedDecl());
+
+    return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
   }
 
   if (VD == this)
@@ -4157,11 +4158,11 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   if (FunctionTemplateDecl *Primary = getPrimaryTemplate()) {
     // If we hit a point where the user provided a specialization of this
     // template, we're done looking.
-    while (!ForDefinition || !Primary->hasMemberSpecialization()) {
-      if (auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate())
-        Primary = NewPrimary;
-      else
+    while (!ForDefinition || !Primary->isMemberSpecialization()) {
+      auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate();
+      if (!NewPrimary)
         break;
+      Primary = NewPrimary;
     }
 
     return getDefinitionOrSelf(Primary->getTemplatedDecl());

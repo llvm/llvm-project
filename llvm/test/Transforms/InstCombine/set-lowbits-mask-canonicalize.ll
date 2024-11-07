@@ -187,8 +187,8 @@ define i32 @shl_nsw_nuw_add_nsw_nuw(i32 %NBits) {
 
 define <2 x i32> @shl_add_vec(<2 x i32> %NBits) {
 ; CHECK-LABEL: @shl_add_vec(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <2 x i32> <i32 -1, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = xor <2 x i32> [[NOTMASK]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <2 x i32> splat (i32 -1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = xor <2 x i32> [[NOTMASK]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %setbit = shl <2 x i32> <i32 1, i32 1>, %NBits
@@ -198,8 +198,8 @@ define <2 x i32> @shl_add_vec(<2 x i32> %NBits) {
 
 define <3 x i32> @shl_add_vec_poison0(<3 x i32> %NBits) {
 ; CHECK-LABEL: @shl_add_vec_poison0(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[NOTMASK]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <3 x i32> splat (i32 -1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[NOTMASK]], splat (i32 -1)
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %setbit = shl <3 x i32> <i32 1, i32 poison, i32 1>, %NBits
@@ -209,8 +209,8 @@ define <3 x i32> @shl_add_vec_poison0(<3 x i32> %NBits) {
 
 define <3 x i32> @shl_add_vec_poison1(<3 x i32> %NBits) {
 ; CHECK-LABEL: @shl_add_vec_poison1(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[NOTMASK]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <3 x i32> splat (i32 -1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[NOTMASK]], splat (i32 -1)
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %setbit = shl <3 x i32> <i32 1, i32 1, i32 1>, %NBits
@@ -220,8 +220,8 @@ define <3 x i32> @shl_add_vec_poison1(<3 x i32> %NBits) {
 
 define <3 x i32> @shl_add_vec_poison2(<3 x i32> %NBits) {
 ; CHECK-LABEL: @shl_add_vec_poison2(
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[NOTMASK]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw <3 x i32> splat (i32 -1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[NOTMASK]], splat (i32 -1)
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %setbit = shl <3 x i32> <i32 1, i32 poison, i32 1>, %NBits
