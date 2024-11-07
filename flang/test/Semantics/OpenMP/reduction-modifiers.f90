@@ -72,7 +72,7 @@ end
 subroutine mod_inscan4(x)
   integer, intent(inout) :: x
 
-  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with worksharing-loop, worksharing-loop simd, or SIMD directive
+  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with WORKSHARING LOOP, WORKSHARING LOOP SIMD, or SIMD directive
   !$omp parallel reduction(inscan, +:x)
   do i = 1, 100
     x = foo(i)
@@ -83,7 +83,7 @@ end
 subroutine mod_inscan5(x)
   integer, intent(inout) :: x
 
-  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with worksharing-loop, worksharing-loop simd, or SIMD directive
+  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with WORKSHARING LOOP, WORKSHARING LOOP SIMD, or SIMD directive
   !$omp sections reduction(inscan, +:x)
   do i = 1, 100
     x = foo(i)

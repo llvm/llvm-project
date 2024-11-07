@@ -773,14 +773,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
             std::get<parser::OmpObjectList>(reductionClause->v.t)};
         auto checkReductionSymbolInScan = [&](const parser::Name *name) {
           if (name->symbol) {
-            std::string nameStr = name->symbol->name().ToString();
-            if (GetContext().usedInScanDirective.find(nameStr) ==
+            if (GetContext().usedInScanDirective.find(name->symbol) ==
                 GetContext().usedInScanDirective.end()) {
               context_.Say(name->source,
-                  "List item %s must appear in 'inclusive' or "
-                  "'exclusive' clause of an "
+                  "List item %s must appear in EXCLUSIVE or "
+                  "INCLUSIVE clause of an "
                   "enclosed scan directive"_err_en_US,
-                  nameStr);
+                  name->ToString());
             }
           }
         };
@@ -1435,14 +1434,14 @@ void OmpStructureChecker::CheckScan(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   if (std::get<parser::OmpClauseList>(x.t).v.size() != 1) {
     context_.Say(x.source,
-        "Exactly one of `exclusive` or `inclusive` clause is expected"_err_en_US);
+        "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected"_err_en_US);
   }
   if (!CurrentDirectiveIsNested() ||
       !llvm::omp::scanParentAllowedSet.test(GetContextParent().directive)) {
     context_.Say(x.source,
-        "Orphaned `omp scan` directives are prohibited; perhaps you forgot "
-        "to enclose the directive in to a worksharing loop, a worksharing "
-        "loop simd or a simd directive."_err_en_US);
+        "Orphaned SCAN directives are prohibited; perhaps you forgot "
+        "to enclose the directive in to a WORKSHARING LOOP, a WORKSHARING "
+        "LOOP SIMD or a SIMD directive."_err_en_US);
   }
 }
 
@@ -2446,8 +2445,8 @@ void OmpStructureChecker::AddModifierToMap(
     const parser::OmpObjectList &x, const ReductionModifier &modifier) {
   for (const auto &ompObject : x.v) {
     if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-      if (const auto *symbol{name->symbol}) {
-        GetContext().reductionMod[symbol->name().ToString()] = modifier;
+      if (const auto &symbol{name->symbol}) {
+        GetContext().reductionMod[symbol] = modifier;
       }
     }
   }
@@ -2459,17 +2458,16 @@ void OmpStructureChecker::CheckAndAddSymbolsToUsedInScanList(
     auto checkScanSymbolInReduction = [&](const parser::Name *name) {
       if (name->symbol) {
         if (CurrentDirectiveIsNested()) {
-          std::string nameStr = name->symbol->name().ToString();
-          if (GetContextParent().reductionMod.find(nameStr) ==
+          if (GetContextParent().reductionMod.find(name->symbol) ==
               GetContextParent().reductionMod.end()) {
 
             context_.Say(name->source,
-                "List item %s must appear in 'reduction' clause "
-                "with the 'inscan' modifier of the parent "
+                "List item %s must appear in REDUCTION clause "
+                "with the INSCAN modifier of the parent "
                 "directive"_err_en_US,
-                nameStr);
+                name->ToString());
           }
-          GetContextParent().usedInScanDirective.insert(nameStr);
+          GetContextParent().usedInScanDirective.insert(name->symbol);
         }
       }
     };
@@ -2659,7 +2657,7 @@ void OmpStructureChecker::CheckReductionModifier(
     if (!llvm::omp::scanParentAllowedSet.test(dirCtx.directive)) {
       context_.Say(GetContext().clauseSource,
           "Modifier 'INSCAN' on REDUCTION clause is only allowed with "
-          "worksharing-loop, worksharing-loop simd, "
+          "WORKSHARING LOOP, WORKSHARING LOOP SIMD, "
           "or SIMD directive"_err_en_US);
     }
   } else {

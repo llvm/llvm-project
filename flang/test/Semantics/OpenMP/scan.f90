@@ -3,7 +3,7 @@
 subroutine test_scan()
  integer x, y, k, z
  
- !ERROR: Orphaned `omp scan` directives are prohibited; perhaps you forgot to enclose the directive in to a worksharing loop, a worksharing loop simd or a simd directive.
+ !ERROR: Orphaned SCAN directives are prohibited; perhaps you forgot to enclose the directive in to a WORKSHARING LOOP, a WORKSHARING LOOP SIMD or a SIMD directive.
  !$omp scan inclusive(x)
  !$omp parallel do simd
  do k = 1, n
@@ -13,21 +13,21 @@ subroutine test_scan()
  
  !$omp parallel do simd
  do k = 1, n
- !ERROR: Exactly one of `exclusive` or `inclusive` clause is expected
+ !ERROR: Exactly one of EXCLUSIVE or INCLUSIVE clause is expected
    !$omp scan
  end do
 
 !$omp parallel do simd reduction(inscan,+: x, y)
  do k = 1, n
- !ERROR: Exactly one of `exclusive` or `inclusive` clause is expected
+ !ERROR: Exactly one of EXCLUSIVE or INCLUSIVE clause is expected
    !$omp scan inclusive(x) exclusive(y)
  end do
 
-!ERROR: List item y must appear in 'inclusive' or 'exclusive' clause of an enclosed scan directive
+!ERROR: List item y must appear in EXCLUSIVE or INCLUSIVE clause of an enclosed scan directive
 !$omp parallel do simd reduction(inscan,+: x, y)
  do k = 1, n
- !ERROR: Exactly one of `exclusive` or `inclusive` clause is expected
- !ERROR: List item z must appear in 'reduction' clause with the 'inscan' modifier of the parent directive
+ !ERROR: Exactly one of EXCLUSIVE or INCLUSIVE clause is expected
+ !ERROR: List item z must appear in REDUCTION clause with the INSCAN modifier of the parent directive
    !$omp scan inclusive(x) exclusive(z)
  end do
 end subroutine
