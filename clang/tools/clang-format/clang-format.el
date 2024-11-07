@@ -146,6 +146,17 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
     (lambda (byte &optional _quality _coding-system)
       (byte-to-position (1+ byte)))))
 
+(defmacro clang-format--with-delete-files-guard (bind-files-to-delete &rest body)
+  "Execute BODY which may add temp files to BIND-FILES-TO-DELETE."
+  (declare (indent 1))
+  `(let ((,bind-files-to-delete nil))
+     (unwind-protect
+         (progn
+           ,@body)
+       (while ,bind-files-to-delete
+         (with-demoted-errors "failed to remove file: %S"
+           (delete-file (pop ,bind-files-to-delete)))))))
+
 (defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
 FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the
@@ -318,35 +329,32 @@ diffs from HEAD in the buffer. If no STYLE is given uses
 file. If no ASSUME-FILE-NAME is given uses the function
 ‘buffer-file-name’."
   (interactive)
-  (let ((tmpfile-vc-head nil)
-        (tmpfile-curbuf nil))
-    (unwind-protect
-        (progn
-          (setq tmpfile-vc-head
-                (make-temp-file "clang-format-vc-tmp-head-content"))
-          (clang-format--vc-diff-get-vc-head-file tmpfile-vc-head)
-          ;; Move the current buffer to a temporary file to take a
-          ;; diff. Even if current-buffer is backed by a file, we
-          ;; want to diff the buffer contents which might not be
-          ;; saved.
-          (setq tmpfile-curbuf (make-temp-file "clang-format-vc-tmp"))
-          (write-region nil nil tmpfile-curbuf nil 'nomessage)
-          ;; Get a list of lines with a diff.
-          (let ((diff-lines
-                 (clang-format--vc-diff-get-diff-lines
-                  tmpfile-vc-head tmpfile-curbuf)))
-            ;; If we have any diffs, format them.
-            (when diff-lines
-              (clang-format--region-impl
-               (point-min)
-               (point-max)
-               style
-               assume-file-name
-               diff-lines))))
-      (progn
-        ;; Cleanup temporary files we created.
-        (when tmpfile-vc-head (ignore-errors (delete-file tmpfile-vc-head)))
-        (when tmpfile-curbuf (ignore-errors (delete-file tmpfile-curbuf)))))))
+  (clang-format--with-delete-files-guard tmp-files
+    (let ((tmpfile-vc-head nil)
+          (tmpfile-curbuf nil))
+      (setq tmpfile-vc-head
+            (make-temp-file "clang-format-vc-tmp-head-content"))
+      (push tmpfile-vc-head tmp-files)
+      (clang-format--vc-diff-get-vc-head-file tmpfile-vc-head)
+      ;; Move the current buffer to a temporary file to take a
+      ;; diff. Even if current-buffer is backed by a file, we
+      ;; want to diff the buffer contents which might not be
+      ;; saved.
+      (setq tmpfile-curbuf (make-temp-file "clang-format-vc-tmp"))
+      (push tmpfile-curbuf tmp-files)
+      (write-region nil nil tmpfile-curbuf nil 'nomessage)
+      ;; Get a list of lines with a diff.
+      (let ((diff-lines
+             (clang-format--vc-diff-get-diff-lines
+              tmpfile-vc-head tmpfile-curbuf)))
+        ;; If we have any diffs, format them.
+        (when diff-lines
+          (clang-format--region-impl
+           (point-min)
+           (point-max)
+           style
+           assume-file-name
+           diff-lines))))))
 
 
 ;;;###autoload
