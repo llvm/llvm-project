@@ -278,7 +278,7 @@ class ASTTypeWriter {
 
 public:
   ASTTypeWriter(ASTContext &Context, ASTWriter &Writer)
-    : Writer(Writer), BasicWriter(Context, Writer, Record) {}
+      : Writer(Writer), BasicWriter(Context, Writer, Record) {}
 
   uint64_t write(QualType T) {
     if (T.hasLocalNonFastQualifiers()) {
