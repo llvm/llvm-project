@@ -976,6 +976,12 @@ void OmpStructureChecker::CheckDistLinear(
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
   const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+
+  // A few semantic checks for InScan reduction are performed below as SCAN
+  // constructs inside LOOP may add the relevant information. Scan reduction is
+  // supported only in loop constructs, so same checks are not applicable to
+  // other directives.
+
   for (const auto &clause : clauseList.v) {
     if (const auto *reductionClause{
             std::get_if<parser::OmpClause::Reduction>(&clause.u)}) {
@@ -987,14 +993,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
             std::get<parser::OmpObjectList>(reductionClause->v.t)};
         auto checkReductionSymbolInScan = [&](const parser::Name *name) {
           if (name->symbol) {
-            std::string nameStr = name->symbol->name().ToString();
-            if (GetContext().usedInScanDirective.find(nameStr) ==
-                GetContext().usedInScanDirective.end()) {
+            if (!scanReductionInfoStack.top().findSymbolInScanConstruct(
+                    name->symbol)) {
               context_.Say(name->source,
-                  "List item %s must appear in 'inclusive' or "
-                  "'exclusive' clause of an "
-                  "enclosed scan directive"_err_en_US,
-                  nameStr);
+                  "List item %s must appear in EXCLUSIVE or "
+                  "INCLUSIVE clause of an "
+                  "enclosed SCAN directive"_err_en_US,
+                  name->ToString());
             }
           }
         };
@@ -1011,6 +1016,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
               },
               ompObj.u);
         }
+        scanReductionInfoStack.pop();
       }
     }
   }
@@ -1690,14 +1696,14 @@ void OmpStructureChecker::CheckScan(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   if (std::get<parser::OmpClauseList>(x.t).v.size() != 1) {
     context_.Say(x.source,
-        "Exactly one of `exclusive` or `inclusive` clause is expected"_err_en_US);
+        "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected"_err_en_US);
   }
   if (!CurrentDirectiveIsNested() ||
       !llvm::omp::scanParentAllowedSet.test(GetContextParent().directive)) {
     context_.Say(x.source,
-        "Orphaned `omp scan` directives are prohibited; perhaps you forgot "
-        "to enclose the directive in to a worksharing loop, a worksharing "
-        "loop simd or a simd directive."_err_en_US);
+        "Orphaned SCAN directives are prohibited; perhaps you forgot "
+        "to enclose the directive in to a WORKSHARING LOOP, a WORKSHARING "
+        "LOOP SIMD or a SIMD directive."_err_en_US);
   }
 }
 
@@ -2838,20 +2844,24 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   if (const auto &maybeModifier{
           std::get<std::optional<ReductionModifier>>(x.v.t)}) {
     const ReductionModifier modifier{*maybeModifier};
-    const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
-    AddModifierToMap(ompObjectList, modifier);
+    if (modifier == ReductionModifier::Inscan) {
+      scanReductionInfoStack.emplace();
+      const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
+      scanReductionInfoStack.top().mapSymbolsToReductionModifiers(
+          ompObjectList, modifier);
+    }
     CheckReductionModifier(modifier);
   }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Inclusive &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_inclusive);
-  CheckAndAddSymbolsToUsedInScanList(x.v);
+  CheckAndMarkSymbolsUsedInScan(x.v);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Exclusive &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_exclusive);
-  CheckAndAddSymbolsToUsedInScanList(x.v);
+  CheckAndMarkSymbolsUsedInScan(x.v);
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
@@ -2895,34 +2905,24 @@ bool OmpStructureChecker::CheckReductionOperators(
   return ok;
 }
 
-void OmpStructureChecker::AddModifierToMap(
-    const parser::OmpObjectList &x, const ReductionModifier &modifier) {
-  for (const auto &ompObject : x.v) {
-    if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-      if (const auto *symbol{name->symbol}) {
-        GetContext().reductionMod[symbol->name().ToString()] = modifier;
-      }
-    }
-  }
-}
-
-void OmpStructureChecker::CheckAndAddSymbolsToUsedInScanList(
+void OmpStructureChecker::CheckAndMarkSymbolsUsedInScan(
     const parser::OmpObjectList &x) {
   for (const auto &ompObj : x.v) {
-    auto checkScanSymbolInReduction = [&](const parser::Name *name) {
+    auto checkAndMark = [&](const parser::Name *name) {
       if (name->symbol) {
         if (CurrentDirectiveIsNested()) {
-          std::string nameStr = name->symbol->name().ToString();
-          if (GetContextParent().reductionMod.find(nameStr) ==
-              GetContextParent().reductionMod.end()) {
-
+          ScanReductionInfo &scanReductionInfo = scanReductionInfoStack.top();
+          std::optional<ReductionModifier> reductionMod =
+              scanReductionInfo.findReductionModifier(name->symbol);
+          if (!reductionMod.has_value() ||
+              reductionMod.value() != ReductionModifier::Inscan) {
             context_.Say(name->source,
-                "List item %s must appear in 'reduction' clause "
-                "with the 'inscan' modifier of the parent "
+                "List item %s must appear in REDUCTION clause "
+                "with the INSCAN modifier of the parent "
                 "directive"_err_en_US,
-                nameStr);
+                name->ToString());
           }
-          GetContextParent().usedInScanDirective.insert(nameStr);
+          scanReductionInfo.markSymbolAsUsedInScanConstruct(name->symbol);
         }
       }
     };
@@ -2931,10 +2931,10 @@ void OmpStructureChecker::CheckAndAddSymbolsToUsedInScanList(
             [&](const parser::Designator &designator) {
               if (const auto *name{
                       semantics::getDesignatorNameIfDataRef(designator)}) {
-                checkScanSymbolInReduction(name);
+                checkAndMark(name);
               }
             },
-            [&](const auto &name) { checkScanSymbolInReduction(&name); },
+            [&](const auto &name) { checkAndMark(&name); },
         },
         ompObj.u);
   }
@@ -3112,7 +3112,7 @@ void OmpStructureChecker::CheckReductionModifier(
     if (!llvm::omp::scanParentAllowedSet.test(dirCtx.directive)) {
       context_.Say(GetContext().clauseSource,
           "Modifier 'INSCAN' on REDUCTION clause is only allowed with "
-          "worksharing-loop, worksharing-loop simd, "
+          "WORKSHARING LOOP, WORKSHARING LOOP SIMD, "
           "or SIMD directive"_err_en_US);
     }
   } else {
