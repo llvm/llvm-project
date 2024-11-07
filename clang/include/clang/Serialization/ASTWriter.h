@@ -673,7 +673,7 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor*> Subject,
+  ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                             StringRef OutputFile, Module *WritingModule,
                             StringRef isysroot,
                             bool ShouldCacheASTInMemory = false);
