@@ -26,10 +26,9 @@ LLVM_LIBC_FUNCTION(void *, lfind,
 
   const cpp::byte *next = reinterpret_cast<const cpp::byte *>(base);
   const cpp::byte *end = next + byte_len;
-  for (; next < end; next += size) {
+  for (; next < end; next += size)
     if (compar(key, next) == 0)
       return const_cast<cpp::byte *>(next);
-  }
   return nullptr;
 }
 
