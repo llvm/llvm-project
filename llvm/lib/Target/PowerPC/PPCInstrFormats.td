@@ -55,9 +55,9 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
   bits<1> ZExt32To64 = 0;
   let TSFlags{9} = ZExt32To64;
 
-  // Indicate that this instruction uses a memory operand.
-  bits<1> MemOp = 0;
-  let TSFlags{10} = MemOp;
+  // Indicate that this instruction takes a register+immediate memory operand.
+  bits<1> MemriOp = 0;
+  let TSFlags{10} = MemriOp;
 
   // Fields used for relation models.
   string BaseName = "";
@@ -86,7 +86,7 @@ class PPC970_Unit_BRU      { bits<3> PPC970_Unit = 7;   }
 class XFormMemOp { bits<1> XFormMemOp = 1; }
 class SExt32To64 { bits<1> SExt32To64 = 1; }
 class ZExt32To64 { bits<1> ZExt32To64 = 1; }
-class MemOp      { bits<1> MemOp = 1;      }
+class MemriOp      { bits<1> MemriOp = 1;      }
 
 // Two joined instructions; used to emit two adjacent instructions as one.
 // The itinerary from the first instruction is used for scheduling and
@@ -119,10 +119,6 @@ class I2<bits<6> opcode1, bits<6> opcode2, dag OOL, dag IOL, string asmstr,
   let TSFlags{1}   = PPC970_Single;
   let TSFlags{2}   = PPC970_Cracked;
   let TSFlags{5-3} = PPC970_Unit;
-
-  // Indicate that this instruction uses a memory operand.
-  bits<1> MemOp = 0;
-  let TSFlags{10} = MemOp;
 
   // Fields used for relation models.
   string BaseName = "";
@@ -259,7 +255,7 @@ class DForm_base<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 
 class DForm_1<bits<6> opcode, dag OOL, dag IOL, string asmstr,
               InstrItinClass itin, list<dag> pattern>
-  : DForm_base<opcode, OOL, IOL, asmstr, itin, pattern>, MemOp {
+  : DForm_base<opcode, OOL, IOL, asmstr, itin, pattern>, MemriOp {
 }
 
 class DForm_2<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -304,7 +300,7 @@ class DForm_4_zero<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let RST = 0;
   let RA = 0;
   let D = 0;
-  let MemOp = 0;
+  let MemriOp = 0;
 }
 
 class DForm_4_fixedreg_zero<bits<6> opcode, bits<5> R, dag OOL, dag IOL,
@@ -382,7 +378,7 @@ class DForm_6_ext<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 // 1.7.5 DS-Form
 class DSForm_1<bits<6> opcode, bits<2> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>
-         : I<opcode, OOL, IOL, asmstr, itin>, MemOp {
+         : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5>  RST;
   bits<5>  RA;
   bits<14> D;
@@ -414,7 +410,7 @@ class DXForm<bits<6> opcode, bits<5> xo, dag OOL, dag IOL, string asmstr,
 // DQ-Form: [PO T RA DQ TX XO] or [PO S RA DQ SX XO]
 class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin>, MemOp {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<6>  XT;
   bits<5> RA;
   bits<12> DQ;
@@ -431,7 +427,7 @@ class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
 class DQForm_RTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin,
                            list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin>, MemOp {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RTp;
   bits<5> RA;
   bits<12> DQ;
@@ -1256,7 +1252,7 @@ class XX2_RD6_DCMX7_RS6<bits<6> opcode, bits<4> xo1, bits<3> xo2,
 
 class XForm_XD6_RA5_RB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                         string asmstr, InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin>, MemOp {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RA;
   bits<6> D;
   bits<5> RB;
@@ -1665,7 +1661,7 @@ class XLForm_2_ext_and_DSForm_1<bits<6> opcode1, bits<10> xo1,
                                 dag OOL, dag IOL, string asmstr,
                                 InstrItinClass itin, list<dag> pattern>
   : XLForm_2_and_DSForm_1<opcode1, xo1, lk, opcode2, xo2,
-                          OOL, IOL, asmstr, itin, pattern>, MemOp {
+                          OOL, IOL, asmstr, itin, pattern> {
   let BO = bo;
   let BI = bi;
   let BH = 0;
@@ -1675,7 +1671,7 @@ class XLForm_2_ext_and_DForm_1<bits<6> opcode1, bits<10> xo1, bits<5> bo,
                                bits<5> bi, bit lk, bits<6> opcode2, dag OOL,
                                dag IOL, string asmstr, InstrItinClass itin,
                                list<dag> pattern>
-  : I2<opcode1, opcode2, OOL, IOL, asmstr, itin>, MemOp {
+  : I2<opcode1, opcode2, OOL, IOL, asmstr, itin> {
 
   bits<5>  RST;
   bits<5>  RA;

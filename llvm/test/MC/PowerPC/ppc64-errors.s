@@ -153,3 +153,8 @@
 # CHECK: error: invalid operand for instruction
 # CHECK-NEXT: addi 3, 10(3)
               addi 3, 10(3)
+
+# Invalid memory operand position
+# CHECK: error: invalid operand for instruction
+# CHECK-NEXT: la 0(3), 3
+              la 0(3), 3

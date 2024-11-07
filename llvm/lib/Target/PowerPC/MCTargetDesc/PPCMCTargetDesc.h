@@ -172,8 +172,8 @@ enum {
   SExt32To64 = 0x1 << (NewDef_Shift + 2),
   /// This instruction produced a zero extended result.
   ZExt32To64 = 0x1 << (NewDef_Shift + 3),
-  /// This instruction uses a memory operand.
-  MemOp = 0x1 << (NewDef_Shift + 4)
+  /// This instruction takes a register+immediate memory operand.
+  MemriOp = 0x1 << (NewDef_Shift + 4)
 };
 } // end namespace PPCII
 

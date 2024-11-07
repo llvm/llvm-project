@@ -1259,13 +1259,17 @@ void PPCAsmParser::processInstruction(MCInst &Inst,
 static std::string PPCMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
-static bool hasMemOp(const OperandVector &Operands) {
-  for (const auto &Operand : Operands) {
-    const PPCOperand &Op = static_cast<const PPCOperand &>(*Operand);
-    if (Op.isMemOpBase())
-      return true;
+// Check that the register+immediate memory operand is in the right position and
+// is expected by the instruction
+static bool validateMemOp(const OperandVector &Operands, bool isMemriOp) {
+  for (size_t idx = 0; idx < Operands.size(); ++idx) {
+    const PPCOperand &Op = static_cast<const PPCOperand &>(*Operands[idx]);
+    if ((idx == 3 && Op.isMemOpBase() != isMemriOp) ||
+        (idx != 3 && Op.isMemOpBase())) {
+        return false;
+    }
   }
-  return false;
+  return true;
 }
 
 bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -1277,7 +1281,7 @@ bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
-    if (hasMemOp(Operands) != TII->isMemOp(Inst.getOpcode()))
+    if (!validateMemOp(Operands, TII->isMemriOp(Inst.getOpcode())))
       return Error(IDLoc, "invalid operand for instruction");
     // Post-process instructions (typically extended mnemonics)
     processInstruction(Inst, Operands);

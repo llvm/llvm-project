@@ -2303,7 +2303,7 @@ let isCodeGenOnly = 1 in
 def LA     : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
                      [(set i32:$RST, (add i32:$RA,
-                                          (PPClo tglobaladdr:$D, 0)))]>, MemOp;
+                                          (PPClo tglobaladdr:$D, 0)))]>, MemriOp;
 def MULLI  : DForm_2< 7, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "mulli $RST, $RA, $D", IIC_IntMulLI,
                      [(set i32:$RST, (mul i32:$RA, imm32SExt16:$D))]>;
@@ -3467,9 +3467,9 @@ class PPCAsmPseudo<string asm, dag iops>
   let isPseudo = 1;
   let hasNoSchedulingInfo = 1;
 
-  // Indicate that this instruction uses a memory operand.
-  bits<1> MemOp = 0;
-  let TSFlags{10} = MemOp;
+  // Indicate that this instruction takes a register+immediate memory operand.
+  bits<1> MemriOp = 0;
+  let TSFlags{10} = MemriOp;
 }
 
 // Prefixed instructions may require access to the above defs at a later
@@ -4718,7 +4718,7 @@ def : InstAlias<"tlbilxva $RA, $RB", (TLBILX 3, gprc:$RA, gprc:$RB)>,
                 Requires<[IsBookE]>;
 def : InstAlias<"tlbilxva $RB", (TLBILX 3, R0, gprc:$RB)>, Requires<[IsBookE]>;
 
-def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>, MemOp;
+def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>, MemriOp;
 
 def SUBI : PPCAsmPseudo<"subi $rA, $rB, $imm",
                         (ins gprc:$rA, gprc:$rB, s16imm:$imm)>;
