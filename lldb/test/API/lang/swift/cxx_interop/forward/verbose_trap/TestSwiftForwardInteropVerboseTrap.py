@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropVerboseTrap(TestBase):
 
     @swiftTest
+    @expectedFailureAll(bugnumber="rdar://139429226")
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
