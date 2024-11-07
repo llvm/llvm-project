@@ -2793,8 +2793,6 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
     support scalable vectors. Hence, this Op is only available for fixed-width
     vectors. Also see:
 
-    Also see:
-
     http://llvm.org/docs/LangRef.html#llvm-matrix-transpose-intrinsic
 
     Example:
