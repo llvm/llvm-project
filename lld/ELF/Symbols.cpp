@@ -501,7 +501,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
 bool Symbol::shouldReplace(Ctx &ctx, const Defined &other) const {
   if (LLVM_UNLIKELY(isCommon())) {
     if (ctx.arg.warnCommon)
-      warn("common " + getName() + " is overridden");
+      Warn(ctx) << "common " << getName() << " is overridden";
     return !other.isWeak();
   }
   if (!isDefined())
@@ -574,13 +574,13 @@ void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
   }
   if (isDefined() && !isWeak()) {
     if (ctx.arg.warnCommon)
-      warn("common " + getName() + " is overridden");
+      Warn(ctx) << "common " << getName() << " is overridden";
     return;
   }
 
   if (CommonSymbol *oldSym = dyn_cast<CommonSymbol>(this)) {
     if (ctx.arg.warnCommon)
-      warn("multiple common of " + getName());
+      Warn(ctx) << "multiple common of " << getName();
     oldSym->alignment = std::max(oldSym->alignment, other.alignment);
     if (oldSym->size < other.size) {
       oldSym->file = other.file;

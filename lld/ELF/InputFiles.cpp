@@ -482,7 +482,7 @@ template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
         std::make_unique<LLDDwarfObj<ELFT>>(this), "",
         [&](Error err) { warn(getName() + ": " + toString(std::move(err))); },
         [&](Error warning) {
-          warn(getName() + ": " + toString(std::move(warning)));
+          Warn(ctx) << getName() << ": " << std::move(warning);
         }));
   });
 
@@ -634,7 +634,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                                                    ? llvm::endianness::little
                                                    : llvm::endianness::big)) {
         InputSection isec(*this, sec, name);
-        warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
+        Warn(ctx) << &isec << ": " << llvm::toString(std::move(e));
       } else {
         updateSupportedARMFeatures(ctx, attributes);
         updateARMVFPArgs(ctx, attributes, this);
@@ -802,12 +802,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
         if (sec.sh_link != 0)
           this->addrsigSec = &sec;
         else if (ctx.arg.icf == ICFLevel::Safe)
-          warn(toString(this) +
-               ": --icf=safe conservatively ignores "
-               "SHT_LLVM_ADDRSIG [index " +
-               Twine(i) +
-               "] with sh_link=0 "
-               "(likely created using objcopy or ld -r)");
+          Warn(ctx) << this
+                    << ": --icf=safe conservatively ignores "
+                       "SHT_LLVM_ADDRSIG [index "
+                    << Twine(i)
+                    << "] with sh_link=0 "
+                       "(likely created using objcopy or ld -r)";
       }
       this->sections[i] = &InputSection::discarded;
       continue;
