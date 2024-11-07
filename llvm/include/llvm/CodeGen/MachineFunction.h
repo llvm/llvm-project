@@ -868,6 +868,10 @@ public:
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
 
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
+
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
   void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
