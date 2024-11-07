@@ -16,7 +16,6 @@
 #define LLVM_ADT_STLFUNCTIONALEXTRAS_H
 
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/Support/Compiler.h"
 
 #include <cstdint>
 #include <type_traits>
@@ -53,7 +52,7 @@ public:
 
   template <typename Callable>
   function_ref(
-      Callable &&callable LLVM_LIFETIME_BOUND,
+      Callable &&callable,
       // This is not the copy-constructor.
       std::enable_if_t<!std::is_same<remove_cvref_t<Callable>,
                                      function_ref>::value> * = nullptr,
