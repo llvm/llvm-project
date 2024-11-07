@@ -211,24 +211,23 @@ class GlobalSaddrTable <bit is_saddr, string Name = ""> {
 // same encoding value as exec_hi, so it isn't possible to use that if
 // saddr is 32-bit (which isn't handled here yet).
 class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
-  bit HasTiedOutput = 0,
-  bit HasSaddr = 0, bit EnableSaddr = 0,
+  bit HasTiedOutput = 0, bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
+  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
+  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64),
   RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret> : FLAT_Pseudo<
   opName,
   (outs vdata_op:$vdst),
-  !con(
-    !if(EnableSaddr,
-      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-      (ins VReg_64:$vaddr)),
-      (ins flat_offset:$offset),
-      // FIXME: Operands with default values do not work with following non-optional operands.
-      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                         (ins CPol_0:$cpol))),
-  " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
+  !con(!if(EnableSaddr, (ins SaddrRC:$saddr), (ins)), !if(HasVaddr, (ins VaddrRC:$vaddr), (ins)),
+       (ins flat_offset:$offset),
+       // FIXME: Operands with default values do not work with following non-optional operands.
+       !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                          (ins CPol_0:$cpol))),
+  " $vdst"#!if(HasVaddr, ", $vaddr", "")#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
   let has_data = 0;
   let mayLoad = 1;
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
+  let has_vaddr = HasVaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -243,20 +242,21 @@ multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterClass regClass, bit HasT
 }
 
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
-  bit HasSaddr = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
+  bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
+  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
+  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64),
+  RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret> : FLAT_Pseudo<
   opName,
   (outs),
-  !con(
-    !if(EnableSaddr,
-      (ins VGPR_32:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata, SReg_64_XEXEC_XNULL:$saddr),
-      (ins VReg_64:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata)),
-      (ins flat_offset:$offset, CPol_0:$cpol)),
-  " $vaddr, $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
+  !con(!if(HasVaddr, (ins VaddrRC:$vaddr), (ins)), (ins vdata_op:$vdata), !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
+       (ins flat_offset:$offset, CPol_0:$cpol)),
+  !if(HasVaddr, " $vaddr,", "")#" $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
+  let has_vaddr = HasVaddr;
 }
 
 multiclass FLAT_Flat_Store_Pseudo<string opName, RegisterClass regClass> {
@@ -773,65 +773,71 @@ multiclass FLAT_Atomic_Pseudo<
   defm "" : FLAT_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc, data_op>;
 }
 
-multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
+class FLAT_Global_Atomic_Pseudo_NO_RTN<
   string opName,
   RegisterClass vdst_rc,
   ValueType vt,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc,
-  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> {
-
-  let is_flat_global = 1 in {
-    def "" : FLAT_AtomicNoRet_Pseudo <opName,
+  bit EnableSaddr = 0,
+  bit HasVaddr = 1,
+  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
+  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64),
+  RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret> :
+    FLAT_AtomicNoRet_Pseudo <opName,
       (outs),
-      (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
-      " $vaddr, $vdata, off$offset$cpol">,
-      GlobalSaddrTable<0, opName> {
-      let has_saddr = 1;
-      let FPAtomic = data_vt.isFP;
-    }
-
-    def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
-      (outs),
-      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_0:$cpol),
-      " $vaddr, $vdata, $saddr$offset$cpol">,
-      GlobalSaddrTable<1, opName> {
-      let has_saddr = 1;
-      let enabled_saddr = 1;
-      let FPAtomic = data_vt.isFP;
-    }
-  }
+      !con(!if(HasVaddr, (ins VaddrRC:$vaddr), (ins)), (ins data_op:$vdata),
+           !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)), (ins flat_offset:$offset, CPol_0:$cpol)),
+      !if(HasVaddr, " $vaddr, ", " ")#"$vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol">,
+      GlobalSaddrTable<EnableSaddr, opName> {
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let FPAtomic = data_vt.isFP;
+  let has_vaddr = HasVaddr;
+  let is_flat_global = 1;
 }
 
-multiclass FLAT_Global_Atomic_Pseudo_RTN<
+multiclass FLAT_Global_Atomic_Pseudo_Helper_NO_RTN<string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc> {
+  def "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc, 0>;
+  def _SADDR : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc, 1>;
+}
+
+class FLAT_Global_Atomic_Pseudo_RTN<
   string opName,
   RegisterClass vdst_rc,
   ValueType vt,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc,
+  bit EnableSaddr = 0,
+  bit HasVaddr = 1,
+  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
+  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64),
   RegisterOperand data_op = getLdStRegisterOperand<data_rc>.ret,
-  RegisterOperand vdst_op = getLdStRegisterOperand<vdst_rc>.ret> {
-
-  let is_flat_global = 1 in {
-    def _RTN : FLAT_AtomicRet_Pseudo <opName,
+  RegisterOperand vdst_op = getLdStRegisterOperand<vdst_rc>.ret> :
+    FLAT_AtomicRet_Pseudo <opName,
       (outs vdst_op:$vdst),
-        (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
-      " $vdst, $vaddr, $vdata, off$offset$cpol">,
-      GlobalSaddrTable<0, opName#"_rtn"> {
-      let has_saddr = 1;
-      let FPAtomic = data_vt.isFP;
-    }
+      !con(!if(HasVaddr, (ins VaddrRC:$vaddr), (ins)), (ins data_op:$vdata),
+           !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)), (ins flat_offset:$offset, CPol_GLC1:$cpol)),
+      " $vdst, "#!if(HasVaddr, "$vaddr, ", "")#"$vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol">,
+      GlobalSaddrTable<EnableSaddr, opName#"_rtn"> {
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let FPAtomic = data_vt.isFP;
+  let has_vaddr = HasVaddr;
+  let is_flat_global = 1;
+}
 
-    def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
-      (outs vdst_op:$vdst),
-        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
-      " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
-      GlobalSaddrTable<1, opName#"_rtn"> {
-       let has_saddr = 1;
-       let enabled_saddr = 1;
-       let FPAtomic = data_vt.isFP;
-    }
-  }
+multiclass FLAT_Global_Atomic_Pseudo_Helper_RTN<string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc> {
+  def _RTN : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc, 0>;
+  def _SADDR_RTN : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc, 1>;
 }
 
 multiclass FLAT_Global_Atomic_Pseudo<
@@ -840,8 +846,18 @@ multiclass FLAT_Global_Atomic_Pseudo<
   ValueType vt,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc> {
-  defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
-  defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+  defm "" : FLAT_Global_Atomic_Pseudo_Helper_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+  defm "" : FLAT_Global_Atomic_Pseudo_Helper_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+}
+
+multiclass FLAT_Global_Atomic_Pseudo_Sgpr<string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  RegisterClass SaddrRC = SReg_64_XEXEC,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc> {
+  def "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc, 1, 0, SaddrRC>;
+  def _RTN : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc, 1, 0, SaddrRC>;
 }
 
 class FLAT_Discard_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
@@ -1044,6 +1060,9 @@ defm GLOBAL_LOAD_DWORDX2  : FLAT_Global_Load_Pseudo <"global_load_dwordx2", VReg
 defm GLOBAL_LOAD_DWORDX3  : FLAT_Global_Load_Pseudo <"global_load_dwordx3", VReg_96>;
 defm GLOBAL_LOAD_DWORDX4  : FLAT_Global_Load_Pseudo <"global_load_dwordx4", VReg_128>;
 
+let is_flat_global = 1 in
+def GLOBAL_LOAD_SGPR_B32  : FLAT_Load_Pseudo <"global_load_sgpr_b32", SReg_32, 0, 1, 1, 0, SReg_64_XEXEC>;
+
 let TiedSourceNotRead = 1 in {
 defm GLOBAL_LOAD_UBYTE_D16    : FLAT_Global_Load_Pseudo <"global_load_ubyte_d16", VGPR_32, 1>;
 defm GLOBAL_LOAD_UBYTE_D16_HI : FLAT_Global_Load_Pseudo <"global_load_ubyte_d16_hi", VGPR_32, 1>;
@@ -1062,6 +1081,10 @@ defm GLOBAL_STORE_DWORD   : FLAT_Global_Store_Pseudo <"global_store_dword", VGPR
 defm GLOBAL_STORE_DWORDX2 : FLAT_Global_Store_Pseudo <"global_store_dwordx2", VReg_64>;
 defm GLOBAL_STORE_DWORDX3 : FLAT_Global_Store_Pseudo <"global_store_dwordx3", VReg_96>;
 defm GLOBAL_STORE_DWORDX4 : FLAT_Global_Store_Pseudo <"global_store_dwordx4", VReg_128>;
+
+let is_flat_global = 1 in
+def GLOBAL_STORE_SGPR_B32 : FLAT_Store_Pseudo<"global_store_sgpr_b32", SReg_32, 1, 1, 0, SReg_64_XEXEC>;
+
 let OtherPredicates = [HasGFX10_BEncoding] in
 defm GLOBAL_STORE_DWORD_ADDTID : FLAT_Global_Store_AddTid_Pseudo <"global_store_dword_addtid", VGPR_32>;
 
@@ -1082,6 +1105,9 @@ defm GLOBAL_ATOMIC_SWAP_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_swap_x2",
 
 defm GLOBAL_ATOMIC_ADD : FLAT_Global_Atomic_Pseudo <"global_atomic_add",
                            VGPR_32, i32>;
+
+defm GLOBAL_ATOMIC_ADD_SGPR_U32 : FLAT_Global_Atomic_Pseudo_Sgpr<"global_atomic_add_sgpr_u32",
+                           SReg_32, i32>;
 
 defm GLOBAL_ATOMIC_SUB : FLAT_Global_Atomic_Pseudo <"global_atomic_sub",
                            VGPR_32, i32>;
@@ -1306,19 +1332,19 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let OtherPredicates = [HasAtomicFaddNoRtnInsts] in
-  defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_NO_RTN <
+  defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_Helper_NO_RTN <
     "global_atomic_add_f32", VGPR_32, f32
   >;
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts] in
-  defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_NO_RTN <
+  defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_Helper_NO_RTN <
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 let OtherPredicates = [HasAtomicFaddRtnInsts] in
-  defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_RTN <
+  defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_Helper_RTN <
     "global_atomic_add_f32", VGPR_32, f32
   >;
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
-  defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_RTN <
+  defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_Helper_RTN <
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 
@@ -3790,8 +3816,11 @@ defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VGLOBAL_Real_AllAddr_gfx13<0x6f>;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VGLOBAL_Real_Atomics_gfx13<0x75>;
 defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
 defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
+defm GLOBAL_STORE_SGPR_B32            : VFLAT_Real_Base_gfx13<0x88>;
+defm GLOBAL_LOAD_SGPR_B32             : VFLAT_Real_Base_gfx13<0x89>;
 defm GLOBAL_LOAD_TR4_B64              : VGLOBAL_Real_AllAddr_gfx13<0x8a>;
 defm GLOBAL_LOAD_TR6_B96              : VGLOBAL_Real_AllAddr_gfx13<0x8b>;
+defm GLOBAL_ATOMIC_ADD_SGPR_U32       : VFLAT_Real_Atomics_gfx13<0x8c>;
 defm RTS_READ_RESULT_ALL_STOP         : VFLAT_Real_Base_gfx13<0x90>;
 defm RTS_READ_RESULT_ONGOING          : VFLAT_Real_Base_gfx13<0x91>;
 defm RTS_UPDATE_RAY                   : VFLAT_Real_Base_gfx13<0x92>;

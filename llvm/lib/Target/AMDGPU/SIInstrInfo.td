@@ -2687,9 +2687,12 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 }
 
 // Return an AGPR+VGPR operand class for the given VGPR register class.
+// In case of a SGPR register class, just return the register operand.
 class getLdStRegisterOperand<RegisterClass RC> {
+  SIRegisterClass SIRC = !cast<SIRegisterClass>(RC);
   RegisterOperand ret =
-    !cond(!eq(RC.Size, 32)   : AVLdSt_32,
+    !cond(SIRC.HasSGPR       : RegisterOperand<RC>,
+          !eq(RC.Size, 32)   : AVLdSt_32,
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
           !eq(RC.Size, 128)  : AVLdSt_128,
