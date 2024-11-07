@@ -17,10 +17,8 @@
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
-
 #include <cstdint>
 #include <optional>
 #include <string>
