@@ -100,6 +100,14 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+  static Instruction *getLowest(ArrayRef<Instruction *> Instrs) {
+    Instruction *LowestI = Instrs.front();
+    for (auto *I : drop_begin(Instrs)) {
+      if (LowestI->comesBefore(I))
+        LowestI = I;
+    }
+    return LowestI;
+  }
 };
 
 } // namespace llvm::sandboxir
