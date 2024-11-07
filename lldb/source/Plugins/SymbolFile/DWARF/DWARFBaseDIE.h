@@ -44,11 +44,7 @@ public:
       : m_cu(const_cast<DWARFUnit *>(cu)),
         m_die(const_cast<DWARFDebugInfoEntry *>(die)) {}
 
-  // Tests
-  explicit operator bool() const { return IsValid(); }
-
-  bool IsValid() const { return m_cu && m_die; }
-  bool isValid() const { return IsValid(); }
+  explicit operator bool() const { return m_cu && m_die; }
 
   bool HasChildren() const;
 
@@ -88,8 +84,6 @@ public:
   // Accessing information about a DIE
   dw_tag_t Tag() const;
 
-  dw_tag_t getTag() const { return Tag(); }
-
   dw_offset_t GetOffset() const;
 
   // Get the LLDB user ID for this DIE. This is often just the DIE offset,
@@ -99,8 +93,6 @@ public:
   lldb::user_id_t GetID() const;
 
   const char *GetName() const;
-
-  const char *getShortName() const { return GetName(); }
 
   lldb::ModuleSP GetModule() const;
 
@@ -123,6 +115,12 @@ public:
 
   enum class Recurse : bool { no, yes };
   DWARFAttributes GetAttributes(Recurse recurse = Recurse::yes) const;
+
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  dw_tag_t getTag() const { return Tag(); }
+
+  const char *getShortName() const { return GetName(); }
 
 protected:
   DWARFUnit *m_cu = nullptr;

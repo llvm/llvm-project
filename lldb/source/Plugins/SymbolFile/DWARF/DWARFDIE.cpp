@@ -86,15 +86,9 @@ elaborating_dies(const DWARFDIE &die) {
 }
 } // namespace
 
-std::optional<uint64_t> DWARFDIE::getLanguage() const {
-  if (IsValid())
-    return m_cu->GetDWARFLanguageType();
-  return std::nullopt;
-}
-
 DWARFDIE
 DWARFDIE::GetParent() const {
-  if (IsValid())
+  if (*this)
     return DWARFDIE(m_cu, m_die->GetParent());
   else
     return DWARFDIE();
@@ -102,7 +96,7 @@ DWARFDIE::GetParent() const {
 
 DWARFDIE
 DWARFDIE::GetFirstChild() const {
-  if (IsValid())
+  if (*this)
     return DWARFDIE(m_cu, m_die->GetFirstChild());
   else
     return DWARFDIE();
@@ -110,7 +104,7 @@ DWARFDIE::GetFirstChild() const {
 
 DWARFDIE
 DWARFDIE::GetSibling() const {
-  if (IsValid())
+  if (*this)
     return DWARFDIE(m_cu, m_die->GetSibling());
   else
     return DWARFDIE();
@@ -118,31 +112,15 @@ DWARFDIE::GetSibling() const {
 
 DWARFDIE
 DWARFDIE::GetReferencedDIE(const dw_attr_t attr) const {
-  if (IsValid())
+  if (*this)
     return m_die->GetAttributeValueAsReference(GetCU(), attr);
   else
     return {};
 }
 
-DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
-  return GetReferencedDIE(attr);
-}
-
-DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
-  if (IsValid())
-    return v.Reference();
-  return {};
-}
-
-DWARFDIE DWARFDIE::resolveTypeUnitReference() const {
-  if (DWARFDIE reference = GetReferencedDIE(DW_AT_signature))
-    return reference;
-  return *this;
-}
-
 DWARFDIE
 DWARFDIE::GetDIE(dw_offset_t die_offset) const {
-  if (IsValid())
+  if (*this)
     return m_cu->GetDIE(die_offset);
   else
     return DWARFDIE();
@@ -150,7 +128,7 @@ DWARFDIE::GetDIE(dw_offset_t die_offset) const {
 
 DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
-  if (IsValid()) {
+  if (*this) {
     DWARFUnit *cu = GetCU();
     const bool check_elaborating_dies = true;
     DWARFFormValue form_value;
@@ -163,7 +141,7 @@ DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
 
 DWARFDIE
 DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
-  if (!IsValid())
+  if (!*this)
     return DWARFDIE();
 
   DWARFDIE result;
@@ -222,14 +200,14 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
 }
 
 const char *DWARFDIE::GetMangledName() const {
-  if (IsValid())
+  if (*this)
     return m_die->GetMangledName(m_cu);
   else
     return nullptr;
 }
 
 const char *DWARFDIE::GetPubname() const {
-  if (IsValid())
+  if (*this)
     return m_die->GetPubname(m_cu);
   else
     return nullptr;
@@ -241,7 +219,7 @@ const char *DWARFDIE::GetPubname() const {
 // stream object. If the DIE is a NULL object "NULL" is placed into the stream,
 // and if no DW_AT_name attribute exists for the DIE then nothing is printed.
 void DWARFDIE::GetName(Stream &s) const {
-  if (!IsValid())
+  if (!*this)
     return;
   if (GetDIE()->IsNULL()) {
     s.PutCString("NULL");
@@ -259,7 +237,7 @@ void DWARFDIE::GetName(Stream &s) const {
 // a fully qualified type name and dump the results to the supplied stream.
 // This is used to show the name of types given a type identifier.
 void DWARFDIE::AppendTypeName(Stream &s) const {
-  if (!IsValid())
+  if (!*this)
     return;
   if (GetDIE()->IsNULL()) {
     s.PutCString("NULL");
@@ -378,7 +356,7 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
 }
 
 lldb_private::Type *DWARFDIE::ResolveType() const {
-  if (IsValid())
+  if (*this)
     return GetDWARF()->ResolveType(*this, true);
   else
     return nullptr;
@@ -586,7 +564,7 @@ bool DWARFDIE::GetDIENamesAndRanges(
     std::optional<int> &decl_column, std::optional<int> &call_file,
     std::optional<int> &call_line, std::optional<int> &call_column,
     lldb_private::DWARFExpressionList *frame_base) const {
-  if (IsValid()) {
+  if (*this) {
     return m_die->GetDIENamesAndRanges(
         GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,
         call_file, call_line, call_column, frame_base);
@@ -594,6 +572,8 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
+// The following methods use LLVM naming convension in order to be are used by
+// LLVM libraries.
 llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
   return llvm::make_range(child_iterator(*this), child_iterator());
 }
@@ -609,4 +589,26 @@ std::optional<DWARFFormValue> DWARFDIE::find(const dw_attr_t attr) const {
   if (m_die->GetAttributeValue(m_cu, attr, form_value, nullptr, false))
     return form_value;
   return std::nullopt;
+}
+
+std::optional<uint64_t> DWARFDIE::getLanguage() const {
+  if (*this)
+    return m_cu->GetDWARFLanguageType();
+  return std::nullopt;
+}
+
+DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
+  return GetReferencedDIE(attr);
+}
+
+DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
+  if (*this)
+    return v.Reference();
+  return {};
+}
+
+DWARFDIE DWARFDIE::resolveTypeUnitReference() const {
+  if (DWARFDIE reference = GetReferencedDIE(DW_AT_signature))
+    return reference;
+  return *this;
 }

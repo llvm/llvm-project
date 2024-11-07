@@ -107,7 +107,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   }
 
   DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
-  if (!dwo_cu_die.IsValid()) {
+  if (!dwo_cu_die) {
     // Can't fetch the compile unit DIE from the dwo file.
     SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to extract compile unit DIE from .dwo file for skeleton "

@@ -903,7 +903,7 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
 Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
                                          const DWARFDIE &die) {
   ASSERT_MODULE_LOCK(this);
-  if (!die.IsValid())
+  if (!die)
     return nullptr;
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
@@ -950,7 +950,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
 ConstString
 SymbolFileDWARF::ConstructFunctionDemangledName(const DWARFDIE &die) {
   ASSERT_MODULE_LOCK(this);
-  if (!die.IsValid()) {
+  if (!die) {
     return ConstString();
   }
 
@@ -4097,7 +4097,7 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
       // Extract DW_AT_call_origin (the call target's DIE).
       if (attr == DW_AT_call_origin || attr == DW_AT_abstract_origin) {
         call_origin = form_value.Reference();
-        if (!call_origin->IsValid()) {
+        if (!*call_origin) {
           LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
                    function_die.GetPubname());
           break;
@@ -4212,7 +4212,7 @@ SymbolFileDWARF::ParseCallEdgesInFunction(lldb_private::UserID func_id) {
   // late, because the act of storing results from ParseCallEdgesInFunction
   // would be racy.
   DWARFDIE func_die = GetDIE(func_id.GetID());
-  if (func_die.IsValid())
+  if (func_die)
     return CollectCallEdges(GetObjectFile()->GetModule(), func_die);
   return {};
 }

@@ -44,12 +44,8 @@ public:
 
   // Functions for obtaining DIE relations and references
 
-  std::optional<uint64_t> getLanguage() const;
-
   DWARFDIE
   GetParent() const;
-
-  DWARFDIE getParent() const { return GetParent(); }
 
   DWARFDIE
   GetFirstChild() const;
@@ -59,12 +55,6 @@ public:
 
   DWARFDIE
   GetReferencedDIE(const dw_attr_t attr) const;
-
-  DWARFDIE resolveReferencedType(dw_attr_t attr) const;
-
-  DWARFDIE resolveReferencedType(DWARFFormValue v) const;
-
-  DWARFDIE resolveTypeUnitReference() const;
 
   // Get a another DIE from the same DWARF file as this DIE. This will
   // check the current DIE's compile unit first to see if "die_offset" is
@@ -106,14 +96,26 @@ public:
   DWARFDIE
   GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const;
 
-  std::optional<DWARFFormValue> find(const dw_attr_t attr) const;
-
   bool GetDIENamesAndRanges(
       const char *&name, const char *&mangled, DWARFRangeList &ranges,
       std::optional<int> &decl_file, std::optional<int> &decl_line,
       std::optional<int> &decl_column, std::optional<int> &call_file,
       std::optional<int> &call_line, std::optional<int> &call_column,
       DWARFExpressionList *frame_base) const;
+
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  std::optional<uint64_t> getLanguage() const;
+
+  DWARFDIE getParent() const { return GetParent(); }
+
+  DWARFDIE resolveReferencedType(dw_attr_t attr) const;
+
+  DWARFDIE resolveReferencedType(DWARFFormValue v) const;
+
+  DWARFDIE resolveTypeUnitReference() const;
+
+  std::optional<DWARFFormValue> find(const dw_attr_t attr) const;
 
   /// The range of all the children of this DIE.
   llvm::iterator_range<child_iterator> children() const;
@@ -136,20 +138,20 @@ public:
     // has a CU but no DIE and one that has neither CU nor DIE. The 'end'
     // iterator could be default constructed, so explicitly allow
     // (CU, (DIE)nullptr) == (nullptr, nullptr) -> true
-    if (!m_die.IsValid() && !it.m_die.IsValid())
+    if (!m_die && !it.m_die)
       return true;
     return m_die == it.m_die;
   }
   const DWARFDIE &operator*() const {
-    assert(m_die.IsValid() && "Derefencing invalid iterator?");
+    assert(m_die && "Derefencing invalid iterator?");
     return m_die;
   }
   DWARFDIE &operator*() {
-    assert(m_die.IsValid() && "Derefencing invalid iterator?");
+    assert(m_die && "Derefencing invalid iterator?");
     return m_die;
   }
   child_iterator &operator++() {
-    assert(m_die.IsValid() && "Incrementing invalid iterator?");
+    assert(m_die && "Incrementing invalid iterator?");
     m_die = m_die.GetSibling();
     return *this;
   }

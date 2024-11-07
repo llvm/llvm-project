@@ -602,7 +602,7 @@ void DWARFTypePrinter<DieType>::appendConstVolatileQualifierAfter(DieType N) {
   decomposeConstVolatile(N, T, C, V);
   if (T && T.getTag() == dwarf::DW_TAG_subroutine_type)
     appendSubroutineNameAfter(T, detail::resolveReferencedType(T), false,
-                              C.isValid(), V.isValid());
+                              static_cast<bool>(C), static_cast<bool>(V));
   else
     appendUnqualifiedNameAfter(T, detail::resolveReferencedType(T));
 }

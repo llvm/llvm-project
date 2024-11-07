@@ -58,14 +58,11 @@ public:
 
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.uval != 0; }
-  std::optional<uint64_t> getAsUnsignedConstant() const;
-  std::optional<int64_t> getAsSignedConstant() const;
   uint64_t Unsigned() const { return m_value.uval; }
   void SetUnsigned(uint64_t uval) { m_value.uval = uval; }
   int64_t Signed() const { return m_value.sval; }
   void SetSigned(int64_t sval) { m_value.sval = sval; }
   const char *AsCString() const;
-  const char *getAsCString() const { return AsCString(); }
   dw_addr_t Address() const;
   bool IsValid() const { return m_form != 0; }
   bool SkipValue(const DWARFDataExtractor &debug_info_data,
@@ -78,6 +75,12 @@ public:
   static int Compare(const DWARFFormValue &a, const DWARFFormValue &b);
   void Clear();
   static bool FormIsSupported(dw_form_t form);
+
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  std::optional<uint64_t> getAsUnsignedConstant() const;
+  std::optional<int64_t> getAsSignedConstant() const;
+  const char *getAsCString() const { return AsCString(); }
 
 protected:
   // Compile unit where m_value was located.
