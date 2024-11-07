@@ -1649,7 +1649,8 @@ namespace {
     TransformSubstTemplateTypeParmType(TypeLocBuilder &TLB,
                                        SubstTemplateTypeParmTypeLoc TL) {
       const SubstTemplateTypeParmType *Type = TL.getTypePtr();
-      if (!Type->expandPacksInPlace())
+      if (Type->getSubstitutionFlag() !=
+          SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace)
         return inherited::TransformSubstTemplateTypeParmType(TLB, TL);
 
       assert(Type->getPackIndex());
@@ -3163,7 +3164,7 @@ struct ExpandPackedTypeConstraints
 
     QualType Result = SemaRef.Context.getSubstTemplateTypeParmType(
         TL.getType(), T->getDecl(), T->getIndex(), PackIndex,
-        /*ExpandPacksInPlace=*/true);
+        SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace);
     SubstTemplateTypeParmTypeLoc NewTL =
         TLB.push<SubstTemplateTypeParmTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());

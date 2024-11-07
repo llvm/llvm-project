@@ -1628,7 +1628,7 @@ ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmType(
 
   return Importer.getToContext().getSubstTemplateTypeParmType(
       *ToReplacementTypeOrErr, *ReplacedOrErr, T->getIndex(), T->getPackIndex(),
-      T->expandPacksInPlace());
+      T->getSubstitutionFlag());
 }
 
 ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(
