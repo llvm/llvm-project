@@ -660,15 +660,15 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           auto val = rel.sym->getVA(ctx, rel.addend) -
                      rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
-            errorOrWarn(sec.getLocation(rel.offset) + ": ULEB128 value " +
-                        Twine(val) + " exceeds available space; references '" +
-                        lld::toString(*rel.sym) + "'");
+            Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
+                     << Twine(val) << " exceeds available space; references '"
+                     << lld::toString(*rel.sym) << "'";
           ++i;
           continue;
         }
       }
-      errorOrWarn(sec.getLocation(rel.offset) +
-                  ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128");
+      Err(ctx) << sec.getLocation(rel.offset)
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
       return;
     default:
       break;
@@ -832,12 +832,12 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       remove = nextLoc - ((loc + align - 1) & -align);
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
-                    "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(r.addend) +
-                    " bytes available "
-                    "for requested alignment of " +
-                    Twine(align) + " bytes");
+        Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
+                 << "insufficient padding bytes for " << lld::toString(r.type)
+                 << ": " << Twine(r.addend)
+                 << " bytes available "
+                    "for requested alignment of "
+                 << Twine(align) << " bytes";
         remove = 0;
       }
       break;
@@ -1064,8 +1064,8 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
   if (!maybeInfo) {
-    errorOrWarn(toString(sec) + ": " + s + ": " +
-                llvm::toString(maybeInfo.takeError()));
+    Err(ctx) << sec << ": " << s << ": "
+             << llvm::toString(maybeInfo.takeError());
     return;
   }
 
@@ -1097,11 +1097,11 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     return;
 
   auto reportAbiError = [&]() {
-    errorOrWarn("atomic abi mismatch for " + oldSection->name + "\n>>> " +
-                toString(oldSection) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(oldTag)) +
-                "\n>>> " + toString(newSection) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(newTag)));
+    Err(ctx) << "atomic abi mismatch for " << oldSection->name << "\n>>> "
+             << oldSection
+             << ": atomic_abi=" << Twine(static_cast<unsigned>(oldTag))
+             << "\n>>> " << newSection
+             << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
   };
 
   auto reportUnknownAbiError = [](const InputSectionBase *section,
@@ -1113,9 +1113,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     case RISCVAtomicAbiTag::A7:
       return;
     };
-    errorOrWarn("unknown atomic abi for " + section->name + "\n>>> " +
-                toString(section) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(tag)));
+    Err(ctx) << "unknown atomic abi for " << section->name << "\n>>> "
+             << section << ": atomic_abi=" << Twine(static_cast<unsigned>(tag));
   };
   switch (oldTag) {
   case RISCVAtomicAbiTag::UNKNOWN:
@@ -1200,9 +1199,9 @@ mergeAttributesSection(Ctx &ctx,
             firstStackAlign = sec;
             firstStackAlignValue = *i;
           } else if (r.first->second != *i) {
-            errorOrWarn(toString(sec) + " has stack_align=" + Twine(*i) +
-                        " but " + toString(firstStackAlign) +
-                        " has stack_align=" + Twine(firstStackAlignValue));
+            Err(ctx) << sec << " has stack_align=" << Twine(*i) << " but "
+                     << firstStackAlign
+                     << " has stack_align=" << Twine(firstStackAlignValue);
           }
         }
         continue;
@@ -1262,7 +1261,7 @@ mergeAttributesSection(Ctx &ctx,
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
                                  saver().save((*result)->toString()));
     } else {
-      errorOrWarn(llvm::toString(result.takeError()));
+      Err(ctx) << llvm::toString(result.takeError());
     }
   }
 
