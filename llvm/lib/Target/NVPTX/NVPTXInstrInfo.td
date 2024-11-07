@@ -3964,6 +3964,9 @@ def fpimm_positive_zero : FPImmLeaf<fAny, [{
   return Imm.isExactlyValue(+0.0);
 }]>;
 
+def fpimm_positive_zero_v2f16 : PatFrag<(ops), (v2f16 (bitconvert (i32 0)))>;
+def fpimm_positive_zero_v2bf16 : PatFrag<(ops), (v2bf16 (bitconvert (i32 0)))>;
+
 def FMARELU_F16 :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
     "fma.rn.relu.f16 \t$dst, $a, $b, $c;", []>,
@@ -3980,6 +3983,22 @@ def FMARELU_BF16_FTZ :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
     "fma.rn.ftz.relu.bf16 \t$dst, $a, $b, $c;", []>,
     Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_F16X2 :
+  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+    "fma.rn.relu.f16x2 \t$dst, $a, $b, $c;", []>,
+    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_BF16X2 :
+  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+    "fma.rn.relu.bf16x2 \t$dst, $a, $b, $c;", []>,
+    Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_F16X2_FTZ :
+  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+    "fma.rn.ftz.relu.f16x2 \t$dst, $a, $b, $c;", []>,
+    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
+def FMARELU_BF16X2_FTZ :
+  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+    "fma.rn.ftz.relu.bf16x2 \t$dst, $a, $b, $c;", []>,
+    Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
 
 // Patterns will only be used if FMA has a single use, in order to mitigate register pressure
 def NVPTX_fma_oneuse : PatFrag<(ops node:$a, node:$b, node:$c),
@@ -3994,10 +4013,22 @@ def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:
 def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_positive_zero)),
   (FMARELU_BF16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[doF32FTZ, allowUnsafeFPMath]>;
+def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
+  (FMARELU_F16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
+  Requires<[doF32FTZ, allowUnsafeFPMath]>;
+def : Pat<(v2bf16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2bf16)),
+  (FMARELU_BF16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
+  Requires<[doF32FTZ, allowUnsafeFPMath]>;
 // No FTZ
 def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_positive_zero)),
   (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[allowUnsafeFPMath]>;
 def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_positive_zero)),
   (FMARELU_BF16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
+  Requires<[allowUnsafeFPMath]>;
+def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
+  (FMARELU_F16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
+  Requires<[allowUnsafeFPMath]>;
+def : Pat<(v2bf16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2bf16)),
+  (FMARELU_BF16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
   Requires<[allowUnsafeFPMath]>;
