@@ -41,6 +41,7 @@ _Pragma("push_macro(\"bool\")");
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
+_Pragma("omp begin declare variant match(device = {kind(gpu)})");
 
 // Returns the number of blocks in the requested dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
@@ -131,6 +132,7 @@ __gpu_lane_scan_u32(uint64_t __lane_mask, uint32_t x) {
   return x;
 }
 
+_Pragma("omp end declare variant");
 _Pragma("omp end declare target");
 
 #if !defined(__cplusplus)
