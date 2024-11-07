@@ -270,6 +270,36 @@ define i64 @test25(ptr %P, i64 %A){
   ret i64 %G
 }
 
+define i64 @zext_ptrtoint_sub_ptrtoint(ptr %p, i32 %offset) {
+; CHECK-LABLE: @zext_ptrtoint_sub_ptrtoint(
+; CHECK-NEXT:  %1 = sext i32 %offset to i64
+; CHECK-NEXT:  %A = getelementptr bfloat, ptr @Arr, i64 %1
+; CHECK-NEXT:  %2 = ptrtoint ptr %A to i64
+; CHECK-NEXT:  %C = and i64 %2, 4294967294
+; CHECK-NEXT:  %D = sub i64 %C, ptrtoint (ptr @Arr to i64)
+; CHECK-NEXT:  ret i64 %D
+  %A = getelementptr bfloat, ptr @Arr, i32 %offset
+  %B = ptrtoint ptr %A to i32
+  %C = zext i32 %B to i64
+  %D = sub i64 %C, ptrtoint (ptr @Arr to i64)
+  ret i64 %D
+}
+
+define i64 @ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
+; CHECK-LABLE: @ptrtoint_sub_zext_ptrtoint(
+; CHECK-NEXT:  %1 = sext i32 %offset to i64
+; CHECK-NEXT:  %A = getelementptr bfloat, ptr @Arr, i64 %1
+; CHECK-NEXT:  %2 = ptrtoint ptr %A to i64
+; CHECK-NEXT:  %C = and i64 %2, 4294967294
+; CHECK-NEXT:  %D = sub i64 ptrtoint (ptr @Arr to i64), %C
+; CHECK-NEXT:  ret i64 %D
+  %A = getelementptr bfloat, ptr @Arr, i32 %offset
+  %B = ptrtoint ptr %A to i32
+  %C = zext i32 %B to i64
+  %D = sub i64 ptrtoint (ptr @Arr to i64), %C
+  ret i64 %D
+}
+
 @Arr_as1 = external addrspace(1) global [42 x i16]
 
 define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
@@ -283,6 +313,32 @@ define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
   %C = ptrtoint ptr addrspace(1) %B to i16
   %G = sub i16 %C, ptrtoint (ptr addrspace(1) getelementptr ([42 x i16], ptr addrspace(1) @Arr_as1, i64 1, i64 0) to i16)
   ret i16 %G
+}
+
+define i64 @zext_ptrtoint_sub_ptrtoint_as1(ptr addrspace(1) %p, i32 %offset) {
+; CHECK-LABLE: @zext_ptrtoint_sub_ptrtoint_as1(
+; CHECK-NEXT:  %1 = trunc i32 %offset to i16
+; CHECK-NEXT:  %A.idx = shl i16 %1, 1
+; CHECK-NEXT:  %D = sext i16 %A.idx to i64
+; CHECK-NEXT:  ret i64 %D
+  %A = getelementptr bfloat, ptr addrspace(1) @Arr_as1, i32 %offset
+  %B = ptrtoint ptr addrspace(1) %A to i32
+  %C = zext i32 %B to i64
+  %D = sub i64 %C, ptrtoint (ptr addrspace(1) @Arr_as1 to i64)
+  ret i64 %D
+}
+
+define i64 @ptrtoint_sub_zext_ptrtoint_as1(ptr addrspace(1) %p, i32 %offset) {
+; CHECK-LABLE: @ptrtoint_sub_zext_ptrtoint_as1(
+; CHECK-NEXT:  %1 = trunc i32 %offset to i16
+; CHECK-NEXT:  %A.idx.neg = mul i16 %1, -2
+; CHECK-NEXT:  %D = sext i16 %A.idx.neg to i64
+; CHECK-NEXT:  ret i64 %D
+  %A = getelementptr bfloat, ptr addrspace(1) @Arr_as1, i32 %offset
+  %B = ptrtoint ptr addrspace(1) %A to i32
+  %C = zext i32 %B to i64
+  %D = sub i64 ptrtoint (ptr addrspace(1) @Arr_as1 to i64), %C
+  ret i64 %D
 }
 
 define i64 @test30(ptr %foo, i64 %i, i64 %j) {
