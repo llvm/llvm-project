@@ -278,25 +278,37 @@ static std::complex<HostT> StdPowF2B(
 }
 
 #ifdef _AIX
+#ifdef __clang_major__
+#pragma clang diagnostic ignored "-Wc99-extensions"
+#endif
+
 extern "C" {
-void csqrtf_wrapper(const float[], float[]);
-void csqrt_wrapper(const double[], double[]);
-} // extern "C"
+float _Complex csqrtf(float _Complex);
+double _Complex csqrt(double _Complex);
+}
 #endif
 
 template <typename HostT>
 static std::complex<HostT> CSqrt(const std::complex<HostT> &x) {
   std::complex<HostT> res;
-#if _AIX
-  HostT y[2]{x.real(), x.imag()};
-  HostT r[2];
+#ifdef _AIX
   if constexpr (std::is_same_v<HostT, float>) {
-    csqrtf_wrapper(y, r);
+    float _Complex c;
+    reinterpret_cast<HostT(&)[2]>(c)[0] = x.real();
+    reinterpret_cast<HostT(&)[2]>(c)[1] = x.imag();
+    float _Complex r{csqrtf(c)};
+    res.real(reinterpret_cast<HostT(&)[2]>(r)[0]);
+    res.imag(reinterpret_cast<HostT(&)[2]>(r)[1]);
   } else if constexpr (std::is_same_v<HostT, double>) {
-    csqrt_wrapper(y, r);
+    double _Complex c;
+    reinterpret_cast<HostT(&)[2]>(c)[0] = x.real();
+    reinterpret_cast<HostT(&)[2]>(c)[1] = x.imag();
+    double _Complex r{csqrt(c)};
+    res.real(reinterpret_cast<HostT(&)[2]>(r)[0]);
+    res.imag(reinterpret_cast<HostT(&)[2]>(r)[1]);
+  } else {
+    assert("bad complex component type");
   }
-  res.real(r[0]);
-  res.imag(r[1]);
 #else
   res = std::sqrt(x);
 #endif
