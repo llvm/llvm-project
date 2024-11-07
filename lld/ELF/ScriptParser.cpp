@@ -306,7 +306,8 @@ void ScriptParser::readNoCrossRefs(bool to) {
   while (auto tok = till(")"))
     cmd.outputSections.push_back(unquote(tok));
   if (cmd.outputSections.size() < 2)
-    warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
+    Warn(ctx) << getCurrentLocation()
+              << ": ignored with fewer than 2 output sections";
   else
     ctx.script->noCrossRefs.push_back(std::move(cmd));
 }
@@ -891,9 +892,9 @@ Expr ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return [=, s = ctx.script]() -> ExprValue {
+  return [=, s = ctx.script, &ctx = ctx]() -> ExprValue {
     if (!e().getValue())
-      errorOrWarn(msg);
+      Err(ctx) << msg;
     return s->getDot();
   };
 }
@@ -975,7 +976,7 @@ static Expr checkAlignment(Expr e, std::string &loc) {
   return [=] {
     uint64_t alignment = std::max((uint64_t)1, e().getValue());
     if (!isPowerOf2_64(alignment)) {
-      error(loc + ": alignment must be power of 2");
+      ErrAlways(ctx) << loc << ": alignment must be power of 2";
       return (uint64_t)1; // Return a dummy value.
     }
     return alignment;
@@ -1081,7 +1082,7 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   }
 
   if (osec->lmaExpr && !osec->lmaRegionName.empty())
-    error("section can't have both LMA and a load region");
+    ErrAlways(ctx) << "section can't have both LMA and a load region";
 
   osec->phdrs = readOutputSectionPhdrs();
 
@@ -1196,7 +1197,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   Expr e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
-    e = [=, s = ctx.script, c = op[0]]() -> ExprValue {
+    e = [=, s = ctx.script, c = op[0], &ctx = ctx]() -> ExprValue {
       ExprValue lhs = s->getSymbolValue(name, loc);
       switch (c) {
       case '*':
@@ -1204,7 +1205,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
       case '/':
         if (uint64_t rv = e().getValue())
           return lhs.getValue() / rv;
-        error(loc + ": division by zero");
+        ErrAlways(ctx) << loc << ": division by zero";
         return 0;
       case '+':
         return add(*s, lhs, e());
@@ -1248,19 +1249,19 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
     return [=] { return l().getValue() * r().getValue(); };
   if (op == "/") {
     std::string loc = getCurrentLocation();
-    return [=]() -> uint64_t {
+    return [=, &ctx = ctx]() -> uint64_t {
       if (uint64_t rv = r().getValue())
         return l().getValue() / rv;
-      error(loc + ": division by zero");
+      ErrAlways(ctx) << loc << ": division by zero";
       return 0;
     };
   }
   if (op == "%") {
     std::string loc = getCurrentLocation();
-    return [=]() -> uint64_t {
+    return [=, &ctx = ctx]() -> uint64_t {
       if (uint64_t rv = r().getValue())
         return l().getValue() % rv;
-      error(loc + ": modulo by zero");
+      ErrAlways(ctx) << loc << ": modulo by zero";
       return 0;
     };
   }
@@ -1327,7 +1328,7 @@ Expr ScriptParser::getPageSize() {
   return [=, &ctx = this->ctx]() -> uint64_t {
     if (ctx.target)
       return ctx.arg.commonPageSize;
-    error(location + ": unable to calculate page size");
+    ErrAlways(ctx) << location << ": unable to calculate page size";
     return 4096; // Return a dummy value.
   };
 }

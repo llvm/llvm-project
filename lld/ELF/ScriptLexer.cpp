@@ -87,7 +87,7 @@ void ScriptLexer::setError(const Twine &msg) {
   if (prevTok.size())
     s += "\n>>> " + getLine().str() + "\n>>> " +
          std::string(getColumnNumber(), ' ') + "^";
-  error(s);
+  ErrAlways(ctx) << s;
 }
 
 void ScriptLexer::lex() {
@@ -116,7 +116,8 @@ void ScriptLexer::lex() {
       if (e == StringRef::npos) {
         size_t lineno =
             StringRef(curBuf.begin, s.data() - curBuf.begin).count('\n');
-        error(curBuf.filename + ":" + Twine(lineno + 1) + ": unclosed quote");
+        ErrAlways(ctx) << curBuf.filename << ":" << Twine(lineno + 1)
+                       << ": unclosed quote";
         return;
       }
 
