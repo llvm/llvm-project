@@ -666,7 +666,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
                 MDString *Identifier, Metadata *Discriminator,
                 Metadata *DataLocation, Metadata *Associated,
                 Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
-                Metadata *SpecificationOf, uint32_t NumExtraInhabitants) 
+                Metadata *SpecificationOf, uint32_t NumExtraInhabitants)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),

@@ -1042,7 +1042,7 @@ private:
                 std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                 ArrayRef<Metadata *> Ops)
       : DIType(C, DIDerivedTypeKind, Storage, Tag, Line, SizeInBits,
-               AlignInBits, OffsetInBits, /*NumExtraInhabitants=*/0, Flags, Ops),
+               AlignInBits, OffsetInBits, 0, Flags, Ops),
         DWARFAddressSpace(DWARFAddressSpace) {
     if (PtrAuthData)
       SubclassData32 = PtrAuthData->RawData;
