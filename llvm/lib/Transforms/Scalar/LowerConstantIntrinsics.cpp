@@ -143,7 +143,7 @@ bool llvm::lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
       IsConstantIntrinsicsHandled++;
       break;
     case Intrinsic::objectsize:
-      NewValue = lowerObjectSizeCall(II, DL, &TLI, /*AA=*/nullptr, DT, true);
+      NewValue = lowerObjectSizeCall(II, DL, &TLI, true);
       LLVM_DEBUG(dbgs() << "Folding " << *II << " to " << *NewValue << "\n");
       ObjectSizeIntrinsicsHandled++;
       break;
