@@ -274,6 +274,12 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
+  case range expressions. This feature was previously supported by Clang as a
+  GNU extension, so ``-Wgnu-case-range`` no longer has effect in C modes, as
+  this is now a C2y extension in C. ``-Wgnu-case-range`` still applies in C++
+  modes.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
