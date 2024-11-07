@@ -344,7 +344,7 @@ static void __init_riscv_feature_bits_ctor(void) CONSTRUCTOR_ATTRIBUTE;
 // run before constructors without the priority set.  However, it still runs
 // after ifunc initializers and needs to be called explicitly there.
 
-static void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits_ctor (void) {
+static void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits_ctor(void) {
   __init_riscv_feature_bits(0);
 }
 
