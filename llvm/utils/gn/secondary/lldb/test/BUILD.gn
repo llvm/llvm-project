@@ -150,7 +150,10 @@ write_lit_cfg("lit_unit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
   input = "//lldb/test/Unit/lit.site.cfg.py.in"
   output = lldb_lit_unit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "LLVM_USE_SANITIZER=",
+  ]
 }
 
 action("lit-lldb-init-quiet") {
