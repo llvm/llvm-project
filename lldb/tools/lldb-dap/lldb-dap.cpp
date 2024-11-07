@@ -6,6 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DAP.h"
+#include "FifoFiles.h"
+#include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "OutputRedirector.h"
+#include "RunInTerminal.h"
+#include "Watchpoint.h"
+
+#include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
+#include "lldb/Host/Config.h"
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
+#include "llvm/Support/Base64.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <cassert>
 #include <climits>
 #include <cstdarg>
@@ -42,38 +75,6 @@
 #include <set>
 #include <thread>
 #include <vector>
-
-#include "lldb/API/SBDeclaration.h"
-#include "lldb/API/SBInstruction.h"
-#include "lldb/API/SBListener.h"
-#include "lldb/API/SBMemoryRegionInfo.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/API/SBStringList.h"
-#include "lldb/Host/Config.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Option/Arg.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
-#include "llvm/Option/Option.h"
-#include "llvm/Support/Base64.h"
-#include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include "DAP.h"
-#include "FifoFiles.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
-#include "OutputRedirector.h"
-#include "RunInTerminal.h"
-#include "Watchpoint.h"
 
 #if defined(_WIN32)
 #ifndef PATH_MAX

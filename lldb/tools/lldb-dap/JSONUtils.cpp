@@ -6,27 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iomanip>
-#include <optional>
-#include <sstream>
-#include <string.h>
+#include "JSONUtils.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
+#include "DAP.h"
+#include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
 
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/Host/PosixApi.h"
 
-#include "DAP.h"
-#include "ExceptionBreakpoint.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
+
+#include <iomanip>
+#include <optional>
+#include <sstream>
+#include <string.h>
 
 namespace lldb_dap {
 

@@ -8,11 +8,10 @@
 
 #include "Breakpoint.h"
 
+#include "JSONUtils.h"
+
 #include "lldb/API/SBBreakpointLocation.h"
 #include "llvm/ADT/StringExtras.h"
-
-#include "DAP.h"
-#include "JSONUtils.h"
 
 using namespace lldb_dap;
 

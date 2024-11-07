@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExceptionBreakpoint.h"
-#include "BreakpointBase.h"
+
 #include "DAP.h"
 
 namespace lldb_dap {

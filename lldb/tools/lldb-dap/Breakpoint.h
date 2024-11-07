@@ -9,9 +9,9 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINT_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINT_H
 
-#include "lldb/API/SBBreakpoint.h"
-
 #include "BreakpointBase.h"
+
+#include "lldb/API/SBBreakpoint.h"
 
 namespace lldb_dap {
 

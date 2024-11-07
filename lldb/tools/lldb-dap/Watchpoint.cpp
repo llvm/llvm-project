@@ -8,10 +8,10 @@
 
 #include "Watchpoint.h"
 
-#include "llvm/ADT/StringExtras.h"
-
 #include "DAP.h"
 #include "JSONUtils.h"
+
+#include "llvm/ADT/StringExtras.h"
 
 namespace lldb_dap {
 Watchpoint::Watchpoint(DAP &d, const llvm::json::Object &obj)

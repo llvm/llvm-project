@@ -11,9 +11,12 @@
 
 #include "BreakpointBase.h"
 #include "DAPForward.h"
+
 #include "lldb/API/SBModule.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
+
 #include <cstdint>
 #include <optional>
 #include <unordered_map>

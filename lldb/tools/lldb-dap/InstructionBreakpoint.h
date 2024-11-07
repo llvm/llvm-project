@@ -10,12 +10,12 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_INSTRUCTIONBREAKPOINT_H
 #define LLDB_TOOLS_LLDB_DAP_INSTRUCTIONBREAKPOINT_H
 
-#include <cstdint>
+#include "Breakpoint.h"
+#include "DAPForward.h"
 
 #include "lldb/lldb-types.h"
 
-#include "Breakpoint.h"
-#include "DAPForward.h"
+#include <cstdint>
 
 namespace lldb_dap {
 

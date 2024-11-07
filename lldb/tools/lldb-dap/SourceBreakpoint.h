@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_SOURCEBREAKPOINT_H
 
 #include "Breakpoint.h"
+
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {

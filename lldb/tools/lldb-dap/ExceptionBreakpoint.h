@@ -9,11 +9,11 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_EXCEPTIONBREAKPOINT_H
 #define LLDB_TOOLS_LLDB_DAP_EXCEPTIONBREAKPOINT_H
 
-#include <string>
+#include "DAPForward.h"
 
 #include "lldb/API/SBBreakpoint.h"
 
-#include "DAPForward.h"
+#include <string>
 
 namespace lldb_dap {
 

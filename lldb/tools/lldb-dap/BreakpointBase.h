@@ -9,11 +9,11 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
-#include <string>
+#include "DAPForward.h"
 
 #include "llvm/Support/JSON.h"
 
-#include "DAPForward.h"
+#include <string>
 
 namespace lldb_dap {
 
