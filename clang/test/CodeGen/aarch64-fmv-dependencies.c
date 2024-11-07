@@ -6,7 +6,7 @@
 // CHECK: define dso_local i32 @fmv._Maes() #[[aes:[0-9]+]] {
 __attribute__((target_version("aes"))) int fmv(void) { return 0; }
 
-// CHECK: define dso_local i32 @fmv._Mbf16() #[[bf16_ebf16:[0-9]+]] {
+// CHECK: define dso_local i32 @fmv._Mbf16() #[[bf16:[0-9]+]] {
 __attribute__((target_version("bf16"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mbti() #[[bti:[0-9]+]] {
@@ -29,9 +29,6 @@ __attribute__((target_version("dpb"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mdpb2() #[[dpb2:[0-9]+]] {
 __attribute__((target_version("dpb2"))) int fmv(void) { return 0; }
-
-// CHECK: define dso_local i32 @fmv._Mebf16() #[[bf16_ebf16:[0-9]+]] {
-__attribute__((target_version("ebf16"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mf32mm() #[[f32mm:[0-9]+]] {
 __attribute__((target_version("f32mm"))) int fmv(void) { return 0; }
@@ -75,9 +72,6 @@ __attribute__((target_version("lse"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mmemtag() #[[memtag:[0-9]+]] {
 __attribute__((target_version("memtag"))) int fmv(void) { return 0; }
 
-// CHECK: define dso_local i32 @fmv._Mmemtag3() #[[memtag:[0-9]+]] {
-__attribute__((target_version("memtag3"))) int fmv(void) { return 0; }
-
 // CHECK: define dso_local i32 @fmv._Mmops() #[[mops:[0-9]+]] {
 __attribute__((target_version("mops"))) int fmv(void) { return 0; }
 
@@ -98,9 +92,6 @@ __attribute__((target_version("rdm"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mrng() #[[rng:[0-9]+]] {
 __attribute__((target_version("rng"))) int fmv(void) { return 0; }
-
-// CHECK: define dso_local i32 @fmv._Mrpres() #[[ATTR0:[0-9]+]] {
-__attribute__((target_version("rpres"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Msb() #[[sb:[0-9]+]] {
 __attribute__((target_version("sb"))) int fmv(void) { return 0; }
@@ -163,7 +154,7 @@ int caller() {
 }
 
 // CHECK: attributes #[[aes]] = { {{.*}} "target-features"="+aes,+fp-armv8,+neon,+outline-atomics,+v8a"
-// CHECK: attributes #[[bf16_ebf16]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[bf16]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[bti]] = { {{.*}} "target-features"="+bti,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[crc]] = { {{.*}} "target-features"="+crc,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[ATTR0]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a"
