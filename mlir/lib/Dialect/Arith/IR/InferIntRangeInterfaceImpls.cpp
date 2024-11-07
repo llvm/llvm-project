@@ -10,6 +10,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -42,6 +43,12 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    if (arrayCstAttr.isSplat()) {
+      setResultRange(getResult(), ConstantIntRanges::constant(
+                                      arrayCstAttr.getSplatValue<APInt>()));
+      return;
+    }
+
     std::optional<ConstantIntRanges> result;
     for (const APInt &val : arrayCstAttr) {
       auto range = ConstantIntRanges::constant(val);
