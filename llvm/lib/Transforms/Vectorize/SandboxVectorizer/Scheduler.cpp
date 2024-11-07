@@ -218,6 +218,7 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     return tryScheduleUntil(Instrs);
   }
   }
+  llvm_unreachable("Unhandled BndlSchedState enum");
 }
 
 #ifndef NDEBUG
