@@ -3454,7 +3454,7 @@ entry:
 ; Confirm that we are actually accessing these bytes.
 ;
 ; Previously, we used the dword offset from the corresponding byte in the second (S1) operand.
-; The result was to access the thd byte instead of the 4th (i.e. a dword offset of 0 instead of 1).
+; The result was to access the 0th byte instead of the 4th (i.e. a dword offset of 0 instead of 1).
 
 define amdgpu_kernel void @ByteOffsetCorrectness(ptr addrspace(1) %inptr1, i8 %l81, i8 %l51) {
 ; GFX7-LABEL: ByteOffsetCorrectness:
