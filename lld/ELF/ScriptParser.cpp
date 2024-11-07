@@ -306,7 +306,8 @@ void ScriptParser::readNoCrossRefs(bool to) {
   while (auto tok = till(")"))
     cmd.outputSections.push_back(unquote(tok));
   if (cmd.outputSections.size() < 2)
-    warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
+    Warn(ctx) << getCurrentLocation()
+              << ": ignored with fewer than 2 output sections";
   else
     ctx.script->noCrossRefs.push_back(std::move(cmd));
 }

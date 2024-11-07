@@ -504,18 +504,19 @@ static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
   if (s.isSection()) {
     // Section symbols must be defined and in a section. Users cannot change
     // the type. Use the section name as getName() returns an empty string.
-    warn(place.loc + "branch and link relocation: " + toString(relt) +
-         " to STT_SECTION symbol " + cast<Defined>(s).section->name +
-         " ; interworking not performed" + hint);
+    Warn(ctx) << place.loc << "branch and link relocation: " << relt
+              << " to STT_SECTION symbol " << cast<Defined>(s).section->name
+              << " ; interworking not performed" << hint;
   } else {
     // Warn with hint on how to alter the symbol type.
-    warn(getErrorLoc(ctx, loc) + "branch and link relocation: " +
-         toString(relt) + " to non STT_FUNC symbol: " + s.getName() +
-         " interworking not performed; consider using directive '.type " +
-         s.getName() +
-         ", %function' to give symbol type STT_FUNC if interworking between "
-         "ARM and Thumb is required" +
-         hint);
+    Warn(ctx)
+        << getErrorLoc(ctx, loc) << "branch and link relocation: " << relt
+        << " to non STT_FUNC symbol: " << s.getName()
+        << " interworking not performed; consider using directive '.type "
+        << s.getName()
+        << ", %function' to give symbol type STT_FUNC if interworking between "
+           "ARM and Thumb is required"
+        << hint;
   }
 }
 
@@ -1236,9 +1237,9 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     }
 
     if (eSym.st_size != ACLESESYM_SIZE) {
-      warn("CMSE symbol '" + sym->getName() + "' in import library '" +
-           toString(this) + "' does not have correct size of " +
-           Twine(ACLESESYM_SIZE) + " bytes");
+      Warn(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+                << this << "' does not have correct size of "
+                << Twine(ACLESESYM_SIZE) << " bytes";
     }
 
     ctx.symtab->cmseImportLib[sym->getName()] = sym;
@@ -1360,16 +1361,17 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
                 cast<Defined>(entryFunc.sym));
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
     if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
-      warn("entry function '" + sym->getName() +
-           "' from CMSE import library is not present in secure application");
+      Warn(ctx)
+          << "entry function '" << sym->getName()
+          << "' from CMSE import library is not present in secure application";
   }
 
   if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
     for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
       if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
-        warn("new entry function '" + sym->getName() +
-             "' introduced but no output import library specified");
+        Warn(ctx) << "new entry function '" << sym->getName()
+                  << "' introduced but no output import library specified";
     }
   }
 }
