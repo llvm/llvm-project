@@ -203,8 +203,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   getActionDefinitionsBuilder({G_ROTL, G_ROTR})
-      .legalFor(ST.hasStdExtZbb() || ST.hasStdExtZbkb(),
-                {{s32, s32}, {sXLen, sXLen}})
+      .legalFor(ST.hasStdExtZbb() || ST.hasStdExtZbkb(), {{sXLen, sXLen}})
+      .customFor(ST.is64Bit() && (ST.hasStdExtZbb() || ST.hasStdExtZbkb()),
+                 {{s32, s32}})
       .lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
@@ -1162,6 +1163,10 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case TargetOpcode::G_ROTL:
+    return RISCV::G_ROLW;
+  case TargetOpcode::G_ROTR:
+    return RISCV::G_RORW;
   case TargetOpcode::G_CTLZ:
     return RISCV::G_CLZW;
   case TargetOpcode::G_CTTZ:
@@ -1204,6 +1209,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
+  }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ: {

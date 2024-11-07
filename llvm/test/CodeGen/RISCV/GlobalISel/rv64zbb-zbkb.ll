@@ -166,7 +166,9 @@ define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ;
 ; RV64ZBB-ZBKB-LABEL: rol_i32_neg_constant_rhs:
 ; RV64ZBB-ZBKB:       # %bb.0:
-; RV64ZBB-ZBKB-NEXT:    li a1, -2
+; RV64ZBB-ZBKB-NEXT:    li a1, 1
+; RV64ZBB-ZBKB-NEXT:    slli a1, a1, 32
+; RV64ZBB-ZBKB-NEXT:    addi a1, a1, -2
 ; RV64ZBB-ZBKB-NEXT:    rolw a0, a1, a0
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 -2, i32 -2, i32 %a)
@@ -250,7 +252,9 @@ define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ;
 ; RV64ZBB-ZBKB-LABEL: ror_i32_neg_constant_rhs:
 ; RV64ZBB-ZBKB:       # %bb.0:
-; RV64ZBB-ZBKB-NEXT:    li a1, -2
+; RV64ZBB-ZBKB-NEXT:    li a1, 1
+; RV64ZBB-ZBKB-NEXT:    slli a1, a1, 32
+; RV64ZBB-ZBKB-NEXT:    addi a1, a1, -2
 ; RV64ZBB-ZBKB-NEXT:    rorw a0, a1, a0
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 -2, i32 -2, i32 %a)

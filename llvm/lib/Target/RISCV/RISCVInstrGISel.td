@@ -17,6 +17,22 @@ class RISCVGenericInstruction : GenericInstruction {
   let Namespace = "RISCV";
 }
 
+// Pseudo equivalent to a RISCVISD::RORW.
+def G_RORW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_RORW, riscv_rorw>;
+
+// Pseudo equivalent to a RISCVISD::ROLW.
+def G_ROLW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_ROLW, riscv_rolw>;
+
 // Pseudo equivalent to a RISCVISD::CLZW.
 def G_CLZW : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
