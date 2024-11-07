@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_llvm_unittest(InstrumentationTests
+  MemProfUseTest.cpp
   PGOInstrumentationTest.cpp
   )
 
