@@ -118,7 +118,7 @@ define float @fcvt_s_wu_load(ptr %p) nounwind {
 ; RV64IF-NEXT:    lw a0, 0(a0)
 ; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    srli a0, a0, 32
-; RV64IF-NEXT:    fcvt.s.lu fa0, a0
+; RV64IF-NEXT:    fcvt.s.wu fa0, a0
 ; RV64IF-NEXT:    ret
   %a = load i32, ptr %p
   %1 = uitofp i32 %a to float
@@ -226,15 +226,10 @@ define float @fcvt_s_w_i8(i8 signext %a) nounwind {
 }
 
 define float @fcvt_s_wu_i8(i8 zeroext %a) nounwind {
-; RV32IF-LABEL: fcvt_s_wu_i8:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.s.wu fa0, a0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fcvt_s_wu_i8:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.s.lu fa0, a0
-; RV64IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_wu_i8:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
+; CHECKIF-NEXT:    ret
   %1 = uitofp i8 %a to float
   ret float %1
 }
@@ -254,15 +249,10 @@ define float @fcvt_s_w_i16(i16 signext %a) nounwind {
 }
 
 define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind {
-; RV32IF-LABEL: fcvt_s_wu_i16:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.s.wu fa0, a0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fcvt_s_wu_i16:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.s.lu fa0, a0
-; RV64IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_wu_i16:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
+; CHECKIF-NEXT:    ret
   %1 = uitofp i16 %a to float
   ret float %1
 }
@@ -302,7 +292,7 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64IF-NEXT:    addiw a0, a0, 1
 ; RV64IF-NEXT:    slli a2, a0, 32
 ; RV64IF-NEXT:    srli a2, a2, 32
-; RV64IF-NEXT:    fcvt.s.lu fa5, a2
+; RV64IF-NEXT:    fcvt.s.wu fa5, a2
 ; RV64IF-NEXT:    fsw fa5, 0(a1)
 ; RV64IF-NEXT:    ret
   %3 = add i32 %0, 1
