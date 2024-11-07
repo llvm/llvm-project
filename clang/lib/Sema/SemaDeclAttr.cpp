@@ -4748,6 +4748,15 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(CUDADeviceAttr::CreateImplicit(S.Context));
 }
 
+static void handleGridConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (D->isInvalidDecl())
+    return;
+  // Whether __grid_constant__ is allowed to be used will be checked in
+  // Sema::CheckFunctionDeclaration as we need complete function decl to make
+  // the call.
+  D->addAttr(::new (S.Context) CUDAGridConstantAttr(S.Context, AL));
+}
+
 static void handleLaneSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (VD->hasLocalStorage()) {
@@ -6763,6 +6772,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_CUDADevice:
     handleDeviceAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CUDAGridConstant:
+    handleGridConstantAttr(S, D, AL);
     break;
   case ParsedAttr::AT_HIPManaged:
     handleManagedAttr(S, D, AL);
