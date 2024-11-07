@@ -259,7 +259,8 @@ RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
                                          unsigned Bits) const {
   if (!Root.isReg())
     return std::nullopt;
-  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+  Register RootReg = Root.getReg();
+  MachineInstr *RootDef = MRI->getVRegDef(RootReg);
 
   if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
       RootDef->getOperand(2).getImm() == Bits) {
@@ -267,7 +268,9 @@ RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
         {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
   }
 
-  // TODO: Use computeNumSignBits.
+  unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
+  if ((Size - KB->computeNumSignBits(RootReg)) < Bits)
+    return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 
   return std::nullopt;
 }

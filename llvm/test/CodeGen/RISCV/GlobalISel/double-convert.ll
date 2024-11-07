@@ -78,17 +78,11 @@ define double @fcvt_d_w(i32 %a) nounwind {
 }
 
 define double @fcvt_d_w_load(ptr %p) nounwind {
-; RV32IFD-LABEL: fcvt_d_w_load:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    lw a0, 0(a0)
-; RV32IFD-NEXT:    fcvt.d.w fa0, a0
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fcvt_d_w_load:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lw a0, 0(a0)
-; RV64IFD-NEXT:    fcvt.d.l fa0, a0
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fcvt_d_w_load:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    lw a0, 0(a0)
+; CHECKIFD-NEXT:    fcvt.d.w fa0, a0
+; CHECKIFD-NEXT:    ret
   %a = load i32, ptr %p
   %1 = sitofp i32 %a to double
   ret double %1
@@ -242,15 +236,10 @@ define double @fmv_d_x(i64 %a, i64 %b) nounwind {
 }
 
 define double @fcvt_d_w_i8(i8 signext %a) nounwind {
-; RV32IFD-LABEL: fcvt_d_w_i8:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w fa0, a0
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fcvt_d_w_i8:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.d.l fa0, a0
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fcvt_d_w_i8:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fcvt.d.w fa0, a0
+; CHECKIFD-NEXT:    ret
   %1 = sitofp i8 %a to double
   ret double %1
 }
@@ -265,15 +254,10 @@ define double @fcvt_d_wu_i8(i8 zeroext %a) nounwind {
 }
 
 define double @fcvt_d_w_i16(i16 signext %a) nounwind {
-; RV32IFD-LABEL: fcvt_d_w_i16:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w fa0, a0
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fcvt_d_w_i16:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.d.l fa0, a0
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fcvt_d_w_i16:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fcvt.d.w fa0, a0
+; CHECKIFD-NEXT:    ret
   %1 = sitofp i16 %a to double
   ret double %1
 }
@@ -298,7 +282,7 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64IFD-LABEL: fcvt_d_w_demanded_bits:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addiw a0, a0, 1
-; RV64IFD-NEXT:    fcvt.d.l fa5, a0
+; RV64IFD-NEXT:    fcvt.d.w fa5, a0
 ; RV64IFD-NEXT:    fsd fa5, 0(a1)
 ; RV64IFD-NEXT:    ret
   %3 = add i32 %0, 1

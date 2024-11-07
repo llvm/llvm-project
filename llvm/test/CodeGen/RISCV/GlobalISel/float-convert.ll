@@ -81,17 +81,11 @@ define float @fcvt_s_w(i32 %a) nounwind {
 }
 
 define float @fcvt_s_w_load(ptr %p) nounwind {
-; RV32IF-LABEL: fcvt_s_w_load:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lw a0, 0(a0)
-; RV32IF-NEXT:    fcvt.s.w fa0, a0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fcvt_s_w_load:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lw a0, 0(a0)
-; RV64IF-NEXT:    fcvt.s.l fa0, a0
-; RV64IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_w_load:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    lw a0, 0(a0)
+; CHECKIF-NEXT:    fcvt.s.w fa0, a0
+; CHECKIF-NEXT:    ret
   %a = load i32, ptr %p
   %1 = sitofp i32 %a to float
   ret float %1
@@ -212,15 +206,10 @@ define float @fcvt_s_lu(i64 %a) nounwind {
 }
 
 define float @fcvt_s_w_i8(i8 signext %a) nounwind {
-; RV32IF-LABEL: fcvt_s_w_i8:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.s.w fa0, a0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fcvt_s_w_i8:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.s.l fa0, a0
-; RV64IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_w_i8:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fcvt.s.w fa0, a0
+; CHECKIF-NEXT:    ret
   %1 = sitofp i8 %a to float
   ret float %1
 }
@@ -235,15 +224,10 @@ define float @fcvt_s_wu_i8(i8 zeroext %a) nounwind {
 }
 
 define float @fcvt_s_w_i16(i16 signext %a) nounwind {
-; RV32IF-LABEL: fcvt_s_w_i16:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.s.w fa0, a0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fcvt_s_w_i16:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.s.l fa0, a0
-; RV64IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_w_i16:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fcvt.s.w fa0, a0
+; CHECKIF-NEXT:    ret
   %1 = sitofp i16 %a to float
   ret float %1
 }
@@ -269,7 +253,7 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64IF-LABEL: fcvt_s_w_demanded_bits:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addiw a0, a0, 1
-; RV64IF-NEXT:    fcvt.s.l fa5, a0
+; RV64IF-NEXT:    fcvt.s.w fa5, a0
 ; RV64IF-NEXT:    fsw fa5, 0(a1)
 ; RV64IF-NEXT:    ret
   %3 = add i32 %0, 1
