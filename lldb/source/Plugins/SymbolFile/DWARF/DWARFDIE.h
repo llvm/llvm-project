@@ -138,20 +138,20 @@ public:
     // has a CU but no DIE and one that has neither CU nor DIE. The 'end'
     // iterator could be default constructed, so explicitly allow
     // (CU, (DIE)nullptr) == (nullptr, nullptr) -> true
-    if (!m_die && !it.m_die)
+    if (!m_die.IsValid() && !it.m_die.IsValid())
       return true;
     return m_die == it.m_die;
   }
   const DWARFDIE &operator*() const {
-    assert(m_die && "Derefencing invalid iterator?");
+    assert(m_die.IsValid() && "Derefencing invalid iterator?");
     return m_die;
   }
   DWARFDIE &operator*() {
-    assert(m_die && "Derefencing invalid iterator?");
+    assert(m_die.IsValid() && "Derefencing invalid iterator?");
     return m_die;
   }
   child_iterator &operator++() {
-    assert(m_die && "Incrementing invalid iterator?");
+    assert(m_die.IsValid() && "Incrementing invalid iterator?");
     m_die = m_die.GetSibling();
     return *this;
   }

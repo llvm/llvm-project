@@ -96,7 +96,7 @@ static bool IsClangModuleFwdDecl(const DWARFDIE &Die) {
   if (!Die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return false;
   auto Parent = Die.GetParent();
-  while (Parent) {
+  while (Parent.IsValid()) {
     if (Parent.Tag() == DW_TAG_module)
       return true;
     Parent = Parent.GetParent();
@@ -105,11 +105,11 @@ static bool IsClangModuleFwdDecl(const DWARFDIE &Die) {
 }
 
 static DWARFDIE GetContainingClangModuleDIE(const DWARFDIE &die) {
-  if (die) {
+  if (die.IsValid()) {
     DWARFDIE top_module_die;
     // Now make sure this DIE is scoped in a DW_TAG_module tag and return true
     // if so
-    for (DWARFDIE parent = die.GetParent(); parent;
+    for (DWARFDIE parent = die.GetParent(); parent.IsValid();
          parent = parent.GetParent()) {
       const dw_tag_t tag = parent.Tag();
       if (tag == DW_TAG_module)
@@ -124,7 +124,7 @@ static DWARFDIE GetContainingClangModuleDIE(const DWARFDIE &die) {
 }
 
 static lldb::ModuleSP GetContainingClangModule(const DWARFDIE &die) {
-  if (die) {
+  if (die.IsValid()) {
     DWARFDIE clang_module_die = GetContainingClangModuleDIE(die);
 
     if (clang_module_die) {
@@ -1590,7 +1590,7 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   // For C++, we rely solely upon the one definition rule that says
   // only one thing can exist at a given decl context. We ignore the
   // file and line that things are declared on.
-  if (!die || !Language::LanguageIsCPlusPlus(language) ||
+  if (!die.IsValid() || !Language::LanguageIsCPlusPlus(language) ||
       unique_typename.IsEmpty())
     return;
   decl_declaration.Clear();
@@ -3211,7 +3211,8 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     // This means 'die' is a C++ static data member.
     // We don't want to create decls for such members
     // here.
-    if (auto parent = die.GetParent(); parent && TagIsRecordType(parent.Tag()))
+    if (auto parent = die.GetParent();
+        parent.IsValid() && TagIsRecordType(parent.Tag()))
       return nullptr;
     break;
   default:
@@ -3350,10 +3351,11 @@ DWARFASTParserClang::GetClangDeclContextForDIE(const DWARFDIE &die) {
 
 OptionalClangModuleID
 DWARFASTParserClang::GetOwningClangModule(const DWARFDIE &die) {
-  if (!die)
+  if (!die.IsValid())
     return {};
 
-  for (DWARFDIE parent = die.GetParent(); parent; parent = parent.GetParent()) {
+  for (DWARFDIE parent = die.GetParent(); parent.IsValid();
+       parent = parent.GetParent()) {
     const dw_tag_t tag = parent.Tag();
     if (tag == DW_TAG_module) {
       DWARFDIE module_die = parent;
@@ -3594,11 +3596,11 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   UniqueCStringMap<DWARFDIE> dst_name_to_die;
   UniqueCStringMap<DWARFDIE> src_name_to_die_artificial;
   UniqueCStringMap<DWARFDIE> dst_name_to_die_artificial;
-  for (DWARFDIE src_die = src_class_die.GetFirstChild(); src_die;
+  for (DWARFDIE src_die = src_class_die.GetFirstChild(); src_die.IsValid();
        src_die = src_die.GetSibling()) {
     gather(src_die, src_name_to_die, src_name_to_die_artificial);
   }
-  for (DWARFDIE dst_die = dst_class_die.GetFirstChild(); dst_die;
+  for (DWARFDIE dst_die = dst_class_die.GetFirstChild(); dst_die.IsValid();
        dst_die = dst_die.GetSibling()) {
     gather(dst_die, dst_name_to_die, dst_name_to_die_artificial);
   }

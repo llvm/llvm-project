@@ -44,7 +44,10 @@ public:
       : m_cu(const_cast<DWARFUnit *>(cu)),
         m_die(const_cast<DWARFDebugInfoEntry *>(die)) {}
 
-  explicit operator bool() const { return m_cu && m_die; }
+  // Tests
+  explicit operator bool() const { return IsValid(); }
+
+  bool IsValid() const { return m_cu && m_die; }
 
   bool HasChildren() const;
 

@@ -21,7 +21,7 @@ using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 
 std::optional<DIERef> DWARFBaseDIE::GetDIERef() const {
-  if (!*this)
+  if (!IsValid())
     return std::nullopt;
 
   return DIERef(m_cu->GetSymbolFileDWARF().GetFileIndex(),
@@ -37,7 +37,7 @@ dw_tag_t DWARFBaseDIE::Tag() const {
 
 const char *DWARFBaseDIE::GetAttributeValueAsString(const dw_attr_t attr,
                                                 const char *fail_value) const {
-  if (*this)
+  if (IsValid())
     return m_die->GetAttributeValueAsString(GetCU(), attr, fail_value);
   else
     return fail_value;
@@ -45,7 +45,7 @@ const char *DWARFBaseDIE::GetAttributeValueAsString(const dw_attr_t attr,
 
 uint64_t DWARFBaseDIE::GetAttributeValueAsUnsigned(const dw_attr_t attr,
                                                uint64_t fail_value) const {
-  if (*this)
+  if (IsValid())
     return m_die->GetAttributeValueAsUnsigned(GetCU(), attr, fail_value);
   else
     return fail_value;
@@ -53,14 +53,14 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsUnsigned(const dw_attr_t attr,
 
 std::optional<uint64_t>
 DWARFBaseDIE::GetAttributeValueAsOptionalUnsigned(const dw_attr_t attr) const {
-  if (*this)
+  if (IsValid())
     return m_die->GetAttributeValueAsOptionalUnsigned(GetCU(), attr);
   return std::nullopt;
 }
 
 uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
                                               uint64_t fail_value) const {
-  if (*this)
+  if (IsValid())
     return m_die->GetAttributeValueAsAddress(GetCU(), attr, fail_value);
   else
     return fail_value;
@@ -75,7 +75,7 @@ lldb::user_id_t DWARFBaseDIE::GetID() const {
 }
 
 const char *DWARFBaseDIE::GetName() const {
-  if (*this)
+  if (IsValid())
     return m_die->GetName(m_cu);
   else
     return nullptr;
@@ -90,7 +90,7 @@ lldb::ModuleSP DWARFBaseDIE::GetModule() const {
 }
 
 dw_offset_t DWARFBaseDIE::GetOffset() const {
-  if (*this)
+  if (IsValid())
     return m_die->GetOffset();
   else
     return DW_INVALID_OFFSET;
@@ -108,11 +108,11 @@ bool DWARFBaseDIE::HasChildren() const {
 }
 
 bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
-  return *this && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
+  return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
 }
 
 DWARFAttributes DWARFBaseDIE::GetAttributes(Recurse recurse) const {
-  if (*this)
+  if (IsValid())
     return m_die->GetAttributes(m_cu, recurse);
   return DWARFAttributes();
 }
@@ -131,6 +131,6 @@ bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
 
 const DWARFDataExtractor &DWARFBaseDIE::GetData() const {
   // Clients must check if this DIE is valid before calling this function.
-  assert(*this);
+  assert(IsValid());
   return m_cu->GetData();
 }
