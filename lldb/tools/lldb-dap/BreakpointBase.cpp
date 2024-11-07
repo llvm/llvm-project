@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BreakpointBase.h"
-
 #include "JSONUtils.h"
-
 #include "llvm/ADT/StringRef.h"
 
 using namespace lldb_dap;

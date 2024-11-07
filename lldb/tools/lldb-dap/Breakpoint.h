@@ -11,7 +11,6 @@
 
 #include "BreakpointBase.h"
 #include "DAPForward.h"
-
 #include "lldb/API/SBBreakpoint.h"
 
 namespace lldb_dap {

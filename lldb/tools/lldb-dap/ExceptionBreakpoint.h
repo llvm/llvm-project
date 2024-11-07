@@ -10,10 +10,8 @@
 #define LLDB_TOOLS_LLDB_DAP_EXCEPTIONBREAKPOINT_H
 
 #include "DAPForward.h"
-
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/lldb-enumerations.h"
-
 #include <string>
 #include <utility>
 

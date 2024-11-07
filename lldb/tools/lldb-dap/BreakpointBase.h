@@ -10,7 +10,6 @@
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
 #include "DAPForward.h"
-
 #include <string>
 
 namespace lldb_dap {

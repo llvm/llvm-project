@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "FunctionBreakpoint.h"
-
 #include "DAP.h"
 #include "JSONUtils.h"
 

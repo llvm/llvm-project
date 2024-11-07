@@ -7,18 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Breakpoint.h"
-
 #include "JSONUtils.h"
-
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBLineEntry.h"
-
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/JSON.h"
-
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 using namespace lldb_dap;
