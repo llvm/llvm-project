@@ -18,3 +18,7 @@ breaks devicelibs
 6e0b0038 [clang][OpenCL][CodeGen][AMDGPU] Do not use `private` as the default AS for when `generic` is available (#112442)
 AlexV and MarkS
 ---
+merge challenges: resource usage
+7f60f1312ae0 [AMDGPU] Fix resource usage information for unnamed functions (#115320)
+Janek and Ron
+---
