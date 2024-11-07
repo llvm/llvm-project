@@ -7218,12 +7218,12 @@ SDValue SystemZTargetLowering::combineSTORE(
 
     // Find a replicated immediate and return it if found in Word and its
     // type in WordVT.
-    auto FindReplicatedImm = [&](ConstantSDNode *C, unsigned TotBytes) {
+    auto FindReplicatedImm = [&](ConstantSDNode *C) {
       // Some constants are better handled with a scalar store.
       if (C->getAPIntValue().getBitWidth() > 64 || C->isAllOnes() ||
           isInt<16>(C->getSExtValue()) || MemVT.getStoreSize() <= 2)
         return;
-      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, C->getZExtValue()));
+      SystemZVectorConstantInfo VCI(C->getAPIntValue());
       if (VCI.isVectorConstantLegal(Subtarget) &&
           VCI.Opcode == SystemZISD::REPLICATE) {
         Word = DAG.getConstant(VCI.OpVals[0], SDLoc(SN), MVT::i32);
@@ -7261,12 +7261,12 @@ SDValue SystemZTargetLowering::combineSTORE(
         DAG.isSplatValue(Op1, true/*AllowUndefs*/)) {
       SDValue SplatVal = Op1->getOperand(0);
       if (auto *C = dyn_cast<ConstantSDNode>(SplatVal))
-        FindReplicatedImm(C, SplatVal.getValueType().getStoreSize());
+        FindReplicatedImm(C);
       else
         FindReplicatedReg(SplatVal);
     } else {
       if (auto *C = dyn_cast<ConstantSDNode>(Op1))
-        FindReplicatedImm(C, MemVT.getStoreSize());
+        FindReplicatedImm(C);
       else
         FindReplicatedReg(Op1);
     }
