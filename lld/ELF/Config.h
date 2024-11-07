@@ -695,6 +695,11 @@ operator<<(const ELFSyncStream &s, T &&v) {
   return s;
 }
 
+inline const ELFSyncStream &operator<<(const ELFSyncStream &s, const char *v) {
+  s.os << v;
+  return s;
+}
+
 // Report a log if --verbose is specified.
 ELFSyncStream Log(Ctx &ctx);
 

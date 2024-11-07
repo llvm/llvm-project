@@ -376,7 +376,7 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
   // Copy relocation against zero-sized symbol doesn't make sense.
   uint64_t symSize = ss.getSize();
   if (symSize == 0 || ss.alignment == 0)
-    fatal("cannot create a copy relocation for symbol " + toString(ss));
+    Err(ctx) << "cannot create a copy relocation for symbol " << &ss;
 
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
@@ -441,7 +441,7 @@ public:
       while (i != cies.end() && i->inputOff <= off)
         ++i;
       if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off)
-        fatal(".eh_frame: relocation is not in any piece");
+        Fatal(ctx) << ".eh_frame: relocation is not in any piece";
       it = i;
     }
 
@@ -2097,8 +2097,8 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
     thunkSecOff = isec->outSecOff + isec->getSize();
     if (!ctx.target->inBranchRange(rel.type, src,
                                    os->addr + thunkSecOff + rel.addend))
-      fatal("InputSection too large for range extension thunk " +
-            isec->getObjMsg(src - (os->addr + isec->outSecOff)));
+      Fatal(ctx) << "InputSection too large for range extension thunk "
+                 << isec->getObjMsg(src - (os->addr << isec->outSecOff));
   }
   return addThunkSection(os, isd, thunkSecOff);
 }

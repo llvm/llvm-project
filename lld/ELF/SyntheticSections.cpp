@@ -210,7 +210,7 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
       }
 
       if (!opt->size)
-        fatal(filename + ": zero option descriptor size");
+        Fatal(ctx) << filename << ": zero option descriptor size";
       d = d.slice(opt->size);
     }
   };
@@ -449,7 +449,7 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
     uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
-      fatal(toString(sec) + ": invalid CIE reference");
+      Fatal(ctx) << sec << ": invalid CIE reference";
 
     if (!isFdeLive<ELFT>(fde, rels))
       continue;
@@ -609,7 +609,8 @@ static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
   case DW_EH_PE_absptr:
     return readUint(ctx, buf);
   }
-  fatal("unknown FDE size encoding");
+  Err(ctx) << "unknown FDE size encoding";
+  return 0;
 }
 
 // Returns the VA to which a given FDE (on a mmap'ed buffer) is applied to.
@@ -625,7 +626,8 @@ uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
     return ctx.arg.is64 ? addr : uint32_t(addr);
   if ((enc & 0x70) == DW_EH_PE_pcrel)
     return addr + getParent()->addr + off + outSecOff;
-  fatal("unknown FDE size relative encoding");
+  Err(ctx) << "unknown FDE size relative encoding";
+  return 0;
 }
 
 void EhFrameSection::writeTo(uint8_t *buf) {

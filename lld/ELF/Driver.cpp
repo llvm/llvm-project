@@ -265,8 +265,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
-    fatal(mb.getBufferIdentifier() + ": Archive::children failed: " +
-          toString(std::move(err)));
+    Fatal(ctx) << mb.getBufferIdentifier()
+               << ": Archive::children failed: " << std::move(err);
 
   // Take ownership of memory buffers created for members of thin archives.
   std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
@@ -1064,7 +1064,7 @@ template <class ELFT> static void readCallGraphsFromObjectFiles(Ctx &ctx) {
       continue;
 
     if (symbolIndices.size() != cgProfile.size() * 2)
-      fatal("number of relocations doesn't match Weights");
+      Fatal(ctx) << "number of relocations doesn't match Weights";
 
     for (uint32_t i = 0, size = cgProfile.size(); i < size; ++i) {
       const Elf_CGProfile_Impl<ELFT> &cgpe = cgProfile[i];
@@ -2445,7 +2445,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
-          fatal(toString(f) + ": could not decode addrsig section: " + err);
+          Fatal(ctx) << f << ": could not decode addrsig section: " << err;
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2507,7 +2507,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   // sizes of the Partition fields in InputSectionBase and Symbol, as well as
   // the amount of space devoted to the partition number in RankFlags.
   if (ctx.partitions.size() == 254)
-    fatal("may not have more than 254 partitions");
+    Fatal(ctx) << "may not have more than 254 partitions";
 
   ctx.partitions.emplace_back(ctx);
   Partition &newPart = ctx.partitions.back();

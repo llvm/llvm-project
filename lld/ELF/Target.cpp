@@ -88,7 +88,7 @@ void elf::setTarget(Ctx &ctx) {
   case EM_X86_64:
     return setX86_64TargetInfo(ctx);
   default:
-    fatal("unsupported e_machine value: " + Twine(ctx.arg.emachine));
+    Fatal(ctx) << "unsupported e_machine value: " << Twine(ctx.arg.emachine);
   }
 }
 
@@ -137,7 +137,8 @@ bool TargetInfo::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
 bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                                   uint8_t stOther) const {
-  fatal("target doesn't support split stacks");
+  Err(ctx) << "target doesn't support split stacks";
+  return false;
 }
 
 bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {

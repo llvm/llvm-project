@@ -58,6 +58,11 @@ std::string lld::toString(const elf::Symbol &sym) {
   return ret;
 }
 
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     const Symbol *sym) {
+  return s << toString(*sym);
+}
+
 static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {

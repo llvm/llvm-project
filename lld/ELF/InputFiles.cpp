@@ -68,8 +68,7 @@ std::string lld::toString(const InputFile *f) {
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
                                      const InputFile *f) {
-  s << toString(f);
-  return s;
+  return s << toString(f);
 }
 
 static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
@@ -80,9 +79,9 @@ static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
   auto report = [&](StringRef msg) {
     StringRef filename = mb.getBufferIdentifier();
     if (archiveName.empty())
-      fatal(filename + ": " + msg);
+      Fatal(ctx) << filename << ": " << msg;
     else
-      fatal(archiveName + "(" + filename + "): " + msg);
+      Fatal(ctx) << archiveName << "(" << filename << "): " << msg;
   };
 
   if (!mb.getBuffer().starts_with(ElfMagic))
@@ -573,7 +572,7 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
 
   ArrayRef<Elf_Sym> eSyms = CHECK(obj.symbols(symtabSec), this);
   if (firstGlobal == 0 || firstGlobal > eSyms.size())
-    fatal(toString(this) + ": invalid sh_info in symbol table");
+    Fatal(ctx) << this << ": invalid sh_info in symbol table";
 
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
   numELFSyms = uint32_t(eSyms.size());
@@ -666,11 +665,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     ArrayRef<Elf_Word> entries =
         CHECK(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
     if (entries.empty())
-      fatal(toString(this) + ": empty SHT_GROUP");
+      Fatal(ctx) << this << ": empty SHT_GROUP";
 
     Elf_Word flag = entries[0];
     if (flag && flag != GRP_COMDAT)
-      fatal(toString(this) + ": unsupported SHT_GROUP format");
+      Fatal(ctx) << this << ": unsupported SHT_GROUP format";
 
     bool keepGroup = (flag & GRP_COMDAT) == 0 || ignoreComdats ||
                      ctx.symtab->comdatGroups
@@ -686,8 +685,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // Otherwise, discard group members.
     for (uint32_t secIndex : entries.slice(1)) {
       if (secIndex >= size)
-        fatal(toString(this) +
-              ": invalid section index in group: " + Twine(secIndex));
+        Fatal(ctx) << this
+                   << ": invalid section index in group: " << Twine(secIndex);
       this->sections[secIndex] = &InputSection::discarded;
     }
   }
@@ -704,7 +703,7 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                               const Elf_Shdr &sec) {
   typename ELFT::SymRange symbols = this->getELFSyms<ELFT>();
   if (sec.sh_info >= symbols.size())
-    fatal(toString(this) + ": invalid symbol index");
+    Fatal(ctx) << this << ": invalid symbol index";
   const typename ELFT::Sym &sym = symbols[sec.sh_info];
   return CHECK(sym.getName(this->stringTable), this);
 }
@@ -742,13 +741,13 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   if (entSize == 0)
     return false;
   if (sec.sh_size % entSize)
-    fatal(toString(this) + ":(" + name + "): SHF_MERGE section size (" +
-          Twine(sec.sh_size) + ") must be a multiple of sh_entsize (" +
-          Twine(entSize) + ")");
+    Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
+               << Twine(sec.sh_size) << ") must be a multiple of sh_entsize ("
+               << Twine(entSize) << ")";
 
   if (sec.sh_flags & SHF_WRITE)
-    fatal(toString(this) + ":(" + name +
-          "): writable SHF_MERGE section is not supported");
+    Fatal(ctx) << this << ":(" << name
+               << "): writable SHF_MERGE section is not supported";
 
   return true;
 }
@@ -934,7 +933,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
-      fatal(toString(this) + ": invalid sh_link index: " + Twine(sec.sh_link));
+      Fatal(ctx) << this << ": invalid sh_link index: " << Twine(sec.sh_link);
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -963,8 +962,9 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
 
   ArrayRef<uint8_t> data = sec.content();
   auto reportFatal = [&](const uint8_t *place, const Twine &msg) {
-    fatal(toString(sec.file) + ":(" + sec.name + "+0x" +
-          Twine::utohexstr(place - sec.content().data()) + "): " + msg);
+    Fatal(ctx) << sec.file << ":(" << sec.name << "+0x"
+               << Twine::utohexstr(place - sec.content().data())
+               << "): " << msg;
   };
   while (!data.empty()) {
     // Read one NOTE record.
@@ -1159,8 +1159,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->isUsedInRegularObj = true;
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
-        fatal(toString(this) + ": common symbol '" + sym->getName() +
-              "' has invalid alignment: " + Twine(value));
+        Fatal(ctx) << this << ": common symbol '" << sym->getName()
+                   << "' has invalid alignment: " << Twine(value);
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1207,7 +1207,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
+      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       error(toString(this) + ": non-local symbol (" + Twine(i) +
             ") found at index < .symtab's sh_info (" + Twine(end) + ")");
@@ -1217,7 +1217,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     if (type == STT_FILE)
       sourceFile = CHECK(eSym.getName(stringTable), this);
     if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
-      fatal(toString(this) + ": invalid symbol name offset");
+      Fatal(ctx) << this << ": invalid symbol name offset";
     StringRef name(stringTable.data() + eSym.st_name);
 
     symbols[i] = reinterpret_cast<Symbol *>(locals + i);
@@ -1267,7 +1267,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
+      Fatal(ctx) << this << ": invalid section index: " << Twine(secIdx);
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {
@@ -1405,15 +1405,15 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   const uint8_t *verneedBuf = data.begin();
   for (unsigned i = 0; i != sec->sh_info; ++i) {
     if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
-      fatal(toString(this) + " has an invalid Verneed");
+      Fatal(ctx) << this << " has an invalid Verneed";
     auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
     const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
     for (unsigned j = 0; j != vn->vn_cnt; ++j) {
       if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
-        fatal(toString(this) + " has an invalid Vernaux");
+        Fatal(ctx) << this << " has an invalid Vernaux";
       auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
       if (aux->vna_name >= this->stringTable.size())
-        fatal(toString(this) + " has a Vernaux with an invalid vna_name");
+        Fatal(ctx) << this << " has a Vernaux with an invalid vna_name";
       uint16_t version = aux->vna_other & VERSYM_VERSION;
       if (version >= verneeds.size())
         verneeds.resize(version + 1);
@@ -1501,12 +1501,12 @@ template <class ELFT> void SharedFile::parse() {
     if (dyn.d_tag == DT_NEEDED) {
       uint64_t val = dyn.getVal();
       if (val >= this->stringTable.size())
-        fatal(toString(this) + ": invalid DT_NEEDED entry");
+        Fatal(ctx) << this << ": invalid DT_NEEDED entry";
       dtNeeded.push_back(this->stringTable.data() + val);
     } else if (dyn.d_tag == DT_SONAME) {
       uint64_t val = dyn.getVal();
       if (val >= this->stringTable.size())
-        fatal(toString(this) + ": invalid DT_SONAME entry");
+        Fatal(ctx) << this << ": invalid DT_SONAME entry";
       soName = this->stringTable.data() + val;
     }
   }
