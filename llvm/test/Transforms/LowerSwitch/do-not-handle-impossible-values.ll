@@ -801,10 +801,8 @@ define i32 @test16(float %f) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i64
-; CHECK-NEXT:    [[COND_LEFT:%.*]] = icmp slt i64 [[I]], 0
-; CHECK-NEXT:    [[CLAMP_LEFT:%.*]] = select i1 [[COND_LEFT]], i64 0, i64 [[I]]
-; CHECK-NEXT:    [[COND_RIGHT:%.*]] = icmp sgt i64 [[I]], 3
-; CHECK-NEXT:    [[CLAMP:%.*]] = select i1 [[COND_RIGHT]], i64 3, i64 [[CLAMP_LEFT]]
+; CHECK-NEXT:    [[CLAMP_LEFT:%.*]] = call i64 @llvm.smax.i64(i64 [[I]], i64 0)
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i64 @llvm.smin.i64(i64 [[CLAMP_LEFT]], i64 3)
 ; CHECK-NEXT:    br label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp sge i64 [[CLAMP]], 2
@@ -821,10 +819,8 @@ define i32 @test16(float %f) {
 ;
 entry:
   %i = fptosi float %f to i64
-  %cond.left = icmp slt i64 %i, 0
-  %clamp.left = select i1 %cond.left, i64 0, i64 %i
-  %cond.right = icmp sgt i64 %i, 3
-  %clamp = select i1 %cond.right, i64 3, i64 %clamp.left
+  %clamp.left = call i64 @llvm.smax(i64 %i, i64 0)
+  %clamp = call i64 @llvm.smin(i64 %clamp.left, i64 3)
   switch i64 %clamp, label %case.D [
   i64 0, label %case.1
   i64 1, label %case.1

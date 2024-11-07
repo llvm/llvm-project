@@ -581,7 +581,8 @@ define i1 @umin(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MIN]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -614,7 +615,8 @@ define i1 @smin(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ule i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MIN]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -647,7 +649,8 @@ define i1 @smax(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MAX]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -680,7 +683,8 @@ define i1 @umax(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MAX]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -706,7 +710,8 @@ define i1 @umin_lhs_overdefined_rhs_const(i32 %a) {
 ; CHECK-SAME: (i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], 42
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[A]], i32 42
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[SEL]], 42
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp = icmp ult i32 %a, 42
   %sel = select i1 %cmp, i32 %a, i32 42
@@ -719,7 +724,8 @@ define i1 @umin_rhs_overdefined_lhs_const(i32 %a) {
 ; CHECK-SAME: (i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A]], 42
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 42, i32 [[A]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[SEL]], 42
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp = icmp uge i32 %a, 42
   %sel = select i1 %cmp, i32 42, i32 %a
@@ -734,7 +740,8 @@ define i1 @umin_lhs_overdefined_rhs_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %assume = icmp ult i32 %b, 42
   call void @llvm.assume(i1 %assume)
@@ -751,7 +758,8 @@ define i1 @umin_rhs_overdefined_lhs_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %assume = icmp ult i32 %b, 42
   call void @llvm.assume(i1 %assume)
@@ -1085,10 +1093,11 @@ define void @abs1(i32 %a, ptr %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
 ; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[ABS]], 19
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
 ; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
-; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp uge i32 [[ABS]], 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp sge i32 [[ABS]], 0
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
 ; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -1131,10 +1140,11 @@ define void @abs2(i32 %a, ptr %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
 ; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[ABS]], 19
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
 ; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
-; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp uge i32 [[ABS]], 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp sge i32 [[ABS]], 0
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
 ; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -1179,7 +1189,8 @@ define void @nabs1(i32 %a, ptr %p) {
 ; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
 ; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
-; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp sle i32 [[NABS]], 0
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
 ; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1225,7 +1236,8 @@ define void @nabs2(i32 %a, ptr %p) {
 ; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
 ; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
-; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp sle i32 [[NABS]], 0
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
 ; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]

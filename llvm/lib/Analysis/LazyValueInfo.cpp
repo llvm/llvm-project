@@ -804,56 +804,6 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
     return std::nullopt;
   ValueLatticeElement &FalseVal = *OptFalseVal;
 
-  if (TrueVal.isConstantRange() || FalseVal.isConstantRange()) {
-    const ConstantRange &TrueCR = TrueVal.asConstantRange(SI->getType());
-    const ConstantRange &FalseCR = FalseVal.asConstantRange(SI->getType());
-    Value *LHS = nullptr;
-    Value *RHS = nullptr;
-    SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
-    // Is this a min specifically of our two inputs?  (Avoid the risk of
-    // ValueTracking getting smarter looking back past our immediate inputs.)
-    if (SelectPatternResult::isMinOrMax(SPR.Flavor) &&
-        ((LHS == SI->getTrueValue() && RHS == SI->getFalseValue()) ||
-         (RHS == SI->getTrueValue() && LHS == SI->getFalseValue()))) {
-      ConstantRange ResultCR = [&]() {
-        switch (SPR.Flavor) {
-        default:
-          llvm_unreachable("unexpected minmax type!");
-        case SPF_SMIN:                   /// Signed minimum
-          return TrueCR.smin(FalseCR);
-        case SPF_UMIN:                   /// Unsigned minimum
-          return TrueCR.umin(FalseCR);
-        case SPF_SMAX:                   /// Signed maximum
-          return TrueCR.smax(FalseCR);
-        case SPF_UMAX:                   /// Unsigned maximum
-          return TrueCR.umax(FalseCR);
-        };
-      }();
-      return ValueLatticeElement::getRange(
-          ResultCR, TrueVal.isConstantRangeIncludingUndef() ||
-                        FalseVal.isConstantRangeIncludingUndef());
-    }
-
-    if (SPR.Flavor == SPF_ABS) {
-      if (LHS == SI->getTrueValue())
-        return ValueLatticeElement::getRange(
-            TrueCR.abs(), TrueVal.isConstantRangeIncludingUndef());
-      if (LHS == SI->getFalseValue())
-        return ValueLatticeElement::getRange(
-            FalseCR.abs(), FalseVal.isConstantRangeIncludingUndef());
-    }
-
-    if (SPR.Flavor == SPF_NABS) {
-      ConstantRange Zero(APInt::getZero(TrueCR.getBitWidth()));
-      if (LHS == SI->getTrueValue())
-        return ValueLatticeElement::getRange(
-            Zero.sub(TrueCR.abs()), FalseVal.isConstantRangeIncludingUndef());
-      if (LHS == SI->getFalseValue())
-        return ValueLatticeElement::getRange(
-            Zero.sub(FalseCR.abs()), FalseVal.isConstantRangeIncludingUndef());
-    }
-  }
-
   // Can we constrain the facts about the true and false values by using the
   // condition itself?  This shows up with idioms like e.g. select(a > 5, a, 5).
   // TODO: We could potentially refine an overdefined true value above.
