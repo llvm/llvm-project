@@ -572,8 +572,8 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
       if (!isInt<32>(pc - va)) {
-        errorOrWarn(toString(fde->sec) + ": PC offset is too large: 0x" +
-                    Twine::utohexstr(pc - va));
+        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
+                 << Twine::utohexstr(pc - va);
         continue;
       }
       ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
@@ -2861,6 +2861,7 @@ void DebugNamesBaseSection::parseDebugNames(
         uint32_t numCus, const DWARFDebugNames::Header &,
         const DWARFDebugNames::DWARFDebugNamesOffsets &)>
         readOffsets) {
+  Ctx &ctx = elf::ctx;
   const LLDDWARFSection &namesSec = inputChunk.section;
   DenseMap<uint32_t, IndexEntry *> offsetMap;
   // Number of CUs seen in previous NameIndex sections within current chunk.
@@ -2869,20 +2870,20 @@ void DebugNamesBaseSection::parseDebugNames(
     NameData &nd = inputChunk.nameData.emplace_back();
     nd.hdr = ni.getHeader();
     if (nd.hdr.Format != DwarfFormat::DWARF32) {
-      errorOrWarn(toString(namesSec.sec) +
-                  Twine(": found DWARF64, which is currently unsupported"));
+      Err(ctx) << namesSec.sec
+               << Twine(": found DWARF64, which is currently unsupported");
       return;
     }
     if (nd.hdr.Version != 5) {
-      errorOrWarn(toString(namesSec.sec) + Twine(": unsupported version: ") +
-                  Twine(nd.hdr.Version));
+      Err(ctx) << namesSec.sec << Twine(": unsupported version: ")
+               << Twine(nd.hdr.Version);
       return;
     }
     uint32_t dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
     DWARFDebugNames::DWARFDebugNamesOffsets locs = ni.getOffsets();
     if (locs.EntriesBase > namesExtractor.getData().size()) {
-      errorOrWarn(toString(namesSec.sec) +
-                  Twine(": entry pool start is beyond end of section"));
+      Err(ctx) << namesSec.sec
+               << Twine(": entry pool start is beyond end of section");
       return;
     }
 
@@ -2907,15 +2908,13 @@ void DebugNamesBaseSection::parseDebugNames(
         Expected<IndexEntry *> ieOrErr =
             readEntry(offset, ni, locs.EntriesBase, namesExtractor, namesSec);
         if (!ieOrErr) {
-          errorOrWarn(toString(namesSec.sec) + ": " +
-                      toString(ieOrErr.takeError()));
+          Err(ctx) << namesSec.sec << ": " << ieOrErr.takeError();
           return;
         }
         ne.indexEntries.push_back(std::move(*ieOrErr));
       }
       if (offset >= namesSec.Data.size())
-        errorOrWarn(toString(namesSec.sec) +
-                    Twine(": index entry is out of bounds"));
+        Err(ctx) << namesSec.sec << Twine(": index entry is out of bounds");
 
       for (IndexEntry &ie : ne.entries())
         offsetMap[ie.poolOffset] = &ie;
@@ -3197,7 +3196,7 @@ void DebugNamesBaseSection::init(
 template <class ELFT>
 DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
     : DebugNamesBaseSection(ctx) {
-  init([](InputFile *f, InputChunk &inputChunk, OutputChunk &chunk) {
+  init([&](InputFile *f, InputChunk &inputChunk, OutputChunk &chunk) {
     auto *file = cast<ObjFile<ELFT>>(f);
     DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
     auto &dobj = static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj());
@@ -3213,8 +3212,7 @@ DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
 
     inputChunk.llvmDebugNames.emplace(namesExtractor, strExtractor);
     if (Error e = inputChunk.llvmDebugNames->extract()) {
-      errorOrWarn(toString(dobj.getNamesSection().sec) + Twine(": ") +
-                  toString(std::move(e)));
+      Err(ctx) << dobj.getNamesSection().sec << Twine(": ") << std::move(e);
     }
     parseDebugNames(
         inputChunk, chunk, namesExtractor, strExtractor,
@@ -3515,8 +3513,8 @@ createSymbols(
   }
   // If off overflows, the last symbol's nameOff likely overflows.
   if (!isUInt<32>(off))
-    errorOrWarn("--gdb-index: constant pool size (" + Twine(off) +
-                ") exceeds UINT32_MAX");
+    Err(ctx) << "--gdb-index: constant pool size (" << Twine(off)
+             << ") exceeds UINT32_MAX";
 
   return {ret, off};
 }
@@ -4625,20 +4623,20 @@ createMemtagGlobalDescriptors(Ctx &ctx,
     const uint64_t size = sym->getSize();
 
     if (addr <= kMemtagGranuleSize && buf != nullptr)
-      errorOrWarn("address of the tagged symbol \"" + sym->getName() +
-                  "\" falls in the ELF header. This is indicative of a "
-                  "compiler/linker bug");
+      Err(ctx) << "address of the tagged symbol \"" << sym->getName()
+               << "\" falls in the ELF header. This is indicative of a "
+                  "compiler/linker bug";
     if (addr % kMemtagGranuleSize != 0)
-      errorOrWarn("address of the tagged symbol \"" + sym->getName() +
-                  "\" at 0x" + Twine::utohexstr(addr) +
-                  "\" is not granule (16-byte) aligned");
+      Err(ctx) << "address of the tagged symbol \"" << sym->getName()
+               << "\" at 0x" << Twine::utohexstr(addr)
+               << "\" is not granule (16-byte) aligned";
     if (size == 0)
-      errorOrWarn("size of the tagged symbol \"" + sym->getName() +
-                  "\" is not allowed to be zero");
+      Err(ctx) << "size of the tagged symbol \"" << sym->getName()
+               << "\" is not allowed to be zero";
     if (size % kMemtagGranuleSize != 0)
-      errorOrWarn("size of the tagged symbol \"" + sym->getName() +
-                  "\" (size 0x" + Twine::utohexstr(size) +
-                  ") is not granule (16-byte) aligned");
+      Err(ctx) << "size of the tagged symbol \"" << sym->getName()
+               << "\" (size 0x" << Twine::utohexstr(size)
+               << ") is not granule (16-byte) aligned";
 
     const uint64_t sizeToEncode = size / kMemtagGranuleSize;
     const uint64_t stepToEncode = ((addr - lastGlobalEnd) / kMemtagGranuleSize)

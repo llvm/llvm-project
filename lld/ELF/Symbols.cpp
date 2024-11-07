@@ -125,8 +125,8 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
       // for Android relocation packing requires knowing TLS symbol addresses
       // during section finalization.)
       if (!ctx.tlsPhdr || !ctx.tlsPhdr->firstSec) {
-        errorOrWarn(toString(d.file) +
-                    " has an STT_TLS symbol but doesn't have a PT_TLS segment");
+        Err(ctx) << d.file
+                 << " has an STT_TLS symbol but doesn't have a PT_TLS segment";
         return 0;
       }
       return va - ctx.tlsPhdr->firstSec->addr;
@@ -530,8 +530,8 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   if (!d->section && !errSec && errOffset && d->value == errOffset)
     return;
   if (!d->section || !errSec) {
-    errorOrWarn("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
-                toString(sym.file) + "\n>>> defined in " + toString(newFile));
+    Err(ctx) << "duplicate symbol: " << &sym << "\n>>> defined in " << sym.file
+             << "\n>>> defined in " << newFile;
     return;
   }
 
@@ -555,7 +555,7 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   if (!src2.empty())
     msg += src2 + "\n>>>            ";
   msg += obj2;
-  errorOrWarn(msg);
+  Err(ctx) << msg;
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {

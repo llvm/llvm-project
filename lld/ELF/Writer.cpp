@@ -1538,12 +1538,12 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         break;
       if (++assignPasses == 5) {
         if (changes.first)
-          errorOrWarn("address (0x" + Twine::utohexstr(changes.first->addr) +
-                      ") of section '" + changes.first->name +
-                      "' does not converge");
+          Err(ctx) << "address (0x" << Twine::utohexstr(changes.first->addr)
+                   << ") of section '" << changes.first->name
+                   << "' does not converge";
         if (changes.second)
-          errorOrWarn("assignment to symbol " + toString(*changes.second) +
-                      " does not converge");
+          Err(ctx) << "assignment to symbol " << changes.second
+                   << " does not converge";
         break;
       }
     } else if (spilled) {
@@ -2644,11 +2644,11 @@ static void checkOverlap(StringRef name, std::vector<SectionOffset> &sections,
     if (isVirtualAddr && a.sec->inOverlay && b.sec->inOverlay)
       continue;
 
-    errorOrWarn("section " + a.sec->name + " " + name +
-                " range overlaps with " + b.sec->name + "\n>>> " + a.sec->name +
-                " range is " + rangeToString(a.offset, a.sec->size) + "\n>>> " +
-                b.sec->name + " range is " +
-                rangeToString(b.offset, b.sec->size));
+    Err(ctx) << "section " << a.sec->name << " " << name
+             << " range overlaps with " << b.sec->name << "\n>>> "
+             << a.sec->name << " range is "
+             << rangeToString(a.offset, a.sec->size) << "\n>>> " << b.sec->name
+             << " range is " << rangeToString(b.offset, b.sec->size);
   }
 }
 
@@ -2662,9 +2662,9 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *os : ctx.outputSections)
     if ((os->addr + os->size < os->addr) ||
         (!ELFT::Is64Bits && os->addr + os->size > uint64_t(UINT32_MAX) + 1))
-      errorOrWarn("section " + os->name + " at 0x" + utohexstr(os->addr) +
-                  " of size 0x" + utohexstr(os->size) +
-                  " exceeds available address space");
+      Err(ctx) << "section " << os->name << " at 0x" << utohexstr(os->addr)
+               << " of size 0x" << utohexstr(os->size)
+               << " exceeds available address space";
 
   // Check for overlapping file offsets. In this case we need to skip any
   // section marked as SHT_NOBITS. These sections don't actually occupy space in
