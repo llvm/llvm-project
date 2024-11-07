@@ -35,17 +35,30 @@ bb:
   ret void
 }
 
-; TODO: Should be able to promote this
 define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_select(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_select(
 ; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x i32], align 4, addrspace(5)
-; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ALLOCA]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[GETELEMENTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ALLOCA]], <4 x i64> <i64 3, i64 2, i64 1, i64 0>
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(5)> [[GETELEMENTPTR0]], <4 x ptr addrspace(5)> [[GETELEMENTPTR1]]
-; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(5)> [[SELECT]], i64 1
-; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[EXTRACTELEMENT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG1]], !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP8:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw nsw i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @scalar_alloca_ptr_with_vector_gep_offset_select.alloca, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[GETELEMENTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 3, i64 2, i64 1, i64 0>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> [[GETELEMENTPTR0]], <4 x ptr addrspace(3)> [[GETELEMENTPTR1]]
+; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(3)> [[SELECT]], i64 1
+; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[EXTRACTELEMENT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
