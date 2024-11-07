@@ -1235,7 +1235,6 @@ def OMP_DistributeParallelDoSimd : Directive<"distribute parallel do simd"> {
     VersionedClause<OMPC_Linear>,
     VersionedClause<OMPC_NonTemporal>,
     VersionedClause<OMPC_NumThreads>,
-    VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Reduction>,
@@ -1243,6 +1242,9 @@ def OMP_DistributeParallelDoSimd : Directive<"distribute parallel do simd"> {
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Shared>,
     VersionedClause<OMPC_SimdLen>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Order, 50>,
   ];
   let leafConstructs = [OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
   let category = CA_Executable;
@@ -1908,7 +1910,6 @@ def OMP_TargetParallelDoSimd : Directive<"target parallel do simd"> {
     VersionedClause<OMPC_NonTemporal>,
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumThreads>,
-    VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_ProcBind>,
@@ -1918,6 +1919,9 @@ def OMP_TargetParallelDoSimd : Directive<"target parallel do simd"> {
     VersionedClause<OMPC_Shared>,
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_UsesAllocators>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Order, 50>
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel, OMP_Do, OMP_Simd];
   let category = CA_Executable;

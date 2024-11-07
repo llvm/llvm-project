@@ -598,6 +598,45 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     CheckDistLinear(x);
   }
 }
+
+void OmpStructureChecker::CheckSymbolsForOrderClause(
+    const parser::Name &name, bool checkRuntimeAPICall) {
+  if (!dirContext_.empty() &&
+      (llvm::omp::allDoSet | llvm::omp::allSimdSet |
+          llvm::omp::allDistributeSet)
+          .test(GetContext().directive)) {
+    if (const auto *clause{FindClause(llvm::omp::Clause::OMPC_order)}) {
+      const auto &orderClause{std::get<parser::OmpClause::Order>(clause->u)};
+      if (std::get<parser::OmpOrderClause::Type>(orderClause.v.t) ==
+          parser::OmpOrderClause::Type::Concurrent) {
+        if (checkRuntimeAPICall &&
+            llvm::StringRef(name.ToString()).starts_with_insensitive("omp_")) {
+          context_.Say(name.source,
+              "The OpenMP runtime API calls are not allowed in "
+              "the `order(concurrent)` clause region"_err_en_US);
+        } else if (name.symbol->test(Symbol::Flag::OmpThreadprivate)) {
+          context_.Say(name.source,
+              "A THREADPRIVATE variable cannot appear in an "
+              "`order(concurrent)` clause region, the behavior "
+              "is unspecified"_err_en_US);
+        }
+      }
+    }
+  }
+}
+
+// OpenMP 5.2: 10.3 Order clause restrictions
+void OmpStructureChecker::Enter(const parser::ProcedureDesignator &x) {
+  const auto &name{std::get<parser::Name>(x.u)};
+  CheckSymbolsForOrderClause(name, true);
+}
+
+// OpenMP 5.2: 10.3 Order clause restrictions
+void OmpStructureChecker::Enter(const parser::Designator &x) {
+  const auto name{parser::Unwrap<parser::Name>(x.u)};
+  CheckSymbolsForOrderClause(*name, false);
+}
+
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
   using Bounds = parser::LoopControl::Bounds;
