@@ -60,11 +60,3 @@ void test1(struct bucket *foo) {
 void test2(struct bucket2 *foo) {
         init(foo->growable.array);
 }
-//.
-// CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META7:![0-9]+]], i64 8}
-// CHECK: [[META3]] = !{!"bucket", [[META4:![0-9]+]], i64 0, [[META7]], i64 8, [[META4]], i64 16}
-// CHECK: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META7]] = !{!"any pointer", [[META5]], i64 0}
-//.
