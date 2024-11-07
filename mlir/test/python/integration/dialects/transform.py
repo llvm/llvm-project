@@ -134,7 +134,9 @@ def test_apply_patterns(module_):
     def mod():
         @named_sequence("__transform_main", [any_op_t()], [])
         def basic(variant_op: any_op_t()):
-            matmul = structured_match(any_op_t(), variant_op, ops=["linalg.batch_reduce_matmul"])
+            matmul = structured_match(
+                any_op_t(), variant_op, ops=["linalg.batch_reduce_matmul"]
+            )
             top_func = get_parent_op(pdl.op_t(), matmul, op_name="func.func")
 
             @apply_patterns(top_func)
