@@ -584,7 +584,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     // may also have a known alignment, and something might depend on that:
     // propagate info to each field.
     Align NewAlign = commonAlignment(StartAlignment, OffsetForTy);
-    NGV->setAlignment(std::max(NewAlign, DL.getABITypeAlign(Ty)));
+    NGV->setAlignment(NewAlign);
 
     // Copy over the debug info for the variable.
     transferSRADebugInfo(GV, NGV, OffsetForTy * 8,
