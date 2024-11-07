@@ -336,16 +336,15 @@ struct TemplateParameterListBuilder {
   }
 
   /*
-  The concept specialization expression (CSE) constructed below is constructed
-  so that it matches the CSE that is constructed when parsing
-  the below C++ code:
+  The concept specialization expression (CSE) constructed in
+  constructConceptSpecializationExpr is constructed so that it
+  matches the CSE that is constructed when parsing the below C++ code:
 
   template<typename T>
-  concept is_typed_resource_element_compatible =sizeof(T) <= 16;
+  concept is_typed_resource_element_compatible = sizeof(T) <= 16;
 
   template<typename element_type> requires
   is_typed_resource_element_compatible<element_type>
-
   struct RWBuffer {
       element_type Val;
   };
@@ -393,12 +392,14 @@ struct TemplateParameterListBuilder {
 
     QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
 
-    // this is the 2nd template argument node in the AST above
+    // this is the 2nd template argument node, on which
+    // the concept constraint is actually being applied, 'element_type'
     TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
 
     QualType CSETType = Context.getTypeDeclType(T);
 
-    // this is the 1st template argument node in the AST above
+    // this is the 1st template argument node, which represents
+    // the abstract type that a concept would refer to, 'T'
     TemplateArgument CSETA = TemplateArgument(CSETType);
 
     ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
