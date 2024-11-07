@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/utility.h"
+#include "src/stdlib/_Exit.h"
 #include "src/stdlib/at_quick_exit.h"
 #include "src/stdlib/quick_exit.h"
 #include "test/UnitTest/Test.h"
