@@ -20,7 +20,8 @@ template <typename T> class CountlsTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
   static constexpr T eps = FXRep::EPS();
 
-  static constexpr auto value_len = LIBC_NAMESPACE::fixed_point::get_value_len<FXRep>();
+  static constexpr auto value_len =
+      LIBC_NAMESPACE::fixed_point::get_value_len<FXRep>();
 
 public:
   typedef int (*CountlsFunc)(T);
@@ -41,7 +42,7 @@ public:
     if (10 <= static_cast<int>(max)) {
       EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(10));
     }
-    
+
     if (static_cast<int>(min) <= -10) {
       EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(-10));
     }

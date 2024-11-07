@@ -296,9 +296,8 @@ template <> struct FXRep<unsigned sat accum> : FXRep<unsigned accum> {};
 template <>
 struct FXRep<unsigned long sat accum> : FXRep<unsigned long accum> {};
 
-template<typename FXRep>
-LIBC_INLINE constexpr int get_value_len() {
-  return FXRep::INTEGRAL_LEN + FXRep::FRACTION_LEN; 
+template <typename FXRep> LIBC_INLINE constexpr int get_value_len() {
+  return FXRep::INTEGRAL_LEN + FXRep::FRACTION_LEN;
 }
 
 } // namespace fixed_point
