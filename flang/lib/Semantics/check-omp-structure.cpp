@@ -1626,10 +1626,8 @@ void OmpStructureChecker::CheckBarrierNesting(
 void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
   if (FindClause(llvm::omp::Clause::OMPC_threads) ||
       FindClause(llvm::omp::Clause::OMPC_simd)) {
-    context_.Say(
-        GetContext().clauseSource,
-        "THREADS, SIMD clauses are not allowed when ORDERED construct is a "
-        "standalone construct with no ORDERED region"_err_en_US);
+    context_.Say(GetContext().clauseSource,
+        "THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
   }
 
   int dependSinkCount{0}, dependSourceCount{0};
