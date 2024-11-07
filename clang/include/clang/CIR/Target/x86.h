@@ -23,7 +23,7 @@ enum class X86AVXABILevel {
 };
 
 // Possible argument classifications according to the x86 ABI documentation.
-enum X86ArgClass {
+enum class X86ArgClass {
   Integer = 0,
   SSE,
   SSEUp,

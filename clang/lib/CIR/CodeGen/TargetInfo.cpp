@@ -379,8 +379,10 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
 
   // Check some invariants
   // FIXME: Enforce these by construction.
-  assert((Hi != Memory || Lo == Memory) && "Invalid memory classification.");
-  assert((Hi != SSEUp || Lo == SSE) && "Invalid SSEUp classification.");
+  assert((Hi != Class::Memory || Lo == Class::Memory) &&
+         "Invalid memory classification.");
+  assert((Hi != Class::SSEUp || Lo == Class::SSE) &&
+         "Invalid SSEUp classification.");
 
   neededInt = 0;
   neededSSE = 0;
@@ -391,7 +393,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
 
   // AMD64-ABI 3.2.3p3: Rule 2. If the class is INTEGER, the next available
   // register of the sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9 is used.
-  case Integer:
+  case Class::Integer:
     ++neededInt;
 
     // Pick an 8-byte type based on the preferred type.
@@ -399,7 +401,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
 
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && mlir::isa<mlir::cir::IntType>(ResType)) {
+    if (Hi == Class::NoClass && mlir::isa<mlir::cir::IntType>(ResType)) {
       assert(!Ty->getAs<EnumType>() && "NYI");
       if (Ty->isSignedIntegerOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty))
@@ -411,7 +413,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
     // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next available SSE
     // register is used, the registers are taken in the order from %xmm0 to
     // %xmm7.
-  case SSE: {
+  case Class::SSE: {
     mlir::Type CIRType = CGT.ConvertType(Ty);
     ResType = GetSSETypeAtOffset(CIRType, 0, Ty, 0);
     ++neededSSE;
@@ -423,7 +425,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
   switch (Hi) {
   default:
     assert(false && "NYI");
-  case NoClass:
+  case Class::NoClass:
     break;
   }
 
@@ -453,23 +455,23 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
   // shouldn't be passed in registers for example, so there is no chance they
   // can straddle an eightbyte. Verify & simplify.
 
-  Lo = Hi = NoClass;
+  Lo = Hi = Class::NoClass;
   Class &Current = OffsetBase < 64 ? Lo : Hi;
-  Current = Memory;
+  Current = Class::Memory;
 
   if (const auto *BT = Ty->getAs<BuiltinType>()) {
     BuiltinType::Kind k = BT->getKind();
     if (k == BuiltinType::Void) {
-      Current = NoClass;
+      Current = Class::NoClass;
     } else if (k == BuiltinType::Int128 || k == BuiltinType::UInt128) {
       assert(false && "NYI");
-      Lo = Integer;
-      Hi = Integer;
+      Lo = Class::Integer;
+      Hi = Class::Integer;
     } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
-      Current = Integer;
+      Current = Class::Integer;
     } else if (k == BuiltinType::Float || k == BuiltinType::Double ||
                k == BuiltinType::Float16) {
-      Current = SSE;
+      Current = Class::SSE;
     } else if (k == BuiltinType::LongDouble) {
       assert(false && "NYI");
     } else
@@ -482,7 +484,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
   assert(!Ty->getAs<EnumType>() && "Enums NYI");
   if (Ty->hasPointerRepresentation()) {
-    Current = Integer;
+    Current = Class::Integer;
     return;
   }
 
@@ -508,27 +510,29 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   classify(RetTy, 0, Lo, Hi, /*isNamedArg*/ true);
 
   // Check some invariants.
-  assert((Hi != Memory || Lo == Memory) && "Invalid memory classification.");
-  assert((Hi != SSEUp || Lo == SSE) && "Invalid SSEUp classification.");
+  assert((Hi != Class::Memory || Lo == Class::Memory) &&
+         "Invalid memory classification.");
+  assert((Hi != Class::SSEUp || Lo == Class::SSE) &&
+         "Invalid SSEUp classification.");
 
   mlir::Type ResType = nullptr;
-  assert(Lo == NoClass || Lo == Integer ||
-         Lo == SSE && "Only NoClass and Integer supported so far");
+  assert(Lo == Class::NoClass || Lo == Class::Integer ||
+         Lo == Class::SSE && "Only NoClass and Integer supported so far");
 
   switch (Lo) {
-  case NoClass:
-    assert(Hi == NoClass && "Only NoClass supported so far for Hi");
+  case Class::NoClass:
+    assert(Hi == Class::NoClass && "Only NoClass supported so far for Hi");
     return ABIArgInfo::getIgnore();
 
   // AMD64-ABI 3.2.3p4: Rule 3. If the class is INTEGER, the next available
   // register of the sequence %rax, %rdx is used.
-  case Integer:
+  case Class::Integer:
     ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
 
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
     // TODO: extend the above consideration to MLIR
-    if (Hi == NoClass && mlir::isa<mlir::cir::IntType>(ResType)) {
+    if (Hi == Class::NoClass && mlir::isa<mlir::cir::IntType>(ResType)) {
       // Treat an enum type as its underlying type.
       if (const auto *EnumTy = RetTy->getAs<EnumType>())
         RetTy = EnumTy->getDecl()->getIntegerType();
@@ -542,7 +546,7 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
 
     // AMD64-ABI 3.2.3p4: Rule 4. If the class is SSE, the next available SSE
     // register of the sequence %xmm0, %xmm1 is used.
-  case SSE:
+  case Class::SSE:
     ResType = GetSSETypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
     break;
 
