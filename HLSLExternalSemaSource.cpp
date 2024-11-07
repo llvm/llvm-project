@@ -16,6 +16,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -144,9 +146,16 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor() {
-    if (Record->isCompleteDefinition())
-      return *this;
+  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
+    return IntegerLiteral::Create(
+        AST,
+        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
+                    static_cast<uint8_t>(RC)),
+        AST.UnsignedCharTy, SourceLocation());
+  }
+
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(ResourceClass RC) {
+    assert(!Record->isCompleteDefinition() && "record is already complete");
     ASTContext &AST = Record->getASTContext();
 
     QualType ConstructorType =
@@ -450,8 +459,6 @@ public:
   BuiltinTypeMethodBuilder &
   callBuiltin(StringRef BuiltinName, ArrayRef<Expr *> CallParms,
               bool AddResourceHandleAsFirstArg = true) {
-
-    // The first statement added to a method creates the declaration.
     if (!Method)
       createMethodDecl();
 
@@ -473,6 +480,14 @@ public:
         FD->getReturnType(), VK_PRValue, SourceLocation(), FPOptionsOverride());
     StmtsList.push_back(Call);
     return *this;
+  }
+
+  BuiltinTypeMethodBuilder &
+  callBuiltinForwardArgs(StringRef BuiltinName,
+                         bool AddResourceHandleAsFirstArg = true) {
+    // FIXME: Call the buildin with all of the method parameters
+    // plus optional resource handle as the first arg.
+    llvm_unreachable("not yet implemented");
   }
 
   BuiltinTypeDeclBuilder &finalizeMethod() {
@@ -534,9 +549,9 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names) {
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
   ASTContext &AST = S.getASTContext();
-  Expr *One = IntegerLiteral::Create(
-      AST, llvm::APInt(AST.getTypeSize(AST.IntTy), 1, true), AST.IntTy,
-      SourceLocation());
+  Expr *One =
+      IntegerLiteral::Create(AST, llvm::APInt(AST.getTypeSize(AST.IntTy), 1),
+                             AST.IntTy, SourceLocation());
   return BuiltinTypeMethodBuilder(S, *this, "IncrementCounter",
                                   AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", {One})
@@ -545,9 +560,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
   ASTContext &AST = S.getASTContext();
-  Expr *NegOne = IntegerLiteral::Create(
-      AST, llvm::APInt(AST.getTypeSize(AST.IntTy), -1, true), AST.IntTy,
-      SourceLocation());
+  Expr *NegOne =
+      IntegerLiteral::Create(AST, llvm::APInt(AST.getTypeSize(AST.IntTy), -1),
+                             AST.IntTy, SourceLocation());
   return BuiltinTypeMethodBuilder(S, *this, "DecrementCounter",
                                   AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", {NegOne})
@@ -659,7 +674,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV, bool RawBuffer) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addHandleMember(RC, RK, IsROV, RawBuffer)
-      .addDefaultHandleConstructor();
+      .addDefaultHandleConstructor(RC);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
@@ -712,19 +727,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
 
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
-                                "RasterizerOrderedStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"})
-             .Record;
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/true,
-                    /*RawBuffer=*/true)
-        .addArraySubscriptOperators()
-        .addIncrementCounterMethod()
-        .addDecrementCounterMethod()
-        .completeDefinition();
-  });
+  // FIXME: Also add Increment/DecrementCounter to
+  // RasterizerOrderedStructuredBuffer when llvm/llvm-project/#113648 is merged.
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
