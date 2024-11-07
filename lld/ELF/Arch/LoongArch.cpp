@@ -250,9 +250,9 @@ uint32_t LoongArch::calcEFlags() const {
 
     if ((flags & EF_LOONGARCH_ABI_MODIFIER_MASK) !=
         (target & EF_LOONGARCH_ABI_MODIFIER_MASK))
-      error(toString(f) +
-            ": cannot link object files with different ABI from " +
-            toString(targetFile));
+      ErrAlways(ctx) << f
+                     << ": cannot link object files with different ABI from "
+                     << targetFile;
 
     // We cannot process psABI v1.x / object ABI v0 files (containing stack
     // relocations), unlike ld.bfd.
@@ -270,7 +270,7 @@ uint32_t LoongArch::calcEFlags() const {
     // and the few impacted users are advised to simply rebuild world or
     // reinstall a recent system.
     if ((flags & EF_LOONGARCH_OBJABI_MASK) != EF_LOONGARCH_OBJABI_V1)
-      error(toString(f) + ": unsupported object file ABI version");
+      ErrAlways(ctx) << f << ": unsupported object file ABI version";
   }
 
   return target;
@@ -528,8 +528,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }

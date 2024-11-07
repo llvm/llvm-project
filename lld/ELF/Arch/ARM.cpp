@@ -195,8 +195,8 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -556,8 +556,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    error(getErrorLoc(ctx, loc) + "unencodeable immediate " + Twine(val).str() +
-          " for relocation " + toString(rel.type));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate "
+             << Twine(val).str() << " for relocation " << rel.type;
   write32(ctx, loc,
           (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -1216,20 +1216,22 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     sym->stOther = eSym.st_other;
 
     if (eSym.st_shndx != SHN_ABS) {
-      error("CMSE symbol '" + sym->getName() + "' in import library '" +
-            toString(this) + "' is not absolute");
+      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
+                     << "' in import library '" << this << "' is not absolute";
       continue;
     }
 
     if (!(eSym.st_value & 1) || (eSym.getType() != STT_FUNC)) {
-      error("CMSE symbol '" + sym->getName() + "' in import library '" +
-            toString(this) + "' is not a Thumb function definition");
+      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
+                     << "' in import library '" << this
+                     << "' is not a Thumb function definition";
       continue;
     }
 
     if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-      error("CMSE symbol '" + sym->getName() +
-            "' is multiply defined in import library '" + toString(this) + "'");
+      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
+                     << "' is multiply defined in import library '" << this
+                     << "'";
       continue;
     }
 
@@ -1283,7 +1285,8 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
     if (!ctx.arg.armCMSESupport) {
-      error("CMSE is only supported by ARMv8-M architecture or later");
+      ErrAlways(ctx)
+          << "CMSE is only supported by ARMv8-M architecture or later";
       ctx.arg.cmseImplib = false;
       break;
     }
@@ -1293,16 +1296,17 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
     Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
-      error(toString(acleSeSym->file) + ": cmse special symbol '" +
-            acleSeSym->getName() +
-            "' detected, but no associated entry function definition '" + name +
-            "' with external linkage found");
+      ErrAlways(ctx)
+          << acleSeSym->file << ": cmse special symbol '"
+          << acleSeSym->getName()
+          << "' detected, but no associated entry function definition '" << name
+          << "' with external linkage found";
       continue;
     }
 
     std::string errMsg = checkCmseSymAttributes(acleSeSym, sym);
     if (!errMsg.empty()) {
-      error(errMsg);
+      ErrAlways(ctx) << errMsg;
       continue;
     }
 
@@ -1432,7 +1436,8 @@ void ArmCmseSGSection::finalizeContents() {
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
   if ((getVA() & ~1) != (addr & ~1)) {
-    error("start address of '.gnu.sgstubs' is different from previous link");
+    ErrAlways(ctx)
+        << "start address of '.gnu.sgstubs' is different from previous link";
     return;
   }
 
@@ -1500,8 +1505,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    error("failed to open " + ctx.arg.cmseOutputLib + ": " +
-          llvm::toString(bufferOrErr.takeError()));
+    ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
+                   << llvm::toString(bufferOrErr.takeError());
     return;
   }
 

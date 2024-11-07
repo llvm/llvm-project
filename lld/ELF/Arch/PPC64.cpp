@@ -240,7 +240,8 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
   if (gepToLep < 7)
     return 1 << gepToLep;
 
-  error("reserved value of 7 in the 3 most-significant-bits of st_other");
+  ErrAlways(ctx)
+      << "reserved value of 7 in the 3 most-significant-bits of st_other";
   return 0;
 }
 
@@ -642,9 +643,9 @@ uint32_t PPC64::calcEFlags() const {
   for (InputFile *f : ctx.objectFiles) {
     uint32_t flag = getEFlags(f);
     if (flag == 1)
-      error(toString(f) + ": ABI version 1 is not supported");
+      ErrAlways(ctx) << f << ": ABI version 1 is not supported";
     else if (flag > 2)
-      error(toString(f) + ": unrecognized e_flags: " + Twine(flag));
+      ErrAlways(ctx) << f << ": unrecognized e_flags: " << Twine(flag);
   }
   return 2;
 }
@@ -660,7 +661,8 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // "addi reg, 2, var@toc".
     uint32_t insn = readFromHalf16(ctx, loc);
     if (getPrimaryOpCode(insn) != LD)
-      error("expected a 'ld' for got-indirect to toc-relative relaxing");
+      ErrAlways(ctx)
+          << "expected a 'ld' for got-indirect to toc-relative relaxing";
     writeFromHalf16(ctx, loc, (insn & 0x03ffffff) | 0x38000000);
     relocateNoSym(loc, R_PPC64_TOC16_LO, val);
     break;
@@ -670,7 +672,8 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // instruction (the primary opcode).
     uint64_t insn = readPrefixedInst(ctx, loc);
     if ((insn & 0xfc000000) != 0xe4000000)
-      error("expected a 'pld' for got-indirect to pc-relative relaxing");
+      ErrAlways(ctx)
+          << "expected a 'pld' for got-indirect to pc-relative relaxing";
     insn &= ~0xff000000fc000000;
 
     // Replace the cleared bits with the values for PADDI (0x600000038000000);
@@ -933,14 +936,14 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     if (locAsInt % 4 == 0) {
       uint32_t primaryOp = getPrimaryOpCode(read32(ctx, loc));
       if (primaryOp != 31)
-        error("unrecognized instruction for IE to LE R_PPC64_TLS");
+        ErrAlways(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
       uint32_t secondaryOp = (read32(ctx, loc) & 0x000007fe) >> 1; // bits 21-30
       uint32_t dFormOp = getPPCDFormOp(secondaryOp);
       uint32_t finalReloc;
       if (dFormOp == 0) { // Expecting a DS-Form instruction.
         dFormOp = getPPCDSFormOp(secondaryOp);
         if (dFormOp == 0)
-          error("unrecognized instruction for IE to LE R_PPC64_TLS");
+          ErrAlways(ctx) << "unrecognized instruction for IE to LE R_PPC64_TLS";
         finalReloc = R_PPC64_TPREL16_LO_DS;
       } else
         finalReloc = R_PPC64_TPREL16_LO;
@@ -1098,8 +1101,8 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TLS:
     return R_TLSIE_HINT;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -1334,8 +1337,9 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
       uint32_t insn = readFromHalf16(ctx, loc);
       if (isInstructionUpdateForm(insn))
-        error(getErrorLoc(ctx, loc) +
-              "can't toc-optimize an update instruction: 0x" + utohexstr(insn));
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "can't toc-optimize an update instruction: 0x"
+                 << utohexstr(insn);
       writeFromHalf16(ctx, loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
       write16(ctx, loc, lo(val));
@@ -1353,9 +1357,9 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.
       if (isInstructionUpdateForm(insn))
-        error(getErrorLoc(ctx, loc) +
-              "Can't toc-optimize an update instruction: 0x" +
-              Twine::utohexstr(insn));
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "Can't toc-optimize an update instruction: 0x"
+                 << Twine::utohexstr(insn);
       insn &= 0xffe00000 | mask;
       writeFromHalf16(ctx, loc, insn | 0x00020000 | lo(val));
     } else {
@@ -1726,7 +1730,8 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   // Check that the adjusted size doesn't overflow what we can represent with 2
   // instructions.
   if (stackFrameSize < ctx.arg.splitStackAdjustSize + INT32_MIN) {
-    error(getErrorLoc(ctx, loc) + "split-stack prologue adjustment overflows");
+    Err(ctx) << getErrorLoc(ctx, loc)
+             << "split-stack prologue adjustment overflows";
     return false;
   }
 

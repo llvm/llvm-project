@@ -248,8 +248,8 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
   // if the symbol has a local version as it won't be in the dynamic
   // symbol table.
   if (ctx.arg.shared && versionId != VER_NDX_LOCAL)
-    error(toString(file) + ": symbol " + s + " has undefined version " +
-          verstr);
+    ErrAlways(ctx) << file << ": symbol " << s << " has undefined version "
+                   << verstr;
 }
 
 void Symbol::extract(Ctx &ctx) const {

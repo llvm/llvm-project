@@ -151,8 +151,8 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
   case R_386_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -372,8 +372,9 @@ void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     //
     // Note: call *x@tlsdesc(%eax) may not immediately follow this instruction.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
-      error(getErrorLoc(ctx, loc - 2) +
-            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      ErrAlways(ctx)
+          << getErrorLoc(ctx, loc - 2)
+          << "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax";
       return;
     }
     loc[-1] = 0x05;
@@ -405,8 +406,9 @@ void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   } else if (rel.type == R_386_TLS_GOTDESC) {
     // Convert leal x@tlsdesc(%ebx), %eax to movl x@gotntpoff(%ebx), %eax.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
-      error(getErrorLoc(ctx, loc - 2) +
-            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      ErrAlways(ctx)
+          << getErrorLoc(ctx, loc - 2)
+          << "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax";
       return;
     }
     loc[-2] = 0x8b;
