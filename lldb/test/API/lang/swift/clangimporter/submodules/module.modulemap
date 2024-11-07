@@ -1,0 +1,4 @@
+module A {
+  umbrella "A"
+  explicit module * { export * }
+}

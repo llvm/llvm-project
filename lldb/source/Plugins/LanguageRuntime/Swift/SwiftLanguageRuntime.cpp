@@ -1469,66 +1469,67 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
   auto *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
       type_system_or_err->get());
-  if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors()) {
-    std::string module_name = "$__lldb_module_for_";
-    module_name.append(&name.GetCString()[1]);
-    SourceModule module_info;
-    module_info.path.push_back(ConstString(module_name));
+  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+    return;
+  std::string module_name = "$__lldb_module_for_";
+  module_name.append(&name.GetCString()[1]);
+  SourceModule module_info;
+  module_info.path.push_back(ConstString(module_name));
 
-    Status module_creation_error;
-    swift::ModuleDecl *module_decl =
-        swift_ast_ctx->CreateModule(module_info, module_creation_error,
-                                    /*importInfo*/ {});
+  swift::ModuleDecl *module_decl = nullptr;
+  auto module_decl_or_err = swift_ast_ctx->CreateModule(module_name,
+                                                        /*importInfo*/ {});
+  if (!module_decl_or_err)
+    llvm::consumeError(module_decl_or_err.takeError());
+  else
+    module_decl = &*module_decl_or_err;
+  if (!module_decl)
+    return;
+  const bool is_static = false;
+  const auto introducer = swift::VarDecl::Introducer::Let;
 
-    if (module_creation_error.Success() && module_decl) {
-      const bool is_static = false;
-      const auto introducer = swift::VarDecl::Introducer::Let;
+  swift::VarDecl *var_decl = new (*swift_ast_ctx->GetASTContext())
+      swift::VarDecl(is_static, introducer, swift::SourceLoc(),
+                     swift_ast_ctx->GetIdentifier(name.GetCString()),
+                     module_decl);
+  var_decl->setInterfaceType(
+      llvm::expectedToStdOptional(
+          swift_ast_ctx->GetSwiftType(swift_ast_ctx->GetErrorType()))
+          .value_or(swift::Type()));
+  var_decl->setDebuggerVar(true);
 
-      swift::VarDecl *var_decl = new (*swift_ast_ctx->GetASTContext())
-          swift::VarDecl(is_static, introducer, swift::SourceLoc(),
-                         swift_ast_ctx->GetIdentifier(name.GetCString()),
-                         module_decl);
-      var_decl->setInterfaceType(
-          llvm::expectedToStdOptional(
-              swift_ast_ctx->GetSwiftType(swift_ast_ctx->GetErrorType()))
-              .value_or(swift::Type()));
-      var_decl->setDebuggerVar(true);
+  SwiftPersistentExpressionState *persistent_state =
+      llvm::cast<SwiftPersistentExpressionState>(
+          target.GetPersistentExpressionStateForLanguage(
+              lldb::eLanguageTypeSwift));
+  if (!persistent_state)
+    return;
 
-      SwiftPersistentExpressionState *persistent_state =
-          llvm::cast<SwiftPersistentExpressionState>(
-              target.GetPersistentExpressionStateForLanguage(
-                  lldb::eLanguageTypeSwift));
-      if (!persistent_state)
-        return;
+  persistent_state->RegisterSwiftPersistentDecl({swift_ast_ctx, var_decl});
 
-      persistent_state->RegisterSwiftPersistentDecl({swift_ast_ctx, var_decl});
+  ConstString mangled_name;
 
-      ConstString mangled_name;
+  {
+    swift::Mangle::ASTMangler mangler(true);
+    mangled_name = ConstString(mangler.mangleGlobalVariableFull(var_decl));
+  }
 
-      {
-        swift::Mangle::ASTMangler mangler(true);
-        mangled_name = ConstString(mangler.mangleGlobalVariableFull(var_decl));
-      }
+  lldb::addr_t symbol_addr;
 
-      lldb::addr_t symbol_addr;
+  {
+    ProcessSP process_sp(target.GetProcessSP());
+    Status alloc_error;
 
-      {
-        ProcessSP process_sp(target.GetProcessSP());
-        Status alloc_error;
+    symbol_addr = process_sp->AllocateMemory(
+        process_sp->GetAddressByteSize(),
+        lldb::ePermissionsWritable | lldb::ePermissionsReadable, alloc_error);
 
-        symbol_addr = process_sp->AllocateMemory(
-            process_sp->GetAddressByteSize(),
-            lldb::ePermissionsWritable | lldb::ePermissionsReadable,
-            alloc_error);
+    if (alloc_error.Success() && symbol_addr != LLDB_INVALID_ADDRESS) {
+      Status write_error;
+      process_sp->WritePointerToMemory(symbol_addr, addr, write_error);
 
-        if (alloc_error.Success() && symbol_addr != LLDB_INVALID_ADDRESS) {
-          Status write_error;
-          process_sp->WritePointerToMemory(symbol_addr, addr, write_error);
-
-          if (write_error.Success()) {
-            persistent_state->RegisterSymbol(mangled_name, symbol_addr);
-          }
-        }
+      if (write_error.Success()) {
+        persistent_state->RegisterSymbol(mangled_name, symbol_addr);
       }
     }
   }
