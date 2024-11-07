@@ -352,17 +352,20 @@ SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange() {
     base = term->getBlockOperands().data();
 }
 
-bool Block::isReachable(Block *other, ArrayRef<Block *> except) {
+bool Block::isReachable(Block *other, SmallPtrSet<Block *, 16> &&except) {
   assert(getParent() == other->getParent() && "expected same region");
+  if (except.contains(other)) {
+    // Fast path: If `other` is in the `except` set, there can be no path from
+    // "this" to `other` (that does not pass through an excluded block).
+    return false;
+  }
   SmallVector<Block *> worklist(succ_begin(), succ_end());
-  SmallPtrSet<Block *, 16> visited;
   while (!worklist.empty()) {
     Block *next = worklist.pop_back_val();
-    if (llvm::is_contained(except, next))
-      continue;
     if (next == other)
       return true;
-    if (!visited.insert(next).second)
+    // Note: `except` keeps track of already visited blocks.
+    if (!except.insert(next).second)
       continue;
     worklist.append(next->succ_begin(), next->succ_end());
   }
