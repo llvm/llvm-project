@@ -1926,9 +1926,9 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
 
-  Register BallotReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVType *BallotType = GR.getOrCreateSPIRVVectorType(IntTy, 4, I, TII);
+  Register BallotReg = MRI->createVirtualRegister(GR.getRegClass(BallotType));
 
   bool Result =
       BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformBallot))
@@ -1938,7 +1938,7 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
           .addUse(I.getOperand(2).getReg())
           .constrainAllUses(TII, TRI, RBI);
 
-  Result |=
+  Result &=
       BuildMI(BB, I, I.getDebugLoc(),
               TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
           .addDef(ResVReg)
