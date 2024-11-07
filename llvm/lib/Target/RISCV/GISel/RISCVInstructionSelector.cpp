@@ -261,7 +261,9 @@ RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
     return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
   }
 
-  // TODO: Use computeKnownBits.
+  unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
+  if (KB->maskedValueIsZero(RootReg, APInt::getBitsSetFrom(Size, Bits)))
+    return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 
   return std::nullopt;
 }
