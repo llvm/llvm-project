@@ -6,7 +6,9 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -std=c++20 -mconstructor-aliases -O0 -fclangir -emit-llvm -fno-clangir-call-conv-lowering %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// PREV: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck %s
+// FIXME: LLVM IR dialect does not yet support function ptr globals, which precludes
+// a lot of the proper semantics for properly representing alias functions in LLVM
+// (see the note on LLVM_O1 below).
 
 struct Member {
   ~Member();
@@ -42,15 +44,20 @@ struct B : A {
 // (aliases from C)
 // FIXME: this should be an alias declaration even in -O0
 // CIR: cir.func @_ZN1CD2Ev(%arg0: !cir.ptr<!ty_C>{{.*}})) {{.*}} {
+// CIR: cir.func private @_ZN1CD1Ev(!cir.ptr<!ty_C>) alias(@_ZN1CD2Ev)
+
 // CIR_O1-NOT: cir.func @_ZN1CD2Ev(%arg0: !cir.ptr<!ty_C>{{.*}})) {{.*}} {
 // CIR_O1: cir.func private @_ZN1CD2Ev(!cir.ptr<!ty_C>) alias(@_ZN1BD2Ev)
-
-// CIR: cir.func private @_ZN1CD1Ev(!cir.ptr<!ty_C>) alias(@_ZN1CD2Ev)
+// FIXME: LLVM alias directly to @_ZN1BD2Ev instead of through @_ZN1CD2Ev
+// CIR_O1: cir.func private @_ZN1CD1Ev(!cir.ptr<!ty_C>) alias(@_ZN1CD2Ev)
 
 // FIXME: LLVM output should be: @_ZN1CD2Ev ={{.*}} unnamed_addr alias {{.*}} @_ZN1BD2Ev
 // LLVM: define dso_local void @_ZN1CD2Ev(ptr
 // FIXME: LLVM output should be: @_ZN1CD1Ev ={{.*}} unnamed_addr alias {{.*}} @_ZN1CD2Ev
 // LLVM: declare {{.*}} dso_local void @_ZN1CD1Ev(ptr)
+// FIXME: note that LLVM_O1 cannot be tested because the canocalizers running
+// on top of LLVM IR dialect delete _ZN1CD2Ev in its current form (a function
+// declaration) since its not used in the TU.
 
 B::~B() { }
 
