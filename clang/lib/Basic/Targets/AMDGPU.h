@@ -462,6 +462,10 @@ public:
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
+  }
 };
 
 } // namespace targets
