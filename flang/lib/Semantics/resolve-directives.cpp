@@ -553,7 +553,7 @@ public:
     return false;
   }
 
-  void Post(const parser::OmpDependSinkVec &x) {
+  void Post(const parser::OmpIteration &x) {
     const auto &name{std::get<parser::Name>(x.t)};
     ResolveName(&name);
   }
@@ -1138,7 +1138,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
 static bool IsLastNameArray(const parser::Designator &designator) {
   const auto &name{GetLastName(designator)};
   const evaluate::DataRef dataRef{*(name.symbol)};
-  return common::visit(
+  return common::visit( //
       common::visitors{
           [](const evaluate::SymbolRef &ref) {
             return ref->Rank() > 0 ||
