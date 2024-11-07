@@ -20,14 +20,14 @@
 int main(int, char**) {
   {
     typedef std::array<int, 0> C;
-    C c = {};
+    C c         = {};
     C const& cc = c;
     TEST_LIBCPP_ASSERT_FAILURE(c.back(), "cannot call array<T, 0>::back() on a zero-sized array");
     TEST_LIBCPP_ASSERT_FAILURE(cc.back(), "cannot call array<T, 0>::back() on a zero-sized array");
   }
   {
     typedef std::array<const int, 0> C;
-    C c = {{}};
+    C c         = {{}};
     C const& cc = c;
     TEST_LIBCPP_ASSERT_FAILURE(c.back(), "cannot call array<T, 0>::back() on a zero-sized array");
     TEST_LIBCPP_ASSERT_FAILURE(cc.back(), "cannot call array<T, 0>::back() on a zero-sized array");
