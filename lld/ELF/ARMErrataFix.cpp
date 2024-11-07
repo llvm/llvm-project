@@ -420,8 +420,8 @@ void ARMErr657417Patcher::insertPatches(
 static void implementPatch(ScanResult sr, InputSection *isec,
                            std::vector<Patch657417Section *> &patches) {
   Ctx &ctx = isec->getCtx();
-  log("detected cortex-a8-657419 erratum sequence starting at " +
-      utohexstr(isec->getVA(sr.off)) + " in unpatched output.");
+  Log(ctx) << "detected cortex-a8-657419 erratum sequence starting at " <<
+      utohexstr(isec->getVA(sr.off)) << " in unpatched output";
   Patch657417Section *psec;
   // We have two cases to deal with.
   // Case 1. There is a relocation at patcheeOffset to a symbol. The
