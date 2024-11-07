@@ -2768,11 +2768,11 @@ func.func @constant_mask_2d_trailing_scalable() -> vector<4x[4]xi1> {
 
 /// Currently, this is not supported as generating the mask would require
 /// unrolling the leading scalable dimension at compile time.
-func.func @cannot_constant_mask_2d_leading_scalable() -> vector<[4]x4xi1> {
+func.func @negative_constant_mask_2d_leading_scalable() -> vector<[4]x4xi1> {
   %0 = vector.constant_mask [4, 2] : vector<[4]x4xi1>
   return %0 : vector<[4]x4xi1>
 }
-// CHECK-LABEL:   func.func @cannot_genbool_2d_leading_scalable
+// CHECK-LABEL:   func.func @negative_constant_mask_2d_leading_scalable
 // CHECK:           %[[VAL_0:.*]] = vector.constant_mask [4, 2] : vector<[4]x4xi1>
 // CHECK:           return %[[VAL_0]] : vector<[4]x4xi1>
 
