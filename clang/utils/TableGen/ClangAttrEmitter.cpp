@@ -3864,9 +3864,10 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
       OS << "    if (";
       if (Names.size() > 1) {
         SmallVector<StringRef, 6> SameLenNames;
+        StringRef FSName = FS.name();
         llvm::copy_if(
             Names, std::back_inserter(SameLenNames),
-            [&](StringRef N) { return N.size() == FS.name().size(); });
+            [&](StringRef N) { return N.size() == FSName.size(); });
 
         if (SameLenNames.size() == 1) {
           OS << "Name.size() == " << FS.name().size() << " && ";
