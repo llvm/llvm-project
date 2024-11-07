@@ -5232,8 +5232,8 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
     int NewRetAddrLoc = SPDiff + FL->getReturnSaveOffset();
     int NewRetAddr = MF.getFrameInfo().CreateFixedObject(SlotSize,
                                                          NewRetAddrLoc, true);
-    EVT VT = Subtarget.getScalarIntVT();
-    SDValue NewRetAddrFrIdx = DAG.getFrameIndex(NewRetAddr, VT);
+    SDValue NewRetAddrFrIdx =
+        DAG.getFrameIndex(NewRetAddr, Subtarget.getScalarIntVT());
     Chain = DAG.getStore(Chain, dl, OldRetAddr, NewRetAddrFrIdx,
                          MachinePointerInfo::getFixedStack(MF, NewRetAddr));
   }
@@ -5243,13 +5243,12 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
 /// CalculateTailCallArgDest - Remember Argument for later processing. Calculate
 /// the position of the argument.
 static void CalculateTailCallArgDest(
-    SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64, SDValue Arg,
-    int SPDiff, unsigned ArgOffset,
+    SelectionDAG &DAG, MachineFunction &MF, EVT VT, SDValue Arg, int SPDiff,
+    unsigned ArgOffset,
     SmallVectorImpl<TailCallArgumentInfo> &TailCallArguments) {
   int Offset = ArgOffset + SPDiff;
   uint32_t OpSize = (Arg.getValueSizeInBits() + 7) / 8;
   int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
-  EVT VT = IsPPC64 ? MVT::i64 : MVT::i32;
   SDValue FIN = DAG.getFrameIndex(FI, VT);
   TailCallArgumentInfo Info;
   Info.Arg = Arg;
@@ -5266,9 +5265,9 @@ SDValue PPCTargetLowering::EmitTailCallLoadFPAndRetAddr(
     SDValue &FPOpOut, const SDLoc &dl) const {
   if (SPDiff) {
     // Load the LR and FP stack slot for later adjusting.
-    EVT VT = Subtarget.getScalarIntVT();
     LROpOut = getReturnAddrFrameIndex(DAG);
-    LROpOut = DAG.getLoad(VT, dl, Chain, LROpOut, MachinePointerInfo());
+    LROpOut = DAG.getLoad(Subtarget.getScalarIntVT(), dl, Chain, LROpOut,
+                          MachinePointerInfo());
     Chain = SDValue(LROpOut.getNode(), 1);
   }
   return Chain;
@@ -5310,8 +5309,9 @@ static void LowerMemOpCallTo(
     MemOpChains.push_back(
         DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
     // Calculate and remember argument location.
-  } else CalculateTailCallArgDest(DAG, MF, isPPC64, Arg, SPDiff, ArgOffset,
-                                  TailCallArguments);
+  } else
+    CalculateTailCallArgDest(DAG, MF, Subtarget.getScalarIntVT(), Arg, SPDiff,
+                             ArgOffset, TailCallArguments);
 }
 
 static void
@@ -6174,7 +6174,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
             DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
       } else {
         // Calculate and remember argument location.
-        CalculateTailCallArgDest(DAG, MF, false, Arg, SPDiff, LocMemOffset,
+        CalculateTailCallArgDest(DAG, MF, MVT::i32, Arg, SPDiff, LocMemOffset,
                                  TailCallArguments);
       }
     }
@@ -11309,11 +11309,11 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Val);
     }
     unsigned Opcode = Subtarget.isPPC64() ? PPC::CFENCE8 : PPC::CFENCE;
-    EVT FTy = Subtarget.getScalarIntVT();
     return SDValue(
-        DAG.getMachineNode(Opcode, DL, MVT::Other,
-                           DAG.getNode(ISD::ANY_EXTEND, DL, FTy, Val),
-                           Op.getOperand(0)),
+        DAG.getMachineNode(
+            Opcode, DL, MVT::Other,
+            DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getScalarIntVT(), Val),
+            Op.getOperand(0)),
         0);
   }
   default:
