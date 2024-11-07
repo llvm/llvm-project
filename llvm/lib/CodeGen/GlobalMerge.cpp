@@ -633,10 +633,13 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       Instruction *Pad = BB.getFirstNonPHI();
-      if (!Pad->isEHPad())
+      auto *II = dyn_cast<IntrinsicInst>(Pad);
+      if (!Pad->isEHPad() &&
+          !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
         continue;
 
-      // Keep globals used by landingpads and catchpads.
+      // Keep globals used by landingpads, catchpads,
+      // or instrinsics that require a plain global.
       for (const Use &U : Pad->operands()) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
@@ -713,25 +716,6 @@ bool GlobalMergeImpl::run(Module &M) {
 
     // Ignore all "required" globals:
     if (isMustKeepGlobalVariable(&GV))
-      continue;
-    auto checkUsers = [](const GlobalVariable *GV) {
-      for (const User *CurrentUser : GV->users()) {
-        auto *I = dyn_cast<Instruction>(CurrentUser);
-        if (!I)
-          continue;
-        // Do not merge globals in exception pads.
-        if (I->isEHPad())
-          return false;
-        if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-          // Some intrinsics require a plain global.
-          if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
-            return false;
-        }
-      }
-      return true;
-    };
-
-    if (!checkUsers(&GV))
       continue;
 
     // Don't merge tagged globals, as each global should have its own unique
