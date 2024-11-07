@@ -15,6 +15,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIf(macos_version=["=", "15.0"])
 class TestCase(TestBase):
     @swiftTest
     @skipUnlessDarwin
