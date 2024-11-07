@@ -4206,8 +4206,9 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(
   SubstTemplateTypeParmTypeBits.Index = Index;
   SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
   SubstTemplateTypeParmTypeBits.SubstitutionFlag = llvm::to_underlying(Flag);
-  assert(Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
-         PackIndex && "ExpandPacksInPlace needs a valid PackIndex");
+  assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
+          PackIndex) &&
+         "ExpandPacksInPlace needs a valid PackIndex");
   assert(AssociatedDecl != nullptr);
 }
 

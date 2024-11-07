@@ -6457,8 +6457,9 @@ public:
     ID.AddInteger(Index);
     ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
     ID.AddInteger(llvm::to_underlying(Flag));
-    assert(Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
-           PackIndex && "ExpandPacksInPlace needs a valid PackIndex");
+    assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
+            PackIndex) &&
+           "ExpandPacksInPlace needs a valid PackIndex");
   }
 
   static bool classof(const Type *T) {

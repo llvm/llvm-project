@@ -1728,11 +1728,12 @@ public:
       QualType Wrapped, QualType Contained,
       const HLSLAttributedResourceType::Attributes &Attrs);
 
-  QualType getSubstTemplateTypeParmType(
-      QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-      std::optional<unsigned> PackIndex,
-      SubstTemplateTypeParmTypeFlag Flag =
-          SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace) const;
+  QualType
+  getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
+                               unsigned Index,
+                               std::optional<unsigned> PackIndex,
+                               SubstTemplateTypeParmTypeFlag Flag =
+                                   SubstTemplateTypeParmTypeFlag::None) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
