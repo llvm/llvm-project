@@ -352,7 +352,7 @@ define bfloat @fma_bf16_expanded_unsafe(bfloat %a, bfloat %b, bfloat %c) #0 {
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_unsafe_param_0];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_unsafe_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_unsafe_param_2];
-; CHECK-FTZ-NEXT:    fma.rn.ftz.relu.bf16 %rs4, %rs1, %rs2, %rs3;
+; CHECK-FTZ-NEXT:    fma.rn.relu.bf16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs4;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -442,7 +442,7 @@ define bfloat @fma_bf16_expanded_unsafe_multiple_uses_of_fma(bfloat %a, bfloat %
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_unsafe_multiple_uses_of_fma_param_0];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_unsafe_multiple_uses_of_fma_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_unsafe_multiple_uses_of_fma_param_2];
-; CHECK-FTZ-NEXT:    fma.rn.ftz.bf16 %rs4, %rs1, %rs2, %rs3;
+; CHECK-FTZ-NEXT:    fma.rn.bf16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-FTZ-NEXT:    mov.b16 %rs5, 0x0000;
 ; CHECK-FTZ-NEXT:    max.bf16 %rs6, %rs4, %rs5;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r1, %rs4;
@@ -549,7 +549,7 @@ define bfloat @fma_bf16_expanded_maxnum_unsafe(bfloat %a, bfloat %b, bfloat %c) 
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_maxnum_unsafe_param_0];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_maxnum_unsafe_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_maxnum_unsafe_param_2];
-; CHECK-FTZ-NEXT:    fma.rn.ftz.relu.bf16 %rs4, %rs1, %rs2, %rs3;
+; CHECK-FTZ-NEXT:    fma.rn.relu.bf16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs4;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -1037,7 +1037,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_unsafe(<2 x bfloat> %a, <2 x bfloat> %b
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_unsafe_param_2];
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r2, [fma_bf16x2_expanded_unsafe_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r3, [fma_bf16x2_expanded_unsafe_param_0];
-; CHECK-FTZ-NEXT:    fma.rn.ftz.relu.bf16x2 %r4, %r3, %r2, %r1;
+; CHECK-FTZ-NEXT:    fma.rn.relu.bf16x2 %r4, %r3, %r2, %r1;
 ; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -1166,7 +1166,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_unsafe_multiple_uses_of_fma(<2 x bfloat
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_unsafe_multiple_uses_of_fma_param_2];
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r2, [fma_bf16x2_expanded_unsafe_multiple_uses_of_fma_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r3, [fma_bf16x2_expanded_unsafe_multiple_uses_of_fma_param_0];
-; CHECK-FTZ-NEXT:    fma.rn.ftz.bf16x2 %r4, %r3, %r2, %r1;
+; CHECK-FTZ-NEXT:    fma.rn.bf16x2 %r4, %r3, %r2, %r1;
 ; CHECK-FTZ-NEXT:    mov.b32 %r5, 0;
 ; CHECK-FTZ-NEXT:    max.bf16x2 %r6, %r4, %r5;
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
@@ -1336,7 +1336,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_unsafe(<2 x bfloat> %a, <2 x bfl
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_maxnum_unsafe_param_2];
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r2, [fma_bf16x2_expanded_maxnum_unsafe_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r3, [fma_bf16x2_expanded_maxnum_unsafe_param_0];
-; CHECK-FTZ-NEXT:    fma.rn.ftz.relu.bf16x2 %r4, %r3, %r2, %r1;
+; CHECK-FTZ-NEXT:    fma.rn.relu.bf16x2 %r4, %r3, %r2, %r1;
 ; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-FTZ-NEXT:    ret;
 ;
