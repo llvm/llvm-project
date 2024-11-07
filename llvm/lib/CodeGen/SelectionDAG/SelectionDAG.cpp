@@ -2518,7 +2518,12 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     SDValue StoreValue = ST->getValue();
     unsigned ResNo = StoreValue.getResNo();
     Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
-    if (CallRetResNo == ResNo || !ST->isSimple() ||
+    // If the pointer value does not come from the IR, it could come from ABI
+    // lowering and may alias with the arguments of the library call if they are
+    // passed via the stack.
+    const Value *PointerValue =
+        dyn_cast_or_null<const Value *>(ST->getPointerInfo().V);
+    if (!PointerValue || CallRetResNo == ResNo || !ST->isSimple() ||
         ST->getAddressSpace() != 0 ||
         ST->getAlign() <
             getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
