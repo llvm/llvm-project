@@ -2687,6 +2687,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
       return selectDot4AddPacked<true>(ResVReg, ResType, I);
     return selectDot4AddPackedExpansion<true>(ResVReg, ResType, I);
+  case Intrinsic::spv_dot4add_u8packed:
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
+        STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+      return selectDot4AddPacked<false>(ResVReg, ResType, I);
+    return selectDot4AddPackedExpansion<false>(ResVReg, ResType, I);
   case Intrinsic::spv_all:
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
