@@ -20,7 +20,7 @@ class Pass;
 
 /// Lowers Mesh communication operations (updateHalo, AllGater, ...)
 /// to MPI primitives.
-std::unique_ptr<Pass> createConvertMeshToMPIPass();
+std::unique_ptr<::mlir::Pass> createConvertMeshToMPIPass();
 
 } // namespace mlir
 

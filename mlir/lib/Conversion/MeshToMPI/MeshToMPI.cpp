@@ -37,6 +37,130 @@ using namespace mlir;
 using namespace mlir::mesh;
 
 namespace {
+static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b, Value linearIndex, ValueRange dimensions) {
+  int n = dimensions.size();
+  SmallVector<Value> multiIndex(n);
+
+  for (int i = n - 1; i >= 0; --i) {
+    b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
+    multiIndex[i] = b.create<arith::RemSIOp>(loc, linearIndex, dimensions[i]);
+    if(i > 0) {
+      linearIndex = b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
+    }
+  }
+
+  return multiIndex;
+}
+
+Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex, ValueRange dimensions) {
+  auto linearIndex = b.create<arith::ConstantIndexOp>(loc, 0).getResult();
+  auto stride = b.create<arith::ConstantIndexOp>(loc, 1).getResult();
+
+  for (int i = multiIndex.size() - 1; i >= 0; --i) {
+      linearIndex = b.create<arith::AddIOp>(loc, multiIndex[i], stride);
+      stride = b.create<arith::MulIOp>(loc, stride, dimensions[i]);
+  }
+
+  return linearIndex;
+}
+
+// This pattern converts the mesh.update_halo operation to MPI calls
+struct ConvertProcessMultiIndexOp
+    : public mlir::OpRewritePattern<mlir::mesh::ProcessMultiIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::mesh::ProcessMultiIndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    SymbolTableCollection symbolTableCollection;
+    auto loc = op.getLoc();
+    auto meshOp = getMesh(op, symbolTableCollection);
+    // For now we only support static mesh shapes
+    if(ShapedType::isDynamicShape(meshOp.getShape())) {
+      return mlir::failure();
+    }
+
+    SmallVector<Value> dims;
+    llvm::transform(meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
+      return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
+    });
+    auto rank = rewriter.create<ProcessLinearIndexOp>(op.getLoc(), meshOp).getResult();
+    auto mIdx = linearToMultiIndex(loc, rewriter, rank, dims);
+
+    // optionally extract subset of mesh axes
+    auto axes = op.getAxes();
+    if(!axes.empty()) {
+      SmallVector<Value> subIndex;
+      for(auto axis : axes) {
+        subIndex.push_back(mIdx[axis]);
+      }
+      mIdx = subIndex;
+    }
+
+    rewriter.replaceOp(op, mIdx);
+    return mlir::success();
+  }
+};
+
+// This pattern converts the mesh.update_halo operation to MPI calls
+struct ConvertProcessLinearIndexOp
+    : public mlir::OpRewritePattern<mlir::mesh::ProcessLinearIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::mesh::ProcessLinearIndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto rank = rewriter.create<mpi::CommRankOp>(op.getLoc(), TypeRange{mpi::RetvalType::get(op->getContext()), rewriter.getI32Type()}).getRank();
+    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(op, rewriter.getIndexType(), rank);
+    return mlir::success();
+  }
+};
+
+// This pattern converts the mesh.update_halo operation to MPI calls
+struct ConvertNeighborsLinearIndicesOp
+    : public mlir::OpRewritePattern<mlir::mesh::NeighborsLinearIndicesOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::mesh::NeighborsLinearIndicesOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto axes = op.getSplitAxes();
+    // For now only single axis sharding is supported
+    if(axes.size() != 1) {
+      return mlir::failure();
+    }
+
+    auto loc = op.getLoc();
+    SymbolTableCollection symbolTableCollection;
+    auto meshOp = getMesh(op, symbolTableCollection);
+    auto mIdx = op.getDevice();
+    auto orgIdx = mIdx[axes[0]];
+    SmallVector<Value> dims;
+    llvm::transform(meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
+      return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
+    });
+    auto dimSz = dims[axes[0]];
+    auto minus1 = rewriter.create<arith::ConstantIndexOp>(loc, -1).getResult();
+    auto atBorder = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sle, dimSz, rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult());
+    auto down = rewriter.create<scf::IfOp>(
+        loc, atBorder, [&](OpBuilder &builder, Location loc) {
+          builder.create<scf::YieldOp>(loc, minus1);
+        }, [&](OpBuilder &builder, Location loc) {
+          mIdx[axes[0]] = rewriter.create<arith::SubIOp>(op.getLoc(), orgIdx, dimSz).getResult();
+          builder.create<scf::YieldOp>(loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
+        });
+    atBorder = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge, dimSz, rewriter.create<arith::AddIOp>(loc, dimSz, minus1).getResult());
+    auto up = rewriter.create<scf::IfOp>(
+        loc, atBorder, [&](OpBuilder &builder, Location loc) {
+          builder.create<scf::YieldOp>(loc, minus1);
+        }, [&](OpBuilder &builder, Location loc) {
+          mIdx[axes[0]] = rewriter.create<arith::AddIOp>(op.getLoc(), orgIdx, dimSz).getResult();
+          builder.create<scf::YieldOp>(loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
+        });
+    rewriter.replaceOp(op, ValueRange{down.getResult(0), up.getResult(0)});
+    return mlir::success();
+  }
+};
 
 // This pattern converts the mesh.update_halo operation to MPI calls
 struct ConvertUpdateHaloOp
@@ -244,7 +368,7 @@ struct ConvertMeshToMPIPass
     auto *ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
 
-    patterns.insert<ConvertUpdateHaloOp>(ctx);
+    patterns.insert<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp, ConvertProcessLinearIndexOp, ConvertProcessMultiIndexOp>(ctx);
 
     (void)mlir::applyPatternsAndFoldGreedily(getOperation(),
                                              std::move(patterns));
@@ -254,6 +378,6 @@ struct ConvertMeshToMPIPass
 } // namespace
 
 // Create a pass that convert Mesh to MPI
-std::unique_ptr<::mlir::OperationPass<void>> createConvertMeshToMPIPass() {
+std::unique_ptr<::mlir::Pass> mlir::createConvertMeshToMPIPass() {
   return std::make_unique<ConvertMeshToMPIPass>();
 }

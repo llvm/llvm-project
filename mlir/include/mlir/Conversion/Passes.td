@@ -884,6 +884,7 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 
 def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
   let summary = "Convert Mesh dialect to MPI dialect.";
+  let constructor = "mlir::createConvertMeshToMPIPass()";
   let description = [{
     This pass converts communication operations
     from the Mesh dialect to the MPI dialect.
