@@ -168,11 +168,10 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
     EXPECT_TRUE(Sched.trySchedule({S0}));
   }
   {
-    // Try invalid scheduling
+    // Try invalid scheduling. Dependency S0->S1.
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
-    EXPECT_TRUE(Sched.trySchedule({S0}));
-    EXPECT_FALSE(Sched.trySchedule({S1}));
+    EXPECT_FALSE(Sched.trySchedule({S0, S1}));
   }
 }
 
@@ -200,5 +199,41 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
   EXPECT_TRUE(Sched.trySchedule({Ret}));
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+  EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+}
+
+TEST_F(SchedulerTest, RescheduleAlreadyScheduled) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  %add0 = add i8 %ld0, %ld0
+  %add1 = add i8 %ld1, %ld1
+  store i8 %add0, ptr %ptr0
+  store i8 %add1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  EXPECT_TRUE(Sched.trySchedule({Ret}));
+  EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+  EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+  // At this point Add0 and Add1 should have been individually scheduled
+  // as single bundles.
+  // Check if rescheduling works.
+  EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
 }
