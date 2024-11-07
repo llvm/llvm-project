@@ -116,6 +116,20 @@ __gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
   return __nvvm_shfl_sync_idx_i32(__mask, __x, __id, __gpu_num_lanes() - 1);
 }
 
+// Copies the value from the first active thread in the warp to the rest.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
+  uint32_t __mask = (uint32_t)__lane_mask;
+  uint32_t __id = __builtin_ffs(__mask) - 1;
+  return ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __hi, __id,
+                                             __gpu_num_lanes() - 1)
+          << 32ull) |
+         ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __lo, __id,
+                                             __gpu_num_lanes() - 1));
+}
+
 // Returns a bitmask of threads in the current lane for which \p x is true.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
                                                           bool __x) {
@@ -140,6 +154,20 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
   uint32_t __bitmask = (__mask >> __idx) & 1u;
   return -__bitmask &
          __nvvm_shfl_sync_idx_i32(__mask, __x, __idx, __gpu_num_lanes() - 1u);
+}
+
+// Shuffles the the lanes inside the warp according to the given index.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
+  uint32_t __mask = (uint32_t)__lane_mask;
+  uint64_t __bitmask = (__mask >> __idx) & 1u;
+  return -__bitmask & ((uint64_t)__nvvm_shfl_sync_idx_i32(
+                           __mask, __hi, __idx, __gpu_num_lanes() - 1u)
+                       << 32ull) |
+         ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __lo, __idx,
+                                             __gpu_num_lanes() - 1u));
 }
 
 // Terminates execution of the calling thread.
