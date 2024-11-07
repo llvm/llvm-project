@@ -772,7 +772,7 @@ DICompositeType *DICompositeType::getImpl(
     Metadata *TemplateParams, MDString *Identifier, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
     Metadata *Rank, Metadata *Annotations, Metadata *SpecificationOf,
-    uint32_t NumExtraInhabitants, APInt SpareBitsMask, StorageType Storage,
+    uint32_t NumExtraInhabitants,  StorageType Storage,
     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
@@ -782,15 +782,14 @@ DICompositeType *DICompositeType::getImpl(
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
        Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations, SpecificationOf, NumExtraInhabitants, SpareBitsMask));
+       Annotations, SpecificationOf, NumExtraInhabitants));
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
                      Rank,          Annotations,  SpecificationOf};
   DEFINE_GETIMPL_STORE(DICompositeType,
                        (Tag, Line, RuntimeLang, SizeInBits, AlignInBits,
-                        OffsetInBits, NumExtraInhabitants, SpareBitsMask,
-                        Flags),
+                        OffsetInBits, NumExtraInhabitants, Flags),
                        Ops);
 }
 
@@ -798,11 +797,11 @@ DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-    Metadata *SpecificationOf, uint32_t NumExtraInhabitants,
-    APInt SpareBitsMask, DIFlags Flags, Metadata *Elements,
-    unsigned RuntimeLang, Metadata *VTableHolder, Metadata *TemplateParams,
-    Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
-    Metadata *Allocated, Metadata *Rank, Metadata *Annotations) {
+    Metadata *SpecificationOf, uint32_t NumExtraInhabitants, DIFlags Flags,
+    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
+    Metadata *TemplateParams, Metadata *Discriminator, Metadata *DataLocation,
+    Metadata *Associated, Metadata *Allocated, Metadata *Rank,
+    Metadata *Annotations) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -813,7 +812,7 @@ DICompositeType *DICompositeType::buildODRType(
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
                VTableHolder, TemplateParams, &Identifier, Discriminator,
                DataLocation, Associated, Allocated, Rank, Annotations,
-               SpecificationOf, NumExtraInhabitants, SpareBitsMask);
+               SpecificationOf, NumExtraInhabitants);
 
   if (CT->getTag() != Tag)
     return nullptr;
@@ -842,11 +841,11 @@ DICompositeType *DICompositeType::getODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-    Metadata *SpecificationOf, uint32_t NumExtraInhabitants,
-    APInt SpareBitsMask, DIFlags Flags, Metadata *Elements,
-    unsigned RuntimeLang, Metadata *VTableHolder, Metadata *TemplateParams,
-    Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
-    Metadata *Allocated, Metadata *Rank, Metadata *Annotations) {
+    Metadata *SpecificationOf, uint32_t NumExtraInhabitants, DIFlags Flags,
+    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
+    Metadata *TemplateParams, Metadata *Discriminator, Metadata *DataLocation,
+    Metadata *Associated, Metadata *Allocated, Metadata *Rank,
+    Metadata *Annotations) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -856,8 +855,7 @@ DICompositeType *DICompositeType::getODRType(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
         TemplateParams, &Identifier, Discriminator, DataLocation, Associated,
-        Allocated, Rank, Annotations, SpecificationOf, NumExtraInhabitants,
-        SpareBitsMask);
+        Allocated, Rank, Annotations, SpecificationOf, NumExtraInhabitants);
   } else {
     if (CT->getTag() != Tag)
       return nullptr;
