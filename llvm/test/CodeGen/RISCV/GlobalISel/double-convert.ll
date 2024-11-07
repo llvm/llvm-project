@@ -106,9 +106,7 @@ define double @fcvt_d_wu_load(ptr %p) nounwind {
 ;
 ; RV64IFD-LABEL: fcvt_d_wu_load:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lw a0, 0(a0)
-; RV64IFD-NEXT:    slli a0, a0, 32
-; RV64IFD-NEXT:    srli a0, a0, 32
+; RV64IFD-NEXT:    lwu a0, 0(a0)
 ; RV64IFD-NEXT:    fcvt.d.wu fa0, a0
 ; RV64IFD-NEXT:    ret
   %a = load i32, ptr %p

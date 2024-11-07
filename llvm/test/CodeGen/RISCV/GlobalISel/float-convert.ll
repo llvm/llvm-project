@@ -109,9 +109,7 @@ define float @fcvt_s_wu_load(ptr %p) nounwind {
 ;
 ; RV64IF-LABEL: fcvt_s_wu_load:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lw a0, 0(a0)
-; RV64IF-NEXT:    slli a0, a0, 32
-; RV64IF-NEXT:    srli a0, a0, 32
+; RV64IF-NEXT:    lwu a0, 0(a0)
 ; RV64IF-NEXT:    fcvt.s.wu fa0, a0
 ; RV64IF-NEXT:    ret
   %a = load i32, ptr %p
