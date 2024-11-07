@@ -12613,11 +12613,11 @@ def note_acc_previous_clause_here : Note<"previous clause is here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
-            "OpenACC Compute Construct">;
+            "OpenACC Compute/Combined Construct">;
 def note_acc_branch_into_compute_construct
-    : Note<"invalid branch into OpenACC Compute Construct">;
+    : Note<"invalid branch into OpenACC Compute/Combined Construct">;
 def note_acc_branch_out_of_compute_construct
-    : Note<"invalid branch out of OpenACC Compute Construct">;
+    : Note<"invalid branch out of OpenACC Compute/Combined Construct">;
 def warn_acc_if_self_conflict
     : Warning<"OpenACC construct 'self' has no effect when an 'if' clause "
               "evaluates to true">,
@@ -12691,7 +12691,7 @@ def err_acc_reduction_composite_member_type :Error<
     "OpenACC 'reduction' composite variable must not have non-scalar field">;
 def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 def err_acc_loop_not_for_loop
-    : Error<"OpenACC 'loop' construct can only be applied to a 'for' loop">;
+    : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
 def err_acc_loop_spec_conflict
     : Error<"OpenACC clause '%0' on '%1' construct conflicts with previous "
@@ -12749,16 +12749,16 @@ def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
 def err_acc_loop_variable_type
-    : Error<"loop variable of loop associated with an OpenACC 'loop' construct "
+    : Error<"loop variable of loop associated with an OpenACC '%0' construct "
             "must be of integer, pointer, or random-access-iterator type (is "
-            "%0)">;
+            "%1)">;
 def err_acc_loop_variable
-    : Error<"OpenACC 'loop' construct must have initialization clause in "
+    : Error<"OpenACC '%0' construct must have initialization clause in "
             "canonical form ('var = init' or 'T var = init')">;
 def err_acc_loop_terminating_condition
-    : Error<"OpenACC 'loop' construct must have a terminating condition">;
+    : Error<"OpenACC '%0' construct must have a terminating condition">;
 def err_acc_loop_not_monotonic
-    : Error<"OpenACC 'loop' variable must monotonically increase or decrease "
+    : Error<"OpenACC '%0' variable must monotonically increase or decrease "
             "('++', '--', or compound assignment)">;
 
 // AMDGCN builtins diagnostics

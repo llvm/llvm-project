@@ -89,3 +89,25 @@ OpenACCLoopConstruct *OpenACCLoopConstruct::Create(
       OpenACCLoopConstruct(ParentKind, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
   return Inst;
 }
+
+OpenACCCombinedConstruct *
+OpenACCCombinedConstruct::CreateEmpty(const ASTContext &C,
+                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCCombinedConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCCombinedConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCCombinedConstruct *OpenACCCombinedConstruct::Create(
+    const ASTContext &C, OpenACCDirectiveKind DK, SourceLocation BeginLoc,
+    SourceLocation DirLoc, SourceLocation EndLoc,
+    ArrayRef<const OpenACCClause *> Clauses, Stmt *Loop) {
+  void *Mem = C.Allocate(
+      OpenACCCombinedConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem)
+      OpenACCCombinedConstruct(DK, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
+  return Inst;
+}

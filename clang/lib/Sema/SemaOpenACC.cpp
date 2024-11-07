@@ -30,6 +30,9 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
     // Nothing to do here, both invalid and unimplemented don't really need to
     // do anything.
     break;
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
@@ -1527,7 +1530,7 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
       DirKind(DK), OldLoopGangClauseOnKernelLoc(S.LoopGangClauseOnKernelLoc),
       OldLoopWorkerClauseLoc(S.LoopWorkerClauseLoc),
       OldLoopVectorClauseLoc(S.LoopVectorClauseLoc),
-      OldLoopWithoutSeqLoc(S.LoopWithoutSeqLoc),
+      OldLoopWithoutSeqInfo(S.LoopWithoutSeqInfo),
       ActiveReductionClauses(S.ActiveReductionClauses),
       LoopRAII(SemaRef, /*PreserveDepth=*/false) {
 
@@ -1548,7 +1551,53 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     SemaRef.LoopGangClauseOnKernelLoc = {};
     SemaRef.LoopWorkerClauseLoc = {};
     SemaRef.LoopVectorClauseLoc = {};
-    SemaRef.LoopWithoutSeqLoc = {};
+    SemaRef.LoopWithoutSeqInfo = {};
+  } else if (DirKind == OpenACCDirectiveKind::ParallelLoop ||
+             DirKind == OpenACCDirectiveKind::SerialLoop ||
+             DirKind == OpenACCDirectiveKind::KernelsLoop) {
+    SemaRef.ActiveComputeConstructInfo.Kind = DirKind;
+    SemaRef.ActiveComputeConstructInfo.Clauses = Clauses;
+
+    CollectActiveReductionClauses(S.ActiveReductionClauses, Clauses);
+    SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+    SetTileInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+
+    // TODO: OpenACC: We need to set these 3, CollapseInfo, and TileInfo
+    SemaRef.LoopGangClauseOnKernelLoc = {};
+    SemaRef.LoopWorkerClauseLoc = {};
+    SemaRef.LoopVectorClauseLoc = {};
+
+    // Set the active 'loop' location if there isn't a 'seq' on it, so we can
+    // diagnose the for loops.
+    SemaRef.LoopWithoutSeqInfo = {};
+    if (Clauses.end() ==
+        llvm::find_if(Clauses, llvm::IsaPred<OpenACCSeqClause>))
+      SemaRef.LoopWithoutSeqInfo = {DirKind, DirLoc};
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The region of a loop
+    // with a gang clause may not contain another loop with a gang clause unless
+    // within a nested compute region.
+    //
+    // We don't bother doing this when this is a template instantiation, as
+    // there is no reason to do these checks: the existance of a
+    // gang/kernels/etc cannot be dependent.
+    if (DirKind == OpenACCDirectiveKind::KernelsLoop && UnInstClauses.empty()) {
+      // This handles the 'outer loop' part of this.
+      auto *Itr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCGangClause>);
+      if (Itr != Clauses.end())
+        SemaRef.LoopGangClauseOnKernelLoc = (*Itr)->getBeginLoc();
+    }
+
+    if (UnInstClauses.empty()) {
+      auto *Itr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCWorkerClause>);
+      if (Itr != Clauses.end())
+        SemaRef.LoopWorkerClauseLoc = (*Itr)->getBeginLoc();
+
+      auto *Itr2 = llvm::find_if(Clauses, llvm::IsaPred<OpenACCVectorClause>);
+      if (Itr2 != Clauses.end())
+        SemaRef.LoopVectorClauseLoc = (*Itr2)->getBeginLoc();
+    }
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
     CollectActiveReductionClauses(S.ActiveReductionClauses, Clauses);
     SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
@@ -1556,10 +1605,10 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
 
     // Set the active 'loop' location if there isn't a 'seq' on it, so we can
     // diagnose the for loops.
-    SemaRef.LoopWithoutSeqLoc = {};
+    SemaRef.LoopWithoutSeqInfo = {};
     if (Clauses.end() ==
         llvm::find_if(Clauses, llvm::IsaPred<OpenACCSeqClause>))
-      SemaRef.LoopWithoutSeqLoc = DirLoc;
+      SemaRef.LoopWithoutSeqInfo = {DirKind, DirLoc};
 
     // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
     // construct, the gang clause behaves as follows. ... The region of a loop
@@ -1661,12 +1710,15 @@ SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
   SemaRef.LoopGangClauseOnKernelLoc = OldLoopGangClauseOnKernelLoc;
   SemaRef.LoopWorkerClauseLoc = OldLoopWorkerClauseLoc;
   SemaRef.LoopVectorClauseLoc = OldLoopVectorClauseLoc;
-  SemaRef.LoopWithoutSeqLoc = OldLoopWithoutSeqLoc;
+  SemaRef.LoopWithoutSeqInfo = OldLoopWithoutSeqInfo;
   SemaRef.ActiveReductionClauses.swap(ActiveReductionClauses);
 
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
-      DirKind == OpenACCDirectiveKind::Kernels) {
+      DirKind == OpenACCDirectiveKind::Kernels ||
+      DirKind == OpenACCDirectiveKind::ParallelLoop ||
+      DirKind == OpenACCDirectiveKind::SerialLoop ||
+      DirKind == OpenACCDirectiveKind::KernelsLoop) {
     // Nothing really to do here, the restorations above should be enough for
     // now.
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
@@ -1875,6 +1927,9 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Loop:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
@@ -2705,7 +2760,7 @@ bool isValidLoopVariableType(QualType LoopVarTy) {
 } // namespace
 
 void SemaOpenACC::ForStmtBeginChecker::check() {
-  if (!SemaRef.LoopWithoutSeqLoc.isValid())
+  if (SemaRef.LoopWithoutSeqInfo.Kind == OpenACCDirectiveKind::Invalid)
     return;
 
   if (AlreadyChecked)
@@ -2745,9 +2800,10 @@ void SemaOpenACC::ForStmtBeginChecker::check() {
     QualType VarType = InitVar->getType().getNonReferenceType();
     if (!isValidLoopVariableType(VarType)) {
       SemaRef.Diag(InitVar->getBeginLoc(), diag::err_acc_loop_variable_type)
-          << VarType;
-      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-          << "loop";
+          << SemaRef.LoopWithoutSeqInfo.Kind << VarType;
+      SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc,
+                   diag::note_acc_construct_here)
+          << SemaRef.LoopWithoutSeqInfo.Kind;
     }
     return;
   }
@@ -2764,18 +2820,22 @@ void SemaOpenACC::ForStmtBeginChecker::check() {
 const ValueDecl *SemaOpenACC::ForStmtBeginChecker::checkInit() {
   if (!Init) {
     if (InitChanged) {
-      SemaRef.Diag(ForLoc, diag::err_acc_loop_variable);
-      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-          << "loop";
+      SemaRef.Diag(ForLoc, diag::err_acc_loop_variable)
+          << SemaRef.LoopWithoutSeqInfo.Kind;
+      SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc,
+                   diag::note_acc_construct_here)
+          << SemaRef.LoopWithoutSeqInfo.Kind;
     }
     return nullptr;
   }
 
   auto DiagLoopVar = [&]() {
     if (InitChanged) {
-      SemaRef.Diag(Init->getBeginLoc(), diag::err_acc_loop_variable);
-      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-          << "loop";
+      SemaRef.Diag(Init->getBeginLoc(), diag::err_acc_loop_variable)
+          << SemaRef.LoopWithoutSeqInfo.Kind;
+      SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc,
+                   diag::note_acc_construct_here)
+          << SemaRef.LoopWithoutSeqInfo.Kind;
     }
     return nullptr;
   };
@@ -2840,9 +2900,10 @@ const ValueDecl *SemaOpenACC::ForStmtBeginChecker::checkInit() {
   if (!isValidLoopVariableType(VarType)) {
     if (InitChanged) {
       SemaRef.Diag(InitVar->getBeginLoc(), diag::err_acc_loop_variable_type)
-          << VarType;
-      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-          << "loop";
+          << SemaRef.LoopWithoutSeqInfo.Kind << VarType;
+      SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc,
+                   diag::note_acc_construct_here)
+          << SemaRef.LoopWithoutSeqInfo.Kind;
     }
     return nullptr;
   }
@@ -2851,9 +2912,10 @@ const ValueDecl *SemaOpenACC::ForStmtBeginChecker::checkInit() {
 }
 void SemaOpenACC::ForStmtBeginChecker::checkCond() {
   if (!*Cond) {
-    SemaRef.Diag(ForLoc, diag::err_acc_loop_terminating_condition);
-    SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-        << "loop";
+    SemaRef.Diag(ForLoc, diag::err_acc_loop_terminating_condition)
+        << SemaRef.LoopWithoutSeqInfo.Kind;
+    SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc, diag::note_acc_construct_here)
+        << SemaRef.LoopWithoutSeqInfo.Kind;
   }
   // Nothing else to do here.  we could probably do some additional work to look
   // into the termination condition, but that error-prone.  For now, we don't
@@ -2865,15 +2927,17 @@ void SemaOpenACC::ForStmtBeginChecker::checkCond() {
 void SemaOpenACC::ForStmtBeginChecker::checkInc(const ValueDecl *Init) {
 
   if (!*Inc) {
-    SemaRef.Diag(ForLoc, diag::err_acc_loop_not_monotonic);
-    SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-        << "loop";
+    SemaRef.Diag(ForLoc, diag::err_acc_loop_not_monotonic)
+        << SemaRef.LoopWithoutSeqInfo.Kind;
+    SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc, diag::note_acc_construct_here)
+        << SemaRef.LoopWithoutSeqInfo.Kind;
     return;
   }
   auto DiagIncVar = [this] {
-    SemaRef.Diag((*Inc)->getBeginLoc(), diag::err_acc_loop_not_monotonic);
-    SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
-        << "loop";
+    SemaRef.Diag((*Inc)->getBeginLoc(), diag::err_acc_loop_not_monotonic)
+        << SemaRef.LoopWithoutSeqInfo.Kind;
+    SemaRef.Diag(SemaRef.LoopWithoutSeqInfo.Loc, diag::note_acc_construct_here)
+        << SemaRef.LoopWithoutSeqInfo.Kind;
     return;
   };
 
@@ -3173,6 +3237,13 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
         getASTContext(), K, StartLoc, DirLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop: {
+    return OpenACCCombinedConstruct::Create(
+        getASTContext(), K, StartLoc, DirLoc, EndLoc, Clauses,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+  }
   case OpenACCDirectiveKind::Loop: {
     return OpenACCLoopConstruct::Create(
         getASTContext(), ActiveComputeConstructInfo.Kind, StartLoc, DirLoc,
@@ -3202,11 +3273,15 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
     // the 'structured block'.
     return AssocStmt;
   case OpenACCDirectiveKind::Loop:
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::KernelsLoop:
     if (!AssocStmt.isUsable())
       return StmtError();
 
     if (!isa<CXXForRangeStmt, ForStmt>(AssocStmt.get())) {
-      Diag(AssocStmt.get()->getBeginLoc(), diag::err_acc_loop_not_for_loop);
+      Diag(AssocStmt.get()->getBeginLoc(), diag::err_acc_loop_not_for_loop)
+          << K;
       Diag(DirectiveLoc, diag::note_acc_construct_here) << K;
       return StmtError();
     }
