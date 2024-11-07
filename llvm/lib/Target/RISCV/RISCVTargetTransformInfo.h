@@ -239,8 +239,12 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
-
+    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+    return TLI->isLegalElementTypeForRVV(ElemType) ||
+           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
+            ST->hasVInstructionsBF16Minimal()) ||
+           (DataTypeVT.getVectorElementType() == MVT::f16 &&
+            ST->hasVInstructionsF16Minimal());
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
