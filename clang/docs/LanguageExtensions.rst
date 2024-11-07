@@ -3838,9 +3838,9 @@ attribute is prone to failure in large code bases. This builtin mitigates this
 for allocators (like in Linux) that are implemented in a way where the counter
 assignment can happen automatically.
 
-**Note: The value returned by ``__builtin_counted_by_ref`` cannot be assigned
+**Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
 to a variable, have its address taken, or passed into or returned from a
-function, because doing so violates bounds safety conventions.**
+function, because doing so violates bounds safety conventions.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
