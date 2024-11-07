@@ -1515,9 +1515,43 @@ protected:
                                const SmallVector<Value> &dynSizes) const;
 };
 
-/// Rewrites a tensor::PackOp into a sequence of tensor.pad + linalg.transpose +
-/// tensor.insert_slice ops, where the tensor::PackOp has outer dims being all
-/// 1s.
+/// Rewrites a tensor::PackOp into a sequence of:
+///   * tensor::PadOp + linalg::TransposeOp + tensor::ExtractSliceOp +
+///     tensor::EmptyOp + tensor::InsertSliceOp ops.
+///
+/// Required that all the outer dims of the input tensor::PackOp are 1.
+///
+/// Before:
+/// ```
+///   %packed = tensor.pack %input
+///     padding_value(%pad : f32)
+///     inner_dims_pos = [1, 0]
+///     inner_tiles = [2, %high]
+///     into %output : tensor<5x1xf32> -> tensor<1x1x2x?xf32>
+/// ```
+///
+/// After:
+/// ```
+///   // PadOp
+///   %padded = tensor.pad %arg0 low[0, 0] high[%0, 1] {
+///     ^bb0(...):
+///       tensor.yield %arg2 : f32
+///   } : tensor<5x1xf32> to tensor<?x2xf32>
+///   // ExtractSliceOp
+///   %extracted_slice = tensor.extract_slice %padded[0, 0] [%tile_dim_1, 2] [1,
+///   1]
+///     : tensor<?x2xf32> to tensor<?x2xf32>
+///   // EmptyOp + TransposeOp
+///   %empty = tensor.empty(%arg3) : tensor<2x?xf32>
+///   %transposed = linalg.transpose
+///     ins(%extracted_slice : tensor<?x2xf32>)
+///     outs(%empty : tensor<2x?xf32>)
+///     permutation = [1, 0]
+///   // InsertSliceOp
+///   %inserted_slice = tensor.insert_slice %transposed
+///     into %arg1[0, 0, 0, 0] [1, 1, 2, %tile_dim_1] [1, 1, 1, 1]
+///     : tensor<2x?xf32> into tensor<1x1x2x?xf32>
+/// ```
 struct GeneralizeOuterUnitDimsPackOpPattern
     : public OpRewritePattern<tensor::PackOp> {
   using OpRewritePattern<tensor::PackOp>::OpRewritePattern;

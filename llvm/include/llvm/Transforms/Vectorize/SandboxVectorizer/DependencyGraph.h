@@ -345,6 +345,11 @@ public:
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
   /// \Returns the range of instructions included in the DAG.
   Interval<Instruction> getInterval() const { return DAGInterval; }
+  /// Called by the scheduler when a new instruction \p I has been created.
+  void notifyCreateInstr(Instruction *I) {
+    getOrCreateNode(I);
+    // TODO: Update the dependencies for the new node.
+  }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
