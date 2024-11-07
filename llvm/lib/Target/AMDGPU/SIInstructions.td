@@ -3553,6 +3553,23 @@ def : AMDGPUPat <
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
+def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
+  return CurDAG->computeKnownBits(SDValue(N, 0)).countMinLeadingZeros() >= 27;
+}]>;
+
+// x << (bitwidth - y) >> (bitwidth - y)
+def : AMDGPUPat <
+  (DivergentBinFrag<srl> (shl_oneuse i32:$src, (sub 32, uint5Bits:$width)),
+                         (sub 32, uint5Bits:$width)),
+   (V_BFE_U32_e64 $src, (i32 0), $width)
+>;
+
+def : AMDGPUPat <
+  (DivergentBinFrag<sra> (shl_oneuse i32:$src, (sub 32, uint5Bits:$width)),
+                         (sub 32, uint5Bits:$width)),
+   (V_BFE_I32_e64 $src, (i32 0), $width)
+>;
+
 // SHA-256 Ma patterns
 
 // ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
