@@ -87,6 +87,12 @@ private:
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
+  ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
+  template <unsigned Bits>
+  ComplexRendererFns selectSExtBits(MachineOperand &Root) const {
+    return selectSExtBits(Root, Bits);
+  }
+
   ComplexRendererFns selectZExtBits(MachineOperand &Root, unsigned Bits) const;
   template <unsigned Bits>
   ComplexRendererFns selectZExtBits(MachineOperand &Root) const {
@@ -246,6 +252,27 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
+                                         unsigned Bits) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  Register RootReg = Root.getReg();
+  MachineInstr *RootDef = MRI->getVRegDef(RootReg);
+
+  if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
+      RootDef->getOperand(2).getImm() == Bits) {
+    return {
+        {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
+  }
+
+  unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
+  if ((Size - KB->computeNumSignBits(RootReg)) < Bits)
+    return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
+
+  return std::nullopt;
 }
 
 InstructionSelector::ComplexRendererFns
