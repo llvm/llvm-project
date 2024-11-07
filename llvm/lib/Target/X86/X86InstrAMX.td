@@ -479,7 +479,7 @@ defm TCVTROWPS2PBF16H : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2pbf16h", XD, XD>;
 defm TCVTROWPS2PBF16L : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2pbf16l", XS, XS>;
 
 multiclass m_tilemovrow {
-  let Predicates = [HasAMXAVX512, In64BitMode] in {
+  let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
     let SchedRW = [WriteSystem] in {
       def rri : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
                     (ins TILE:$src1, u8imm:$src2),
@@ -495,7 +495,7 @@ multiclass m_tilemovrow {
 
 defm TILEMOVROW : m_tilemovrow;
 
-let Predicates = [HasAMXAVX512, In64BitMode] in {
+let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     let  usesCustomInserter = 1 in {
       def PTILEMOVROWrri : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
