@@ -212,7 +212,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fscanf
     libc.src.stdio.vfscanf
     libc.src.stdio.printf
-    libc.src.stdio.iprintf
     libc.src.stdio.remove
     libc.src.stdio.rename
     libc.src.stdio.scanf
@@ -227,6 +226,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
+
+    # stdio.h hidden entrypoints
+    libc.src.stdio.iprintf
+    libc.src.stdio.fiprintf
+    libc.src.stdio.siprintf
+    libc.src.stdio.sniprintf
 
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create

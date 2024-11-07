@@ -86,43 +86,59 @@ add_object_library(
     libc.src.string.memory_utils.inline_memset
 )
 
+list(APPEND printf_converter_deps_nofloat
+  .core_structs
+  .writer
+  libc.src.__support.big_int
+  libc.src.__support.common
+  libc.src.__support.CPP.limits
+  libc.src.__support.CPP.span
+  libc.src.__support.CPP.string_view
+  libc.src.__support.integer_to_string
+  libc.src.__support.libc_assert
+  libc.src.__support.uint128
+  libc.src.__support.StringUtil.error_to_string
+)
+
+list(APPEND printf_converter_hdrs_nofloat
+  converter_atlas.h
+  converter_utils.h
+  string_converter.h
+  char_converter.h
+  int_converter.h
+  ptr_converter.h
+  write_int_converter.h
+  fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
+  strerror_converter.h
+)
+
+set(printf_converter_deps ${printf_converter_deps_nofloat})
+set(printf_converter_hdrs ${printf_converter_hdrs_nofloat})
+
+list(APPEND printf_converter_deps
+  libc.src.__support.float_to_string
+  libc.src.__support.FPUtil.fenv_impl
+  libc.src.__support.FPUtil.fp_bits
+  libc.src.__support.FPUtil.rounding_mode
+)
+
+list(APPEND printf_converter_hdrs
+  float_inf_nan_converter.h
+  float_hex_converter.h
+  float_dec_converter.h
+)
+
 add_object_library(
   converter
   SRCS
     converter.cpp
   HDRS
     converter.h
-    converter_atlas.h
-    converter_utils.h
-    string_converter.h
-    char_converter.h
-    int_converter.h
-    ptr_converter.h
-    write_int_converter.h
-    float_inf_nan_converter.h
-    float_hex_converter.h
-    float_dec_converter.h
-    fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
-    strerror_converter.h
+    ${printf_converter_hdrs}
   DEPENDS
-    .core_structs
     .printf_config
-    .writer
-    libc.src.__support.big_int
-    libc.src.__support.common
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.span
-    libc.src.__support.CPP.string_view
-    libc.src.__support.float_to_string
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.integer_to_string
-    libc.src.__support.libc_assert
-    libc.src.__support.uint128
-    libc.src.__support.StringUtil.error_to_string
+    ${printf_converter_deps}
 )
-
 
 add_object_library(
   converter_nofloat
@@ -130,32 +146,10 @@ add_object_library(
     converter.cpp
   HDRS
     converter.h
-    converter_atlas.h
-    converter_utils.h
-    string_converter.h
-    char_converter.h
-    int_converter.h
-    ptr_converter.h
-    write_int_converter.h
-    fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
-    strerror_converter.h
+    ${printf_converter_hdrs_nofloat}
   DEPENDS
-    .core_structs
     .printf_config_nofloat
-    .writer
-    libc.src.__support.big_int
-    libc.src.__support.common
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.span
-    libc.src.__support.CPP.string_view
-    libc.src.__support.float_to_string
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.integer_to_string
-    libc.src.__support.libc_assert
-    libc.src.__support.uint128
-    libc.src.__support.StringUtil.error_to_string
+    ${printf_converter_deps_nofloat}
 )
 
 add_object_library(
