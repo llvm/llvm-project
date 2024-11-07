@@ -90,6 +90,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
 
   const LLT nxv1s1 = LLT::scalable_vector(1, s1);
   const LLT nxv2s1 = LLT::scalable_vector(2, s1);
@@ -157,8 +158,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
       .lower();
 
-  auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
-  ShiftActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
+      .legalFor({{s32, s32}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
@@ -201,10 +202,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
-  auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
-    RotateActions.legalFor({{s32, s32}, {sXLen, sXLen}});
-  RotateActions.lower();
+  getActionDefinitionsBuilder({G_ROTL, G_ROTR})
+      .legalFor(ST.hasStdExtZbb() || ST.hasStdExtZbkb(),
+                {{s32, s32}, {sXLen, sXLen}})
+      .lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
@@ -244,11 +245,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
   }
 
-  auto &ConstantActions = getActionDefinitionsBuilder(G_CONSTANT);
-  ConstantActions.legalFor({s32, p0});
-  if (ST.is64Bit())
-    ConstantActions.customFor({s64});
-  ConstantActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen);
+  getActionDefinitionsBuilder(G_CONSTANT)
+      .legalFor({s32, p0})
+      .customFor(ST.is64Bit(), {s64})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, sXLen);
 
   // TODO: transform illegal vector types into legal vector type
   getActionDefinitionsBuilder(
@@ -267,14 +268,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(1, sXLen, sXLen)
       .clampScalar(0, sXLen, sXLen);
 
-  auto &SelectActions =
-      getActionDefinitionsBuilder(G_SELECT)
-          .legalFor({{s32, sXLen}, {p0, sXLen}})
-          .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                       typeIsLegalBoolVec(1, BoolVecTys, ST)));
-  if (XLen == 64 || ST.hasStdExtD())
-    SelectActions.legalFor({{s64, sXLen}});
-  SelectActions.widenScalarToNextPow2(0)
+  getActionDefinitionsBuilder(G_SELECT)
+      .legalFor({{s32, sXLen}, {p0, sXLen}})
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   typeIsLegalBoolVec(1, BoolVecTys, ST)))
+      .legalFor(XLen == 64 || ST.hasStdExtD(), {{s64, sXLen}})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
@@ -471,16 +470,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // TODO: Use libcall for sDoubleXLen.
   getActionDefinitionsBuilder({G_UDIVREM, G_SDIVREM}).lower();
 
-  auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
-  if (ST.hasStdExtZbb())
-    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
-  AbsActions.lower();
+  getActionDefinitionsBuilder(G_ABS)
+      .customFor(ST.hasStdExtZbb(), {sXLen})
+      .minScalar(ST.hasStdExtZbb(), 0, sXLen)
+      .lower();
 
-  auto &MinMaxActions =
-      getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
-  if (ST.hasStdExtZbb())
-    MinMaxActions.legalFor({sXLen}).minScalar(0, sXLen);
-  MinMaxActions.lower();
+  getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
+      .legalFor(ST.hasStdExtZbb(), {sXLen})
+      .minScalar(ST.hasStdExtZbb(), 0, sXLen)
+      .lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
@@ -538,13 +536,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen)
-      .libcall();
+      .minScalar(0, s32)
+      .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
+      .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
       .widenScalarToNextPow2(1)
-      .clampScalar(1, s32, sXLen);
+      .minScalar(1, s32)
+      .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
+      .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.

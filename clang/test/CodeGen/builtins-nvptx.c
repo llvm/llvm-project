@@ -999,13 +999,13 @@ __device__ void nvvm_cvt_sm89() {
   // CHECK_PTX81_SM89: call i16 @llvm.nvvm.ff.to.e5m2x2.rn.relu(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff_to_e5m2x2_rn_relu(1.0f, 1.0f);
 
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e4m3x2_rn({1.0f16, 1.0f16});
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn.relu(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn.relu(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e4m3x2_rn_relu({1.0f16, 1.0f16});
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e5m2x2_rn({1.0f16, 1.0f16});
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn.relu(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn.relu(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e5m2x2_rn_relu({1.0f16, 1.0f16});
 
   // CHECK_PTX81_SM89: call <2 x half> @llvm.nvvm.e4m3x2.to.f16x2.rn(i16 18504)
@@ -1035,12 +1035,12 @@ __device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.abs.bf16(bfloat 0xR3DCD)
   __nvvm_abs_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.abs.bf16x2(<2 x bfloat> <bfloat 0xR3DCD, bfloat 0xR3DCD>)
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.abs.bf16x2(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_abs_bf16x2(BF16X2);
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.neg.bf16(bfloat 0xR3DCD)
   __nvvm_neg_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.neg.bf16x2(<2 x bfloat> <bfloat 0xR3DCD, bfloat 0xR3DCD>)
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.neg.bf16x2(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_neg_bf16x2(BF16X2);
 #endif
   // CHECK: ret void

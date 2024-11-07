@@ -15,7 +15,7 @@
 
 This entire header is C99 / C++0X
 
-#include <cstdint>  // <cinttypes> includes <cstdint>
+#include <__cxx03/cstdint>  // <cinttypes> includes <cstdint>
 
 Macros:
 
@@ -234,14 +234,14 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 }  // std
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 // standard-mandated includes
 
 // [cinttypes.syn]
-#include <cstdint>
+#include <__cxx03/cstdint>
 
-#include <inttypes.h>
+#include <__cxx03/inttypes.h>
 
 #ifndef _LIBCPP_INTTYPES_H
 #   error <cinttypes> tried including <inttypes.h> but didn't find libc++'s <inttypes.h> header. \

@@ -130,9 +130,12 @@ def OMPC_Depobj : Clause<"depobj"> {
 }
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
+  let flangClass = "OmpDestroyClause";
+  let isValueOptional = true;
 }
 def OMPC_Detach : Clause<"detach"> {
   let clangClass = "OMPDetachClause";
+  let flangClass = "OmpDetachClause";
 }
 def OMPC_Device : Clause<"device"> {
   let clangClass = "OMPDeviceClause";
@@ -179,7 +182,7 @@ def OMPC_Flush : Clause<"flush"> {
 }
 def OMPC_From : Clause<"from"> {
   let clangClass = "OMPFromClause";
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpFromClause";
 }
 def OMPC_Full: Clause<"full"> {
   let clangClass = "OMPFullClause";
@@ -460,7 +463,7 @@ def OMPC_Threads : Clause<"threads"> {
 }
 def OMPC_To : Clause<"to"> {
   let clangClass = "OMPToClause";
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpToClause";
 }
 def OMPC_UnifiedAddress : Clause<"unified_address"> {
   let clangClass = "OMPUnifiedAddressClause";
@@ -481,6 +484,7 @@ def OMPC_Untied : Clause<"untied"> {
 }
 def OMPC_Update : Clause<"update"> {
   let clangClass = "OMPUpdateClause";
+  let flangClass = "OmpUpdateClause";
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";

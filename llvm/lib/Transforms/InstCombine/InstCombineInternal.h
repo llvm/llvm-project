@@ -102,6 +102,7 @@ public:
   Instruction *visitSRem(BinaryOperator &I);
   Instruction *visitFRem(BinaryOperator &I);
   bool simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I);
+  Instruction *commonIDivRemTransforms(BinaryOperator &I);
   Instruction *commonIRemTransforms(BinaryOperator &I);
   Instruction *commonIDivTransforms(BinaryOperator &I);
   Instruction *visitUDiv(BinaryOperator &I);

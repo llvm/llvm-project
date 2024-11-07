@@ -121,8 +121,11 @@ genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
 }
 
 static mlir::omp::ClauseTaskDependAttr
-genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
+genDependKindAttr(lower::AbstractConverter &converter,
                   const omp::clause::Depend::TaskDependenceType kind) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+
   mlir::omp::ClauseTaskDepend pbKind;
   switch (kind) {
   case omp::clause::Depend::TaskDependenceType::In:
@@ -136,7 +139,11 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
     break;
   case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
   case omp::clause::Depend::TaskDependenceType::Inoutset:
+    TODO(currentLocation, "INOUTSET and MUTEXINOUTSET are not supported yet");
+    break;
   case omp::clause::Depend::TaskDependenceType::Depobj:
+  case omp::clause::Depend::TaskDependenceType::Sink:
+  case omp::clause::Depend::TaskDependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
     break;
   }
@@ -793,8 +800,6 @@ bool ClauseProcessor::processCopyprivate(
 }
 
 bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
     using Depend = omp::clause::Depend;
@@ -811,7 +816,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
            "Support for iterator modifiers is not implemented yet");
     }
     mlir::omp::ClauseTaskDependAttr dependTypeOperand =
-        genDependKindAttr(firOpBuilder, kind);
+        genDependKindAttr(converter, kind);
     result.dependKinds.append(objects.size(), dependTypeOperand);
 
     for (const omp::Object &object : objects) {
@@ -1017,16 +1022,22 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
-
+    const auto &[expectation, mapper, iterator, objects] = clause.t;
     // TODO Support motion modifiers: present, mapper, iterator.
+    if (expectation) {
+      TODO(clauseLocation, "PRESENT modifier is not supported yet");
+    } else if (mapper) {
+      TODO(clauseLocation, "Mapper modifier is not supported yet");
+    } else if (iterator) {
+      TODO(clauseLocation, "Iterator modifier is not supported yet");
+    }
     constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
-                      mapTypeBits, parentMemberIndices, result.mapVars,
-                      mapSymbols);
+    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapSymbols);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);

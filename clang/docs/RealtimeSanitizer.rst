@@ -11,10 +11,15 @@ RealtimeSanitizer (a.k.a. RTSan) is a real-time safety testing tool for C and C+
 projects. RTSan can be used to detect real-time violations, i.e. calls to methods
 that are not safe for use in functions with deterministic run time requirements.
 RTSan considers any function marked with the ``[[clang::nonblocking]]`` attribute
-to be a real-time function. If RTSan detects a call to ``malloc``, ``free``,
-``pthread_mutex_lock``, or anything else that could have a non-deterministic
-execution time in a function marked ``[[clang::nonblocking]]``
-RTSan raises an error.
+to be a real-time function. At run-time, if RTSan detects a call to ``malloc``, 
+``free``, ``pthread_mutex_lock``, or anything else known to have a 
+non-deterministic execution time in a function marked ``[[clang::nonblocking]]``
+it raises an error. 
+
+RTSan performs its analysis at run-time but shares the ``[[clang::nonblocking]]`` 
+attribute with the :doc:`FunctionEffectAnalysis` system, which operates at 
+compile-time to detect potential real-time safety violations. For comprehensive 
+detection of real-time safety issues, it is recommended to use both systems together.
 
 The runtime slowdown introduced by RealtimeSanitizer is negligible.
 

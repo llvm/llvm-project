@@ -383,6 +383,14 @@ public:
   }
   void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDepobjConstruct &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
+    auto &object{std::get<parser::OmpObject>(x.t)};
+    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    return true;
+  }
+  void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     using Flags = WithOmpDeclarative::RequiresFlags;
     using Requires = WithOmpDeclarative::RequiresFlag;
@@ -1531,6 +1539,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_masked:
   case llvm::omp::Directive::OMPD_parallel_masked:
   case llvm::omp::Directive::OMPD_master:
+  case llvm::omp::Directive::OMPD_parallel_master:
   case llvm::omp::Directive::OMPD_ordered:
   case llvm::omp::Directive::OMPD_parallel:
   case llvm::omp::Directive::OMPD_scope:
@@ -1550,7 +1559,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     // TODO others
     break;
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_master)
+  if (beginDir.v == llvm::omp::Directive::OMPD_master ||
+      beginDir.v == llvm::omp::Directive::OMPD_parallel_master)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
@@ -1563,7 +1573,9 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_masked:
+  case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_parallel_masked:
+  case llvm::omp::Directive::OMPD_parallel_master:
   case llvm::omp::Directive::OMPD_parallel:
   case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
@@ -1634,10 +1646,14 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_loop:
   case llvm::omp::Directive::OMPD_masked_taskloop_simd:
   case llvm::omp::Directive::OMPD_masked_taskloop:
+  case llvm::omp::Directive::OMPD_master_taskloop_simd:
+  case llvm::omp::Directive::OMPD_master_taskloop:
   case llvm::omp::Directive::OMPD_parallel_do:
   case llvm::omp::Directive::OMPD_parallel_do_simd:
   case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
   case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
+  case llvm::omp::Directive::OMPD_parallel_master_taskloop_simd:
+  case llvm::omp::Directive::OMPD_parallel_master_taskloop:
   case llvm::omp::Directive::OMPD_simd:
   case llvm::omp::Directive::OMPD_target_loop:
   case llvm::omp::Directive::OMPD_target_parallel_do:
@@ -1662,7 +1678,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   default:
     break;
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_target_loop)
+  if (beginDir.v == llvm::omp::OMPD_master_taskloop ||
+      beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
+      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
+      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
+      beginDir.v == llvm::omp::Directive::OMPD_target_loop)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
@@ -1910,7 +1930,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     for (const auto &clause : clauseList->v) {
       if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        ResolveOmpObjectList(toClause->v, Symbol::Flag::OmpDeclareTarget);
+        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
@@ -2891,18 +2912,39 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
 
 void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
-  std::string warnStr = "";
-  std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
+  std::string warnStr;
+  llvm::raw_string_ostream warnStrOS(warnStr);
+  warnStrOS << "OpenMP directive "
+            << parser::ToUpperCaseLetters(
+                   llvm::omp::getOpenMPDirectiveName(D).str())
+            << " has been deprecated";
+
+  auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {
+    warnStrOS << ", please use " << alt << " instead.";
+  };
   switch (D) {
   case llvm::omp::OMPD_master:
-    warnStr = "OpenMP directive '" + dirName +
-        "' has been deprecated, please use 'masked' instead.";
+    setAlternativeStr("MASKED");
+    break;
+  case llvm::omp::OMPD_master_taskloop:
+    setAlternativeStr("MASKED TASKLOOP");
+    break;
+  case llvm::omp::OMPD_master_taskloop_simd:
+    setAlternativeStr("MASKED TASKLOOP SIMD");
+    break;
+  case llvm::omp::OMPD_parallel_master:
+    setAlternativeStr("PARALLEL MASKED");
+    break;
+  case llvm::omp::OMPD_parallel_master_taskloop:
+    setAlternativeStr("PARALLEL MASKED TASKLOOP");
+    break;
+  case llvm::omp::OMPD_parallel_master_taskloop_simd:
+    setAlternativeStr("PARALLEL_MASKED TASKLOOP SIMD");
     break;
   case llvm::omp::OMPD_target_loop:
-  default:
-    warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
+  default:;
   }
-  context_.Warn(
-      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStr);
+  context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
+      warnStrOS.str());
 }
 } // namespace Fortran::semantics

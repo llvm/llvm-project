@@ -430,16 +430,15 @@ Error RTDyldObjectLinkingLayer::handleRemoveResources(JITDylib &JD,
 void RTDyldObjectLinkingLayer::handleTransferResources(JITDylib &JD,
                                                        ResourceKey DstKey,
                                                        ResourceKey SrcKey) {
-  auto I = MemMgrs.find(SrcKey);
-  if (I != MemMgrs.end()) {
-    auto &SrcMemMgrs = I->second;
+  if (MemMgrs.contains(SrcKey)) {
+    // DstKey may not be in the DenseMap yet, so the following line may resize
+    // the container and invalidate iterators and value references.
     auto &DstMemMgrs = MemMgrs[DstKey];
+    auto &SrcMemMgrs = MemMgrs[SrcKey];
     DstMemMgrs.reserve(DstMemMgrs.size() + SrcMemMgrs.size());
     for (auto &MemMgr : SrcMemMgrs)
       DstMemMgrs.push_back(std::move(MemMgr));
 
-    // Erase SrcKey entry using value rather than iterator I: I may have been
-    // invalidated when we looked up DstKey.
     MemMgrs.erase(SrcKey);
   }
 }

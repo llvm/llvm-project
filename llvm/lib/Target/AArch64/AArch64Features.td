@@ -358,10 +358,6 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
-  "UseFixedOverScalableIfEqualCost", "true",
-  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
-
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
@@ -796,6 +792,10 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
+
+def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+  "UseFixedOverScalableIfEqualCost", "true",
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
