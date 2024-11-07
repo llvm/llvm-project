@@ -698,6 +698,11 @@ Error RewriteInstance::run() {
   if (opts::DiffOnly)
     return Error::success();
 
+  if (opts::BinaryAnalysisMode) {
+    runBinaryAnalyses();
+    return Error::success();
+  }
+
   preregisterSections();
 
   runOptimizationPasses();
@@ -3418,6 +3423,8 @@ void RewriteInstance::runOptimizationPasses() {
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   BC->logBOLTErrorsAndQuitOnFatal(BinaryFunctionPassManager::runAllPasses(*BC));
 }
+
+void RewriteInstance::runBinaryAnalyses() {}
 
 void RewriteInstance::preregisterSections() {
   // Preregister sections before emission to set their order in the output.
