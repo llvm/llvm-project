@@ -147,5 +147,6 @@ group("hwasan") {
     ":hwasan_shared",
     ":hwasan_static",
     ":hwasan_cxx",
+    ":version_script",
   ]
 }
