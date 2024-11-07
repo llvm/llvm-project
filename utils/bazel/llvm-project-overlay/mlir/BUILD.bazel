@@ -4875,6 +4875,7 @@ cc_library(
     deps = [
         ":AffineTransformOps",
         ":ArithToLLVM",
+        ":AMXTransforms",
         ":BufferizationTransformOps",
         ":BuiltinToLLVMIRTranslation",
         ":ComplexToLLVM",
