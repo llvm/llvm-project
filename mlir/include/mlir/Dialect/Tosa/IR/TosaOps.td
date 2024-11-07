@@ -74,7 +74,9 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
   let description = [{
     This performs an average pooling over the given input tensor. A sliding
     window of size given by <kernel size> is passed over the input tensor, with
-    the mean value being placed in the output tensor.
+    the mean value being placed in the output tensor. When calculating the
+    average, only the number of valid input tensor values, but not padding, are
+    used to calculate the divisor.
   }];
 
   let arguments = (ins
