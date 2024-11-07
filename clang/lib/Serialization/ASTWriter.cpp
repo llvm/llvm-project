@@ -4755,6 +4755,8 @@ void ASTWriter::AddString(StringRef Str, RecordDataImpl &Record) {
 }
 
 bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
+  assert(WritingAST && "can't prepare path for output when not writing AST");
+
   // Leave special file names as they are.
   StringRef PathStr(Path.data(), Path.size());
   if (PathStr == "<built-in>" || PathStr == "<command line>")
