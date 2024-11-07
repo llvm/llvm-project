@@ -313,6 +313,29 @@ Non-comprehensive list of changes in this release
   as well as declarations.
 - ``__builtin_abs`` function can now be used in constant expressions.
 
+- The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
+  programmer needs access to the ``counted_by`` attribute's field, but it's not
+  available --- e.g. in macros. For instace, it can be used to automatically
+  set the counter during allocation in the Linux kernel:
+
+  .. code-block:: c
+
+     /* A simplified version of Linux allocation macros */
+     #define alloc(PTR, FAM, COUNT) ({ \
+         sizeof_t __ignored_assignment;                             \
+         typeof(P) __p;                                             \
+         size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT;      \
+         __p = malloc(__size);                                      \
+         *_Generic(                                                 \
+           __builtin_counted_by_ref(__p->FAM),                      \
+             void *: &__ignored_assignment,                         \
+             default: __builtin_counted_by_ref(__p->FAM)) = COUNT;  \
+         __p;                                                       \
+     })
+
+  The flexible array member (FAM) can now be accessed immediately without causing
+  issues with the sanitizer because the counter is automatically set.
+
 New Compiler Flags
 ------------------
 
