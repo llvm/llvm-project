@@ -595,6 +595,8 @@ Bug Fixes to C++ Support
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Fixed an assertion failure caused by invalid default argument substitutions in non-defining
+  friend declarations. (#GH113324).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
