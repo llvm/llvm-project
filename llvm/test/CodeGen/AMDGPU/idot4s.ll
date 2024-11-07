@@ -3450,4 +3450,3 @@ entry:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-
