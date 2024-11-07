@@ -280,6 +280,12 @@ C2y Feature Support
   this is now a C2y extension in C. ``-Wgnu-case-range`` still applies in C++
   modes.
 
+- Clang implemented support for `N3344 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3344.pdf>`_
+  which disallows a ``void`` parameter from having a qualifier or storage class
+  specifier. Note that ``register void`` was previously accepted in all C
+  language modes but is now rejected (all of the other qualifiers and storage
+  class specifiers were previously rejected).
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
