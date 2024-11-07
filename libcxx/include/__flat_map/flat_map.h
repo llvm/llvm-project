@@ -23,6 +23,7 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/swappable.h>
 #include <__config>
+#include <__cstddef/byte.h>
 #include <__flat_map/sorted_unique.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>

@@ -4035,7 +4035,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
         LTOMode != LTOK_None &&
         !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
-             .equals_insensitive("lld"))
+             .starts_with_insensitive("lld"))
       Diag(clang::diag::err_drv_lto_without_lld);
 
     // If -dumpdir is not specified, give a default prefix derived from the link
@@ -4789,6 +4789,11 @@ Action *Driver::ConstructPhaseAction(
   // encode this in the steps because the intermediate type depends on
   // arguments. Just special case here.
   if (Phase == phases::Assemble && Input->getType() != types::TY_PP_Asm)
+    return Input;
+
+  // Use of --sycl-link will only allow for the link phase to occur. This is
+  // for all input files.
+  if (Args.hasArg(options::OPT_sycl_link) && Phase != phases::Link)
     return Input;
 
   // Build the appropriate action.

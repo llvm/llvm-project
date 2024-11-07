@@ -1,6 +1,5 @@
 """Test stepping over and into inlined functions."""
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -14,6 +13,7 @@ class TestInlineStepping(TestBase):
         compiler="icc",
         bugnumber="# Not really a bug.  ICC combines two inlined functions.",
     )
+    @skipIf(oslist=["linux"], archs=["arm"])  # Fails for 32 bit arm
     def test_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
@@ -31,6 +31,12 @@ class TestInlineStepping(TestBase):
         """Test stepping in to templated functions."""
         self.build()
         self.step_in_template()
+
+    @add_test_categories(["pyapi"])
+    def test_virtual_inline_stepping(self):
+        """Test stepping through a virtual inlined call stack"""
+        self.build()
+        self.virtual_inline_stepping()
 
     def setUp(self):
         # Call super's setUp().
@@ -357,3 +363,76 @@ class TestInlineStepping(TestBase):
 
         step_sequence = [["// In max_value specialized", "into"]]
         self.run_step_sequence(step_sequence)
+
+    def run_to_call_site_and_step(
+        self, source_regex, func_name, start_pos, one_more_step_loc=None
+    ):
+        main_spec = lldb.SBFileSpec("calling.cpp")
+        # Set the breakpoint by file and line, not sourced regex because
+        # we want to make sure we can set breakpoints on call sites:
+        call_site_line_num = line_number(self.main_source, source_regex)
+        target, process, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self, main_spec, call_site_line_num
+        )
+
+        # Make sure that the location is at the call site (run_to_line_breakpoint already asserted
+        # that there's one location.):
+        bkpt_loc = bkpt.location[0]
+        strm = lldb.SBStream()
+        result = bkpt_loc.GetDescription(strm, lldb.eDescriptionLevelFull)
+
+        self.assertTrue(result, "Got a location description")
+        desc = strm.GetData()
+        self.assertIn(f"calling.cpp:{call_site_line_num}", desc, "Right line listed")
+        # We don't get the function name right yet - so we omit it in printing.
+        # Turn on this test when that is working.
+        # self.assertIn(func_name, desc, "Right function listed")
+
+        pc = thread.frame[0].pc
+        for i in range(start_pos, 3):
+            thread.StepInto()
+            frame_0 = thread.frame[0]
+
+            trivial_line_num = line_number(
+                self.main_source, f"In caller_trivial_inline_{i}."
+            )
+            self.assertEqual(
+                frame_0.line_entry.line,
+                trivial_line_num,
+                f"Stepped into the caller_trivial_inline_{i}",
+            )
+            if pc != frame_0.pc:
+                # If we get here, we stepped to the expected line number, but
+                # the compiler on this system has decided to insert an instruction
+                # between the call site of an inlined function with no arguments,
+                # returning void, and its immediate call to another void inlined function
+                # with no arguments.  We aren't going to be testing virtual inline
+                # stepping for this function...
+                break
+
+        if one_more_step_loc:
+            thread.StepInto()
+            frame_0 = thread.frame[0]
+            self.assertEqual(
+                frame_0.line_entry.line,
+                line_number(self.main_source, one_more_step_loc),
+                "Was able to step one more time",
+            )
+        process.Kill()
+        target.Clear()
+
+    def virtual_inline_stepping(self):
+        """Use the Python API's to step through a virtual inlined stack"""
+        self.run_to_call_site_and_step("At caller_trivial_inline_1", "main", 1)
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_1", "caller_trivial_inline_1", 2
+        )
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_2", "caller_trivial_inline_2", 3
+        )
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_3",
+            "caller_trivial_inline_3",
+            4,
+            "After caller_trivial_inline_3",
+        )

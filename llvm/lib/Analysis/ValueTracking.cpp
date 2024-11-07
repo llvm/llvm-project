@@ -1566,6 +1566,22 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Skip direct self references.
         if (IncValue == P) continue;
 
+        // Recurse, but cap the recursion to one level, because we don't
+        // want to waste time spinning around in loops.
+        // TODO: See if we can base recursion limiter on number of incoming phi
+        // edges so we don't overly clamp analysis.
+        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
+
+        // If the Use is a select of this phi, use the knownbit of the other
+        // operand to break the recursion.
+        if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P) {
+            IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
+                                               : SI->getTrueValue();
+            IncDepth = Depth + 1;
+          }
+        }
+
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
@@ -1574,13 +1590,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
-
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
-        // TODO: See if we can base recursion limiter on number of incoming phi
-        // edges so we don't overly clamp analysis.
-        computeKnownBits(IncValue, DemandedElts, Known2,
-                         MaxAnalysisRecursionDepth - 1, RecQ);
+        computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
@@ -6003,14 +6013,32 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (IncValue == P)
           continue;
 
+        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
+
+        // If the Use is a select of this phi, use the fp class of the other
+        // operand to break the recursion. Same around 2-operand phi nodes
+        Value *V;
+        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
+          IncValue = V;
+        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
+                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
+          for (int Idx = 0; Idx < 2; ++Idx) {
+            if (IncPhi->getIncomingValue(Idx) == P) {
+              IncValue = IncPhi->getIncomingValue(1 - Idx);
+              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+              break;
+            }
+          }
+        }
+
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
         computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
                             PhiRecursionLimit,
-                            Q.getWithoutCondContext().getWithInstruction(
-                                P->getIncomingBlock(U)->getTerminator()));
+                            Q.getWithoutCondContext().getWithInstruction(CxtI));
 
         if (First) {
           Known = KnownSrc;

@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1772,10 +1773,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 SDValue SelectionDAG::getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
                                         bool isT, bool isO) {
   unsigned Size = VT.getScalarSizeInBits();
-  assert(
-      isIntN(Size, Val) &&
-      "getSignedConstant with a int64_t value that doesn't fit in the type!");
-  return getConstant(APInt(Size, Val, true), DL, VT, isT, isO);
+  return getConstant(APInt(Size, Val, /*isSigned=*/true), DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget,
@@ -2481,6 +2479,103 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
          "There should only be one subvector after tree flattening");
 
   return Subvectors[0];
+}
+
+bool SelectionDAG::expandFSINCOS(SDNode *Node,
+                                 SmallVectorImpl<SDValue> &Results) {
+  EVT VT = Node->getValueType(0);
+  LLVMContext *Ctx = getContext();
+  Type *Ty = VT.getTypeForEVT(*Ctx);
+  RTLIB::Libcall LC =
+      RTLIB::getFSINCOS(VT.isVector() ? VT.getVectorElementType() : VT);
+
+  const char *LCName = TLI->getLibcallName(LC);
+  if (!LC || !LCName)
+    return false;
+
+  auto getVecDesc = [&]() -> VecDesc const * {
+    for (bool Masked : {false, true}) {
+      if (VecDesc const *VD = getLibInfo().getVectorMappingInfo(
+              LCName, VT.getVectorElementCount(), Masked)) {
+        return VD;
+      }
+    }
+    return nullptr;
+  };
+
+  VecDesc const *VD = nullptr;
+  if (VT.isVector() && !(VD = getVecDesc()))
+    return false;
+
+  // Find users of the node that store the results (and share input chains). The
+  // destination pointers can be used instead of creating stack allocations.
+  SDValue StoresInChain{};
+  std::array<StoreSDNode *, 2> ResultStores = {nullptr};
+  for (SDNode *User : Node->uses()) {
+    if (!ISD::isNormalStore(User))
+      continue;
+    auto *ST = cast<StoreSDNode>(User);
+    if (!ST->isSimple() || ST->getAddressSpace() != 0 ||
+        ST->getAlign() < getDataLayout().getABITypeAlign(Ty->getScalarType()) ||
+        (StoresInChain && ST->getChain() != StoresInChain) ||
+        Node->isPredecessorOf(ST->getChain().getNode()))
+      continue;
+    ResultStores[ST->getValue().getResNo()] = ST;
+    StoresInChain = ST->getChain();
+  }
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry{};
+
+  // Pass the argument.
+  Entry.Node = Node->getOperand(0);
+  Entry.Ty = Ty;
+  Args.push_back(Entry);
+
+  // Pass the output pointers for sin and cos.
+  SmallVector<SDValue, 2> ResultPtrs{};
+  for (StoreSDNode *ST : ResultStores) {
+    SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(VT);
+    Entry.Node = ResultPtr;
+    Entry.Ty = PointerType::getUnqual(Ty->getContext());
+    Args.push_back(Entry);
+    ResultPtrs.push_back(ResultPtr);
+  }
+
+  SDLoc DL(Node);
+
+  if (VD && VD->isMasked()) {
+    EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), *Ctx, VT);
+    Entry.Node = getBoolConstant(true, DL, MaskVT, VT);
+    Entry.Ty = MaskVT.getTypeForEVT(*Ctx);
+    Args.push_back(Entry);
+  }
+
+  SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
+  SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
+                                     TLI->getPointerTy(getDataLayout()));
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
+      TLI->getLibcallCallingConv(LC), Type::getVoidTy(*Ctx), Callee,
+      std::move(Args));
+
+  auto [Call, OutChain] = TLI->LowerCallTo(CLI);
+
+  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
+    MachinePointerInfo PtrInfo;
+    if (StoreSDNode *ST = ResultStores[ResNo]) {
+      // Replace store with the library call.
+      ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
+      PtrInfo = ST->getPointerInfo();
+    } else {
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          getMachineFunction(), cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    }
+    SDValue LoadResult = getLoad(VT, DL, OutChain, ResultPtr, PtrInfo);
+    Results.push_back(LoadResult);
+  }
+
+  return true;
 }
 
 SDValue SelectionDAG::expandVAArg(SDNode *Node) {
@@ -10220,8 +10315,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
 
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
@@ -10426,8 +10523,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
     void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList);
     createOperands(N, Ops);
@@ -12377,7 +12476,7 @@ bool SDNode::hasPredecessor(const SDNode *N) const {
 }
 
 void SDNode::intersectFlagsWith(const SDNodeFlags Flags) {
-  this->Flags.intersectWith(Flags);
+  this->Flags &= Flags;
 }
 
 SDValue

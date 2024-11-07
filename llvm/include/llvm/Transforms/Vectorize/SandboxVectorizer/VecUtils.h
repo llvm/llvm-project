@@ -12,7 +12,10 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
+#include "llvm/SandboxIR/Utils.h"
 
 namespace llvm::sandboxir {
 
@@ -28,6 +31,40 @@ public:
   /// Returns \p Ty if scalar or its element type if vector.
   static Type *getElementType(Type *Ty) {
     return Ty->isVectorTy() ? cast<FixedVectorType>(Ty)->getElementType() : Ty;
+  }
+
+  /// \Returns true if \p I1 and \p I2 are load/stores accessing consecutive
+  /// memory addresses.
+  template <typename LoadOrStoreT>
+  static bool areConsecutive(LoadOrStoreT *I1, LoadOrStoreT *I2,
+                             ScalarEvolution &SE, const DataLayout &DL) {
+    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
+                      std::is_same<LoadOrStoreT, StoreInst>::value,
+                  "Expected Load or Store!");
+    auto Diff = Utils::getPointerDiffInBytes(I1, I2, SE);
+    if (!Diff)
+      return false;
+    int ElmBytes = Utils::getNumBits(I1) / 8;
+    return *Diff == ElmBytes;
+  }
+
+  template <typename LoadOrStoreT>
+  static bool areConsecutive(ArrayRef<Value *> &Bndl, ScalarEvolution &SE,
+                             const DataLayout &DL) {
+    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
+                      std::is_same<LoadOrStoreT, StoreInst>::value,
+                  "Expected Load or Store!");
+    assert(isa<LoadOrStoreT>(Bndl[0]) && "Expected Load or Store!");
+    auto *LastLS = cast<LoadOrStoreT>(Bndl[0]);
+    for (Value *V : drop_begin(Bndl)) {
+      assert(isa<LoadOrStoreT>(V) &&
+             "Unimplemented: we only support StoreInst!");
+      auto *LS = cast<LoadOrStoreT>(V);
+      if (!VecUtils::areConsecutive(LastLS, LS, SE, DL))
+        return false;
+      LastLS = LS;
+    }
+    return true;
   }
 };
 

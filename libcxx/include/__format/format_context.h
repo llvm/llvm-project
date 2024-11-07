@@ -23,7 +23,6 @@
 #include <__memory/addressof.h>
 #include <__utility/move.h>
 #include <__variant/monostate.h>
-#include <cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <__locale>

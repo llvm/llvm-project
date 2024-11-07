@@ -7146,8 +7146,8 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // For C++ standard modules we are done - we will call the module
     // initializer for imported modules, and that will likewise call those for
     // any imports it has.
-    if (CXX20ModuleInits && Import->getImportedOwningModule() &&
-        !Import->getImportedOwningModule()->isModuleMapModule())
+    if (CXX20ModuleInits && Import->getImportedModule() &&
+        Import->getImportedModule()->isNamedModule())
       break;
 
     // For clang C++ module map modules the initializers for sub-modules are

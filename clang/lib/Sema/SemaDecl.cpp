@@ -3332,9 +3332,7 @@ static void mergeParamDeclTypes(ParmVarDecl *NewParam,
       }
     } else {
       QualType NewT = NewParam->getType();
-      NewT = S.Context.getAttributedType(
-                         AttributedType::getNullabilityAttrKind(*Oldnullability),
-                         NewT, NewT);
+      NewT = S.Context.getAttributedType(*Oldnullability, NewT, NewT);
       NewParam->setType(NewT);
     }
   }
@@ -4696,8 +4694,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   // Keep a chain of previous declarations.
   New->setPreviousDecl(Old);
-  if (NewTemplate)
+  if (NewTemplate) {
+    NewTemplate->mergePrevDecl(OldTemplate);
     NewTemplate->setPreviousDecl(OldTemplate);
+  }
 
   // Inherit access appropriately.
   New->setAccess(Old->getAccess());
@@ -17957,6 +17957,8 @@ CreateNewDecl:
             << Name;
         Invalid = true;
       }
+      if (TUK == TagUseKind::Declaration)
+        Invalid = true;
     } else if (!PrevDecl) {
       Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
     }

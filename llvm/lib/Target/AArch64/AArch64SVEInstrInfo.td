@@ -928,9 +928,10 @@ let Predicates = [HasSVEorSME] in {
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice", AArch64splice>;
 } // End HasSVEorSME
 
-let Predicates = [HasSVE] in {
-  defm COMPACT_ZPZ : sve_int_perm_compact<"compact", int_aarch64_sve_compact>;
-} // End HasSVE
+// COMPACT - word and doubleword
+let Predicates = [HasNonStreamingSVEorSME2p2] in {
+  defm COMPACT_ZPZ : sve_int_perm_compact_sd<"compact", int_aarch64_sve_compact>;
+}
 
 let Predicates = [HasSVEorSME] in {
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
@@ -2128,7 +2129,7 @@ let Predicates = [HasSVEorSME] in {
   defm CNTH_XPiI : sve_int_count<0b010, "cnth", int_aarch64_sve_cnth>;
   defm CNTW_XPiI : sve_int_count<0b100, "cntw", int_aarch64_sve_cntw>;
   defm CNTD_XPiI : sve_int_count<0b110, "cntd", int_aarch64_sve_cntd>;
-  defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp", int_aarch64_sve_cntp>;
+  defm CNTP_XPP : sve_int_pcount_pred<0b000, "cntp", int_aarch64_sve_cntp>;
 
   def : Pat<(i64 (AArch64CttzElts nxv16i1:$Op1)),
             (CNTP_XPP_B (BRKB_PPzP (PTRUE_B 31), PPR:$Op1),
@@ -3365,6 +3366,21 @@ let Predicates = [HasSVEorSME] in {
             (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
             (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
+
+  // Move element from the bottom 128-bits of a scalable vector to a single-element vector.
+  // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
+  def : Pat<(v1f64 (scalar_to_vector
+                     (f64 (vector_extract nxv2f64:$vec, VectorIndexD:$index)))),
+            (EXTRACT_SUBREG
+                (INSvi64lane (IMPLICIT_DEF), (i64 0),
+                    (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index),
+                dsub)>;
+  def : Pat<(v1i64 (scalar_to_vector
+                     (i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)))),
+            (EXTRACT_SUBREG
+                (INSvi64lane (IMPLICIT_DEF), (i64 0),
+                    (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index),
+                 dsub)>;
   } // End HasNEON
 
   let Predicates = [HasNEON] in {
@@ -3850,7 +3866,7 @@ let Predicates = [HasSVE2] in {
 
 let Predicates = [HasSVE2orSME] in {
   // SVE2 vector splice (constructive)
-  defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice">;
+  defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice", AArch64splice>;
 } // End HasSVE2orSME
 
 let Predicates = [HasSVE2] in {
@@ -4225,15 +4241,22 @@ defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 // SME2.2 or SVE2.2 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p2orSME2p2] in {
+  // SVE Floating-point convert precision, zeroing predicate
+  defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt">;
+
   // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
   defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
   def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+  // Placing even
+  def FCVTX_ZPzZ_DtoS   : sve_fp_z2op_p_zd<0b0001010, "fcvtx", ZPR64, ZPR32>;
 
   // SVE2p2 floating-point convert precision up, zeroing predicate
   defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt">;
 
   // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
   def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
+  // Placing corresponding
+  def BFCVT_ZPzZ_StoH   : sve_fp_z2op_p_zd<0b1001010, "bfcvt", ZPR32, ZPR16>;
 
   // Floating-point convert to integer, zeroing predicate
   defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;
@@ -4296,7 +4319,27 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   def SXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1000, "sxtw", ZPR64>;
   def UXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1010, "uxtw", ZPR64>;
 
+  // SVE predicate count
+  defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
+  defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
+
+  // SVE reverse within elements, zeroing predicate
+  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
+  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
+  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
+  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
+  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
 } // End HasSME2p2orSVE2p2
+
+//===----------------------------------------------------------------------===//
+// SME2.2 or SVE2.2 instructions - Legal in streaming mode iff target has SME2p2
+//===----------------------------------------------------------------------===//
+let Predicates = [HasNonStreamingSVE2p2orSME2p2] in {
+  // SVE2 EXPAND
+  defm EXPAND_ZPZ : sve2_int_perm_expand<"expand">;
+  // SVE COMPACT - byte and halfword
+  defm COMPACT_ZPZ : sve_int_perm_compact_bh<"compact">;
+}
 
 //===----------------------------------------------------------------------===//
 // SVE2 FP8 instructions

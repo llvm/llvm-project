@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 
@@ -47,6 +48,7 @@ const char *const kOpenAtFunctionName = "openat64";
 const char *const kOpenFunctionName = "open64";
 const char *const kPreadFunctionName = "pread64";
 const char *const kPwriteFunctionName = "pwrite64";
+const char *const kMmapFunctionName = "mmap64";
 #else
 const char *const kCreatFunctionName = "creat";
 const char *const kFcntlFunctionName = "fcntl";
@@ -55,6 +57,7 @@ const char *const kOpenAtFunctionName = "openat";
 const char *const kOpenFunctionName = "open";
 const char *const kPreadFunctionName = "pread";
 const char *const kPwriteFunctionName = "pwrite";
+const char *const kMmapFunctionName = "mmap";
 #endif
 
 using namespace testing;
@@ -122,13 +125,20 @@ TEST(TestRtsanInterceptors, VallocDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-#if SANITIZER_INTERCEPT_ALIGNED_ALLOC
-TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
-  auto Func = []() { EXPECT_NE(nullptr, aligned_alloc(16, 32)); };
-  ExpectRealtimeDeath(Func, "aligned_alloc");
-  ExpectNonRealtimeSurvival(Func);
-}
+#if __has_builtin(__builtin_available) && SANITIZER_APPLE
+#define ALIGNED_ALLOC_AVAILABLE() (__builtin_available(macOS 10.15, *))
+#else
+// We are going to assume this is true until we hit systems where it isn't
+#define ALIGNED_ALLOC_AVAILABLE() (true)
 #endif
+
+TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
+  if (ALIGNED_ALLOC_AVAILABLE()) {
+    auto Func = []() { EXPECT_NE(nullptr, aligned_alloc(16, 32)); };
+    ExpectRealtimeDeath(Func, "aligned_alloc");
+    ExpectNonRealtimeSurvival(Func);
+  }
+}
 
 // free_sized and free_aligned_sized (both C23) are not yet supported
 TEST(TestRtsanInterceptors, FreeDiesWhenRealtime) {
@@ -171,6 +181,37 @@ TEST(TestRtsanInterceptors, PvallocDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
+
+TEST(TestRtsanInterceptors, MmapDiesWhenRealtime) {
+  auto Func = []() {
+    void *_ = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  };
+  ExpectRealtimeDeath(Func, kMmapFunctionName);
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
+  void *ptr = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  EXPECT_NE(ptr, nullptr);
+  auto Func = [ptr]() { munmap(ptr, 8); };
+  printf("Right before death munmap\n");
+  ExpectRealtimeDeath(Func, "munmap");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, ShmOpenDiesWhenRealtime) {
+  auto Func = []() { shm_open("/rtsan_test_shm", O_CREAT | O_RDWR, 0); };
+  ExpectRealtimeDeath(Func, "shm_open");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, ShmUnlinkDiesWhenRealtime) {
+  auto Func = []() { shm_unlink("/rtsan_test_shm"); };
+  ExpectRealtimeDeath(Func, "shm_unlink");
+  ExpectNonRealtimeSurvival(Func);
+}
 
 /*
     Sleeping

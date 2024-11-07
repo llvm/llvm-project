@@ -2222,64 +2222,6 @@ defm MVE_VRHADDu8  : MVE_VRHADD<MVE_v16u8, avgceilu>;
 defm MVE_VRHADDu16 : MVE_VRHADD<MVE_v8u16, avgceilu>;
 defm MVE_VRHADDu32 : MVE_VRHADD<MVE_v4u32, avgceilu>;
 
-// Rounding Halving Add perform the arithemtic operation with an extra bit of
-// precision, before performing the shift, to void clipping errors. We're not
-// modelling that here with these patterns, but we're using no wrap forms of
-// add to ensure that the extra bit of information is not needed for the
-// arithmetic or the rounding.
-let Predicates = [HasMVEInt] in {
-  def : Pat<(v16i8 (ARMvshrsImm (addnsw (addnsw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvmovImm (i32 3585)))),
-                                (i32 1))),
-            (MVE_VRHADDs8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshrsImm (addnsw (addnsw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvmovImm (i32 2049)))),
-                                (i32 1))),
-            (MVE_VRHADDs16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshrsImm (addnsw (addnsw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvmovImm (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs32 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v16i8 (ARMvshruImm (addnuw (addnuw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvmovImm (i32 3585)))),
-                                (i32 1))),
-            (MVE_VRHADDu8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshruImm (addnuw (addnuw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvmovImm (i32 2049)))),
-                                (i32 1))),
-            (MVE_VRHADDu16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshruImm (addnuw (addnuw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvmovImm (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu32 MQPR:$Qm, MQPR:$Qn)>;
-
-  def : Pat<(v16i8 (ARMvshrsImm (addnsw (addnsw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshrsImm (addnsw (addnsw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshrsImm (addnsw (addnsw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDs32 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v16i8 (ARMvshruImm (addnuw (addnuw (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)),
-                                        (v16i8 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu8 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v8i16 (ARMvshruImm (addnuw (addnuw (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)),
-                                        (v8i16 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu16 MQPR:$Qm, MQPR:$Qn)>;
-  def : Pat<(v4i32 (ARMvshruImm (addnuw (addnuw (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)),
-                                        (v4i32 (ARMvdup (i32 1)))),
-                                (i32 1))),
-            (MVE_VRHADDu32 MQPR:$Qm, MQPR:$Qn)>;
-}
-
-
 class MVE_VHADDSUB<string iname, string suffix, bit U, bit subtract,
                    bits<2> size, list<dag> pattern=[]>
   : MVE_int<iname, suffix, size, pattern> {
@@ -2303,8 +2245,7 @@ class MVE_VHSUB_<string suffix, bit U, bits<2> size,
   : MVE_VHADDSUB<"vhsub", suffix, U, 0b1, size, pattern>;
 
 multiclass MVE_VHADD_m<MVEVectorVTInfo VTI, SDNode Op,
-                      SDPatternOperator unpred_op, Intrinsic PredInt, PatFrag add_op,
-                      SDNode shift_op> {
+                      SDPatternOperator unpred_op, Intrinsic PredInt> {
   def "" : MVE_VHADD_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
   defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
@@ -2313,26 +2254,18 @@ multiclass MVE_VHADD_m<MVEVectorVTInfo VTI, SDNode Op,
     // Unpredicated add-and-divide-by-two
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
-
-    def : Pat<(VTI.Vec (shift_op (add_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)), (i32 1))),
-              (Inst MQPR:$Qm, MQPR:$Qn)>;
   }
 }
 
-multiclass MVE_VHADD<MVEVectorVTInfo VTI, SDNode Op, PatFrag add_op, SDNode shift_op>
-  : MVE_VHADD_m<VTI, Op, int_arm_mve_vhadd, int_arm_mve_hadd_predicated, add_op,
-                shift_op>;
+multiclass MVE_VHADD<MVEVectorVTInfo VTI, SDNode Op>
+  : MVE_VHADD_m<VTI, Op, int_arm_mve_vhadd, int_arm_mve_hadd_predicated>;
 
-// Halving add/sub perform the arithemtic operation with an extra bit of
-// precision, before performing the shift, to void clipping errors. We're not
-// modelling that here with these patterns, but we're using no wrap forms of
-// add/sub to ensure that the extra bit of information is not needed.
-defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, avgfloors, addnsw, ARMvshrsImm>;
-defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, avgfloors, addnsw, ARMvshrsImm>;
-defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, avgfloors, addnsw, ARMvshrsImm>;
-defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, avgflooru, addnuw, ARMvshruImm>;
-defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, avgflooru, addnuw, ARMvshruImm>;
-defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, avgflooru, addnuw, ARMvshruImm>;
+defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, avgfloors>;
+defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, avgfloors>;
+defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, avgfloors>;
+defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, avgflooru>;
+defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, avgflooru>;
+defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, avgflooru>;
 
 multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
                       SDPatternOperator unpred_op, Intrinsic pred_int, PatFrag sub_op,

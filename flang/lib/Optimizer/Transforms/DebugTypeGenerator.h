@@ -39,6 +39,10 @@ private:
                                            mlir::LLVM::DIFileAttr fileAttr,
                                            mlir::LLVM::DIScopeAttr scope,
                                            fir::cg::XDeclareOp declOp);
+  mlir::LLVM::DITypeAttr convertTupleType(mlir::TupleType Ty,
+                                          mlir::LLVM::DIFileAttr fileAttr,
+                                          mlir::LLVM::DIScopeAttr scope,
+                                          fir::cg::XDeclareOp declOp);
   mlir::LLVM::DITypeAttr convertSequenceType(fir::SequenceType seqTy,
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
@@ -73,6 +77,8 @@ private:
                              mlir::LLVM::DIFileAttr fileAttr,
                              mlir::LLVM::DIScopeAttr scope,
                              fir::cg::XDeclareOp declOp);
+  std::pair<std::uint64_t, unsigned short>
+  getFieldSizeAndAlign(mlir::Type fieldTy);
 
   mlir::ModuleOp module;
   mlir::SymbolTable *symbolTable;

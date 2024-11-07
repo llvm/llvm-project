@@ -23,14 +23,6 @@ package(
 
 licenses(["notice"])
 
-exports_files([
-    "tools/clang-format/clang-format.el",
-    "tools/clang-format/clang-format-test.el",
-    "tools/clang-format/clang-format.py",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer.el",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer-test.el",
-])
-
 cc_binary(
     name = "clang-tblgen",
     srcs = glob([
@@ -360,6 +352,20 @@ gentbl(
     td_srcs = [
         "include/clang/Basic/BuiltinsRISCV.td",
         "include/clang/Basic/BuiltinsRISCVXCV.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name="basic_builtins_x86_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsX86.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsX86.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsX86.td",
         "include/clang/Basic/BuiltinsBase.td",
     ],
 )
@@ -701,6 +707,7 @@ cc_library(
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
         ":basic_builtins_riscv_gen",
+        ":basic_builtins_x86_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",

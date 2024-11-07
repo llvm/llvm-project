@@ -172,3 +172,44 @@ if.end:
 for.end:
   ret void
 }
+
+; Test case for https://github.com/llvm/llvm-project/issues/113794.
+define i32 @red_phi_0(i32 %start, ptr %src) {
+; CHECK-LABEL: define i32 @red_phi_0(
+; CHECK-SAME: i32 [[START:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[START]], i64 0
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP0]])
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br i1 poison, label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ poison, %[[LOOP]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %red = phi i32 [ %start, %entry ], [ %red.next, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red.next = add i32 0, %red
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i32 [ %red.next, %loop ]
+  ret i32 %res
+}

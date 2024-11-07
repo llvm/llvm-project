@@ -1159,7 +1159,6 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
     if (LoadInst *LI = dyn_cast<LoadInst>(UseInst)) {
       if (LI->isVolatile())
         return false;
-
       continue;
     }
 
@@ -1170,12 +1169,19 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       // Reject if the stored value is not the pointer operand.
       if (SI->getPointerOperand() != Val)
         return false;
-    } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(UseInst)) {
+      continue;
+    }
+
+    if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(UseInst)) {
       if (RMW->isVolatile())
         return false;
-    } else if (AtomicCmpXchgInst *CAS = dyn_cast<AtomicCmpXchgInst>(UseInst)) {
+      continue;
+    }
+
+    if (AtomicCmpXchgInst *CAS = dyn_cast<AtomicCmpXchgInst>(UseInst)) {
       if (CAS->isVolatile())
         return false;
+      continue;
     }
 
     // Only promote a select if we know that the other select operand
@@ -1186,6 +1192,7 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
 
       // May need to rewrite constant operands.
       WorkList.push_back(ICmp);
+      continue;
     }
 
     // TODO: If we know the address is only observed through flat pointers, we
@@ -1198,8 +1205,9 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
     if (isa<InsertValueInst>(User) || isa<InsertElementInst>(User))
       return false;
 
+    // TODO: Handle vectors of pointers.
     if (!User->getType()->isPointerTy())
-      continue;
+      return false;
 
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(UseInst)) {
       // Be conservative if an address could be computed outside the bounds of
@@ -1503,6 +1511,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
         continue;
 
       PointerType *NewTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
+
+      assert(isa<PointerType>(V->getType()));
 
       // FIXME: It doesn't really make sense to try to do this for all
       // instructions.

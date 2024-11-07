@@ -4570,9 +4570,6 @@ def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
            "before or after -ibuiltininc. "
            "Using -nobuiltininc after the option disables it">;
-def index_header_map : Flag<["-"], "index-header-map">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Make the next included directory (-I or -F) an indexer header map">;
 def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
@@ -4678,7 +4675,8 @@ def malign_loops_EQ : Joined<["-"], "malign-loops=">, Group<clang_ignored_m_Grou
 def malign_jumps_EQ : Joined<["-"], "malign-jumps=">, Group<clang_ignored_m_Group>;
 
 let Flags = [TargetSpecific] in {
-def mabi_EQ : Joined<["-"], "mabi=">, Group<m_Group>;
+def mabi_EQ : Joined<["-"], "mabi=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def malign_branch_EQ : CommaJoined<["-"], "malign-branch=">, Group<m_Group>,
   HelpText<"Specify types of branches to align">;
 def malign_branch_boundary_EQ : Joined<["-"], "malign-branch-boundary=">, Group<m_Group>,
@@ -6299,8 +6297,12 @@ def mamx_fp16 : Flag<["-"], "mamx-fp16">, Group<m_x86_Features_Group>;
 def mno_amx_fp16 : Flag<["-"], "mno-amx-fp16">, Group<m_x86_Features_Group>;
 def mamx_int8 : Flag<["-"], "mamx-int8">, Group<m_x86_Features_Group>;
 def mno_amx_int8 : Flag<["-"], "mno-amx-int8">, Group<m_x86_Features_Group>;
+def mamx_fp8 : Flag<["-"], "mamx-fp8">, Group<m_x86_Features_Group>;
+def mno_amx_fp8 : Flag<["-"], "mno-amx-fp8">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
+def mamx_transpose : Flag<["-"], "mamx-transpose">, Group<m_x86_Features_Group>;
+def mno_amx_transpose : Flag<["-"], "mno-amx-transpose">, Group<m_x86_Features_Group>;
 def mcmpccxadd : Flag<["-"], "mcmpccxadd">, Group<m_x86_Features_Group>;
 def mno_cmpccxadd : Flag<["-"], "mno-cmpccxadd">, Group<m_x86_Features_Group>;
 def msse : Flag<["-"], "msse">, Group<m_x86_Features_Group>;
@@ -6778,7 +6780,10 @@ def fsycl : Flag<["-"], "fsycl">,
 def fno_sycl : Flag<["-"], "fno-sycl">,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
-
+def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Perform link through clang-sycl-linker via the target "
+  "offloading toolchain.">;
 // OS-specific options
 let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
@@ -7363,6 +7368,7 @@ def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
 def mabi_EQ_vec_extabi : Flag<["-"], "mabi=vec-extabi">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Enable the extended Altivec ABI on AIX. Use volatile and nonvolatile vector registers">,
   MarshallingInfoFlag<LangOpts<"EnableAIXExtendedAltivecABI">>;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,

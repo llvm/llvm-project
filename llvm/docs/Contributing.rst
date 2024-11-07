@@ -6,7 +6,7 @@ Contributing to LLVM
 Thank you for your interest in contributing to LLVM! There are multiple ways to
 contribute, and we appreciate all contributions. In case you have questions,
 you can either use the `Forum`_ or, for a more interactive chat, go to our
-`Discord server`_ or the IRC #llvm channel on `irc.oftc.net`_.
+`Discord server`_.
 
 If you want to contribute code, please familiarize yourself with the :doc:`DeveloperPolicy`.
 

@@ -33,12 +33,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
