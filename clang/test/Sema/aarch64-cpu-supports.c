@@ -12,7 +12,7 @@ int test_aarch64_features(void) {
   if (__builtin_cpu_supports("pmull128"))
     return 3;
   // expected-warning@+1 {{invalid cpu feature string}}
-  if (__builtin_cpu_supports("sve2,rpres"))
+  if (__builtin_cpu_supports("sve2,sve"))
     return 4;
   // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports("dgh+sve2-pmull"))

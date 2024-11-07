@@ -58,7 +58,7 @@ define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP24:%.*]] = shl <4 x i32> [[TMP23]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP24:%.*]] = shl <4 x i32> [[TMP23]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

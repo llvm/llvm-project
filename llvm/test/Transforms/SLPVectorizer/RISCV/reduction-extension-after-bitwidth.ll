@@ -6,7 +6,7 @@ define i32 @test(ptr %0, ptr %1) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD_5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> splat (i8 1))
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP3]], [[LOAD_5]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]

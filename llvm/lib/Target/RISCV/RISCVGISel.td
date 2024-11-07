@@ -96,6 +96,22 @@ def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
 def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
                       GIComplexPatternEquiv<sh3add_uw_op>;
 
+def gi_zexti32 : GIComplexOperandMatcher<s64, "selectZExtBits<32>">,
+                 GIComplexPatternEquiv<zexti32>;
+def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,
+                 GIComplexPatternEquiv<zexti16>;
+def gi_zexti8  : GIComplexOperandMatcher<s32, "selectZExtBits<8>">,
+                 GIComplexPatternEquiv<zexti8>;
+
+// FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
+def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
+          (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
+
+let Predicates = [IsRV64] in {
+def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
+          (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
+}
+
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
 
@@ -248,10 +264,6 @@ def : PatGprGpr<urem, REMUW, i32, i32>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def : PatGpr<ctlz, CLZW, i32>;
-def : PatGpr<cttz, CTZW, i32>;
-def : PatGpr<ctpop, CPOPW, i32>;
-
 def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
 def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
 
