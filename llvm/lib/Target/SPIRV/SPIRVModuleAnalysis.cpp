@@ -660,7 +660,8 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   // Add the min requirements for different OpenCL and SPIR-V versions.
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
                     Capability::Kernel, Capability::Vector16,
-                    Capability::Groups, Capability::GenericPointer});
+                    Capability::Groups, Capability::GenericPointer,
+                    Capability::StorageImageReadWithoutFormat});
   if (ST.hasOpenCLFullProfile())
     addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
   if (ST.hasOpenCLImageSupport()) {
