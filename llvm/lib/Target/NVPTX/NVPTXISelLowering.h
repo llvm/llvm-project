@@ -628,6 +628,8 @@ private:
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;

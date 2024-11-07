@@ -667,6 +667,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
+  setCondCodeAction({ISD::SETNE, ISD::SETEQ, ISD::SETUGE, ISD::SETULE,
+                     ISD::SETUGT, ISD::SETULT, ISD::SETGT, ISD::SETLT,
+                     ISD::SETGE, ISD::SETLE},
+                    MVT::i1, Custom);
+
   // expand extload of vector of integers.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
                    MVT::v2i8, Expand);
@@ -2668,6 +2673,46 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
   }
 }
 
+// Lowers SETCC nodes that aren't directly supported by our arch.
+SDValue NVPTXTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue L = Op->getOperand(0);
+  SDValue R = Op->getOperand(1);
+
+  if (L.getValueType() != MVT::i1)
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Ret;
+  switch (cast<CondCodeSDNode>(Op->getOperand(2))->get()) {
+  default:
+    llvm_unreachable("Unknown integer setcc!");
+  case ISD::SETEQ: // X == Y  -> ~(X^Y)
+    Ret = DAG.getNOT(DL, DAG.getNode(ISD::XOR, DL, MVT::i1, L, R), MVT::i1);
+    break;
+  case ISD::SETNE: // X != Y   -->  (X^Y)
+    Ret = DAG.getNode(ISD::XOR, DL, MVT::i1, L, R);
+    break;
+  case ISD::SETGT:  // X >s Y   -->  X == 0 & Y == 1  -->  ~X & Y
+  case ISD::SETULT: // X <u Y   -->  X == 0 & Y == 1  -->  ~X & Y
+    Ret = DAG.getNode(ISD::AND, DL, MVT::i1, R, DAG.getNOT(DL, L, MVT::i1));
+    break;
+  case ISD::SETLT:  // X <s Y   --> X == 1 & Y == 0  -->  ~Y & X
+  case ISD::SETUGT: // X >u Y   --> X == 1 & Y == 0  -->  ~Y & X
+    Ret = DAG.getNode(ISD::AND, DL, MVT::i1, L, DAG.getNOT(DL, R, MVT::i1));
+    break;
+  case ISD::SETULE: // X <=u Y  --> X == 0 | Y == 1  -->  ~X | Y
+  case ISD::SETGE:  // X >=s Y  --> X == 0 | Y == 1  -->  ~X | Y
+    Ret = DAG.getNode(ISD::OR, DL, MVT::i1, R, DAG.getNOT(DL, L, MVT::i1));
+    break;
+  case ISD::SETUGE: // X >=u Y  --> X == 1 | Y == 0  -->  ~Y | X
+  case ISD::SETLE:  // X <=s Y  --> X == 1 | Y == 0  -->  ~Y | X
+    Ret = DAG.getNode(ISD::OR, DL, MVT::i1, L, DAG.getNOT(DL, R, MVT::i1));
+    break;
+  }
+
+  return DAG.getZExtOrTrunc(Ret, DL, Op.getValueType());
+}
+
 /// If the types match, convert the generic copysign to the NVPTXISD version,
 /// otherwise bail ensuring that mismatched cases are properly expaned.
 SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
@@ -2921,6 +2966,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTORE(Op, DAG);
   case ISD::LOAD:
     return LowerLOAD(Op, DAG);
+  case ISD::SETCC:
+    return LowerSETCC(Op, DAG);
   case ISD::SHL_PARTS:
     return LowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
