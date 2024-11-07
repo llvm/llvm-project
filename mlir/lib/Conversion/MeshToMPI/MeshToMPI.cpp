@@ -18,11 +18,13 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #define DEBUG_TYPE "mesh-to-mpi"
@@ -37,14 +39,17 @@ using namespace mlir;
 using namespace mlir::mesh;
 
 namespace {
-static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b, Value linearIndex, ValueRange dimensions) {
+// Create operations converting a linear index to a multi-dimensional index
+static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
+                                             Value linearIndex,
+                                             ValueRange dimensions) {
   int n = dimensions.size();
   SmallVector<Value> multiIndex(n);
 
   for (int i = n - 1; i >= 0; --i) {
     b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
     multiIndex[i] = b.create<arith::RemSIOp>(loc, linearIndex, dimensions[i]);
-    if(i > 0) {
+    if (i > 0) {
       linearIndex = b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
     }
   }
@@ -52,13 +57,16 @@ static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b, Value li
   return multiIndex;
 }
 
-Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex, ValueRange dimensions) {
+// Create operations converting a multi-dimensional index to a linear index
+Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex,
+                         ValueRange dimensions) {
+
   auto linearIndex = b.create<arith::ConstantIndexOp>(loc, 0).getResult();
   auto stride = b.create<arith::ConstantIndexOp>(loc, 1).getResult();
 
   for (int i = multiIndex.size() - 1; i >= 0; --i) {
-      linearIndex = b.create<arith::AddIOp>(loc, multiIndex[i], stride);
-      stride = b.create<arith::MulIOp>(loc, stride, dimensions[i]);
+    linearIndex = b.create<arith::AddIOp>(loc, multiIndex[i], stride);
+    stride = b.create<arith::MulIOp>(loc, stride, dimensions[i]);
   }
 
   return linearIndex;
@@ -76,22 +84,24 @@ struct ConvertProcessMultiIndexOp
     auto loc = op.getLoc();
     auto meshOp = getMesh(op, symbolTableCollection);
     // For now we only support static mesh shapes
-    if(ShapedType::isDynamicShape(meshOp.getShape())) {
+    if (ShapedType::isDynamicShape(meshOp.getShape())) {
       return mlir::failure();
     }
 
     SmallVector<Value> dims;
-    llvm::transform(meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
-      return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
-    });
-    auto rank = rewriter.create<ProcessLinearIndexOp>(op.getLoc(), meshOp).getResult();
+    llvm::transform(
+        meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
+          return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
+        });
+    auto rank =
+        rewriter.create<ProcessLinearIndexOp>(op.getLoc(), meshOp).getResult();
     auto mIdx = linearToMultiIndex(loc, rewriter, rank, dims);
 
     // optionally extract subset of mesh axes
     auto axes = op.getAxes();
-    if(!axes.empty()) {
+    if (!axes.empty()) {
       SmallVector<Value> subIndex;
-      for(auto axis : axes) {
+      for (auto axis : axes) {
         subIndex.push_back(mIdx[axis]);
       }
       mIdx = subIndex;
@@ -102,7 +112,9 @@ struct ConvertProcessMultiIndexOp
   }
 };
 
-// This pattern converts the mesh.update_halo operation to MPI calls
+// This pattern converts the mesh.update_halo operation to MPI calls.
+// If it finds a global named "static_mpi_rank" it will use that splat value.
+// Otherwise it defaults to mpi.comm_rank.
 struct ConvertProcessLinearIndexOp
     : public mlir::OpRewritePattern<mlir::mesh::ProcessLinearIndexOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -110,8 +122,25 @@ struct ConvertProcessLinearIndexOp
   mlir::LogicalResult
   matchAndRewrite(mlir::mesh::ProcessLinearIndexOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    auto rank = rewriter.create<mpi::CommRankOp>(op.getLoc(), TypeRange{mpi::RetvalType::get(op->getContext()), rewriter.getI32Type()}).getRank();
-    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(op, rewriter.getIndexType(), rank);
+    auto loc = op.getLoc();
+    auto rankOpName = StringAttr::get(op->getContext(), "static_mpi_rank");
+    if (auto globalOp = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
+            op, rankOpName)) {
+      if (auto initTnsr = globalOp.getInitialValueAttr()) {
+        auto val = cast<DenseElementsAttr>(initTnsr).getSplatValue<int64_t>();
+        rewriter.replaceOp(op,
+                           rewriter.create<arith::ConstantIndexOp>(loc, val));
+        return mlir::success();
+      }
+    }
+    auto rank =
+        rewriter
+            .create<mpi::CommRankOp>(
+                op.getLoc(), TypeRange{mpi::RetvalType::get(op->getContext()),
+                                       rewriter.getI32Type()})
+            .getRank();
+    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(op, rewriter.getIndexType(),
+                                                    rank);
     return mlir::success();
   }
 };
@@ -126,7 +155,7 @@ struct ConvertNeighborsLinearIndicesOp
                   mlir::PatternRewriter &rewriter) const override {
     auto axes = op.getSplitAxes();
     // For now only single axis sharding is supported
-    if(axes.size() != 1) {
+    if (axes.size() != 1) {
       return mlir::failure();
     }
 
@@ -136,26 +165,41 @@ struct ConvertNeighborsLinearIndicesOp
     auto mIdx = op.getDevice();
     auto orgIdx = mIdx[axes[0]];
     SmallVector<Value> dims;
-    llvm::transform(meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
-      return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
-    });
+    llvm::transform(
+        meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
+          return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
+        });
     auto dimSz = dims[axes[0]];
     auto minus1 = rewriter.create<arith::ConstantIndexOp>(loc, -1).getResult();
-    auto atBorder = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sle, dimSz, rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult());
+    auto atBorder = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sle, dimSz,
+        rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult());
     auto down = rewriter.create<scf::IfOp>(
-        loc, atBorder, [&](OpBuilder &builder, Location loc) {
+        loc, atBorder,
+        [&](OpBuilder &builder, Location loc) {
           builder.create<scf::YieldOp>(loc, minus1);
-        }, [&](OpBuilder &builder, Location loc) {
-          mIdx[axes[0]] = rewriter.create<arith::SubIOp>(op.getLoc(), orgIdx, dimSz).getResult();
-          builder.create<scf::YieldOp>(loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
+        },
+        [&](OpBuilder &builder, Location loc) {
+          mIdx[axes[0]] =
+              rewriter.create<arith::SubIOp>(op.getLoc(), orgIdx, dimSz)
+                  .getResult();
+          builder.create<scf::YieldOp>(
+              loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
         });
-    atBorder = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge, dimSz, rewriter.create<arith::AddIOp>(loc, dimSz, minus1).getResult());
+    atBorder = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sge, dimSz,
+        rewriter.create<arith::AddIOp>(loc, dimSz, minus1).getResult());
     auto up = rewriter.create<scf::IfOp>(
-        loc, atBorder, [&](OpBuilder &builder, Location loc) {
+        loc, atBorder,
+        [&](OpBuilder &builder, Location loc) {
           builder.create<scf::YieldOp>(loc, minus1);
-        }, [&](OpBuilder &builder, Location loc) {
-          mIdx[axes[0]] = rewriter.create<arith::AddIOp>(op.getLoc(), orgIdx, dimSz).getResult();
-          builder.create<scf::YieldOp>(loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
+        },
+        [&](OpBuilder &builder, Location loc) {
+          mIdx[axes[0]] =
+              rewriter.create<arith::AddIOp>(op.getLoc(), orgIdx, dimSz)
+                  .getResult();
+          builder.create<scf::YieldOp>(
+              loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
         });
     rewriter.replaceOp(op, ValueRange{down.getResult(0), up.getResult(0)});
     return mlir::success();
@@ -368,7 +412,9 @@ struct ConvertMeshToMPIPass
     auto *ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
 
-    patterns.insert<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp, ConvertProcessLinearIndexOp, ConvertProcessMultiIndexOp>(ctx);
+    patterns.insert<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp,
+                    ConvertProcessLinearIndexOp, ConvertProcessMultiIndexOp>(
+        ctx);
 
     (void)mlir::applyPatternsAndFoldGreedily(getOperation(),
                                              std::move(patterns));

@@ -1091,6 +1091,7 @@ def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
 }
 
 def Mesh_UpdateHaloOp : Mesh_Op<"update_halo", [
+  Pure,
   DestinationStyleOpInterface,
   TypesMatchWith<
     "result has same type as destination",
