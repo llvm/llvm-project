@@ -372,8 +372,10 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
     the input tensor consists of real values producing complex valued output. The
     complex output values will be split into the output_real and output_imag
     tensor arguments. RFFT2D takes advantage of Hermitian symmetry to only
-    calculate the first half of the final output axis. Imaginary values with
-    locations (0,0), (0,W/2), (H/2,0) and (H/2,W/2) are zero.
+    calculate the first half of the final output axis. Implementations may choose
+    to skip calculation of the imaginary values at (0,0), (0,W/2), (H/2,0), and
+    (H/2, W/2). If the calculation is skipped, the result at that location must be
+    zero.
 
     Example:
 
