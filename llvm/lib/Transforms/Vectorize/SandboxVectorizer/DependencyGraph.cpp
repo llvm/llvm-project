@@ -325,6 +325,51 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
   setDefUseUnscheduledSuccs(NewInterval);
 }
 
+MemDGNode *DependencyGraph::getMemDGNodeBefore(DGNode *N,
+                                               bool IncludingN) const {
+  auto *I = N->getInstruction();
+  for (auto *PrevI = IncludingN ? I : I->getPrevNode(); PrevI != nullptr;
+       PrevI = PrevI->getPrevNode()) {
+    auto *PrevN = getNodeOrNull(PrevI);
+    if (PrevN == nullptr)
+      return nullptr;
+    if (auto *PrevMemN = dyn_cast<MemDGNode>(PrevN))
+      return PrevMemN;
+  }
+  return nullptr;
+}
+
+MemDGNode *DependencyGraph::getMemDGNodeAfter(DGNode *N,
+                                              bool IncludingN) const {
+  auto *I = N->getInstruction();
+  for (auto *NextI = IncludingN ? I : I->getNextNode(); NextI != nullptr;
+       NextI = NextI->getNextNode()) {
+    auto *NextN = getNodeOrNull(NextI);
+    if (NextN == nullptr)
+      return nullptr;
+    if (auto *NextMemN = dyn_cast<MemDGNode>(NextN))
+      return NextMemN;
+  }
+  return nullptr;
+}
+
+void DependencyGraph::notifyCreateInstr(Instruction *I) {
+  auto *MemN = dyn_cast<MemDGNode>(getOrCreateNode(I));
+  // TODO: Update the dependencies for the new node.
+
+  // Update the MemDGNode chain if this is a memory node.
+  if (MemN != nullptr) {
+    if (auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false)) {
+      PrevMemN->NextMemN = MemN;
+      MemN->PrevMemN = PrevMemN;
+    }
+    if (auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false)) {
+      NextMemN->PrevMemN = MemN;
+      MemN->NextMemN = NextMemN;
+    }
+  }
+}
+
 Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   if (Instrs.empty())
     return {};
