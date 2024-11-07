@@ -598,16 +598,26 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
   SourceModule completion_module_info;
   completion_module_info.path.push_back(ConstString("repl"));
   swift::ModuleDecl *repl_module = nullptr;
-  if (m_completion_module_initialized)
-    repl_module = swift_ast->GetModule(completion_module_info, error);
+  if (m_completion_module_initialized) {
+    auto m_or_err = swift_ast->GetModule(completion_module_info);
+    if (!m_or_err)
+      llvm::consumeError(m_or_err.takeError());
+    else
+      repl_module = &*m_or_err;
+  }
   if (!repl_module) {
     swift::ImplicitImportInfo importInfo;
     importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
-    repl_module = swift_ast->CreateModule(completion_module_info, error,
-                                          importInfo);
+    auto repl_module_or_err = swift_ast->CreateModule(
+        completion_module_info.path.back().GetString(), importInfo);
+    if (!repl_module_or_err) {
+      llvm::consumeError(repl_module_or_err.takeError());
+      return;
+    }
+    repl_module = &*repl_module_or_err;
     auto bufferID = (*ast)->SourceMgr.addMemBufferCopy("// swift repl\n");
-    swift::SourceFile *repl_source_file = new (**ast) swift::SourceFile(
-                                                                        *repl_module, swift::SourceFileKind::Main, bufferID);
+    swift::SourceFile *repl_source_file = new (**ast)
+        swift::SourceFile(*repl_module, swift::SourceFileKind::Main, bufferID);
     repl_module->addFile(*repl_source_file);
     swift::performImportResolution(*repl_source_file);
     m_completion_module_initialized = true;

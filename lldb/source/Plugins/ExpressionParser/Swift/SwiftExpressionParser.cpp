@@ -1242,18 +1242,17 @@ SwiftExpressionParser::ParseAndImport(
   // FIXME: We won't have to do this once the playground adds import
   //        statements for the things it needs itself.
   if (playground) {
-    Status error;
     SourceModule module_info;
     module_info.path.emplace_back("Swift");
-    swift::ModuleDecl *module = m_swift_ast_ctx.GetModule(module_info, error);
+    auto module_or_err = m_swift_ast_ctx.GetModule(module_info);
 
-    if (error.Fail() || !module) {
+    if (!module_or_err) {
       LLDB_LOG(log, "couldn't load Swift Standard Library");
-      return error.ToError();
+      return module_or_err.takeError();
     }
 
     m_swift_ast_ctx.AddHandLoadedModule(ConstString("Swift"),
-                                        swift::ImportedModule(module));
+                                        swift::ImportedModule(&*module_or_err));
   }
 
   std::string main_filename;
@@ -2100,7 +2099,10 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     ThreadSafeASTContext ast_context = GetASTContext(diagnostic_manager);
     ast_context->addLoadedModule(module);
   }
-  m_swift_ast_ctx.CacheModule(module);
+  std::string module_name;
+  if (module)
+    module_name = module->getName().get();
+  m_swift_ast_ctx.CacheModule(module_name, module);
   if (m_sc.target_sp) {
     auto *persistent_state =
         m_sc.target_sp->GetSwiftPersistentExpressionState(*m_exe_scope);

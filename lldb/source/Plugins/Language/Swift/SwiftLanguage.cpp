@@ -1464,9 +1464,9 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                     std::vector<llvm::StringRef> name_parts;
                     SplitDottedName(input, name_parts);
 
-                    std::function<void(swift::ModuleDecl *)> lookup_func =
+                    std::function<void(const swift::ModuleDecl *)> lookup_func =
                         [&ast_ctx, input, name_parts,
-                         &results](swift::ModuleDecl *module) -> void {
+                         &results](const swift::ModuleDecl *module) -> void {
                       for (auto imported_module :
                            swift::namelookup::getAllImports(module)) {
                         auto module = imported_module.importedModule;
@@ -1519,7 +1519,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                     };
 
                     for (; iter != end; iter++)
-                      lookup_func(iter->second);
+                      lookup_func(&iter->second);
                   }
             }
           }

@@ -304,24 +304,22 @@ public:
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
 
-  /// Attempt to create a Swift module, returning \c nullptr and setting
-  /// \p error if unsuccessful.
+  /// Attempt to create a Swift module.
   ///
   /// \param importInfo Information about which modules should be implicitly
   /// imported by each file of the module.
-  swift::ModuleDecl *CreateModule(const SourceModule &module, Status &error,
-                                  swift::ImplicitImportInfo importInfo);
+  llvm::Expected<swift::ModuleDecl &>
+  CreateModule(std::string module_name, swift::ImplicitImportInfo importInfo);
 
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
   // allow for imports to happen correctly. Use with caution,
   // or use the GetModule() call that takes a FileSpec.
-  swift::ModuleDecl *GetModule(const SourceModule &module, Status &error,
-                               bool *cached = nullptr);
+  llvm::Expected<swift::ModuleDecl &> GetModule(const SourceModule &module,
+                                                bool *cached = nullptr);
+  llvm::Expected<swift::ModuleDecl &> GetModule(const FileSpec &module_spec);
 
-  swift::ModuleDecl *GetModule(const FileSpec &module_spec, Status &error);
-
-  void CacheModule(swift::ModuleDecl *module);
+  void CacheModule(std::string module_name, swift::ModuleDecl *module);
 
   /// Call this after the search paths are set up, it will find the module given
   /// by module, load the module into the AST context, and (if import_dylib is
@@ -538,7 +536,7 @@ public:
   // DebuggerClient's that we are sticking into the Swift Modules.
   void AddDebuggerClient(swift::DebuggerClient *debugger_client);
 
-  typedef llvm::StringMap<swift::ModuleDecl *> SwiftModuleMap;
+  typedef llvm::StringMap<const swift::ModuleDecl &> SwiftModuleMap;
 
   const SwiftModuleMap &GetModuleCache() { return m_swift_module_cache; }
 
@@ -881,7 +879,7 @@ protected:
 
   swift::MemoryBufferSerializedModuleLoader *GetMemoryBufferModuleLoader();
 
-  swift::ModuleDecl *GetCachedModule(const SourceModule &module);
+  swift::ModuleDecl *GetCachedModule(std::string module_name);
 
   void CacheDemangledType(ConstString mangled_name,
                           swift::TypeBase *found_type);
