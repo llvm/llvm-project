@@ -47,7 +47,6 @@ static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
   SmallVector<Value> multiIndex(n);
 
   for (int i = n - 1; i >= 0; --i) {
-    b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
     multiIndex[i] = b.create<arith::RemSIOp>(loc, linearIndex, dimensions[i]);
     if (i > 0) {
       linearIndex = b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
@@ -172,7 +171,7 @@ struct ConvertNeighborsLinearIndicesOp
     auto dimSz = dims[axes[0]];
     auto minus1 = rewriter.create<arith::ConstantIndexOp>(loc, -1).getResult();
     auto atBorder = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sle, dimSz,
+        loc, arith::CmpIPredicate::sle, orgIdx,
         rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult());
     auto down = rewriter.create<scf::IfOp>(
         loc, atBorder,
@@ -187,7 +186,7 @@ struct ConvertNeighborsLinearIndicesOp
               loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
         });
     atBorder = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::sge, dimSz,
+        loc, arith::CmpIPredicate::sge, orgIdx,
         rewriter.create<arith::AddIOp>(loc, dimSz, minus1).getResult());
     auto up = rewriter.create<scf::IfOp>(
         loc, atBorder,
