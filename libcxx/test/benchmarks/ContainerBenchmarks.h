@@ -50,6 +50,76 @@ void BM_Assignment(benchmark::State& st, Container) {
   }
 }
 
+// Wrap any Iterator into an input iterator
+template <typename Iterator>
+class InputIterator {
+  using iter_traits = std::iterator_traits<Iterator>;
+
+public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type        = typename iter_traits::value_type;
+  using difference_type   = typename iter_traits::difference_type;
+  using pointer           = typename iter_traits::pointer;
+  using reference         = typename iter_traits::reference;
+
+  InputIterator(Iterator it) : current_(it) {}
+
+  reference operator*() { return *current_; }
+  InputIterator& operator++() {
+    ++current_;
+    return *this;
+  }
+  InputIterator operator++(int) {
+    InputIterator tmp = *this;
+    ++(*this);
+    return tmp;
+  }
+
+  friend bool operator==(const InputIterator& lhs, const InputIterator& rhs) { return lhs.current_ == rhs.current_; }
+  friend bool operator!=(const InputIterator& lhs, const InputIterator& rhs) { return !(lhs == rhs); }
+
+private:
+  Iterator current_;
+};
+
+template <typename Iterator>
+InputIterator<Iterator> make_input_iterator(Iterator it) {
+  return InputIterator<Iterator>(it);
+}
+
+template <class Container,
+          class GenInputs,
+          typename std::enable_if<std::is_trivial<typename Container::value_type>::value>::type* = nullptr>
+void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
+  auto in = gen(st.range(1));
+  benchmark::DoNotOptimize(&in);
+  for (auto _ : st) {
+    st.PauseTiming();
+    c.resize(st.range(0));
+    benchmark::DoNotOptimize(&c);
+    st.ResumeTiming();
+    c.assign(make_input_iterator(in.begin()), make_input_iterator(in.end()));
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container,
+          class GenInputs,
+          typename std::enable_if<!std::is_trivial<typename Container::value_type>::value>::type* = nullptr>
+void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
+  auto v  = gen(1, 100);
+  auto in = gen(st.range(1), 32);
+  benchmark::DoNotOptimize(&in);
+  for (auto _ : st) {
+    st.PauseTiming();
+    c.resize(st.range(0), v[0]);
+    benchmark::DoNotOptimize(&c);
+    st.ResumeTiming();
+    c.assign(make_input_iterator(in.begin()), make_input_iterator(in.end()));
+    benchmark::ClobberMemory();
+  }
+}
+
 template <class Container>
 void BM_ConstructSizeValue(benchmark::State& st, Container, typename Container::value_type const& val) {
   const auto size = st.range(0);

@@ -121,6 +121,14 @@ inline std::vector<std::string> getRandomStringInputs(std::size_t N) {
   return inputs;
 }
 
+inline std::vector<std::string> getRandomStringInputsWithLength(std::size_t N, std::size_t len) {
+  std::vector<std::string> inputs;
+  inputs.reserve(N);
+  for (size_t i = 0; i < N; ++i)
+    inputs.push_back(getRandomString(len));
+  return inputs;
+}
+
 inline std::vector<std::string> getPrefixedRandomStringInputs(std::size_t N) {
   std::vector<std::string> inputs;
   inputs.reserve(N);

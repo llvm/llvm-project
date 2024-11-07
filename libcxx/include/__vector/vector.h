@@ -1004,7 +1004,7 @@ template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __last) {
   pointer __cur = __begin_;
-  for (; __first != __last && __cur != __end_; ++__cur, ++__first)
+  for (; __first != __last && __cur != __end_; ++__first, (void)++__cur)
     *__cur = *__first;
   if (__cur != __end_)
     __destruct_at_end(__cur);
