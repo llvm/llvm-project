@@ -10,7 +10,7 @@ subroutine foo()
 ! PARSE-TREE: | | | | OmpLoopDirective -> llvm::omp::Directive = do
 ! PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 ! PARSE-TREE: | | | | | ReductionModifier = Task
-! PARSE-TREE: | | | | | OmpReductionOperator -> DefinedOperator -> IntrinsicOperator = Multiply
+! PARSE-TREE: | | | | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
 ! PARSE-TREE: | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'j
   !$omp do reduction (task, *: j)
   do i = 1, 10
