@@ -442,6 +442,10 @@ static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
 
 // Returns an instruction pointer (may be nullptr if we do not know the answer).
 // Returns nullopt if `II` is not one of the `isspacep` intrinsics.
+//
+// TODO: If InferAddressSpaces were run early enough in the pipeline this could
+// be removed in favor of the constant folding that occurs there through
+// rewriteIntrinsicWithAddressSpace
 static std::optional<Instruction *>
 handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
 
