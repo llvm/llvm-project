@@ -2964,8 +2964,8 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
       // TODO: We don't handle type units yet, so LocalTypeUnitCount &
       // ForeignTypeUnitCount are left as 0.
       if (nd.hdr.LocalTypeUnitCount || nd.hdr.ForeignTypeUnitCount)
-        warn(toString(inputChunk.section.sec) +
-             Twine(": type units are not implemented"));
+        Warn(ctx) << inputChunk.section.sec
+                  << Twine(": type units are not implemented");
       // If augmentation strings are not identical, use an empty string.
       if (i == 0) {
         hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;
@@ -3383,12 +3383,12 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
   uint32_t cuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &cu : dwarf.compile_units()) {
     if (Error e = cu->tryExtractDIEsIfNeeded(false)) {
-      warn(toString(sec) + ": " + toString(std::move(e)));
+      Warn(ctx) << sec << ": " << std::move(e);
       return {};
     }
     Expected<DWARFAddressRangesVector> ranges = cu->collectAddressRanges();
     if (!ranges) {
-      warn(toString(sec) + ": " + toString(ranges.takeError()));
+      Warn(ctx) << sec << ": " << ranges.takeError();
       return {};
     }
 
@@ -3421,7 +3421,7 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
                             ELFT::Is64Bits ? 8 : 4);
     DWARFDebugPubTable table;
     table.extract(data, /*GnuStyle=*/true, [&](Error e) {
-      warn(toString(pub->sec) + ": " + toString(std::move(e)));
+      Warn(ctx) << pub->sec << ": " << std::move(e);
     });
     for (const DWARFDebugPubTable::Set &set : table.getData()) {
       // The value written into the constant pool is kind << 24 | cuIndex. As we

@@ -746,7 +746,7 @@ void LinkerScript::processSectionCommands() {
     OutputSection *osec = &osd->osec;
     if (process(osec) &&
         !map.try_emplace(CachedHashStringRef(osec->name), osd).second)
-      warn("OVERWRITE_SECTIONS specifies duplicate " + osec->name);
+      Warn(ctx) << "OVERWRITE_SECTIONS specifies duplicate " << osec->name;
   }
   for (SectionCommand *&base : sectionCommands) {
     if (auto *osd = dyn_cast<OutputDesc>(base)) {
@@ -1055,7 +1055,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
     if (ctx.arg.orphanHandling == OrphanHandlingPolicy::Error)
       ErrAlways(ctx) << sec << " is being placed in '" << name << "'";
     else
-      warn(toString(sec) + " is being placed in '" + name + "'");
+      Warn(ctx) << sec << " is being placed in '" << name << "'";
   }
 }
 
@@ -1084,8 +1084,9 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
           return ByteCommand::classof(comm);
         });
     if (!sec->memoryRegionName.empty() && hasInputOrByteCommand)
-      warn("ignoring memory region assignment for non-allocatable section '" +
-           sec->name + "'");
+      Warn(ctx)
+          << "ignoring memory region assignment for non-allocatable section '"
+          << sec->name << "'";
     return {nullptr, nullptr};
   }
 
