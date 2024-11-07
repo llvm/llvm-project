@@ -155,6 +155,7 @@ define <vscale x 8 x half> @dup_extract_nxv8f16_nxv4f16(<vscale x 4 x half> %dat
 ; CHECK-LABEL: dup_extract_nxv8f16_nxv4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 4 x half> %data, i16 1
   %.splatinsert = insertelement <vscale x 8 x half> poison, half %1, i32 0
@@ -166,6 +167,7 @@ define <vscale x 8 x half> @dup_extract_nxv8f16_nxv2f16(<vscale x 2 x half> %dat
 ; CHECK-LABEL: dup_extract_nxv8f16_nxv2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 2 x half> %data, i16 1
   %.splatinsert = insertelement <vscale x 8 x half> poison, half %1, i32 0
@@ -223,6 +225,7 @@ define <vscale x 4 x half> @dup_extract_nxv4f16_nxv2f16(<vscale x 2 x half> %dat
 ; CHECK-LABEL: dup_extract_nxv4f16_nxv2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 2 x half> %data, i16 1
   %.splatinsert = insertelement <vscale x 4 x half> poison, half %1, i32 0
@@ -326,6 +329,7 @@ define <vscale x 4 x float> @dup_extract_nxv4f32_nxv2f32(<vscale x 2 x float> %d
 ; CHECK-LABEL: dup_extract_nxv4f32_nxv2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 2 x float> %data, i32 1
   %.splatinsert = insertelement <vscale x 4 x float> poison, float %1, i32 0
@@ -452,6 +456,7 @@ define <vscale x 8 x bfloat> @dup_extract_nxv8bf16_nxv4bf16(<vscale x 4 x bfloat
 ; CHECK-LABEL: dup_extract_nxv8bf16_nxv4bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 4 x bfloat> %data, i16 1
   %.splatinsert = insertelement <vscale x 8 x bfloat> poison, bfloat %1, i32 0
@@ -463,6 +468,7 @@ define <vscale x 8 x bfloat> @dup_extract_nxv8bf16_nxv2bf16(<vscale x 2 x bfloat
 ; CHECK-LABEL: dup_extract_nxv8bf16_nxv2bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 2 x bfloat> %data, i16 1
   %.splatinsert = insertelement <vscale x 8 x bfloat> poison, bfloat %1, i32 0
@@ -520,6 +526,7 @@ define <vscale x 4 x bfloat> @dup_extract_nxv4bf16_nxv2bf16(<vscale x 2 x bfloat
 ; CHECK-LABEL: dup_extract_nxv4bf16_nxv2bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %1 = extractelement <vscale x 2 x bfloat> %data, i16 1
   %.splatinsert = insertelement <vscale x 4 x bfloat> poison, bfloat %1, i32 0

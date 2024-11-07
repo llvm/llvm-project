@@ -1491,26 +1491,20 @@ multiclass sve_int_perm_dup_i<string asm> {
 
   // When extracting from an unpacked vector the index must be scaled to account
   // for the "holes" in the underlying packed vector type. We get the scaling
-  // for free by "promoting" the element type to one whose underlying vector type
-  // is packed.
+  // for free by "promoting" the element type to one whose underlying vector
+  // type is packed. This is only valid when extracting from a vector whose
+  // length is the same or bigger than the result of the splat.
 
-  foreach VT = [nxv2f16, nxv4f16, nxv8f16] in {
-    def : Pat<(VT (splat_vector (f16 (vector_extract (nxv4f16 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+  foreach VT = [nxv4f16, nxv4bf16] in {
+    def : Pat<(SVEType<VT>.HalfLength (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
               (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-    def : Pat<(VT (splat_vector (f16 (vector_extract (nxv2f16 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
-              (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+              (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
   }
 
-  foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
-    def : Pat<(VT (splat_vector (bf16 (vector_extract (nxv4bf16 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
-              (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-    def : Pat<(VT (splat_vector (bf16 (vector_extract (nxv2bf16 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+  foreach VT = [nxv2f16, nxv2f32, nxv2bf16] in {
+    def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (VT ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
               (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  }
-
-  foreach VT = [nxv2f32, nxv4f32] in {
-    def : Pat<(VT (splat_vector (f32 (vector_extract (nxv2f32 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
-            (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
   }
 
   // Duplicate an indexed 128-bit segment across a vector.
