@@ -40,5 +40,13 @@ entry:
   ret void
 }
 
+; CSE-DAG: declare <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32) [[ROAttr:#[0-9]+]]
+; CSE-DAG: declare void @llvm.dx.typedBufferStore.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0), i32, <4 x float>) [[WOAttr:#[0-9]+]]
+
 attributes #0 = { convergent noinline norecurse "frame-pointer"="all" "hlsl.numthreads"="8,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 
+; Just need to split up the DAG searches.
+; CSE: attributes #0
+
+; CSE-DAG: attributes [[ROAttr]] = { {{.*}} memory(read) }
+; CSE-DAG: attributes [[WOAttr]] = { {{.*}} memory(write) }
