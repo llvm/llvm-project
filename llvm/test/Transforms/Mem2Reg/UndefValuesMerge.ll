@@ -8,7 +8,8 @@ define i32 @testfunc(i1 %C, i32 %i, i8 %j) {
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    br label %[[CONT]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    ret i32 [[I]]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ [[I]], %[[T]] ], [ undef, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[I_0]]
 ;
   %I = alloca i32
   br i1 %C, label %T, label %Cont
