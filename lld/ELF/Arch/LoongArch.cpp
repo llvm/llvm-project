@@ -839,7 +839,7 @@ bool LoongArch::relaxOnce(int pass) const {
 }
 
 void LoongArch::finalizeRelax(int passes) const {
-  log("relaxation passes: " + Twine(passes));
+  Log(ctx) << "relaxation passes: " << Twine(passes);
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))

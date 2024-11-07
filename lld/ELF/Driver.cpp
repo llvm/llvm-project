@@ -1724,7 +1724,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     parallel::strategy = hardware_concurrency(threads);
     ctx.arg.thinLTOJobs = v;
   } else if (parallel::strategy.compute_thread_count() > 16) {
-    log("set maximum concurrency to 16, specify --threads= to change");
+    Log(ctx) << "set maximum concurrency to 16, specify --threads= to change";
     parallel::strategy = hardware_concurrency(16);
   }
   if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
