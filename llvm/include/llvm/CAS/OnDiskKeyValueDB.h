@@ -39,6 +39,13 @@ public:
     return Cache.size();
   }
 
+  /// \returns The precentage of space utilization of hard space limits.
+  ///
+  /// Return value is an integer between 0 and 100 for percentage.
+  unsigned getHardStorageLimitUtilization() const {
+    return Cache.size() * 100ULL / Cache.capacity();
+  }
+
   /// Open the on-disk store from a directory.
   ///
   /// \param Path directory for the on-disk store. The directory will be created

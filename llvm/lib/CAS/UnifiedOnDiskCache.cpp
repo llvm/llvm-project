@@ -271,6 +271,14 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
   uint64_t CurSizeLimit = SizeLimit;
   if (!CurSizeLimit)
     return false;
+
+  // If the hard limit is beyond 85%, declare above limit and request clean up.
+  unsigned CurrentPrecent =
+      std::max(PrimaryGraphDB->getHardStorageLimitUtilization(),
+               PrimaryKVDB->getHardStorageLimitUtilization());
+  if (CurrentPrecent > 85)
+    return true;
+
   // We allow each of the directories in the chain to reach up to half the
   // intended size limit. Check whether the primary directory has exceeded half
   // the limit or not, in order to decide whether we need to start a new chain.

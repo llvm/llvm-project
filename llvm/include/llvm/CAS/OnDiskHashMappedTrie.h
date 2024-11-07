@@ -275,6 +275,7 @@ public:
   }
 
   size_t size() const;
+  size_t capacity() const;
 
   /// Gets or creates a file at \p Path with a hash-mapped trie named \p
   /// TrieName. The hash size is \p NumHashBits (in bits) and the records store
@@ -366,6 +367,7 @@ public:
   MutableArrayRef<uint8_t> getUserHeader();
 
   size_t size() const;
+  size_t capacity() const;
 
   static Expected<OnDiskDataAllocator>
   create(const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,

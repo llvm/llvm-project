@@ -1259,12 +1259,33 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
   SmallString<256> Path;
   std::optional<MappedTempFile> File;
   std::optional<uint64_t> FileSize;
+  auto AllocStandaloneFile = [&](size_t Size) -> Expected<char *> {
+    getStandalonePath(TrieRecord::getStandaloneFileSuffix(
+                          TrieRecord::StorageKind::Standalone),
+                      I, Path);
+    if (Error E = createTempFile(Path, Size).moveInto(File))
+      return std::move(E);
+    assert(File->size() == Size);
+    FileSize = Size;
+    SK = TrieRecord::StorageKind::Standalone;
+    return File->data();
+  };
   auto Alloc = [&](size_t Size) -> Expected<char *> {
     if (Size <= TrieRecord::MaxEmbeddedSize) {
       SK = TrieRecord::StorageKind::DataPool;
       auto P = DataPool.allocate(Size);
-      if (LLVM_UNLIKELY(!P))
-        return P.takeError();
+      if (LLVM_UNLIKELY(!P)) {
+        char *NewAlloc = nullptr;
+        auto NewE = handleErrors(
+            P.takeError(), [&](std::unique_ptr<StringError> E) -> Error {
+              if (E->convertToErrorCode() == std::errc::not_enough_memory)
+                return AllocStandaloneFile(Size).moveInto(NewAlloc);
+              return Error(std::move(E));
+            });
+        if (!NewE)
+          return NewAlloc;
+        return std::move(NewE);
+      }
       PoolOffset = P->getOffset();
       LLVM_DEBUG({
         dbgs() << "pool-alloc addr=" << (void *)PoolOffset.get()
@@ -1273,15 +1294,9 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
       });
       return (*P)->data();
     }
-
-    SK = TrieRecord::StorageKind::Standalone;
-    getStandalonePath(TrieRecord::getStandaloneFileSuffix(SK), I, Path);
-    if (Error E = createTempFile(Path, Size).moveInto(File))
-      return std::move(E);
-    assert(File->size() == Size);
-    FileSize = Size;
-    return File->data();
+    return AllocStandaloneFile(Size);
   };
+
   DataRecordHandle Record;
   if (Error E =
           DataRecordHandle::createWithError(Alloc, Input).moveInto(Record))
@@ -1348,6 +1363,12 @@ uint64_t OnDiskGraphDB::getStandaloneStorageSize() const {
 
 size_t OnDiskGraphDB::getStorageSize() const {
   return Index.size() + DataPool.size() + getStandaloneStorageSize();
+}
+
+unsigned OnDiskGraphDB::getHardStorageLimitUtilization() const {
+  unsigned IndexPercent = Index.size() * 100ULL / Index.capacity();
+  unsigned DataPercent = DataPool.size() * 100ULL / DataPool.capacity();
+  return std::max(IndexPercent, DataPercent);
 }
 
 static bool useSmallMappedFiles(const Twine &P) {

@@ -980,6 +980,9 @@ static Error checkTable(StringRef Label, size_t Expected, size_t Observed,
 }
 
 size_t OnDiskHashMappedTrie::size() const { return Impl->File.size(); }
+size_t OnDiskHashMappedTrie::capacity() const {
+  return Impl->File.getRegion().size();
+}
 
 Expected<OnDiskHashMappedTrie>
 OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
@@ -1415,6 +1418,9 @@ MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
 }
 
 size_t OnDiskDataAllocator::size() const { return Impl->File.size(); }
+size_t OnDiskDataAllocator::capacity() const {
+  return Impl->File.getRegion().size();
+}
 
 OnDiskDataAllocator::OnDiskDataAllocator(std::unique_ptr<ImplType> Impl)
     : Impl(std::move(Impl)) {}
@@ -1456,6 +1462,14 @@ void OnDiskHashMappedTrie::print(
 }
 
 size_t OnDiskHashMappedTrie::size() const {
+  report_fatal_error("not supported");
+}
+
+size_t OnDiskHashMappedTrie::capacity() const {
+  report_fatal_error("not supported");
+}
+
+size_t OnDiskDataAllocator::capacity() const {
   report_fatal_error("not supported");
 }
 

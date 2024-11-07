@@ -302,6 +302,11 @@ public:
   /// large object if the process crashed right at the point of inserting it.
   size_t getStorageSize() const;
 
+  /// \returns The precentage of space utilization of hard space limits.
+  ///
+  /// Return value is an integer between 0 and 100 for percentage.
+  unsigned getHardStorageLimitUtilization() const;
+
   void print(raw_ostream &OS) const;
 
   /// How to fault-in nodes if an upstream database is used.
