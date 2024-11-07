@@ -98,6 +98,7 @@ class ParentMapContext;
 struct ParsedTargetAttr;
 class Preprocessor;
 class ProfileList;
+class Sema;
 class StoredDeclsMap;
 class TargetAttr;
 class TargetInfo;
@@ -180,6 +181,18 @@ struct TypeInfoChars {
   bool isAlignRequired() {
     return AlignRequirement != AlignRequirementKind::None;
   }
+};
+
+// Interface that allows constant evaluator to mutate AST.
+// When constant evaluation is triggered by Sema, it can supply a proper
+// implementation of this interface.
+struct EvalASTMutator {
+  virtual ~EvalASTMutator() = default;
+
+  virtual void
+  InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                FunctionDecl *Function, bool Recursive,
+                                bool DefinitionRequired, bool AtEndOfTU) = 0;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -671,7 +684,11 @@ private:
   /// Keeps track of the deallocated DeclListNodes for future reuse.
   DeclListNode *ListNodeFreeList = nullptr;
 
+  EvalASTMutator *ASTMutator = nullptr;
+
 public:
+  EvalASTMutator *getASTMutator() const { return ASTMutator; }
+
   IdentifierTable &Idents;
   SelectorTable &Selectors;
   Builtin::Context &BuiltinInfo;
@@ -3258,7 +3275,7 @@ public:
   ///
   /// \returns true if the function/var must be CodeGen'ed/deserialized even if
   /// it is not used.
-  bool DeclMustBeEmitted(const Decl *D, EvalASTMutator *ASTMutator = nullptr);
+  bool DeclMustBeEmitted(const Decl *D);
 
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.
@@ -3508,6 +3525,8 @@ private:
   std::unique_ptr<VTableContextBase> VTContext;
 
   void ReleaseDeclContextMaps();
+
+  friend void injectASTMutatorIntoASTContext(Sema &, ASTContext &);
 
 public:
   enum PragmaSectionFlag : unsigned {

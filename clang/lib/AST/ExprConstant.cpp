@@ -8336,7 +8336,7 @@ public:
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
-    if (!Definition && FD->getTemplateInstantiationPattern()) {
+    if (Info.Ctx.getLangOpts().CPlusPlus26 && Info.getASTMutator() && !Definition && FD->getTemplateInstantiationPattern()) {
       Info.getASTMutator()->InstantiateFunctionDefinition(
           E->getExprLoc(), const_cast<FunctionDecl *>(FD),
           /*Recursive=*/true, /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
@@ -16683,8 +16683,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                                  const VarDecl *VD,
                                  SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                 bool IsConstantInitialization,
-                                 EvalASTMutator *ASTMutator) const {
+                                 bool IsConstantInitialization) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -16703,7 +16702,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                  (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
                     : EvalInfo::EM_ConstantFold,
-                ASTMutator);
+                Ctx.getASTMutator());
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 

@@ -78,18 +78,6 @@ class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
 
-/// Interface that allows constant evaluator to mutate AST.
-/// When constant evaluation is triggered by Sema, it can supply a proper
-/// implementation of this interface.
-struct EvalASTMutator {
-  virtual ~EvalASTMutator() = default;
-
-  virtual void
-  InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
-                                FunctionDecl *Function, bool Recursive,
-                                bool DefinitionRequired, bool AtEndOfTU) = 0;
-};
-
 /// The top declaration context.
 class TranslationUnitDecl : public Decl,
                             public DeclContext,
@@ -1367,12 +1355,11 @@ public:
   /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated.
   /// Returns a pointer to the value if evaluation succeeded, 0 otherwise.
-  APValue *evaluateValue(EvalASTMutator *ASTMutator = nullptr) const;
+  APValue *evaluateValue() const;
 
 private:
   APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                             bool IsConstantInitialization,
-                             EvalASTMutator *ASTMutator = nullptr) const;
+                             bool IsConstantInitialization) const;
 
 public:
   /// Return the already-evaluated value of this variable's
@@ -1405,8 +1392,7 @@ public:
   /// constant initializer. Should only be called once, after completing the
   /// definition of the variable.
   bool
-  checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                 EvalASTMutator *ASTMutator = nullptr) const;
+  checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;

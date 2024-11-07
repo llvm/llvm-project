@@ -2546,14 +2546,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
   return Init.dyn_cast<EvaluatedStmt *>();
 }
 
-APValue *VarDecl::evaluateValue(EvalASTMutator *ASTMutator) const {
+APValue *VarDecl::evaluateValue() const {
   SmallVector<PartialDiagnosticAt, 8> Notes;
-  return evaluateValueImpl(Notes, hasConstantInitialization(), ASTMutator);
+  return evaluateValueImpl(Notes, hasConstantInitialization());
 }
 
 APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                    bool IsConstantInitialization,
-                                    EvalASTMutator *ASTMutator) const {
+                                    bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
   const auto *Init = getInit();
@@ -2574,7 +2573,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
 
   ASTContext &Ctx = getASTContext();
   bool Result = Init->EvaluateAsInitializer(
-      Eval->Evaluated, Ctx, this, Notes, IsConstantInitialization, ASTMutator);
+      Eval->Evaluated, Ctx, this, Notes, IsConstantInitialization);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
   // a constant initializer if we produced notes. In that case, we can't keep
@@ -2637,8 +2636,7 @@ bool VarDecl::hasConstantInitialization() const {
 }
 
 bool VarDecl::checkForConstantInitialization(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes,
-    EvalASTMutator *ASTMutator) const {
+    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   // If we ask for the value before we know whether we have a constant
   // initializer, we can compute the wrong value (for example, due to
@@ -2653,7 +2651,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(Notes, true, ASTMutator) && Notes.empty();
+      evaluateValueImpl(Notes, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.

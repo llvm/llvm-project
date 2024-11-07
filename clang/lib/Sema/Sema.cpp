@@ -208,6 +208,10 @@ public:
 } // end namespace sema
 } // end namespace clang
 
+void clang::injectASTMutatorIntoASTContext(Sema &S, ASTContext &Context) {
+  Context.ASTMutator = S.getASTMutator();
+}
+
 SemaASTMutator::SemaASTMutator(Sema &SemaRef) : SemaRef(SemaRef) {}
 
 const unsigned Sema::MaxAlignmentExponent;
@@ -300,6 +304,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   SemaPPCallbackHandler->set(*this);
 
   CurFPFeatures.setFPEvalMethod(PP.getCurrentFPEvalMethod());
+
+  injectASTMutatorIntoASTContext(*this, Context);
 }
 
 // Anchor Sema's type info to this TU.
