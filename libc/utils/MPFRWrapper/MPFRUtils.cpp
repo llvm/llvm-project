@@ -255,19 +255,14 @@ public:
     mpfr_cospi(result.value, value, mpfr_rounding);
     return result;
 #else
-    MPFRNumber value_frac(*this);
-    mpfr_frac(value_frac.value, value, MPFR_RNDN);
+    if (mpfr_integer_p(value)) {
+      mpz_t integer;
+      mpz_init(integer);
+      mpfr_get_z(integer, value, mpfr_rounding);
 
-    if (mpfr_cmp_si(value_frac.value, 0.0) == 0) {
-      mpz_t integer_part;
-      mpz_init(integer_part);
-      mpfr_get_z(integer_part, value, MPFR_RNDN);
-
-      if (mpz_tstbit(integer_part, 0)) {
-        mpfr_set_si(result.value, -1.0, MPFR_RNDN); // odd
-      } else {
-        mpfr_set_si(result.value, 1.0, MPFR_RNDN); // even
-      }
+      int d = mpz_tstbit(integer, 0);
+      mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
+      mpz_clear(integer);
       return result;
     }
 

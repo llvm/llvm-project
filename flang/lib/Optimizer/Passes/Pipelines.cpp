@@ -35,11 +35,11 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config) {
   if (config.NSWOnLoopVarInc)
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
+  else
     addNestedPassToAllTopLevelOperationsConditionally(pm, disableCfgConversion,
                                                       fir::createCFGConversion);
-  else
-    addNestedPassToAllTopLevelOperationsConditionally(
-        pm, disableCfgConversion, fir::createCFGConversionPassWithoutNSW);
 }
 
 void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
@@ -264,10 +264,10 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
-  fir::addTargetRewritePass(pm);
-  fir::addCompilerGeneratedNamesConversionPass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
+  fir::addTargetRewritePass(pm);
+  fir::addCompilerGeneratedNamesConversionPass(pm);
 
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));

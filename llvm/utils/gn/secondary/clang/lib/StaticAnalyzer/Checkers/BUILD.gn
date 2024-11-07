@@ -99,8 +99,6 @@ static_library("Checkers") {
     "ObjCUnusedIVarsChecker.cpp",
     "PaddingChecker.cpp",
     "PointerArithChecker.cpp",
-    "PointerIterationChecker.cpp",
-    "PointerSortingChecker.cpp",
     "PointerSubChecker.cpp",
     "PthreadLockChecker.cpp",
     "PutenvStackArrayChecker.cpp",
@@ -141,12 +139,12 @@ static_library("Checkers") {
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
     "WebKit/ASTUtils.cpp",
-    "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/PtrTypesSemantics.cpp",
+    "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
     "WebKit/UncountedCallArgsChecker.cpp",
     "WebKit/UncountedLambdaCapturesChecker.cpp",
-    "WebKit/UncountedLocalVarsChecker.cpp",
+    "WebKit/RawPtrRefLocalVarsChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
   ]
 }

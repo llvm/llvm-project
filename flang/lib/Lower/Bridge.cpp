@@ -2131,18 +2131,37 @@ private:
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
+    mlir::Operation *boundsAndStepIP = nullptr;
+
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
-      info.loopVariable =
-          genLoopVariableAddress(loc, *info.loopVariableSym, info.isUnordered);
-      mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
-      mlir::Value upperValue = genControlValue(info.upperExpr, info);
-      bool isConst = true;
-      mlir::Value stepValue = genControlValue(
-          info.stepExpr, info, info.isStructured() ? nullptr : &isConst);
-      // Use a temp variable for unstructured loops with non-const step.
-      if (!isConst) {
-        info.stepVariable = builder->createTemporary(loc, stepValue.getType());
-        builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
+      mlir::Value lowerValue;
+      mlir::Value upperValue;
+      mlir::Value stepValue;
+
+      {
+        mlir::OpBuilder::InsertionGuard guard(*builder);
+
+        // Set the IP before the first loop in the nest so that all nest bounds
+        // and step values are created outside the nest.
+        if (boundsAndStepIP)
+          builder->setInsertionPointAfter(boundsAndStepIP);
+
+        info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
+                                                   info.isUnordered);
+        lowerValue = genControlValue(info.lowerExpr, info);
+        upperValue = genControlValue(info.upperExpr, info);
+        bool isConst = true;
+        stepValue = genControlValue(info.stepExpr, info,
+                                    info.isStructured() ? nullptr : &isConst);
+        boundsAndStepIP = stepValue.getDefiningOp();
+
+        // Use a temp variable for unstructured loops with non-const step.
+        if (!isConst) {
+          info.stepVariable =
+              builder->createTemporary(loc, stepValue.getType());
+          boundsAndStepIP =
+              builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
+        }
       }
 
       // Structured loop - generate fir.do_loop.
@@ -2271,7 +2290,7 @@ private:
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
     mlir::arith::IntegerOverflowFlags flags{};
-    if (!getLoweringOptions().getIntegerWrapAround())
+    if (getLoweringOptions().getNSWOnLoopVarInc())
       flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
     auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
         builder->getContext(), flags);

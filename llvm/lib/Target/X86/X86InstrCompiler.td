@@ -195,7 +195,8 @@ def EH_RETURN64   : I<0xC3, RawFrm, (outs), (ins GR64:$addr),
 
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1 in {
-  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET", [(cleanupret)]>;
+  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET",
+                     [(cleanupret bb)]>;
 
   // CATCHRET needs a custom inserter for SEH.
   let usesCustomInserter = 1 in
@@ -478,7 +479,7 @@ let Defs = [EAX, ECX, EDX, FP0, FP1, FP2, FP3, FP4, FP5, FP6, FP7,
             MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
             XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, EFLAGS, DF],
-    usesCustomInserter = 1, Uses = [ESP, SSP] in {
+    Uses = [ESP, SSP] in {
 def TLS_addr32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                   "# TLS_addr32",
                   [(X86tlsaddr tls32addr:$sym)]>,
@@ -498,7 +499,7 @@ let Defs = [RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
             MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
             XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, EFLAGS, DF],
-    usesCustomInserter = 1, Uses = [RSP, SSP] in {
+    Uses = [RSP, SSP] in {
 def TLS_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_addr64",
                   [(X86tlsaddr tls64addr:$sym)]>,
@@ -520,7 +521,7 @@ def TLS_base_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
 // TLSDESC only clobbers EAX and EFLAGS. ESP is marked as a use to prevent
 // stack-pointer assignments that appear immediately before calls from
 // potentially appearing dead.
-let Defs = [EAX, EFLAGS], usesCustomInserter = 1, Uses = [RSP, SSP] in {
+let Defs = [EAX, EFLAGS], Uses = [RSP, SSP] in {
   def TLS_desc32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                      "# TLS_desc32", [(X86tlsdesc tls32addr:$sym)]>;
   def TLS_desc64 : I<0, Pseudo, (outs), (ins i64mem:$sym),

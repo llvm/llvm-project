@@ -358,10 +358,6 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
-  "UseFixedOverScalableIfEqualCost", "true",
-  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
-
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
@@ -564,6 +560,9 @@ def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
 
 def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
   "Enable Armv9.6-A Producer Consumer Data Placement hints">;
+
+def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
+  "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -793,6 +792,10 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
+
+def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+  "UseFixedOverScalableIfEqualCost", "true",
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

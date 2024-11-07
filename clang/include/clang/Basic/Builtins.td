@@ -4792,6 +4792,18 @@ def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot4add_i8packed"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "int(unsigned int, unsigned int, int)";
+}
+
+def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbithigh"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
   let Attributes = [NoThrow, Const];
@@ -4867,6 +4879,12 @@ def HLSLStep: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_radians"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

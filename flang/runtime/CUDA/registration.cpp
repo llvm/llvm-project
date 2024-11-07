@@ -21,6 +21,9 @@ extern void __cudaRegisterFatBinaryEnd(void *);
 extern void __cudaRegisterFunction(void **fatCubinHandle, const char *hostFun,
     char *deviceFun, const char *deviceName, int thread_limit, uint3 *tid,
     uint3 *bid, dim3 *bDim, dim3 *gDim, int *wSize);
+extern void __cudaRegisterVar(void **fatCubinHandle, char *hostVar,
+    const char *deviceAddress, const char *deviceName, int ext, size_t size,
+    int constant, int global);
 
 void *RTDECL(CUFRegisterModule)(void *data) {
   void **fatHandle{__cudaRegisterFatBinary(data)};
@@ -32,6 +35,11 @@ void RTDEF(CUFRegisterFunction)(
     void **module, const char *fctSym, char *fctName) {
   __cudaRegisterFunction(module, fctSym, fctName, fctName, -1, (uint3 *)0,
       (uint3 *)0, (dim3 *)0, (dim3 *)0, (int *)0);
+}
+
+void RTDEF(CUFRegisterVariable)(
+    void **module, char *varSym, const char *varName, int64_t size) {
+  __cudaRegisterVar(module, varSym, varName, varName, 0, size, 0, 0);
 }
 
 } // extern "C"

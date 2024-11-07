@@ -2048,8 +2048,8 @@ declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
 declare void @f.sanitize_realtime() sanitize_realtime
 ; CHECK: declare void @f.sanitize_realtime() #52
 
-declare void @f.sanitize_realtime_unsafe() sanitize_realtime_unsafe
-; CHECK: declare void @f.sanitize_realtime_unsafe() #53
+declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
+; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
@@ -2183,7 +2183,7 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
-; CHECK: attributes #53 = { sanitize_realtime_unsafe }
+; CHECK: attributes #53 = { sanitize_realtime_blocking }
 ; CHECK: attributes #54 = { builtin }
 
 ;; Metadata
