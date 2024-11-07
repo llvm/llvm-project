@@ -4884,7 +4884,7 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_buffer_update_counter"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow];
   let Prototype = "uint32_t(...)";
 }
 
