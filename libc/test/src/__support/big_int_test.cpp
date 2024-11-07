@@ -1072,7 +1072,7 @@ TEST(LlvmLibcUIntClassTest, MixedSignednessOtherWordTypeCastTests) {
   LL_UInt96 x = -123;
   // ensure that -123 gets extended, even though the input type is signed while
   // the BigInt is unsigned.
-  ASSERT_EQ(int64_t(x), -123LL);
+  ASSERT_EQ(int64_t(x), int64_t(-123));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
