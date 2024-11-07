@@ -2044,31 +2044,6 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
-bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
-                                          BuildFnTy &MatchInfo) {
-  GSub &Sub = cast<GSub>(MI);
-
-  LLT Ty = MRI.getType(Sub.getReg(0));
-
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {Ty}}))
-    return false;
-
-  if (!isConstantLegalOrBeforeLegalizer(Ty))
-    return false;
-
-  APInt Imm = getIConstantFromReg(Sub.getRHSReg(), MRI);
-
-  MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    auto NegCst = B.buildConstant(Ty, -Imm);
-    Observer.changingInstr(MI);
-    MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
-    MI.getOperand(2).setReg(NegCst.getReg(0));
-    MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
-    Observer.changedInstr(MI);
-  };
-  return true;
-}
-
 // shl ([sza]ext x), y => zext (shl x, y), if shift does not overflow source
 bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
                                              RegisterImmPair &MatchData) {
@@ -7720,4 +7695,34 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
   };
 
   return false;
+}
+
+bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) {
+
+  bool Changed = false;
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  ArrayRef<int> OrigMask = Shuffle.getMask();
+  SmallVector<int, 16> NewMask;
+  const LLT SrcTy = MRI.getType(Shuffle.getSrc1Reg());
+  const unsigned NumSrcElems = SrcTy.isVector() ? SrcTy.getNumElements() : 1;
+  const unsigned NumDstElts = OrigMask.size();
+  for (unsigned i = 0; i != NumDstElts; ++i) {
+    int Idx = OrigMask[i];
+    if (Idx >= (int)NumSrcElems) {
+      Idx = -1;
+      Changed = true;
+    }
+    NewMask.push_back(Idx);
+  }
+
+  if (!Changed)
+    return false;
+
+  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+    B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
+                         NewMask);
+  };
+
+  return true;
 }
