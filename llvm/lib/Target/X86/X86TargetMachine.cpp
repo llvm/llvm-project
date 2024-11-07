@@ -376,6 +376,8 @@ bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
   return SrcAS < 256 && DestAS < 256;
 }
 
+void X86TargetMachine::reset() { SubtargetMap.clear(); }
+
 //===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//
