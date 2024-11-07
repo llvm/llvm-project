@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: aarch64
 ; RUN: llvm-as -o %main.obj %s
 ; RUN: lld-link /out:%main.exe /entry:main  /subsystem:console %main.obj
 ; RUN: llvm-readobj --coff-debug-directory %main.exe

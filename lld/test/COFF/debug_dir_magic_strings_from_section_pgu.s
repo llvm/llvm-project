@@ -1,6 +1,8 @@
 // This test checks if lld puts magic string "PGU" when an object files contains
 // .pgu section.
 
+// REQUIRES: aarch64, x86
+
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-windows %s -o %t.main_x86.obj
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-windows %s -o %t.main_aarch.obj
 
