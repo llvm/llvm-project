@@ -24,7 +24,8 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 31; // lifetimebound
+const uint16_t VERSION_MINOR =
+    32; // implicit parameter support (at position -1)
 
 const uint8_t kSwiftCopyable = 1;
 const uint8_t kSwiftNonCopyable = 2;

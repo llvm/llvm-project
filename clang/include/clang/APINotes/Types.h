@@ -445,9 +445,7 @@ public:
         RawRetainCountConvention() {}
 
   std::optional<bool> isNoEscape() const {
-    if (!NoEscapeSpecified)
-      return std::nullopt;
-    return NoEscape;
+    return NoEscapeSpecified ? std::optional<bool>(NoEscape) : std::nullopt;
   }
   void setNoEscape(std::optional<bool> Value) {
     NoEscapeSpecified = Value.has_value();
@@ -455,9 +453,8 @@ public:
   }
 
   std::optional<bool> isLifetimebound() const {
-    if (!LifetimeboundSpecified)
-      return std::nullopt;
-    return Lifetimebound;
+    return LifetimeboundSpecified ? std::optional<bool>(Lifetimebound)
+                                  : std::nullopt;
   }
   void setLifetimebound(std::optional<bool> Value) {
     LifetimeboundSpecified = Value.has_value();
@@ -643,6 +640,8 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned RequiredInit : 1;
 
+  std::optional<ParamInfo> Self;
+
   ObjCMethodInfo() : DesignatedInit(false), RequiredInit(false) {}
 
   friend bool operator==(const ObjCMethodInfo &, const ObjCMethodInfo &);
@@ -664,7 +663,7 @@ public:
 inline bool operator==(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
   return static_cast<const FunctionInfo &>(LHS) == RHS &&
          LHS.DesignatedInit == RHS.DesignatedInit &&
-         LHS.RequiredInit == RHS.RequiredInit;
+         LHS.RequiredInit == RHS.RequiredInit && LHS.Self == RHS.Self;
 }
 
 inline bool operator!=(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
@@ -693,7 +692,19 @@ public:
 class CXXMethodInfo : public FunctionInfo {
 public:
   CXXMethodInfo() {}
+
+  std::optional<ParamInfo> This;
+
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
 };
+
+inline bool operator==(const CXXMethodInfo &LHS, const CXXMethodInfo &RHS) {
+  return static_cast<const FunctionInfo &>(LHS) == RHS && LHS.This == RHS.This;
+}
+
+inline bool operator!=(const CXXMethodInfo &LHS, const CXXMethodInfo &RHS) {
+  return !(LHS == RHS);
+}
 
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
