@@ -30,6 +30,7 @@ void test2(struct fam_struct *ptr, int idx) {
 }
 
 void test3(struct fam_struct *ptr, int idx) {
+  __builtin_counted_by_ref(&ptr->array[0]);                 // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(&ptr->array[idx]);               // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(&ptr->array);                    // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(ptr->x);                         // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
