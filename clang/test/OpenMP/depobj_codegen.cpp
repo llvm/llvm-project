@@ -22,8 +22,8 @@ void tmainc(){
 #pragma omp depobj(obj) depend(inout: omp_all_memory)
 {
    volatile omp_depend_t temp = obj;
-    char* char_ptr = reinterpret_cast<char*>(temp);
-    char_ptr[0] = 1;
+   char* char_ptr = reinterpret_cast<char*>(temp);
+   char_ptr[0] = 1;
 }
 }
 
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 #pragma omp depobj(b) destroy
 #pragma omp depobj(b) update(mutexinoutset)
 #pragma omp depobj(a) depend(iterator(char *p = argv[argc]:argv[0]:-1), out: p[0])
-  (void)tmain(a), tmain(b);
+ (void)tmain(a), tmain(b);
  tmainc();
   return 0;
 }
