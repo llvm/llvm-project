@@ -13,7 +13,7 @@ CHECK:                             Streams
 CHECK-NEXT: ============================================================
 CHECK:        Stream 10 ( 104 bytes): [Module "Import:test.dll"]
 CHECK-NEXT:              Blocks: [9]
-CHECK-NEXT:   Stream 11 ( {{[0-9]+}} bytes): [Module "* Linker *"]
+CHECK-NEXT:   Stream 11 ({{[ 0-9]+}} bytes): [Module "* Linker *"]
 CHECK-NEXT:              Blocks: [10]
 
 CHECK:                             Module Stats
