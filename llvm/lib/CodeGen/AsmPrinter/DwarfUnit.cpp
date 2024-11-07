@@ -737,7 +737,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_little);
 
   if (uint32_t NumExtraInhabitants = BTy->getNumExtraInhabitants())
-    addUInt(Buffer, dwarf::DW_AT_APPLE_num_extra_inhabitants, std::nullopt,
+    addUInt(Buffer, dwarf::DW_AT_LLVM_num_extra_inhabitants, std::nullopt,
             NumExtraInhabitants);
 }
 
@@ -1101,10 +1101,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
               AlignInBytes);
 
     if (uint32_t NumExtraInhabitants = CTy->getNumExtraInhabitants())
-      addUInt(Buffer, dwarf::DW_AT_APPLE_num_extra_inhabitants,
-            std::nullopt, NumExtraInhabitants);
-
-  } 
+      addUInt(Buffer, dwarf::DW_AT_LLVM_num_extra_inhabitants, std::nullopt,
+              NumExtraInhabitants);
+  }
 }
 
 void DwarfUnit::constructTemplateTypeParameterDIE(

@@ -318,7 +318,7 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
   unsigned stride = ((byte_size + alignment - 1) & ~(alignment - 1));
 
   auto num_extra_inhabitants =
-      die.GetAttributeValueAsUnsigned(DW_AT_APPLE_num_extra_inhabitants, 0);
+      die.GetAttributeValueAsUnsigned(DW_AT_LLVM_num_extra_inhabitants, 0);
 
   auto is_bitwise_takable = true; // TODO: encode it in DWARF
 

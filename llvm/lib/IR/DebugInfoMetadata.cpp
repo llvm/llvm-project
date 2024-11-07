@@ -664,8 +664,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, uint64_t SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
                                   uint32_t NumExtraInhabitants, DIFlags Flags,
-                                  StorageType Storage,
-                                  bool ShouldCreate) {
+                                  StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
                                       Encoding, NumExtraInhabitants, Flags));
