@@ -10,7 +10,6 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -43,6 +42,7 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    assert(arrayCstAttr.size() && "Zero-sized vectors are not allowed");
     if (arrayCstAttr.isSplat()) {
       setResultRange(getResult(), ConstantIntRanges::constant(
                                       arrayCstAttr.getSplatValue<APInt>()));
@@ -55,7 +55,6 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
       result = (result ? result->rangeUnion(range) : range);
     }
 
-    assert(result && "Zero-sized vectors are not allowed");
     setResultRange(getResult(), *result);
     return;
   }
