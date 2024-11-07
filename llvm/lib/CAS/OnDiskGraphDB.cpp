@@ -1397,8 +1397,8 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
   constexpr uint64_t MB = 1024ull * 1024ull;
   constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
 
-  uint64_t MaxIndexSize = 8 * GB;
-  uint64_t MaxDataPoolSize = 16 * GB;
+  uint64_t MaxIndexSize = 12 * GB;
+  uint64_t MaxDataPoolSize = 24 * GB;
 
   if (useSmallMappedFiles(AbsPath)) {
     MaxIndexSize = 1 * GB;
