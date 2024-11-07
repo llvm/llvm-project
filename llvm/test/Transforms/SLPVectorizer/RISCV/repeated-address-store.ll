@@ -6,12 +6,7 @@ define void @test(ptr %dest) {
 ; CHECK-SAME: ptr [[DEST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[INC3:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 3
-; CHECK-NEXT:    store i32 1, ptr [[INC3]], align 2
-; CHECK-NEXT:    store i32 1, ptr [[DEST]], align 4
-; CHECK-NEXT:    [[INC1:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 1
-; CHECK-NEXT:    store i32 1, ptr [[INC1]], align 2
-; CHECK-NEXT:    [[INC2:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 2
-; CHECK-NEXT:    store i32 1, ptr [[INC2]], align 2
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[DEST]], align 4
 ; CHECK-NEXT:    store i32 2, ptr [[DEST]], align 2
 ; CHECK-NEXT:    store i32 1, ptr [[INC3]], align 2
 ; CHECK-NEXT:    ret void
