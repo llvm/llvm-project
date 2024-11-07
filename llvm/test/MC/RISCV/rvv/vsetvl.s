@@ -10,6 +10,19 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+# LMUL is omitted.
+vsetvli a2, a0, e8, ta, ma
+# CHECK-INST: vsetvli a2, a0, e8, m1, ta, ma
+# CHECK-ENCODING: [0x57,0x76,0x05,0x0c]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 0c057657 <unknown>
+
+vsetivli a2, 16, e8, ta, ma
+# CHECK-INST: vsetivli a2, 16, e8, m1, ta, ma
+# CHECK-ENCODING: [0x57,0x76,0x08,0xcc]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: cc087657 <unknown>
+
 # reserved filed: vlmul[2:0]=4, vsew[2:0]=0b1xx, non-zero bits 8/9/10.
 vsetvli a2, a0, 0x224
 # CHECK-INST: vsetvli a2, a0, 548

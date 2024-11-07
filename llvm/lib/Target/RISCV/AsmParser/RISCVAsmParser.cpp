@@ -2222,8 +2222,14 @@ bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
     State = VTypeState_LMUL;
     return false;
   case VTypeState_LMUL: {
-    if (!Identifier.consume_front("m"))
-      break;
+    // Set LMUL to default if it is omitted.
+    if (!Identifier.consume_front("m")) {
+      Lmul = 1;
+      Fractional = false;
+      State = VTypeState_TailPolicy;
+      return parseVTypeToken(Tok, State, Sew, Lmul, Fractional, TailAgnostic,
+                             MaskAgnostic);
+    }
     Fractional = Identifier.consume_front("f");
     if (Identifier.getAsInteger(10, Lmul))
       break;
@@ -2320,7 +2326,7 @@ bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
   return Error(
       ErrorLoc,
       "operand must be "
-      "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+      "e{8|16|32|64}[,m{1|2|4|8|f2|f4|f8}],{ta|tu},{ma|mu}");
 }
 
 ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
