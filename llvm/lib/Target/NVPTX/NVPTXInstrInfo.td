@@ -3974,25 +3974,30 @@ def FMARELU_BF16 :
     Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
 def FMARELU_F16_FTZ :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
-    "fma.rn.relu.ftz.f16 \t$dst, $a, $b, $c;", []>,
+    "fma.rn.ftz.relu.f16 \t$dst, $a, $b, $c;", []>,
     Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
 def FMARELU_BF16_FTZ :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
-    "fma.rn.relu.ftz.bf16 \t$dst, $a, $b, $c;", []>,
+    "fma.rn.ftz.relu.bf16 \t$dst, $a, $b, $c;", []>,
     Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
 
+// Patterns will only be used if FMA has a single use, in order to mitigate register pressure
+def NVPTX_fma_oneuse : PatFrag<(ops node:$a, node:$b, node:$c),
+                                  (fma node:$a, node:$b, node:$c), [{
+  return N->hasOneUse();
+}]>;
 
 // FTZ variants
-def : Pat<(f16 (fmaxnum (fma Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
+def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
   (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[doF32FTZ, allowUnsafeFPMath]>;
-def : Pat<(bf16 (fmaxnum (fma Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
+def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
   (FMARELU_BF16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[doF32FTZ, allowUnsafeFPMath]>;
 // No FTZ
-def : Pat<(f16 (fmaxnum (fma Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
+def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
   (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[allowUnsafeFPMath]>;
-def : Pat<(bf16 (fmaxnum (fma Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
+def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm0)),
   (FMARELU_BF16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[allowUnsafeFPMath]>;
