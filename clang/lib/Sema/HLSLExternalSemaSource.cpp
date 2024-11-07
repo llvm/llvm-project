@@ -341,9 +341,10 @@ struct TemplateParameterListBuilder {
   the below C++ code:
 
   template<typename T>
-  concept is_valid_line_vector =sizeof(T) <= 16;
+  concept is_typed_resource_element_compatible =sizeof(T) <= 16;
 
-  template<typename element_type> requires is_valid_line_vector<element_type>
+  template<typename element_type> requires
+  is_typed_resource_element_compatible<element_type>
 
   struct RWBuffer {
       element_type Val;
@@ -389,7 +390,6 @@ struct TemplateParameterListBuilder {
     );
 
     T->setDeclContext(DC);
-    T->setReferenced();
 
     QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
 
@@ -636,8 +636,6 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
   DeclContext *DC = NSD->getDeclContext();
   SourceLocation DeclLoc = SourceLocation();
 
-  IdentifierInfo &IsTypedResourceElementCompatibleII =
-      Context.Idents.get("__is_typed_resource_element_compatible");
   IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
   TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
       Context, Context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
@@ -654,8 +652,8 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
   TemplateParameterList *ConceptParams = TemplateParameterList::Create(
       Context, DeclLoc, DeclLoc, {T}, DeclLoc, nullptr);
 
-  DeclarationName DeclName =
-      DeclarationName(&IsTypedResourceElementCompatibleII);
+  DeclarationName DeclName = DeclarationName(
+      &Context.Idents.get("__is_typed_resource_element_compatible"));
   Expr *ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
 
   // Create a ConceptDecl
