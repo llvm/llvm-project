@@ -1423,6 +1423,8 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
+  dbgs() << "getBBAddrMapFeature::SkipEmitBBEntries: " << SkipEmitBBEntries
+         << "\n";
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1, SkipEmitBBEntries};
 }
@@ -1442,6 +1444,12 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->AddComment("feature");
   auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size());
   OutStreamer->emitInt8(Features.encode());
+  if (Features.NoBBEntries)
+    dbgs() << "NoBBEntries feature is enabled\n";
+  else if (SkipEmitBBEntries)
+    dbgs()
+        << "--SkipEmitBBEntries is enabled but NoBBEntries is set to false\n";
+
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");

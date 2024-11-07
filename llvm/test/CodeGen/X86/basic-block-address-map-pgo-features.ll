@@ -11,7 +11,8 @@
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=bb-freq | FileCheck %s --check-prefixes=CHECK,PGO-BBF,BBF-ONLY
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -pgo-analysis-map=br-prob | FileCheck %s --check-prefixes=CHECK,PGO-BRP,BRP-ONLY
 
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map  -skip-emit-bb-entries=true  -pgo-analysis-map=func-entry-count | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES
+; RUN: llc < %s -mtriple=x86_64  -basic-block-address-map  -skip-emit-bb-entries=true  -pgo-analysis-map=func-entry-count | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true  -basic-block-address-map  -skip-emit-bb-entries=true  -pgo-analysis-map=func-entry-count | FileCheck %s --check-prefixes=SKIP-BB-ENTRIES
 ; RUN: not llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -skip-emit-bb-entries -pgo-analysis-map=bb-freq
 ; RUN: not llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -skip-emit-bb-entries -pgo-analysis-map=br-prob
 
