@@ -86,12 +86,9 @@ define i64 @test_udiv(i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 9, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = udiv i64 [[IV]], 3
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[IV]], 16
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
 entry:
   br label %loop
@@ -132,12 +129,9 @@ define i64 @test_urem(i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 3, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = urem i64 9, [[IV]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[IV]], 4
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 0
 ;
 entry:
   br label %loop
