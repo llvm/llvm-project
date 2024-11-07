@@ -563,12 +563,12 @@ public:
   MPFRNumber tanpi() const {
     MPFRNumber result(*this);
 
-    //#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
-    //    mpfr_tanpi(result.value, value, mpfr_rounding);
-    //    return result;
-    // #else
+    mpfr_tanpi(result.value, value, mpfr_rounding);
+    return result;
+#else
     MPFRNumber value_ret_exact(*this);
     MPFRNumber value_one(*this);
     mpfr_set_si(value_one.value, 1, MPFR_RNDN);
@@ -607,7 +607,7 @@ public:
     mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
     mpfr_tan(result.value, value_pi.value, mpfr_rounding);
     return result;
-    // #endif
+#endif
   }
 
   MPFRNumber trunc() const {

@@ -41,7 +41,6 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
   FPBits xbits(x);
 
   uint16_t x_u = xbits.uintval();
-  bool x_sign = x_u >> 15;
   uint16_t x_abs = x_u & 0x7fff;
 
   if (LIBC_UNLIKELY(x_abs == 0U))
@@ -49,6 +48,7 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
 
   // Handle exceptional values
   if (LIBC_UNLIKELY(x_abs <= 0x4335)) {
+    bool x_sign = x_u >> 15;
     if (auto r = TANF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
