@@ -1269,8 +1269,8 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__v.__begin_), std::__to_address(__v.__end_), std::__to_address(__merged.__end_));
     __merged.__end_ += __v.size();
-    __v.__end_   = __v.__begin_;
-    __p          = __swap_out_circular_buffer(__merged, __p);
+    __v.__end_ = __v.__begin_;
+    __p        = __swap_out_circular_buffer(__merged, __p);
   }
   return __make_iter(__p);
 }
