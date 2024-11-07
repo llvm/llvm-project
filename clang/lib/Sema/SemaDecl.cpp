@@ -6965,6 +6965,11 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
         } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_ctor_dtor)
               << isa<CXXDestructorDecl>(MD) << A->getRange();
+        } else if (MD->getReturnType()->isVoidType()) {
+          S.Diag(
+              MD->getLocation(),
+              diag::
+                  err_lifetimebound_implicit_object_parameter_void_return_type);
         }
       }
     }
@@ -6976,7 +6981,8 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
       // only if the function returns a value.
       if (auto *A = P->getAttr<LifetimeBoundAttr>()) {
         if (!isa<CXXConstructorDecl>(FD) && FD->getReturnType()->isVoidType()) {
-          S.Diag(A->getLocation(), diag::err_lifetimebound_void_return_type);
+          S.Diag(A->getLocation(),
+                 diag::err_lifetimebound_parameter_void_return_type);
         }
       }
     }
