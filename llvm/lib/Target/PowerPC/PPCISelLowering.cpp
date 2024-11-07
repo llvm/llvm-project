@@ -15699,7 +15699,7 @@ static void fixupShuffleMaskForPermutedSToV(
     int Idx = ShuffV[I];
     if (Idx >= LHSFirstElt && Idx <= LHSLastElt)
       ShuffV[I] += LHSEltFixup;
-    if (Idx >= RHSFirstElt && Idx <= RHSLastElt)
+    else if (Idx >= RHSFirstElt && Idx <= RHSLastElt)
       ShuffV[I] += RHSEltFixup;
   }
 }
