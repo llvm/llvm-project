@@ -229,10 +229,11 @@ define amdgpu_kernel void @add_x_shl_max_offset() #1 {
 ;
 ; GFX11-LABEL: add_x_shl_max_offset:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1 offset:65535
+; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-NEXT:    ds_store_b8 v1, v0 offset:65535
 ; GFX11-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %shl = shl i32 %x.i, 4
@@ -273,11 +274,12 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0xffff, v0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-NEXT:    ds_store_b8 v1, v0
 ; GFX11-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %.neg = mul i32 %x.i, -4
@@ -318,11 +320,12 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0xffff, v0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-NEXT:    ds_store_b8 v1, v0
 ; GFX11-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
@@ -361,11 +364,12 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_p1:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x10000, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1
+; GFX11-NEXT:    v_sub_nc_u32_e32 v1, 0x10000, v0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, 13
+; GFX11-NEXT:    ds_store_b8 v1, v0
 ; GFX11-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
