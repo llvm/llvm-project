@@ -1373,7 +1373,7 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
   // File system options.
   Record.clear();
   const FileSystemOptions &FSOpts =
-      Context.getSourceManager().getFileManager().getFileSystemOpts();
+      PP.getSourceManager().getFileManager().getFileSystemOpts();
   AddString(FSOpts.WorkingDir, Record);
   Stream.EmitRecord(FILE_SYSTEM_OPTIONS, Record);
 
