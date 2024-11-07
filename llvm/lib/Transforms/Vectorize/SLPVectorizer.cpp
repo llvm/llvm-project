@@ -9362,6 +9362,12 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   DenseMap<std::pair<size_t, Value *>, SmallVector<LoadInst *>> LoadsMap;
   SmallSet<size_t, 2> LoadKeyUsed;
 
+  // Do not reorder nodes if it small (just 2 elements), all-constant or all
+  // instructions have same opcode already.
+  if (TE.Scalars.size() == 2 || (TE.getOpcode() && !TE.isAltShuffle()) ||
+      all_of(TE.Scalars, isConstant))
+    return;
+
   if (any_of(seq<unsigned>(TE.Idx), [&](unsigned Idx) {
         return VectorizableTree[Idx]->isSame(TE.Scalars);
       }))
