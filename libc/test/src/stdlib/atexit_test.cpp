@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/func/_Exit.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/utility.h"
 #include "src/stdlib/atexit.h"
@@ -34,7 +33,7 @@ TEST(LlvmLibcAtExit, Basic) {
 
 TEST(LlvmLibcAtExit, AtExitCallsSysExit) {
   auto test = [] {
-    LIBC_NAMESPACE::atexit(+[] { _Exit(1); });
+    LIBC_NAMESPACE::atexit(+[] { LIBC_NAMESPACE::_Exit(1); });
     LIBC_NAMESPACE::exit(0);
   };
   EXPECT_EXITS(test, 1);
