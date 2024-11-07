@@ -123,9 +123,9 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     hint += "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
 
-  errorOrWarn(errPlace.loc + "relocation " + lld::toString(rel.type) +
-              " out of range: " + v.str() + " is not in [" + Twine(min).str() +
-              ", " + Twine(max).str() + "]" + hint);
+  Err(ctx) << errPlace.loc << "relocation " << lld::toString(rel.type)
+           << " out of range: " << v.str() << " is not in [" << Twine(min).str()
+           << ", " << Twine(max).str() << "]" << hint;
 }
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
@@ -135,9 +135,9 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
   if (!sym.getName().empty())
     hint = "; references '" + lld::toString(sym) + '\'' +
            getDefinedLocation(ctx, sym);
-  errorOrWarn(errPlace.loc + msg + " is out of range: " + Twine(v) +
-              " is not in [" + Twine(llvm::minIntN(n)) + ", " +
-              Twine(llvm::maxIntN(n)) + "]" + hint);
+  Err(ctx) << errPlace.loc << msg << " is out of range: " << Twine(v)
+           << " is not in [" << Twine(llvm::minIntN(n)) << ", "
+           << Twine(llvm::maxIntN(n)) << "]" << hint;
 }
 
 // Build a bitmask with one bit set for each 64 subset of RelExpr.
@@ -376,7 +376,7 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
   // Copy relocation against zero-sized symbol doesn't make sense.
   uint64_t symSize = ss.getSize();
   if (symSize == 0 || ss.alignment == 0)
-    fatal("cannot create a copy relocation for symbol " + toString(ss));
+    Err(ctx) << "cannot create a copy relocation for symbol " << &ss;
 
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
@@ -441,7 +441,7 @@ public:
       while (i != cies.end() && i->inputOff <= off)
         ++i;
       if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off)
-        fatal(".eh_frame: relocation is not in any piece");
+        Fatal(ctx) << ".eh_frame: relocation is not in any piece";
       it = i;
     }
 
@@ -519,8 +519,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
         ri->getSymbol(ctx.arg.isMips64EL) == symIndex)
       return ctx.target->getImplicitAddend(buf + ri->r_offset, pairTy);
 
-  warn("can't find matching " + toString(pairTy) + " relocation for " +
-       toString(type));
+  Warn(ctx) << "can't find matching " << pairTy << " relocation for " << type;
   return 0;
 }
 
@@ -796,7 +795,7 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
   }
 
   if (undef.isWarning)
-    warn(msg);
+    Warn(ctx) << msg;
   else
     error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
@@ -1042,8 +1041,9 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (sym.scriptDefined)
       return true;
 
-  error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
-        toString(sym) + getLocation(ctx, *sec, sym, relOff));
+  Err(ctx) << "relocation " << type
+           << " cannot refer to absolute symbol: " << &sym
+           << getLocation(ctx, *sec, sym, relOff);
   return true;
 }
 
@@ -1209,8 +1209,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   if (!ctx.arg.shared && sym.isShared() &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(ctx, sym)) {
-      errorOrWarn("cannot preempt symbol: " + toString(sym) +
-                  getLocation(ctx, *sec, sym, offset));
+      Err(ctx) << "cannot preempt symbol: " << &sym
+               << getLocation(ctx, *sec, sym, offset);
       return;
     }
 
@@ -1218,10 +1218,9 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // Produce a copy relocation.
       if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
         if (!ctx.arg.zCopyreloc)
-          error("unresolvable relocation " + toString(type) +
-                " against symbol '" + toString(*ss) +
-                "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-                getLocation(ctx, *sec, sym, offset));
+          Err(ctx) << "unresolvable relocation " << type << " against symbol '"
+                   << ss << "'; recompile with -fPIC or remove '-z nocopyreloc'"
+                   << getLocation(ctx, *sec, sym, offset);
         sym.setFlags(NEEDS_COPY);
       }
       sec->addReloc({expr, type, offset, addend, &sym});
@@ -1257,19 +1256,19 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     //   the wrong ebx value.
     if (sym.isFunc()) {
       if (ctx.arg.pie && ctx.arg.emachine == EM_386)
-        errorOrWarn("symbol '" + toString(sym) +
-                    "' cannot be preempted; recompile with -fPIE" +
-                    getLocation(ctx, *sec, sym, offset));
+        Err(ctx) << "symbol '" << &sym
+                 << "' cannot be preempted; recompile with -fPIE"
+                 << getLocation(ctx, *sec, sym, offset);
       sym.setFlags(NEEDS_COPY | NEEDS_PLT);
       sec->addReloc({expr, type, offset, addend, &sym});
       return;
     }
   }
 
-  errorOrWarn("relocation " + toString(type) + " cannot be used against " +
-              (sym.getName().empty() ? "local symbol"
-                                     : "symbol '" + toString(sym) + "'") +
-              "; recompile with -fPIC" + getLocation(ctx, *sec, sym, offset));
+  Err(ctx) << "relocation " << type << " cannot be used against "
+           << (sym.getName().empty() ? "local symbol"
+                                     : ("symbol '" + toString(sym) + "'"))
+           << "; recompile with -fPIC" << getLocation(ctx, *sec, sym, offset);
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -1306,9 +1305,9 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
                                                 int64_t addend) {
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (ctx.arg.shared) {
-      errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
-                  " cannot be used with -shared" +
-                  getLocation(ctx, *sec, sym, offset));
+      Err(ctx) << "relocation " << type << " against " << &sym
+               << " cannot be used with -shared"
+               << getLocation(ctx, *sec, sym, offset);
       return 1;
     }
     return 0;
@@ -1515,9 +1514,9 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
       // Skip the error check for CREL, which does not set `end`.
       if constexpr (!RelTy::IsCrel) {
         if (i == end) {
-          errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
-                      "relocation" +
-                      getLocation(ctx, *sec, sym, offset));
+          Err(ctx) << "R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
+                      "relocation"
+                   << getLocation(ctx, *sec, sym, offset);
           return;
         }
       }
@@ -1588,9 +1587,10 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
   if (hasGDLD) {
     sec.file->ppc64DisableTLSRelax = true;
-    warn(toString(sec.file) +
-         ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations without "
-         "R_PPC64_TLSGD/R_PPC64_TLSLD relocations");
+    Warn(ctx) << sec.file
+              << ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations "
+                 "without "
+                 "R_PPC64_TLSGD/R_PPC64_TLSLD relocations";
   }
 }
 
@@ -2097,8 +2097,8 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
     thunkSecOff = isec->outSecOff + isec->getSize();
     if (!ctx.target->inBranchRange(rel.type, src,
                                    os->addr + thunkSecOff + rel.addend))
-      fatal("InputSection too large for range extension thunk " +
-            isec->getObjMsg(src - (os->addr + isec->outSecOff)));
+      Fatal(ctx) << "InputSection too large for range extension thunk "
+                 << isec->getObjMsg(src - (os->addr << isec->outSecOff));
   }
   return addThunkSection(os, isd, thunkSecOff);
 }
@@ -2460,9 +2460,9 @@ static void scanCrossRefs(Ctx &ctx, const NoCrossRefCommand &cmd,
       toSymName = toString(sym);
     else if (auto *d = dyn_cast<Defined>(&sym))
       toSymName = d->section->name;
-    errorOrWarn(sec->getLocation(r.r_offset) +
-                ": prohibited cross reference from '" + osec->name + "' to '" +
-                toSymName + "' in '" + dstOsec->name + "'");
+    Err(ctx) << sec->getLocation(r.r_offset)
+             << ": prohibited cross reference from '" << osec->name << "' to '"
+             << toSymName << "' in '" << dstOsec->name << "'";
   }
 }
 
