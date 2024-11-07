@@ -47,6 +47,10 @@ include(HandleCompilerRT)
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
+option(LIBCXX_ENABLE_EXCEPTIONS "Enable exceptions in the built library." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
   "Whether to include support for parts of the library that rely on a filesystem being
    available on the platform. This includes things like most parts of <filesystem> and
@@ -97,6 +101,10 @@ option(LIBCXX_ENABLE_WIDE_CHARACTERS
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
+option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
+option(LIBCXX_ENABLE_MONOTONIC_CLOCK
+  "Build libc++ with support for a monotonic clock.
+  This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 
 # To use time zone support in libc++ the platform needs to have the IANA
 # database installed. Libc++ will fail to build if this is enabled on a
@@ -284,14 +292,6 @@ if (LIBCXX_BUILD_32_BITS)
 endif()
 
 # Feature options -------------------------------------------------------------
-option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI
-  "Use runtime type information.
-   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
-option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
-option(LIBCXX_ENABLE_MONOTONIC_CLOCK
-  "Build libc++ with support for a monotonic clock.
-   This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
