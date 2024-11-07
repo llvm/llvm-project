@@ -122,6 +122,7 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zihintntl"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zihintpause"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zihpm"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zimop"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zmmul"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zawrs"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zfa"
