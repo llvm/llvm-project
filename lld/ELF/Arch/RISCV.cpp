@@ -156,14 +156,14 @@ uint32_t RISCV::calcEFlags() const {
       target |= EF_RISCV_RVC;
 
     if ((eflags & EF_RISCV_FLOAT_ABI) != (target & EF_RISCV_FLOAT_ABI))
-      error(
-          toString(f) +
-          ": cannot link object files with different floating-point ABI from " +
-          toString(ctx.objectFiles[0]));
+      ErrAlways(ctx) << f
+                     << ": cannot link object files with different "
+                        "floating-point ABI from "
+                     << ctx.objectFiles[0];
 
     if ((eflags & EF_RISCV_RVE) != (target & EF_RISCV_RVE))
-      error(toString(f) +
-            ": cannot link object files with different EF_RISCV_RVE");
+      ErrAlways(ctx)
+          << f << ": cannot link object files with different EF_RISCV_RVE";
   }
 
   return target;
@@ -325,8 +325,8 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }

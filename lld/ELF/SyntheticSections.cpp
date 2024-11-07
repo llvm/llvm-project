@@ -125,15 +125,17 @@ MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
     // zero padding) we ignore everything after the first Elf_Mips_ABIFlags
     if (size < sizeof(Elf_Mips_ABIFlags)) {
-      error(filename + ": invalid size of .MIPS.abiflags section: got " +
-            Twine(size) + " instead of " + Twine(sizeof(Elf_Mips_ABIFlags)));
+      ErrAlways(ctx) << filename
+                     << ": invalid size of .MIPS.abiflags section: got "
+                     << Twine(size) << " instead of "
+                     << Twine(sizeof(Elf_Mips_ABIFlags));
       return nullptr;
     }
     auto *s =
         reinterpret_cast<const Elf_Mips_ABIFlags *>(sec->content().data());
     if (s->version != 0) {
-      error(filename + ": unexpected .MIPS.abiflags version " +
-            Twine(s->version));
+      ErrAlways(ctx) << filename << ": unexpected .MIPS.abiflags version "
+                     << Twine(s->version);
       return nullptr;
     }
 
@@ -198,7 +200,7 @@ MipsOptionsSection<ELFT>::create(Ctx &ctx) {
 
     while (!d.empty()) {
       if (d.size() < sizeof(Elf_Mips_Options)) {
-        error(filename + ": invalid size of .MIPS.options section");
+        ErrAlways(ctx) << filename << ": invalid size of .MIPS.options section";
         break;
       }
 
@@ -252,7 +254,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
     sec->markDead();
 
     if (sec->content().size() != sizeof(Elf_Mips_RegInfo)) {
-      error(toString(sec->file) + ": invalid size of .reginfo section");
+      ErrAlways(ctx) << sec->file << ": invalid size of .reginfo section";
       return nullptr;
     }
 
@@ -4392,7 +4394,7 @@ static uint8_t getAbiVersion(Ctx &ctx) {
     uint8_t ver = ctx.objectFiles[0]->abiVersion;
     for (InputFile *file : ArrayRef(ctx.objectFiles).slice(1))
       if (file->abiVersion != ver)
-        error("incompatible ABI version: " + toString(file));
+        ErrAlways(ctx) << "incompatible ABI version: " << file;
     return ver;
   }
 
