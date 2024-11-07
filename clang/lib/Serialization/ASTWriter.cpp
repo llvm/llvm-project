@@ -1271,8 +1271,7 @@ ASTFileSignature ASTWriter::backpatchSignature() {
   return Signature;
 }
 
-void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
-                                          ASTContext &Context) {
+void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
   using namespace llvm;
 
   // Flush first to prepare the PCM hash (signature).
@@ -1325,7 +1324,7 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   const auto &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // Diagnostic options.
-  const auto &Diags = Context.getDiagnostics();
+  const auto &Diags = PP.getDiagnostics();
   const DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
   if (!HSOpts.ModulesSkipDiagnosticOptions) {
 #define DIAGOPT(Name, Bits, Default) Record.push_back(DiagOpts.Name);
@@ -5364,7 +5363,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // SourceLocations or FileIDs depends on it.
   computeNonAffectingInputFiles();
 
-  writeUnhashedControlBlock(PP, Context);
+  writeUnhashedControlBlock(PP);
 
   // Don't reuse type ID and Identifier ID from readers for C++ standard named
   // modules since we want to support no-transitive-change model for named
