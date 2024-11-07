@@ -555,7 +555,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           // @llvm.spv.assign.ptr.type.p...(...)'s info.
           if (Arg.OrigValue)
             if (Type *ElemTy = GR->findDeducedElementType(Arg.OrigValue))
-              ArgTy = TypedPointerType::get(ElemTy, PtrArgTy->getAddressSpace());
+              ArgTy =
+                  TypedPointerType::get(ElemTy, PtrArgTy->getAddressSpace());
         } else {
           ArgTy = Arg.Ty;
         }
