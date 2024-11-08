@@ -393,13 +393,13 @@ struct TemplateParameterListBuilder {
     QualType ConceptTType = Context.getTypeDeclType(ConceptTTPD);
 
     // this is the 2nd template argument node, on which
-    // the concept constraint is actually being applied, 'element_type'
+    // the concept constraint is actually being applied: 'element_type'
     TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
 
     QualType CSETType = Context.getTypeDeclType(T);
 
     // this is the 1st template argument node, which represents
-    // the abstract type that a concept would refer to, 'T'
+    // the abstract type that a concept would refer to: 'T'
     TemplateArgument CSETA = TemplateArgument(CSETType);
 
     ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
