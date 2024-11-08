@@ -97,3 +97,18 @@ subroutine s10
     type(undef), pointer :: y
   end type
 end subroutine s10
+
+subroutine s11
+  !ERROR: Derived type 'undef1' not found
+  type(undef1), pointer :: p
+  type t1
+    !ERROR: The derived type 'undef2' has not been defined
+    type(undef2), pointer :: p
+  end type
+  !ERROR: Derived type 'undef1' not found
+  type, extends(undef1) :: t2
+  end type
+  !ERROR: Derived type 't3' cannot extend type 'undef2' that has not yet been defined
+  type, extends(undef2) :: t3
+  end type
+end subroutine s11

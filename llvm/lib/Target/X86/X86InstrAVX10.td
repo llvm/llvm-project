@@ -1537,3 +1537,182 @@ defm VFNMADD132NEPBF16 : avx10_fma3p_132_bf16<0x9C, "vfnmadd132nepbf16", X86any_
 defm VFNMSUB132NEPBF16 : avx10_fma3p_132_bf16<0x9E, "vfnmsub132nepbf16", X86any_Fnmsub,
                                               X86Fnmsub, SchedWriteFMA>;
 }
+
+//-------------------------------------------------
+// AVX10  COMEF instructions
+//-------------------------------------------------
+multiclass avx10_com_ef<bits<8> Opc, RegisterClass RC, ValueType VT,
+                        SDPatternOperator OpNode, string OpcodeStr,
+                        X86MemOperand x86memop, PatFrag ld_frag,
+                        Domain d, X86FoldableSchedWrite sched = WriteFComX>{
+  let ExeDomain = d, mayRaiseFPException = 1, isCodeGenOnly = 1 in {
+    def rr : AVX512<Opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
+                    !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                    [(set EFLAGS, (OpNode (VT RC:$src1), RC:$src2))]>,
+                    EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
+    let mayLoad = 1 in {
+      def rm : AVX512<Opc, MRMSrcMem, (outs), (ins RC:$src1, x86memop:$src2),
+                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                      [(set EFLAGS, (OpNode (VT RC:$src1), (ld_frag addr:$src2)))]>,
+                      EVEX, EVEX_V128, Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+    }
+  }
+}
+
+multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
+                             string OpcodeStr,
+                             Domain d,
+                             X86FoldableSchedWrite sched = WriteFComX> {
+  let ExeDomain = d, mayRaiseFPException = 1 in {
+    def rr_Int : AVX512<Opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
+                        !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                        [(set EFLAGS, (OpNode (_.VT _.RC:$src1), _.RC:$src2))]>,
+                        EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
+    let mayLoad = 1 in {
+      def rm_Int : AVX512<Opc, MRMSrcMem, (outs), (ins _.RC:$src1, _.ScalarMemOp:$src2),
+                          !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
+                          [(set EFLAGS, (OpNode (_.VT _.RC:$src1), (_.LdFrag addr:$src2)))]>,
+                          EVEX, EVEX_V128, Sched<[sched]>, SIMD_EXC;
+    }
+    def rrb_Int : AVX512<Opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
+                        !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"),
+                        []>,
+                        EVEX, EVEX_V128, EVEX_B, Sched<[sched]>, SIMD_EXC;
+  }
+}
+
+let Defs = [EFLAGS], Uses = [MXCSR], Predicates = [HasAVX10_2] in {
+  defm VUCOMXSDZ  :  avx10_com_ef<0x2e, FR64X, f64, X86ucomi512,
+                                  "vucomxsd", f64mem, loadf64, SSEPackedDouble>,
+                                  TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+  defm VUCOMXSHZ  :  avx10_com_ef<0x2e, FR16X, f16, X86ucomi512,
+                                  "vucomxsh", f16mem, loadf16, SSEPackedSingle>,
+                                  T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+  defm VUCOMXSSZ  :  avx10_com_ef<0x2e, FR32X, f32, X86ucomi512,
+                                  "vucomxss", f32mem, loadf32, SSEPackedSingle>,
+                                  TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
+  defm VCOMXSDZ   :  avx10_com_ef_int<0x2f, v2f64x_info, X86comi512,
+                                      "vcomxsd", SSEPackedDouble>,
+                                      TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+  defm VCOMXSHZ   :  avx10_com_ef_int<0x2f, v8f16x_info, X86comi512,
+                                      "vcomxsh", SSEPackedSingle>,
+                                      T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+  defm VCOMXSSZ   :  avx10_com_ef_int<0x2f, v4f32x_info, X86comi512,
+                                      "vcomxss", SSEPackedSingle>,
+                                      TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
+  defm VUCOMXSDZ  :  avx10_com_ef_int<0x2e, v2f64x_info, X86ucomi512,
+                                      "vucomxsd", SSEPackedDouble>,
+                                      TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+  defm VUCOMXSHZ  :  avx10_com_ef_int<0x2e, v8f16x_info, X86ucomi512,
+                                      "vucomxsh", SSEPackedSingle>,
+                                      T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+  defm VUCOMXSSZ  :  avx10_com_ef_int<0x2e, v4f32x_info, X86ucomi512,
+                                      "vucomxss", SSEPackedSingle>,
+                                      TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
+}
+
+//-------------------------------------------------
+// AVX10 MOVZXC (COPY) instructions
+//-------------------------------------------------
+let Predicates = [HasAVX10_2] in {
+  def VMOVZPDILo2PDIZrr : AVX512XSI<0x7E, MRMSrcReg, (outs VR128X:$dst),
+                                    (ins VR128X:$src),
+                                    "vmovd\t{$src, $dst|$dst, $src}",
+                                    [(set VR128X:$dst, (v4i32 (X86vzmovl
+                                    (v4i32 VR128X:$src))))]>, EVEX,
+                                    Sched<[WriteVecMoveFromGpr]>;
+
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
+  def VMOVZPDILo2PDIZrm : AVX512XSI<0x7E, MRMSrcMem, (outs VR128X:$dst),
+                                    (ins i32mem:$src),
+                                    "vmovd\t{$src, $dst|$dst, $src}", []>, EVEX,
+                                     EVEX_CD8<32, CD8VT1>,
+                                     Sched<[WriteVecLoad]>;
+
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
+  def VMOVZPDILo2PDIZmr : AVX512PDI<0xD6, MRMDestMem, (outs),
+                                    (ins i32mem:$dst, VR128X:$src),
+                                    "vmovd\t{$src, $dst|$dst, $src}", []>, EVEX,
+                                    EVEX_CD8<32, CD8VT1>,
+                                    Sched<[WriteVecStore]>;
+
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def VMOVZPDILo2PDIZrr2 : AVX512PDI<0xD6, MRMSrcReg, (outs VR128X:$dst),
+                                     (ins VR128X:$src),
+                                     "vmovd\t{$src, $dst|$dst, $src}", []>, EVEX,
+                                     Sched<[WriteVecMoveFromGpr]>;
+  def : InstAlias<"vmovd.s\t{$src, $dst|$dst, $src}",
+                  (VMOVZPDILo2PDIZrr2 VR128X:$dst, VR128X:$src), 0>;
+
+def VMOVZPWILo2PWIZrr : AVX512XSI<0x6E, MRMSrcReg, (outs VR128X:$dst),
+                                  (ins VR128X:$src),
+                                  "vmovw\t{$src, $dst|$dst, $src}",
+                                  [(set VR128X:$dst, (v8i16 (X86vzmovl
+                                  (v8i16 VR128X:$src))))]>, EVEX, T_MAP5,
+                                  Sched<[WriteVecMoveFromGpr]>;
+
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
+  def VMOVZPWILo2PWIZrm : AVX512XSI<0x6E, MRMSrcMem, (outs VR128X:$dst),
+                                    (ins i16mem:$src),
+                                    "vmovw\t{$src, $dst|$dst, $src}", []>, EVEX,
+                                    EVEX_CD8<16, CD8VT1>, T_MAP5,
+                                    Sched<[WriteVecLoad]>;
+
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
+  def VMOVZPWILo2PWIZmr : AVX512XSI<0x7E, MRMDestMem, (outs),
+                                    (ins i32mem:$dst, VR128X:$src),
+                                    "vmovw\t{$src, $dst|$dst, $src}", []>, EVEX,
+                                    EVEX_CD8<16, CD8VT1>, T_MAP5,
+                                    Sched<[WriteVecStore]>;
+
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def VMOVZPWILo2PWIZrr2 : AVX512XSI<0x7E, MRMSrcReg, (outs VR128X:$dst),
+                                     (ins VR128X:$src),
+                                     "vmovw\t{$src, $dst|$dst, $src}",
+                                     []>, EVEX, T_MAP5,
+                                     Sched<[WriteVecMoveFromGpr]>;
+  def : InstAlias<"vmovw.s\t{$src, $dst|$dst, $src}",
+                  (VMOVZPWILo2PWIZrr2 VR128X:$dst, VR128X:$src), 0>;
+}
+
+// MOVRS
+multiclass vmovrs_p<bits<8> opc, string OpStr, X86VectorVTInfo _> {
+  let ExeDomain = _.ExeDomain in {
+    defm m: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                            (ins _.MemOp:$src), OpStr, "$src", "$src",
+                            (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpStr#_.Size)
+                                   addr:$src))>, EVEX;
+  }
+}
+
+multiclass vmovrs_p_vl<bits<8> opc, string OpStr, AVX512VLVectorVTInfo _Vec> {
+  let Predicates = [HasMOVRS, HasAVX10_2_512] in
+    defm Z : vmovrs_p<opc, OpStr, _Vec.info512>, EVEX_V512;
+  let Predicates = [HasMOVRS, HasAVX10_2] in {
+    defm Z128 : vmovrs_p<opc, OpStr, _Vec.info128>, EVEX_V128;
+    defm Z256 : vmovrs_p<opc, OpStr, _Vec.info256>, EVEX_V256;
+  }
+}
+
+defm VMOVRSB : vmovrs_p_vl<0x6f, "vmovrsb", avx512vl_i8_info>,
+                          T_MAP5, XD, EVEX_CD8<8, CD8VF>, Sched<[WriteVecLoad]>;
+defm VMOVRSW : vmovrs_p_vl<0x6f, "vmovrsw", avx512vl_i16_info>,
+                          T_MAP5, XD, REX_W, EVEX_CD8<16, CD8VF>, Sched<[WriteVecLoad]>;
+defm VMOVRSD : vmovrs_p_vl<0x6f, "vmovrsd", avx512vl_i32_info>,
+                          T_MAP5, XS, EVEX_CD8<32, CD8VF>, Sched<[WriteVecLoad]>;
+defm VMOVRSQ : vmovrs_p_vl<0x6f, "vmovrsq", avx512vl_i64_info>,
+                          T_MAP5, XS, REX_W, EVEX_CD8<64, CD8VF>, Sched<[WriteVecLoad]>;
+
+// SM4(EVEX)
+multiclass avx10_sm4_base<string OpStr> {
+  // SM4_Base is in X86InstrSSE.td.
+  let Predicates = [HasSM4, HasAVX10_2], AddedComplexity = 1 in {
+    defm Z128 : SM4_Base<OpStr, VR128X, "128", loadv4i32, i128mem>, EVEX_V128;
+    defm Z256 : SM4_Base<OpStr, VR256X, "256", loadv8i32, i256mem>, EVEX_V256;
+  }
+  let Predicates = [HasSM4, HasAVX10_2_512] in
+    defm Z : SM4_Base<OpStr, VR512, "512", loadv16i32, i512mem>, EVEX_V512;
+}
+
+defm VSM4KEY4 : avx10_sm4_base<"vsm4key4">, T8, XS, EVEX, VVVV;
+defm VSM4RNDS4 : avx10_sm4_base<"vsm4rnds4">, T8, XD, EVEX, VVVV;

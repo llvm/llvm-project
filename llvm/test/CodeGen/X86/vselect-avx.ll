@@ -187,7 +187,7 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 define void @PR59003(<2 x float> %0, <2 x float> %1, <8 x i1> %shuffle108) {
 ; AVX-LABEL: PR59003:
 ; AVX:       ## %bb.0: ## %entry
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB4_1: ## %for.body.i
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    jmp LBB4_1

@@ -154,3 +154,11 @@ void _Exit(int status) __attribute__ ((__noreturn__));
 #define EOF (-1)
 
 #define offsetof(t, d) __builtin_offsetof(t, d)
+
+struct sigaction {
+  void (*sa_handler)(int);
+};
+#define SIGINT 2
+#define	SIG_IGN (void (*)(int))1
+
+int sigaction(int, const struct sigaction *restrict, struct sigaction *restrict);

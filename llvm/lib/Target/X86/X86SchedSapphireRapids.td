@@ -59,6 +59,8 @@ def SPRPort01_05          : ProcResGroup<[SPRPort01, SPRPort05]>;
 def SPRPort01_05_10       : ProcResGroup<[SPRPort01, SPRPort05, SPRPort10]>;
 def SPRPort02_03          : ProcResGroup<[SPRPort02, SPRPort03]>;
 def SPRPort02_03_11       : ProcResGroup<[SPRPort02, SPRPort03, SPRPort11]>;
+def SPRPort02_03_10       : ProcResGroup<[SPRPort02, SPRPort03, SPRPort10]>;
+def SPRPort05_11          : ProcResGroup<[SPRPort05, SPRPort11]>;
 def SPRPort07_08          : ProcResGroup<[SPRPort07, SPRPort08]>;
 
 // EU has 112 reservation stations.
@@ -77,6 +79,10 @@ def SPRPort02_03_07_08_11 : ProcResGroup<[SPRPort02, SPRPort03, SPRPort07,
                                           SPRPort08, SPRPort11]> {
   let BufferSize = 72;
 }
+
+def SPRPortAny : ProcResGroup<[SPRPort00, SPRPort01, SPRPort02, SPRPort03,
+                               SPRPort04, SPRPort05, SPRPort06, SPRPort07,
+                               SPRPort08, SPRPort09, SPRPort10, SPRPort11]>;
 
 // Integer loads are 5 cycles, so ReadAfterLd registers needn't be available
 // until 5 cycles after the memory operand.
@@ -1601,9 +1607,9 @@ def SPRWriteResGroup126 : SchedWriteRes<[SPRPort02_03_11]> {
 def : InstRW<[SPRWriteResGroup126], (instregex "^MMX_MOV(D|Q)64rm$",
                                                "^VBROADCAST(F|I)128rm$",
                                                "^VBROADCAST(F|I)32X(2|4)Z256rm$",
-                                               "^VBROADCAST(F|I)32X(8|2Z)rm$",
-                                               "^VBROADCAST(F|I)(32|64)X4rm$",
-                                               "^VBROADCAST(F|I)64X2((Z128)?)rm$",
+                                               "^VBROADCAST(F|I)32X(8|2)Zrm$",
+                                               "^VBROADCAST(F|I)(32|64)X4Zrm$",
+                                               "^VBROADCAST(F|I)64X2(Z|Z256)rm$",
                                                "^VBROADCASTS(DY|SZ)rm$",
                                                "^VBROADCASTS(D|S)Z256rm$",
                                                "^VBROADCASTS(DZ|SY)rm$",
@@ -1652,9 +1658,9 @@ def SPRWriteResGroup131 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11]> {
   let Latency = 9;
   let NumMicroOps = 2;
 }
-def : InstRW<[SPRWriteResGroup131], (instregex "^VBROADCAST(F|I)32X(8|2Z)rmk(z?)$",
-                                               "^VBROADCAST(F|I)(32|64)X4rmk(z?)$",
-                                               "^VBROADCAST(F|I)64X2rmk(z?)$",
+def : InstRW<[SPRWriteResGroup131], (instregex "^VBROADCAST(F|I)32X(8|2)Zrmk(z?)$",
+                                               "^VBROADCAST(F|I)(32|64)X4Zrmk(z?)$",
+                                               "^VBROADCAST(F|I)64X2Zrmk(z?)$",
                                                "^VBROADCASTS(D|S)Zrmk(z?)$",
                                                "^VMOV(A|U)P(D|S)Zrmk(z?)$",
                                                "^VMOV(D|SH|SL)DUPZrmk(z?)$",
@@ -2698,7 +2704,7 @@ def SPRWriteResGroup262 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[SPRWriteResGroup262], (instregex "^VBROADCAST(F|I)32X(2|4)Z256rmk(z?)$",
-                                               "^VBROADCAST(F|I)64X2Z128rmk(z?)$",
+                                               "^VBROADCAST(F|I)64X2Z256rmk(z?)$",
                                                "^VBROADCASTS(D|S)Z256rmk(z?)$",
                                                "^VMOV(A|U)P(D|S)Z256rmk(z?)$",
                                                "^VMOV(D|SH|SL)DUPZ256rmk(z?)$",

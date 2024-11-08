@@ -112,7 +112,6 @@ body:             |
     S_BRANCH %bb.2
 ...
 
-
 ---
 name:            phi_moveimm_bad_opcode_input
 tracksRegLiveness: true

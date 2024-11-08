@@ -32,8 +32,8 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV32-NEXT:    or a0, a0, a3
 ; RV32-NEXT:    neg a3, a6
 ; RV32-NEXT:    and a2, a3, a2
-; RV32-NEXT:    sb a2, 2(a1)
 ; RV32-NEXT:    sh a0, 0(a1)
+; RV32-NEXT:    sb a2, 2(a1)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vec3_setcc_crash:
@@ -59,8 +59,8 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV64-NEXT:    or a0, a0, a3
 ; RV64-NEXT:    negw a3, a6
 ; RV64-NEXT:    and a2, a3, a2
-; RV64-NEXT:    sb a2, 2(a1)
 ; RV64-NEXT:    sh a0, 0(a1)
+; RV64-NEXT:    sb a2, 2(a1)
 ; RV64-NEXT:    ret
   %a = load <3 x i8>, ptr %in
   %cmp = icmp sgt <3 x i8> %a, zeroinitializer

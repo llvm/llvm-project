@@ -421,10 +421,32 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
-def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
+def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
     "fir::FIROpsDialect"
+  ];
+}
+
+def CUFDeviceGlobal :
+    Pass<"cuf-device-global", "mlir::ModuleOp"> {
+  let summary = "Flag globals used in device function with data attribute";
+  let dependentDialects = [
+    "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
+  ];
+}
+
+def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
+  let summary = "Add constructor to register CUDA Fortran allocators";
+  let dependentDialects = [
+    "cuf::CUFDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
+  let summary = "Convert some GPU operations lowered from CUF to runtime calls";
+  let dependentDialects = [
+    "mlir::LLVM::LLVMDialect"
   ];
 }
 

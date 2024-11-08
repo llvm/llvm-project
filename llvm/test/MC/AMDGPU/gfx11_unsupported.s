@@ -34,6 +34,9 @@ buffer_invl2
 buffer_store_lds_dword s[4:7], -1 offset:4095 lds
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+buffer_wbinvl1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_wbinvl1_vol
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -2009,9 +2012,6 @@ s_cmp_neq_f16 s1, s2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cmp_nlt_f16 s1, s2
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-s_singleuse_vdst 0x1234
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 glc

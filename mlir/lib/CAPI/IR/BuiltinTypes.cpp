@@ -85,6 +85,18 @@ unsigned mlirFloatTypeGetWidth(MlirType type) {
   return llvm::cast<FloatType>(unwrap(type)).getWidth();
 }
 
+MlirTypeID mlirFloat4E2M1FNTypeGetTypeID() {
+  return wrap(Float4E2M1FNType::getTypeID());
+}
+
+bool mlirTypeIsAFloat4E2M1FN(MlirType type) {
+  return unwrap(type).isFloat4E2M1FN();
+}
+
+MlirType mlirFloat4E2M1FNTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat4E2M1FN(unwrap(ctx)));
+}
+
 MlirTypeID mlirFloat6E2M3FNTypeGetTypeID() {
   return wrap(Float6E2M3FNType::getTypeID());
 }
@@ -191,6 +203,18 @@ bool mlirTypeIsAFloat8E3M4(MlirType type) {
 
 MlirType mlirFloat8E3M4TypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E3M4(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat8E8M0FNUTypeGetTypeID() {
+  return wrap(Float8E8M0FNUType::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E8M0FNU(MlirType type) {
+  return unwrap(type).isFloat8E8M0FNU();
+}
+
+MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E8M0FNU(unwrap(ctx)));
 }
 
 MlirTypeID mlirBFloat16TypeGetTypeID() {

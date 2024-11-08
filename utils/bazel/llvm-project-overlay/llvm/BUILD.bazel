@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -31,7 +32,6 @@ exports_files([
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     "utils/lit/lit.py",
-    "utils/lldbDataFormatters.py",
 ])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
@@ -956,6 +956,9 @@ cc_library(
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
+        "include/llvm/Analysis/SimplifyQuery.h",
+        "include/llvm/Analysis/ValueTracking.h",
+        "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     textual_hdrs = glob(["include/llvm/IR/*.def"]),
@@ -1155,6 +1158,7 @@ cc_library(
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1241,6 +1245,18 @@ cc_library(
         ":TargetParser",
         ":config",
     ],
+)
+
+filegroup(
+    name = "common_target_td_sources",
+    srcs = glob([
+        "include/llvm/CodeGen/*.td",
+        "include/llvm/Frontend/Directive/*.td",
+        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/TableGen/*.td",
+        "include/llvm/Target/*.td",
+        "include/llvm/Target/GlobalISel/*.td",
+    ]),
 )
 
 gentbl(
@@ -1452,8 +1468,9 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
+    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
     deps = [
+        ":Analysis",
         ":Core",
         ":Support",
     ],
@@ -1492,6 +1509,9 @@ cc_library(
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
+    textual_hdrs = [
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
+    ],
     deps = [
         ":Analysis",
         ":Core",
@@ -1595,6 +1615,18 @@ gentbl(
 )
 
 cc_library(
+    name = "FrontendAtomic",
+    hdrs = glob([
+        "include/llvm/Frontend/Atomic/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":ir_headers",
+    ],
+)
+
+cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
@@ -1614,6 +1646,7 @@ cc_library(
         ":BitReader",
         ":Core",
         ":Demangle",
+        ":FrontendAtomic",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -2198,7 +2231,8 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "SystemZ",
         "tbl_outs": [
             ("-gen-asm-matcher", "lib/Target/SystemZ/SystemZGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenAsmWriter.inc"),
+            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenGNUAsmWriter.inc"),
+            ("-gen-asm-writer -asmwriternum=1", "lib/Target/SystemZ/SystemZGenHLASMAsmWriter.inc"),
             ("-gen-callingconv", "lib/Target/SystemZ/SystemZGenCallingConv.inc"),
             ("-gen-dag-isel", "lib/Target/SystemZ/SystemZGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc"),
@@ -2302,18 +2336,6 @@ cc_library(
     textual_hdrs = ["lib/Target/X86/X86InstrInfo.h"],
 )
 
-filegroup(
-    name = "common_target_td_sources",
-    srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
-        "include/llvm/TableGen/*.td",
-        "include/llvm/Target/*.td",
-        "include/llvm/Target/GlobalISel/*.td",
-    ]),
-)
-
 gentbl(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
@@ -2362,7 +2384,6 @@ gentbl(
         ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerLowering", "lib/Target/RISCV/RISCVGenPostLegalizeGILowering.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -2723,6 +2744,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":BitWriter",
+        ":CGData",
         ":CodeGen",
         ":CodeGenTypes",
         ":Core",

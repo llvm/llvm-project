@@ -268,11 +268,11 @@ define i32 @bit_ceil_32_sub_used_twice(i32 %x, ptr %p) {
 ; a vector version of @bit_ceil_32 above
 define <4 x i32> @bit_ceil_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: @bit_ceil_v4i32(
-; CHECK-NEXT:    [[DEC:%.*]] = add <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[DEC:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[DEC]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> zeroinitializer, [[CTLZ]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[SEL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], splat (i32 31)
+; CHECK-NEXT:    [[SEL:%.*]] = shl nuw <4 x i32> splat (i32 1), [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %dec = add <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>

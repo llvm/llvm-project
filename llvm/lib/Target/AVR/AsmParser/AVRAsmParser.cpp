@@ -51,7 +51,7 @@ class AVRAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "AVRGenAsmMatcher.inc"
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -60,7 +60,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
@@ -320,7 +320,7 @@ bool AVRAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
   return false;
 }
 
-bool AVRAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
+bool AVRAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
@@ -623,7 +623,7 @@ void AVRAsmParser::eatComma() {
   }
 }
 
-bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool AVRAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                     StringRef Mnemonic, SMLoc NameLoc,
                                     OperandVector &Operands) {
   Operands.push_back(AVROperand::CreateToken(Mnemonic, NameLoc));

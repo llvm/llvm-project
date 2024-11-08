@@ -202,6 +202,8 @@ static int dummy_vname[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VNAME_SECT_NAME);
 static int dummy_vtab[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VTAB_SECT_NAME);
+static int dummy_covinit_funcs[0] COMPILER_RT_SECTION(
+    COMPILER_RT_SEG INSTR_PROF_COVINIT_SECT_NAME);
 
 // To avoid GC'ing of the dummy variables by the linker, reference them in an
 // array and reference the array in the runtime registration code
@@ -214,7 +216,8 @@ COMPILER_RT_VISIBILITY
 void *__llvm_profile_keep[] = {(void *)&dummy_cnts,  (void *)&dummy_bits,
                                (void *)&dummy_data,  (void *)&dummy_name,
                                (void *)&dummy_vnds,  (void *)&dummy_orderfile,
-                               (void *)&dummy_vname, (void *)&dummy_vtab};
+                               (void *)&dummy_vname, (void *)&dummy_vtab,
+                               (void *)&dummy_covinit_funcs};
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

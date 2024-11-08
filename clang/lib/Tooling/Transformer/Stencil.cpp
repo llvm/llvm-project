@@ -75,7 +75,6 @@ public:
     OS << "\"";
     OS.write_escaped(Text);
     OS << "\"";
-    OS.flush();
     return Result;
   }
 

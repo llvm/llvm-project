@@ -4538,6 +4538,11 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
 #undef GET_EGPR_IF_ENABLED
+  case 2048:
+    assert(X86::TILEPAIRRegClass.hasSubClassEq(RC) &&
+           "Unknown 2048-byte regclass");
+    assert(STI.hasAMXTILE() && "Using 2048-bit register requires AMX-TILE");
+    return Load ? X86::PTILEPAIRLOAD : X86::PTILEPAIRSTORE;
   }
 }
 
@@ -4732,6 +4737,7 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILESTORED:
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRLOAD:
     return true;
   }
 }
@@ -4744,7 +4750,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unexpected special opcode!");
   case X86::TILESTORED:
-  case X86::TILESTORED_EVEX: {
+  case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRSTORE: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4758,7 +4765,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     break;
   }
   case X86::TILELOADD:
-  case X86::TILELOADD_EVEX: {
+  case X86::TILELOADD_EVEX:
+  case X86::PTILEPAIRLOAD: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -6246,16 +6254,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   case X86::VMOVAPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSrm),
-                           get(X86::VBROADCASTF32X4rm), X86::sub_xmm);
+                           get(X86::VBROADCASTF32X4Zrm), X86::sub_xmm);
   case X86::VMOVUPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVUPSrm),
-                           get(X86::VBROADCASTF32X4rm), X86::sub_xmm);
+                           get(X86::VBROADCASTF32X4Zrm), X86::sub_xmm);
   case X86::VMOVAPSZ256rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSYrm),
-                           get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
+                           get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVUPSZ256rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVUPSYrm),
-                           get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
+                           get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
                             get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);

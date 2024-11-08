@@ -1,4 +1,0 @@
-void foo() {
-    bar = 2;     //   expected-error       {{use of undeclared identifier 'bar'}}
-}
-

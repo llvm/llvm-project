@@ -209,7 +209,6 @@ bool SetEnv(const char *name, const char *value) {
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #  if SANITIZER_GLIBC && !SANITIZER_GO
-
 static void GetGLibcVersion(int *major, int *minor, int *patch) {
   const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
@@ -219,43 +218,13 @@ static void GetGLibcVersion(int *major, int *minor, int *patch) {
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
 }
 
-__attribute__((unused)) static size_t g_tls_size;
-
-void InitTlsSize() {
-  int major, minor, patch;
-  GetGLibcVersion(&major, &minor, &patch);
-  g_use_dlpi_tls_data = major == 2 && minor >= 25;
-
-#    if defined(__aarch64__) || defined(__x86_64__) || \
-        defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_DEFAULT, "_dl_get_tls_static_info");
-  size_t tls_align;
-  ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
-#    endif
-}
-#  else
-void InitTlsSize() {}
-#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
-
-// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
-// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
-// to get the pointer to thread-specific data keys in the thread control block.
-#  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
-// sizeof(struct pthread) from glibc.
-static atomic_uintptr_t thread_descriptor_size;
-
-// FIXME: Implementation is very GLIBC specific, but it's used by FREEBSD.
 static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
         SANITIZER_RISCV64
-#      if SANITIZER_GLIBC
   int major;
   int minor;
   int patch;
   GetGLibcVersion(&major, &minor, &patch);
-#      else   // SANITIZER_GLIBC
-  return 0;
-#      endif  // SANITIZER_GLIBC
 #    endif
 
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
@@ -322,20 +291,84 @@ static uptr ThreadDescriptorSizeFallback() {
   return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
 }
+#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
-uptr ThreadDescriptorSize() {
-  uptr val = atomic_load_relaxed(&thread_descriptor_size);
-  if (val)
-    return val;
-  // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
-  // glibc 2.34 and later.
-  if (unsigned *psizeof = static_cast<unsigned *>(
-          dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread")))
-    val = *psizeof;
-  if (!val)
-    val = ThreadDescriptorSizeFallback();
-  atomic_store_relaxed(&thread_descriptor_size, val);
-  return val;
+#  if SANITIZER_FREEBSD && !SANITIZER_GO
+// FIXME: Implementation is very GLIBC specific, but it's used by FreeBSD.
+static uptr ThreadDescriptorSizeFallback() {
+#    if defined(__s390__) || defined(__sparc__)
+  // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
+  // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
+  // changed since 2007-05. Technically this applies to i386/x86_64 as well but
+  // we call _dl_get_tls_static_info and need the precise size of struct
+  // pthread.
+  return FIRST_32_SECOND_64(524, 1552);
+#    endif
+
+#    if defined(__mips__)
+  // TODO(sagarthakur): add more values as per different glibc versions.
+  return FIRST_32_SECOND_64(1152, 1776);
+#    endif
+
+#    if SANITIZER_LOONGARCH64
+  return 1856;  // from glibc 2.36
+#    endif
+
+#    if defined(__aarch64__)
+  // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
+  return 1776;
+#    endif
+
+#    if defined(__powerpc64__)
+  return 1776;  // from glibc.ppc64le 2.20-8.fc21
+#    endif
+
+  return 0;
+}
+#  endif  // SANITIZER_FREEBSD && !SANITIZER_GO
+
+#  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
+// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
+// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
+// to get the pointer to thread-specific data keys in the thread control block.
+// sizeof(struct pthread) from glibc.
+static uptr thread_descriptor_size;
+
+uptr ThreadDescriptorSize() { return thread_descriptor_size; }
+
+#    if SANITIZER_GLIBC
+__attribute__((unused)) static size_t g_tls_size;
+#    endif
+
+void InitTlsSize() {
+#    if SANITIZER_GLIBC
+  int major, minor, patch;
+  GetGLibcVersion(&major, &minor, &patch);
+  g_use_dlpi_tls_data = major == 2 && minor >= 25;
+
+  if (major == 2 && minor >= 34) {
+    // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
+    // glibc 2.34 and later.
+    if (unsigned *psizeof = static_cast<unsigned *>(
+            dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread"))) {
+      thread_descriptor_size = *psizeof;
+    }
+  }
+
+#      if defined(__aarch64__) || defined(__x86_64__) || \
+          defined(__powerpc64__) || defined(__loongarch__)
+  auto *get_tls_static_info = (void (*)(size_t *, size_t *))dlsym(
+      RTLD_DEFAULT, "_dl_get_tls_static_info");
+  size_t tls_align;
+  // Can be null if static link.
+  if (get_tls_static_info)
+    get_tls_static_info(&g_tls_size, &tls_align);
+#      endif
+
+#    endif  // SANITIZER_GLIBC
+
+  if (!thread_descriptor_size)
+    thread_descriptor_size = ThreadDescriptorSizeFallback();
 }
 
 #    if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64 || \
@@ -358,8 +391,10 @@ static uptr TlsPreTcbSize() {
   return kTlsPreTcbSize;
 }
 #    endif
-
-#  endif
+#  else   // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
+void InitTlsSize() {}
+uptr ThreadDescriptorSize() { return 0; }
+#  endif  // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 
 #  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
       !SANITIZER_ANDROID && !SANITIZER_GO

@@ -13,21 +13,35 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/PassManager.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
 
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
-  LegalityAnalysis Legality;
-  void vectorizeRec(ArrayRef<Value *> Bndl);
-  void tryVectorize(ArrayRef<Value *> Seeds);
+  std::unique_ptr<LegalityAnalysis> Legality;
+
+  /// Creates and returns a vector instruction that replaces the instructions in
+  /// \p Bndl. \p Operands are the already vectorized operands.
+  Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
+  Value *vectorizeRec(ArrayRef<Value *> Bndl);
+  bool tryVectorize(ArrayRef<Value *> Seeds);
+
+  // The PM containing the pipeline of region passes.
+  RegionPassManager RPM;
 
 public:
-  BottomUpVec() : FunctionPass("bottom-up-vec") {}
-  bool runOnFunction(Function &F) final;
+  BottomUpVec(StringRef Pipeline);
+  bool runOnFunction(Function &F, const Analyses &A) final;
+  void printPipeline(raw_ostream &OS) const final {
+    OS << getName() << "\n";
+    RPM.printPipeline(OS);
+  }
 };
 
 } // namespace llvm::sandboxir

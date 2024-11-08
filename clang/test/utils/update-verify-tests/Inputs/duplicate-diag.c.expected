@@ -1,8 +1,0 @@
-void foo() {
-    // expected-error@+1 2{{use of undeclared identifier 'a'}}
-    a = 2; a = 2;
-    // expected-error@+1 2{{use of undeclared identifier 'b'}}
-    b = 2; b = 2;
-    // expected-error@+1 2{{use of undeclared identifier 'c'}}
-    c = 2; c = 2;
-}

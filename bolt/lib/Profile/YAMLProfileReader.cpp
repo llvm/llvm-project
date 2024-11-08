@@ -643,11 +643,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     // equal number of blocks.
     if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
       continue;
-    auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
-    if (NamespaceToBFsIt == NamespaceToBFs.end())
-      NamespaceToBFs[Namespace] = {BF};
-    else
-      NamespaceToBFsIt->second.push_back(BF);
+    NamespaceToBFs[Namespace].push_back(BF);
   }
 
   // Iterates through all profiled functions and binary functions belonging to

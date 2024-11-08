@@ -1010,8 +1010,8 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
   Param->setAccess(AS_public);
 
   if (Param->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
-      LSI->LocalPacks.push_back(Param);
+    if (auto *CSI = getEnclosingLambdaOrBlock())
+      CSI->LocalPacks.push_back(Param);
 
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, ParamNameLoc, ParamName);
@@ -1134,7 +1134,8 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
       ConceptName, CD, /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
-      ConstrainedParameter, EllipsisLoc);
+      ConstrainedParameter, Context.getTypeDeclType(ConstrainedParameter),
+      EllipsisLoc);
 }
 
 template <typename ArgumentLocAppender>
@@ -1191,6 +1192,7 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                 ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 TemplateTypeParmDecl *ConstrainedParameter,
+                                QualType ConstrainedType,
                                 SourceLocation EllipsisLoc) {
   // C++2a [temp.param]p4:
   //     [...] If Q is of the form C<A1, ..., An>, then let E' be
@@ -1199,7 +1201,7 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
     TemplateArgs ? ASTTemplateArgumentListInfo::Create(Context,
                                                        *TemplateArgs) : nullptr;
 
-  QualType ParamAsArgument(ConstrainedParameter->getTypeForDecl(), 0);
+  QualType ParamAsArgument = ConstrainedType;
 
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, NS, NameInfo, NamedConcept, FoundDecl,
@@ -1540,8 +1542,8 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     Param->setInvalidDecl();
 
   if (Param->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
-      LSI->LocalPacks.push_back(Param);
+    if (auto *CSI = getEnclosingLambdaOrBlock())
+      CSI->LocalPacks.push_back(Param);
 
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, D.getIdentifierLoc(),
@@ -1591,7 +1593,7 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
   Param->setAccess(AS_public);
 
   if (Param->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
+    if (auto *LSI = getEnclosingLambdaOrBlock())
       LSI->LocalPacks.push_back(Param);
 
   // If the template template parameter has a name, then link the identifier
@@ -2993,7 +2995,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
       // Fabricate an empty template parameter list for the invented header.
       return TemplateParameterList::Create(Context, SourceLocation(),
-                                           SourceLocation(), std::nullopt,
+                                           SourceLocation(), {},
                                            SourceLocation(), nullptr);
     }
 
@@ -3076,6 +3078,140 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
   }
 }
 
+static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
+                                      SourceLocation TemplateLoc,
+                                      ArrayRef<TemplateArgument> Ts) {
+  auto lookUpCommonType = [&](TemplateArgument T1,
+                              TemplateArgument T2) -> QualType {
+    // Don't bother looking for other specializations if both types are
+    // builtins - users aren't allowed to specialize for them
+    if (T1.getAsType()->isBuiltinType() && T2.getAsType()->isBuiltinType())
+      return builtinCommonTypeImpl(S, BaseTemplate, TemplateLoc, {T1, T2});
+
+    TemplateArgumentListInfo Args;
+    Args.addArgument(TemplateArgumentLoc(
+        T1, S.Context.getTrivialTypeSourceInfo(T1.getAsType())));
+    Args.addArgument(TemplateArgumentLoc(
+        T2, S.Context.getTrivialTypeSourceInfo(T2.getAsType())));
+
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+    QualType BaseTemplateInst =
+        S.CheckTemplateIdType(BaseTemplate, TemplateLoc, Args);
+
+    if (SFINAE.hasErrorOccurred())
+      return QualType();
+
+    return BaseTemplateInst;
+  };
+
+  // Note A: For the common_type trait applied to a template parameter pack T of
+  // types, the member type shall be either defined or not present as follows:
+  switch (Ts.size()) {
+
+  // If sizeof...(T) is zero, there shall be no member type.
+  case 0:
+    return QualType();
+
+  // If sizeof...(T) is one, let T0 denote the sole type constituting the
+  // pack T. The member typedef-name type shall denote the same type, if any, as
+  // common_type_t<T0, T0>; otherwise there shall be no member type.
+  case 1:
+    return lookUpCommonType(Ts[0], Ts[0]);
+
+  // If sizeof...(T) is two, let the first and second types constituting T be
+  // denoted by T1 and T2, respectively, and let D1 and D2 denote the same types
+  // as decay_t<T1> and decay_t<T2>, respectively.
+  case 2: {
+    QualType T1 = Ts[0].getAsType();
+    QualType T2 = Ts[1].getAsType();
+    QualType D1 = S.BuiltinDecay(T1, {});
+    QualType D2 = S.BuiltinDecay(T2, {});
+
+    // If is_same_v<T1, D1> is false or is_same_v<T2, D2> is false, let C denote
+    // the same type, if any, as common_type_t<D1, D2>.
+    if (!S.Context.hasSameType(T1, D1) || !S.Context.hasSameType(T2, D2))
+      return lookUpCommonType(D1, D2);
+
+    // Otherwise, if decay_t<decltype(false ? declval<D1>() : declval<D2>())>
+    // denotes a valid type, let C denote that type.
+    {
+      auto CheckConditionalOperands = [&](bool ConstRefQual) -> QualType {
+        EnterExpressionEvaluationContext UnevaluatedContext(
+            S, Sema::ExpressionEvaluationContext::Unevaluated);
+        Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+        Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+        // false
+        OpaqueValueExpr CondExpr(SourceLocation(), S.Context.BoolTy,
+                                 VK_PRValue);
+        ExprResult Cond = &CondExpr;
+
+        auto EVK = ConstRefQual ? VK_LValue : VK_PRValue;
+        if (ConstRefQual) {
+          D1.addConst();
+          D2.addConst();
+        }
+
+        // declval<D1>()
+        OpaqueValueExpr LHSExpr(TemplateLoc, D1, EVK);
+        ExprResult LHS = &LHSExpr;
+
+        // declval<D2>()
+        OpaqueValueExpr RHSExpr(TemplateLoc, D2, EVK);
+        ExprResult RHS = &RHSExpr;
+
+        ExprValueKind VK = VK_PRValue;
+        ExprObjectKind OK = OK_Ordinary;
+
+        // decltype(false ? declval<D1>() : declval<D2>())
+        QualType Result =
+            S.CheckConditionalOperands(Cond, LHS, RHS, VK, OK, TemplateLoc);
+
+        if (Result.isNull() || SFINAE.hasErrorOccurred())
+          return QualType();
+
+        // decay_t<decltype(false ? declval<D1>() : declval<D2>())>
+        return S.BuiltinDecay(Result, TemplateLoc);
+      };
+
+      if (auto Res = CheckConditionalOperands(false); !Res.isNull())
+        return Res;
+
+      // Let:
+      // CREF(A) be add_lvalue_reference_t<const remove_reference_t<A>>,
+      // COND-RES(X, Y) be
+      //   decltype(false ? declval<X(&)()>()() : declval<Y(&)()>()()).
+
+      // C++20 only
+      // Otherwise, if COND-RES(CREF(D1), CREF(D2)) denotes a type, let C denote
+      // the type decay_t<COND-RES(CREF(D1), CREF(D2))>.
+      if (!S.Context.getLangOpts().CPlusPlus20)
+        return QualType();
+      return CheckConditionalOperands(true);
+    }
+  }
+
+  // If sizeof...(T) is greater than two, let T1, T2, and R, respectively,
+  // denote the first, second, and (pack of) remaining types constituting T. Let
+  // C denote the same type, if any, as common_type_t<T1, T2>. If there is such
+  // a type C, the member typedef-name type shall denote the same type, if any,
+  // as common_type_t<C, R...>. Otherwise, there shall be no member type.
+  default: {
+    QualType Result = Ts.front().getAsType();
+    for (auto T : llvm::drop_begin(Ts)) {
+      Result = lookUpCommonType(Result, T.getAsType());
+      if (Result.isNull())
+        return QualType();
+    }
+    return Result;
+  }
+  }
+}
+
 static QualType
 checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
                            ArrayRef<TemplateArgument> Converted,
@@ -3132,7 +3268,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
                                        TemplateLoc, SyntheticTemplateArgs);
   }
 
-  case BTK__type_pack_element:
+  case BTK__type_pack_element: {
     // Specializations of
     //    __type_pack_element<Index, T_1, ..., T_N>
     // are treated like T_Index.
@@ -3157,6 +3293,29 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     // We simply return the type at index `Index`.
     int64_t N = Index.getExtValue();
     return Ts.getPackAsArray()[N].getAsType();
+  }
+
+  case BTK__builtin_common_type: {
+    assert(Converted.size() == 4);
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
+      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
+                                                            Converted);
+
+    TemplateName BaseTemplate = Converted[0].getAsTemplate();
+    TemplateName HasTypeMember = Converted[1].getAsTemplate();
+    QualType HasNoTypeMember = Converted[2].getAsType();
+    ArrayRef<TemplateArgument> Ts = Converted[3].getPackAsArray();
+    if (auto CT = builtinCommonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts);
+        !CT.isNull()) {
+      TemplateArgumentListInfo TAs;
+      TAs.addArgument(TemplateArgumentLoc(
+          TemplateArgument(CT), SemaRef.Context.getTrivialTypeSourceInfo(
+                                    CT, TemplateArgs[1].getLocation())));
+
+      return SemaRef.CheckTemplateIdType(HasTypeMember, TemplateLoc, TAs);
+    }
+    return HasNoTypeMember;
+  }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
@@ -4226,8 +4385,20 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
   Template->getPartialSpecializations(PartialSpecs);
 
-  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-    VarTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+  for (VarTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
+    // C++ [temp.spec.partial.member]p2:
+    //   If the primary member template is explicitly specialized for a given
+    //   (implicit) specialization of the enclosing class template, the partial
+    //   specializations of the member template are ignored for this
+    //   specialization of the enclosing class template. If a partial
+    //   specialization of the member template is explicitly specialized for a
+    //   given (implicit) specialization of the enclosing class template, the
+    //   primary member template and its other partial specializations are still
+    //   considered for this specialization of the enclosing class template.
+    if (Template->getMostRecentDecl()->isMemberSpecialization() &&
+        !Partial->getMostRecentDecl()->isMemberSpecialization())
+      continue;
+
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
 
     if (TemplateDeductionResult Result =
@@ -5919,6 +6090,13 @@ bool UnnamedLocalNoLinkageFinder::VisitNestedNameSpecifier(
     return Visit(QualType(NNS->getAsType(), 0));
   }
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
+    const HLSLAttributedResourceType *T) {
+  if (T->hasContainedType() && Visit(T->getContainedType()))
+    return true;
+  return Visit(T->getWrappedType());
 }
 
 bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
@@ -8308,15 +8486,12 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       Diag(TemplateNameLoc, diag::err_partial_spec_args_match_primary_template)
           << /*class template*/ 0 << (TUK == TagUseKind::Definition)
           << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
-      return CheckClassTemplate(S, TagSpec, TUK, KWLoc, SS,
-                                ClassTemplate->getIdentifier(),
-                                TemplateNameLoc,
-                                Attr,
-                                TemplateParams,
-                                AS_none, /*ModulePrivateLoc=*/SourceLocation(),
-                                /*FriendLoc*/SourceLocation(),
-                                TemplateParameterLists.size() - 1,
-                                TemplateParameterLists.data());
+      return CheckClassTemplate(
+          S, TagSpec, TUK, KWLoc, SS, ClassTemplate->getIdentifier(),
+          TemplateNameLoc, Attr, TemplateParams, AS_none,
+          /*ModulePrivateLoc=*/SourceLocation(),
+          /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
+          TemplateParameterLists.data());
     }
 
     // Create a new class template partial specialization declaration node.
@@ -8474,6 +8649,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     return SkipBody->Previous;
 
   Specialization->setInvalidDecl(Invalid);
+  inferGslOwnerPointerAttribute(Specialization);
   return Specialization;
 }
 

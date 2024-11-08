@@ -1732,7 +1732,7 @@ if.end:
 ; Another infinite loop test this time with two nested infinite loop.
 ; infiniteloop3
 ; bx lr
-define void @infiniteloop3() "frame-pointer"="all" {
+define void @infiniteloop3() "frame-pointer"="none" {
 ; ARM-LABEL: infiniteloop3:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    mov r0, #0

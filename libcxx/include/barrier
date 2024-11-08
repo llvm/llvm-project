@@ -47,16 +47,16 @@ namespace std
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
 #  include <__atomic/atomic_base.h>
 #  include <__atomic/memory_order.h>
+#  include <__cstddef/ptrdiff_t.h>
 #  include <__memory/unique_ptr.h>
 #  include <__thread/poll_with_backoff.h>
 #  include <__thread/timed_backoff_policy.h>
 #  include <__utility/move.h>
-#  include <cstddef>
 #  include <cstdint>
 #  include <limits>
 #  include <version>
@@ -294,7 +294,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>

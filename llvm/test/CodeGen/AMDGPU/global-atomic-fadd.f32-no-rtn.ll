@@ -43,7 +43,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE]]
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[REG_SEQUENCE]]
   ; GFX908-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64 = SI_PS_LIVE
   ; GFX908-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[SI_PS_LIVE]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_BRANCH %bb.1
@@ -105,7 +105,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; GFX90A_GFX940-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE]]
+  ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX940-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_64 = SI_PS_LIVE
   ; GFX90A_GFX940-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[SI_PS_LIVE]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.1
@@ -167,7 +167,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; GFX11_GFX12-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX11_GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX11_GFX12-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE]]
+  ; GFX11_GFX12-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[REG_SEQUENCE]]
   ; GFX11_GFX12-NEXT:   [[SI_PS_LIVE:%[0-9]+]]:sreg_32 = SI_PS_LIVE
   ; GFX11_GFX12-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[SI_PS_LIVE]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   S_BRANCH %bb.1

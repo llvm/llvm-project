@@ -27,7 +27,7 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   Triple TT(Triple(M.getTargetTriple()));
   MMDAI.DXILVersion = TT.getDXILVersion();
   MMDAI.ShaderModelVersion = TT.getOSVersion();
-  MMDAI.ShaderStage = TT.getEnvironment();
+  MMDAI.ShaderProfile = TT.getEnvironment();
   NamedMDNode *ValidatorVerNode = M.getNamedMetadata("dx.valver");
   if (ValidatorVerNode) {
     auto *ValVerMD = cast<MDNode>(ValidatorVerNode->getOperand(0));
@@ -42,7 +42,7 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
 
-    EntryProperties EFP(F);
+    EntryProperties EFP(&F);
     // Get "hlsl.shader" attribute
     Attribute EntryAttr = F.getFnAttribute("hlsl.shader");
     assert(EntryAttr.isValid() &&
@@ -74,8 +74,8 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
 void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Shader Model Version : " << ShaderModelVersion.getAsString() << "\n";
   OS << "DXIL Version : " << DXILVersion.getAsString() << "\n";
-  OS << "Target Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
-     << "\n";
+  OS << "Target Shader Stage : "
+     << Triple::getEnvironmentTypeName(ShaderProfile) << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
   for (const auto &EP : EntryPropertyVec) {
     OS << " " << EP.Entry->getName() << "\n";

@@ -1,5 +1,5 @@
 ! Test lowering of select rank to HLFIR
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module iface_helpers
 interface

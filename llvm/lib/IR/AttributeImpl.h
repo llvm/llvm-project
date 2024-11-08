@@ -86,6 +86,9 @@ public:
 
   ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
 
+  /// Used to sort attributes. KindOnly controls if the sort includes the
+  /// attributes' values or just the kind.
+  int cmp(const AttributeImpl &AI, bool KindOnly) const;
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 

@@ -9,8 +9,6 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 #define LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 
-#include <thread>
-
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 

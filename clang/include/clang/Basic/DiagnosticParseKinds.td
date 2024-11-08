@@ -113,9 +113,12 @@ def ext_cxx11_enum_fixed_underlying_type : Extension<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
-def ext_clang_c_enum_fixed_underlying_type : Extension<
-  "enumeration types with a fixed underlying type are a Clang extension">,
-  InGroup<DiagGroup<"fixed-enum-extension">>;
+def ext_c23_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a C23 extension">,
+  InGroup<C23>;
+def warn_c17_compat_enum_fixed_underlying_type : Warning<
+  "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -200,8 +203,13 @@ def err_expected_equal_designator : Error<"expected '=' or another designator">;
 def ext_gnu_old_style_field_designator : ExtWarn<
   "use of GNU old-style field designator extension">,
   InGroup<GNUDesignator>;
-def ext_gnu_case_range : Extension<"use of GNU case range extension">,
-  InGroup<GNUCaseRange>;
+def ext_gnu_case_range : Extension<
+  "case ranges are a GNU extension">, InGroup<GNUCaseRange>;
+def warn_c23_compat_case_range : Warning<
+  "case ranges are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_case_range : Extension<
+  "case ranges are a C2y extension">, InGroup<C2y>;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;

@@ -809,6 +809,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
 
+/// Floating point combined sine and cosine.
+HANDLE_TARGET_OPCODE(G_FSINCOS)
+
 /// Floating point tangent.
 HANDLE_TARGET_OPCODE(G_FTAN)
 
@@ -820,6 +823,9 @@ HANDLE_TARGET_OPCODE(G_FASIN)
 
 /// Floating point arctangent.
 HANDLE_TARGET_OPCODE(G_FATAN)
+
+/// Floating point arctangent of y/x.
+HANDLE_TARGET_OPCODE(G_FATAN2)
 
 /// Floating point hyperbolic cosine.
 HANDLE_TARGET_OPCODE(G_FCOSH)

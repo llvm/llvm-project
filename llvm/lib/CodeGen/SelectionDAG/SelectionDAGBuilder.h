@@ -526,7 +526,7 @@ public:
   void visitBitTestHeader(SwitchCG::BitTestBlock &B,
                           MachineBasicBlock *SwitchBB);
   void visitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
-                        BranchProbability BranchProbToNext, unsigned Reg,
+                        BranchProbability BranchProbToNext, Register Reg,
                         SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
   void visitJumpTable(SwitchCG::JumpTable &JT);
   void visitJumpTableHeader(SwitchCG::JumpTable &JT,

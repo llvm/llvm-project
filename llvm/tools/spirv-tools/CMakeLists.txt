@@ -12,7 +12,7 @@ endif ()
 # SPIRV_DIS and SPIRV_VAL variables can be used to provide paths to existing
 # spirv-dis and spirv-val binaries, respectively. Otherwise, build them from
 # SPIRV-Tools source.
-if (NOT SPIRV_DIS OR NOT SPIRV_VAL)
+if (NOT SPIRV_DIS OR NOT SPIRV_VAL OR NOT SPIRV_AS)
   include(ExternalProject)
 
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/SPIRVTools-bin)
@@ -21,8 +21,8 @@ if (NOT SPIRV_DIS OR NOT SPIRV_VAL)
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Tools.git
     GIT_TAG main
     BINARY_DIR ${BINARY_DIR}
-    BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target spirv-dis spirv-val
-    BUILD_BYPRODUCTS ${BINARY_DIR}/tools/spirv-dis ${BINARY_DIR}/tools/spirv-val
+    BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target spirv-dis spirv-val spirv-as
+    BUILD_BYPRODUCTS ${BINARY_DIR}/tools/spirv-dis ${BINARY_DIR}/tools/spirv-val ${BINARY_DIR}/tools/spirv-as
     DOWNLOAD_COMMAND git clone https://github.com/KhronosGroup/SPIRV-Tools.git SPIRVTools &&
       cd SPIRVTools &&
       ${Python3_EXECUTABLE} utils/git-sync-deps
@@ -60,6 +60,16 @@ if (SPIRV_VAL)
 else ()
   add_custom_target(spirv-val
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-val${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-val${CMAKE_EXECUTABLE_SUFFIX}"
+    DEPENDS SPIRVTools
+    )
+endif ()
+
+if (SPIRV_AS)
+  add_custom_target(spirv-as
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_VAL}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-as")
+else ()
+  add_custom_target(spirv-as
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-as${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-as${CMAKE_EXECUTABLE_SUFFIX}"
     DEPENDS SPIRVTools
     )
 endif ()

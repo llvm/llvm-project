@@ -600,6 +600,9 @@ public:
   bool matchRotateOutOfRange(MachineInstr &MI);
   void applyRotateOutOfRange(MachineInstr &MI);
 
+  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   bool matchICmpToTrueFalseKnownBits(MachineInstr &MI, int64_t &MatchInfo);
@@ -845,7 +848,8 @@ public:
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                                const MachineInstr &MI2,
                                                 BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector trunc on the vector
@@ -855,13 +859,18 @@ public:
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                                  const MachineInstr &MI2,
                                                   BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a insert vector element on the vector
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+
+  /// Remove references to rhs if it is undef
+  bool matchShuffleUndefRHS(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
@@ -912,6 +921,10 @@ public:
 
   bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // unmerge_values(anyext(build vector)) -> build vector(anyext)
+  bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                           BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

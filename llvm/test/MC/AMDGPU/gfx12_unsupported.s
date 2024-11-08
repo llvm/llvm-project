@@ -232,7 +232,13 @@ buffer_gl0_inv
 buffer_gl1_inv
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+buffer_store_lds_dword s[4:7], -1 offset:4095 lds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_wbinvl1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_wbinvl1_vol
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN

@@ -3305,6 +3305,10 @@ public:
                                         const FieldDecl *FAMDecl,
                                         uint64_t &Offset);
 
+  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
+
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
                                         const FieldDecl *FAMDecl,
@@ -3524,7 +3528,7 @@ public:
   /// This function may clear the current insertion point; callers should use
   /// EnsureInsertPoint if they wish to subsequently generate code without first
   /// calling EmitBlock, EmitBranch, or EmitStmt.
-  void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = std::nullopt);
+  void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = {});
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -3551,11 +3555,9 @@ public:
   void EmitIndirectGotoStmt(const IndirectGotoStmt &S);
   void EmitIfStmt(const IfStmt &S);
 
-  void EmitWhileStmt(const WhileStmt &S,
-                     ArrayRef<const Attr *> Attrs = std::nullopt);
-  void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = std::nullopt);
-  void EmitForStmt(const ForStmt &S,
-                   ArrayRef<const Attr *> Attrs = std::nullopt);
+  void EmitWhileStmt(const WhileStmt &S, ArrayRef<const Attr *> Attrs = {});
+  void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = {});
+  void EmitForStmt(const ForStmt &S, ArrayRef<const Attr *> Attrs = {});
   void EmitReturnStmt(const ReturnStmt &S);
   void EmitDeclStmt(const DeclStmt &S);
   void EmitBreakStmt(const BreakStmt &S);
@@ -3632,7 +3634,7 @@ public:
                                     llvm::Value *ParentFP);
 
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
-                           ArrayRef<const Attr *> Attrs = std::nullopt);
+                           ArrayRef<const Attr *> Attrs = {});
 
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {
@@ -3823,6 +3825,7 @@ public:
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
+  void EmitOMPScopeDirective(const OMPScopeDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
   void EmitOMPSectionDirective(const OMPSectionDirective &S);
   void EmitOMPSingleDirective(const OMPSingleDirective &S);
@@ -4165,7 +4168,8 @@ public:
   llvm::AtomicRMWInst *emitAtomicRMWInst(
       llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
       llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
-      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System,
+      const AtomicExpr *AE = nullptr);
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
@@ -4295,8 +4299,12 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
-  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                          QualType Ty);
+  LValue EmitHLSLArrayAssignLValue(const BinaryOperator *E);
+
+  std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
+                                                  QualType Ty);
+  LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
+                            QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -4396,7 +4404,8 @@ public:
   }
   RValue EmitCall(QualType FnType, const CGCallee &Callee, const CallExpr *E,
                   ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr,
-                  llvm::CallBase **CallOrInvoke = nullptr);
+                  llvm::CallBase **CallOrInvoke = nullptr,
+                  CGFunctionInfo const **ResolvedFnInfo = nullptr);
 
   // If a Call or Invoke instruction was emitted for this CallExpr, this method
   // writes the pointer to `CallOrInvoke` if it's not null.
@@ -4644,6 +4653,8 @@ public:
                            unsigned BuiltinID);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred,
                                     llvm::ScalableVectorType *VTy);
+  llvm::Value *EmitSVEPredicateTupleCast(llvm::Value *PredTuple,
+                                         llvm::StructType *Ty);
   llvm::Value *EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                  llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                  unsigned IntID);
@@ -4668,12 +4679,6 @@ public:
   llvm::Value *EmitSVEStructStore(const SVETypeFlags &TypeFlags,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned IntID);
-  /// FormSVEBuiltinResult - Returns the struct of scalable vectors as a wider
-  /// vector. It extracts the scalable vector from the struct and inserts into
-  /// the wider vector. This avoids the error when allocating space in llvm
-  /// for struct of scalable vectors if a function returns struct.
-  llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
-
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
@@ -5083,11 +5088,16 @@ public:
   enum BuiltinCheckKind {
     BCK_CTZPassedZero,
     BCK_CLZPassedZero,
+    BCK_AssumePassedFalse,
   };
 
   /// Emits an argument for a call to a builtin. If the builtin sanitizer is
   /// enabled, a runtime check specified by \p Kind is also emitted.
   llvm::Value *EmitCheckedArgForBuiltin(const Expr *E, BuiltinCheckKind Kind);
+
+  /// Emits an argument for a call to a `__builtin_assume`. If the builtin
+  /// sanitizer is enabled, a runtime check is also emitted.
+  llvm::Value *EmitCheckedArgForAssume(const Expr *E);
 
   /// Emit a description of a type in a format suitable for passing to
   /// a runtime sanitizer handler.
@@ -5143,6 +5153,9 @@ public:
   void EmitNonNullArgCheck(Address Addr, QualType ArgType,
                            SourceLocation ArgLoc, AbstractCallee AC,
                            unsigned ParmNum);
+
+  /// EmitWriteback - Emit callbacks for function.
+  void EmitWritebacks(const CallArgList &Args);
 
   /// EmitCallArg - Emit a single call argument.
   void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType);

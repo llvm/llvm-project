@@ -11,6 +11,9 @@ unittest("SandboxVectorizerTests") {
   ]
   sources = [
     "DependencyGraphTest.cpp",
+    "IntervalTest.cpp",
     "LegalityTest.cpp",
+    "SchedulerTest.cpp",
+    "VecUtilsTest.cpp",
   ]
 }

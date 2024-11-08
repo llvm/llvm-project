@@ -531,10 +531,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     // Character length distinction is allowed, with a warning
     if (!HaveCompatibleLengths(
             *type_, allocateInfo_.sourceExprType.value())) { // F'2023 C950
-      if (context.ShouldWarn(common::LanguageFeature::AllocateToOtherLength)) {
-        context.Say(name_.source,
-            "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
-      }
+      context.Warn(common::LanguageFeature::AllocateToOtherLength, name_.source,
+          "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
       return false;
     }
   }

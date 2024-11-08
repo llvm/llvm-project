@@ -586,9 +586,9 @@ const FullSourceLoc BackendConsumer::getBestLocationFromDebugLoc(
   if (D.isLocationAvailable()) {
     D.getLocation(Filename, Line, Column);
     if (Line > 0) {
-      auto FE = FileMgr.getFile(Filename);
+      auto FE = FileMgr.getOptionalFileRef(Filename);
       if (!FE)
-        FE = FileMgr.getFile(D.getAbsolutePath());
+        FE = FileMgr.getOptionalFileRef(D.getAbsolutePath());
       if (FE) {
         // If -gcolumn-info was not used, Column will be 0. This upsets the
         // source manager, so pass 1 if Column is not set.
