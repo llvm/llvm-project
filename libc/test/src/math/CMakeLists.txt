@@ -1085,6 +1085,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    libc.hdr.math_macros
+    libc.src.errno.errno
+    libc.src.math.exp10m1f
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   copysign_test
   SUITE
     libc-math-unittests
