@@ -1269,10 +1269,10 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   if (CmpInst::isFPPredicate(Predicate)) {
     // Flush any denormal constant float input according to denormal handling
     // mode.
-    Ops0 = FlushFPConstant(Ops0, I, /* IsOutput=*/false);
+    Ops0 = FlushFPConstant(Ops0, I, /*IsOutput=*/false);
     if (!Ops0)
       return nullptr;
-    Ops1 = FlushFPConstant(Ops1, I, /* IsOutput= */ false);
+    Ops1 = FlushFPConstant(Ops1, I, /*IsOutput=*/false);
     if (!Ops1)
       return nullptr;
   }
