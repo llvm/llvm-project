@@ -1840,6 +1840,20 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
            Subtarget->hasUnalignedBufferAccessEnabled();
   }
 
+  // Check natural alignment of buffer if the target requires it. This is needed
+  // only if robust out-of-bounds guarantees are needed. Normally hardware will
+  // ensure proper out-of-bounds behavior, but in the edge case where an access
+  // starts out-of-bounds and then enter in-bounds, the entire access would be
+  // treated as out-of-bounds. Requiring the natural alignment avoids the
+  // problem.
+  if (AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
+      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
+      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
+    if (Subtarget->requiresNaturallyAlignedBufferAccess() &&
+        Alignment < Align(PowerOf2Ceil(divideCeil(Size, 8))))
+      return false;
+  }
+
   // Smaller than dword value must be aligned.
   if (Size < 32)
     return false;
