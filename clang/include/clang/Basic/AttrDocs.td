@@ -8717,9 +8717,10 @@ def WrapsDocs : Documentation {
 The ``wraps`` attribute can be used with type or variable declarations to
 denote that arithmetic containing attributed types or variables have defined
 overflow behavior. Specifically, the behavior is defined as being consistent
-with two's complement wrap-around. For the purposes of sanitizers or warnings
-that concern themselves with the definedness of integer arithmetic, they will
-cease to instrument or warn about arithmetic that directly involves operands
+with two's complement wrap-around. This is similar to ``-fwrapv`` but at the
+type and declaration level. For the purposes of sanitizers or warnings that
+concern themselves with the definedness of integer arithmetic, they will cease
+to instrument or warn about arithmetic that directly involves operands
 attributed with the ``wraps`` attribute.
 
 The ``signed-integer-overflow``, ``unsigned-integer-overflow``,
