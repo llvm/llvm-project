@@ -13,6 +13,7 @@ declare i16 @llvm.abs.i16(i16, i1 immarg)
 declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare i64 @llvm.abs.i64(i64, i1 immarg)
 
+; FIXME: Could combine back to back srais.
 define i8 @abs8(i8 %x) {
 ; RV32I-LABEL: abs8:
 ; RV32I:       # %bb.0:
@@ -49,6 +50,7 @@ define i8 @abs8(i8 %x) {
   ret i8 %abs
 }
 
+; FIXME: Could combine back to back srais.
 define i16 @abs16(i16 %x) {
 ; RV32I-LABEL: abs16:
 ; RV32I:       # %bb.0:

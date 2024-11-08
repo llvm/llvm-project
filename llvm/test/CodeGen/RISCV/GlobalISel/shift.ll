@@ -47,6 +47,7 @@ define i16 @test_shl_i48(i48 %x) {
   ret i16 %trunc
 }
 
+; FIXME: Could use srlw to remove slli+srli.
 define i16 @test_lshr_i48_2(i48 %x, i48 %y) {
 ; RV32-LABEL: test_lshr_i48_2:
 ; RV32:       # %bb.0:
@@ -67,6 +68,7 @@ define i16 @test_lshr_i48_2(i48 %x, i48 %y) {
   ret i16 %trunc
 }
 
+; FIXME: Could use sraw to remove the sext.w.
 define i16 @test_ashr_i48_2(i48 %x, i48 %y) {
 ; RV32-LABEL: test_ashr_i48_2:
 ; RV32:       # %bb.0:
