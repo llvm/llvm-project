@@ -152,6 +152,7 @@ define void @rol_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
   ret void
 }
 
+; FIXME: Bad materialization of -2 as 0xfffffffe.
 define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: rol_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
@@ -240,6 +241,7 @@ define void @ror_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
   ret void
 }
 
+; FIXME: Bad materialization of -2 as 0xfffffffe.
 define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: ror_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
@@ -473,6 +475,7 @@ define i16 @srli_i16(i16 %a) nounwind {
 
 ; We could use sext.h+srai, but slli+srai offers more opportunities for
 ; comppressed instructions.
+; FIXME: Combine back to back srai.
 define i16 @srai_i16(i16 %a) nounwind {
 ; RV64I-LABEL: srai_i16:
 ; RV64I:       # %bb.0:
