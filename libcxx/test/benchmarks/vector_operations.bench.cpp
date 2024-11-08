@@ -13,9 +13,9 @@
 #include <cstring>
 #include <deque>
 #include <functional>
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
