@@ -98,7 +98,6 @@ class ParentMapContext;
 struct ParsedTargetAttr;
 class Preprocessor;
 class ProfileList;
-class Sema;
 class StoredDeclsMap;
 class TargetAttr;
 class TargetInfo;
@@ -3533,7 +3532,7 @@ private:
   /// This is a function that is implemented in the Sema layer,
   /// that needs friendship to initialize ASTMutator without this capability
   /// being available in the public interface of ASTContext.
-  friend void injectASTMutatorIntoASTContext(Sema &, ASTContext &);
+  friend void injectASTMutatorIntoASTContext(ASTContext &, EvalASTMutator *);
 
 public:
   enum PragmaSectionFlag : unsigned {

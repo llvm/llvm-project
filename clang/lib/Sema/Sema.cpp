@@ -208,8 +208,9 @@ public:
 } // end namespace sema
 } // end namespace clang
 
-void clang::injectASTMutatorIntoASTContext(Sema &S, ASTContext &Context) {
-  Context.ASTMutator = S.getASTMutator();
+void clang::injectASTMutatorIntoASTContext(ASTContext &Context,
+                                           EvalASTMutator *ASTMutator) {
+  Context.ASTMutator = ASTMutator;
 }
 
 SemaASTMutator::SemaASTMutator(Sema &SemaRef) : SemaRef(SemaRef) {}
@@ -308,7 +309,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   /// Initialize ASTMutator within ASTContext.
   /// This is very intentionally not a part of public interface
   /// of ASTContext.
-  injectASTMutatorIntoASTContext(*this, Context);
+  injectASTMutatorIntoASTContext(Context, getASTMutator());
 }
 
 // Anchor Sema's type info to this TU.
