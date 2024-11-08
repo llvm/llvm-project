@@ -1040,9 +1040,7 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
       symbolTable->getLoc(), name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes));
   func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
-  if (convergent) {
-    func.setConvergent(true);
-  }
+  func.setConvergent(convergent);
   func.setNoUnwind(true);
   func.setWillReturn(true);
   return func;
@@ -1050,13 +1048,10 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
 
 static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &builder,
                                            LLVM::LLVMFuncOp func,
-                                           ValueRange args,
-                                           bool convergent = true) {
+                                           ValueRange args) {
   auto call = builder.create<LLVM::CallOp>(loc, func, args);
   call.setCConv(func.getCConv());
-  if (convergent) {
-    call.setConvergentAttr(func.getConvergentAttr());
-  }
+  call.setConvergentAttr(func.getConvergentAttr());
   call.setNoUnwindAttr(func.getNoUnwindAttr());
   call.setWillReturnAttr(func.getWillReturnAttr());
   return call;
@@ -1101,9 +1096,9 @@ namespace {
 StringRef getTypeMangling(Type type, bool isSigned) {
   return llvm::TypeSwitch<Type, StringRef>(type)
       .Case<Float16Type>([](auto) { return "Dh"; })
-      .template Case<Float32Type>([](auto) { return "f"; })
-      .template Case<Float64Type>([](auto) { return "d"; })
-      .template Case<IntegerType>([isSigned](IntegerType intTy) {
+      .Case<Float32Type>([](auto) { return "f"; })
+      .Case<Float64Type>([](auto) { return "d"; })
+      .Case<IntegerType>([isSigned](IntegerType intTy) {
         switch (intTy.getWidth()) {
         case 1:
           return "b";
@@ -1115,23 +1110,19 @@ StringRef getTypeMangling(Type type, bool isSigned) {
           return (isSigned) ? "i" : "j";
         case 64:
           return (isSigned) ? "l" : "m";
-        default: {
-          assert(false && "Unsupported integer width");
-          return "";
-        }
+        default:
+          llvm_unreachable("Unsupported integer width");
         }
       })
       .Default([](auto) {
-        assert(false && "No mangling defined");
+        llvm_unreachable("No mangling defined");
         return "";
       });
 }
 
 template <typename ReduceOp>
-constexpr StringLiteral getGroupFuncName() {
-  assert(false && "No builtin defined");
-  return "";
-}
+constexpr StringLiteral getGroupFuncName();
+
 template <>
 constexpr StringLiteral getGroupFuncName<spirv::GroupIAddOp>() {
   return "_Z17__spirv_GroupIAddii";
@@ -1243,7 +1234,7 @@ public:
     if (!retTy.isIntOrFloat()) {
       return failure();
     }
-    SmallString<20> funcName = getGroupFuncName<ReduceOp>();
+    SmallString<36> funcName = getGroupFuncName<ReduceOp>();
     funcName += getTypeMangling(retTy, false);
 
     Type i32Ty = rewriter.getI32Type();
@@ -1269,8 +1260,7 @@ public:
     SmallVector<Value> operands{scope, groupOp};
     operands.append(adaptor.getOperands().begin(), adaptor.getOperands().end());
 
-    auto call =
-        createSPIRVBuiltinCall(loc, rewriter, func, operands, !NonUniform);
+    auto call = createSPIRVBuiltinCall(loc, rewriter, func, operands);
     rewriter.replaceOp(op, call);
     return success();
   }
@@ -1916,42 +1906,42 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       GroupReducePattern<spirv::GroupFAddOp>,
       GroupReducePattern<spirv::GroupFMinOp>,
       GroupReducePattern<spirv::GroupUMinOp>,
-      GroupReducePattern<spirv::GroupSMinOp, /*Signed*/ true>,
+      GroupReducePattern<spirv::GroupSMinOp, /*Signed=*/true>,
       GroupReducePattern<spirv::GroupFMaxOp>,
       GroupReducePattern<spirv::GroupUMaxOp>,
-      GroupReducePattern<spirv::GroupSMaxOp, /*Signed*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformIAddOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformFAddOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformIMulOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformFMulOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformSMinOp, /*Signed*/ true,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformUMinOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformFMinOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformSMaxOp, /*Signed*/ true,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformUMaxOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformFMaxOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformBitwiseAndOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformBitwiseOrOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformBitwiseXorOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformLogicalAndOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformLogicalOrOp, /*Signed*/ false,
-                         /*NonUniform*/ true>,
-      GroupReducePattern<spirv::GroupNonUniformLogicalXorOp, /*Signed*/ false,
-                         /*NonUniform*/ true>>(patterns.getContext(),
+      GroupReducePattern<spirv::GroupSMaxOp, /*Signed=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformIAddOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFAddOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformIMulOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFMulOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformSMinOp, /*Signed=*/true,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformUMinOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFMinOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformSMaxOp, /*Signed=*/true,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformUMaxOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFMaxOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformBitwiseAndOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformBitwiseOrOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformBitwiseXorOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformLogicalAndOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformLogicalOrOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformLogicalXorOp, /*Signed=*/false,
+                         /*NonUniform=*/true>>(patterns.getContext(),
                                                typeConverter);
 
   patterns.add<GlobalVariablePattern>(clientAPI, patterns.getContext(),
