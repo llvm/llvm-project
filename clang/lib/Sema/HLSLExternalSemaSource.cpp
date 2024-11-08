@@ -374,8 +374,9 @@ struct TemplateParameterListBuilder {
     TemplateTypeParmDecl *ConceptTTPD = dyn_cast<TemplateTypeParmDecl>(
         CD->getTemplateParameters()->getParam(0));
 
-    // this fake TemplateTypeParmDecl is used to construct a template argument
-    // that will be used to construct the ImplicitConceptSpecializationDecl
+    // this TemplateTypeParmDecl is the template for the resource, and is
+    // used to construct a template argumentthat will be used
+    // to construct the ImplicitConceptSpecializationDecl
     TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
         Context,                          // AST context
         Context.getTranslationUnitDecl(), // DeclContext
