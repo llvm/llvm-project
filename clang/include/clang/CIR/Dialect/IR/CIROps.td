@@ -4126,6 +4126,37 @@ def MemChrOp : CIR_Op<"libc.memchr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ReturnAddrOp
+//===----------------------------------------------------------------------===//
+
+def ReturnAddrOp : CIR_Op<"return_address"> {
+  let arguments = (ins UInt32:$level);
+  let summary = "The return address of the current function, or of one of its callers";
+  let results = (outs Res<VoidPtr, "">:$result);
+
+  let description = [{
+    Represents call to builtin function ` __builtin_return_address` in CIR. 
+    This builtin function returns the return address of the current function, 
+    or of one of its callers. 
+    The `level` argument is number of frames to scan up the call stack.
+    For instance, value of 0 yields the return address of the current function, 
+    value of 1 yields the return address of the caller of the current function, 
+    and so forth. 
+
+    Examples:
+
+    ```mlir
+    %p = return_address(%level) -> !cir.ptr<!void>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    `(` $level `)` attr-dict
+  }];
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // StdFindOp
 //===----------------------------------------------------------------------===//
 

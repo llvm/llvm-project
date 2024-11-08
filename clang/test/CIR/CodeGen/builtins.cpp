@@ -75,3 +75,14 @@ extern "C" char* test_memchr(const char arg[32]) {
   // LLVM: [[RET:%.*]] = load ptr, ptr [[RET_P]], align 8
   // LLVM: ret ptr [[RET]]
 }
+
+extern "C" void *test_return_address(void) {
+  return __builtin_return_address(1);
+
+  // CIR-LABEL: test_return_address
+  // [[ARG:%.*]] = cir.const #cir.int<1> : !u32i
+  // {{%.*}} = cir.return_address([[ARG]])
+
+  // LLVM-LABEL: @test_return_address
+  // LLVM: {{%.*}} = call ptr @llvm.returnaddress(i32 1)
+}
