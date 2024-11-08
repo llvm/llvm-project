@@ -6164,8 +6164,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     VectorType *MaskTy = dyn_cast<VectorType>(Mask->getType());
 
     Check(Op1Ty && Op2Ty && MaskTy, "Operands must be vectors.", &Call);
-    Check(!isa<ScalableVectorType>(Op2Ty), "Second operand cannot be scalable.",
-          &Call);
+    Check(isa<FixedVectorType>(Op2Ty),
+          "Second operand must be a fixed length vector.", &Call);
     Check(Op1Ty->getElementType()->isIntegerTy(),
           "First operand must be a vector of integers.", &Call);
     Check(Op1Ty->getElementType() == Op2Ty->getElementType(),

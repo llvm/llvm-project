@@ -2057,7 +2057,7 @@ bool AArch64TargetLowering::shouldExpandVectorMatch(EVT VT,
   // MATCH is SVE2 and only available in non-streaming mode.
   if (!Subtarget->hasSVE2() || !Subtarget->isSVEAvailable())
     return true;
-  // Furthermore, we can only use it for 8-bit or 16-bit characters.
+  // Furthermore, we can only use it for 8-bit or 16-bit elements.
   if (VT == MVT::nxv8i16 || VT == MVT::v8i16)
     return SearchSize != 8;
   if (VT == MVT::nxv16i8 || VT == MVT::v16i8 || VT == MVT::v8i8)
@@ -5798,23 +5798,20 @@ SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
                           ? Op1VT
                           : getContainerForFixedLengthVector(DAG, Op1VT);
 
-  // Wrap Op2 in a scalable register, and splat it if necessary.
-  if (Op1VT.getVectorMinNumElements() == Op2VT.getVectorNumElements()) {
-    // If Op1 and Op2 have the same number of elements we can trivially wrap
-    // Op2 in an SVE register.
+  if (Op2VT.is128BitVector()) {
+    // If Op2 is a full 128-bit vector, wrap it trivially in a scalable vector.
     Op2 = convertToScalableVector(DAG, OpContainerVT, Op2);
-    // If the result is scalable, we need to broadcast Op2 to a full SVE
-    // register.
+    // Further, if the result is scalable, broadcast Op2 to a full SVE register.
     if (ResVT.isScalableVector())
       Op2 = DAG.getNode(AArch64ISD::DUPLANE128, dl, OpContainerVT, Op2,
                         DAG.getTargetConstant(0, dl, MVT::i64));
   } else {
-    // If Op1 and Op2 have different number of elements, we need to broadcast
-    // Op2. Ideally we would use a AArch64ISD::DUPLANE* node for this
-    // similarly to the above, but unfortunately we seem to be missing some
-    // patterns for this. So, in alternative, we splat Op2 through a splat of
-    // a scalable vector extract. This idiom, though a bit more verbose, is
-    // supported and get us the MOV instruction we want.
+    // If Op2 is not a full 128-bit vector, we need to broadcast it. Ideally we
+    // would use a AArch64ISD::DUPLANE* node for this similarly to the below,
+    // but unfortunately we seem to be missing some patterns for this. So, in
+    // alternative, we splat Op2 through a splat of a scalable vector extract.
+    // This idiom, though a bit more verbose, is supported and get us the MOV
+    // instruction we want.
     unsigned Op2BitWidth = Op2VT.getFixedSizeInBits();
     MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
     MVT Op2PromotedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth,

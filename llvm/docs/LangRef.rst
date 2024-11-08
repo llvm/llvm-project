@@ -20081,9 +20081,6 @@ in the first argument against the elements of the second argument, placing
 comparison is successful, and ``0`` otherwise. Inactive elements in the mask
 are set to ``0`` in the output.
 
-The second argument needs to be a fixed-length vector with the same element
-type as the first argument.
-
 Matrix Intrinsics
 -----------------
 

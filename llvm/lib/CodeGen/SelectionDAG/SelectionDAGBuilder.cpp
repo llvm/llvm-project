@@ -8166,14 +8166,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     unsigned SearchSize = Op2VT.getVectorNumElements();
 
     // If the target has native support for this vector match operation, lower
-    // the intrinsic directly; otherwise, lower it below.
+    // the intrinsic untouched; otherwise, expand it below.
     if (!TLI.shouldExpandVectorMatch(Op1VT, SearchSize)) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
 
-    SDValue Ret = DAG.getNode(ISD::SPLAT_VECTOR, sdl, ResVT,
-                              DAG.getConstant(0, sdl, MVT::i1));
+    SDValue Ret = DAG.getConstant(0, sdl, ResVT);
 
     for (unsigned i = 0; i < SearchSize; ++i) {
       SDValue Op2Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl,

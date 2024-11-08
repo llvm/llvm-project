@@ -177,6 +177,7 @@ define <8 x i1> @match_v8i8_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
@@ -217,6 +218,23 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 
 }
 
 ; Cases where op2 has more elements than op1.
+
+define <8 x i1> @match_v8i8_v16i8(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask) #0 {
+; CHECK-LABEL: match_v8i8_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v2.8b, v2.8b, #7
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
+; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
+  ret <8 x i1> %r
+}
 
 define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v32i8:
