@@ -298,6 +298,12 @@ C2y Feature Support
   paper adopts Clang's existing practice, so there were no changes to compiler
   behavior.
 
+- Implemented support for `N3341 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3341.pdf>`_
+  which makes empty structure and union objects implementation-defined in C.
+  ``-Wgnu-empty-struct`` will be emitted in C23 and earlier modes because the
+  behavior is a conforming GNU extension in those modes, but will no longer
+  have an effect in C2y mode.
+
 - Updated conformance for `N3342 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3342.pdf>`_
   which made qualified function types implementation-defined rather than
   undefined. Clang has always accepted ``const`` and ``volatile`` qualified
