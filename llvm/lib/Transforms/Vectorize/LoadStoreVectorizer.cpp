@@ -324,7 +324,7 @@ private:
       Instruction *ChainElem, Instruction *ChainBegin,
       const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets);
 
-  /// Merges the equivalence classes if they have uderlying objects that differ
+  /// Merges the equivalence classes if they have underlying objects that differ
   /// by one level of indirection (i.e., one is a getelementptr and the other is
   /// the base pointer in that getelementptr).
   void mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const;
@@ -1350,7 +1350,7 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
              << ", " << std::get<2>(EC.first) << ", "
              << static_cast<int>(std::get<3>(EC.first)) << ")\n";
       for (const auto &Inst : EC.second)
-        dbgs() << "\tInst:\t" << *Inst << "\n";
+        dbgs() << "\tInst: " << *Inst << '\n';
     }
   });
   LLVM_DEBUG({
@@ -1361,7 +1361,7 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
              << static_cast<int>(std::get<2>(RedKeyToUO.first)) << ") --> "
              << RedKeyToUO.second.size() << " underlying objects:\n";
       for (auto UObject : RedKeyToUO.second)
-        dbgs() << "    [" << UObject << "]: " << *UObject << "\n";
+        dbgs() << "    [" << UObject << "]: " << *UObject << '\n';
     }
   });
 
@@ -1373,8 +1373,7 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
     UObjectToUObjectMap IndirectionMap;
     for (const auto *UObject : UObjects) {
       const unsigned MaxLookupDepth = 1; // look for 1-level indirections only
-      const auto *UltimateTarget =
-          llvm::getUnderlyingObject(UObject, MaxLookupDepth);
+      const auto *UltimateTarget = getUnderlyingObject(UObject, MaxLookupDepth);
       if (UltimateTarget != UObject)
         IndirectionMap[UObject] = UltimateTarget;
     }
@@ -1403,8 +1402,8 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
                          std::get<2>(RedKey)};
       EqClassKey KeyTo{UltimateTarget, std::get<0>(RedKey), std::get<1>(RedKey),
                        std::get<2>(RedKey)};
-      auto VecFrom = EQClasses[KeyFrom];
-      auto VecTo = EQClasses[KeyTo];
+      const auto &VecFrom = EQClasses[KeyFrom];
+      const auto &VecTo = EQClasses[KeyTo];
       SmallVector<Instruction *, 8> MergedVec;
       std::merge(VecFrom.begin(), VecFrom.end(), VecTo.begin(), VecTo.end(),
                  std::back_inserter(MergedVec),
@@ -1423,7 +1422,7 @@ void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
              << ", " << std::get<2>(EC.first) << ", "
              << static_cast<int>(std::get<3>(EC.first)) << ")\n";
       for (const auto &Inst : EC.second)
-        dbgs() << "\tInst:\t" << *Inst << "\n";
+        dbgs() << "\tInst: " << *Inst << '\n';
     }
   });
 }
