@@ -9,13 +9,21 @@ endif()
 # If we are bootstrapping hsa via external project we need to use find_library
 # as it will not be installed.
 if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
-  find_library(HSA_RUNTIME hsa-runtime64
-    HINTS
-    ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build
-    ${CMAKE_INSTALL_PREFIX}
-    PATHS
-    ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}
-  )
+  if(OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
+    find_library(HSA_RUNTIME hsa-runtime64
+      HINTS
+      ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build/rocr/lib
+      ${CMAKE_INSTALL_PREFIX}
+      PATHS
+      /opt/rocm)
+  else()
+    find_library(HSA_RUNTIME hsa-runtime64
+      HINTS
+      ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build
+      ${CMAKE_INSTALL_PREFIX}
+      PATHS
+      ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH})
+  endif()
 else()
   # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
   find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)

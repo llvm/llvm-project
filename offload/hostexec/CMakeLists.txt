@@ -18,20 +18,41 @@ endif()
 
 # If we are bootstrapping hsa via external project we need to use find_library
 # as it will not be installed.
-if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
-  find_library(HSA_RUNTIME hsa-runtime64 HINTS ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+if(OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
+  # With ROCm 6.3 ROCr and ROCt are in one repo and we need to account for the different paths
+  find_library(HSA_RUNTIME hsa-runtime64
+    HINTS
+    ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build/rocr/lib
+    ${CMAKE_INSTALL_PREFIX}
+    PATHS
+    /opt/rocm)
 else()
- # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
-  find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+  if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
+    find_library(HSA_RUNTIME hsa-runtime64
+      HINTS
+      ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build
+      ${CMAKE_INSTALL_PREFIX}
+      PATHS
+      /opt/rocm)
+  else()
+    # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
+    find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+  endif()
 endif()
 
 if(DEFINED HSA_RUNTIME)
   message(STATUS "Building hostexec for AMDGCN linked against libhsa")
-  set(HSA_INCLUDE ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}/inc)
+  if(OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
+    set(HSA_INCLUDE ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}/runtime/hsa-runtime/inc)
+  else()
+    set(HSA_INCLUDE ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}/inc)
+  endif()
   set(HOSTEXEC_EXTRA_SOURCE)
   set(HOSTEXEC_DEP_LIBRARIES ${HSA_RUNTIME})
+  message(STATUS "HSA Runtime found: ${HSA_RUNTIME}")
+  message(STATUS "HSA Runtime include: ${HSA_INCLUDE}")
 elseif(${hsa-runtime64_FOUND})
-  message(STATUS "Building hostexec for AMDGCN linked against libhsa")
+  message(STATUS "Building hostexec for AMDGCN linked against libhsa64")
   set(HSA_INCLUDE ${hsa-runtime64_DIR}/../../../include/hsa)
   get_target_property(HSA_INCLUDE hsa-runtime64::hsa-runtime64 INTERFACE_INCLUDE_DIRECTORIES)
   set(HOSTEXEC_EXTRA_SOURCE)

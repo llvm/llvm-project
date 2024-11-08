@@ -503,6 +503,39 @@ if(build_runtimes)
   endif()
 
   if("offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+    # With ROCm 6.3 the ROCr runtime and the thunk layer share a single repository.
+    # No need to provide a separate path for ROCt.
+    if (OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
+      if(NOT DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
+        message(SEND_ERROR "External ROCr requires setting LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH")
+      endif()
+
+      message(STATUS "Add external unified ROCr: ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}")
+      ExternalProject_Add(rocr-runtime
+        SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}
+        DEPENDS clang llvm-link lld opt llvm-objcopy
+        INSTALL_COMMAND ""
+        CMAKE_ARGS -DBUILD_SHARED_LIBS=ON
+                   -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake
+                   -DIMAGE_SUPPORT=OFF
+                   -DLLVM_RUNTIME_OPENMP=ON)
+      set(HSA_DEP rocr-runtime)
+
+      # omptarget device RTL depends on device libs, leading to circular dependency in build scripts.
+      # Providing path to the sources enables to build them as part of compiler build, which
+      # removes the ciruclar dependency on the script-side.
+      if (DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH)
+        message(STATUS "Add external AMD device-libs: ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}")
+        ExternalProject_Add(rocm-device-libs
+          SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}
+          DEPENDS clang llvm-link lld opt llvm-objcopy
+          CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH}
+                     -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake
+                     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC}
+                     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn)
+      endif()
+    endif()
+
     if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH AND
        DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH AND
        DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH)
