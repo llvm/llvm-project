@@ -2938,7 +2938,7 @@ bool RISCVInstrInfo::shouldOutlineFromFunctionByDefault(
   return MF.getFunction().hasMinSize();
 }
 
-static bool IsCandidatePatchable(const MachineInstr &MI) {
+static bool isCandidatePatchable(const MachineInstr &MI) {
   const MachineBasicBlock *MBB = MI.getParent();
   const MachineFunction *MF = MBB->getParent();
   const Function &F = MF->getFunction();
@@ -2946,13 +2946,13 @@ static bool IsCandidatePatchable(const MachineInstr &MI) {
          F.hasFnAttribute("patchable-function-entry");
 }
 
-static bool CannotInsertTailCall(const MachineInstr &MI) {
+static bool cannotInsertTailCall(const MachineInstr &MI) {
   if (MI.isTerminator())
-    return IsCandidatePatchable(MI);
+    return isCandidatePatchable(MI);
   return true;
 }
 
-static bool MIUseX5(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
+static bool isMIUsesX5(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   return MI.modifiesRegister(RISCV::X5, TRI) ||
          MI.getDesc().hasImplicitDefOfPhysReg(RISCV::X5);
 }
@@ -2963,18 +2963,18 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs,
     unsigned MinRepeats) const {
 
-  auto CandidateUseX5 = [](outliner::Candidate &C) {
+  auto CandidateUsesX5 = [](outliner::Candidate &C) {
     const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
     for (const MachineInstr &MI : C)
-      if (MIUseX5(MI, TRI))
+      if (isMIUsesX5(MI, TRI))
         return true;
     return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
   };
 
-  auto CannotInsertCall = [CandidateUseX5](outliner::Candidate &C) {
-    if (!CandidateUseX5(C))
+  auto CannotInsertCall = [CandidateUsesX5](outliner::Candidate &C) {
+    if (!CandidateUsesX5(C))
       return false;
-    if (!CannotInsertTailCall(C.back()))
+    if (!cannotInsertTailCall(C.back()))
       return false;
     return true;
   };
@@ -2990,12 +2990,12 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
 
-  if (!CannotInsertTailCall(RepeatedSequenceLocs[0].back())) {
+  if (!cannotInsertTailCall(RepeatedSequenceLocs[0].back())) {
     // tail function = 8 bytes. Can't be compressed
     for (auto &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 8);
 
-    // Using tail call we move ret instrunction from caller to calee.
+    // Using tail call we move ret instruction from caller to calle.
     //   So, FrameOverhead for this is 0
     return std::make_unique<outliner::OutlinedFunction>(
         RepeatedSequenceLocs, SequenceSize, 0, MachineOutlinerTailCall);
@@ -3037,7 +3037,7 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
                                      : outliner::InstrType::Invisible;
 
-  if (CannotInsertTailCall(MBB->back()) && MIUseX5(MI, TRI))
+  if (cannotInsertTailCall(MBB->back()) && isMIUsesX5(MI, TRI))
     return outliner::InstrType::Illegal;
 
   // Make sure the operands don't reference something unsafe.
@@ -3080,9 +3080,9 @@ void RISCVInstrInfo::buildOutlinedFrame(
 
   // Add in a return instruction to the end of the outlined frame.
   MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))
-                            .addReg(RISCV::X0, RegState::Define)
-                            .addReg(RISCV::X5)
-                            .addImm(0));
+      .addReg(RISCV::X0, RegState::Define)
+      .addReg(RISCV::X5)
+      .addImm(0));
 }
 
 MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
