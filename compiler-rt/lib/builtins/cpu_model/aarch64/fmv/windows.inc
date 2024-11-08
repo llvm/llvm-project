@@ -65,7 +65,6 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
 
   // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-isprocessorfeaturepresent
   if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE)) {
-    setCPUFeature(FEAT_AES);
     setCPUFeature(FEAT_SHA2);
     setCPUFeature(FEAT_PMULL);
   }
@@ -81,13 +80,13 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
       {PF_ARM_V83_LRCPC_INSTRUCTIONS_AVAILABLE, FEAT_RCPC},
       {PF_ARM_SVE_INSTRUCTIONS_AVAILABLE, FEAT_SVE},
       {PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE, FEAT_SVE2},
-      {PF_ARM_SVE_AES_INSTRUCTIONS_AVAILABLE, FEAT_SVE_AES},
-      {PF_ARM_SVE_BF16_INSTRUCTIONS_AVAILABLE, FEAT_SVE_BF16},
-      {PF_ARM_SVE_EBF16_INSTRUCTIONS_AVAILABLE, FEAT_SVE_EBF16},
+      {PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE, FEAT_SVE_PMULL128},
       {PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE, FEAT_SVE_SHA3},
       {PF_ARM_SVE_SM4_INSTRUCTIONS_AVAILABLE, FEAT_SVE_SM4},
       {PF_ARM_SVE_F32MM_INSTRUCTIONS_AVAILABLE, FEAT_SVE_F32MM},
       {PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE, FEAT_SVE_F64MM},
+      // There is no I8MM flag, but when SVE_I8MM is available, I8MM is too.
+      {PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE, FEAT_I8MM},
   };
 
   for (size_t I = 0, E = sizeof(FeatMap) / sizeof(FeatMap[0]); I != E; ++I)
