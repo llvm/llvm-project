@@ -119,8 +119,6 @@ void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
 
-std::string FindDebugPerfInLibraryPath(const std::string &RLib);
-
 void addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
                                    const llvm::opt::ArgList &Args,
                                    llvm::opt::ArgStringList &CmdArgs);
