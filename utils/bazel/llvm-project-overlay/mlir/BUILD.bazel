@@ -9969,6 +9969,8 @@ cc_binary(
         ":OpenMPToLLVMIRTranslation",
         ":ToLLVMIRTranslation",
         "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Linker",
         "//llvm:Support",
         "//llvm:X86AsmParser",
     ],
