@@ -480,7 +480,7 @@ constexpr auto starOrExpr{
     construct<CallStmt::StarOrExpr>("*" >> pure<std::optional<ScalarExpr>>() ||
         applyFunction(presentOptional<ScalarExpr>, scalarExpr))};
 TYPE_PARSER(extension<LanguageFeature::CUDA>(
-    "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> starOrExpr,
+    "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> scalarExpr,
                  maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
 constexpr auto actualArgSpecList{optionalList(actualArgSpec)};

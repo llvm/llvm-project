@@ -3254,7 +3254,7 @@ struct CallStmt {
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
-    std::tuple<StarOrExpr, StarOrExpr, std::optional<ScalarIntExpr>,
+    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarIntExpr>,
         std::optional<ScalarIntExpr>>
         t;
   };

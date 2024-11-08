@@ -3067,8 +3067,6 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
   }};
 
   if (const auto &chevrons{call.chevrons}) {
-    bool gridIsStar{false};
-    bool blockIsStar{false};
     auto &starOrExpr0{std::get<0>(chevrons->t)};
     if (starOrExpr0.v) {
       if (auto expr{Analyze(*starOrExpr0.v)};
@@ -3078,25 +3076,14 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
         return std::nullopt;
       }
     } else {
-      gridIsStar = true;
       result.emplace_back(
           AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
     }
-    auto &starOrExpr1{std::get<1>(chevrons->t)};
-    if (starOrExpr1.v) {
-      if (auto expr{Analyze(*starOrExpr1.v)};
-          expr && checkLaunchArg(*expr, "block")) {
-        result.emplace_back(*expr);
-      } else {
-        return std::nullopt;
-      }
+    if (auto expr{Analyze(std::get<1>(chevrons->t))};
+        expr && checkLaunchArg(*expr, "block")) {
+      result.emplace_back(*expr);
     } else {
-      blockIsStar = true;
-      result.emplace_back(
-          AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
-    }
-    if (gridIsStar && blockIsStar) {
-      Say("Grid and block can not be * in kernel launch parameter"_err_en_US);
+      return std::nullopt;
     }
     if (const auto &maybeExpr{std::get<2>(chevrons->t)}) {
       if (auto expr{Analyze(*maybeExpr)}) {
