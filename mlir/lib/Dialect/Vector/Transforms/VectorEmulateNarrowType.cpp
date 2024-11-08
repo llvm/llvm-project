@@ -1,9 +1,17 @@
-//===- VectorEmulateNarrowType.cpp - Narrow type emulation ----*- C++
-//-*-===//
+//===- VectorEmulateNarrowType.cpp - Narrow type emulation ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements target-independent rewrites and utilities to emulate
+// narrow types that are not supported by the target hardware, e.g. i4, using
+// wider types, e.g. i8.
+//
+/// Currently, only power-of-two integer types are supported. These are
+/// converted to wider integers that are either 8 bits wide or wider.
 //
 //===----------------------------------------------------------------------===//
 
@@ -315,21 +323,28 @@ struct ConvertVectorMaskedStore final
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndicesOfr);
 
     // Load the whole data and use arith.select to handle the corner cases.
-    // E.g., given these input values:
+    // E.g., given these input i4 values:
     //
-    //   %mask = [0, 1, 1, 1, 1, 1, 0, 0]
-    //   %0[%c0, %c0] contains [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]
-    //   %value_to_store = [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0]
+    //   %res = vector.maskedload %0[%c0, %c0], %mask, %val_to_store :
     //
-    // we'll have
+    //   %mask = [1, 1, 1, 1, 1, 1, 1, 0]                     (8 * i1)
+    //   %0[%c0, %c0] =
+    //      [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]          (8 * i4)
+    //   %val_to_store =
+    //      [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0]          (8 * i4)
     //
-    //    expected output: [0x1, 0xA, 0xB, 0xC, 0xD, 0xE, 0x7, 0x8]
+    // we'll have the following i4 output:
     //
-    //    %new_mask = [1, 1, 1, 0]
-    //    %maskedload = [0x12, 0x34, 0x56, 0x00]
-    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, 0x0]
-    //    %select_using_shifted_mask = [0x1, 0xA, 0xB, 0xC, 0xD, 0xE, 0x0, 0x0]
-    //    %packed_data = [0x1A, 0xBC, 0xDE, 0x00]
+    //    expected output: [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x8]
+    //
+    // Emulating the above using i8 will give:
+    //
+    //    %compressed_mask = [1, 1, 1, 1]                     (4 * i1)
+    //    %maskedload = [0x12, 0x34, 0x56, 0x78]              (4 * i8)
+    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8] (8 * i4)
+    //    %select_using_shifted_mask =
+    //      [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x8]          (8 * i4)
+    //    %packed_data = [0x9A, 0xBC, 0xDE, 0xF8]             (4 * i8)
     //
     // Using the new mask to store %packed_data results in expected output.
     FailureOr<Operation *> newMask =
