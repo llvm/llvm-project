@@ -153,10 +153,10 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x) {
     }                                                                          \
     return __gpu_read_first_lane_##__suffix(__lane_mask, x);                   \
   }
-__DO_LANE_REDUCE(uint32_t, u32);
-__DO_LANE_REDUCE(uint64_t, u64);
-__DO_LANE_REDUCE(float, f32);
-__DO_LANE_REDUCE(double, f64);
+__DO_LANE_REDUCE(uint32_t, u32); // uint32_t __gpu_lane_reduce_u32(m, x)
+__DO_LANE_REDUCE(uint64_t, u64); // uint64_t __gpu_lane_reduce_u64(m, x)
+__DO_LANE_REDUCE(float, f32);    // float __gpu_lane_reduce_f32(m, x)
+__DO_LANE_REDUCE(double, f64);   // double __gpu_lane_reduce_f64(m, x)
 #undef __DO_LANE_REDUCE
 
 // Gets the accumulator scan of the threads in the warp or wavefront.
@@ -173,10 +173,10 @@ __DO_LANE_REDUCE(double, f64);
     }                                                                          \
     return x;                                                                  \
   }
-__DO_LANE_SCAN(uint32_t, uint32_t, u32);
-__DO_LANE_SCAN(uint64_t, uint64_t, u64);
-__DO_LANE_SCAN(float, uint32_t, f32);
-__DO_LANE_SCAN(double, uint64_t, f64);
+__DO_LANE_SCAN(uint32_t, uint32_t, u32); // uint32_t __gpu_lane_scan_u32(m, x)
+__DO_LANE_SCAN(uint64_t, uint64_t, u64); // uint64_t __gpu_lane_scan_u64(m, x)
+__DO_LANE_SCAN(float, uint32_t, f32);    // float __gpu_lane_scan_f32(m, x)
+__DO_LANE_SCAN(double, uint64_t, f64);   // double __gpu_lane_scan_f64(m, x)
 #undef __DO_LANE_SCAN
 
 _Pragma("omp end declare variant");
