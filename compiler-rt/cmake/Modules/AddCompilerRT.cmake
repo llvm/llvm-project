@@ -713,7 +713,7 @@ macro(add_custom_libcxx name prefix)
     USES_TERMINAL_INSTALL 1
     LIST_SEPARATOR |
     EXCLUDE_FROM_ALL TRUE
-    # Ensure that DESDIR=... set in the out environment does not affect this
+    # Ensure that DESTDIR=... set in the out environment does not affect this
     # target (we always need to install to the build directory).
     INSTALL_COMMAND env DESTDIR= ${CMAKE_COMMAND} --build ${prefix}/build --target install
     INSTALL_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
