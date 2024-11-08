@@ -2618,8 +2618,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;
-  if (match(Op0, m_ZExtOrSelf(m_PtrToInt(m_Value(LHSOp)))) &&
-      match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp)))))
+  if (match(Op0, m_PtrToInt(m_Value(LHSOp))) &&
+      match(Op1, m_PtrToInt(m_Value(RHSOp))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                I.hasNoUnsignedWrap()))
       return replaceInstUsesWith(I, Res);
@@ -2630,6 +2630,18 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
+
+  if (match(Op0, m_ZExt(m_PtrToInt(m_Value(LHSOp)))) &&
+      match(Op1, m_PtrToInt(m_Value(RHSOp))) && isa<GlobalValue>(RHSOp)) {
+    Value *Offset;
+    if (match(LHSOp, m_GEP(m_Specific(RHSOp), m_Value(Offset)))) {
+      auto *GEP = cast<GEPOperator>(LHSOp);
+      if (GEP->isInBounds()) {
+        Value *Res = Builder.CreateZExt(EmitGEPOffset(GEP), I.getType());
+        return replaceInstUsesWith(I, Res);
+      }
+    }
+  }
 
   // Canonicalize a shifty way to code absolute value to the common pattern.
   // There are 2 potential commuted variants.
