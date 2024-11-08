@@ -293,6 +293,8 @@ template <typename HostT>
 static std::complex<HostT> CSqrt(const std::complex<HostT> &x) {
   std::complex<HostT> res;
 #ifdef _AIX
+  // On AIX, the implementation of csqrt[f] and std::sqrt is different,
+  // use csqrt[f] in folding.
   if constexpr (std::is_same_v<HostT, float>) {
     float _Complex c;
     reinterpret_cast<HostT(&)[2]>(c)[0] = x.real();
