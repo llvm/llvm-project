@@ -195,8 +195,8 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -504,18 +504,19 @@ static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
   if (s.isSection()) {
     // Section symbols must be defined and in a section. Users cannot change
     // the type. Use the section name as getName() returns an empty string.
-    warn(place.loc + "branch and link relocation: " + toString(relt) +
-         " to STT_SECTION symbol " + cast<Defined>(s).section->name +
-         " ; interworking not performed" + hint);
+    Warn(ctx) << place.loc << "branch and link relocation: " << relt
+              << " to STT_SECTION symbol " << cast<Defined>(s).section->name
+              << " ; interworking not performed" << hint;
   } else {
     // Warn with hint on how to alter the symbol type.
-    warn(getErrorLoc(ctx, loc) + "branch and link relocation: " +
-         toString(relt) + " to non STT_FUNC symbol: " + s.getName() +
-         " interworking not performed; consider using directive '.type " +
-         s.getName() +
-         ", %function' to give symbol type STT_FUNC if interworking between "
-         "ARM and Thumb is required" +
-         hint);
+    Warn(ctx)
+        << getErrorLoc(ctx, loc) << "branch and link relocation: " << relt
+        << " to non STT_FUNC symbol: " << s.getName()
+        << " interworking not performed; consider using directive '.type "
+        << s.getName()
+        << ", %function' to give symbol type STT_FUNC if interworking between "
+           "ARM and Thumb is required"
+        << hint;
   }
 }
 
@@ -556,8 +557,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    error(getErrorLoc(ctx, loc) + "unencodeable immediate " + Twine(val).str() +
-          " for relocation " + toString(rel.type));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate "
+             << Twine(val).str() << " for relocation " << rel.type;
   write32(ctx, loc,
           (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -1198,8 +1199,8 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
   ArrayRef<Elf_Sym> eSyms = getELFSyms<ELFT>();
   // Error for local symbols. The symbol at index 0 is LOCAL. So skip it.
   for (size_t i = 1, end = firstGlobal; i != end; ++i) {
-    errorOrWarn("CMSE symbol '" + CHECK(eSyms[i].getName(stringTable), this) +
-                "' in import library '" + toString(this) + "' is not global");
+    Err(ctx) << "CMSE symbol '" << CHECK(eSyms[i].getName(stringTable), this)
+             << "' in import library '" << this << "' is not global";
   }
 
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
@@ -1216,27 +1217,29 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     sym->stOther = eSym.st_other;
 
     if (eSym.st_shndx != SHN_ABS) {
-      error("CMSE symbol '" + sym->getName() + "' in import library '" +
-            toString(this) + "' is not absolute");
+      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
+                     << "' in import library '" << this << "' is not absolute";
       continue;
     }
 
     if (!(eSym.st_value & 1) || (eSym.getType() != STT_FUNC)) {
-      error("CMSE symbol '" + sym->getName() + "' in import library '" +
-            toString(this) + "' is not a Thumb function definition");
+      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
+                     << "' in import library '" << this
+                     << "' is not a Thumb function definition";
       continue;
     }
 
     if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-      error("CMSE symbol '" + sym->getName() +
-            "' is multiply defined in import library '" + toString(this) + "'");
+      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
+                     << "' is multiply defined in import library '" << this
+                     << "'";
       continue;
     }
 
     if (eSym.st_size != ACLESESYM_SIZE) {
-      warn("CMSE symbol '" + sym->getName() + "' in import library '" +
-           toString(this) + "' does not have correct size of " +
-           Twine(ACLESESYM_SIZE) + " bytes");
+      Warn(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+                << this << "' does not have correct size of "
+                << Twine(ACLESESYM_SIZE) << " bytes";
     }
 
     ctx.symtab->cmseImportLib[sym->getName()] = sym;
@@ -1283,7 +1286,8 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
     if (!ctx.arg.armCMSESupport) {
-      error("CMSE is only supported by ARMv8-M architecture or later");
+      ErrAlways(ctx)
+          << "CMSE is only supported by ARMv8-M architecture or later";
       ctx.arg.cmseImplib = false;
       break;
     }
@@ -1293,16 +1297,17 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
     Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
-      error(toString(acleSeSym->file) + ": cmse special symbol '" +
-            acleSeSym->getName() +
-            "' detected, but no associated entry function definition '" + name +
-            "' with external linkage found");
+      ErrAlways(ctx)
+          << acleSeSym->file << ": cmse special symbol '"
+          << acleSeSym->getName()
+          << "' detected, but no associated entry function definition '" << name
+          << "' with external linkage found";
       continue;
     }
 
     std::string errMsg = checkCmseSymAttributes(acleSeSym, sym);
     if (!errMsg.empty()) {
-      error(errMsg);
+      ErrAlways(ctx) << errMsg;
       continue;
     }
 
@@ -1356,16 +1361,17 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
                 cast<Defined>(entryFunc.sym));
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
     if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
-      warn("entry function '" + sym->getName() +
-           "' from CMSE import library is not present in secure application");
+      Warn(ctx)
+          << "entry function '" << sym->getName()
+          << "' from CMSE import library is not present in secure application";
   }
 
   if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
     for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
       if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
-        warn("new entry function '" + sym->getName() +
-             "' introduced but no output import library specified");
+        Warn(ctx) << "new entry function '" << sym->getName()
+                  << "' introduced but no output import library specified";
     }
   }
 }
@@ -1432,7 +1438,8 @@ void ArmCmseSGSection::finalizeContents() {
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
   if ((getVA() & ~1) != (addr & ~1)) {
-    error("start address of '.gnu.sgstubs' is different from previous link");
+    ErrAlways(ctx)
+        << "start address of '.gnu.sgstubs' is different from previous link";
     return;
   }
 
@@ -1500,8 +1507,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    error("failed to open " + ctx.arg.cmseOutputLib + ": " +
-          llvm::toString(bufferOrErr.takeError()));
+    ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
+                   << llvm::toString(bufferOrErr.takeError());
     return;
   }
 
@@ -1542,8 +1549,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   }
 
   if (auto e = buffer->commit())
-    fatal("failed to write output '" + buffer->getPath() +
-          "': " + toString(std::move(e)));
+    Fatal(ctx) << "failed to write output '" << buffer->getPath()
+               << "': " << std::move(e);
 }
 
 void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }
