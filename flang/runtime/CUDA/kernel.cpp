@@ -25,8 +25,17 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
   blockDim.x = blockX;
   blockDim.y = blockY;
   blockDim.z = blockZ;
-  bool gridIsStar = (gridX < 0); // <<<*, block>>> syntax was used.
-  if (gridIsStar) {
+  unsigned nbNegGridDim{0};
+  if (gridX < 0) {
+    ++nbNegGridDim;
+  }
+  if (gridY < 0) {
+    ++nbNegGridDim;
+  }
+  if (gridZ < 0) {
+    ++nbNegGridDim;
+  }
+  if (nbNegGridDim == 1) {
     int maxBlocks, nbBlocks, dev, multiProcCount;
     cudaError_t err1, err2;
     nbBlocks = blockDim.x * blockDim.y * blockDim.z;
@@ -35,18 +44,35 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
         &multiProcCount, cudaDevAttrMultiProcessorCount, dev);
     err2 = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &maxBlocks, kernel, nbBlocks, smem);
-    if (err1 == cudaSuccess && err2 == cudaSuccess)
+    if (err1 == cudaSuccess && err2 == cudaSuccess) {
       maxBlocks = multiProcCount * maxBlocks;
-    if (maxBlocks > 0) {
-      if (gridDim.y > 0)
-        maxBlocks = maxBlocks / gridDim.y;
-      if (gridDim.z > 0)
-        maxBlocks = maxBlocks / gridDim.z;
-      if (maxBlocks < 1)
-        maxBlocks = 1;
-      if (gridIsStar)
-        gridDim.x = maxBlocks;
     }
+    if (maxBlocks > 0) {
+      if (gridDim.x > 0) {
+        maxBlocks = maxBlocks / gridDim.x;
+      }
+      if (gridDim.y > 0) {
+        maxBlocks = maxBlocks / gridDim.y;
+      }
+      if (gridDim.z > 0) {
+        maxBlocks = maxBlocks / gridDim.z;
+      }
+      if (maxBlocks < 1) {
+        maxBlocks = 1;
+      }
+      if (gridX < 0) {
+        gridDim.x = maxBlocks;
+      }
+      if (gridY < 0) {
+        gridDim.y = maxBlocks;
+      }
+      if (gridZ < 0) {
+        gridDim.z = maxBlocks;
+      }
+    }
+  } else if (nbNegGridDim > 1) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t stream = 0; // TODO stream managment
   CUDA_REPORT_IF_ERROR(
@@ -64,8 +90,17 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   config.blockDim.x = blockX;
   config.blockDim.y = blockY;
   config.blockDim.z = blockZ;
-  bool gridIsStar = (gridX < 0); // <<<*, block>>> syntax was used.
-  if (gridIsStar) {
+  unsigned nbNegGridDim{0};
+  if (gridX < 0) {
+    ++nbNegGridDim;
+  }
+  if (gridY < 0) {
+    ++nbNegGridDim;
+  }
+  if (gridZ < 0) {
+    ++nbNegGridDim;
+  }
+  if (nbNegGridDim == 1) {
     int maxBlocks, nbBlocks, dev, multiProcCount;
     cudaError_t err1, err2;
     nbBlocks = config.blockDim.x * config.blockDim.y * config.blockDim.z;
@@ -74,18 +109,35 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
         &multiProcCount, cudaDevAttrMultiProcessorCount, dev);
     err2 = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &maxBlocks, kernel, nbBlocks, smem);
-    if (err1 == cudaSuccess && err2 == cudaSuccess)
+    if (err1 == cudaSuccess && err2 == cudaSuccess) {
       maxBlocks = multiProcCount * maxBlocks;
-    if (maxBlocks > 0) {
-      if (config.gridDim.y > 0)
-        maxBlocks = maxBlocks / config.gridDim.y;
-      if (config.gridDim.z > 0)
-        maxBlocks = maxBlocks / config.gridDim.z;
-      if (maxBlocks < 1)
-        maxBlocks = 1;
-      if (gridIsStar)
-        config.gridDim.x = maxBlocks;
     }
+    if (maxBlocks > 0) {
+      if (config.gridDim.x > 0) {
+        maxBlocks = maxBlocks / config.gridDim.x;
+      }
+      if (config.gridDim.y > 0) {
+        maxBlocks = maxBlocks / config.gridDim.y;
+      }
+      if (config.gridDim.z > 0) {
+        maxBlocks = maxBlocks / config.gridDim.z;
+      }
+      if (maxBlocks < 1) {
+        maxBlocks = 1;
+      }
+      if (gridX < 0) {
+        config.gridDim.x = maxBlocks;
+      }
+      if (gridY < 0) {
+        config.gridDim.y = maxBlocks;
+      }
+      if (gridZ < 0) {
+        config.gridDim.z = maxBlocks;
+      }
+    }
+  } else if (nbNegGridDim > 1) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("Too many invalid grid dimensions");
   }
   config.dynamicSmemBytes = smem;
   config.stream = 0; // TODO stream managment
