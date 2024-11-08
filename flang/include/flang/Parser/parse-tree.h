@@ -3695,9 +3695,8 @@ struct OmpMapClause {
 
 // 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
 struct OmpOrderModifier {
-  UNION_CLASS_BOILERPLATE(OmpOrderModifier);
   ENUM_CLASS(Kind, Reproducible, Unconstrained)
-  std::variant<Kind> u;
+  WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Kind);
 };
 
 struct OmpOrderClause {
