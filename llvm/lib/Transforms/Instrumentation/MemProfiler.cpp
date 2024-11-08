@@ -823,6 +823,8 @@ memprof::extractCallsFromIR(Module &M) {
         for (const DILocation *DIL = I.getDebugLoc(); DIL;
              DIL = DIL->getInlinedAt()) {
           StringRef CallerName = DIL->getSubprogramLinkageName();
+          assert(!CallerName.empty() &&
+                 "Be sure to enable -fdebug-info-for-profiling");
           uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
           uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
           LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
