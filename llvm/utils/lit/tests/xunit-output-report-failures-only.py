@@ -1,5 +1,4 @@
 ## Check xunit output.
-# RUN: rm -rf %t.xunit.xml
 # RUN: not %{lit} --report-failures-only --xunit-xml-output %t.xunit.xml %{inputs}/xunit-output
 # RUN: FileCheck --input-file=%t.xunit.xml %s
 
