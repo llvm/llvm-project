@@ -4447,7 +4447,7 @@ namespace {
         ObjCCategoryDecl *&Existing = NameCategoryMap[Cat->getDeclName()];
         if (Existing && Reader.getOwningModuleFile(Existing) !=
                             Reader.getOwningModuleFile(Cat)) {
-          llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+          StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
           StructuralEquivalenceContext Ctx(
               Cat->getASTContext(), Existing->getASTContext(),
               NonEquivalentDecls, StructuralEquivalenceKind::Default,
