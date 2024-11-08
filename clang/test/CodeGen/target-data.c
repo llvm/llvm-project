@@ -54,7 +54,7 @@
 // RUN: FileCheck %s -check-prefix=MIPS-64EL
 // RUN: %clang_cc1 -triple mipsisa64r6el-linux-gnuabi64 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MIPS-64EL
-// MIPS-64EL: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EL: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mips64el-linux-gnu -o - -emit-llvm -target-abi n32 \
 // RUN: %s | FileCheck %s -check-prefix=MIPS-64EL-N32
@@ -64,7 +64,7 @@
 // RUN: %s | FileCheck %s -check-prefix=MIPS-64EL-N32
 // RUN: %clang_cc1 -triple mipsisa64r6el-linux-gnuabin32 -o - -emit-llvm \
 // RUN: %s | FileCheck %s -check-prefix=MIPS-64EL-N32
-// MIPS-64EL-N32: target datalayout = "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EL-N32: target datalayout = "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mips64-linux-gnu -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MIPS-64EB
@@ -74,7 +74,7 @@
 // RUN: FileCheck %s -check-prefix=MIPS-64EB
 // RUN: %clang_cc1 -triple mipsisa64r6-linux-gnuabi64 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MIPS-64EB
-// MIPS-64EB: target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EB: target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mips64-linux-gnu -o - -emit-llvm %s -target-abi n32 \
 // RUN: | FileCheck %s -check-prefix=MIPS-64EB-N32
@@ -84,7 +84,7 @@
 // RUN: | FileCheck %s -check-prefix=MIPS-64EB-N32
 // RUN: %clang_cc1 -triple mipsisa64r6-linux-gnuabin32 -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=MIPS-64EB-N32
-// MIPS-64EB-N32: target datalayout = "E-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EB-N32: target datalayout = "E-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple powerpc64-lv2 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PS3
@@ -271,4 +271,4 @@
 
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AMDGPUSPIRV64
-// AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0"
+// AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0"

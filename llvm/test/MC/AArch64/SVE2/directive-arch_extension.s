@@ -4,7 +4,7 @@
 tbx z0.b, z1.b, z2.b
 // CHECK: tbx z0.b, z1.b, z2.b
 
-.arch_extension sve2-aes
+.arch_extension sve-aes
 aesd z23.b, z23.b, z13.b
 // CHECK: aesd z23.b, z23.b, z13.b
 

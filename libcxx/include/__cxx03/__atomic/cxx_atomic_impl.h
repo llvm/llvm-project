@@ -9,14 +9,14 @@
 #ifndef _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
 #define _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
 
-#include <__atomic/memory_order.h>
-#include <__atomic/to_gcc_order.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_const.h>
-#include <cstddef>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__atomic/to_gcc_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__type_traits/remove_const.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

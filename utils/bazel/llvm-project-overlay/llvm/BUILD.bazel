@@ -1248,6 +1248,18 @@ cc_library(
     ],
 )
 
+filegroup(
+    name = "common_target_td_sources",
+    srcs = glob([
+        "include/llvm/CodeGen/*.td",
+        "include/llvm/Frontend/Directive/*.td",
+        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/TableGen/*.td",
+        "include/llvm/Target/*.td",
+        "include/llvm/Target/GlobalISel/*.td",
+    ]),
+)
+
 gentbl(
     name = "ARMTargetParserDefGen",
     tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/ARMTargetParserDef.inc")],
@@ -2323,18 +2335,6 @@ llvm_target_lib_list = [lib for lib in [
 cc_library(
     name = "x86_target_layering_problem_hdrs",
     textual_hdrs = ["lib/Target/X86/X86InstrInfo.h"],
-)
-
-filegroup(
-    name = "common_target_td_sources",
-    srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
-        "include/llvm/TableGen/*.td",
-        "include/llvm/Target/*.td",
-        "include/llvm/Target/GlobalISel/*.td",
-    ]),
 )
 
 gentbl(

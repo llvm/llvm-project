@@ -193,9 +193,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue And = DAG->getNode(ISD::AND, DL, Int32VT, Op0, Op1);
   SDValue Xor = DAG->getNode(ISD::XOR, DL, Int32VT, Op1, Op0);
   SDValue Or  = DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op1);
-  SDNodeFlags DisFlags;
-  DisFlags.setDisjoint(true);
-  SDValue DisOr = DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op3, DisFlags);
+  SDValue DisOr =
+      DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op3, SDNodeFlags::Disjoint);
   SDValue SMax = DAG->getNode(ISD::SMAX, DL, Int32VT, Op0, Op1);
   SDValue SMin = DAG->getNode(ISD::SMIN, DL, Int32VT, Op1, Op0);
   SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
@@ -293,10 +292,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
 
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op0);
-  SDNodeFlags NNegFlags;
-  NNegFlags.setNonNeg(true);
   SDValue ZExtNNeg =
-      DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op3, NNegFlags);
+      DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op3, SDNodeFlags::NonNeg);
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op0);
   SDValue Trunc = DAG->getNode(ISD::TRUNCATE, DL, Int32VT, Op1);
 
