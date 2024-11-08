@@ -434,16 +434,22 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    already duplicated
   //  - call both from Sema and from here
 
-  const auto *BaseDRE =
-      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  if (!BaseDRE)
-    return false;
-  if (!BaseDRE->getDecl())
-    return false;
-  const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseDRE->getDecl()->getType());
-  if (!CATy)
-    return false;
+  APInt ArrSize{};
+  if (const auto *BaseDRE =
+    dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts())) {
+    if (!BaseDRE)
+      return false;
+    if (!BaseDRE->getDecl())
+      return false;
+    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
+        BaseDRE->getDecl()->getType());
+    if (!CATy)
+      return false;
+    ArrSize = CATy->getSize();
+  } else if (const auto *BaseStrLit = dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts())) {
+    // Add 1 for the terminating null character.
+    ArrSize = APInt{64, BaseStrLit->getLength() + 1, false};
+  }
 
   if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
     const APInt ArrIdx = IdxLit->getValue();
