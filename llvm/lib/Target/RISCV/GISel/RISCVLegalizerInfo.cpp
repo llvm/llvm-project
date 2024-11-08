@@ -534,9 +534,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalIf(typeIsScalarFPArith(0, ST))
       .lowerFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
-      .widenScalarToNextPow2(0)
+  auto &FPToIActions = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI});
+  FPToIActions.legalIf(all(typeInSet(0, {sXLen}), typeIsScalarFPArith(1, ST)));
+  if (ST.is64Bit())
+    FPToIActions.customIf(all(typeInSet(0, {s32}), typeIsScalarFPArith(1, ST)));
+  FPToIActions.widenScalarToNextPow2(0)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
@@ -1171,6 +1173,10 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
     return RISCV::G_CLZW;
   case TargetOpcode::G_CTTZ:
     return RISCV::G_CTZW;
+  case TargetOpcode::G_FPTOSI:
+    return RISCV::G_FCVT_W_RV64;
+  case TargetOpcode::G_FPTOUI:
+    return RISCV::G_FCVT_WU_RV64;
   }
 }
 
@@ -1226,6 +1232,15 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarDst(MI, sXLen);
     MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RTZ));
     Helper.Observer.changedInstr(MI);
     return true;
   }
