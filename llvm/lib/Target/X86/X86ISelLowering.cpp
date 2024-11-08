@@ -37613,6 +37613,82 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
+  case X86::PTCVTROWPS2PBF16Hrri:
+  case X86::PTCVTROWPS2PBF16Lrri:
+  case X86::PTCVTROWPS2PHHrri:
+  case X86::PTCVTROWPS2PHLrri:
+  case X86::PTCVTROWD2PSrri:
+  case X86::PTILEMOVROWrri: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected instruction!");
+    case X86::PTCVTROWD2PSrri:
+      Opc = X86::TCVTROWD2PSrri;
+      break;
+    case X86::PTCVTROWPS2PBF16Hrri:
+      Opc = X86::TCVTROWPS2PBF16Hrri;
+      break;
+    case X86::PTCVTROWPS2PHHrri:
+      Opc = X86::TCVTROWPS2PHHrri;
+      break;
+    case X86::PTCVTROWPS2PBF16Lrri:
+      Opc = X86::TCVTROWPS2PBF16Lrri;
+      break;
+    case X86::PTCVTROWPS2PHLrri:
+      Opc = X86::TCVTROWPS2PHLrri;
+      break;
+    case X86::PTILEMOVROWrri:
+      Opc = X86::TILEMOVROWrri;
+      break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.add(MI.getOperand(0));
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
+    MIB.addImm(MI.getOperand(2).getImm());
+
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PTCVTROWPS2PBF16Hrre:
+  case X86::PTCVTROWPS2PBF16Lrre:
+  case X86::PTCVTROWPS2PHHrre:
+  case X86::PTCVTROWPS2PHLrre:
+  case X86::PTCVTROWD2PSrre:
+  case X86::PTILEMOVROWrre: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected instruction!");
+    case X86::PTCVTROWD2PSrre:
+      Opc = X86::TCVTROWD2PSrre;
+      break;
+    case X86::PTCVTROWPS2PBF16Hrre:
+      Opc = X86::TCVTROWPS2PBF16Hrre;
+      break;
+    case X86::PTCVTROWPS2PBF16Lrre:
+      Opc = X86::TCVTROWPS2PBF16Lrre;
+      break;
+    case X86::PTCVTROWPS2PHHrre:
+      Opc = X86::TCVTROWPS2PHHrre;
+      break;
+    case X86::PTCVTROWPS2PHLrre:
+      Opc = X86::TCVTROWPS2PHLrre;
+      break;
+    case X86::PTILEMOVROWrre:
+      Opc = X86::TILEMOVROWrre;
+      break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.add(MI.getOperand(0));
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
+    MIB.add(MI.getOperand(2));
+
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
   }
 }
 
@@ -46107,11 +46183,17 @@ static SDValue combineToExtendBoolVectorInReg(
     assert((NumElts % EltSizeInBits) == 0 && "Unexpected integer scale");
     unsigned Scale = NumElts / EltSizeInBits;
     EVT BroadcastVT = EVT::getVectorVT(*DAG.getContext(), SclVT, EltSizeInBits);
-    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, BroadcastVT, N00);
+    bool UseBroadcast = Subtarget.hasInt256() &&
+                        (!BroadcastVT.is128BitVector() || isa<LoadSDNode>(N00));
+    Vec = UseBroadcast
+              ? DAG.getSplat(BroadcastVT, DL, N00)
+              : DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, BroadcastVT, N00);
     Vec = DAG.getBitcast(VT, Vec);
 
-    for (unsigned i = 0; i != Scale; ++i)
-      ShuffleMask.append(EltSizeInBits, i);
+    for (unsigned i = 0; i != Scale; ++i) {
+      int Offset = UseBroadcast ? (i * EltSizeInBits) : 0;
+      ShuffleMask.append(EltSizeInBits, i + Offset);
+    }
     Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
   } else if (Subtarget.hasAVX2() && NumElts < EltSizeInBits &&
              (SclVT == MVT::i8 || SclVT == MVT::i16 || SclVT == MVT::i32)) {
@@ -46120,21 +46202,14 @@ static SDValue combineToExtendBoolVectorInReg(
     // widened bits won't be used, and this might allow the use of a broadcast
     // load.
     assert((EltSizeInBits % NumElts) == 0 && "Unexpected integer scale");
-    unsigned Scale = EltSizeInBits / NumElts;
-    EVT BroadcastVT =
-        EVT::getVectorVT(*DAG.getContext(), SclVT, NumElts * Scale);
-    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, BroadcastVT, N00);
-    ShuffleMask.append(NumElts * Scale, 0);
-    Vec = DAG.getVectorShuffle(BroadcastVT, DL, Vec, Vec, ShuffleMask);
-    Vec = DAG.getBitcast(VT, Vec);
+    EVT BroadcastVT = EVT::getVectorVT(*DAG.getContext(), SclVT,
+                                       (NumElts * EltSizeInBits) / NumElts);
+    Vec = DAG.getBitcast(VT, DAG.getSplat(BroadcastVT, DL, N00));
   } else {
     // For smaller scalar integers, we can simply any-extend it to the vector
     // element size (we don't care about the upper bits) and broadcast it to all
     // elements.
-    SDValue Scl = DAG.getAnyExtOrTrunc(N00, DL, SVT);
-    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Scl);
-    ShuffleMask.append(NumElts, 0);
-    Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
+    Vec = DAG.getSplat(VT, DL, DAG.getAnyExtOrTrunc(N00, DL, SVT));
   }
 
   // Now, mask the relevant bit in each element.

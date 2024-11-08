@@ -298,6 +298,22 @@ C2y Feature Support
   paper adopts Clang's existing practice, so there were no changes to compiler
   behavior.
 
+- Implemented support for `N3341 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3341.pdf>`_
+  which makes empty structure and union objects implementation-defined in C.
+  ``-Wgnu-empty-struct`` will be emitted in C23 and earlier modes because the
+  behavior is a conforming GNU extension in those modes, but will no longer
+  have an effect in C2y mode.
+
+- Updated conformance for `N3342 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3342.pdf>`_
+  which made qualified function types implementation-defined rather than
+  undefined. Clang has always accepted ``const`` and ``volatile`` qualified
+  function types by ignoring the qualifiers.
+
+- Updated conformance for `N3346 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3346.pdf>`_
+  which changes some undefined behavior around initialization to instead be
+  constraint violations. This paper adopts Clang's existing practice, so there
+  were no changes to compiler behavior.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -312,6 +328,29 @@ Non-comprehensive list of changes in this release
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
 - ``__builtin_abs`` function can now be used in constant expressions.
+
+- The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
+  programmer needs access to the ``counted_by`` attribute's field, but it's not
+  available --- e.g. in macros. For instace, it can be used to automatically
+  set the counter during allocation in the Linux kernel:
+
+  .. code-block:: c
+
+     /* A simplified version of Linux allocation macros */
+     #define alloc(PTR, FAM, COUNT) ({ \
+         sizeof_t __ignored_assignment;                             \
+         typeof(P) __p;                                             \
+         size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT;      \
+         __p = malloc(__size);                                      \
+         *_Generic(                                                 \
+           __builtin_counted_by_ref(__p->FAM),                      \
+             void *: &__ignored_assignment,                         \
+             default: __builtin_counted_by_ref(__p->FAM)) = COUNT;  \
+         __p;                                                       \
+     })
+
+  The flexible array member (FAM) can now be accessed immediately without causing
+  issues with the sanitizer because the counter is automatically set.
 
 New Compiler Flags
 ------------------
@@ -613,8 +652,6 @@ Bug Fixes to C++ Support
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
-- Fixed an assertion failure caused by invalid default argument substitutions in non-defining
-  friend declarations. (#GH113324).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -702,6 +739,7 @@ X86 Support
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
+- Support ISA of ``AMX-AVX512``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
