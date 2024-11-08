@@ -2894,9 +2894,8 @@ multiclass vfp_vstrldr_sysreg<bit opc, bits<4> SysReg, string sysreg,
  }
 }
 
-let Defs = [FPSCR] in {
+let Uses = [FPSCR] in {
   defm VSTR_FPSCR          : vfp_vstrldr_sysreg<0b0,0b0001, "fpscr">;
-  defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc">;
 
   let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
     defm VSTR_FPCXTNS      : vfp_vstrldr_sysreg<0b0,0b1110, "fpcxtns">;
@@ -2918,12 +2917,18 @@ let Predicates = [HasV8_1MMainline, HasMVEInt] in {
                                                 (outs VCCR:$P0), (ins)>;
 }
 
-let Uses = [FPSCR] in {
+let Defs = [FPSCR] in {
   defm VLDR_FPSCR          : vfp_vstrldr_sysreg<0b1,0b0001, "fpscr">;
-  defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc">;
 
   let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
     defm VLDR_FPCXTNS      : vfp_vstrldr_sysreg<0b1,0b1110, "fpcxtns">;
     defm VLDR_FPCXTS       : vfp_vstrldr_sysreg<0b1,0b1111, "fpcxts">;
   }
+}
+
+defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc",
+                                              (outs), (ins cl_FPSCR_NZCV:$fpscr)>;
+let canFoldAsLoad = 1, isReMaterializable = 1 in {
+defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc",
+                                              (outs cl_FPSCR_NZCV:$fpscr), (ins)>;
 }

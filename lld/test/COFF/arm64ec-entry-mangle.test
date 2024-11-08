@@ -8,6 +8,7 @@ RUN: llvm-mc -filetype=obj -triple=arm64ec-windows mangled-func.s -o mangled-fun
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-demangled.s -o ref-demangled.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows demangled-entry-drectve.s -o demangled-entry-drectve.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows demangled-dll-main.s -o x64-dll-main.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows ref-demangled.s -o ref-x64.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 
 RUN: llvm-lib -machine:arm64ec -out:func.lib mangled-func.obj
@@ -79,6 +80,14 @@ by its mangled name and creates a demangled alias for it.
 RUN: lld-link -machine:arm64ec -dll -noentry -out:demangled-export-ref.dll mangled-func.obj \
 RUN:          ref-demangled.obj loadconfig-arm64ec.obj "-export:#func"
 RUN: llvm-objdump -d demangled-export-ref.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that an x86_64 object file can reference ARM64EC mangled functions without requiring an explicit alias.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:x64-ref.dll mangled-func.obj ref-x64.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d x64-ref.dll | FileCheck -check-prefix=DISASM2 %s
+
+Verify that an x86_64 object file can reference ARM64EC mangled functions provided by a library.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:x64-lib-ref.dll func.lib ref-x64.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d x64-lib-ref.dll | FileCheck -check-prefix=DISASM2 %s
 
 DISASM2:      0000000180001000 <.text>:
 DISASM2-NEXT: 180001000: d65f03c0     ret
