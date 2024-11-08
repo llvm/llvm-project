@@ -2510,6 +2510,8 @@ private:
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
 
+  bool BuiltinCountedByRef(CallExpr *TheCall);
+
   // Matrix builtin handling.
   ExprResult BuiltinMatrixTranspose(CallExpr *TheCall, ExprResult CallResult);
   ExprResult BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
