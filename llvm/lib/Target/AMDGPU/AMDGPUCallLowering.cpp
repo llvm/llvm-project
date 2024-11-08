@@ -465,7 +465,9 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
-  if (UserSGPRInfo.hasQueuePtr()) {
+  const Module *M = MF.getFunction().getParent();
+  if (UserSGPRInfo.hasQueuePtr() &&
+      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
