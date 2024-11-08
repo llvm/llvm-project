@@ -42,13 +42,13 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/Support/Debug.h"
 #include <memory>
-#include <regex>
 
 namespace llvm::sandboxir {
 
@@ -66,6 +66,60 @@ class ShuffleVectorInst;
 class CmpInst;
 class Module;
 class GlobalVariable;
+
+#ifndef NDEBUG
+
+/// A class that saves hashes and textual IR snapshots of modules in a
+/// SandboxIR Context, and does hash comparison when `expectNoDiff` is called.
+/// If hashes differ, it prints textual IR for both old and new versions to
+/// aid debugging.
+///
+/// This is used as an additional debug check when reverting changes to
+/// SandboxIR, to verify the reverted state matches the initial state.
+class IRSnapshotChecker {
+  Context &Ctx;
+
+  // A snapshot of textual IR for a module, with a hash for quick comparison.
+  struct ModuleSnapshot {
+    llvm::stable_hash Hash;
+    std::string TextualIR;
+  };
+
+  // A snapshot for each llvm::Module found in the SandboxIR Context. In
+  // practice there will always be one module, but sandbox IR save/restore ops
+  // work at the Context level, so we must take the full state into account.
+  using ContextSnapshot = DenseMap<llvm::Module *, ModuleSnapshot>;
+
+  ContextSnapshot OrigContextSnapshot;
+
+  // True if save() was previously called. This helps us distinguish between
+  // "expectNoDiff was called without calling save" and "save was called but
+  // the saved snapshot is empty".
+  bool HasSavedState = false;
+
+  // Dumps to a string the textual IR for a single Module.
+  std::string dumpIR(llvm::Module *F) const;
+
+  // Returns a snapshot of all the modules in the sandbox IR context.
+  ContextSnapshot takeSnapshot() const;
+
+  // Compares two snapshots and returns true if they differ.
+  bool diff(const ContextSnapshot &Orig, const ContextSnapshot &Curr) const;
+
+public:
+  IRSnapshotChecker(Context &Ctx) : Ctx(Ctx) {}
+
+  /// Saves the current state.
+  void save();
+
+  /// Checks current state against saved state, crashes if different.
+  void expectNoDiff();
+
+  /// Empties saved state.
+  void reset();
+};
+
+#endif // NDEBUG
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -405,6 +459,10 @@ private:
   TrackerState State = TrackerState::Disabled;
   Context &Ctx;
 
+#ifndef NDEBUG
+  IRSnapshotChecker SnapshotChecker;
+#endif
+
 public:
 #ifndef NDEBUG
   /// Helps catch bugs where we are creating new change objects while in the
@@ -412,7 +470,15 @@ public:
   bool InMiddleOfCreatingChange = false;
 #endif // NDEBUG
 
-  explicit Tracker(Context &Ctx) : Ctx(Ctx) {}
+  explicit Tracker(Context &Ctx)
+      : Ctx(Ctx)
+#ifndef NDEBUG
+        ,
+        SnapshotChecker(Ctx)
+#endif
+  {
+  }
+
   ~Tracker();
   Context &getContext() const { return Ctx; }
   /// Record \p Change and take ownership. This is the main function used to
