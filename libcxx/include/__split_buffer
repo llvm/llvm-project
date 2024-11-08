@@ -329,7 +329,7 @@ __split_buffer<_Tp, _Allocator>::__split_buffer(size_type __cap, size_type __sta
     __cap             = __allocation.count;
   }
   __begin_ = __end_ = __first_ + __start;
-  __cap_        = __first_ + __cap;
+  __cap_            = __first_ + __cap;
 }
 
 template <class _Tp, class _Allocator>
@@ -347,10 +347,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __split_buffer<_Tp, _Allocator>::__split_buffer(__
       __end_(std::move(__c.__end_)),
       __cap_(std::move(__c.__cap_)),
       __alloc_(std::move(__c.__alloc_)) {
-  __c.__first_   = nullptr;
-  __c.__begin_   = nullptr;
-  __c.__end_     = nullptr;
-  __c.__cap_ = nullptr;
+  __c.__first_ = nullptr;
+  __c.__begin_ = nullptr;
+  __c.__end_   = nullptr;
+  __c.__cap_   = nullptr;
 }
 
 template <class _Tp, class _Allocator>
@@ -358,19 +358,19 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c, const __alloc_rr& __a)
     : __cap_(nullptr), __alloc_(__a) {
   if (__a == __c.__alloc_) {
-    __first_       = __c.__first_;
-    __begin_       = __c.__begin_;
-    __end_         = __c.__end_;
-    __cap_     = __c.__cap_;
-    __c.__first_   = nullptr;
-    __c.__begin_   = nullptr;
-    __c.__end_     = nullptr;
-    __c.__cap_ = nullptr;
+    __first_     = __c.__first_;
+    __begin_     = __c.__begin_;
+    __end_       = __c.__end_;
+    __cap_       = __c.__cap_;
+    __c.__first_ = nullptr;
+    __c.__begin_ = nullptr;
+    __c.__end_   = nullptr;
+    __c.__cap_   = nullptr;
   } else {
     auto __allocation = std::__allocate_at_least(__alloc_, __c.size());
     __first_          = __allocation.ptr;
     __begin_ = __end_ = __first_;
-    __cap_        = __first_ + __allocation.count;
+    __cap_            = __first_ + __allocation.count;
     typedef move_iterator<iterator> _Ip;
     __construct_at_end(_Ip(__c.begin()), _Ip(__c.end()));
   }
@@ -384,10 +384,10 @@ __split_buffer<_Tp, _Allocator>::operator=(__split_buffer&& __c)
                !__alloc_traits::propagate_on_container_move_assignment::value) {
   clear();
   shrink_to_fit();
-  __first_   = __c.__first_;
-  __begin_   = __c.__begin_;
-  __end_     = __c.__end_;
-  __cap_ = __c.__cap_;
+  __first_ = __c.__first_;
+  __begin_ = __c.__begin_;
+  __end_   = __c.__end_;
+  __cap_   = __c.__cap_;
   __move_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   __c.__first_ = __c.__begin_ = __c.__end_ = __c.__cap_ = nullptr;
   return *this;
