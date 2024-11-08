@@ -26,6 +26,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/addressof.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/is_pointer.h>
 #include <__utility/declval.h>
 #include <variant>

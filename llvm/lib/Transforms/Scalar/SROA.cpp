@@ -55,7 +55,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -429,7 +428,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
           // discard the value component of this dbg.assign as the value cannot
           // be computed with the new fragment.
           Expr = *DIExpression::createFragmentExpression(
-              DIExpression::get(Expr->getContext(), std::nullopt),
+              DIExpression::get(Expr->getContext(), {}),
               NewFragment.OffsetInBits, NewFragment.SizeInBits);
           SetKillLocation = true;
         }
@@ -445,8 +444,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
     auto *NewAssign = UnwrapDbgInstPtr(
         DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
-                            Dest,
-                            DIExpression::get(Expr->getContext(), std::nullopt),
+                            Dest, DIExpression::get(Expr->getContext(), {}),
                             DbgAssign->getDebugLoc()),
         DbgAssign);
 

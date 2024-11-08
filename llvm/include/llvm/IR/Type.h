@@ -206,6 +206,7 @@ public:
   bool isScalableTargetExtTy() const;
 
   /// Return true if this is a type whose size is a known multiple of vscale.
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   bool isScalableTy() const;
 
   /// Return true if this is a FP type or a vector of FP.
@@ -249,10 +250,6 @@ public:
 
   /// True if this is an instance of PointerType.
   bool isPointerTy() const { return getTypeID() == PointerTyID; }
-
-  /// True if this is an instance of an opaque PointerType.
-  LLVM_DEPRECATED("Use isPointerTy() instead", "isPointerTy")
-  bool isOpaquePointerTy() const { return isPointerTy(); };
 
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
@@ -406,14 +403,6 @@ public:
 
   inline StringRef getTargetExtName() const;
 
-  /// Only use this method in code that is not reachable with opaque pointers,
-  /// or part of deprecated methods that will be removed as part of the opaque
-  /// pointers transition.
-  [[deprecated("Pointers no longer have element types")]]
-  Type *getNonOpaquePointerElementType() const {
-    llvm_unreachable("Pointers no longer have element types");
-  }
-
   /// Given vector type, change the element type,
   /// whilst keeping the old number of elements.
   /// For non-vectors simply returns \p EltTy.
@@ -483,8 +472,9 @@ public:
   static Type *getWasm_FuncrefTy(LLVMContext &C);
 
   /// Return a pointer to the current type. This is equivalent to
-  /// PointerType::get(Foo, AddrSpace).
+  /// PointerType::get(Ctx, AddrSpace).
   /// TODO: Remove this after opaque pointer transition is complete.
+  LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
   PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:

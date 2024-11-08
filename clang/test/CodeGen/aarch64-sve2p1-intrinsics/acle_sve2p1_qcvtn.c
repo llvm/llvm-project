@@ -29,17 +29,13 @@
 
 // CHECK-LABEL: @test_qcvtn_s16_s32_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN]], i64 4)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]])
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[ZN_COERCE0:%.*]], <vscale x 4 x i32> [[ZN_COERCE1:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_qcvtn_s16_s32_x211svint32x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]])
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[ZN_COERCE0:%.*]], <vscale x 4 x i32> [[ZN_COERCE1:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_qcvtn_s16_s32_x2(svint32x2_t zn) ATTR {
   return SVE_ACLE_FUNC(svqcvtn_s16,_s32_x2,,)(zn);
@@ -47,17 +43,13 @@ svint16_t test_qcvtn_s16_s32_x2(svint32x2_t zn) ATTR {
 
 // CHECK-LABEL: @test_qcvtn_u16_u32_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN]], i64 4)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]])
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[ZN_COERCE0:%.*]], <vscale x 4 x i32> [[ZN_COERCE1:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_qcvtn_u16_u32_x212svuint32x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]])
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqcvtn.x2.nxv4i32(<vscale x 4 x i32> [[ZN_COERCE0:%.*]], <vscale x 4 x i32> [[ZN_COERCE1:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_qcvtn_u16_u32_x2(svuint32x2_t zn) ATTR {
   return SVE_ACLE_FUNC(svqcvtn_u16,_u32_x2,,)(zn);
@@ -65,17 +57,13 @@ svuint16_t test_qcvtn_u16_u32_x2(svuint32x2_t zn) ATTR {
 
 // CHECK-LABEL: @test_qcvtn_u16_s32_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN]], i64 4)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtun.x2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]])
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtun.x2.nxv4i32(<vscale x 4 x i32> [[ZN_COERCE0:%.*]], <vscale x 4 x i32> [[ZN_COERCE1:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_qcvtn_u16_s32_x211svint32x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[ZN]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtun.x2.nxv4i32(<vscale x 4 x i32> [[TMP0]], <vscale x 4 x i32> [[TMP1]])
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqcvtun.x2.nxv4i32(<vscale x 4 x i32> [[ZN_COERCE0:%.*]], <vscale x 4 x i32> [[ZN_COERCE1:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_qcvtn_u16_s32_x2(svint32x2_t zn) ATTR {
   return SVE_ACLE_FUNC(svqcvtn_u16,_s32_x2,,)(zn);

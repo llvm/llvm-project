@@ -66,14 +66,24 @@ void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 /// Collect a set of patterns to break down subgroup_reduce ops into smaller
 /// ones supported by the target of `size <= maxShuffleBitwidth`, where `size`
 /// is the subgroup_reduce value bitwidth.
-void populateGpuBreakDownSubgrupReducePatterns(RewritePatternSet &patterns,
-                                               unsigned maxShuffleBitwidth = 32,
-                                               PatternBenefit benefit = 1);
+void populateGpuBreakDownSubgroupReducePatterns(
+    RewritePatternSet &patterns, unsigned maxShuffleBitwidth = 32,
+    PatternBenefit benefit = 1);
 
 /// Collect a set of patterns to lower `gpu.subgroup_reduce` into `gpu.shuffle`
 /// ops over `shuffleBitwidth` scalar types. Assumes that the subgroup has
 /// `subgroupSize` lanes. Uses the butterfly shuffle algorithm.
-void populateGpuLowerSubgroupReduceToShufflePattenrs(
+///
+/// The patterns populated by this function will ignore ops with the
+/// `cluster_size` attribute.
+/// `populateGpuLowerClusteredSubgroupReduceToShufflePatterns` is the opposite.
+void populateGpuLowerSubgroupReduceToShufflePatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
+
+/// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
+/// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
+void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
 

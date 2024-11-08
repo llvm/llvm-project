@@ -17,19 +17,15 @@
 #endif
 
 // CHECK-LABEL: define dso_local void @test_svadd_za16_vg1x2_f16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z25test_svadd_za16_vg1x2_f16j13svfloat16x2_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svadd_za16_vg1x2_f16(uint32_t slice, svfloat16x2_t zn) __arm_streaming __arm_inout("za") {
@@ -37,23 +33,15 @@ void test_svadd_za16_vg1x2_f16(uint32_t slice, svfloat16x2_t zn) __arm_streaming
 }
 
 // CHECK-LABEL: define dso_local void @test_svadd_za16_vg1x4_f16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]], <vscale x 8 x half> [[ZN_COERCE2:%.*]], <vscale x 8 x half> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 16)
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]], <vscale x 8 x half> [[ZN_COERCE2]], <vscale x 8 x half> [[ZN_COERCE3]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z25test_svadd_za16_vg1x4_f16j13svfloat16x4_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]], <vscale x 8 x half> [[ZN_COERCE2:%.*]], <vscale x 8 x half> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 16)
-// CHECK-CXX-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 24)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]], <vscale x 8 x half> [[ZN_COERCE2]], <vscale x 8 x half> [[ZN_COERCE3]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svadd_za16_vg1x4_f16(uint32_t slice, svfloat16x4_t zn) __arm_streaming __arm_inout("za") {
@@ -61,19 +49,15 @@ void test_svadd_za16_vg1x4_f16(uint32_t slice, svfloat16x4_t zn) __arm_streaming
 }
 
 // CHECK-LABEL: define dso_local void @test_svsub_za16_vg1x2_f16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z25test_svsub_za16_vg1x2_f16j13svfloat16x2_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svsub_za16_vg1x2_f16(uint32_t slice, svfloat16x2_t zn) __arm_streaming __arm_inout("za") {
@@ -81,23 +65,15 @@ void test_svsub_za16_vg1x2_f16(uint32_t slice, svfloat16x2_t zn) __arm_streaming
 }
 
 // CHECK-LABEL: define dso_local void @test_svsub_za16_vg1x4_f16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]], <vscale x 8 x half> [[ZN_COERCE2:%.*]], <vscale x 8 x half> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 16)
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]], <vscale x 8 x half> [[ZN_COERCE2]], <vscale x 8 x half> [[ZN_COERCE3]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z25test_svsub_za16_vg1x4_f16j13svfloat16x4_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x half> [[ZN_COERCE0:%.*]], <vscale x 8 x half> [[ZN_COERCE1:%.*]], <vscale x 8 x half> [[ZN_COERCE2:%.*]], <vscale x 8 x half> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 16)
-// CHECK-CXX-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv32f16(<vscale x 32 x half> [[ZN]], i64 24)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8f16(i32 [[SLICE]], <vscale x 8 x half> [[ZN_COERCE0]], <vscale x 8 x half> [[ZN_COERCE1]], <vscale x 8 x half> [[ZN_COERCE2]], <vscale x 8 x half> [[ZN_COERCE3]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svsub_za16_vg1x4_f16(uint32_t slice, svfloat16x4_t zn) __arm_streaming __arm_inout("za") {
@@ -105,19 +81,15 @@ void test_svsub_za16_vg1x4_f16(uint32_t slice, svfloat16x4_t zn) __arm_streaming
 }
 
 // CHECK-LABEL: define dso_local void @test_svadd_za16_vg1x2_bf16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z26test_svadd_za16_vg1x2_bf16j14svbfloat16x2_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svadd_za16_vg1x2_bf16(uint32_t slice, svbfloat16x2_t zn) __arm_streaming __arm_inout("za") {
@@ -125,23 +97,15 @@ void test_svadd_za16_vg1x2_bf16(uint32_t slice, svbfloat16x2_t zn) __arm_streami
 }
 
 // CHECK-LABEL: define dso_local void @test_svadd_za16_vg1x4_bf16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 16)
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]], <vscale x 8 x bfloat> [[ZN_COERCE2]], <vscale x 8 x bfloat> [[ZN_COERCE3]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z26test_svadd_za16_vg1x4_bf16j14svbfloat16x4_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 16)
-// CHECK-CXX-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 24)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.add.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]], <vscale x 8 x bfloat> [[ZN_COERCE2]], <vscale x 8 x bfloat> [[ZN_COERCE3]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svadd_za16_vg1x4_bf16(uint32_t slice, svbfloat16x4_t zn) __arm_streaming __arm_inout("za") {
@@ -149,19 +113,15 @@ void test_svadd_za16_vg1x4_bf16(uint32_t slice, svbfloat16x4_t zn) __arm_streami
 }
 
 // CHECK-LABEL: define dso_local void @test_svsub_za16_vg1x2_bf16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z26test_svsub_za16_vg1x2_bf16j14svbfloat16x2_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x2.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svsub_za16_vg1x2_bf16(uint32_t slice, svbfloat16x2_t zn) __arm_streaming __arm_inout("za") {
@@ -169,23 +129,15 @@ void test_svsub_za16_vg1x2_bf16(uint32_t slice, svbfloat16x2_t zn) __arm_streami
 }
 
 // CHECK-LABEL: define dso_local void @test_svsub_za16_vg1x4_bf16(
-// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 16)
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]], <vscale x 8 x bfloat> [[ZN_COERCE2]], <vscale x 8 x bfloat> [[ZN_COERCE3]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z26test_svsub_za16_vg1x4_bf16j14svbfloat16x4_t(
-// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 32 x bfloat> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: i32 noundef [[SLICE:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE2:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE3:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 0)
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 8)
-// CHECK-CXX-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 16)
-// CHECK-CXX-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[ZN]], i64 24)
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.sub.za16.vg1x4.nxv8bf16(i32 [[SLICE]], <vscale x 8 x bfloat> [[ZN_COERCE0]], <vscale x 8 x bfloat> [[ZN_COERCE1]], <vscale x 8 x bfloat> [[ZN_COERCE2]], <vscale x 8 x bfloat> [[ZN_COERCE3]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svsub_za16_vg1x4_bf16(uint32_t slice, svbfloat16x4_t zn) __arm_streaming __arm_inout("za") {

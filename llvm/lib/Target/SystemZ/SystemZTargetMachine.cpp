@@ -257,7 +257,7 @@ bool SystemZPassConfig::addInstSelector() {
 }
 
 bool SystemZPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);

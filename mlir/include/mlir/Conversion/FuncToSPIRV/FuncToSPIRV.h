@@ -21,7 +21,7 @@ class SPIRVTypeConverter;
 /// Appends to a pattern list additional patterns for translating Func ops
 /// to SPIR-V ops. Also adds the patterns to legalize ops not directly
 /// translated to SPIR-V dialect.
-void populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateFuncToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns);
 
 } // namespace mlir

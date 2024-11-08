@@ -43,4 +43,9 @@
 // defines convert_pointer
 #include "src/stdio/printf_core/ptr_converter.h"
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+// defines convert_strerror
+#include "src/stdio/printf_core/strerror_converter.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
+
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_ATLAS_H

@@ -213,7 +213,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__fwd/ios.h>
 #  include <__ios/fpos.h>
@@ -232,7 +232,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 // [ios.syn]
 #  include <iosfwd>
 
-#  if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#  if _LIBCPP_HAS_ATOMIC_HEADER
 #    include <__atomic/atomic.h> // for __xindex_
 #  endif
 
@@ -397,7 +397,7 @@ private:
   size_t __event_cap_;
 // TODO(EricWF): Enable this for both Clang and GCC. Currently it is only
 // enabled with clang.
-#  if defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
   static atomic<int> __xindex_;
 #  else
   static int __xindex_;
@@ -441,7 +441,7 @@ public:
 };
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_failure(char const* __msg) {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw ios_base::failure(__msg);
 #  else
   _LIBCPP_VERBOSE_ABORT("ios_base::failure was thrown in -fno-exceptions mode with message \"%s\"", __msg);
@@ -524,7 +524,10 @@ template <class _Traits>
 // Attribute 'packed' is used to keep the layout compatible with the previous
 // definition of the '__fill_' and '_set_' pair in basic_ios on AIX & z/OS.
 struct _LIBCPP_PACKED _FillHelper {
-  _LIBCPP_HIDE_FROM_ABI void __init() { __set_ = false; }
+  _LIBCPP_HIDE_FROM_ABI void __init() {
+    __set_      = false;
+    __fill_val_ = _Traits::eof();
+  }
   _LIBCPP_HIDE_FROM_ABI _FillHelper& operator=(typename _Traits::int_type __x) {
     __set_      = true;
     __fill_val_ = __x;
@@ -741,7 +744,7 @@ inline _LIBCPP_HIDE_FROM_ABI void basic_ios<_CharT, _Traits>::set_rdbuf(basic_st
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ios<char>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ios<wchar_t>;
 #  endif
 
@@ -869,7 +872,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>

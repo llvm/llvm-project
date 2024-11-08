@@ -229,9 +229,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
         case DW_AT_frame_base:
           if (frame_base) {
             if (form_value.BlockData()) {
-              uint32_t block_offset =
+              uint64_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
-              uint32_t block_length = form_value.Unsigned();
+              uint64_t block_length = form_value.Unsigned();
               *frame_base =
                   DWARFExpressionList(module,
                                       DWARFExpression(DataExtractor(
@@ -614,7 +614,7 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
 }
 
 bool DWARFDebugInfoEntry::IsGlobalOrStaticScopeVariable() const {
-  if (Tag() != DW_TAG_variable)
+  if (Tag() != DW_TAG_variable && Tag() != DW_TAG_member)
     return false;
   const DWARFDebugInfoEntry *parent_die = GetParent();
   while (parent_die != nullptr) {

@@ -22,7 +22,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -3292,6 +3291,12 @@ const ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;
+}
+
+std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
+  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+    return 0;
+  return std::nullopt;
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,

@@ -13,9 +13,8 @@ include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 
 
 def OpenMP_MyFirstClause : OpenMP_Clause<
-    /*isRequired=*/false, /*skipTraits=*/false, /*skipArguments=*/false,
-    /*skipAssemblyFormat=*/false, /*skipDescription=*/false,
-    /*skipExtraClassDeclaration=*/false> {
+    /*skipTraits=*/false, /*skipArguments=*/false, /*skipAssemblyFormat=*/false,
+    /*skipDescription=*/false, /*skipExtraClassDeclaration=*/false> {
   let arguments = (ins
     // Simple attributes
     I32Attr:$int_attr,
@@ -64,9 +63,8 @@ def OpenMP_MyFirstClause : OpenMP_Clause<
 // CHECK-NEXT: }
 
 def OpenMP_MySecondClause : OpenMP_Clause<
-    /*isRequired=*/false, /*skipTraits=*/false, /*skipArguments=*/false,
-    /*skipAssemblyFormat=*/false, /*skipDescription=*/false,
-    /*skipExtraClassDeclaration=*/false> {
+    /*skipTraits=*/false, /*skipArguments=*/false, /*skipAssemblyFormat=*/false,
+    /*skipDescription=*/false, /*skipExtraClassDeclaration=*/false> {
   let arguments = (ins
     I32:$int_val,
     Optional<AnyType>:$opt_any_val,

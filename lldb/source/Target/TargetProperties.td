@@ -201,6 +201,13 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def LaunchWorkingDir: Property<"launch-working-dir", "String">,
+    DefaultStringValue<"">,
+    Desc<"A default value for the working directory to use when launching processes. "
+         "It is ignored when empty. This setting is only used when the target is "
+         "launched. If you change this setting, the new value will only apply to "
+         "subsequent launches. Commands that take an explicit working directory "
+         "will override this setting.">;
 }
 
 let Definition = "process_experimental" in {
@@ -235,7 +242,7 @@ let Definition = "process" in {
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, language runtime augmented/overidden backtraces will not be used when printing a stack trace.">;
+    Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
     Global,
     DefaultFalse,

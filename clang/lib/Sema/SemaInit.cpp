@@ -569,7 +569,7 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
                                                             true);
   MultiExprArg SubInit;
   Expr *InitExpr;
-  InitListExpr DummyInitList(SemaRef.Context, Loc, std::nullopt, Loc);
+  InitListExpr DummyInitList(SemaRef.Context, Loc, {}, Loc);
 
   // C++ [dcl.init.aggr]p7:
   //   If there are fewer initializer-clauses in the list than there are
@@ -588,10 +588,9 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
     //
     // Only do this if we're initializing a class type, to avoid filling in
     // the initializer list where possible.
-    InitExpr = VerifyOnly
-                   ? &DummyInitList
-                   : new (SemaRef.Context)
-                         InitListExpr(SemaRef.Context, Loc, std::nullopt, Loc);
+    InitExpr = VerifyOnly ? &DummyInitList
+                          : new (SemaRef.Context)
+                                InitListExpr(SemaRef.Context, Loc, {}, Loc);
     InitExpr->setType(SemaRef.Context.VoidTy);
     SubInit = InitExpr;
     Kind = InitializationKind::CreateCopy(Loc, Loc);
@@ -763,6 +762,8 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
             SemaRef.parentEvaluationContext()
                 .DelayedDefaultInitializationContext;
+        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
+            SemaRef.parentEvaluationContext().InLifetimeExtendingContext;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {
@@ -1976,8 +1977,9 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_vector_incorrect_num_initializers)
-          << (numEltsInit < maxElements) << maxElements << numEltsInit;
+                   diag::err_vector_incorrect_num_elements)
+          << (numEltsInit < maxElements) << maxElements << numEltsInit
+          << /*initialization*/ 0;
     hadError = true;
   }
 }
@@ -2251,6 +2253,10 @@ bool InitListChecker::CheckFlexibleArrayInit(const InitializedEntity &Entity,
   return FlexArrayDiag != diag::ext_flexible_array_init;
 }
 
+static bool isInitializedStructuredList(const InitListExpr *StructuredList) {
+  return StructuredList && StructuredList->getNumInits() == 1U;
+}
+
 void InitListChecker::CheckStructUnionTypes(
     const InitializedEntity &Entity, InitListExpr *IList, QualType DeclType,
     CXXRecordDecl::base_class_const_range Bases, RecordDecl::field_iterator Field,
@@ -2497,8 +2503,7 @@ void InitListChecker::CheckStructUnionTypes(
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
     InitializedFields.insert(*Field);
-
-    if (RD->isUnion() && StructuredList) {
+    if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
       // Initialize the first field within the union.
       StructuredList->setInitializedFieldInUnion(*Field);
     }
@@ -2583,7 +2588,7 @@ void InitListChecker::CheckStructUnionTypes(
     CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
                           StructuredList, StructuredIndex);
 
-  if (RD->isUnion() && StructuredList) {
+  if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
     // Initialize the first field within the union.
     StructuredList->setInitializedFieldInUnion(*Field);
   }
@@ -3400,7 +3405,7 @@ InitListChecker::createInitListExpr(QualType CurrentObjectType,
                                     SourceRange InitRange,
                                     unsigned ExpectedNumInits) {
   InitListExpr *Result = new (SemaRef.Context) InitListExpr(
-      SemaRef.Context, InitRange.getBegin(), std::nullopt, InitRange.getEnd());
+      SemaRef.Context, InitRange.getBegin(), {}, InitRange.getEnd());
 
   QualType ResultType = CurrentObjectType;
   if (!ResultType->isArrayType())
@@ -5647,7 +5652,7 @@ static void TryDefaultInitialization(Sema &S,
   //       constructor for T is called (and the initialization is ill-formed if
   //       T has no accessible default constructor);
   if (DestType->isRecordType() && S.getLangOpts().CPlusPlus) {
-    TryConstructorInitialization(S, Entity, Kind, std::nullopt, DestType,
+    TryConstructorInitialization(S, Entity, Kind, {}, DestType,
                                  Entity.getType(), Sequence);
     return;
   }
@@ -5684,11 +5689,13 @@ static void TryOrBuildParenListInitialization(
                                      const InitializationKind &SubKind,
                                      Expr *Arg, Expr **InitExpr = nullptr) {
     InitializationSequence IS = InitializationSequence(
-        S, SubEntity, SubKind, Arg ? MultiExprArg(Arg) : std::nullopt);
+        S, SubEntity, SubKind,
+        Arg ? MultiExprArg(Arg) : MutableArrayRef<Expr *>());
 
     if (IS.Failed()) {
       if (!VerifyOnly) {
-        IS.Diagnose(S, SubEntity, SubKind, Arg ? ArrayRef(Arg) : std::nullopt);
+        IS.Diagnose(S, SubEntity, SubKind,
+                    Arg ? ArrayRef(Arg) : ArrayRef<Expr *>());
       } else {
         Sequence.SetFailed(
             InitializationSequence::FK_ParenthesizedListInitFailed);
@@ -5699,7 +5706,7 @@ static void TryOrBuildParenListInitialization(
     if (!VerifyOnly) {
       ExprResult ER;
       ER = IS.Perform(S, SubEntity, SubKind,
-                      Arg ? MultiExprArg(Arg) : std::nullopt);
+                      Arg ? MultiExprArg(Arg) : MutableArrayRef<Expr *>());
 
       if (ER.isInvalid())
         return false;

@@ -19,6 +19,8 @@
 #include <initializer_list>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
+
 #include "test_macros.h"
 
 struct Foo {

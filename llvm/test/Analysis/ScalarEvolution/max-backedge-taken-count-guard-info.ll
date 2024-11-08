@@ -1568,33 +1568,6 @@ exit:
   ret i32 0
 }
 
-
-define i32 @ptr_induction_ult_2(ptr %a, ptr %b) {
-; CHECK-LABEL: 'ptr_induction_ult_2'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_2
-; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_2
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-;
-entry:
-  %cmp.6 = icmp ult ptr %a, %b
-  br i1 %cmp.6, label %loop, label %exit
-
-loop:
-  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-  %exitcond = icmp eq ptr %ptr.iv, %b
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret i32 0
-}
-
 define void @ptr_induction_eq_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
@@ -1652,27 +1625,66 @@ exit:
   ret void
 }
 
-; TODO: It feels like we should be able to calculate the symbolic max
-; exit count for the loop.inc block here, in the same way as
-; ptr_induction_eq_1. The problem seems to be in howFarToZero when the
-; ControlsOnlyExit is set to false.
-define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
-; CHECK-LABEL: 'ptr_induction_early_exit_eq_1'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1
-; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+define void @ptr_induction_early_exit_eq_1_with_align_on_load(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_with_align_on_load'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_with_align_on_load
+; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8, !align !0
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8, !align !0
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
 ; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a),+,8}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_with_align_on_load
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+;
+entry:
+  %a_ = load ptr, ptr %a, !align !{i64 8}
+  %b_ = load ptr, ptr %b, !align !{i64 8}
+  %cmp = icmp eq ptr %a_, %b_
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b_
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_with_align_on_arguments(ptr align 8 %a, ptr align 8 %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_with_align_on_arguments'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_with_align_on_arguments
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_with_align_on_arguments
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
 ;
 entry:
   %cmp = icmp eq ptr %a, %b
@@ -1687,6 +1699,96 @@ loop:
 loop.inc:
   %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
   %exitcond = icmp eq ptr %ptr.iv.next, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_align_assumption_1(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_align_assumption_1'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_align_assumption_1
+; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_1
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+;
+entry:
+  %a_ = load ptr, ptr %a
+  call void @llvm.assume(i1 true) [ "align"(ptr %a_, i64 8) ]
+  %b_ = load ptr, ptr %b
+  call void @llvm.assume(i1 true) [ "align"(ptr %b_, i64 8) ]
+  %cmp = icmp eq ptr %a_, %b_
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b_
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @ptr_induction_early_exit_eq_1_align_assumption_2(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: 'ptr_induction_early_exit_eq_1_align_assumption_2'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1_align_assumption_2
+; CHECK-NEXT:    %a_ = load ptr, ptr %a, align 8
+; CHECK-NEXT:    --> %a_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %b_ = load ptr, ptr %b, align 8
+; CHECK-NEXT:    --> %b_ U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+; CHECK-NEXT:    --> {%a_,+,8}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
+; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+; CHECK-NEXT:    --> {(8 + %a_),+,8}<nw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_2
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+;
+entry:
+  %a_ = load ptr, ptr %a
+  %b_ = load ptr, ptr %b
+  call void @llvm.assume(i1 true) [ "align"(ptr %a_, i64 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %b_, i64 8) ]
+  %cmp = icmp eq ptr %a_, %b_
+  br i1 %cmp, label %exit, label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a_, %entry ]
+  %ld1 = load ptr, ptr %ptr.iv, align 8
+  %earlyexitcond = icmp eq ptr %ld1, %c
+  br i1 %earlyexitcond, label %exit, label %loop.inc
+
+loop.inc:
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
+  %exitcond = icmp eq ptr %ptr.iv.next, %b_
   br i1 %exitcond, label %exit, label %loop
 
 exit:
@@ -1732,7 +1834,6 @@ loop.inc:
 exit:
   ret void
 }
-
 
 define void @gep_addrec_nw(ptr %a) {
 ; CHECK-LABEL: 'gep_addrec_nw'

@@ -10,6 +10,7 @@ set(
     "builtin_round"
     "builtin_roundeven"
     "float16"
+    "float16_conversion"
     "float128"
     "fixed_point"
 )
@@ -61,15 +62,21 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
-  elseif(${feature} MATCHES "^builtin_")
+  elseif(${feature} MATCHES "^builtin_" OR
+         ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
     set(link_options -nostdlib)
-    # The compiler might handle calls to rounding builtins by generating calls
-    # to the respective libc math functions, in which case we cannot use these
+    # The compiler might handle calls to math builtins by generating calls to
+    # the respective libc math functions, in which case we cannot use these
     # builtins in our implementations of these functions. We check that this is
     # not the case by trying to link an executable, since linking would fail due
     # to unresolved references with -nostdlib if calls to libc functions were
     # generated.
+    #
+    # We also had issues with soft-float float16 conversion functions using both
+    # compiler-rt and libgcc, so we also check whether we can convert from and
+    # to float16 without calls to compiler runtime functions by trying to link
+    # an executable with -nostdlib.
     set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
   endif()
 
@@ -97,6 +104,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
     if(${feature} STREQUAL "float16")
       set(LIBC_TYPES_HAS_FLOAT16 TRUE)
+    elseif(${feature} STREQUAL "float16_conversion")
+      add_compile_definitions(__LIBC_USE_FLOAT16_CONVERSION)
     elseif(${feature} STREQUAL "float128")
       set(LIBC_TYPES_HAS_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
@@ -114,6 +123,10 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     endif()
   endif()
 endforeach()
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
+set(link_options "")
 
 message(STATUS "Compiler features available: ${AVAILABLE_COMPILER_FEATURES}")
 

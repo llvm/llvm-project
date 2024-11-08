@@ -31,12 +31,15 @@ class IntegerType;
 class FunctionType;
 class ArrayType;
 class StructType;
+class TargetExtType;
+class Module;
+class FPMathOperator;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 
-/// Just like llvm::Type these are immutable, unique, never get freed and can
-/// only be created via static factory methods.
+/// Just like llvm::Type these are immutable, unique, never get freed and
+/// can only be created via static factory methods.
 class Type {
 protected:
   llvm::Type *LLVMTy;
@@ -56,11 +59,15 @@ protected:
   friend class ConstantVector;     // For LLVMTy.
   friend class CmpInst;            // For LLVMTy. TODO: Cleanup after
                                    // sandboxir::VectorType is more complete.
+  friend class Utils;              // for LLVMTy
+  friend class TargetExtType;      // For LLVMTy.
+  friend class Module;             // For LLVMTy.
+  friend class FPMathOperator;     // For LLVMTy.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   Context &Ctx;
 
   Type(llvm::Type *LLVMTy, Context &Ctx) : LLVMTy(LLVMTy), Ctx(Ctx) {}

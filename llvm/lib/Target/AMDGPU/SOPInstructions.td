@@ -458,13 +458,13 @@ let hasSideEffects = 1 in {
 let has_sdst = 0 in {
 let Uses = [M0] in {
 def S_BARRIER_SIGNAL_M0 : SOP1_Pseudo <"s_barrier_signal m0", (outs), (ins),
-  "", [(int_amdgcn_s_barrier_signal_var M0)]>{
+  "", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
 
 def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (outs), (ins),
-  "", [(set SCC, (int_amdgcn_s_barrier_signal_isfirst_var M0))]>{
+  "", []>{
   let Defs = [SCC];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
@@ -1604,14 +1604,16 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let isConvergent = 1;
 }
 
-def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins), "",
-  [(set SCC, (int_amdgcn_s_barrier_leave))]> {
+def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
   let SchedRW = [WriteBarrier];
   let simm16 = 0;
   let fixed_imm = 1;
   let isConvergent = 1;
   let Defs = [SCC];
 }
+
+def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
+    (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let SubtargetPredicate = isGFX8Plus;
@@ -1751,11 +1753,6 @@ let OtherPredicates = [HasExportInsts] in
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
-
-let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
-  def S_SINGLEUSE_VDST :
-    SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
-} // End SubtargetPredicate = HasVGPRSingeUseHintInsts
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
@@ -2675,12 +2672,6 @@ defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
 
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
-
-//===----------------------------------------------------------------------===//
-// SOPP - GFX1150, GFX12.
-//===----------------------------------------------------------------------===//
-
-defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11_gfx12<0x013>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

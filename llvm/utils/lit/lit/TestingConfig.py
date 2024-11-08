@@ -64,6 +64,8 @@ class TestingConfig(object):
             "SOURCE_DATE_EPOCH",
             "GTEST_FILTER",
             "DFLTCC",
+            "QEMU_LD_PREFIX",
+            "QEMU_CPU",
         ]
 
         if sys.platform.startswith("aix"):

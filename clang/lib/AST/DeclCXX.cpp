@@ -1060,6 +1060,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (isUnion() && !Field->isAnonymousStructOrUnion())
       data().HasVariantMembers = true;
 
+    if (isUnion() && IsFirstField)
+      data().HasUninitializedFields = true;
+
     // C++0x [class]p9:
     //   A POD struct is a class that is both a trivial class and a
     //   standard-layout class, and has no non-static data members of type
@@ -1128,7 +1131,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().DefaultedCopyConstructorIsDeleted = true;
     }
 
-    if (!Field->hasInClassInitializer() && !Field->isMutable()) {
+    if (isUnion() && !Field->isMutable()) {
+      if (Field->hasInClassInitializer())
+        data().HasUninitializedFields = false;
+    } else if (!Field->hasInClassInitializer() && !Field->isMutable()) {
       if (CXXRecordDecl *FieldType = T->getAsCXXRecordDecl()) {
         if (FieldType->hasDefinition() && !FieldType->allowConstDefaultInit())
           data().HasUninitializedFields = true;
@@ -1411,10 +1417,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
         Ty = Ty->getArrayElementTypeNoTypeQual();
 
       Ty = Ty->getUnqualifiedDesugaredType();
-      if (Ty->isBuiltinType())
-        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
-      else if (const RecordType *RT = dyn_cast<RecordType>(Ty))
+      if (const RecordType *RT = dyn_cast<RecordType>(Ty))
         data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
+      else
+        data().IsHLSLIntangible |= (Ty->isHLSLAttributedResourceType() ||
+                                    Ty->isHLSLBuiltinIntangibleType());
     }
   }
 
@@ -1631,13 +1638,42 @@ static bool allLookupResultsAreTheSame(const DeclContext::lookup_result &R) {
 static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   if (!RD.isLambda()) return nullptr;
   DeclarationName Name =
-    RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
-  DeclContext::lookup_result Calls = RD.lookup(Name);
+      RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
 
+  DeclContext::lookup_result Calls = RD.lookup(Name);
   assert(!Calls.empty() && "Missing lambda call operator!");
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
-  return Calls.front();
+
+  // FIXME: If we have multiple call operators, we might be in a situation
+  // where we merged this lambda with one from another module; in that
+  // case, return our method (instead of that of the other lambda).
+  //
+  // This avoids situations where, given two modules A and B, if we
+  // try to instantiate A's call operator in a function in B, anything
+  // in the call operator that relies on local decls in the surrounding
+  // function will crash because it tries to find A's decls, but we only
+  // instantiated B's:
+  //
+  //   template <typename>
+  //   void f() {
+  //     using T = int;      // We only instantiate B's version of this.
+  //     auto L = [](T) { }; // But A's call operator would want A's here.
+  //   }
+  //
+  // Walk the call operator’s redecl chain to find the one that belongs
+  // to this module.
+  //
+  // TODO: We need to fix this properly (see
+  // https://github.com/llvm/llvm-project/issues/90154).
+  Module *M = RD.getOwningModule();
+  for (Decl *D : Calls.front()->redecls()) {
+    auto *MD = cast<NamedDecl>(D);
+    if (MD->getOwningModule() == M)
+      return MD;
+  }
+
+  llvm_unreachable("Couldn't find our call operator!");
 }
 
 FunctionTemplateDecl* CXXRecordDecl::getDependentLambdaCallOperator() const {
@@ -2211,9 +2247,10 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
-    DeductionCandidate Kind) {
-  return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T,
-                                           TInfo, EndLocation, Ctor, Kind);
+    DeductionCandidate Kind, Expr *TrailingRequiresClause) {
+  return new (C, DC)
+      CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T, TInfo,
+                            EndLocation, Ctor, Kind, TrailingRequiresClause);
 }
 
 CXXDeductionGuideDecl *
@@ -2221,7 +2258,7 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) CXXDeductionGuideDecl(
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
       QualType(), nullptr, SourceLocation(), nullptr,
-      DeductionCandidate::Normal);
+      DeductionCandidate::Normal, nullptr);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
@@ -3254,8 +3291,7 @@ UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
 UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                  unsigned NumExpansions) {
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
-  auto *Result =
-      new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, std::nullopt);
+  auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, {});
   Result->NumExpansions = NumExpansions;
   auto *Trail = Result->getTrailingObjects<NamedDecl *>();
   for (unsigned I = 0; I != NumExpansions; ++I)
@@ -3404,7 +3440,7 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
   auto *Result = new (C, ID, Extra)
       DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), std::nullopt);
+                        QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects<BindingDecl *>();

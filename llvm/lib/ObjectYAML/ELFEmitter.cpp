@@ -966,7 +966,7 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
       Symbol.st_shndx = *Sym.Index;
 
     Symbol.st_value = Sym.Value.value_or(yaml::Hex64(0));
-    Symbol.st_other = Sym.Other ? *Sym.Other : 0;
+    Symbol.st_other = Sym.Other.value_or(0);
     Symbol.st_size = Sym.Size.value_or(yaml::Hex64(0));
   }
 

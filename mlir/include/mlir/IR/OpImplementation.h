@@ -749,7 +749,9 @@ public:
     // zero for non-negated integers.
     result =
         (IntT)uintResult.sextOrTrunc(sizeof(IntT) * CHAR_BIT).getLimitedValue();
-    if (APInt(uintResult.getBitWidth(), result) != uintResult)
+    if (APInt(uintResult.getBitWidth(), result,
+              /*isSigned=*/std::is_signed_v<IntT>,
+              /*implicitTrunc=*/true) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
   }

@@ -15,9 +15,12 @@
 #include <__algorithm/simd_utils.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__iterator/aliasing_iterator.h>
+#include <__iterator/iterator_traits.h>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
@@ -25,7 +28,6 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/unreachable.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -1,5 +1,4 @@
 // RUN: %clangxx -fsanitize=realtime %s -o %t
-// RUN: %clang -fsanitize=realtime %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: ios
 

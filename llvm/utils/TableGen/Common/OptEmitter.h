@@ -11,7 +11,8 @@
 
 namespace llvm {
 class Record;
-bool CompareOptionRecords(const Record *A, const Record *B);
+/// Return true of Option record \p A is ordered before \p B.
+bool IsOptionRecordsLess(const Record *A, const Record *B);
 } // namespace llvm
 
 #endif // LLVM_UTILS_TABLEGEN_COMMON_OPTEMITTER_H

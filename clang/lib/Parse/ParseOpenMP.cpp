@@ -2561,7 +2561,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
              DKind == OMPD_target_exit_data) {
     Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
     AssociatedStmt = (Sema::CompoundScopeRAII(Actions),
-                      Actions.ActOnCompoundStmt(Loc, Loc, std::nullopt,
+                      Actions.ActOnCompoundStmt(Loc, Loc, {},
                                                 /*isStmtExpr=*/false));
     AssociatedStmt =
         Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
@@ -3080,6 +3080,18 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
                                                  OpenLoc, CloseLoc);
 }
 
+OMPClause *Parser::ParseOpenMPPermutationClause() {
+  SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
+  SmallVector<Expr *> ArgExprs;
+  if (ParseOpenMPExprListClause(OMPC_permutation, ClauseNameLoc, OpenLoc,
+                                CloseLoc, ArgExprs,
+                                /*ReqIntConst=*/true))
+    return nullptr;
+
+  return Actions.OpenMP().ActOnOpenMPPermutationClause(ArgExprs, ClauseNameLoc,
+                                                       OpenLoc, CloseLoc);
+}
+
 OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
   SourceLocation Loc = Tok.getLocation();
   ConsumeAnyToken();
@@ -3376,6 +3388,14 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     }
 
     Clause = ParseOpenMPSizesClause();
+    break;
+  case OMPC_permutation:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPPermutationClause();
     break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);
@@ -4780,7 +4800,23 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // iterator(iterators-definition)
     ExprResult Tail;
     if (Kind == OMPC_allocate) {
-      Tail = ParseAssignmentExpression();
+      auto Modifier = static_cast<OpenMPAllocateClauseModifier>(
+          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), getLangOpts()));
+      if (Modifier == OMPC_ALLOCATE_allocator) {
+        Data.AllocClauseModifier = Modifier;
+        ConsumeToken();
+        BalancedDelimiterTracker AllocateT(*this, tok::l_paren,
+                                           tok::annot_pragma_openmp_end);
+        if (Tok.is(tok::l_paren)) {
+          AllocateT.consumeOpen();
+          Tail = ParseAssignmentExpression();
+          AllocateT.consumeClose();
+        } else {
+          Diag(Tok, diag::err_expected) << tok::l_paren;
+        }
+      } else {
+        Tail = ParseAssignmentExpression();
+      }
     } else {
       HasIterator = true;
       EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
@@ -4797,6 +4833,12 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       } else {
         // Colon not found, parse only list of variables.
         TPA.Revert();
+        if (Kind == OMPC_allocate &&
+            Data.AllocClauseModifier == OMPC_ALLOCATE_allocator) {
+          SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
+                    StopBeforeMatch);
+          Diag(Tok, diag::err_modifier_expected_colon) << "allocator";
+        }
       }
     } else {
       // Parsing was unsuccessfull, revert and skip to the end of clause or
@@ -4866,7 +4908,6 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   // Parse ')' for linear clause with modifier.
   if (NeedRParenForLinear)
     LinearT.consumeClose();
-
   // Parse ':' linear modifiers (val, uval, ref or step(step-size))
   // or parse ':' alignment.
   const bool MustHaveTail = MayHaveTail && Tok.is(tok::colon);
@@ -4998,6 +5039,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'has_device_addr' '(' list ')'
 ///    allocate-clause:
 ///       'allocate' '(' [ allocator ':' ] list ')'
+///       As of OpenMP 5.1 there's also
+///         'allocate' '(' allocate-modifier: list ')'
+///         where allocate-modifier is: 'allocator' '(' allocator ')'
 ///    nontemporal-clause:
 ///       'nontemporal' '(' list ')'
 ///    inclusive-clause:

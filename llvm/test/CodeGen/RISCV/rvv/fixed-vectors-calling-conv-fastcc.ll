@@ -186,7 +186,9 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; CHECK-NEXT:    vmv8r.v v16, v24
 ; CHECK-NEXT:    call ext2
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %t = call fastcc <32 x i32> @ext2(<32 x i32> %y, <32 x i32> %x, i32 %w, i32 2)
   ret <32 x i32> %t
@@ -214,9 +216,13 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    call ext3
 ; CHECK-NEXT:    addi sp, s0, -256
+; CHECK-NEXT:    .cfi_def_cfa sp, 256
 ; CHECK-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 256
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %t = call fastcc <32 x i32> @ext3(<32 x i32> %z, <32 x i32> %y, <32 x i32> %x, i32 %w, i32 42)
   ret <32 x i32> %t
@@ -268,9 +274,13 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_indirect_stack
 ; CHECK-NEXT:    addi sp, s0, -256
+; CHECK-NEXT:    .cfi_def_cfa sp, 256
 ; CHECK-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 256
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %s = call fastcc <32 x i32> @vector_arg_indirect_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 8)
   ret <32 x i32> %s
@@ -308,8 +318,7 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    sd a0, 144(sp)
 ; CHECK-NEXT:    li a0, 13
-; CHECK-NEXT:    sd a0, 8(sp)
-; CHECK-NEXT:    li a0, 12
+; CHECK-NEXT:    li t0, 12
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    li a3, 3
@@ -321,12 +330,15 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li t4, 9
 ; CHECK-NEXT:    li t5, 10
 ; CHECK-NEXT:    li t6, 11
-; CHECK-NEXT:    sd a0, 0(sp)
+; CHECK-NEXT:    sd t0, 0(sp)
+; CHECK-NEXT:    sd a0, 8(sp)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_direct_stack
 ; CHECK-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 160
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %s = call fastcc <32 x i32> @vector_arg_direct_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 1)
   ret <32 x i32> %s
