@@ -66,8 +66,7 @@ define i1 @fcmp_constexpr_une(float %conv) {
 
 define i1 @fcmp_constexpr_ueq(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_ueq(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = fcmp ueq float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp
@@ -75,8 +74,7 @@ define i1 @fcmp_constexpr_ueq(float %conv) {
 
 define i1 @fcmp_constexpr_one(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_one(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = fcmp one float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp

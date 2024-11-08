@@ -1346,7 +1346,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
     return flushDenormalConstantFP(CFP, Inst, IsOutput);
 
-  if (isa<ConstantAggregateZero, UndefValue>(Operand))
+  if (isa<ConstantAggregateZero, UndefValue, ConstantExpr>(Operand))
     return Operand;
 
   Type *Ty = Operand->getType();
