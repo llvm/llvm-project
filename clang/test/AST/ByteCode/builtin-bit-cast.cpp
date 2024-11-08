@@ -38,6 +38,13 @@ constexpr Init round_trip(const Init &init) {
   return bit_cast<Init>(bit_cast<Intermediate>(init));
 }
 
+
+namespace Discarding {
+  struct S { int a; };
+  constexpr int f = (__builtin_bit_cast(int, 2), 0);
+  constexpr int f2 = (__builtin_bit_cast(S, 2), 0);
+}
+
 namespace std {
 enum byte : unsigned char {};
 } // namespace std
@@ -467,3 +474,66 @@ struct ref_mem {
 // both-error@+2 {{constexpr variable 'run_ref_mem' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast from a type with a reference member is not allowed in a constant expression}}
 constexpr intptr_t run_ref_mem = __builtin_bit_cast(intptr_t, ref_mem{global_int});
+
+namespace test_vector {
+
+typedef unsigned uint2 __attribute__((vector_size(2 * sizeof(unsigned))));
+typedef char byte8 __attribute__((vector_size(sizeof(unsigned long long))));
+
+constexpr uint2 test_vector = { 0x0C05FEFE, 0xCAFEBABE };
+
+static_assert(bit_cast<unsigned long long>(test_vector) == (LITTLE_END
+                                                                ? 0xCAFEBABE0C05FEFE
+                                                                : 0x0C05FEFECAFEBABE), "");
+static_assert(check_round_trip<uint2>(0xCAFEBABE0C05FEFEULL), "");
+static_assert(check_round_trip<byte8>(0xCAFEBABE0C05FEFEULL), "");
+
+typedef bool bool8 __attribute__((ext_vector_type(8)));
+typedef bool bool9 __attribute__((ext_vector_type(9)));
+typedef bool bool16 __attribute__((ext_vector_type(16)));
+typedef bool bool17 __attribute__((ext_vector_type(17)));
+typedef bool bool32 __attribute__((ext_vector_type(32)));
+typedef bool bool128 __attribute__((ext_vector_type(128)));
+
+static_assert(bit_cast<unsigned char>(bool8{1,0,1,0,1,0,1,0}) == (LITTLE_END ? 0x55 : 0xAA), "");
+constexpr bool8 b8 = __builtin_bit_cast(bool8, 0x55); // both-error {{__builtin_bit_cast source size does not equal destination size (4 vs 1)}}
+#if 0
+static_assert(check_round_trip<bool8>(static_cast<unsigned char>(0)), "");
+static_assert(check_round_trip<bool8>(static_cast<unsigned char>(1)), "");
+static_assert(check_round_trip<bool8>(static_cast<unsigned char>(0x55)), "");
+
+static_assert(bit_cast<unsigned short>(bool16{1,1,1,1,1,0,0,0, 1,1,1,1,0,1,0,0}) == (LITTLE_END ? 0x2F1F : 0xF8F4), "");
+
+static_assert(check_round_trip<bool16>(static_cast<short>(0xCAFE)), "");
+static_assert(check_round_trip<bool32>(static_cast<int>(0xCAFEBABE)), "");
+static_assert(check_round_trip<bool128>(static_cast<__int128_t>(0xCAFEBABE0C05FEFEULL)), "");
+#endif
+
+#if 0
+// expected-error@+2 {{constexpr variable 'bad_bool9_to_short' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}
+constexpr unsigned short bad_bool9_to_short = __builtin_bit_cast(unsigned short, bool9{1,1,0,1,0,1,0,1,0});
+// expected-error@+2 {{constexpr variable 'bad_short_to_bool9' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}
+constexpr bool9 bad_short_to_bool9 = __builtin_bit_cast(bool9, static_cast<unsigned short>(0));
+// expected-error@+2 {{constexpr variable 'bad_int_to_bool17' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(17)))' (vector of 17 'bool' values) is not allowed in a constant expression; element size 1 * element count 17 is not a multiple of the byte size 8}}
+constexpr bool17 bad_int_to_bool17 = __builtin_bit_cast(bool17, 0x0001CAFEU);
+#endif
+}
+
+namespace test_complex {
+  constexpr _Complex unsigned test_int_complex = { 0x0C05FEFE, 0xCAFEBABE };
+  static_assert(round_trip<_Complex unsigned>(0xCAFEBABE0C05FEFEULL), "");
+  static_assert(bit_cast<unsigned long long>(test_int_complex) == (LITTLE_END
+                                                                   ? 0xCAFEBABE0C05FEFE
+                                                                   : 0x0C05FEFECAFEBABE), "");
+  static_assert(sizeof(double) == 2 * sizeof(float));
+  struct TwoFloats { float A; float B; };
+  constexpr _Complex float test_float_complex = {1.0f, 2.0f};
+  constexpr TwoFloats TF = __builtin_bit_cast(TwoFloats, test_float_complex);
+  static_assert(TF.A == 1.0f && TF.B == 2.0f);
+
+  constexpr double D = __builtin_bit_cast(double, test_float_complex);
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{__builtin_bit_cast source size does not equal destination size}}
+}

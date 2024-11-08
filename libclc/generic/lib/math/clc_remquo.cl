@@ -24,6 +24,7 @@
 #include <clc/clcmacro.h>
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_trunc.h>
+#include <clc/shared/clc_max.h>
 
 #include <math/clc_remainder.h>
 #include "config.h"
@@ -140,7 +141,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y, __private int *pq
     // less than the mantissa of y, ntimes will be one too large
     // but it doesn't matter - it just means that we'll go round
     // the loop below one extra time.
-    int ntimes = max(0, (xexp1 - yexp1) / 53);
+    int ntimes = __clc_max(0, (xexp1 - yexp1) / 53);
     double w =  ldexp(dy, ntimes * 53);
     w = ntimes == 0 ? dy : w;
     double scale = ntimes == 0 ? 1.0 : 0x1.0p-53;

@@ -4357,6 +4357,8 @@ public:
   /// Retrieve the parameter pack.
   NamedDecl *getPack() const { return Pack; }
 
+  void setPack(NamedDecl *NewPack) { Pack = NewPack; }
+
   /// Retrieve the length of the parameter pack.
   ///
   /// This routine may only be invoked when the expression is not

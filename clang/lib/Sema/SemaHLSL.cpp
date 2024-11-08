@@ -1947,6 +1947,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+
+    const Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+    QualType EltTy = ArgTy;
+
+    QualType ResTy = SemaRef.Context.UnsignedIntTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>()) {
+      EltTy = VecTy->getElementType();
+      ResTy = SemaRef.Context.getVectorType(ResTy, VecTy->getNumElements(),
+                                            VecTy->getVectorKind());
+    }
+
+    if (!EltTy->isIntegerType()) {
+      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* integer ty */ 6 << ArgTy;
+      return true;
+    }
+
+    TheCall->setType(ResTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_select: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
@@ -2197,6 +2222,50 @@ static void BuildFlattenedTypeList(QualType BaseTy,
     }
     List.push_back(T);
   }
+}
+
+bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  // check if the outer type was an array type
+  if (QT->isArrayType())
+    return false;
+
+  llvm::SmallVector<QualType, 4> QTTypes;
+  BuildFlattenedTypeList(QT, QTTypes);
+
+  assert(QTTypes.size() > 0 &&
+         "expected at least one constituent type from non-null type");
+  QualType FirstQT = SemaRef.Context.getCanonicalType(QTTypes[0]);
+
+  // element count cannot exceed 4
+  if (QTTypes.size() > 4)
+    return false;
+
+  for (QualType TempQT : QTTypes) {
+    // ensure homogeneity
+    if (!getASTContext().hasSameUnqualifiedType(FirstQT, TempQT))
+      return false;
+  }
+
+  if (const BuiltinType *BT = FirstQT->getAs<BuiltinType>()) {
+    if (BT->isBooleanType() || BT->isEnumeralType())
+      return false;
+
+    // Check if it is an array type.
+    if (FirstQT->isArrayType())
+      return false;
+  }
+
+  // if the loop above completes without returning, then
+  // we've guaranteed homogeneity
+  int TotalSizeInBytes =
+      (SemaRef.Context.getTypeSize(FirstQT) / 8) * QTTypes.size();
+  if (TotalSizeInBytes > 16)
+    return false;
+
+  return true;
 }
 
 bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
