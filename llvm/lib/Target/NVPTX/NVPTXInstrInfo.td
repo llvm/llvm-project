@@ -152,6 +152,7 @@ def allowFMA : Predicate<"allowFMA()">;
 def noFMA : Predicate<"!allowFMA()">;
 def allowUnsafeFPMath : Predicate<"allowUnsafeFPMath()">;
 def noUnsafeFPMath : Predicate<"!allowUnsafeFPMath()">;
+def noNaNsFPMath : Predicate<"noNaNsFPMath()">;
 
 def do_DIVF32_APPROX : Predicate<"getDivF32Level()==0">;
 def do_DIVF32_FULL : Predicate<"getDivF32Level()==1">;
@@ -3988,20 +3989,20 @@ def FMARELU_F16X2_FTZ :
 // FTZ variants are only supported by fp16, not bf16
 def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_positive_zero)),
   (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
-  Requires<[doF32FTZ, allowUnsafeFPMath]>;
+  Requires<[doF32FTZ, noNaNsFPMath]>;
 def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
   (FMARELU_F16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
-  Requires<[doF32FTZ, allowUnsafeFPMath]>;
+  Requires<[doF32FTZ, noNaNsFPMath]>;
 // No FTZ
 def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_positive_zero)),
   (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
-  Requires<[allowUnsafeFPMath]>;
+  Requires<[noNaNsFPMath]>;
 def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_positive_zero)),
   (FMARELU_BF16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
-  Requires<[allowUnsafeFPMath]>;
+  Requires<[noNaNsFPMath]>;
 def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
   (FMARELU_F16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
-  Requires<[allowUnsafeFPMath]>;
+  Requires<[noNaNsFPMath]>;
 def : Pat<(v2bf16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2bf16)),
   (FMARELU_BF16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
-  Requires<[allowUnsafeFPMath]>;
+  Requires<[noNaNsFPMath]>;

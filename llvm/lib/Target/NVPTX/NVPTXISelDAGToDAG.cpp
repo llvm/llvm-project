@@ -85,6 +85,11 @@ bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
   return TL->allowUnsafeFPMath(*MF);
 }
 
+bool NVPTXDAGToDAGISel::noNaNsFPMath() const {
+  const NVPTXTargetLowering *TL = Subtarget->getTargetLowering();
+  return TL->noNaNsFPMath(*MF);
+}
+
 bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
 
 /// Select - Select instructions not customized! Used for
