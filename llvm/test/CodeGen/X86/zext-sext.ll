@@ -11,32 +11,34 @@ define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-LABEL: func:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq (%rsi), %rax
-; CHECK-NEXT:    movl $4, %esi
-; CHECK-NEXT:    subq %rax, %rsi
+; CHECK-NEXT:    movl $4, %r8d
+; CHECK-NEXT:    subq %rax, %r8
 ; CHECK-NEXT:    movq (%rdx), %rax
 ; CHECK-NEXT:    movswl 8(%rdi), %edx
-; CHECK-NEXT:    movswl (%rax,%rsi,2), %eax
+; CHECK-NEXT:    movswl (%rax,%r8,2), %eax
 ; CHECK-NEXT:    imull %edx, %eax
 ; CHECK-NEXT:    addl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    cmpl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    setl %dl
 ; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
-; CHECK-NEXT:    setge %sil
-; CHECK-NEXT:    andb %dl, %sil
-; CHECK-NEXT:    movzbl %sil, %edx
-; CHECK-NEXT:    movslq %eax, %rsi
-; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    setge %r8b
+; CHECK-NEXT:    andb %dl, %r8b
+; CHECK-NEXT:    movzbl %r8b, %edx
+; CHECK-NEXT:    movslq %eax, %r8
+; CHECK-NEXT:    movq %r8, %r9
 ; CHECK-NEXT:    negl %edx
-; CHECK-NEXT:    subq %rax, %rdi
+; CHECK-NEXT:    subq %rax, %r9
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl $-2, %edx
-; CHECK-NEXT:    cmovneq %rax, %rdi
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    cmovnsq %rax, %rdi
+; CHECK-NEXT:    cmovneq %rax, %r9
+; CHECK-NEXT:    testl %r8d, %r8d
+; CHECK-NEXT:    cmovnsq %rax, %r9
 ; CHECK-NEXT:    movq (%rcx), %rax
-; CHECK-NEXT:    subq %rdi, %rsi
-; CHECK-NEXT:    leaq -2138875574(%rax,%rsi), %rax
+; CHECK-NEXT:    subq %r9, %r8
+; CHECK-NEXT:    leaq -2138875574(%rax,%r8), %rax
 ; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    movl $0, (%rdi)
+; CHECK-NEXT:    movl $0, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
   %tmp103 = getelementptr inbounds [40 x i16], ptr %a, i64 0, i64 4
@@ -77,5 +79,15 @@ entry:
   %alphaXbetaY = add i64 %alphaX, %tmp115
   %transformed = add i64 %alphaXbetaY, 9040145182981852475
   store i64 %transformed, ptr %d, align 8
+  %tmp200 = zext i16 undef to i32
+  %tmp201 = zext i16 undef to i32
+  %tmp202 = shl i32 %tmp201, 16
+  %tmp203 = or i32 %tmp200, %tmp202
+  store i32 %tmp203, ptr %a, align 4
+  %tmp210 = sext i16 undef to i32
+  %tmp211 = sext i16 undef to i32
+  %tmp212 = shl i32 %tmp211, 16
+  %tmp213 = or i32 %tmp210, %tmp212
+  store i32 %tmp213, ptr %b, align 4
   ret void
 }
