@@ -18838,14 +18838,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *OpMax = EmitScalarExpr(E->getArg(2));
 
     QualType Ty = E->getArg(0)->getType();
-    bool IsUnsigned = false;
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
-    IsUnsigned = Ty->isUnsignedIntegerType();
+
+    Intrinsic::ID Intr;
+    if (Ty->isFloatingType()) {
+      Intr = CGM.getHLSLRuntime().getNClampIntrinsic();
+    } else if (Ty->isUnsignedIntegerType()) {
+      Intr = CGM.getHLSLRuntime().getUClampIntrinsic();
+    } else {
+      assert(Ty->isSignedIntegerType());
+      Intr = CGM.getHLSLRuntime().getSClampIntrinsic();
+    }
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/OpX->getType(),
-        IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
-        ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
+        /*ReturnType=*/OpX->getType(), Intr,
+        ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "hlsl.clamp");
   }
   case Builtin::BI__builtin_hlsl_cross: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

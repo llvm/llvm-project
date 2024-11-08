@@ -2773,6 +2773,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   } break;
   case Intrinsic::spv_saturate:
     return selectSaturate(ResVReg, ResType, I);
+  case Intrinsic::spv_nclamp:
+    return selectExtInst(ResVReg, ResType, I, CL::fclamp, GL::NClamp);
+  case Intrinsic::spv_uclamp:
+    return selectExtInst(ResVReg, ResType, I, CL::u_clamp, GL::UClamp);
+  case Intrinsic::spv_sclamp:
+    return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_is_first_lane: {

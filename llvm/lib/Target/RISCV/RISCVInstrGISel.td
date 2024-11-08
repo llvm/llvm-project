@@ -49,6 +49,22 @@ def G_CTZW : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_CTZW, riscv_ctzw>;
 
+// Pseudo equivalent to a RISCVISD::FCVT_W_RV64.
+def G_FCVT_W_RV64 : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$frm);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_FCVT_W_RV64, riscv_fcvt_w_rv64>;
+
+// Pseudo equivalent to a RISCVISD::FCVT_WU_RV64.
+def G_FCVT_WU_RV64 : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$frm);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_FCVT_WU_RV64, riscv_fcvt_wu_rv64>;
+
 // Pseudo equivalent to a RISCVISD::FCLASS.
 def G_FCLASS : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
