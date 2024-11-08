@@ -1100,15 +1100,15 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
     ValueReg = TmpReg;
   }
 
-  Result &= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
-                .addDef(ResVReg)
-                .addUse(GR.getSPIRVTypeID(ResType))
-                .addUse(Ptr)
-                .addUse(ScopeReg)
-                .addUse(MemSemReg)
-                .addUse(ValueReg)
-                .constrainAllUses(TII, TRI, RBI);
-  return Result;
+  return Result &&
+         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
+             .addDef(ResVReg)
+             .addUse(GR.getSPIRVTypeID(ResType))
+             .addUse(Ptr)
+             .addUse(ScopeReg)
+             .addUse(MemSemReg)
+             .addUse(ValueReg)
+             .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
@@ -1222,13 +1222,12 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
     Result &= MIB.constrainAllUses(TII, TRI, RBI);
   }
   // Build boolean value from the higher part.
-  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
-                .addDef(I.getOperand(1).getReg())
-                .addUse(BoolTypeReg)
-                .addUse(HigherVReg)
-                .addUse(ZeroReg)
-                .constrainAllUses(TII, TRI, RBI);
-  return Result;
+  return Result && BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
+                       .addDef(I.getOperand(1).getReg())
+                       .addUse(BoolTypeReg)
+                       .addUse(HigherVReg)
+                       .addUse(ZeroReg)
+                       .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
@@ -1302,14 +1301,14 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
                 .addUse(GR.getOrCreateUndef(I, ResType, TII))
                 .addImm(0)
                 .constrainAllUses(TII, TRI, RBI);
-  Result &= BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpCompositeInsert))
-                .addDef(ResVReg)
-                .addUse(GR.getSPIRVTypeID(ResType))
-                .addUse(CmpSuccReg)
-                .addUse(TmpReg)
-                .addImm(1)
-                .constrainAllUses(TII, TRI, RBI);
-  return Result;
+  return Result &&
+         BuildMI(*I.getParent(), I, DL, TII.get(SPIRV::OpCompositeInsert))
+             .addDef(ResVReg)
+             .addUse(GR.getSPIRVTypeID(ResType))
+             .addUse(CmpSuccReg)
+             .addUse(TmpReg)
+             .addImm(1)
+             .constrainAllUses(TII, TRI, RBI);
 }
 
 static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
@@ -1787,14 +1786,12 @@ bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                     .addUse(I.getOperand(3).getReg())
                     .constrainAllUses(TII, TRI, RBI);
 
-  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
-                .addDef(ResVReg)
-                .addUse(GR.getSPIRVTypeID(ResType))
-                .addUse(Dot)
-                .addUse(I.getOperand(4).getReg())
-                .constrainAllUses(TII, TRI, RBI);
-
-  return Result;
+  return Result && BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+                       .addDef(ResVReg)
+                       .addUse(GR.getSPIRVTypeID(ResType))
+                       .addUse(Dot)
+                       .addUse(I.getOperand(4).getReg())
+                       .constrainAllUses(TII, TRI, RBI);
 }
 
 // Since pre-1.6 SPIRV has no DotProductInput4x8BitPacked implementation,
@@ -3277,14 +3274,12 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
                     ? SPIRV::OpVectorTimesScalar
                     : SPIRV::OpFMulS;
-  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-                .addDef(ResVReg)
-                .addUse(GR.getSPIRVTypeID(ResType))
-                .addUse(VarReg)
-                .addUse(ScaleReg)
-                .constrainAllUses(TII, TRI, RBI);
-
-  return Result;
+  return Result && BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                       .addDef(ResVReg)
+                       .addUse(GR.getSPIRVTypeID(ResType))
+                       .addUse(VarReg)
+                       .addUse(ScaleReg)
+                       .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
