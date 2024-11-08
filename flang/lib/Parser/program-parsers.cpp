@@ -474,7 +474,7 @@ TYPE_CONTEXT_PARSER("function reference"_en_US,
 
 // R1521 call-stmt -> CALL procedure-designator [chevrons]
 ///                          [( [actual-arg-spec-list] )]
-// (CUDA) chevrons -> <<< * | scalar-expr, * | scalar-expr [, scalar-int-expr
+// (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [, scalar-int-expr
 //                      [, scalar-int-expr ] ] >>>
 constexpr auto starOrExpr{
     construct<CallStmt::StarOrExpr>("*" >> pure<std::optional<ScalarExpr>>() ||
