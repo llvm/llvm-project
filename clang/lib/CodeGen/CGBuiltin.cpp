@@ -5174,6 +5174,135 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.SetInsertPoint(ContBB);
     return RValue::get(nullptr);
   }
+  case Builtin::BI__scoped_atomic_thread_fence: {
+    auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+
+    Value *Order = EmitScalarExpr(E->getArg(0));
+    Value *Scope = EmitScalarExpr(E->getArg(1));
+    if (isa<llvm::ConstantInt>(Order) && isa<llvm::ConstantInt>(Scope)) {
+      int Ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+      int Scp = cast<llvm::ConstantInt>(Scope)->getZExtValue();
+      SyncScope SS = ScopeModel->isValid(Scp)
+                         ? ScopeModel->map(Scp)
+                         : ScopeModel->map(ScopeModel->getFallBackValue());
+      switch (Ord) {
+      case 0:  // memory_order_relaxed
+      default: // invalid order
+        break;
+      case 1: // memory_order_consume
+      case 2: // memory_order_acquire
+        Builder.CreateFence(
+            llvm::AtomicOrdering::Acquire,
+            getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
+                                                llvm::AtomicOrdering::Acquire,
+                                                getLLVMContext()));
+        break;
+      case 3: // memory_order_release
+        Builder.CreateFence(
+            llvm::AtomicOrdering::Release,
+            getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
+                                                llvm::AtomicOrdering::Release,
+                                                getLLVMContext()));
+        break;
+      case 4: // memory_order_acq_rel
+        Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease,
+                            getTargetHooks().getLLVMSyncScopeID(
+                                getLangOpts(), SS,
+                                llvm::AtomicOrdering::AcquireRelease,
+                                getLLVMContext()));
+        break;
+      case 5: // memory_order_seq_cst
+        Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                            getTargetHooks().getLLVMSyncScopeID(
+                                getLangOpts(), SS,
+                                llvm::AtomicOrdering::SequentiallyConsistent,
+                                getLLVMContext()));
+        break;
+      }
+      return RValue::get(nullptr);
+    }
+
+    llvm::BasicBlock *ContBB = createBasicBlock("atomic.scope.continue", CurFn);
+
+    llvm::DenseMap<llvm::BasicBlock *, llvm::AtomicOrdering> OrderBBs;
+    if (isa<llvm::ConstantInt>(Order)) {
+      int Ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+      switch (Ord) {
+      case 0:  // memory_order_relaxed
+      default: // invalid order
+        ContBB->eraseFromParent();
+        return RValue::get(nullptr);
+      case 1: // memory_order_consume
+      case 2: // memory_order_acquire
+        OrderBBs[Builder.GetInsertBlock()] = llvm::AtomicOrdering::Acquire;
+        break;
+      case 3: // memory_order_release
+        OrderBBs[Builder.GetInsertBlock()] = llvm::AtomicOrdering::Release;
+        break;
+      case 4: // memory_order_acq_rel
+        OrderBBs[Builder.GetInsertBlock()] =
+            llvm::AtomicOrdering::AcquireRelease;
+        break;
+      case 5: // memory_order_seq_cst
+        OrderBBs[Builder.GetInsertBlock()] =
+            llvm::AtomicOrdering::SequentiallyConsistent;
+        break;
+      }
+    } else {
+      llvm::BasicBlock *AcquireBB, *ReleaseBB, *AcqRelBB, *SeqCstBB;
+      AcquireBB = createBasicBlock("acquire", CurFn);
+      ReleaseBB = createBasicBlock("release", CurFn);
+      AcqRelBB = createBasicBlock("acqrel", CurFn);
+      SeqCstBB = createBasicBlock("seqcst", CurFn);
+
+      Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
+      llvm::SwitchInst *SI = Builder.CreateSwitch(Order, ContBB);
+      SI->addCase(Builder.getInt32(1), AcquireBB);
+      SI->addCase(Builder.getInt32(2), AcquireBB);
+      SI->addCase(Builder.getInt32(3), ReleaseBB);
+      SI->addCase(Builder.getInt32(4), AcqRelBB);
+      SI->addCase(Builder.getInt32(5), SeqCstBB);
+
+      OrderBBs[AcquireBB] = llvm::AtomicOrdering::Acquire;
+      OrderBBs[ReleaseBB] = llvm::AtomicOrdering::Release;
+      OrderBBs[AcqRelBB] = llvm::AtomicOrdering::AcquireRelease;
+      OrderBBs[SeqCstBB] = llvm::AtomicOrdering::SequentiallyConsistent;
+    }
+
+    for (auto &[OrderBB, Ordering] : OrderBBs) {
+      Builder.SetInsertPoint(OrderBB);
+      if (isa<llvm::ConstantInt>(Scope)) {
+        int Scp = cast<llvm::ConstantInt>(Scope)->getZExtValue();
+        SyncScope SS = ScopeModel->isValid(Scp)
+                           ? ScopeModel->map(Scp)
+                           : ScopeModel->map(ScopeModel->getFallBackValue());
+        Builder.CreateFence(Ordering,
+                            getTargetHooks().getLLVMSyncScopeID(
+                                getLangOpts(), SS, Ordering, getLLVMContext()));
+        Builder.CreateBr(ContBB);
+      } else {
+        llvm::DenseMap<unsigned, llvm::BasicBlock *> BBs;
+        for (unsigned Scp : ScopeModel->getRuntimeValues())
+          BBs[Scp] = createBasicBlock(getAsString(ScopeModel->map(Scp)), CurFn);
+
+        auto *SC = Builder.CreateIntCast(Scope, Builder.getInt32Ty(), false);
+        llvm::SwitchInst *SI = Builder.CreateSwitch(SC, ContBB);
+        for (unsigned Scp : ScopeModel->getRuntimeValues()) {
+          auto *B = BBs[Scp];
+          SI->addCase(Builder.getInt32(Scp), B);
+
+          Builder.SetInsertPoint(B);
+          Builder.CreateFence(Ordering, getTargetHooks().getLLVMSyncScopeID(
+                                            getLangOpts(), ScopeModel->map(Scp),
+                                            Ordering, getLLVMContext()));
+          Builder.CreateBr(ContBB);
+        }
+      }
+    }
+
+    Builder.SetInsertPoint(ContBB);
+    return RValue::get(nullptr);
+  }
 
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
