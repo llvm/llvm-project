@@ -795,6 +795,53 @@ struct AllocMatchInfo {
   bool Matched = false;
 };
 
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
+memprof::extractCallsFromIR(Module &M) {
+  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
+
+  auto GetOffset = [](const DILocation *DIL) {
+    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+           0xffff;
+  };
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        const DILocation *DIL = I.getDebugLoc();
+        if (!DIL)
+          continue;
+
+        if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
+          continue;
+
+        auto *CB = dyn_cast<CallBase>(&I);
+        auto *CalledFunction = CB->getCalledFunction();
+        // Disregard indirect calls and intrinsics.
+        if (!CalledFunction || CalledFunction->isIntrinsic())
+          continue;
+
+        StringRef CalleeName = CalledFunction->getName();
+        uint64_t CallerGUID =
+            IndexedMemProfRecord::getGUID(DIL->getSubprogramLinkageName());
+        uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+        LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
+        Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+      }
+    }
+  }
+
+  // Sort each call list by the source location.
+  for (auto &[CallerGUID, CallList] : Calls) {
+    llvm::sort(CallList);
+    CallList.erase(llvm::unique(CallList), CallList.end());
+  }
+
+  return Calls;
+}
+
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
