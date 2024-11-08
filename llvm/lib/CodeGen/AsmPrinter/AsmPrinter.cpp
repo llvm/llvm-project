@@ -1425,8 +1425,15 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   }
   dbgs() << "getBBAddrMapFeature::SkipEmitBBEntries: " << SkipEmitBBEntries
          << "\n";
-  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
-          MF.hasBBSections() && NumMBBSectionRanges > 1, SkipEmitBBEntries};
+  llvm::object::BBAddrMap::Features F1 = {true, false, false, false, true};
+  dbgs() << "F1.NoBBEntries: " << F1.NoBBEntries << "\n";
+  llvm::object::BBAddrMap::Features F2 =
+      llvm::object::BBAddrMap::Features{true, false, false, false, true};
+  dbgs() << "F2.NoBBEntries: " << F2.NoBBEntries << "\n";
+
+  return llvm::object::BBAddrMap::Features{
+      FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+      MF.hasBBSections() && NumMBBSectionRanges > 1, SkipEmitBBEntries};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
