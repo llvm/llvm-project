@@ -73,6 +73,7 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
 }
 def OMPC_Bind : Clause<"bind"> {
   let clangClass = "OMPBindClause";
+  let flangClass = "OmpBindClause";
 }
 def OMP_CANCELLATION_CONSTRUCT_Parallel : ClauseVal<"parallel", 1, 1> {}
 def OMP_CANCELLATION_CONSTRUCT_Loop : ClauseVal<"loop", 2, 1> {}
