@@ -284,8 +284,26 @@ static std::complex<HostT> StdPowF2B(
 #endif
 
 extern "C" {
+float _Complex cacosf(float _Complex);
+double _Complex cacos(double _Complex);
 float _Complex csqrtf(float _Complex);
 double _Complex csqrt(double _Complex);
+}
+
+enum CRI { Real, Imag };
+template <typename TR, typename TA> static TR &reIm(TA &x, CRI n) {
+  return reinterpret_cast<TR(&)[2]>(x)[n];
+}
+template <typename TR, typename T> static TR CppToC(const std::complex<T> &x) {
+  TR r;
+  reIm<T, TR>(r, CRI::Real) = x.real();
+  reIm<T, TR>(r, CRI::Imag) = x.imag();
+  return r;
+}
+template <typename T, typename TA> static std::complex<T> CToCpp(const TA &x) {
+  TA &z{const_cast<TA&>(x)};
+  return std::complex<T>(reIm<T, TA>(z, CRI::Real),
+                         reIm<T, TA>(z, CRI::Imag));
 }
 #endif
 
@@ -296,24 +314,37 @@ static std::complex<HostT> CSqrt(const std::complex<HostT> &x) {
   // On AIX, the implementation of csqrt[f] and std::sqrt is different,
   // use csqrt[f] in folding.
   if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex c;
-    reinterpret_cast<HostT(&)[2]>(c)[0] = x.real();
-    reinterpret_cast<HostT(&)[2]>(c)[1] = x.imag();
-    float _Complex r{csqrtf(c)};
-    res.real(reinterpret_cast<HostT(&)[2]>(r)[0]);
-    res.imag(reinterpret_cast<HostT(&)[2]>(r)[1]);
+    float _Complex r{csqrtf(CppToC<float _Complex, float>(x))};
+    res = CToCpp<float, float _Complex>(r);
   } else if constexpr (std::is_same_v<HostT, double>) {
-    double _Complex c;
-    reinterpret_cast<HostT(&)[2]>(c)[0] = x.real();
-    reinterpret_cast<HostT(&)[2]>(c)[1] = x.imag();
-    double _Complex r{csqrt(c)};
-    res.real(reinterpret_cast<HostT(&)[2]>(r)[0]);
-    res.imag(reinterpret_cast<HostT(&)[2]>(r)[1]);
+    double _Complex r{csqrt(CppToC<double _Complex, double>(x))};
+    res = CToCpp<double, double _Complex>(r);
   } else {
     DIE("bad complex component type");
   }
 #else
   res = std::sqrt(x);
+#endif
+  return res;
+}
+
+template <typename HostT>
+static std::complex<HostT> CAcos(const std::complex<HostT> &x) {
+  std::complex<HostT> res;
+#ifdef _AIX
+  // On AIX, the implementation of cacos[f] and std::acos is different,
+  // use cacos[f] in folding.
+  if constexpr (std::is_same_v<HostT, float>) {
+    float _Complex r{cacosf(CppToC<float _Complex, float>(x))};
+    res = CToCpp<float, float _Complex>(r);
+  } else if constexpr (std::is_same_v<HostT, double>) {
+    double _Complex r{cacos(CppToC<double _Complex, double>(x))};
+    res = CToCpp<double, double _Complex>(r);
+  } else {
+    DIE("bad complex component type");
+  }
+#else
+  res = std::acos(x);
 #endif
   return res;
 }
@@ -328,7 +359,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   using F2B = FuncPointer<std::complex<HostT>, const std::complex<HostT> &,
       const HostT &>;
   static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{std::acos}>::Create("acos"),
+      FolderFactory<F, F{CAcos}>::Create("acos"),
       FolderFactory<F, F{std::acosh}>::Create("acosh"),
       FolderFactory<F, F{std::asin}>::Create("asin"),
       FolderFactory<F, F{std::asinh}>::Create("asinh"),
