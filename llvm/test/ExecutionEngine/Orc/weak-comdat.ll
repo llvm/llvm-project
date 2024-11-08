@@ -1,5 +1,5 @@
 ; RUN: lli -extra-module %p/Inputs/weak-comdat-def.ll %s
-; UNSUPPORTED: target={{.*}}-darwin{{.*}}
+; UNSUPPORTED: system-darwin
 
 declare i32 @g()
 

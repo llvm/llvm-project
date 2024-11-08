@@ -5,7 +5,7 @@
 // compiler. Certain LLVM IR optimisation passes will perform runtime breaking 
 // transformations on allocations not found to be in the entry block, current
 // OpenMP dialect lowering of TargetOp's will inject user allocations after
-// compiler generated entry code, in a seperate block, this test checks that
+// compiler generated entry code, in a separate block, this test checks that
 // a small function which attempts to raise some of these (specifically 
 // constant sized) allocations performs its task reasonably in these 
 // scenarios. 
@@ -16,7 +16,6 @@ module attributes {omp.is_target_device = true} {
     %2 = llvm.alloca %1 x !llvm.struct<(ptr)> : (i64) -> !llvm.ptr
     %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.struct<(ptr)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr):
       %4 = llvm.mlir.constant(1 : i32) : i32
       %5 = llvm.alloca %4 x !llvm.struct<(ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
       %6 = llvm.mlir.constant(50 : i32) : i32

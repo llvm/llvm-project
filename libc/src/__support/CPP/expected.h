@@ -9,7 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
 
-namespace LIBC_NAMESPACE::cpp {
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // This is used to hold an unexpected value so that a different constructor is
 // selected.
@@ -17,9 +21,11 @@ template <class T> class unexpected {
   T value;
 
 public:
-  constexpr explicit unexpected(T value) : value(value) {}
-  constexpr T error() { return value; }
+  LIBC_INLINE constexpr explicit unexpected(T value) : value(value) {}
+  LIBC_INLINE constexpr T error() { return value; }
 };
+
+template <class T> explicit unexpected(T) -> unexpected<T>;
 
 template <class T, class E> class expected {
   union {
@@ -29,25 +35,26 @@ template <class T, class E> class expected {
   bool is_expected;
 
 public:
-  constexpr expected(T exp) : exp(exp), is_expected(true) {}
-  constexpr expected(unexpected<E> unexp)
+  LIBC_INLINE constexpr expected(T exp) : exp(exp), is_expected(true) {}
+  LIBC_INLINE constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}
 
-  constexpr bool has_value() const { return is_expected; }
+  LIBC_INLINE constexpr bool has_value() const { return is_expected; }
 
-  constexpr T &value() { return exp; }
-  constexpr E &error() { return unexp; }
-  constexpr const T &value() const { return exp; }
-  constexpr const E &error() const { return unexp; }
+  LIBC_INLINE constexpr T &value() { return exp; }
+  LIBC_INLINE constexpr E &error() { return unexp; }
+  LIBC_INLINE constexpr const T &value() const { return exp; }
+  LIBC_INLINE constexpr const E &error() const { return unexp; }
 
-  constexpr operator bool() const { return is_expected; }
+  LIBC_INLINE constexpr operator bool() const { return is_expected; }
 
-  constexpr T &operator*() { return exp; }
-  constexpr const T &operator*() const { return exp; }
-  constexpr T *operator->() { return &exp; }
-  constexpr const T *operator->() const { return &exp; }
+  LIBC_INLINE constexpr T &operator*() { return exp; }
+  LIBC_INLINE constexpr const T &operator*() const { return exp; }
+  LIBC_INLINE constexpr T *operator->() { return &exp; }
+  LIBC_INLINE constexpr const T *operator->() const { return &exp; }
 };
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H

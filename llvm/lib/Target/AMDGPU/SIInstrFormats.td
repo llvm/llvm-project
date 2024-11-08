@@ -12,7 +12,7 @@
 
 class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
-  AMDGPUInst<outs, ins, asm, pattern>, GCNPredicateControl {
+  AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
   // Low bits - basic encoding information.
   field bit SALU = 0;
   field bit VALU = 0;
@@ -83,10 +83,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // Is it possible for this instruction to be atomic?
   field bit maybeAtomic = 1;
-
-  // This bit indicates that this is a VI instruction which is renamed
-  // in GFX9. Required for correct mapping from pseudo to MC.
-  field bit renamedInGFX9 = 0;
 
   // This bit indicates that this has a floating point result type, so
   // the clamp modifier has floating point semantics.
@@ -214,7 +210,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
-  let TSFlags{44} = renamedInGFX9;
+
+  // Reserved, must be 0.
+  let TSFlags{44} = 0;
 
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;
@@ -319,6 +317,12 @@ def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
 def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+}
+
+// Source-encoded destination operand for instructions like v_swap_b16.
+def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+  let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
+  let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
 }
 
 class VINTRPe <bits<2> op> : Enc32 {

@@ -393,6 +393,7 @@ declare half @llvm.sqrt.f16(half %a) #0
 declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
+declare half @llvm.tan.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
 declare half @llvm.exp.f16(half %a) #0
 declare half @llvm.exp2.f16(half %a) #0
@@ -468,6 +469,21 @@ define void @test_sin(ptr %p) #0 {
 define void @test_cos(ptr %p) #0 {
   %a = load half, ptr %p, align 2
   %r = call half @llvm.cos.f16(half %a)
+  store half %r, ptr %p
+  ret void
+}
+
+; CHECK-FP16-LABEL: test_tan:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: bl tanf
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL-LABEL: test_tan:
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl tanf
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_tan(ptr %p) #0 {
+  %a = load half, ptr %p, align 2
+  %r = call half @llvm.tan.f16(half %a)
   store half %r, ptr %p
   ret void
 }

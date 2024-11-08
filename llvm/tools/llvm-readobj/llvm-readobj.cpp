@@ -134,7 +134,6 @@ static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
-bool RawRelr;
 static bool SectionGroups;
 static bool VersionInfo;
 
@@ -273,7 +272,6 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Notes = Args.hasArg(OPT_notes);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
-  opts::RawRelr = Args.hasArg(OPT_raw_relr);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
     std::string SortKeysString = A->getValue();
@@ -582,6 +580,22 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
   }
 }
 
+/// Dumps \a COFF file;
+static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
+  dumpObject(*Obj, Writer);
+
+  // Dump a hybrid object when available.
+  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
+  if (!HybridView)
+    return;
+  Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
+      COFFObjectFile::create(*HybridView);
+  if (!HybridObjOrErr)
+    reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
+  DictScope D(Writer, "HybridObject");
+  dumpObject(**HybridObjOrErr, Writer);
+}
+
 /// Dumps \a WinRes, Windows Resource (.res) file;
 static void dumpWindowsResourceFile(WindowsResource *WinRes,
                                     ScopedPrinter &Printer) {
@@ -619,6 +633,8 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (MachOUniversalBinary *UBinary =
                dyn_cast<MachOUniversalBinary>(Bin.get()))
     dumpMachOUniversalBinary(UBinary, Writer);
+  else if (COFFObjectFile *Obj = dyn_cast<COFFObjectFile>(Bin.get()))
+    dumpCOFFObject(Obj, Writer);
   else if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin.get()))
     dumpObject(*Obj, Writer);
   else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(Bin.get()))
@@ -702,14 +718,14 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
   std::unique_ptr<ScopedPrinter> Writer = createWriter();
 
   for (const std::string &I : opts::InputFilenames)
-    dumpInput(I, *Writer.get());
+    dumpInput(I, *Writer);
 
   if (opts::CodeViewMergedTypes) {
     if (opts::CodeViewEnableGHash)
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.GlobalIDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.GlobalIDTable.records(),
                               CVTypes.GlobalTypeTable.records());
     else
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.IDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.IDTable.records(),
                               CVTypes.TypeTable.records());
   }
 

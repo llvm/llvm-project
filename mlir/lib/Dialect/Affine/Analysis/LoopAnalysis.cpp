@@ -18,17 +18,20 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
 #include <type_traits>
 
 using namespace mlir;
 using namespace mlir::affine;
+
+#define DEBUG_TYPE "affine-loop-analysis"
 
 /// Returns the trip count of the loop as an affine expression if the latter is
 /// expressible as an affine expression, and nullptr otherwise. The trip count
@@ -47,7 +50,8 @@ void mlir::affine::getTripCountMapAndOperands(
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
+    *tripCountMap = AffineMap::getConstantMap(
+        llvm::divideCeilSigned(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }
@@ -387,5 +391,60 @@ bool mlir::affine::isOpwiseShiftValid(AffineForOp forOp,
       }
     }
   }
+  return true;
+}
+
+bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
+  assert(!loops.empty() && "no original loops provided");
+
+  // We first find out all dependences we intend to check.
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  loops[0]->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
+  });
+
+  unsigned numOps = loadAndStoreOps.size();
+  unsigned numLoops = loops.size();
+  for (unsigned d = 1; d <= numLoops + 1; ++d) {
+    for (unsigned i = 0; i < numOps; ++i) {
+      Operation *srcOp = loadAndStoreOps[i];
+      MemRefAccess srcAccess(srcOp);
+      for (unsigned j = 0; j < numOps; ++j) {
+        Operation *dstOp = loadAndStoreOps[j];
+        MemRefAccess dstAccess(dstOp);
+
+        SmallVector<DependenceComponent, 2> depComps;
+        DependenceResult result = checkMemrefAccessDependence(
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
+            &depComps);
+
+        // Skip if there is no dependence in this case.
+        if (!hasDependence(result))
+          continue;
+
+        // Check whether there is any negative direction vector in the
+        // dependence components found above, which means that dependence is
+        // violated by the default hyper-rect tiling method.
+        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
+                                   "for dependence at depth: "
+                                << Twine(d) << " between:\n";);
+        LLVM_DEBUG(srcAccess.opInst->dump());
+        LLVM_DEBUG(dstAccess.opInst->dump());
+        for (const DependenceComponent &depComp : depComps) {
+          if (depComp.lb.has_value() && depComp.ub.has_value() &&
+              *depComp.lb < *depComp.ub && *depComp.ub < 0) {
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Dependence component lb = " << Twine(*depComp.lb)
+                       << " ub = " << Twine(*depComp.ub)
+                       << " is negative  at depth: " << Twine(d)
+                       << " and thus violates the legality rule.\n");
+            return false;
+          }
+        }
+      }
+    }
+  }
+
   return true;
 }

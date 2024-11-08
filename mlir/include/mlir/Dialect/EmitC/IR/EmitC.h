@@ -31,6 +31,9 @@ namespace mlir {
 namespace emitc {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 
+/// Determines whether \p type is valid in EmitC.
+bool isSupportedEmitCType(mlir::Type type);
+
 /// Determines whether \p type is a valid integer type in EmitC.
 bool isSupportedIntegerType(mlir::Type type);
 
@@ -40,6 +43,10 @@ bool isIntegerIndexOrOpaqueType(Type type);
 
 /// Determines whether \p type is a valid floating-point type in EmitC.
 bool isSupportedFloatType(mlir::Type type);
+
+/// Determines whether \p type is a emitc.size_t/ssize_t type.
+bool isPointerWideType(mlir::Type type);
+
 } // namespace emitc
 } // namespace mlir
 

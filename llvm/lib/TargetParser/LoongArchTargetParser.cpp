@@ -44,6 +44,19 @@ bool LoongArch::getArchFeatures(StringRef Arch,
       return true;
     }
   }
+
+  if (Arch == "la64v1.0" || Arch == "la64v1.1") {
+    Features.push_back("+64bit");
+    Features.push_back("+d");
+    Features.push_back("+lsx");
+    Features.push_back("+ual");
+    if (Arch == "la64v1.1") {
+      Features.push_back("+frecipe");
+      Features.push_back("+lam-bh");
+    }
+    return true;
+  }
+
   return false;
 }
 

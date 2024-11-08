@@ -55,16 +55,16 @@ NestedNameSpecifier::FindOrInsert(const ASTContext &Context,
   return NNS;
 }
 
-NestedNameSpecifier *
-NestedNameSpecifier::Create(const ASTContext &Context,
-                            NestedNameSpecifier *Prefix, IdentifierInfo *II) {
+NestedNameSpecifier *NestedNameSpecifier::Create(const ASTContext &Context,
+                                                 NestedNameSpecifier *Prefix,
+                                                 const IdentifierInfo *II) {
   assert(II && "Identifier cannot be NULL");
   assert((!Prefix || Prefix->isDependent()) && "Prefix must be dependent");
 
   NestedNameSpecifier Mockup;
   Mockup.Prefix.setPointer(Prefix);
   Mockup.Prefix.setInt(StoredIdentifier);
-  Mockup.Specifier = II;
+  Mockup.Specifier = const_cast<IdentifierInfo *>(II);
   return FindOrInsert(Context, Mockup);
 }
 
@@ -87,7 +87,7 @@ NestedNameSpecifier::Create(const ASTContext &Context,
 NestedNameSpecifier *
 NestedNameSpecifier::Create(const ASTContext &Context,
                             NestedNameSpecifier *Prefix,
-                            NamespaceAliasDecl *Alias) {
+                            const NamespaceAliasDecl *Alias) {
   assert(Alias && "Namespace alias cannot be NULL");
   assert((!Prefix ||
           (Prefix->getAsType() == nullptr &&
@@ -96,7 +96,7 @@ NestedNameSpecifier::Create(const ASTContext &Context,
   NestedNameSpecifier Mockup;
   Mockup.Prefix.setPointer(Prefix);
   Mockup.Prefix.setInt(StoredDecl);
-  Mockup.Specifier = Alias;
+  Mockup.Specifier = const_cast<NamespaceAliasDecl *>(Alias);
   return FindOrInsert(Context, Mockup);
 }
 
@@ -112,13 +112,13 @@ NestedNameSpecifier::Create(const ASTContext &Context,
   return FindOrInsert(Context, Mockup);
 }
 
-NestedNameSpecifier *
-NestedNameSpecifier::Create(const ASTContext &Context, IdentifierInfo *II) {
+NestedNameSpecifier *NestedNameSpecifier::Create(const ASTContext &Context,
+                                                 const IdentifierInfo *II) {
   assert(II && "Identifier cannot be NULL");
   NestedNameSpecifier Mockup;
   Mockup.Prefix.setPointer(nullptr);
   Mockup.Prefix.setInt(StoredIdentifier);
-  Mockup.Specifier = II;
+  Mockup.Specifier = const_cast<IdentifierInfo *>(II);
   return FindOrInsert(Context, Mockup);
 }
 

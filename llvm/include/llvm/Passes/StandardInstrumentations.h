@@ -18,7 +18,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -33,6 +36,7 @@ namespace llvm {
 
 class Module;
 class Function;
+class MachineFunction;
 class PassInstrumentationCallbacks;
 
 /// Instrumentation to print IR before/after passes.
@@ -64,8 +68,11 @@ private:
 
   bool shouldPrintBeforePass(StringRef PassID);
   bool shouldPrintAfterPass(StringRef PassID);
+  bool shouldPrintBeforeCurrentPassNumber();
+  bool shouldPrintAfterCurrentPassNumber();
   bool shouldPrintPassNumbers();
-  bool shouldPrintBeforePassNumber();
+  bool shouldPrintBeforeSomePassNumber();
+  bool shouldPrintAfterSomePassNumber();
 
   void pushPassRunDescriptor(StringRef PassID, Any IR,
                              std::string &DumpIRFilename);
@@ -165,7 +172,7 @@ public:
                     FunctionAnalysisManager::Invalidator &);
   };
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<StringRef, 8> PassStack;
 #endif
 
@@ -313,6 +320,11 @@ public:
     B.print(SS, nullptr, true, true);
   }
 
+  BlockDataT(const MachineBasicBlock &B) : Label(B.getName().str()), Data(B) {
+    raw_string_ostream SS(Body);
+    B.print(SS);
+  }
+
   bool operator==(const BlockDataT &That) const { return Body == That.Body; }
   bool operator!=(const BlockDataT &That) const { return Body != That.Body; }
 
@@ -364,6 +376,7 @@ protected:
 class EmptyData {
 public:
   EmptyData(const BasicBlock &) {}
+  EmptyData(const MachineBasicBlock &) {}
 };
 
 // The data saved for comparing functions.
@@ -405,7 +418,8 @@ public:
 
 protected:
   // Generate the data for \p F into \p Data.
-  static bool generateFunctionData(IRDataT<T> &Data, const Function &F);
+  template <typename FunctionT>
+  static bool generateFunctionData(IRDataT<T> &Data, const FunctionT &F);
 
   const IRDataT<T> &Before;
   const IRDataT<T> &After;
@@ -448,7 +462,8 @@ class VerifyInstrumentation {
 
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                         ModuleAnalysisManager *MAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.
@@ -475,6 +490,7 @@ class DCData {
 public:
   // Fill the map with the transitions from basic block \p B.
   DCData(const BasicBlock &B);
+  DCData(const MachineBasicBlock &B);
 
   // Return an iterator to the names of the successor blocks.
   StringMap<std::string>::const_iterator begin() const {
@@ -563,6 +579,83 @@ private:
   static void SignalHandler(void *);
 };
 
+/// A class to collect and print dropped debug information variable statistics.
+/// After every LLVM IR pass is run, it will print how many #dbg_values were
+/// dropped due to that pass.
+class DroppedVariableStats {
+public:
+  DroppedVariableStats(bool DroppedVarStatsEnabled) {
+    if (DroppedVarStatsEnabled)
+      llvm::outs()
+          << "Pass Level, Pass Name, Num of Dropped Variables, Func or "
+             "Module Name\n";
+  };
+  // We intend this to be unique per-compilation, thus no copies.
+  DroppedVariableStats(const DroppedVariableStats &) = delete;
+  void operator=(const DroppedVariableStats &) = delete;
+
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  void runBeforePass(StringRef PassID, Any IR);
+  void runAfterPass(StringRef PassID, Any IR, const PreservedAnalyses &PA);
+  void runAfterPassInvalidated(StringRef PassID, const PreservedAnalyses &PA);
+  bool getPassDroppedVariables() { return PassDroppedVariables; }
+
+private:
+  bool PassDroppedVariables = false;
+  /// A unique key that represents a #dbg_value.
+  using VarID =
+      std::tuple<const DIScope *, const DIScope *, const DILocalVariable *>;
+
+  struct DebugVariables {
+    /// DenseSet of VarIDs before an optimization pass has run.
+    DenseSet<VarID> DebugVariablesBefore;
+    /// DenseSet of VarIDs after an optimization pass has run.
+    DenseSet<VarID> DebugVariablesAfter;
+  };
+
+  /// A stack of a DenseMap, that maps DebugVariables for every pass to an
+  /// llvm::Function. A stack is used because an optimization pass can call
+  /// other passes.
+  SmallVector<DenseMap<const Function *, DebugVariables>> DebugVariablesStack;
+
+  /// A DenseSet tracking whether a scope was visited before.
+  DenseSet<const DIScope *> VisitedScope;
+  /// A stack of DenseMaps, which map the name of an llvm::Function to a
+  /// DenseMap of VarIDs and their inlinedAt locations before an optimization
+  /// pass has run.
+  SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>> InlinedAts;
+
+  /// Iterate over all Functions in a Module and report any dropped debug
+  /// information. Will call calculateDroppedVarStatsOnFunction on every
+  /// Function.
+  void calculateDroppedVarStatsOnModule(const Module *M, StringRef PassID,
+                                        std::string FuncOrModName,
+                                        std::string PassLevel);
+  /// Iterate over all Instructions in a Function and report any dropped debug
+  /// information.
+  void calculateDroppedVarStatsOnFunction(const Function *F, StringRef PassID,
+                                          std::string FuncOrModName,
+                                          std::string PassLevel);
+  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
+  /// after a pass has run to facilitate dropped variable calculation for an
+  /// llvm::Function.
+  void runOnFunction(const Function *F, bool Before);
+  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
+  /// after a pass has run to facilitate dropped variable calculation for an
+  /// llvm::Module. Calls runOnFunction on every Function in the Module.
+  void runOnModule(const Module *M, bool Before);
+  /// Remove a dropped #dbg_value VarID from all Sets in the
+  /// DroppedVariablesBefore stack.
+  void removeVarFromAllSets(VarID Var, const Function *F);
+  /// Return true if \p Scope is the same as \p DbgValScope or a child scope of
+  /// \p DbgValScope, return false otherwise.
+  bool isScopeChildOfOrEqualTo(DIScope *Scope, const DIScope *DbgValScope);
+  /// Return true if \p InlinedAt is the same as \p DbgValInlinedAt or part of
+  /// the InlinedAt chain, return false otherwise.
+  bool isInlinedAtChildOfOrEqualTo(const DILocation *InlinedAt,
+                                   const DILocation *DbgValInlinedAt);
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -580,6 +673,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
+  DroppedVariableStats DroppedStats;
 
   bool VerifyEach;
 

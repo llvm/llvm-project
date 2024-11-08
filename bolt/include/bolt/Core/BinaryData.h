@@ -107,7 +107,6 @@ public:
   std::vector<MCSymbol *> &getSymbols() { return Symbols; }
 
   bool hasName(StringRef Name) const;
-  bool hasNameRegex(StringRef Name) const;
   bool nameStartsWith(StringRef Prefix) const;
 
   bool hasSymbol(const MCSymbol *Symbol) const {
@@ -227,7 +226,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     Sep = ",\n        ";
     TotalCount += AccessInfo.Count;
   }
-  SS.flush();
 
   OS << TotalCount << " total counts : " << TempString;
   return OS;

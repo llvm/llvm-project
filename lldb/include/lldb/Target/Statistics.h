@@ -9,13 +9,16 @@
 #ifndef LLDB_TARGET_STATISTICS_H
 #define LLDB_TARGET_STATISTICS_H
 
+#include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
 #include <atomic>
 #include <chrono>
+#include <mutex>
 #include <optional>
 #include <ratio>
 #include <string>
@@ -25,6 +28,9 @@ namespace lldb_private {
 
 using StatsClock = std::chrono::high_resolution_clock;
 using StatsTimepoint = std::chrono::time_point<StatsClock>;
+class SummaryStatistics;
+// Declaring here as there is no private forward
+typedef std::shared_ptr<SummaryStatistics> SummaryStatisticsSP;
 
 class StatsDuration {
 public:
@@ -131,8 +137,122 @@ struct ConstStringStats {
 };
 
 struct StatisticsOptions {
-  bool summary_only = false;
-  bool load_all_debug_info = false;
+public:
+  void SetSummaryOnly(bool value) { m_summary_only = value; }
+  bool GetSummaryOnly() const { return m_summary_only.value_or(false); }
+
+  void SetLoadAllDebugInfo(bool value) { m_load_all_debug_info = value; }
+  bool GetLoadAllDebugInfo() const {
+    return m_load_all_debug_info.value_or(false);
+  }
+
+  void SetIncludeTargets(bool value) { m_include_targets = value; }
+  bool GetIncludeTargets() const {
+    if (m_include_targets.has_value())
+      return m_include_targets.value();
+    // Default to true in both default mode and summary mode.
+    return true;
+  }
+
+  void SetIncludeModules(bool value) { m_include_modules = value; }
+  bool GetIncludeModules() const {
+    if (m_include_modules.has_value())
+      return m_include_modules.value();
+    // `m_include_modules` has no value set, so return a value based on
+    // `m_summary_only`.
+    return !GetSummaryOnly();
+  }
+
+  void SetIncludeTranscript(bool value) { m_include_transcript = value; }
+  bool GetIncludeTranscript() const {
+    if (m_include_transcript.has_value())
+      return m_include_transcript.value();
+    // `m_include_transcript` has no value set, so return a value based on
+    // `m_summary_only`.
+    return !GetSummaryOnly();
+  }
+
+private:
+  std::optional<bool> m_summary_only;
+  std::optional<bool> m_load_all_debug_info;
+  std::optional<bool> m_include_targets;
+  std::optional<bool> m_include_modules;
+  std::optional<bool> m_include_transcript;
+};
+
+/// A class that represents statistics about a TypeSummaryProviders invocations
+/// \note All members of this class need to be accessed in a thread safe manner
+class SummaryStatistics {
+public:
+  explicit SummaryStatistics(std::string name, std::string impl_type)
+      : m_total_time(), m_impl_type(std::move(impl_type)),
+        m_name(std::move(name)), m_count(0) {}
+
+  std::string GetName() const { return m_name; };
+  double GetTotalTime() const { return m_total_time.get().count(); }
+
+  uint64_t GetSummaryCount() const {
+    return m_count.load(std::memory_order_relaxed);
+  }
+
+  StatsDuration &GetDurationReference() { return m_total_time; };
+
+  std::string GetSummaryKindName() const { return m_impl_type; }
+
+  llvm::json::Value ToJSON() const;
+
+  /// Basic RAII class to increment the summary count when the call is complete.
+  class SummaryInvocation {
+  public:
+    SummaryInvocation(SummaryStatisticsSP summary_stats)
+        : m_stats(summary_stats),
+          m_elapsed_time(summary_stats->GetDurationReference()) {}
+    ~SummaryInvocation() { m_stats->OnInvoked(); }
+
+    /// Delete the copy constructor and assignment operator to prevent
+    /// accidental double counting.
+    /// @{
+    SummaryInvocation(const SummaryInvocation &) = delete;
+    SummaryInvocation &operator=(const SummaryInvocation &) = delete;
+    /// @}
+
+  private:
+    SummaryStatisticsSP m_stats;
+    ElapsedTime m_elapsed_time;
+  };
+
+private:
+  void OnInvoked() noexcept { m_count.fetch_add(1, std::memory_order_relaxed); }
+  lldb_private::StatsDuration m_total_time;
+  const std::string m_impl_type;
+  const std::string m_name;
+  std::atomic<uint64_t> m_count;
+};
+
+/// A class that wraps a std::map of SummaryStatistics objects behind a mutex.
+class SummaryStatisticsCache {
+public:
+  /// Get the SummaryStatistics object for a given provider name, or insert
+  /// if statistics for that provider is not in the map.
+  SummaryStatisticsSP
+  GetSummaryStatisticsForProvider(lldb_private::TypeSummaryImpl &provider) {
+    std::lock_guard<std::mutex> guard(m_map_mutex);
+    if (auto iterator = m_summary_stats_map.find(provider.GetName());
+        iterator != m_summary_stats_map.end())
+      return iterator->second;
+
+    auto it = m_summary_stats_map.try_emplace(
+        provider.GetName(),
+        std::make_shared<SummaryStatistics>(provider.GetName(),
+                                            provider.GetSummaryKindName()));
+    return it.first->second;
+  }
+
+  llvm::json::Value ToJSON();
+
+private:
+  llvm::StringMap<SummaryStatisticsSP> m_summary_stats_map;
+  std::mutex m_map_mutex;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.
@@ -145,6 +265,8 @@ public:
   void SetFirstPrivateStopTime();
   void SetFirstPublicStopTime();
   void IncreaseSourceMapDeduceCount();
+  void IncreaseSourceRealpathAttemptCount(uint32_t count);
+  void IncreaseSourceRealpathCompatibleCount(uint32_t count);
 
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }
@@ -159,6 +281,8 @@ protected:
   StatsSuccessFail m_frame_var{"frameVariable"};
   std::vector<intptr_t> m_module_identifiers;
   uint32_t m_source_map_deduce_count = 0;
+  uint32_t m_source_realpath_attempt_count = 0;
+  uint32_t m_source_realpath_compatible_count = 0;
   void CollectStats(Target &target);
 };
 

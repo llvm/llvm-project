@@ -23,14 +23,13 @@
 
 ; CHECK: function 'Test':
 ; CHECK:   .inner:
-; CHECK-NEXT:     Memory dependences are safe
+; CHECK-NEXT:     Memory dependences are safe with run-time checks
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:     Run-time memory checks:
 ; CHECK:          Check 0:
 ; CHECK:          Check 1:
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 %struct.s = type { [32 x i32], [32 x i32], [32 x [32 x i32]] }
 

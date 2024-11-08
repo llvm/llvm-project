@@ -169,3 +169,20 @@
 // CHECK-ATOMIC: #define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
 // CHECK-ATOMIC: #define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
 // CHECK-ATOMIC: #define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-linux-musl \
+// RUN: -target-cpu hexagonv67 | FileCheck \
+// RUN: %s -check-prefix CHECK-INTERFERENCE
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-none-elf \
+// RUN: -target-cpu hexagonv67 | FileCheck \
+// RUN: %s -check-prefix CHECK-INTERFERENCE
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-none-elf \
+// RUN: -target-cpu hexagonv71t | FileCheck \
+// RUN: %s -check-prefix CHECK-INTERFERENCE
+// CHECK-INTERFERENCE: #define __GCC_CONSTRUCTIVE_SIZE 32
+// CHECK-INTERFERENCE: #define __GCC_DESTRUCTIVE_SIZE 32
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-none-elf \
+// RUN: -target-cpu hexagonv73 | FileCheck \
+// RUN: %s -check-prefix CHECK-INTERFERENCE-73
+// CHECK-INTERFERENCE-73: #define __GCC_CONSTRUCTIVE_SIZE 64
+// CHECK-INTERFERENCE-73: #define __GCC_DESTRUCTIVE_SIZE 64

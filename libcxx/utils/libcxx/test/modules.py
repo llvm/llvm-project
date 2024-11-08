@@ -26,8 +26,6 @@ SkipDeclarations["cwchar"] = ["std::FILE"]
 # The operators are added for private types like __iom_t10.
 SkipDeclarations["iomanip"] = ["std::operator<<", "std::operator>>"]
 
-SkipDeclarations["iosfwd"] = ["std::ios_base", "std::vector"]
-
 # This header also provides declarations in the namespace that might be
 # an error.
 SkipDeclarations["filesystem"] = [
@@ -54,18 +52,6 @@ SkipDeclarations["random"] = [
     "std::operator==",
 ]
 
-# Declared in the forward header since std::string uses std::allocator
-SkipDeclarations["string"] = ["std::allocator"]
-# TODO MODULES remove zombie names
-# https://libcxx.llvm.org/Status/Cxx20.html#note-p0619
-SkipDeclarations["memory"] = [
-    "std::return_temporary_buffer",
-    "std::get_temporary_buffer",
-]
-
-# TODO MODULES this should be part of ios instead
-SkipDeclarations["streambuf"] = ["std::basic_ios"]
-
 # include/__type_traits/is_swappable.h
 SkipDeclarations["type_traits"] = [
     "std::swap",
@@ -83,6 +69,13 @@ ExtraDeclarations = dict()
 # This declaration is in the ostream header.
 ExtraDeclarations["system_error"] = ["std::operator<<"]
 
+# TODO MODULES avoid this work-around
+# This is a work-around for the special math functions. They are declared in
+# __math/special_functions.h. Adding this as an ExtraHeader works for the std
+# module. However these functions are special; they are not available in the
+# global namespace.
+ExtraDeclarations["cmath"] = ["std::hermite", "std::hermitef", "std::hermitel"]
+
 ### ExtraHeader
 
 # Adds extra headers file to scan
@@ -98,6 +91,10 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 # The extra header is needed since two headers are required to provide the
 # same definition.
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
+
+# Some C compatibility headers define std::size_t, which is in <__cstddef/size_t.h>
+for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar"):
+    ExtraHeader[header] = "v1/__cstddef/size_t.h$"
 
 
 # newline needs to be escaped for the module partition output.

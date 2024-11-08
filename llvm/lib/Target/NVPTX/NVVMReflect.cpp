@@ -192,7 +192,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   while (!ToSimplify.empty()) {
     Instruction *I = ToSimplify.pop_back_val();
     if (Constant *C =
-            ConstantFoldInstruction(I, F.getParent()->getDataLayout())) {
+            ConstantFoldInstruction(I, F.getDataLayout())) {
       for (User *U : I->users())
         if (Instruction *I = dyn_cast<Instruction>(U))
           ToSimplify.push_back(I);
@@ -209,7 +209,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // Removing via isInstructionTriviallyDead may add duplicates to the ToRemove
   // array. Filter out the duplicates before starting to erase from parent.
   std::sort(ToRemove.begin(), ToRemove.end());
-  auto NewLastIter = std::unique(ToRemove.begin(), ToRemove.end());
+  auto NewLastIter = llvm::unique(ToRemove);
   ToRemove.erase(NewLastIter, ToRemove.end());
 
   for (Instruction *I : ToRemove)

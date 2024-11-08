@@ -82,7 +82,7 @@ constexpr void k() {
 
 // If the return type is not 'void', no return statements => never a constant
 // expression, so still diagnose that case.
-[[noreturn]] constexpr int fn() { // expected-error {{no return statement in constexpr function}}
+[[noreturn]] constexpr int fn() { // cxx14_20-error {{no return statement in constexpr function}}
   fn();
 }
 
@@ -1305,4 +1305,19 @@ constexpr int field(int a) {
 }
 static_assert(field(3), ""); // expected-error {{constant expression}} \
                              // expected-note {{in call to 'field(3)'}}
+}
+
+namespace literal_comparison {
+
+constexpr bool different_in_loop(bool b = false) {
+  if (b) return false;
+
+  const char *p[2] = {};
+  for (const char *&r : p)
+    r = "hello";
+  return p[0] == p[1]; // expected-note {{addresses of literals}}
+}
+constexpr bool check = different_in_loop();
+  // expected-error@-1 {{}} expected-note@-1 {{in call}}
+
 }

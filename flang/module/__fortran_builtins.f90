@@ -6,6 +6,8 @@
 !
 !===------------------------------------------------------------------------===!
 
+#include '../include/flang/Runtime/magic-numbers.h'
+
 ! These naming shenanigans prevent names from Fortran intrinsic modules
 ! from being usable on INTRINSIC statements, and force the program
 ! to USE the standard intrinsic modules in order to access the
@@ -18,6 +20,7 @@ module __fortran_builtins
   private
 
   intrinsic :: __builtin_c_loc
+  public :: __builtin_c_loc
 
   intrinsic :: __builtin_c_f_pointer
   public :: __builtin_c_f_pointer
@@ -48,6 +51,42 @@ module __fortran_builtins
     integer(kind=int64), private :: __count
   end type
 
+  type, public :: __builtin_ieee_flag_type
+    integer(kind=1), private :: flag = 0
+  end type
+
+  type(__builtin_ieee_flag_type), parameter, public :: &
+    __builtin_ieee_invalid = &
+      __builtin_ieee_flag_type(_FORTRAN_RUNTIME_IEEE_INVALID), &
+    __builtin_ieee_overflow = &
+      __builtin_ieee_flag_type(_FORTRAN_RUNTIME_IEEE_OVERFLOW), &
+    __builtin_ieee_divide_by_zero = &
+      __builtin_ieee_flag_type(_FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO), &
+    __builtin_ieee_underflow = &
+      __builtin_ieee_flag_type(_FORTRAN_RUNTIME_IEEE_UNDERFLOW), &
+    __builtin_ieee_inexact = &
+      __builtin_ieee_flag_type(_FORTRAN_RUNTIME_IEEE_INEXACT), &
+    __builtin_ieee_denorm = & ! extension
+      __builtin_ieee_flag_type(_FORTRAN_RUNTIME_IEEE_DENORM)
+
+  type, public :: __builtin_ieee_round_type
+    integer(kind=1), private :: mode = 0
+  end type
+
+  type(__builtin_ieee_round_type), parameter, public :: &
+    __builtin_ieee_to_zero = &
+      __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_TO_ZERO), &
+    __builtin_ieee_nearest = &
+      __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_NEAREST), &
+    __builtin_ieee_up = &
+      __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_UP), &
+    __builtin_ieee_down = &
+      __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_DOWN), &
+    __builtin_ieee_away = &
+      __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_AWAY), &
+    __builtin_ieee_other = &
+      __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
+
   type, public :: __builtin_team_type
     integer(kind=int64), private :: __id
   end type
@@ -56,8 +95,6 @@ module __fortran_builtins
   integer, parameter, public :: &
     __builtin_atomic_logical_kind = __builtin_atomic_int_kind
 
-  procedure(type(__builtin_c_ptr)), public :: __builtin_c_loc
-
   type, public :: __builtin_dim3
     integer :: x=1, y=1, z=1
   end type
@@ -65,31 +102,43 @@ module __fortran_builtins
     __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, &
     __builtin_gridDim
   integer, parameter, public :: __builtin_warpsize = 32
+  
+  type, public, bind(c) :: __builtin_c_devptr
+    type(__builtin_c_ptr) :: cptr
+  end type
 
   intrinsic :: __builtin_fma
+  intrinsic :: __builtin_ieee_int
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   intrinsic :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
   intrinsic :: scale ! for ieee_scalb
+  intrinsic :: __builtin_ieee_real
   intrinsic :: __builtin_ieee_selected_real_kind
   intrinsic :: __builtin_ieee_support_datatype, &
     __builtin_ieee_support_denormal, __builtin_ieee_support_divide, &
+    __builtin_ieee_support_flag, __builtin_ieee_support_halting, &
     __builtin_ieee_support_inf, __builtin_ieee_support_io, &
-    __builtin_ieee_support_nan, __builtin_ieee_support_sqrt, &
+    __builtin_ieee_support_nan, __builtin_ieee_support_rounding, &
+    __builtin_ieee_support_sqrt, &
     __builtin_ieee_support_standard, __builtin_ieee_support_subnormal, &
     __builtin_ieee_support_underflow_control
   public :: __builtin_fma
+  public :: __builtin_ieee_int
   public :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   public :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
+  public :: __builtin_ieee_real
   public :: scale ! for ieee_scalb
   public :: __builtin_ieee_selected_real_kind
   public :: __builtin_ieee_support_datatype, &
     __builtin_ieee_support_denormal, __builtin_ieee_support_divide, &
+    __builtin_ieee_support_flag, __builtin_ieee_support_halting, &
     __builtin_ieee_support_inf, __builtin_ieee_support_io, &
-    __builtin_ieee_support_nan, __builtin_ieee_support_sqrt, &
+    __builtin_ieee_support_nan, __builtin_ieee_support_rounding, &
+    __builtin_ieee_support_sqrt, &
     __builtin_ieee_support_standard, __builtin_ieee_support_subnormal, &
     __builtin_ieee_support_underflow_control
 
@@ -141,7 +190,10 @@ module __fortran_builtins
     __builtin_c_ptr_ne = x%__address /= y%__address
   end function
 
-  function __builtin_c_funloc(x)
+  ! Semantics has some special-case code that allows c_funloc()
+  ! to appear in a specification expression and exempts it
+  ! from the requirement that "x" be a pure dummy procedure.
+  pure function __builtin_c_funloc(x)
     type(__builtin_c_funptr) :: __builtin_c_funloc
     external :: x
     __builtin_c_funloc = __builtin_c_funptr(loc(x))

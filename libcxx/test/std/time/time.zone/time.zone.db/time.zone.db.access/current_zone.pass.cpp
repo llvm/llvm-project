@@ -9,17 +9,18 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
 
 // const time_zone* current_zone();
 
-#include <cassert>
 #include <chrono>
-#include <string_view>
+#include <cassert>
 #include <stdlib.h>
+#include <string_view>
+#include <string>
 
 #include "test_macros.h"
 #include "assert_macros.h"
@@ -32,7 +33,7 @@ static void set_tz(std::string zone) {
   // Unlike POSIX it does not mention the string of putenv becomes part
   // of the environment.
 
-  int status = _putenv_s("TZ", zone.c_str(), 1);
+  int status = _putenv_s("TZ", zone.c_str());
   assert(status == 0);
 }
 

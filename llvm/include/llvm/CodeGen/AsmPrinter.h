@@ -19,7 +19,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -34,11 +33,14 @@
 namespace llvm {
 
 class AddrLabelMap;
+class AsmPrinterHandler;
 class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
+class ConstantPtrAuth;
 class DataLayout;
+class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
@@ -135,29 +137,12 @@ public:
     MCSymbol *BeginLabel, *EndLabel;
   };
 
-  MapVector<unsigned, MBBSectionRange> MBBSectionRanges;
+  MapVector<MBBSectionID, MBBSectionRange> MBBSectionRanges;
 
   /// Map global GOT equivalent MCSymbols to GlobalVariables and keep track of
   /// its number of uses by other globals.
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
-
-  /// struct HandlerInfo and Handlers permit users or target extended
-  /// AsmPrinter to add their own handlers.
-  struct HandlerInfo {
-    std::unique_ptr<AsmPrinterHandler> Handler;
-    StringRef TimerName;
-    StringRef TimerDescription;
-    StringRef TimerGroupName;
-    StringRef TimerGroupDescription;
-
-    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler, StringRef TimerName,
-                StringRef TimerDescription, StringRef TimerGroupName,
-                StringRef TimerGroupDescription)
-        : Handler(std::move(Handler)), TimerName(TimerName),
-          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
-          TimerGroupDescription(TimerGroupDescription) {}
-  };
 
   // Flags representing which CFI section is required for a function/module.
   enum class CFISection : unsigned {
@@ -172,7 +157,7 @@ private:
   /// Map a basic block section ID to the exception symbol associated with that
   /// section. Map entries are assigned and looked up via
   /// AsmPrinter::getMBBExceptionSym.
-  DenseMap<unsigned, MCSymbol *> MBBSectionExceptionSyms;
+  DenseMap<MBBSectionID, MCSymbol *> MBBSectionExceptionSyms;
 
   // The symbol used to represent the start of the current BB section of the
   // function. This is used to calculate the size of the BB section.
@@ -204,8 +189,12 @@ protected:
 
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
-  std::vector<HandlerInfo> Handlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
+
+  /// Debuginfo handler. Protected so that targets can add their own.
+  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
+  size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
 
@@ -221,7 +210,7 @@ private:
 
   /// A handler that supports pseudo probe emission with embedded inline
   /// context.
-  PseudoProbeHandler *PP = nullptr;
+  std::unique_ptr<PseudoProbeHandler> PP;
 
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
@@ -235,6 +224,9 @@ private:
   /// .note.GNU-no-split-stack section when it also contains functions without a
   /// split stack prologue.
   bool HasNoSplitStack = false;
+
+  /// True if debugging information is available in this module.
+  bool DbgInfoAvailable = false;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -441,6 +433,9 @@ public:
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
+  /// Returns true if valid debug info is present.
+  bool hasDebugInfo() const { return DbgInfoAvailable; }
+
   bool needsSEHMoves();
 
   /// Since emitting CFI unwind information is entangled with supporting the
@@ -530,10 +525,9 @@ public:
   // Overridable Hooks
   //===------------------------------------------------------------------===//
 
-  void addAsmPrinterHandler(HandlerInfo Handler) {
-    Handlers.insert(Handlers.begin(), std::move(Handler));
-    NumUserHandlers++;
-  }
+  void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler);
+
+  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler);
 
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
@@ -584,6 +578,13 @@ public:
   virtual void emitXXStructor(const DataLayout &DL, const Constant *CV) {
     emitGlobalConstant(DL, CV);
   }
+
+  virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
+    report_fatal_error("ptrauth constant lowering not implemented");
+  }
+
+  /// Lower the specified BlockAddress to an MCExpr.
+  virtual const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA);
 
   /// Return true if the basic block has exactly one predecessor and the control
   /// transfer mechanism between the predecessor and this block is a
@@ -868,6 +869,9 @@ private:
   /// This method emits a comment next to header for the current function.
   virtual void emitFunctionHeaderComment();
 
+  /// This method emits prefix-like data before the current function.
+  void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
+
   /// Emit a blob of inline asm to the output streamer.
   void
   emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
@@ -890,6 +894,10 @@ private:
 
   void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
+
+  void emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+                                 const Function &F) const;
+
   void emitLLVMUsedList(const ConstantArray *InitList);
   /// Emit llvm.ident metadata in an '.ident' directive.
   void emitModuleIdents(Module &M);
@@ -897,7 +905,6 @@ private:
   virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
-  virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
 private:
@@ -905,6 +912,7 @@ private:
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 
 protected:
+  virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;
   }

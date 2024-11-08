@@ -15,6 +15,7 @@
 #include "PybindUtils.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -72,6 +73,27 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
+static const char kDenseElementsAttrGetFromListDocstring[] =
+    R"(Gets a DenseElementsAttr from a Python list of attributes.
+
+Note that it can be expensive to construct attributes individually.
+For a large number of elements, consider using a Python buffer or array instead.
+
+Args:
+  attrs: A list of attributes.
+  type: The desired shape and type of the resulting DenseElementsAttr.
+    If not provided, the element type is determined based on the type
+    of the 0th attribute and the shape is `[len(attrs)]`.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the attributes does not match the type
+    specified by `shaped_type`.
+)";
+
 static const char kDenseResourceElementsAttrGetFromBufferDocstring[] =
     R"(Gets a DenseResourceElementsAttr from a Python buffer or array.
 
@@ -120,6 +142,28 @@ public:
           return PyAffineMapAttribute(affineMap.getContext(), attr);
         },
         py::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
+    c.def_property_readonly("value", mlirAffineMapAttrGetValue,
+                            "Returns the value of the AffineMap attribute");
+  }
+};
+
+class PyIntegerSetAttribute
+    : public PyConcreteAttribute<PyIntegerSetAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAIntegerSet;
+  static constexpr const char *pyClassName = "IntegerSetAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirIntegerSetAttrGetTypeID;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyIntegerSet &integerSet) {
+          MlirAttribute attr = mlirIntegerSetAttrGet(integerSet.get());
+          return PyIntegerSetAttribute(integerSet.getContext(), attr);
+        },
+        py::arg("integer_set"), "Gets an attribute wrapping an IntegerSet.");
   }
 };
 
@@ -648,6 +692,57 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseElementsAttribute
+  getFromList(py::list attributes, std::optional<PyType> explicitType,
+              DefaultingPyMlirContext contextWrapper) {
+
+    const size_t numAttributes = py::len(attributes);
+    if (numAttributes == 0)
+      throw py::value_error("Attributes list must be non-empty.");
+
+    MlirType shapedType;
+    if (explicitType) {
+      if ((!mlirTypeIsAShaped(*explicitType) ||
+           !mlirShapedTypeHasStaticShape(*explicitType))) {
+
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "Expected a static ShapedType for the shaped_type parameter: "
+           << py::repr(py::cast(*explicitType));
+        throw py::value_error(message);
+      }
+      shapedType = *explicitType;
+    } else {
+      SmallVector<int64_t> shape{static_cast<int64_t>(numAttributes)};
+      shapedType = mlirRankedTensorTypeGet(
+          shape.size(), shape.data(),
+          mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
+          mlirAttributeGetNull());
+    }
+
+    SmallVector<MlirAttribute> mlirAttributes;
+    mlirAttributes.reserve(numAttributes);
+    for (const py::handle &attribute : attributes) {
+      MlirAttribute mlirAttribute = pyTryCast<PyAttribute>(attribute);
+      MlirType attrType = mlirAttributeGetType(mlirAttribute);
+      mlirAttributes.push_back(mlirAttribute);
+
+      if (!mlirTypeEqual(mlirShapedTypeGetElementType(shapedType), attrType)) {
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "All attributes must be of the same type and match "
+           << "the type parameter: expected=" << py::repr(py::cast(shapedType))
+           << ", but got=" << py::repr(py::cast(attrType));
+        throw py::value_error(message);
+      }
+    }
+
+    MlirAttribute elements = mlirDenseElementsAttrGet(
+        shapedType, mlirAttributes.size(), mlirAttributes.data());
+
+    return PyDenseElementsAttribute(contextWrapper->getRef(), elements);
+  }
+
+  static PyDenseElementsAttribute
   getFromBuffer(py::buffer array, bool signless,
                 std::optional<PyType> explicitType,
                 std::optional<std::vector<int64_t>> explicitShape,
@@ -883,6 +978,10 @@ public:
                     py::arg("type") = py::none(), py::arg("shape") = py::none(),
                     py::arg("context") = py::none(),
                     kDenseElementsAttrGetDocstring)
+        .def_static("get", PyDenseElementsAttribute::getFromList,
+                    py::arg("attrs"), py::arg("type") = py::none(),
+                    py::arg("context") = py::none(),
+                    kDenseElementsAttrGetFromListDocstring)
         .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                     py::arg("shaped_type"), py::arg("element_attr"),
                     "Gets a DenseElementsAttr where all values are the same")
@@ -1347,7 +1446,6 @@ py::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
 
 void mlir::python::populateIRAttributes(py::module &m) {
   PyAffineMapAttribute::bind(m);
-
   PyDenseBoolArrayAttribute::bind(m);
   PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);
   PyDenseI8ArrayAttribute::bind(m);
@@ -1387,6 +1485,7 @@ void mlir::python::populateIRAttributes(py::module &m) {
   PyOpaqueAttribute::bind(m);
   PyFloatAttribute::bind(m);
   PyIntegerAttribute::bind(m);
+  PyIntegerSetAttribute::bind(m);
   PyStringAttribute::bind(m);
   PyTypeAttribute::bind(m);
   PyGlobals::get().registerTypeCaster(

@@ -10,8 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_REMOVE_CV_H
 
 #include <__config>
-#include <__type_traits/remove_const.h>
-#include <__type_traits/remove_volatile.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,7 +28,7 @@ using __remove_cv_t = typename remove_cv<_Tp>::type;
 #else
 template <class _Tp>
 using __remove_cv_t = __remove_cv(_Tp);
-#endif // __has_builtin(__remove_cv)
+#endif
 
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp>

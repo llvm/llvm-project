@@ -612,7 +612,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &LogMutex, Out, Die]() mutable {
+        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
@@ -620,7 +620,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
           if (Out.GetOS()) {
-            StrStream.flush();
             Out << storage;
           }
           Out.Merge(ThreadOut);
@@ -700,7 +699,6 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
             Log << "    [" << Idx << "]: " << gii.Name << " @ " << gii.Dir
                 << '/' << gii.Base << ':' << gii.Line << '\n';
           }
-          DwarfInlineInfos = DICtx.getInliningInfoForAddress(SectAddr, DLIS);
           Gsym->dump(Log, *FI);
         }
         continue;

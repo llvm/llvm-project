@@ -21,6 +21,8 @@
 namespace llvm {
 namespace orc {
 
+DylibManager::~DylibManager() = default;
+
 ExecutorProcessControl::MemoryAccess::~MemoryAccess() = default;
 
 ExecutorProcessControl::~ExecutorProcessControl() = default;
@@ -41,6 +43,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = this;
+  this->DylibMgr = this;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
@@ -61,13 +64,8 @@ SelfExecutorProcessControl::Create(
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
 
-  if (!D) {
-#if LLVM_ENABLE_THREADS
-    D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
-#else
+  if (!D)
     D = std::make_unique<InPlaceTaskDispatcher>();
-#endif
-  }
 
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
@@ -91,7 +89,7 @@ SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
 
 void SelfExecutorProcessControl::lookupSymbolsAsync(
     ArrayRef<LookupRequest> Request,
-    ExecutorProcessControl::SymbolLookupCompleteFn Complete) {
+    DylibManager::SymbolLookupCompleteFn Complete) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {

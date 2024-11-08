@@ -19,7 +19,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -52,6 +51,15 @@ public:
     return failure();
   }
 
+  /// Hook for derived dialect interfaces to implement the import of
+  /// instructions into MLIR.
+  virtual LogicalResult
+  convertInstruction(OpBuilder &builder, llvm::Instruction *inst,
+                     ArrayRef<llvm::Value *> llvmOperands,
+                     LLVM::ModuleImport &moduleImport) const {
+    return failure();
+  }
+
   /// Hook for derived dialect interfaces to implement the import of metadata
   /// into MLIR. Attaches the converted metadata kind and node to the provided
   /// operation.
@@ -66,10 +74,22 @@ public:
   /// returns the list of supported intrinsic identifiers.
   virtual ArrayRef<unsigned> getSupportedIntrinsics() const { return {}; }
 
+  /// Hook for derived dialect interfaces to publish the supported instructions.
+  /// As every LLVM IR instruction has a unique integer identifier, the function
+  /// returns the list of supported instruction identifiers. These identifiers
+  /// will then be used to match LLVM instructions to the appropriate import
+  /// interface and `convertInstruction` method. It is an error to have multiple
+  /// interfaces overriding the same instruction.
+  virtual ArrayRef<unsigned> getSupportedInstructions() const { return {}; }
+
   /// Hook for derived dialect interfaces to publish the supported metadata
   /// kinds. As every metadata kind has a unique integer identifier, the
-  /// function returns the list of supported metadata identifiers.
-  virtual ArrayRef<unsigned> getSupportedMetadata() const { return {}; }
+  /// function returns the list of supported metadata identifiers. `ctx` can be
+  /// used to obtain IDs of metadata kinds that do not have a fixed static one.
+  virtual ArrayRef<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &ctx) const {
+    return {};
+  }
 };
 
 /// Interface collection for the import of LLVM IR that dispatches to a concrete
@@ -85,26 +105,45 @@ public:
   /// intrinsic and metadata kinds and builds the dispatch tables for the
   /// conversion. Returns failure if multiple dialect interfaces translate the
   /// same LLVM IR intrinsic.
-  LogicalResult initializeImport() {
+  LogicalResult initializeImport(llvm::LLVMContext &llvmContext) {
     for (const LLVMImportDialectInterface &iface : *this) {
       // Verify the supported intrinsics have not been mapped before.
-      const auto *it =
+      const auto *intrinsicIt =
           llvm::find_if(iface.getSupportedIntrinsics(), [&](unsigned id) {
             return intrinsicToDialect.count(id);
           });
-      if (it != iface.getSupportedIntrinsics().end()) {
+      if (intrinsicIt != iface.getSupportedIntrinsics().end()) {
         return emitError(
             UnknownLoc::get(iface.getContext()),
-            llvm::formatv("expected unique conversion for intrinsic ({0}), but "
-                          "got conflicting {1} and {2} conversions",
-                          *it, iface.getDialect()->getNamespace(),
-                          intrinsicToDialect.lookup(*it)->getNamespace()));
+            llvm::formatv(
+                "expected unique conversion for intrinsic ({0}), but "
+                "got conflicting {1} and {2} conversions",
+                *intrinsicIt, iface.getDialect()->getNamespace(),
+                intrinsicToDialect.lookup(*intrinsicIt)->getNamespace()));
+      }
+      const auto *instructionIt =
+          llvm::find_if(iface.getSupportedInstructions(), [&](unsigned id) {
+            return instructionToDialect.count(id);
+          });
+      if (instructionIt != iface.getSupportedInstructions().end()) {
+        return emitError(
+            UnknownLoc::get(iface.getContext()),
+            llvm::formatv(
+                "expected unique conversion for instruction ({0}), but "
+                "got conflicting {1} and {2} conversions",
+                *intrinsicIt, iface.getDialect()->getNamespace(),
+                instructionToDialect.lookup(*intrinsicIt)
+                    ->getDialect()
+                    ->getNamespace()));
       }
       // Add a mapping for all supported intrinsic identifiers.
       for (unsigned id : iface.getSupportedIntrinsics())
         intrinsicToDialect[id] = iface.getDialect();
+      // Add a mapping for all supported instruction identifiers.
+      for (unsigned id : iface.getSupportedInstructions())
+        instructionToDialect[id] = &iface;
       // Add a mapping for all supported metadata kinds.
-      for (unsigned kind : iface.getSupportedMetadata())
+      for (unsigned kind : iface.getSupportedMetadata(llvmContext))
         metadataToDialect[kind].push_back(iface.getDialect());
     }
 
@@ -130,6 +169,26 @@ public:
   /// operation.
   bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
     return intrinsicToDialect.count(id);
+  }
+
+  /// Converts the LLVM instruction to an MLIR operation if a conversion exists.
+  /// Returns failure otherwise.
+  LogicalResult convertInstruction(OpBuilder &builder, llvm::Instruction *inst,
+                                   ArrayRef<llvm::Value *> llvmOperands,
+                                   LLVM::ModuleImport &moduleImport) const {
+    // Lookup the dialect interface for the given instruction.
+    const LLVMImportDialectInterface *iface =
+        instructionToDialect.lookup(inst->getOpcode());
+    if (!iface)
+      return failure();
+
+    return iface->convertInstruction(builder, inst, llvmOperands, moduleImport);
+  }
+
+  /// Returns true if the given LLVM IR instruction is convertible to an MLIR
+  /// operation.
+  bool isConvertibleInstruction(unsigned id) {
+    return instructionToDialect.count(id);
   }
 
   /// Attaches the given LLVM metadata to the imported operation if a conversion
@@ -166,6 +225,7 @@ public:
 
 private:
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
+  DenseMap<unsigned, const LLVMImportDialectInterface *> instructionToDialect;
   DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;
 };
 

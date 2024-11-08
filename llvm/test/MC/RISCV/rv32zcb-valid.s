@@ -43,7 +43,7 @@ c.not s0
 
 # CHECK-ASM-AND-OBJ: c.mul s0, s1
 # CHECK-ASM: encoding: [0x45,0x9c]
-# CHECK-NO-EXT: error: instruction requires the following: 'M' (Integer Multiplication and Division) or 'Zmmul' (Integer Multiplication), 'Zcb' (Compressed basic bit manipulation instructions){{$}}
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions), 'Zmmul' (Integer Multiplication)
 c.mul s0, s1
 
 # CHECK-ASM-AND-OBJ: c.lbu a5, 2(a4)

@@ -27,7 +27,7 @@
 #include <string>
 #include <type_traits>
 
-// Some environments, viz. glibc 2.17, allow the macro HUGE
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
 #undef HUGE
 
@@ -50,9 +50,12 @@ namespace Fortran::evaluate::value {
 // named accordingly in ALL CAPS so that they can be referenced easily in
 // the language standard.
 template <int BITS, bool IS_LITTLE_ENDIAN = isHostLittleEndian,
-    int PARTBITS = BITS <= 32 ? BITS : 32,
+    int PARTBITS = BITS <= 32 ? BITS
+        : BITS % 32 == 0      ? 32
+        : BITS % 16 == 0      ? 16
+                              : 8,
     typename PART = HostUnsignedInt<PARTBITS>,
-    typename BIGPART = HostUnsignedInt<PARTBITS * 2>>
+    typename BIGPART = HostUnsignedInt<PARTBITS * 2>, int ALIGNMENT = BITS>
 class Integer {
 public:
   static constexpr int bits{BITS};
@@ -79,6 +82,8 @@ private:
   static_assert((parts - 1) * partBits + topPartBits == bits);
   static constexpr Part partMask{static_cast<Part>(~0) >> extraPartBits};
   static constexpr Part topPartMask{static_cast<Part>(~0) >> extraTopPartBits};
+  static constexpr int partsWithAlignment{
+      (ALIGNMENT + partBits - 1) / partBits};
 
 public:
   // Some types used for member function results
@@ -310,7 +315,7 @@ public:
       }
       result.overflow = false;
     } else if constexpr (bits < FROM::bits) {
-      auto back{FROM::template ConvertSigned(result.value)};
+      auto back{FROM::template ConvertSigned<Integer>(result.value)};
       result.overflow = back.value.CompareUnsigned(that) != Ordering::Equal;
     }
     return result;
@@ -823,9 +828,9 @@ public:
           if (Part ypart{y.LEPart(k)}) {
             BigPart xy{xpart};
             xy *= ypart;
-#if defined __GNUC__ && __GNUC__ < 8
-            // && to < (2 * parts) was added to avoid GCC < 8 build failure on
-            // -Werror=array-bounds. This can be removed if -Werror is disable.
+#if defined __GNUC__ && __GNUC__ < 8 || __GNUC__ >= 12
+            // && to < (2 * parts) was added to avoid GCC build failure on
+            // -Werror=array-bounds. This can be removed if -Werror is disabled.
             for (int to{j + k}; xy != 0 && to < (2 * parts); ++to) {
 #else
             for (int to{j + k}; xy != 0; ++to) {
@@ -1043,14 +1048,17 @@ private:
     }
   }
 
-  Part part_[parts]{};
+  Part part_[partsWithAlignment]{};
 };
 
 extern template class Integer<8>;
 extern template class Integer<16>;
 extern template class Integer<32>;
 extern template class Integer<64>;
-extern template class Integer<80>;
+using X87IntegerContainer =
+    Integer<80, isHostLittleEndian, 16, std::uint16_t, std::uint32_t, 128>;
+extern template class Integer<80, isHostLittleEndian, 16, std::uint16_t,
+    std::uint32_t, 128>;
 extern template class Integer<128>;
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_INTEGER_H_

@@ -12,8 +12,9 @@
 #include "platform.h"
 
 #include "src/__support/GPU/utils.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
 float __ocml_acos_f32(float);
@@ -65,6 +66,8 @@ float __ocml_nextafter_f32(float, float);
 double __ocml_nextafter_f64(double, double);
 float __ocml_pow_f32(float, float);
 double __ocml_pow_f64(double, double);
+float __ocml_pown_f32(float, int);
+double __ocml_pown_f64(double, int);
 float __ocml_sin_f32(float);
 double __ocml_sin_f64(double);
 float __ocml_sincos_f32(float, float *);
@@ -79,8 +82,10 @@ float __ocml_remquo_f32(float, float, gpu::Private<int> *);
 double __ocml_remquo_f64(double, double, gpu::Private<int> *);
 double __ocml_tgamma_f64(double);
 float __ocml_tgamma_f32(float);
+double __ocml_lgamma_f64(double);
+double __ocml_lgamma_r_f64(double, gpu::Private<int> *);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_AMDGPU_DECLARATIONS_H

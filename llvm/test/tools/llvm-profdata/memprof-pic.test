@@ -11,7 +11,7 @@ RUN: llvm-profdata show --memory %p/Inputs/pic.memprofraw --profiled-binary %p/I
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:   Summary:
-CHECK-NEXT:     Version: 3
+CHECK-NEXT:     Version: 4
 CHECK-NEXT:     NumSegments: {{[0-9]+}}
 CHECK-NEXT:     NumMibInfo: 2
 CHECK-NEXT:     NumAllocFunctions: 1
@@ -62,6 +62,9 @@ CHECK-NEXT:         MaxAccessDensity: 20
 CHECK-NEXT:         TotalLifetimeAccessDensity: 20000
 CHECK-NEXT:         MinLifetimeAccessDensity: 20000
 CHECK-NEXT:         MaxLifetimeAccessDensity: 20000
+CHECK-NEXT:         AccessHistogramSize: 0
+CHECK-NEXT:         AccessHistogram: 0
+
 CHECK-NEXT:     -
 CHECK-NEXT:       Callstack:
 CHECK-NEXT:       -
@@ -96,3 +99,5 @@ CHECK-NEXT:         MaxAccessDensity: 20
 CHECK-NEXT:         TotalLifetimeAccessDensity: 20000
 CHECK-NEXT:         MinLifetimeAccessDensity: 20000
 CHECK-NEXT:         MaxLifetimeAccessDensity: 20000
+CHECK-NEXT:         AccessHistogramSize: 0
+CHECK-NEXT:         AccessHistogram: 0

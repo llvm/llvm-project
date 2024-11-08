@@ -527,7 +527,7 @@ static void AnalyzeArguments(CCState &State,
 
     if (!UsedStack && Parts == 2 && RegsLeft == 1) {
       // Special case for 32-bit register split, see EABI section 3.3.3
-      unsigned Reg = State.AllocateReg(RegList);
+      MCRegister Reg = State.AllocateReg(RegList);
       State.addLoc(CCValAssign::getReg(ValNo++, ArgVT, Reg, LocVT, LocInfo));
       RegsLeft -= 1;
 
@@ -535,7 +535,7 @@ static void AnalyzeArguments(CCState &State,
       CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
     } else if (Parts <= RegsLeft) {
       for (unsigned j = 0; j < Parts; j++) {
-        unsigned Reg = State.AllocateReg(RegList);
+        MCRegister Reg = State.AllocateReg(RegList);
         State.addLoc(CCValAssign::getReg(ValNo++, ArgVT, Reg, LocVT, LocInfo));
         RegsLeft--;
       }
@@ -864,11 +864,12 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 
       if (Flags.isByVal()) {
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i16);
-        MemOp = DAG.getMemcpy(
-            Chain, dl, PtrOff, Arg, SizeNode, Flags.getNonZeroByValAlign(),
-            /*isVolatile*/ false,
-            /*AlwaysInline=*/true,
-            /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
+        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode,
+                              Flags.getNonZeroByValAlign(),
+                              /*isVolatile*/ false,
+                              /*AlwaysInline=*/true,
+                              /*CI=*/nullptr, std::nullopt,
+                              MachinePointerInfo(), MachinePointerInfo());
       } else {
         MemOp = DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo());
       }

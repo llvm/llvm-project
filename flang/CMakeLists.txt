@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Flang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -336,7 +337,7 @@ endif()
 
 if (FLANG_RUNTIME_F128_MATH_LIB)
   add_compile_definitions(
-    -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
+    FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
     )
 endif()
 
@@ -460,6 +461,13 @@ option(FLANG_BUILD_TOOLS
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
+
+option(FLANG_CUF_RUNTIME
+  "Compile CUDA Fortran runtime sources" OFF)
+if (FLANG_CUF_RUNTIME)
+  find_package(CUDAToolkit REQUIRED)
+endif()
+
 add_subdirectory(runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
@@ -481,7 +489,7 @@ endif()
 
 # Custom target to install Flang libraries.
 add_custom_target(flang-libraries)
-set_target_properties(flang-libraries PROPERTIES FOLDER "Misc")
+set_target_properties(flang-libraries PROPERTIES FOLDER "Flang/Meta")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-flang-libraries
@@ -537,3 +545,4 @@ get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
 install(
   FILES include/flang/ISO_Fortran_binding.h
   DESTINATION ${HEADER_INSTALL_DIR} )
+

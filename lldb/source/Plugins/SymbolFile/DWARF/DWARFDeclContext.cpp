@@ -12,18 +12,16 @@
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
-/// Returns the name of `entry` if it has one, or the appropriate "anonymous
-/// {namespace, class, struct, union}".
-static const char *GetName(DWARFDeclContext::Entry entry) {
-  if (entry.name != nullptr)
-    return entry.name;
-  if (entry.tag == DW_TAG_namespace)
+const char *DWARFDeclContext::Entry::GetName() const {
+  if (name != nullptr)
+    return name;
+  if (tag == DW_TAG_namespace)
     return "(anonymous namespace)";
-  if (entry.tag == DW_TAG_class_type)
+  if (tag == DW_TAG_class_type)
     return "(anonymous class)";
-  if (entry.tag == DW_TAG_structure_type)
+  if (tag == DW_TAG_structure_type)
     return "(anonymous struct)";
-  if (entry.tag == DW_TAG_union_type)
+  if (tag == DW_TAG_union_type)
     return "(anonymous union)";
   return "(anonymous)";
 }
@@ -46,7 +44,7 @@ const char *DWARFDeclContext::GetQualifiedName() const {
         llvm::raw_string_ostream string_stream(m_qualified_name);
         llvm::interleave(
             llvm::reverse(m_entries), string_stream,
-            [&](auto entry) { string_stream << GetName(entry); }, "::");
+            [&](auto entry) { string_stream << entry.GetName(); }, "::");
       }
     }
   }

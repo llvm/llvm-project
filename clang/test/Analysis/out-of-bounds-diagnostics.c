@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-output=text        \
-// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,alpha.security.taint -verify %s
+// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,optin.taint -verify %s
 
 int TenElements[10];
 
@@ -15,6 +15,27 @@ int underflowWithDeref(void) {
   return *p;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at negative byte offset -4}}
+}
+
+int rng(void);
+int getIndex(void) {
+  switch (rng()) {
+    case 1: return -152;
+    case 2: return -160;
+    case 3: return -168;
+    default: return -172;
+  }
+}
+
+void gh86959(void) {
+  // Previously code like this produced many almost-identical bug reports that
+  // only differed in the offset value. Verify that now we only see one report.
+
+  // expected-note@+1 {{Entering loop body}}
+  while (rng())
+    TenElements[getIndex()] = 10;
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -688}}
 }
 
 int scanf(const char *restrict fmt, ...);
@@ -254,6 +275,21 @@ int *mallocRegion(void) {
   mem[3] = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
+  return mem;
+}
+
+int *custom_calloc(size_t a, size_t b) {
+  size_t res;
+
+  return __builtin_mul_overflow(a, b, &res) ? 0 : malloc(res);
+}
+
+int *mallocRegionOverflow(void) {
+  int *mem = (int*)custom_calloc(10, sizeof(int));
+
+  mem[20] = 10;
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of the heap area at index 20, while it holds only 10 'int' elements}}
   return mem;
 }
 

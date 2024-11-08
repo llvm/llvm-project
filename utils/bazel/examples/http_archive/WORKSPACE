@@ -39,6 +39,8 @@ load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
 
 llvm_configure(name = "llvm-project")
 
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+
 maybe(
     http_archive,
     name = "llvm_zlib",

@@ -12,7 +12,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "gtest/gtest.h"
-#include <fstream>
 
 using namespace clang;
 using namespace ento;
@@ -38,7 +37,8 @@ public:
 
 private:
   const BugType Bug{this, "DescriptiveNameBug"};
-  const CallDescription HandlerFn = {{"reportDescriptiveName"}, 1};
+  const CallDescription HandlerFn = {
+      CDM::SimpleFunc, {"reportDescriptiveName"}, 1};
 };
 
 void addDescriptiveNameChecker(AnalysisASTConsumer &AnalysisConsumer,
@@ -89,7 +89,7 @@ void reportDescriptiveName(int *p);
 extern int* ptr;
 extern int array[3];
 void top() {
-  reportDescriptiveName(&array[(long)ptr]);
+  reportDescriptiveName(&array[(long long)ptr]);
 })cpp";
 
   std::string Output;
@@ -140,6 +140,34 @@ void top() {
   ASSERT_TRUE(runChecker(Code, Output));
   // FIXME: Should return array[y], but returns array[x] (OriginRegion).
   EXPECT_EQ(Output, "DescriptiveNameChecker: array[x]\n");
+}
+
+TEST(MemRegionDescriptiveNameTest, FieldRegWithSuperElementReg) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+struct val_struct { int val; };
+extern struct val_struct val_struct_array[3];
+void top() {
+  reportDescriptiveName(&val_struct_array[0].val);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  EXPECT_EQ(Output, "DescriptiveNameChecker: val_struct_array[0].val\n");
+}
+
+TEST(MemRegionDescriptiveNameTest, FieldRegWithSuperMultidimElementReg) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+struct val_struct { int val; };
+extern struct val_struct val_struct_array[3][4];
+void top() {
+  reportDescriptiveName(&val_struct_array[1][2].val);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  EXPECT_EQ(Output, "DescriptiveNameChecker: val_struct_array[1][2].val\n");
 }
 
 } // namespace

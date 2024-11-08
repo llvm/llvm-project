@@ -55,11 +55,11 @@ fn:
   mrs x2, ssbs                          // AEK_SSBS
   abs z31.h, p7/m, z31.h                // AEK_SVE
   sqdmlslbt z0.d, z1.s, z31.s           // AEK_SVE2
-  aesd z0.b, z0.b, z31.b                // AEK_SVE2AES
+  aesd z0.b, z0.b, z31.b                // AEK_SVEAES
   bdep z0.b, z1.b, z31.b                // AEK_SVE2BITPERM
   rax1 z0.d, z0.d, z0.d                 // AEK_SVE2SHA3
   sm4e z0.s, z0.s, z0.s                 // AEK_SVE2SM4
-  addqv   v0.8h, p0, z0.h               // AEK_SVE2p1 / AEK_SME2p1
+  addqv   v0.8h, p0, z0.h               // AEK_SVE2P1 / AEK_SME2P1
   rcwswp x0, x1, [x2]                   // AEK_THE
   tcommit                               // AEK_TME
 lbl:

@@ -24,10 +24,10 @@
 
 # CHECK-ASM-AND-OBJ: cm.jt 1
 # CHECK-ASM: encoding: [0x06,0xa0]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmt' (table jump instuctions for code-size reduction){{$}}
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction){{$}}
 cm.jt 1
 
 # CHECK-ASM-AND-OBJ: cm.jalt 32
 # CHECK-ASM: encoding: [0x82,0xa0]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmt' (table jump instuctions for code-size reduction){{$}}
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction){{$}}
 cm.jalt 32

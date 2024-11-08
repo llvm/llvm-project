@@ -46,14 +46,14 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
   return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
 }
 
-static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
+static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 
 /// Return "true" if the given op is guaranteed to have neither "Allocate" nor
 /// "Free" side effects.
 static bool hasNeitherAllocateNorFreeSideEffect(Operation *op) {
   if (isa<MemoryEffectOpInterface>(op))
-    return hasEffect<MemoryEffects::Allocate>(op) ||
-           hasEffect<MemoryEffects::Free>(op);
+    return !hasEffect<MemoryEffects::Allocate>(op) &&
+           !hasEffect<MemoryEffects::Free>(op);
   // If the op does not implement the MemoryEffectOpInterface but has has
   // recursive memory effects, then this op in isolation (without its body) does
   // not have any side effects. All the ops inside the regions of this op will
@@ -497,6 +497,11 @@ BufferDeallocation::verifyFunctionPreconditions(FunctionOpInterface op) {
 }
 
 LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
+  // We do not care about ops that do not operate on buffers and have no
+  // Allocate/Free side effect.
+  if (!hasBufferSemantics(op) && hasNeitherAllocateNorFreeSideEffect(op))
+    return success();
+
   // (1) The pass does not work properly when deallocations are already present.
   // Alternatively, we could also remove all deallocations as a pre-pass.
   if (isa<DeallocOp>(op))
@@ -516,11 +521,6 @@ LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
       !isa<CallOpInterface>(op))
     return op->emitError(
         "ops with unknown memory side effects are not supported");
-
-  // We do not care about ops that do not operate on buffers and have no
-  // Allocate/Free side effect.
-  if (!hasBufferSemantics(op) && hasNeitherAllocateNorFreeSideEffect(op))
-    return success();
 
   // (3) Check that the control flow structures are supported.
   auto regions = op->getRegions();
@@ -822,10 +822,11 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
 
   // Lookup the function operation and check if it has private visibility. If
   // the function is referenced by SSA value instead of a Symbol, it's assumed
-  // to be always private.
-  Operation *funcOp = op.resolveCallable(state.getSymbolTable());
-  bool isPrivate = true;
-  if (auto symbol = dyn_cast<SymbolOpInterface>(funcOp))
+  // to be public. (And we cannot easily change the type of the SSA value
+  // anyway.)
+  Operation *funcOp = op.resolveCallableInTable(state.getSymbolTable());
+  bool isPrivate = false;
+  if (auto symbol = dyn_cast_or_null<SymbolOpInterface>(funcOp))
     isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
 
   // If the private-function-dynamic-ownership option is enabled and we are

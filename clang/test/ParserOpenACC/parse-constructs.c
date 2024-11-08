@@ -82,10 +82,9 @@ void func() {
   // expected-warning@+1{{OpenACC construct 'host_data' not yet implemented, pragma ignored}}
 #pragma acc host_data clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc loop clause list
-  for(;;){}
+  for(int i = 0; i < 6;++i){}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc parallel invalid clause list
   for(;;){}

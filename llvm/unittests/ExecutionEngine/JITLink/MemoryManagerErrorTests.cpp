@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "JITLinkMocks.h"
+#include "JITLinkTestUtils.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 
 #include "llvm/Testing/Support/Error.h"

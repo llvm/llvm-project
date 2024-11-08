@@ -406,6 +406,31 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+;CHECK-LABEL: @tan_f32_intrinsic(
+;CHECK: vtanf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.tan.f32(float) nounwind readnone
+define void @tan_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.tan.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 ;CHECK-LABEL: @asin_f32(
 ;CHECK: vasinf{{.*}}<4 x float>
 ;CHECK: ret void
@@ -420,6 +445,31 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %call = tail call float @asinf(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+;CHECK-LABEL: @asin_f32_intrinsic(
+;CHECK: vasinf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.asin.f32(float) nounwind readnone
+define void @asin_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.asin.f32(float %0) nounwind readnone
   %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
   store float %call, ptr %arrayidx2, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -456,6 +506,31 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+;CHECK-LABEL: @acos_f32_intrinsic(
+;CHECK: vacosf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.acos.f32(float) nounwind readnone
+define void @acos_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.acos.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 ;CHECK-LABEL: @atan_f32(
 ;CHECK: vatanf{{.*}}<4 x float>
 ;CHECK: ret void
@@ -470,6 +545,31 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %call = tail call float @atanf(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+;CHECK-LABEL: @atan_f32_intrinsic(
+;CHECK: vatanf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.atan.f32(float) nounwind readnone
+define void @atan_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.atan.f32(float %0) nounwind readnone
   %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
   store float %call, ptr %arrayidx2, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -506,6 +606,31 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+;CHECK-LABEL: @sinh_f32_intrinsic(
+;CHECK: vsinhf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.sinh.f32(float) nounwind readnone
+define void @sinh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.sinh.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 ;CHECK-LABEL: @cosh_f32(
 ;CHECK: vcoshf{{.*}}<4 x float>
 ;CHECK: ret void
@@ -531,6 +656,31 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+;CHECK-LABEL: @cosh_f32_intrinsic(
+;CHECK: vcoshf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.cosh.f32(float) nounwind readnone
+define void @cosh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.cosh.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 ;CHECK-LABEL: @tanh_f32(
 ;CHECK: vtanhf{{.*}}<4 x float>
 ;CHECK: ret void
@@ -545,6 +695,31 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %call = tail call float @tanhf(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+;CHECK-LABEL: @tanh_f32_intrinsic(
+;CHECK: vtanhf{{.*}}<4 x float>
+;CHECK: ret void
+declare float @llvm.tanh.f32(float) nounwind readnone
+define void @tanh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.tanh.f32(float %0) nounwind readnone
   %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
   store float %call, ptr %arrayidx2, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1

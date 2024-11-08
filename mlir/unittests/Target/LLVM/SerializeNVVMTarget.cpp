@@ -18,6 +18,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_HAS_NVPTX_TARGET
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"
@@ -30,7 +31,7 @@
 using namespace mlir;
 
 // Skip the test if the NVPTX target was not built.
-#if MLIR_ENABLE_CUDA_CONVERSIONS
+#if LLVM_HAS_NVPTX_TARGET
 #define SKIP_WITHOUT_NVPTX(x) x
 #else
 #define SKIP_WITHOUT_NVPTX(x) DISABLED_##x

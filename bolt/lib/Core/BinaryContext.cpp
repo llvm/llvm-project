@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -72,7 +71,7 @@ PrintMemData("print-mem-data",
 
 cl::opt<std::string> CompDirOverride(
     "comp-dir-override",
-    cl::desc("overrides DW_AT_comp_dir, and provides an alterantive base "
+    cl::desc("overrides DW_AT_comp_dir, and provides an alternative base "
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
@@ -142,8 +141,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       AsmInfo(std::move(AsmInfo)), MII(std::move(MII)), STI(std::move(STI)),
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
-      Logger(Logger) {
-  Relocation::Arch = this->TheTriple->getArch();
+      Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -555,6 +553,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                                      const uint64_t NextJTAddress,
                                      JumpTable::AddressesType *EntriesAsAddress,
                                      bool *HasEntryInFragment) const {
+  // Target address of __builtin_unreachable.
+  const uint64_t UnreachableAddress = BF.getAddress() + BF.getSize();
+
   // Is one of the targets __builtin_unreachable?
   bool HasUnreachable = false;
 
@@ -564,9 +565,15 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   // Number of targets other than __builtin_unreachable.
   uint64_t NumRealEntries = 0;
 
-  auto addEntryAddress = [&](uint64_t EntryAddress) {
-    if (EntriesAsAddress)
-      EntriesAsAddress->emplace_back(EntryAddress);
+  // Size of the jump table without trailing __builtin_unreachable entries.
+  size_t TrimmedSize = 0;
+
+  auto addEntryAddress = [&](uint64_t EntryAddress, bool Unreachable = false) {
+    if (!EntriesAsAddress)
+      return;
+    EntriesAsAddress->emplace_back(EntryAddress);
+    if (!Unreachable)
+      TrimmedSize = EntriesAsAddress->size();
   };
 
   ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
@@ -618,8 +625,8 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
             : *getPointerAtAddress(EntryAddress);
 
     // __builtin_unreachable() case.
-    if (Value == BF.getAddress() + BF.getSize()) {
-      addEntryAddress(Value);
+    if (Value == UnreachableAddress) {
+      addEntryAddress(Value, /*Unreachable*/ true);
       HasUnreachable = true;
       LLVM_DEBUG(dbgs() << formatv("OK: {0:x} __builtin_unreachable\n", Value));
       continue;
@@ -638,7 +645,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
     const bool DoesBelongToFunction =
         BF.containsAddress(Value) ||
-        (TargetBF && TargetBF->isParentOrChildOf(BF));
+        (TargetBF && areRelatedFragments(TargetBF, &BF));
     if (!DoesBelongToFunction) {
       LLVM_DEBUG({
         if (!BF.containsAddress(Value)) {
@@ -672,6 +679,13 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       *HasEntryInFragment = true;
     addEntryAddress(Value);
   }
+
+  // Trim direct/normal jump table to exclude trailing unreachable entries that
+  // can collide with a function address.
+  if (Type == JumpTable::JTT_NORMAL && EntriesAsAddress &&
+      TrimmedSize != EntriesAsAddress->size() &&
+      getBinaryFunctionAtAddress(UnreachableAddress))
+    EntriesAsAddress->resize(TrimmedSize);
 
   // It's a jump table if the number of real entries is more than 1, or there's
   // one real entry and one or more special targets. If there are only multiple
@@ -824,9 +838,11 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
     // Prevent associating a jump table to a specific fragment twice.
-    // This simple check arises from the assumption: no more than 2 fragments.
-    if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      assert(JT->Parents[0]->isParentOrChildOf(Function) &&
+    if (!llvm::is_contained(JT->Parents, &Function)) {
+      assert(llvm::all_of(JT->Parents,
+                          [&](const BinaryFunction *BF) {
+                            return areRelatedFragments(&Function, BF);
+                          }) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
@@ -837,8 +853,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
         JT->print(this->outs());
       }
       Function.JumpTables.emplace(Address, JT);
-      JT->Parents[0]->setHasIndirectTargetToSplitFragment(true);
-      JT->Parents[1]->setHasIndirectTargetToSplitFragment(true);
+      for (BinaryFunction *Parent : JT->Parents)
+        Parent->setHasIndirectTargetToSplitFragment(true);
     }
 
     bool IsJumpTableParent = false;
@@ -918,10 +934,13 @@ std::string BinaryContext::generateJumpTableName(const BinaryFunction &BF,
   uint64_t Offset = 0;
   if (const JumpTable *JT = BF.getJumpTableContainingAddress(Address)) {
     Offset = Address - JT->getAddress();
-    auto Itr = JT->Labels.find(Offset);
-    if (Itr != JT->Labels.end())
-      return std::string(Itr->second->getName());
-    Id = JumpTableIds.at(JT->getAddress());
+    auto JTLabelsIt = JT->Labels.find(Offset);
+    if (JTLabelsIt != JT->Labels.end())
+      return std::string(JTLabelsIt->second->getName());
+
+    auto JTIdsIt = JumpTableIds.find(JT->getAddress());
+    assert(JTIdsIt != JumpTableIds.end());
+    Id = JTIdsIt->second;
   } else {
     Id = JumpTableIds[Address] = BF.JumpTables.size();
   }
@@ -1191,12 +1210,13 @@ void BinaryContext::generateSymbolHashes() {
 }
 
 bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
-                                     BinaryFunction &Function) const {
+                                     BinaryFunction &Function) {
   assert(TargetFunction.isFragment() && "TargetFunction must be a fragment");
   if (TargetFunction.isChildOf(Function))
     return true;
   TargetFunction.addParentFragment(Function);
   Function.addFragment(TargetFunction);
+  FragmentClasses.unionSets(&TargetFunction, &Function);
   if (!HasRelocations) {
     TargetFunction.setSimple(false);
     Function.setSimple(false);
@@ -1274,8 +1294,8 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
     Veneer->getOrCreateLocalLabel(Address);
     Veneer->setMaxSize(TotalSize);
     Veneer->updateState(BinaryFunction::State::Disassembled);
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x" << Address
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x"
+                      << Twine::utohexstr(Address) << "\n");
     return true;
   };
 
@@ -1306,7 +1326,9 @@ void BinaryContext::processInterproceduralReferences() {
        InterproceduralReferences) {
     BinaryFunction &Function = *It.first;
     uint64_t Address = It.second;
-    if (!Address || Function.isIgnored())
+    // Process interprocedural references from ignored functions in BAT mode
+    // (non-simple in non-relocation mode) to properly register entry points
+    if (!Address || (Function.isIgnored() && !HasBATSection))
       continue;
 
     BinaryFunction *TargetFunction =
@@ -1316,7 +1338,7 @@ void BinaryContext::processInterproceduralReferences() {
 
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
-          !TargetFunction->isChildOf(Function)) {
+          !areRelatedFragments(TargetFunction, &Function)) {
         this->errs()
             << "BOLT-WARNING: interprocedural reference between unrelated "
                "fragments: "
@@ -1864,7 +1886,7 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
   // the end of a data chunk inside code, $d identifies start of data.
-  if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
+  if (isX86() || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
   Expected<StringRef> NameOrError = Symbol.getName();
@@ -1999,6 +2021,9 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
   // Find a segment with a matching file offset.
   for (auto &KV : SegmentMapInfo) {
     const SegmentInfo &SegInfo = KV.second;
+    // Only consider executable segments.
+    if (!SegInfo.IsExecutable)
+      continue;
     // FileOffset is got from perf event,
     // and it is equal to alignDown(SegInfo.FileOffset, pagesize).
     // If the pagesize is not equal to SegInfo.Alignment.
@@ -2196,8 +2221,8 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   return DE.getUnsigned(&ValueOffset, Size);
 }
 
-ErrorOr<uint64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
-                                                         size_t Size) const {
+ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
+                                                        size_t Size) const {
   const ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return std::make_error_code(std::errc::bad_address);
@@ -2347,10 +2372,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(VecOS);
   std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI,
-      /*RelaxAll=*/false,
-      /*IncrementalLinkerCompatible=*/false,
-      /*DWARFMustBeAtTheEnd=*/false));
+      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
   Streamer->initSections(false, *STI);
 
@@ -2383,32 +2405,23 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     Streamer->emitLabel(SplitStartLabel);
     emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
     Streamer->emitLabel(SplitEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
-    // private
-    Streamer->emitBytes(StringRef(""));
-    Streamer->switchSection(Section);
   }
-
-  // To avoid calling MCObjectStreamer::flushPendingLabels() which is private or
-  // MCStreamer::Finish(), which does more than we want
-  Streamer->emitBytes(StringRef(""));
 
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler();
-  MCAsmLayout Layout(Assembler);
-  Assembler.layout(Layout);
+  Assembler.layout();
 
   // Obtain fragment sizes.
   std::vector<uint64_t> FragmentSizes;
   // Main fragment size.
-  const uint64_t HotSize =
-      Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
+  const uint64_t HotSize = Assembler.getSymbolOffset(*EndLabel) -
+                           Assembler.getSymbolOffset(*StartLabel);
   FragmentSizes.push_back(HotSize);
   // Split fragment sizes.
   uint64_t ColdSize = 0;
   for (const auto &Labels : SplitLabels) {
-    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
-                    Layout.getSymbolOffset(*Labels.first);
+    uint64_t Size = Assembler.getSymbolOffset(*Labels.second) -
+                    Assembler.getSymbolOffset(*Labels.first);
     FragmentSizes.push_back(Size);
     ColdSize += Size;
   }
@@ -2418,7 +2431,8 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     BinaryBasicBlock *PrevBB = nullptr;
     for (BinaryBasicBlock *BB : FF) {
-      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      const uint64_t BBStartOffset =
+          Assembler.getSymbolOffset(*(BB->getLabel()));
       BB->setOutputStartAddress(BBStartOffset);
       if (PrevBB)
         PrevBB->setOutputEndAddress(BBStartOffset);
@@ -2509,6 +2523,16 @@ BinaryFunction *BinaryContext::getBinaryFunctionAtAddress(uint64_t Address) {
       return BF;
   }
   return nullptr;
+}
+
+/// Deregister JumpTable registered at a given \p Address and delete it.
+void BinaryContext::deleteJumpTable(uint64_t Address) {
+  assert(JumpTables.count(Address) && "Must have a jump table at address");
+  JumpTable *JT = JumpTables.at(Address);
+  for (BinaryFunction *Parent : JT->Parents)
+    Parent->JumpTables.erase(Address);
+  JumpTables.erase(Address);
+  delete JT;
 }
 
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(

@@ -57,7 +57,8 @@ class ComdatSelectorOp;
 /// needs to look up block and function mappings.
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
-  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef);
+  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
+                                bool);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.
@@ -327,6 +328,12 @@ private:
   /// Process tbaa LLVM Metadata operations and create LLVM
   /// metadata nodes for them.
   LogicalResult createTBAAMetadata();
+
+  /// Process the ident LLVM Metadata, if it exists.
+  LogicalResult createIdentMetadata();
+
+  /// Process the llvm.commandline LLVM Metadata, if it exists.
+  LogicalResult createCommandlineMetadata();
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult

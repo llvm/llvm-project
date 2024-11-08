@@ -52,6 +52,9 @@ public:
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
   bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
 
+  // Set default DWARF version to 4 for DXIL uses version 4.
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
+
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
 };

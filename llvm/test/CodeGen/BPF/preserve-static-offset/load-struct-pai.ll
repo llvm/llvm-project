@@ -40,7 +40,7 @@ entry:
 
 ; CHECK:      define dso_local i32 @buz(ptr noundef %[[p:.*]]) {{.*}} {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   call void @llvm.dbg.value
+; CHECK-NEXT:   #dbg_value
 ; CHECK-NEXT:   %[[b1:.*]] = call i32 (ptr, i1, i8, i8, i8, i1, ...)
 ; CHECK-SAME:     @llvm.bpf.getelementptr.and.load.i32
 ; CHECK-SAME:       (ptr readonly elementtype(%struct.bar) %[[p]],

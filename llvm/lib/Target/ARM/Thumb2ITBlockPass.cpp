@@ -269,7 +269,8 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
     MIB.addImm(Mask);
 
     // Last instruction in IT block kills ITSTATE.
-    LastITMI->findRegisterUseOperand(ARM::ITSTATE)->setIsKill();
+    LastITMI->findRegisterUseOperand(ARM::ITSTATE, /*TRI=*/nullptr)
+        ->setIsKill();
 
     // Finalize the bundle.
     finalizeBundle(MBB, InsertPos.getInstrIterator(),

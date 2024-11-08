@@ -45,7 +45,7 @@ using namespace llvm;
 #define DEBUG_TYPE "polly-detect"
 
 #define SCOP_STAT(NAME, DESC)                                                  \
-  { "polly-detect", "NAME", "Number of rejected regions: " DESC }
+  {"polly-detect", "NAME", "Number of rejected regions: " DESC}
 
 static Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
@@ -89,7 +89,6 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
   std::string Buf;
   raw_string_ostream fmt(Buf);
   fmt << RHS;
-  fmt.flush();
 
   return LHS.concat(Buf).str();
 }
@@ -669,7 +668,7 @@ std::string ReportAlias::formatInvalidAlias(std::string Prefix,
 
   OS << Suffix;
 
-  return OS.str();
+  return Message;
 }
 
 std::string ReportAlias::getRemarkName() const { return "Alias"; }

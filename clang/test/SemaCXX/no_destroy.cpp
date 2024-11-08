@@ -1,30 +1,20 @@
-// RUN: %clang_cc1 -DNO_DTORS -DNO_EXCEPTIONS -fno-c++-static-destructors -verify %s
-// RUN: %clang_cc1 -DNO_EXCEPTIONS -verify %s
-// RUN: %clang_cc1 -DNO_DTORS -fexceptions -fno-c++-static-destructors -verify %s
-// RUN: %clang_cc1 -fexceptions -verify %s
+// RUN: %clang_cc1 -fc++-static-destructors=none -verify %s
+// RUN: %clang_cc1 -fc++-static-destructors=thread-local -verify=expected,thread-local-dtors %s
+// RUN: %clang_cc1 -verify=expected,thread-local-dtors,all-dtors %s
+// RUN: %clang_cc1 -fexceptions -fc++-static-destructors=none -verify %s
+// RUN: %clang_cc1 -fexceptions -fc++-static-destructors=thread-local -verify=expected,thread-local-dtors %s
+// RUN: %clang_cc1 -fexceptions -verify=expected,thread-local-dtors,all-dtors %s
 
 struct SecretDestructor {
-#ifndef NO_DTORS
-  // expected-note@+2 4 {{private}}
-#endif
 private: ~SecretDestructor(); // expected-note + {{private}}
 };
 
-SecretDestructor sd1;
-thread_local SecretDestructor sd2;
+SecretDestructor sd1; // all-dtors-error{{private}}
+thread_local SecretDestructor sd2; // thread-local-dtors-error{{private}}
 void locals() {
-  static SecretDestructor sd3;
-  thread_local SecretDestructor sd4;
+  static SecretDestructor sd3; // all-dtors-error{{private}}
+  thread_local SecretDestructor sd4; // thread-local-dtors-error{{private}}
 }
-
-#ifndef NO_DTORS
-// SecretDestructor sd1;                  // expected-error@-8 {{private}}
-// thread_local SecretDestructor sd2;     // expected-error@-8 {{private}}
-// void locals() {
-//   static SecretDestructor sd3;         // expected-error@-8 {{private}}
-//   thread_local SecretDestructor sd4;   // expected-error@-8 {{private}}
-// }
-#endif
 
 [[clang::always_destroy]] SecretDestructor sd6; // expected-error{{private}}
 [[clang::always_destroy]] thread_local SecretDestructor sd7; // expected-error{{private}}

@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -92,9 +93,9 @@ module {
     // CHECK-NEXT: nse = 16
     // CHECK-NEXT: dim = ( 8, 8 )
     // CHECK-NEXT: lvl = ( 8, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 3, 4, 5, 6, 8, 11, 14, 16
-    // CHECK-NEXT: crd[1] : ( 0, 2, 7, 1, 2, 3, 1, 4, 1, 2, 5, 2, 6, 7, 2, 7
-    // CHECK-NEXT: values : ( 2, 2, 2, 4, 6, 8, 2, 10, 2, 2, 12, 2, 14, 2, 2, 16
+    // CHECK-NEXT: pos[1] : ( 0, 3, 4, 5, 6, 8, 11, 14, 16 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 7, 1, 2, 3, 1, 4, 1, 2, 5, 2, 6, 7, 2, 7 )
+    // CHECK-NEXT: values : ( 2, 2, 2, 4, 6, 8, 2, 10, 2, 2, 12, 2, 14, 2, 2, 16 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %2 : tensor<8x8xf32, #CSR>

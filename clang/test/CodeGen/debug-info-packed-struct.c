@@ -59,7 +59,7 @@ struct layout2 {
 #pragma pack()
 // CHECK: l2_ofs0
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l2_ofs1",
-// CHECK-SAME:     {{.*}}size: 64, offset: 8)
+// CHECK-SAME:     {{.*}}size: 64, align: 8, offset: 8)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l2_ofs9",
 // CHECK-SAME:     {{.*}}size: 1, offset: 72, flags: DIFlagBitField, extraData: i64 72)
 
@@ -81,7 +81,7 @@ struct layout3 {
 #pragma pack()
 // CHECK: l3_ofs0
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l3_ofs4",
-// CHECK-SAME:     {{.*}}size: 64, offset: 32)
+// CHECK-SAME:     {{.*}}size: 64, align: 32, offset: 32)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l3_ofs12",
 // CHECK-SAME:     {{.*}}size: 1, offset: 96, flags: DIFlagBitField, extraData: i64 96)
 

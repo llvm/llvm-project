@@ -28,12 +28,8 @@
 #include "flang/Runtime/descriptor.h"
 #include <cstring>
 
-namespace Fortran::runtime {
-
-// Suppress the warnings about calling __host__-only std::complex operators,
-// defined in C++ STD header files, from __device__ code.
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+namespace {
+using namespace Fortran::runtime;
 
 // General accumulator for any type and stride; this is not used for
 // contiguous numeric cases.
@@ -111,8 +107,6 @@ inline RT_API_ATTRS void MatrixTimesMatrix(
   }
 }
 
-RT_DIAG_POP
-
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline RT_API_ATTRS void MatrixTimesMatrixHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
@@ -137,9 +131,6 @@ inline RT_API_ATTRS void MatrixTimesMatrixHelper(
     }
   }
 }
-
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Contiguous numeric matrix*vector multiplication
 //   matrix(rows,n) * column vector(n) -> column vector(rows)
@@ -178,8 +169,6 @@ inline RT_API_ATTRS void MatrixTimesVector(
   }
 }
 
-RT_DIAG_POP
-
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline RT_API_ATTRS void MatrixTimesVectorHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
@@ -192,9 +181,6 @@ inline RT_API_ATTRS void MatrixTimesVectorHelper(
         product, rows, n, x, y, *xColumnByteStride);
   }
 }
-
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Contiguous numeric vector*matrix multiplication
 //   row vector(n) * matrix(n,cols) -> row vector(cols)
@@ -234,8 +220,6 @@ inline RT_API_ATTRS void VectorTimesMatrix(
   }
 }
 
-RT_DIAG_POP
-
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool SPARSE_COLUMNS = false>
 inline RT_API_ATTRS void VectorTimesMatrixHelper(
@@ -249,9 +233,6 @@ inline RT_API_ATTRS void VectorTimesMatrixHelper(
         product, n, cols, x, y, *yColumnByteStride);
   }
 }
-
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Implements an instance of MATMUL for given argument types.
 template <bool IS_ALLOCATING, TypeCategory RCAT, int RKIND, typename XT,
@@ -288,11 +269,25 @@ static inline RT_API_ATTRS void DoMatmul(
   }
   SubscriptValue n{x.GetDimension(xRank - 1).Extent()};
   if (n != y.GetDimension(0).Extent()) {
-    terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
-        static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
-        static_cast<std::intmax_t>(n),
-        static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
-        static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    // At this point, we know that there's a shape error.  There are three
+    // possibilities, x is rank 1, y is rank 1, or both are rank 2.
+    if (xRank == 1) {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jd, %jdx%jd)",
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    } else if (yRank == 1) {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jd)",
+          static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()));
+    } else {
+      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+          static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(n),
+          static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+          static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
+    }
   }
   using WriteResult =
       CppTypeFor<RCAT == TypeCategory::Logical ? TypeCategory::Integer : RCAT,
@@ -329,9 +324,9 @@ static inline RT_API_ATTRS void DoMatmul(
             // TODO: try using CUTLASS for device.
           } else if constexpr (std::is_same_v<XT, double>) {
             // TODO: call BLAS-3 DGEMM
-          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
             // TODO: call BLAS-3 CGEMM
-          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
             // TODO: call BLAS-3 ZGEMM
           }
         }
@@ -346,9 +341,9 @@ static inline RT_API_ATTRS void DoMatmul(
             // TODO: call BLAS-2 SGEMV(x,y)
           } else if constexpr (std::is_same_v<XT, double>) {
             // TODO: call BLAS-2 DGEMV(x,y)
-          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
             // TODO: call BLAS-2 CGEMV(x,y)
-          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
             // TODO: call BLAS-2 ZGEMV(x,y)
           }
         }
@@ -362,9 +357,9 @@ static inline RT_API_ATTRS void DoMatmul(
             // TODO: call BLAS-2 SGEMV(y,x)
           } else if constexpr (std::is_same_v<XT, double>) {
             // TODO: call BLAS-2 DGEMV(y,x)
-          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
             // TODO: call BLAS-2 CGEMV(y,x)
-          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
             // TODO: call BLAS-2 ZGEMV(y,x)
           }
         }
@@ -426,60 +421,54 @@ static inline RT_API_ATTRS void DoMatmul(
   }
 }
 
-RT_DIAG_POP
-
-// Maps the dynamic type information from the arguments' descriptors
-// to the right instantiation of DoMatmul() for valid combinations of
-// types.
-template <bool IS_ALLOCATING> struct Matmul {
+template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
+    int YKIND>
+struct MatmulHelper {
   using ResultDescriptor =
       std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
-  template <TypeCategory XCAT, int XKIND> struct MM1 {
-    template <TypeCategory YCAT, int YKIND> struct MM2 {
-      RT_API_ATTRS void operator()(ResultDescriptor &result,
-          const Descriptor &x, const Descriptor &y,
-          Terminator &terminator) const {
-        if constexpr (constexpr auto resultType{
-                          GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
-          if constexpr (common::IsNumericTypeCategory(resultType->first) ||
-              resultType->first == TypeCategory::Logical) {
-            return DoMatmul<IS_ALLOCATING, resultType->first,
-                resultType->second, CppTypeFor<XCAT, XKIND>,
-                CppTypeFor<YCAT, YKIND>>(result, x, y, terminator);
-          }
-        }
-        terminator.Crash("MATMUL: bad operand types (%d(%d), %d(%d))",
-            static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
-      }
-    };
-    RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
-        const Descriptor &y, Terminator &terminator, TypeCategory yCat,
-        int yKind) const {
-      ApplyType<MM2, void>(yCat, yKind, terminator, result, x, y, terminator);
-    }
-  };
   RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
       const Descriptor &y, const char *sourceFile, int line) const {
     Terminator terminator{sourceFile, line};
     auto xCatKind{x.type().GetCategoryAndKind()};
     auto yCatKind{y.type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
-    ApplyType<MM1, void>(xCatKind->first, xCatKind->second, terminator, result,
-        x, y, terminator, yCatKind->first, yCatKind->second);
+    RUNTIME_CHECK(terminator, xCatKind->first == XCAT);
+    RUNTIME_CHECK(terminator, yCatKind->first == YCAT);
+    if constexpr (constexpr auto resultType{
+                      GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
+      return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,
+          CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(
+          result, x, y, terminator);
+    }
+    terminator.Crash("MATMUL: bad operand types (%d(%d), %d(%d))",
+        static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
   }
 };
+} // namespace
 
+namespace Fortran::runtime {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-void RTDEF(Matmul)(Descriptor &result, const Descriptor &x, const Descriptor &y,
-    const char *sourceFile, int line) {
-  Matmul<true>{}(result, x, y, sourceFile, line);
-}
-void RTDEF(MatmulDirect)(const Descriptor &result, const Descriptor &x,
-    const Descriptor &y, const char *sourceFile, int line) {
-  Matmul<false>{}(result, x, y, sourceFile, line);
-}
+#define MATMUL_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
+  void RTDEF(Matmul##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
+      const Descriptor &x, const Descriptor &y, const char *sourceFile, \
+      int line) { \
+    MatmulHelper<true, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
+        YKIND>{}(result, x, y, sourceFile, line); \
+  }
+
+#define MATMUL_DIRECT_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
+  void RTDEF(MatmulDirect##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
+      const Descriptor &x, const Descriptor &y, const char *sourceFile, \
+      int line) { \
+    MatmulHelper<false, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
+        YKIND>{}(result, x, y, sourceFile, line); \
+  }
+
+#define MATMUL_FORCE_ALL_TYPES 0
+
+#include "flang/Runtime/matmul-instances.inc"
 
 RT_EXT_API_GROUP_END
 } // extern "C"

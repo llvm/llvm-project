@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/UInt128.h"
 #include "src/__support/high_precision_decimal.h"
+#include "src/__support/uint128.h"
 
 #include "test/UnitTest/Test.h"
 

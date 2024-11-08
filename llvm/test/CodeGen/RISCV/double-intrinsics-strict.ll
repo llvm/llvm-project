@@ -57,7 +57,7 @@ define double @sqrt_f64(double %a) nounwind strictfp {
   ret double %1
 }
 
-declare double @llvm.experimental.constrained.powi.f64.i32(double, i32, metadata, metadata)
+declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)
 
 define double @powi_f64(double %a, i32 %b) nounwind strictfp {
 ; RV32IFD-LABEL: powi_f64:
@@ -116,7 +116,7 @@ define double @powi_f64(double %a, i32 %b) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.powi.f64.i32(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.powi.f64(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
 
@@ -373,6 +373,66 @@ define double @sincos_f64(double %a) nounwind strictfp {
   %2 = call double @llvm.experimental.constrained.cos.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   %3 = fadd double %1, %2
   ret double %3
+}
+
+declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+
+define double @tan_f64(double %a) nounwind strictfp {
+; RV32IFD-LABEL: tan_f64:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call tan
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: tan_f64:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    call tan
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: tan_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    call tan
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: tan_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    call tan
+; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32I-LABEL: tan_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call tan
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: tan_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call tan
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call double @llvm.experimental.constrained.tan.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret double %1
 }
 
 declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, metadata)

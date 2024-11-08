@@ -43,7 +43,7 @@ private:
     M = parseAssemblyString("declare void @dummy()", Err, Ctx);
     EXPECT_NE(M.get(), nullptr)
         << "Loading an invalid module.\n " << Err.getMessage() << "\n";
-    Type *Ty = parseType(ScalarFTyStr, Err, *(M.get()));
+    Type *Ty = parseType(ScalarFTyStr, Err, *(M));
     ScalarFTy = dyn_cast<FunctionType>(Ty);
     EXPECT_NE(ScalarFTy, nullptr)
         << "Invalid function type string: " << ScalarFTyStr << "\n"
@@ -161,7 +161,7 @@ TEST_F(VFABIParserTest, ParamListParsing) {
       Type::getVoidTy(Ctx),
       {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
        Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
-       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx)},
+       PointerType::getUnqual(Ctx), Type::getInt32Ty(Ctx)},
       false);
   EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)5);
@@ -225,11 +225,11 @@ TEST_F(VFABIParserTest, Parse) {
           Type::getInt32Ty(Ctx),
           Type::getInt32Ty(Ctx),
           Type::getInt32Ty(Ctx),
-          Type::getInt32Ty(Ctx)->getPointerTo(),
+          PointerType::getUnqual(Ctx),
           Type::getInt32Ty(Ctx),
           Type::getInt32Ty(Ctx),
           Type::getInt32Ty(Ctx),
-          Type::getInt32Ty(Ctx)->getPointerTo(),
+          PointerType::getUnqual(Ctx),
       },
       false);
   EXPECT_EQ(getFunctionType(), FTy);
@@ -265,11 +265,11 @@ TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
                            "void(i32, i32, i32, ptr)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Ctx),
-      {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
-       Type::getInt32Ty(Ctx)->getPointerTo()},
-      false);
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx),
+                        {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+                         Type::getInt32Ty(Ctx), PointerType::getUnqual(Ctx)},
+                        false);
   EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)4);
@@ -332,13 +332,13 @@ TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
                            "void(i32, i32, ptr, i32, i32, i32, ptr, i32)"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
-  FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Ctx),
-      {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
-       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx),
-       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
-       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx)},
-      false);
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx),
+                        {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+                         PointerType::getUnqual(Ctx), Type::getInt32Ty(Ctx),
+                         Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+                         PointerType::getUnqual(Ctx), Type::getInt32Ty(Ctx)},
+                        false);
   EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)8);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
@@ -423,7 +423,7 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
       Type::getVoidTy(Ctx),
       {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
        Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
-       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx),
+       PointerType::getUnqual(Ctx), Type::getInt32Ty(Ctx),
        Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
        Type::getInt32Ty(Ctx)},
       false);
@@ -692,8 +692,8 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
       Type::getVoidTy(Ctx),
       {
           VectorType::get(Type::getDoubleTy(Ctx), ElementCount::getScalable(2)),
-          Type::getInt32Ty(Ctx)->getPointerTo(),
-          Type::getInt32Ty(Ctx)->getPointerTo(),
+          PointerType::getUnqual(Ctx),
+          PointerType::getUnqual(Ctx),
           VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
       },
       false);

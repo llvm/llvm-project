@@ -104,7 +104,8 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
   // for the Case Statement'" (1994), but builds the MinPartitions array in
   // reverse order to make it easier to reconstruct the partitions in ascending
   // order. In the choice between two optimal partitionings, it picks the one
-  // which yields more jump tables.
+  // which yields more jump tables. The algorithm is described in
+  // https://arxiv.org/pdf/1910.02351v2
 
   // MinPartitions[i] is the minimum nbr of partitions of Clusters[i..N-1].
   SmallVector<unsigned, 8> MinPartitions(N);
@@ -253,7 +254,7 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
                      ->createJumpTableIndex(Table);
 
   // Set up the jump table info.
-  JumpTable JT(-1U, JTI, JumpTableMBB, nullptr, SL);
+  JumpTable JT(Register(), JTI, JumpTableMBB, nullptr, SL);
   JumpTableHeader JTH(Clusters[First].Low->getValue(),
                       Clusters[Last].High->getValue(), SI->getCondition(),
                       nullptr, false);
@@ -454,7 +455,7 @@ bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,
     BTI.push_back(BitTestCase(CB.Mask, BitTestBB, CB.BB, CB.ExtraProb));
   }
   BitTestCases.emplace_back(std::move(LowBound), std::move(CmpRange),
-                            SI->getCondition(), -1U, MVT::Other, false,
+                            SI->getCondition(), Register(), MVT::Other, false,
                             ContiguousRange, nullptr, nullptr, std::move(BTI),
                             TotalProb);
 

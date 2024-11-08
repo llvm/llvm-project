@@ -83,9 +83,6 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
       copySyntheticField(SrcFieldLoc->getType(), *SrcFieldLoc,
                          Dst.getSyntheticField(Name), Env);
   }
-
-  RecordValue *DstVal = &Env.create<RecordValue>(Dst);
-  Env.setValue(Dst, *DstVal);
 }
 
 bool recordsEqual(const RecordStorageLocation &Loc1, const Environment &Env1,

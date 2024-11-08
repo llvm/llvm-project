@@ -44,12 +44,10 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using unique_copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __unique_copy {
-
 template <class _InIter, class _OutIter>
 concept __can_reread_from_output = (input_iterator<_OutIter> && same_as<iter_value_t<_InIter>, iter_value_t<_OutIter>>);
 
-struct __fn {
+struct __unique_copy {
   template <class _InIter, class _OutIter>
   static consteval auto __get_algo_tag() {
     if constexpr (forward_iterator<_InIter>) {
@@ -104,10 +102,8 @@ struct __fn {
   }
 };
 
-} // namespace __unique_copy
-
 inline namespace __cpo {
-inline constexpr auto unique_copy = __unique_copy::__fn{};
+inline constexpr auto unique_copy = __unique_copy{};
 } // namespace __cpo
 } // namespace ranges
 

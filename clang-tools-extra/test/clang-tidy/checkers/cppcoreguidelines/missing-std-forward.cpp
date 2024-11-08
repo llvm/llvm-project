@@ -187,14 +187,27 @@ void lambda_value_reference_auxiliary_var(T&& t) {
 namespace deleted_functions {
 
 template <typename T>
-void f(T &&) = delete;
+void f(T &&t) = delete;
 
 struct S {
     template <typename T>
-    S(T &&) = delete;
+    S(T &&t) = delete;
 
     template <typename T>
-    void operator&(T &&) = delete;
+    void operator&(T &&t) = delete;
 };
 
 } // namespace deleted_functions
+
+namespace unused_arguments {
+
+template<typename F>
+void unused_argument1(F&&) {}
+
+template<typename F>
+void unused_argument2([[maybe_unused]] F&& f) {}
+
+template<typename F>
+void unused_argument3(F&& _) {}
+
+} // namespace unused_arguments

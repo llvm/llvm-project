@@ -47,6 +47,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -67,7 +68,7 @@ static codegen::RegisterCodeGenFlags CFG;
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
 static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
-    "Optimizations available (use '-passes=' for the new pass manager)"));
+    "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
 static cl::opt<bool> EnableLegacyPassManager(
     "bugpoint-enable-legacy-pm",
@@ -84,7 +85,7 @@ static cl::opt<std::string> PassPipeline(
     "passes",
     cl::desc(
         "A textual description of the pass pipeline. To have analysis passes "
-        "available before a certain pass, add 'require<foo-analysis>'."));
+        "available before a certain pass, add \"require<foo-analysis>\"."));
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
@@ -153,28 +154,28 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     OptLevelO0("O0", cl::desc("Optimization level 0. Similar to clang -O0. "
-                              "Same as -passes='default<O0>'"));
+                              "Same as -passes=\"default<O0>\""));
 
 static cl::opt<bool>
     OptLevelO1("O1", cl::desc("Optimization level 1. Similar to clang -O1. "
-                              "Same as -passes='default<O1>'"));
+                              "Same as -passes=\"default<O1>\""));
 
 static cl::opt<bool>
     OptLevelO2("O2", cl::desc("Optimization level 2. Similar to clang -O2. "
-                              "Same as -passes='default<O2>'"));
+                              "Same as -passes=\"default<O2>\""));
 
 static cl::opt<bool>
     OptLevelOs("Os", cl::desc("Like -O2 but size-conscious. Similar to clang "
-                              "-Os. Same as -passes='default<Os>'"));
+                              "-Os. Same as -passes=\"default<Os>\""));
 
 static cl::opt<bool> OptLevelOz(
     "Oz",
     cl::desc("Like -O2 but optimize for code size above all else. Similar to "
-             "clang -Oz. Same as -passes='default<Oz>'"));
+             "clang -Oz. Same as -passes=\"default<Oz>\""));
 
 static cl::opt<bool>
     OptLevelO3("O3", cl::desc("Optimization level 3. Similar to clang -O3. "
-                              "Same as -passes='default<O3>'"));
+                              "Same as -passes=\"default<O3>\""));
 
 static cl::opt<unsigned> CodeGenOptLevelCL(
     "codegen-opt-level",
@@ -374,6 +375,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "fix-irreducible",
       "expand-large-fp-convert",
       "callbrprepare",
+      "scalarizer",
   };
   for (const auto &P : PassNamePrefix)
     if (Pass.starts_with(P))
@@ -439,9 +441,9 @@ extern "C" int optMain(
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
+  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
-  initializeExpandVectorPredicationPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
@@ -725,11 +727,11 @@ extern "C" int optMain(
                ? OK_OutputAssembly
                : (OutputThinLTOBC ? OK_OutputThinLTOBitcode : OK_OutputBitcode);
 
-    VerifierKind VK = VK_VerifyOut;
+    VerifierKind VK = VerifierKind::InputOutput;
     if (NoVerify)
-      VK = VK_NoVerifier;
+      VK = VerifierKind::None;
     else if (VerifyEach)
-      VK = VK_VerifyEachPass;
+      VK = VerifierKind::EachPass;
 
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that

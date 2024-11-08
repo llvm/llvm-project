@@ -227,7 +227,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    // CHECK-LABEL gpu.func @printf_test
+    // CHECK-LABEL: gpu.func @printf_test
     // CHECK: (%[[ARG0:.*]]: i32)
     // CHECK: gpu.printf "Value: %d" %[[ARG0]] : i32
     gpu.func @printf_test(%arg0 : i32) {
@@ -441,3 +441,26 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
 
 gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }
+
+// Test kernel attributes
+gpu.binary @kernel_attrs_1 [
+    #gpu.object<#rocdl.target<chip = "gfx900">,
+      kernels = #gpu.kernel_table<[
+        #gpu.kernel_metadata<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+        #gpu.kernel_metadata<"kernel1", (i32) -> (), arg_attrs = [{llvm.read_only}]>
+      ]>,
+      bin = "BLOB">
+  ]
+
+// Verify the kernels are sorted
+// CHECK-LABEL: gpu.binary @kernel_attrs_2
+gpu.binary @kernel_attrs_2 [
+    // CHECK: [#gpu.kernel_metadata<"a_kernel", () -> ()>, #gpu.kernel_metadata<"m_kernel", () -> ()>, #gpu.kernel_metadata<"z_kernel", () -> ()>]
+    #gpu.object<#rocdl.target<chip = "gfx900">,
+      kernels = #gpu.kernel_table<[
+        #gpu.kernel_metadata<"z_kernel", () -> ()>,
+        #gpu.kernel_metadata<"m_kernel", () -> ()>,
+        #gpu.kernel_metadata<"a_kernel", () -> ()>
+      ]>,
+      bin = "BLOB">
+  ]

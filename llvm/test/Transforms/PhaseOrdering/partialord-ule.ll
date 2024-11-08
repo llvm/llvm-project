@@ -6,8 +6,8 @@
 define i1 @ule(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ule(
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ule i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[DOTNOT]]
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp ule i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[SWITCH_SELECTCMP1]]
 ;
 start:
   %cmp1 = icmp eq i32 %a, %b

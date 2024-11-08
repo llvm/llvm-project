@@ -41,7 +41,7 @@ end
 !  real(4)::y(1_8:8_8)
 !  type::t(c,d)
 !    integer(4),kind::c=1_4
-!    integer(4),len::d=3_4
+!    integer(4),len::d=3_8
 !  end type
 !  type(t(c=4_4,d=:)),allocatable::z
 !  class(t(c=5_4,d=:)),allocatable::z2

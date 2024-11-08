@@ -53,6 +53,14 @@ Pass *createLoopStrengthReducePass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopTermFold -  This pass attempts to eliminate the last use of an IV in
+// a loop terminator instruction by rewriting it in terms of another IV.
+// Expected to be run immediately after LSR.
+//
+Pass *createLoopTermFoldPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
 Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
@@ -142,19 +150,6 @@ Pass *createMergeICmpsLegacyPass();
 //
 FunctionPass *createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 extern char &InferAddressSpacesID;
-
-//===----------------------------------------------------------------------===//
-//
-// TLSVariableHoist - This pass reduce duplicated TLS address call.
-//
-FunctionPass *createTLSVariableHoistPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LowerConstantIntrinsicss - Expand any remaining llvm.objectsize and
-// llvm.is.constant intrinsic calls, even for the unknown cases.
-//
-FunctionPass *createLowerConstantIntrinsicsPass();
 
 //===----------------------------------------------------------------------===//
 //

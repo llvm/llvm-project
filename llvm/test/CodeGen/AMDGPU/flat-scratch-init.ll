@@ -7,10 +7,10 @@ declare void @extern_func() #0
 define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-LABEL: stack_object_addrspacecast_in_kernel_no_calls:
 ; FLAT_SCR_OPT:       ; %bb.0:
-; FLAT_SCR_OPT-NEXT:    s_add_u32 s0, s0, s3
-; FLAT_SCR_OPT-NEXT:    s_addc_u32 s1, s1, 0
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
+; FLAT_SCR_OPT-NEXT:    s_add_u32 s6, s6, s11
+; FLAT_SCR_OPT-NEXT:    s_addc_u32 s7, s7, 0
+; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
+; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
 ; FLAT_SCR_OPT-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 0
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v1, s1
@@ -37,10 +37,10 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-LABEL: stack_object_in_kernel_no_calls:
 ; FLAT_SCR_OPT:       ; %bb.0:
-; FLAT_SCR_OPT-NEXT:    s_add_u32 s0, s0, s3
-; FLAT_SCR_OPT-NEXT:    s_addc_u32 s1, s1, 0
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
+; FLAT_SCR_OPT-NEXT:    s_add_u32 s6, s6, s11
+; FLAT_SCR_OPT-NEXT:    s_addc_u32 s7, s7, 0
+; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
+; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 0
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 0
 ; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s0
@@ -108,255 +108,114 @@ define amdgpu_kernel void @kernel_calls_no_stack() {
 }
 
 define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
-; FLAT_SCR_OPT-LABEL: test:
-; FLAT_SCR_OPT:       ; %bb.0:
-; FLAT_SCR_OPT-NEXT:    s_add_u32 s2, s2, s5
-; FLAT_SCR_OPT-NEXT:    s_addc_u32 s3, s3, 0
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
-; FLAT_SCR_OPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; FLAT_SCR_OPT-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
-; FLAT_SCR_OPT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s2, 0
-; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s3, 1
-; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s2, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s2 ; 4-byte Folded Spill
-; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
-; FLAT_SCR_OPT-NEXT:    s_load_dword vcc_lo, s[0:1], 0x8
-; FLAT_SCR_OPT-NEXT:    ; kill: killed $sgpr0_sgpr1
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, vcc_lo
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
-; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
-; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 0
-; FLAT_SCR_OPT-NEXT:    scratch_load_dword v1, off, s0 ; 4-byte Folded Reload
-; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
-; FLAT_SCR_OPT-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s0, v1, 0
-; FLAT_SCR_OPT-NEXT:    v_readlane_b32 s1, v1, 1
-; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
-; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v2, 0
-; FLAT_SCR_OPT-NEXT:    ; kill: killed $vgpr1
-; FLAT_SCR_OPT-NEXT:    global_store_dword v2, v0, s[0:1]
-; FLAT_SCR_OPT-NEXT:    s_endpgm
-;
-; FLAT_SCR_ARCH-LABEL: test:
-; FLAT_SCR_ARCH:       ; %bb.0:
-; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; FLAT_SCR_ARCH-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s2, 0
-; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s3, 1
-; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s2, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s2 ; 4-byte Folded Spill
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
-; FLAT_SCR_ARCH-NEXT:    s_load_dword vcc_lo, s[0:1], 0x8
-; FLAT_SCR_ARCH-NEXT:    ; kill: killed $sgpr0_sgpr1
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v0, vcc_lo
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
-; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
-; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v1, off, s0 ; 4-byte Folded Reload
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
-; FLAT_SCR_ARCH-NEXT:    s_waitcnt vmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s0, v1, 0
-; FLAT_SCR_ARCH-NEXT:    v_readlane_b32 s1, v1, 1
-; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
-; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v2, 0
-; FLAT_SCR_ARCH-NEXT:    ; kill: killed $vgpr1
-; FLAT_SCR_ARCH-NEXT:    global_store_dword v2, v0, s[0:1]
-; FLAT_SCR_ARCH-NEXT:    s_endpgm
+; GCN-LABEL: test:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
+; GCN-NEXT:    s_load_dword vcc_lo, s[2:3], 0x8
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; kill: killed $sgpr2_sgpr3
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_writelane_b32 v0, s0, 0
+; GCN-NEXT:    v_writelane_b32 v0, s1, 1
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_readlane_b32 s0, v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, vcc_lo
+; GCN-NEXT:    v_readlane_b32 s1, v0, 1
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    global_store_dword v2, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()
   call void asm sideeffect "", "~{s[16:23]}" ()
@@ -371,7 +230,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
   call void asm sideeffect "", "~{s[88:95]}" ()
   call void asm sideeffect "", "~{s[96:103]}" ()
   call void asm sideeffect "", "~{s[104:105]}" ()
-  call void asm sideeffect "", "~{v[0:7]}" ()
+  call void asm sideeffect "", "~{v[1:7]}" ()
   call void asm sideeffect "", "~{v[8:15]}" ()
   call void asm sideeffect "", "~{v[16:23]}" ()
   call void asm sideeffect "", "~{v[24:31]}" ()

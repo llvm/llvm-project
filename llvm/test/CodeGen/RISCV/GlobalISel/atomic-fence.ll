@@ -3,13 +3,13 @@
 ; RUN:   | FileCheck --check-prefixes=CHECK,WMO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -global-isel -verify-machineinstrs < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,WMO %s
-; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso -global-isel -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+a,+ztso -global-isel -verify-machineinstrs < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,TSO %s
 ; RUN: llc -mtriple=riscv64 -global-isel -verify-machineinstrs < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,WMO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -global-isel -verify-machineinstrs < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,WMO %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso -global-isel -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso -global-isel -verify-machineinstrs < %s \
 ; RUN:   | FileCheck --check-prefixes=CHECK,TSO %s
 
 define void @fence_acquire() nounwind {

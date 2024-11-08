@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme2,+b16b16 2>&1 < %s | FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-b16b16 2>&1 < %s | FileCheck %s
 
 // --------------------------------------------------------------------------//
 // Invalid vector list

@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../access.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -57,7 +58,7 @@ add_entrypoint_object(
   HDRS
     ../dup2.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -103,6 +104,21 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.thread
     libc.src.errno.errno
+    libc.src.__support.threads.identifier
+)
+
+add_entrypoint_object(
+  fpathconf
+  SRCS
+    fpathconf.cpp
+  HDRS
+    ../fpathconf.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.unistd.linux.pathconf_utils
 )
 
 add_entrypoint_object(
@@ -163,7 +179,6 @@ add_entrypoint_object(
   HDRS
     ../getcwd.h
   DEPENDS
-    libc.include.stdlib
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -239,7 +254,7 @@ add_entrypoint_object(
   HDRS
     ../link.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -253,7 +268,7 @@ add_entrypoint_object(
   HDRS
     ../linkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -266,6 +281,60 @@ add_entrypoint_object(
     lseek.cpp
   HDRS
     ../lseek.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pathconf
+  SRCS
+    pathconf.cpp
+  HDRS
+    ../pathconf.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.unistd.linux.pathconf_utils
+)
+
+add_object_library(
+  pathconf_utils
+  SRCS
+    pathconf_utils.cpp
+  HDRS
+    pathconf_utils.h
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.sys.statvfs.linux.statfs_utils
+)
+
+add_entrypoint_object(
+  pipe
+  SRCS
+    pipe.cpp
+  HDRS
+    ../pipe.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pipe2
+  SRCS
+    pipe2.cpp
+  HDRS
+    ../pipe2.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall
@@ -321,7 +390,7 @@ add_entrypoint_object(
   HDRS
     ../rmdir.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -335,7 +404,7 @@ add_entrypoint_object(
   HDRS
     ../readlink.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -349,7 +418,7 @@ add_entrypoint_object(
   HDRS
     ../readlinkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -363,7 +432,7 @@ add_entrypoint_object(
   HDRS
     ../symlink.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -377,7 +446,7 @@ add_entrypoint_object(
   HDRS
     ../symlinkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -429,7 +498,7 @@ add_entrypoint_object(
   HDRS
     ../unlink.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -443,7 +512,7 @@ add_entrypoint_object(
   HDRS
     ../unlinkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

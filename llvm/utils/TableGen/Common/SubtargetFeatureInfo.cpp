@@ -20,12 +20,10 @@ LLVM_DUMP_METHOD void SubtargetFeatureInfo::dump() const {
 }
 #endif
 
-std::vector<std::pair<Record *, SubtargetFeatureInfo>>
+SubtargetFeaturesInfoVec
 SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {
-  std::vector<std::pair<Record *, SubtargetFeatureInfo>> SubtargetFeatures;
-  std::vector<Record *> AllPredicates =
-      Records.getAllDerivedDefinitions("Predicate");
-  for (Record *Pred : AllPredicates) {
+  SubtargetFeaturesInfoVec SubtargetFeatures;
+  for (const Record *Pred : Records.getAllDerivedDefinitions("Predicate")) {
     // Ignore predicates that are not intended for the assembler.
     //
     // The "AssemblerMatcherPredicate" string should be promoted to an argument
@@ -108,7 +106,7 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
   if (!ExtraParams.empty())
     OS << ", " << ExtraParams;
   OS << ") const {\n";
-  OS << "  PredicateBitset Features;\n";
+  OS << "  PredicateBitset Features{};\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
     StringRef CondStr = SFI.TheDef->getValueAsString("CondString");

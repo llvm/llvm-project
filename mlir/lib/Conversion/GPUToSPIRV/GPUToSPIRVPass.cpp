@@ -18,6 +18,7 @@
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
+#include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
@@ -75,8 +76,7 @@ void GPUToSPIRVPass::runOnOperation() {
     // module inside the original GPU module, as that's the expectaion of the
     // normal GPU compilation pipeline.
     if (targetEnvSupportsKernelCapability(moduleOp)) {
-      builder.setInsertionPoint(moduleOp.getBody(),
-                                moduleOp.getBody()->begin());
+      builder.setInsertionPointToStart(moduleOp.getBody());
     } else {
       builder.setInsertionPoint(moduleOp.getOperation());
     }
@@ -132,6 +132,7 @@ void GPUToSPIRVPass::runOnOperation() {
     mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
     populateMemRefToSPIRVPatterns(typeConverter, patterns);
     populateFuncToSPIRVPatterns(typeConverter, patterns);
+    populateVectorToSPIRVPatterns(typeConverter, patterns);
 
     if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
       return signalPassFailure();

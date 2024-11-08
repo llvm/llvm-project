@@ -195,7 +195,8 @@ def EH_RETURN64   : I<0xC3, RawFrm, (outs), (ins GR64:$addr),
 
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1 in {
-  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET", [(cleanupret)]>;
+  def CLEANUPRET : I<0, Pseudo, (outs), (ins), "# CLEANUPRET",
+                     [(cleanupret bb)]>;
 
   // CATCHRET needs a custom inserter for SEH.
   let usesCustomInserter = 1 in
@@ -235,7 +236,13 @@ let isBranch = 1, isTerminator = 1, isCodeGenOnly = 1 in {
 //===----------------------------------------------------------------------===//
 // Pseudo instructions used by unwind info.
 //
-let isPseudo = 1, SchedRW = [WriteSystem] in {
+
+// Prolog instructions should not be duplicated, since this can cause issues
+// because 1) if only some of the instructions are duplicated, then we will
+// observe prolog instructions after the end-prolog instruction and 2) Windows
+// expects there to only be a single prolog (e.g., when checking if unwinding
+// is happening in the middle of a prolog).
+let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
   def SEH_PushReg : I<0, Pseudo, (outs), (ins i32imm:$reg),
                             "#SEH_PushReg $reg", []>;
   def SEH_SaveReg : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
@@ -252,6 +259,10 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
                             "#SEH_PushFrame $mode", []>;
   def SEH_EndPrologue : I<0, Pseudo, (outs), (ins),
                             "#SEH_EndPrologue", []>;
+}
+
+// Epilog instructions:
+let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
   def SEH_Epilogue : I<0, Pseudo, (outs), (ins),
                             "#SEH_Epilogue", []>;
 }
@@ -468,7 +479,7 @@ let Defs = [EAX, ECX, EDX, FP0, FP1, FP2, FP3, FP4, FP5, FP6, FP7,
             MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
             XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, EFLAGS, DF],
-    usesCustomInserter = 1, Uses = [ESP, SSP] in {
+    Uses = [ESP, SSP] in {
 def TLS_addr32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                   "# TLS_addr32",
                   [(X86tlsaddr tls32addr:$sym)]>,
@@ -488,7 +499,7 @@ let Defs = [RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
             MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
             XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, EFLAGS, DF],
-    usesCustomInserter = 1, Uses = [RSP, SSP] in {
+    Uses = [RSP, SSP] in {
 def TLS_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_addr64",
                   [(X86tlsaddr tls64addr:$sym)]>,
@@ -510,7 +521,7 @@ def TLS_base_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
 // TLSDESC only clobbers EAX and EFLAGS. ESP is marked as a use to prevent
 // stack-pointer assignments that appear immediately before calls from
 // potentially appearing dead.
-let Defs = [EAX, EFLAGS], usesCustomInserter = 1, Uses = [RSP, SSP] in {
+let Defs = [EAX, EFLAGS], Uses = [RSP, SSP] in {
   def TLS_desc32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                      "# TLS_desc32", [(X86tlsdesc tls32addr:$sym)]>;
   def TLS_desc64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
@@ -1035,27 +1046,27 @@ multiclass ATOMIC_RMW_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
                     (ins GR8:$val, i8mem:$ptr),
                     !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
                     [(set GR8:$dst,
-                          (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))]>;
+                          (!cast<PatFrag>(frag # "_i8") addr:$ptr, GR8:$val))]>;
     def NAME#16 : I<opc, MRMSrcMem, (outs GR16:$dst),
                     (ins GR16:$val, i16mem:$ptr),
                     !strconcat(mnemonic, "{w}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR16:$dst,
-                       (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))]>,
+                       (!cast<PatFrag>(frag # "_i16") addr:$ptr, GR16:$val))]>,
                     OpSize16;
     def NAME#32 : I<opc, MRMSrcMem, (outs GR32:$dst),
                     (ins GR32:$val, i32mem:$ptr),
                     !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR32:$dst,
-                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>,
+                       (!cast<PatFrag>(frag # "_i32") addr:$ptr, GR32:$val))]>,
                     OpSize32;
     def NAME#64 : RI<opc, MRMSrcMem, (outs GR64:$dst),
                      (ins GR64:$val, i64mem:$ptr),
                      !strconcat(mnemonic, "{q}\t{$val, $ptr|$ptr, $val}"),
                      [(set
                         GR64:$dst,
-                        (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))]>;
+                        (!cast<PatFrag>(frag # "_i64") addr:$ptr, GR64:$val))]>;
   }
 }
 
@@ -1125,7 +1136,9 @@ multiclass ATOMIC_LOAD_FP_BINOP_MI<string Name, SDNode op> {
             Requires<[HasAVX512]>;
 }
 defm : ATOMIC_LOAD_FP_BINOP_MI<"ADD", fadd>;
-// FIXME: Add fsub, fmul, fdiv, ...
+defm : ATOMIC_LOAD_FP_BINOP_MI<"SUB", fsub>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"MUL", fmul>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"DIV", fdiv>;
 
 multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
                         dag dag64> {
@@ -1570,21 +1583,21 @@ let Predicates = [HasNDD] in {
 }
 
 // Depositing value to 8/16 bit subreg:
-def : Pat<(or (and GR64:$dst, -256), 
+def : Pat<(or (and GR64:$dst, -256),
               (i64 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR32:$dst, -256), 
+def : Pat<(or (and GR32:$dst, -256),
               (i32 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR64:$dst, -65536), 
+def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
-def : Pat<(or (and GR32:$dst, -65536), 
+def : Pat<(or (and GR32:$dst, -65536),
               (i32 (zextloadi16 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>; 
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at

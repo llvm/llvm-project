@@ -7,18 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/rand_util.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-// FIXME: Local GPU memory cannot be initialized so we cannot currently provide
-// a standard compliant default value.
-ThreadLocal<unsigned long> rand_next;
-#else
-// C standard 7.10p2: If 'rand' is called before 'srand' it is to proceed as if
-// the 'srand' function was called with a value of '1'.
-LIBC_THREAD_LOCAL unsigned long rand_next = 1;
-#endif
+// C standard 7.10p2: If 'rand' is called before 'srand' it is to
+// proceed as if the 'srand' function was called with a value of '1'.
+cpp::Atomic<unsigned long> rand_next = 1;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

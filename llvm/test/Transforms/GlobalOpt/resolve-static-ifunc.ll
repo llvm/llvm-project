@@ -7,11 +7,15 @@ target triple = "aarch64-unknown-linux-gnu"
 @trivial.ifunc = internal ifunc void (), ptr @trivial.resolver
 ;.
 ; CHECK: @unknown_condition = external local_unnamed_addr global i1
+; CHECK: @alias_decl = weak_odr alias void (), ptr @aliased_decl.ifunc
+; CHECK: @alias_def = weak_odr alias void (), ptr @aliased_def._Msimd
 ; CHECK: @external_ifunc.ifunc = dso_local ifunc void (), ptr @external_ifunc.resolver
 ; CHECK: @complex.ifunc = internal ifunc void (), ptr @complex.resolver
 ; CHECK: @sideeffects.ifunc = internal ifunc void (), ptr @sideeffects.resolver
 ; CHECK: @interposable_ifunc.ifunc = internal ifunc void (), ptr @interposable_ifunc.resolver
 ; CHECK: @interposable_resolver.ifunc = weak ifunc void (), ptr @interposable_resolver.resolver
+; CHECK: @aliased_decl.ifunc = weak_odr ifunc void (), ptr @aliased_decl.resolver
+; CHECK: @aliased_def.ifunc = weak_odr ifunc void (), ptr @aliased_def.resolver
 ;.
 define ptr @trivial.resolver() {
   ret ptr @trivial._Msimd
@@ -89,6 +93,20 @@ define void @interposable_resolver.default() {
   ret void
 }
 
+@alias_decl = weak_odr alias void (), ptr @aliased_decl.ifunc
+@aliased_decl.ifunc = weak_odr ifunc void (), ptr @aliased_decl.resolver
+declare void @aliased_decl._Msimd()
+define ptr @aliased_decl.resolver() {
+  ret ptr @aliased_decl._Msimd
+}
+
+@alias_def = weak_odr alias void (), ptr @aliased_def.ifunc
+@aliased_def.ifunc = weak_odr ifunc void (), ptr @aliased_def.resolver
+define void @aliased_def._Msimd() { ret void }
+define ptr @aliased_def.resolver() {
+  ret ptr @aliased_def._Msimd
+}
+
 define void @caller() {
 ; CHECK-LABEL: define void @caller() local_unnamed_addr {
 ; CHECK-NEXT:    call void @trivial._Msimd()
@@ -97,6 +115,8 @@ define void @caller() {
 ; CHECK-NEXT:    call void @sideeffects.ifunc()
 ; CHECK-NEXT:    call void @interposable_ifunc.ifunc()
 ; CHECK-NEXT:    call void @interposable_resolver.ifunc()
+; CHECK-NEXT:    call void @aliased_decl.ifunc()
+; CHECK-NEXT:    call void @aliased_def._Msimd()
 ; CHECK-NEXT:    ret void
 ;
   call void @trivial.ifunc()
@@ -105,5 +125,7 @@ define void @caller() {
   call void @sideeffects.ifunc()
   call void @interposable_ifunc.ifunc()
   call void @interposable_resolver.ifunc()
+  call void @aliased_decl.ifunc()
+  call void @aliased_def.ifunc()
   ret void
 }

@@ -33,7 +33,9 @@ struct DecisionParameters {
 
   DecisionParameters() = delete;
   DecisionParameters(unsigned BitmapIdx, unsigned NumConditions)
-      : BitmapIdx(BitmapIdx), NumConditions(NumConditions) {}
+      : BitmapIdx(BitmapIdx), NumConditions(NumConditions) {
+    assert(NumConditions > 0);
+  }
 };
 
 struct BranchParameters {
@@ -44,7 +46,9 @@ struct BranchParameters {
 
   BranchParameters() = delete;
   BranchParameters(ConditionID ID, const ConditionIDs &Conds)
-      : ID(ID), Conds(Conds) {}
+      : ID(ID), Conds(Conds) {
+    assert(ID >= 0);
+  }
 };
 
 /// The type of MC/DC-specific parameters.

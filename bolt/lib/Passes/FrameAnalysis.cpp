@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/FrameAnalysis.h"
+#include "bolt/Core/CallGraphWalker.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/CallGraphWalker.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Timer.h"
 #include <fstream>
@@ -561,11 +561,6 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
     NamedRegionTimer T1("clearspt", "clear spt", "FA", "FA breakdown",
                         opts::TimeFA);
     clearSPTMap();
-
-    // Clean up memory allocated for annotation values
-    if (!opts::NoThreads)
-      for (MCPlusBuilder::AllocatorIdTy Id : SPTAllocatorsId)
-        BC.MIB->freeValuesAllocator(Id);
   }
 }
 

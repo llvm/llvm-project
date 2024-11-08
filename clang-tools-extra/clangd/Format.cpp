@@ -281,7 +281,7 @@ formatIncremental(llvm::StringRef OriginalCode, unsigned OriginalCursor,
   // Never *remove* lines in response to pressing enter! This annoys users.
   if (InsertedText == "\n") {
     Style.MaxEmptyLinesToKeep = 1000;
-    Style.KeepEmptyLinesAtTheStartOfBlocks = true;
+    Style.KeepEmptyLines.AtStartOfBlock = true;
   }
 
   // Compute the code we want to format:

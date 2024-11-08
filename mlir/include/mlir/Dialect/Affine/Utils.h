@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_AFFINE_UTILS_H
 #define MLIR_DIALECT_AFFINE_UTILS_H
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/OpDefinition.h"
@@ -31,8 +32,6 @@ class FuncOp;
 namespace memref {
 class AllocOp;
 } // namespace memref
-
-struct LogicalResult;
 
 namespace affine {
 class AffineForOp;
@@ -106,7 +105,8 @@ struct VectorizationStrategy {
 /// loads and eliminate invariant affine loads; consequently, eliminate dead
 /// allocs.
 void affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
-                         PostDominanceInfo &postDomInfo);
+                         PostDominanceInfo &postDomInfo,
+                         AliasAnalysis &analysis);
 
 /// Vectorizes affine loops in 'loops' using the n-D vectorization factors in
 /// 'vectorSizes'. By default, each vectorization factor is applied
@@ -311,11 +311,20 @@ DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
                                                ArrayRef<Value> basis);
+
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<OpFoldResult> basis);
+
 // Generate IR that extracts the linear index from a multi-index according to
 // a basis/shape.
 OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
                             ArrayRef<OpFoldResult> basis,
                             ImplicitLocOpBuilder &builder);
+
+OpFoldResult linearizeIndex(OpBuilder &builder, Location loc,
+                            ArrayRef<OpFoldResult> multiIndex,
+                            ArrayRef<OpFoldResult> basis);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
@@ -325,7 +334,8 @@ OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
 /// will check if there is no write to the memory between `start` and `memOp`
 /// that would change the read within `memOp`.
 template <typename EffectType, typename T>
-bool hasNoInterveningEffect(Operation *start, T memOp);
+bool hasNoInterveningEffect(Operation *start, T memOp,
+                            llvm::function_ref<bool(Value, Value)> mayAlias);
 
 struct AffineValueExpr {
   explicit AffineValueExpr(AffineExpr e) : e(e) {}

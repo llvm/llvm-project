@@ -77,7 +77,15 @@ DWARFDie DWARFLinker::resolveDIEReference(const DWARFFile &File,
                                           const DWARFDie &DIE,
                                           CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
+  uint64_t RefOffset;
+  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
+    RefOffset = RefValue.getUnit()->getOffset() + *Off;
+  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
+    RefOffset = *Off;
+  } else {
+    reportWarning("Unsupported reference type", File, &DIE);
+    return DWARFDie();
+  }
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
       // In a file with broken references, an attribute might point to a NULL
@@ -116,6 +124,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_string_type:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_template_alias:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_ptr_to_member_type:
@@ -200,8 +209,10 @@ static void analyzeImportedModule(
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));
@@ -1070,7 +1081,13 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     unsigned AttrSize, const DWARFFormValue &Val, const DWARFFile &File,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint64_t Ref = *Val.getAsReference();
+  uint64_t Ref;
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
+    Ref = Val.getUnit()->getOffset() + *Off;
+  else if (Off = Val.getAsDebugInfoReference(); Off)
+    Ref = *Off;
+  else
+    return 0;
 
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;
@@ -1394,6 +1411,12 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     CompileUnit &Unit, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
+
+  // We don't emit any skeleton CUs with dsymutil. So avoid emitting
+  // a redundant DW_AT_GNU_dwo_id on the non-skeleton CU.
+  if (AttrSpec.Attr == dwarf::DW_AT_GNU_dwo_id ||
+      AttrSpec.Attr == dwarf::DW_AT_dwo_id)
+    return 0;
 
   // Check for the offset to the macro table. If offset is incorrect then we
   // need to remove the attribute.
@@ -1814,10 +1837,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
   } else if (Tag == dwarf::DW_TAG_imported_declaration && AttrInfo.Name) {
     Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
-  } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration &&
-             getDIENames(InputDIE, AttrInfo, DebugStrPool) && AttrInfo.Name &&
-             AttrInfo.Name.getString()[0]) {
-    uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
+  } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration) {
+    bool Success = getDIENames(InputDIE, AttrInfo, DebugStrPool);
     uint64_t RuntimeLang =
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
             .value_or(0);
@@ -1826,8 +1847,21 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
          RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
             .value_or(0);
-    Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
-                            Hash);
+    if (Success && AttrInfo.Name && !AttrInfo.Name.getString().empty()) {
+      uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
+      Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
+                              Hash);
+    }
+
+    // For Swift, mangled names are put into DW_AT_linkage_name.
+    if (Success && AttrInfo.MangledName &&
+        RuntimeLang == dwarf::DW_LANG_Swift &&
+        !AttrInfo.MangledName.getString().empty() &&
+        AttrInfo.MangledName != AttrInfo.Name) {
+      auto Hash = djbHash(AttrInfo.MangledName.getString().data());
+      Unit.addTypeAccelerator(Die, AttrInfo.MangledName,
+                              ObjCClassIsImplementation, Hash);
+    }
   }
 
   // Determine whether there are any children that we want to keep.
@@ -2244,17 +2278,20 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
         DebugNames.addName(
             Namespace.Name, Namespace.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
-            Namespace.Die->getTag(), Unit.getUniqueID());
+            Namespace.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubname : Unit.getPubnames())
         DebugNames.addName(
             Pubname.Name, Pubname.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
-            Pubname.Die->getTag(), Unit.getUniqueID());
+            Pubname.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubtype : Unit.getPubtypes())
         DebugNames.addName(
             Pubtype.Name, Pubtype.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
-            Pubtype.Die->getTag(), Unit.getUniqueID());
+            Pubtype.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
     } break;
     }
   }

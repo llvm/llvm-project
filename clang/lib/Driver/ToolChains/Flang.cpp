@@ -15,7 +15,8 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 #include <cassert>
@@ -35,18 +36,26 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(
-      CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
-                options::OPT_ffixed_line_length_EQ, options::OPT_fopenacc,
-                options::OPT_finput_charset_EQ, options::OPT_fimplicit_none,
-                options::OPT_fno_implicit_none, options::OPT_fbackslash,
-                options::OPT_fno_backslash, options::OPT_flogical_abbreviations,
-                options::OPT_fno_logical_abbreviations,
-                options::OPT_fxor_operator, options::OPT_fno_xor_operator,
-                options::OPT_falternative_parameter_statement,
-                options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
-                options::OPT_fdefault_double_8, options::OPT_flarge_sizes,
-                options::OPT_fno_automatic});
+  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
+                            options::OPT_ffree_form,
+                            options::OPT_ffixed_line_length_EQ,
+                            options::OPT_fopenacc,
+                            options::OPT_finput_charset_EQ,
+                            options::OPT_fimplicit_none,
+                            options::OPT_fno_implicit_none,
+                            options::OPT_fbackslash,
+                            options::OPT_fno_backslash,
+                            options::OPT_flogical_abbreviations,
+                            options::OPT_fno_logical_abbreviations,
+                            options::OPT_fxor_operator,
+                            options::OPT_fno_xor_operator,
+                            options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_real_8,
+                            options::OPT_fdefault_integer_8,
+                            options::OPT_fdefault_double_8,
+                            options::OPT_flarge_sizes,
+                            options::OPT_fno_automatic,
+                            options::OPT_fhermetic_module_files});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -118,7 +127,7 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
   } else if (Args.hasArg(options::OPT_g_Flag)) {
-    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+    DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
@@ -139,6 +148,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
+                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -170,10 +180,9 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
     StringRef Val = A->getValue();
     const Driver &D = getToolChain().getDriver();
-    if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
-        Val.equals("1024") || Val.equals("2048") || Val.equals("128+") ||
-        Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
-        Val.equals("2048+")) {
+    if (Val == "128" || Val == "256" || Val == "512" || Val == "1024" ||
+        Val == "2048" || Val == "128+" || Val == "256+" || Val == "512+" ||
+        Val == "1024+" || Val == "2048+") {
       unsigned Bits = 0;
       if (!Val.consume_back("+")) {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
@@ -187,10 +196,36 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
       // Silently drop requests for vector-length agnostic code as it's implied.
-    } else if (!Val.equals("scalable"))
+    } else if (Val != "scalable")
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+  }
+}
+
+void Flang::AddPPCTargetArgs(const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  bool VecExtabi = false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "vec-extabi")
+      VecExtabi = true;
+    else if (V == "vec-default")
+      VecExtabi = false;
+    else
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << V;
+  }
+
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (VecExtabi) {
+    if (!T.isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-mabi=vec-extabi" << T.str();
+    }
+    CmdArgs.push_back("-mabi=vec-extabi");
   }
 }
 
@@ -204,7 +239,7 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
-    StringRef Arch = riscv::getRISCVArch(Args, Triple);
+    std::string Arch = riscv::getRISCVArch(Args, Triple);
     auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
         Arch, /*EnableExperimentalExtensions*/ true);
     // Ignore parsing error.
@@ -214,7 +249,7 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
     // If the value is "zvl", use MinVLen from march. Otherwise, try to parse
     // as integer as long as we have a MinVLen.
     unsigned Bits = 0;
-    if (Val.equals("zvl") && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
+    if (Val == "zvl" && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
       Bits = MinVLen;
     } else if (!Val.getAsInteger(10, Bits)) {
       // Only accept power of 2 values beteen RVVBitsPerBlock and 65536 that
@@ -231,7 +266,7 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
           Args.MakeArgString("-mvscale-max=" + llvm::Twine(VScaleMin)));
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(VScaleMin)));
-    } else if (!Val.equals("scalable")) {
+    } else if (Val != "scalable") {
       // Handle the unsupported values passed to mrvv-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
@@ -264,7 +299,7 @@ static void addVSDefines(const ToolChain &TC, const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
   CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
 
-  llvm::Triple triple = TC.getTriple();
+  const llvm::Triple &triple = TC.getTriple();
   if (triple.isAArch64()) {
     CmdArgs.push_back("-D_M_ARM64=1");
   } else if (triple.isX86() && triple.isArch32Bit()) {
@@ -282,7 +317,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
   // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
@@ -300,8 +334,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
@@ -309,8 +341,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
@@ -318,8 +348,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
@@ -328,8 +356,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;
@@ -342,6 +368,9 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
   }
+
+  const ToolChain &TC = getToolChain();
+  TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
 }
 
 void Flang::addTargetOptions(const ArgList &Args,
@@ -379,6 +408,11 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddX86_64TargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    AddPPCTargetArgs(Args, CmdArgs);
     break;
   }
 
@@ -420,6 +454,13 @@ void Flang::addTargetOptions(const ArgList &Args,
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    CmdArgs.push_back("-tune-cpu");
+    if (A->getValue() == StringRef{"native"})
+      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
+    else
+      CmdArgs.push_back(A->getValue());
+  }
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -485,6 +526,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     if (Args.hasArg(options::OPT_nogpulib))
       CmdArgs.push_back("-nogpulib");
   }
+
+  addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 }
 
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
@@ -589,7 +632,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
-      (FPContract == "fast" || FPContract == "")) {
+      (FPContract == "fast" || FPContract.empty())) {
     CmdArgs.push_back("-ffast-math");
     return;
   }
@@ -679,7 +722,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-      CmdArgs.push_back("-E");
+    CmdArgs.push_back("-E");
+    if (Args.getLastArg(options::OPT_dM)) {
+      CmdArgs.push_back("-dM");
+    }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
@@ -712,16 +758,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addFortranDialectOptions(Args, CmdArgs);
 
-  // Color diagnostics are parsed by the driver directly from argv and later
-  // re-parsed to construct this job; claim any possible color diagnostic here
-  // to avoid warn_drv_unused_argument.
-  Args.getLastArg(options::OPT_fcolor_diagnostics,
-                  options::OPT_fno_color_diagnostics);
-  if (Diags.getDiagnosticOptions().ShowColors)
-    CmdArgs.push_back("-fcolor-diagnostics");
+  handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
   // LTO mode is parsed by the Clang driver library.
-  LTOKind LTOMode = D.getLTOMode(/* IsOffload */ false);
+  LTOKind LTOMode = D.getLTOMode();
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
@@ -741,6 +781,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  llvm::Reloc::Model RelocationModel =
+      std::get<0>(ParsePICArgs(getToolChain(), Args));
+  // Add MCModel information
+  addMCModel(D, Args, Triple, RelocationModel, CmdArgs);
+
   // Add Codegen options
   addCodegenOptions(Args, CmdArgs);
 
@@ -754,6 +799,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
 
+  // Disable all warnings
+  // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
+  Args.AddLastArg(CmdArgs, options::OPT_w);
+
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
@@ -766,6 +815,12 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       // Clang can generate useful OpenMP code for these two runtime libraries.
       CmdArgs.push_back("-fopenmp");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
+      // TODO: OpenMP support isn't "done" yet, so for now we warn that it
+      // is experimental.
+      D.Diag(diag::warn_openmp_experimental);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -783,6 +838,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Pass the path to compiler resource files.
+  CmdArgs.push_back("-resource-dir");
+  CmdArgs.push_back(D.ResourceDir.c_str());
+
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
 
@@ -796,6 +855,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   switch (FPKeepKind) {
   case CodeGenOptions::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    FPKeepKindStr = "-mframe-pointer=reserved";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";
@@ -838,6 +900,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
@@ -851,16 +915,28 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addDashXForInput(Args, Input, CmdArgs);
 
+  bool FRecordCmdLine = false;
+  bool GRecordCmdLine = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+    const char *CmdLine = renderEscapedCommandLine(TC, Args);
+    if (FRecordCmdLine) {
+      CmdArgs.push_back("-record-command-line");
+      CmdArgs.push_back(CmdLine);
+    }
+    if (TC.UseDwarfDebugFlags() || GRecordCmdLine) {
+      CmdArgs.push_back("-dwarf-debug-flags");
+      CmdArgs.push_back(CmdLine);
+    }
+  }
+
   CmdArgs.push_back(Input.getFilename());
 
-  // TODO: Replace flang-new with flang once the new driver replaces the
-  // throwaway driver
-  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang-new", TC));
+  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-Flang::Flang(const ToolChain &TC) : Tool("flang-new", "flang frontend", TC) {}
+Flang::Flang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
 
 Flang::~Flang() {}

@@ -10,9 +10,9 @@
 #define _LIBCPP___TYPE_TRAITS_ALIGNED_UNION_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/integral_constant.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

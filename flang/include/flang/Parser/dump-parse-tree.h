@@ -95,8 +95,6 @@ public:
   NODE(parser, AccObjectList)
   NODE(parser, AccObjectListWithModifier)
   NODE(parser, AccObjectListWithReduction)
-  NODE(parser, AccReductionOperator)
-  NODE_ENUM(parser::AccReductionOperator, Operator)
   NODE(parser, AccSizeExpr)
   NODE(parser, AccSizeExprList)
   NODE(parser, AccSelfClause)
@@ -203,11 +201,12 @@ public:
   NODE(parser, CommonStmt)
   NODE(CommonStmt, Block)
   NODE(parser, CompilerDirective)
+  NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, IgnoreTKR)
   NODE(CompilerDirective, LoopCount)
-  NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, NameValue)
   NODE(CompilerDirective, Unrecognized)
+  NODE(CompilerDirective, VectorAlways)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
@@ -236,6 +235,7 @@ public:
   NODE(parser, CUFKernelDoConstruct)
   NODE(CUFKernelDoConstruct, StarOrExpr)
   NODE(CUFKernelDoConstruct, Directive)
+  NODE(parser, CUFReduction)
   NODE(parser, CycleStmt)
   NODE(parser, DataComponentDefStmt)
   NODE(parser, DataIDoObject)
@@ -435,10 +435,13 @@ public:
   NODE(parser, LetterSpec)
   NODE(parser, LiteralConstant)
   NODE(parser, IntLiteralConstant)
+  NODE(parser, ReductionOperator)
+  NODE_ENUM(parser::ReductionOperator, Operator)
   NODE(parser, LocalitySpec)
   NODE(LocalitySpec, DefaultNone)
   NODE(LocalitySpec, Local)
   NODE(LocalitySpec, LocalInit)
+  NODE(LocalitySpec, Reduce)
   NODE(LocalitySpec, Shared)
   NODE(parser, LockStmt)
   NODE(LockStmt, LockStat)
@@ -471,6 +474,9 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpIteratorSpecifier)
+  NODE(parser, OmpIteratorModifier)
+  NODE(parser, OmpAffinityClause)
   NODE(parser, OmpAlignedClause)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
@@ -504,21 +510,27 @@ public:
   NODE_ENUM(OmpDefaultmapClause, ImplicitBehavior)
   NODE_ENUM(OmpDefaultmapClause, VariableCategory)
   NODE(parser, OmpDependClause)
+  NODE(parser, OmpDetachClause)
   NODE(OmpDependClause, InOut)
   NODE(OmpDependClause, Sink)
   NODE(OmpDependClause, Source)
-  NODE(parser, OmpDependenceType)
-  NODE_ENUM(OmpDependenceType, Type)
+  NODE(parser, OmpTaskDependenceType)
+  NODE_ENUM(OmpTaskDependenceType, Type)
   NODE(parser, OmpDependSinkVec)
   NODE(parser, OmpDependSinkVecLength)
+  NODE(parser, OmpDestroyClause)
   NODE(parser, OmpEndAllocators)
   NODE(parser, OmpEndAtomic)
   NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
+  NODE(parser, OmpFromClause)
+  NODE_ENUM(OmpFromClause, Expectation)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
+  NODE_ENUM(OmpLastprivateClause, LastprivateModifier)
+  NODE(parser, OmpLastprivateClause)
   NODE(parser, OmpLinearClause)
   NODE(OmpLinearClause, WithModifier)
   NODE(OmpLinearClause, WithoutModifier)
@@ -526,9 +538,8 @@ public:
   NODE_ENUM(OmpLinearModifier, Type)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
-  NODE(parser, OmpMapType)
-  NODE(OmpMapType, Always)
-  NODE_ENUM(OmpMapType, Type)
+  NODE_ENUM(OmpMapClause, TypeModifier)
+  NODE_ENUM(OmpMapClause, Type)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
@@ -540,8 +551,15 @@ public:
   NODE_ENUM(OmpOrderClause, Type)
   NODE(parser, OmpOrderModifier)
   NODE_ENUM(OmpOrderModifier, Kind)
+  NODE(parser, OmpGrainsizeClause)
+  NODE_ENUM(OmpGrainsizeClause, Prescriptiveness)
+  NODE(parser, OmpNumTasksClause)
+  NODE_ENUM(OmpNumTasksClause, Prescriptiveness)
+  NODE(parser, OmpBindClause)
+  NODE_ENUM(OmpBindClause, Type)
   NODE(parser, OmpProcBindClause)
   NODE_ENUM(OmpProcBindClause, Type)
+  NODE_ENUM(OmpReductionClause, ReductionModifier)
   NODE(parser, OmpReductionClause)
   NODE(parser, OmpInReductionClause)
   NODE(parser, OmpReductionCombiner)
@@ -559,6 +577,7 @@ public:
   NODE_ENUM(OmpDeviceClause, DeviceModifier)
   NODE(parser, OmpDeviceTypeClause)
   NODE_ENUM(OmpDeviceTypeClause, Type)
+  NODE(parser, OmpUpdateClause)
   NODE(parser, OmpScheduleModifier)
   NODE(OmpScheduleModifier, Modifier1)
   NODE(OmpScheduleModifier, Modifier2)
@@ -567,6 +586,9 @@ public:
   NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
   NODE(parser, OmpSimpleStandaloneDirective)
+  NODE(parser, OmpToClause)
+  // No NODE_ENUM for OmpToClause::Expectation, because it's an alias
+  // for OmpFromClause::Expectation.
   NODE(parser, Only)
   NODE(parser, OpenACCAtomicConstruct)
   NODE(parser, OpenACCBlockConstruct)
@@ -597,6 +619,7 @@ public:
   NODE(parser, OmpAtomicClauseList)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
+  NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
@@ -871,7 +894,7 @@ protected:
       ss << x;
     }
     if (ss.tell()) {
-      return ss.str();
+      return buf;
     }
     if constexpr (std::is_same_v<T, Name>) {
       return x.source.ToString();
@@ -879,8 +902,10 @@ protected:
     } else if constexpr (HasSource<T>::value) {
       return x.source.ToString();
 #endif
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      return x;
+    } else if constexpr (std::is_same_v<T, int>) {
+      return std::to_string(x);
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return x ? "true" : "false";
     } else {
       return "";
     }

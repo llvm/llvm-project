@@ -22,8 +22,8 @@
 
 ; CHECK-LABEL: sw.bb:
 ; CHECK: %[[REG:[0-9]+]] = load i32, ptr @"?Two{{.*}}
-; CHECK: call void @llvm.dbg.value(metadata i32 %[[REG]], metadata ![[DBG1:[0-9]+]], {{.*}}
-; CHECK: call void @llvm.dbg.value(metadata i32 %[[REG]], metadata ![[DBG2:[0-9]+]], {{.*}}
+; CHECK: #dbg_value(i32 %[[REG]], ![[DBG1:[0-9]+]], {{.*}}
+; CHECK: #dbg_value(i32 %[[REG]], ![[DBG2:[0-9]+]], {{.*}}
 ; CHECK-DAG: ![[DBG1]] = !DILocalVariable(name: "Four"{{.*}})
 ; CHECK-DAG: ![[DBG2]] = !DILocalVariable(name: "Three"{{.*}})
 

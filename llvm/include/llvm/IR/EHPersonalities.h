@@ -32,7 +32,8 @@ enum class EHPersonality {
   CoreCLR,
   Rust,
   Wasm_CXX,
-  XL_CXX
+  XL_CXX,
+  ZOS_CXX,
 };
 
 /// See if the given exception handling personality function is one

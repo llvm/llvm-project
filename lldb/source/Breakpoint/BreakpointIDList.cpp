@@ -259,7 +259,7 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
     
     if (!names_found.empty()) {
       for (BreakpointSP bkpt_sp : target->GetBreakpointList().Breakpoints()) {
-        for (std::string name : names_found) {
+        for (const std::string &name : names_found) {
           if (bkpt_sp->MatchesName(name.c_str())) {
             StreamString canonical_id_str;
             BreakpointID::GetCanonicalReference(

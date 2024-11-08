@@ -214,6 +214,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_KZ;
   /// The hasEVEX_B field from the record
   bool HasEVEX_B;
+  /// The hasEVEX_U field from the record
+  bool HasEVEX_U;
   /// The hasEVEX_NF field from the record
   bool HasEVEX_NF;
   /// The hasTwoConditionalOps field from the record

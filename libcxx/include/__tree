@@ -13,7 +13,6 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
-#include <__functional/invoke.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -25,6 +24,8 @@
 #include <__memory/unique_ptr.h>
 #include <__type_traits/can_extract_key.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -566,15 +567,22 @@ struct __tree_node_base_types {
 
   typedef __tree_end_node<__node_base_pointer> __end_node_type;
   typedef __rebind_pointer_t<_VoidPtr, __end_node_type> __end_node_pointer;
-#if defined(_LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB)
   typedef __end_node_pointer __parent_pointer;
-#else
-  typedef __conditional_t< is_pointer<__end_node_pointer>::value, __end_node_pointer, __node_base_pointer>
-      __parent_pointer;
+
+// TODO(LLVM 22): Remove this check
+#ifndef _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
+  static_assert(sizeof(__node_base_pointer) == sizeof(__end_node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
+                    _LIBCPP_ALIGNOF(__end_node_pointer),
+                "It looks like you are using std::__tree (an implementation detail for (multi)map/set) with a fancy "
+                "pointer type that thas a different representation depending on whether it points to a __tree base "
+                "pointer or a __tree node pointer (both of which are implementation details of the standard library). "
+                "This means that your ABI is being broken between LLVM 19 and LLVM 20. If you don't care about your "
+                "ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to silence this "
+                "diagnostic.");
 #endif
 
 private:
-  static_assert((is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value),
+  static_assert(is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value,
                 "_VoidPtr does not point to unqualified void type");
 };
 
@@ -605,16 +613,11 @@ public:
   typedef _Tp __node_value_type;
   typedef __rebind_pointer_t<_VoidPtr, __node_value_type> __node_value_type_pointer;
   typedef __rebind_pointer_t<_VoidPtr, const __node_value_type> __const_node_value_type_pointer;
-#if defined(_LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB)
   typedef typename __base::__end_node_pointer __iter_pointer;
-#else
-  typedef __conditional_t< is_pointer<__node_pointer>::value, typename __base::__end_node_pointer, __node_pointer>
-      __iter_pointer;
-#endif
 
 private:
   static_assert(!is_const<__node_type>::value, "_NodePtr should never be a pointer to const");
-  static_assert((is_same<__rebind_pointer_t<_VoidPtr, __node_type>, _NodePtr>::value),
+  static_assert(is_same<__rebind_pointer_t<_VoidPtr, __node_type>, _NodePtr>::value,
                 "_VoidPtr does not rebind to _NodePtr.");
 };
 
@@ -651,7 +654,6 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __p) { __parent_ = static_cast<__parent_pointer>(__p); }
 
-private:
   ~__tree_node_base()                                  = delete;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
@@ -666,7 +668,6 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
 
-private:
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
@@ -925,30 +926,30 @@ private:
   // check for sane allocator pointer rebinding semantics. Rebinding the
   // allocator for a new pointer type should be exactly the same as rebinding
   // the pointer using 'pointer_traits'.
-  static_assert((is_same<__node_pointer, typename __node_traits::pointer>::value),
+  static_assert(is_same<__node_pointer, typename __node_traits::pointer>::value,
                 "Allocator does not rebind pointers in a sane manner.");
   typedef __rebind_alloc<__node_traits, __node_base> __node_base_allocator;
   typedef allocator_traits<__node_base_allocator> __node_base_traits;
-  static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
+  static_assert(is_same<__node_base_pointer, typename __node_base_traits::pointer>::value,
                 "Allocator does not rebind pointers in a sane manner.");
 
 private:
   __iter_pointer __begin_node_;
-  __compressed_pair<__end_node_t, __node_allocator> __pair1_;
-  __compressed_pair<size_type, value_compare> __pair3_;
+  _LIBCPP_COMPRESSED_PAIR(__end_node_t, __end_node_, __node_allocator, __node_alloc_);
+  _LIBCPP_COMPRESSED_PAIR(size_type, __size_, value_compare, __value_comp_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __iter_pointer __end_node() _NOEXCEPT {
-    return static_cast<__iter_pointer>(pointer_traits<__end_node_ptr>::pointer_to(__pair1_.first()));
+    return static_cast<__iter_pointer>(pointer_traits<__end_node_ptr>::pointer_to(__end_node_));
   }
   _LIBCPP_HIDE_FROM_ABI __iter_pointer __end_node() const _NOEXCEPT {
     return static_cast<__iter_pointer>(
-        pointer_traits<__end_node_ptr>::pointer_to(const_cast<__end_node_t&>(__pair1_.first())));
+        pointer_traits<__end_node_ptr>::pointer_to(const_cast<__end_node_t&>(__end_node_)));
   }
-  _LIBCPP_HIDE_FROM_ABI __node_allocator& __node_alloc() _NOEXCEPT { return __pair1_.second(); }
+  _LIBCPP_HIDE_FROM_ABI __node_allocator& __node_alloc() _NOEXCEPT { return __node_alloc_; }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __pair1_.second(); }
+  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
   _LIBCPP_HIDE_FROM_ABI __iter_pointer& __begin_node() _NOEXCEPT { return __begin_node_; }
   _LIBCPP_HIDE_FROM_ABI const __iter_pointer& __begin_node() const _NOEXCEPT { return __begin_node_; }
 
@@ -956,12 +957,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI allocator_type __alloc() const _NOEXCEPT { return allocator_type(__node_alloc()); }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __pair3_.first(); }
+  _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __size_; }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI const size_type& size() const _NOEXCEPT { return __pair3_.first(); }
-  _LIBCPP_HIDE_FROM_ABI value_compare& value_comp() _NOEXCEPT { return __pair3_.second(); }
-  _LIBCPP_HIDE_FROM_ABI const value_compare& value_comp() const _NOEXCEPT { return __pair3_.second(); }
+  _LIBCPP_HIDE_FROM_ABI const size_type& size() const _NOEXCEPT { return __size_; }
+  _LIBCPP_HIDE_FROM_ABI value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
+  _LIBCPP_HIDE_FROM_ABI const value_compare& value_comp() const _NOEXCEPT { return __value_comp_; }
 
 public:
   _LIBCPP_HIDE_FROM_ABI __node_pointer __root() const _NOEXCEPT {
@@ -1006,11 +1007,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(__tree& __t)
 #if _LIBCPP_STD_VER <= 11
-      _NOEXCEPT_(__is_nothrow_swappable<value_compare>::value &&
-                 (!__node_traits::propagate_on_container_swap::value ||
-                  __is_nothrow_swappable<__node_allocator>::value));
+      _NOEXCEPT_(__is_nothrow_swappable_v<value_compare> &&
+                 (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>));
 #else
-      _NOEXCEPT_(__is_nothrow_swappable<value_compare>::value);
+      _NOEXCEPT_(__is_nothrow_swappable_v<value_compare>);
 #endif
 
   template <class _Key, class... _Args>
@@ -1327,21 +1327,19 @@ private:
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp) _NOEXCEPT_(
     is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_copy_constructible<value_compare>::value)
-    : __pair3_(0, __comp) {
+    : __size_(0), __value_comp_(__comp) {
   __begin_node() = __end_node();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
-    : __begin_node_(__iter_pointer()),
-      __pair1_(__default_init_tag(), __node_allocator(__a)),
-      __pair3_(0, __default_init_tag()) {
+    : __begin_node_(__iter_pointer()), __node_alloc_(__node_allocator(__a)), __size_(0) {
   __begin_node() = __end_node();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp, const allocator_type& __a)
-    : __begin_node_(__iter_pointer()), __pair1_(__default_init_tag(), __node_allocator(__a)), __pair3_(0, __comp) {
+    : __begin_node_(__iter_pointer()), __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(__comp) {
   __begin_node() = __end_node();
 }
 
@@ -1401,7 +1399,7 @@ template <class _ForwardIterator>
 void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _ForwardIterator __last) {
   typedef iterator_traits<_ForwardIterator> _ITraits;
   typedef typename _ITraits::value_type _ItValueType;
-  static_assert((is_same<_ItValueType, __container_value_type>::value),
+  static_assert(is_same<_ItValueType, __container_value_type>::value,
                 "__assign_unique may only be called with the containers value type");
   static_assert(
       __has_forward_iterator_category<_ForwardIterator>::value, "__assign_unique requires a forward iterator");
@@ -1440,8 +1438,9 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__default_init_tag(), __node_traits::select_on_container_copy_construction(__t.__node_alloc())),
-      __pair3_(0, __t.value_comp()) {
+      __node_alloc_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
+      __size_(0),
+      __value_comp_(__t.value_comp()) {
   __begin_node() = __end_node();
 }
 
@@ -1449,8 +1448,10 @@ template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
     is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<value_compare>::value)
     : __begin_node_(std::move(__t.__begin_node_)),
-      __pair1_(std::move(__t.__pair1_)),
-      __pair3_(std::move(__t.__pair3_)) {
+      __end_node_(std::move(__t.__end_node_)),
+      __node_alloc_(std::move(__t.__node_alloc_)),
+      __size_(__t.__size_),
+      __value_comp_(std::move(__t.__value_comp_)) {
   if (size() == 0)
     __begin_node() = __end_node();
   else {
@@ -1463,7 +1464,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
-    : __pair1_(__default_init_tag(), __node_allocator(__a)), __pair3_(0, std::move(__t.value_comp())) {
+    : __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(std::move(__t.value_comp())) {
   if (__a == __t.__alloc()) {
     if (__t.size() == 0)
       __begin_node() = __end_node();
@@ -1485,10 +1486,11 @@ template <class _Tp, class _Compare, class _Allocator>
 void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
     _NOEXCEPT_(is_nothrow_move_assignable<value_compare>::value&& is_nothrow_move_assignable<__node_allocator>::value) {
   destroy(static_cast<__node_pointer>(__end_node()->__left_));
-  __begin_node_    = __t.__begin_node_;
-  __pair1_.first() = __t.__pair1_.first();
+  __begin_node_ = __t.__begin_node_;
+  __end_node_   = __t.__end_node_;
   __move_assign_alloc(__t);
-  __pair3_ = std::move(__t.__pair3_);
+  __size_       = __t.__size_;
+  __value_comp_ = std::move(__t.__value_comp_);
   if (size() == 0)
     __begin_node() = __end_node();
   else {
@@ -1531,7 +1533,7 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::~__tree() {
-  static_assert((is_copy_constructible<value_compare>::value), "Comparator must be copy-constructible.");
+  static_assert(is_copy_constructible<value_compare>::value, "Comparator must be copy-constructible.");
   destroy(__root());
 }
 
@@ -1549,17 +1551,18 @@ void __tree<_Tp, _Compare, _Allocator>::destroy(__node_pointer __nd) _NOEXCEPT {
 template <class _Tp, class _Compare, class _Allocator>
 void __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
 #if _LIBCPP_STD_VER <= 11
-    _NOEXCEPT_(__is_nothrow_swappable<value_compare>::value &&
-               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value))
+    _NOEXCEPT_(__is_nothrow_swappable_v<value_compare> &&
+               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>))
 #else
-    _NOEXCEPT_(__is_nothrow_swappable<value_compare>::value)
+    _NOEXCEPT_(__is_nothrow_swappable_v<value_compare>)
 #endif
 {
   using std::swap;
   swap(__begin_node_, __t.__begin_node_);
-  swap(__pair1_.first(), __t.__pair1_.first());
+  swap(__end_node_, __t.__end_node_);
   std::__swap_allocator(__node_alloc(), __t.__node_alloc());
-  __pair3_.swap(__t.__pair3_);
+  swap(__size_, __t.__size_);
+  swap(__value_comp_, __t.__value_comp_);
   if (size() == 0)
     __begin_node() = __end_node();
   else

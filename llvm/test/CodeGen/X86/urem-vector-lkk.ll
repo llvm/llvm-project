@@ -92,15 +92,15 @@ define <4 x i16> @fold_urem_vec_2(<4 x i16> %x) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
 ; SSE-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE-NEXT:    psrlw $6, %xmm1
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,95,95,95,95,95,95,95]
 ; SSE-NEXT:    psubw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fold_urem_vec_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,44151,44151,44151,44151]
 ; AVX-NEXT:    vpsrlw $6, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [95,95,95,95,95,95,95,95]
 ; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = urem <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>
@@ -123,9 +123,9 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) {
 ;
 ; AVX-LABEL: combine_urem_udiv:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,44151,44151,44151,44151]
 ; AVX-NEXT:    vpsrlw $6, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2 # [95,95,95,95,95,95,95,95]
 ; AVX-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq

@@ -89,18 +89,13 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
   ];
 }
 
-def LinalgBufferizePass : Pass<"linalg-bufferize"> {
-  let summary = "Bufferize the linalg dialect";
-  let dependentDialects = [
-    "affine::AffineDialect",
-    "bufferization::BufferizationDialect",
-    "linalg::LinalgDialect",
-    "memref::MemRefDialect",
-  ];
-}
-
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
   let summary = "Convert named ops into generic ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops"> {
+  let summary = "Convert generic ops back to named ops";
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
@@ -138,6 +133,65 @@ def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInter
            "Detensorize all ops that qualify for detensoring along with branch"
            " operands and basic-block arguments.">
 
+  ];
+}
+
+def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
+  let summary = "Convert linalg matmul ops to block layout and back";
+  let description = [{
+    Pack a matmul operation into blocked layout with two levels of subdivision:
+    - major 2D blocks - outer dimensions, consist of minor blocks
+    - minor 2D blocks - inner dimensions, consist of scalar elements
+
+    A 2D matmul MxNxK gets reshaped into blocked 4D representation
+    as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][nb][kb]
+    where the (MB, NB, KB) dimensions represent the major blocks,
+    and the (mb, nb, kb) are the minor blocks of their respective
+    original 2D dimensions (M, N, K).
+
+    Depending on the initial operands' data layout and the specified
+    packing options, the major blocks dimensions might get transposed
+    e.g., [MB][KB] -> [KB][MB]. The minor blocks can also be transposed
+    e.g., [mb][kb] -> [kb][mb].
+    Any present batch dimensions remain unchanged.
+    The final result is unpacked back to the original shape.
+
+    For example, given a matmul operation:
+    ```mlir
+      %res = linalg.matmul ins(%A, %B) outs(%C)
+    ```
+    the default transformation result can be represented as:
+    ```mlir
+      %A_packed = pack %A : 2D <MxK> -> 4D <MBxKBxmbxkb>
+      %B_packed = pack %B : 2D <KxN> -> 4D <NBxKBxnbxkb>
+      %C_packed = pack %C : 2D <MxN> -> 4D <MBxNBxmbxnb>
+      %res_packed = linalg.mmt4d ins(%A_packed, %B_packed) outs(%C_packed)
+      %res = unpack %res_packed : 4D <MBxNBxmbxnb> -> 2D <MxN>
+    ```
+  }];
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+  let options = [
+    ListOption<"blockFactors", "block-factors", "int64_t",
+               "Block factors (mb, nb, kb) for relayout">,
+    Option<"allowPadding", "allow-padding", "bool",
+           /*default=*/"true",
+           "Allow packing padding">,
+    ListOption<"mnkPaddedSizesNextMultipleOf", "mnk-padded-multiples", "int64_t",
+               "Next multiples of the packing sizes">,
+    ListOption<"mnkOrder", "mnk-order", "int64_t",
+               "Permutation of matmul (M, N, K) dimensions order">,
+    Option<"lhsTransposeOuterBlocks", "lhs-transpose-outer-blocks", "bool",
+           /*default=*/"false",
+           "Transpose LHS outer block layout [MB][KB] -> [KB][MB]">,
+    Option<"lhsTransposeInnerBlocks", "lhs-transpose-inner-blocks", "bool",
+           /*default=*/"false",
+           "Transpose LHS inner block layout [mb][kb] -> [kb][mb]">,
+    Option<"rhsTransposeOuterBlocks", "rhs-transpose-outer-blocks", "bool",
+           /*default=*/"true",
+           "Transpose RHS outer block layout [KB][NB] -> [NB][KB]">,
+    Option<"rhsTransposeInnerBlocks", "rhs-transpose-inner-blocks", "bool",
+           /*default=*/"true",
+           "Transpose RHS inner block layout [kb][nb] -> [nb][kb]">
   ];
 }
 

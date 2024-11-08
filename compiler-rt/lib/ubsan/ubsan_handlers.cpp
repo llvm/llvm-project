@@ -555,13 +555,11 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
                                      ReportOptions Opts, ValueHandle Src,
                                      ValueHandle Dst) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::GenericUB;
-
   const TypeDescriptor &SrcTy = Data->FromType;
   const TypeDescriptor &DstTy = Data->ToType;
-
   bool SrcSigned = SrcTy.isSignedIntegerTy();
   bool DstSigned = DstTy.isSignedIntegerTy();
+  ErrorType ET = ErrorType::GenericUB;
 
   switch (Data->Kind) {
   case ICCK_IntegerTruncation: { // Legacy, no longer used.
@@ -594,14 +592,23 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
 
   ScopedReport R(Opts, Loc, ET);
 
+  // In the case we have a bitfield, we want to explicitly say so in the
+  // error message.
   // FIXME: is it possible to dump the values as hex with fixed width?
-
-  Diag(Loc, DL_Error, ET,
-       "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
-       "type %4 changed the value to %5 (%6-bit, %7signed)")
-      << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
-      << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
-      << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
+  if (Data->BitfieldBits)
+    Diag(Loc, DL_Error, ET,
+         "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+         "type %4 changed the value to %5 (%6-bit bitfield, %7signed)")
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+        << Data->BitfieldBits << (DstSigned ? "" : "un");
+  else
+    Diag(Loc, DL_Error, ET,
+         "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+         "type %4 changed the value to %5 (%6-bit, %7signed)")
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+        << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
 }
 
 void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,
@@ -626,13 +633,16 @@ static void handleInvalidBuiltin(InvalidBuiltinData *Data, ReportOptions Opts) {
 
   ScopedReport R(Opts, Loc, ET);
 
-  Diag(Loc, DL_Error, ET,
-       "passing zero to %0, which is not a valid argument")
-    << ((Data->Kind == BCK_CTZPassedZero) ? "ctz()" : "clz()");
+  if (Data->Kind == BCK_AssumePassedFalse)
+    Diag(Loc, DL_Error, ET, "assumption is violated during execution");
+  else
+    Diag(Loc, DL_Error, ET,
+         "passing zero to __builtin_%0(), which is not a valid argument")
+        << ((Data->Kind == BCK_CTZPassedZero) ? "ctz" : "clz");
 }
 
 void __ubsan::__ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
-  GET_REPORT_OPTIONS(true);
+  GET_REPORT_OPTIONS(false);
   handleInvalidBuiltin(Data, Opts);
 }
 void __ubsan::__ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {

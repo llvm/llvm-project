@@ -35,6 +35,12 @@ class ModFileWriter {
 public:
   explicit ModFileWriter(SemanticsContext &context) : context_{context} {}
   bool WriteAll();
+  void WriteClosure(llvm::raw_ostream &, const Symbol &,
+      UnorderedSymbolSet &nonIntrinsicModulesWritten);
+  ModFileWriter &set_hermeticModuleFileOutput(bool yes = true) {
+    hermeticModuleFileOutput_ = yes;
+    return *this;
+  }
 
 private:
   SemanticsContext &context_;
@@ -46,6 +52,7 @@ private:
   std::string containsBuf_;
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
+  UnorderedSymbolSet usedNonIntrinsicModules_;
 
   llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};
@@ -54,14 +61,14 @@ private:
   llvm::raw_string_ostream decls_{declsBuf_};
   llvm::raw_string_ostream contains_{containsBuf_};
   bool isSubmodule_{false};
-  std::map<const Symbol *, SourceName> renamings_;
+  bool hermeticModuleFileOutput_{false};
 
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
   void PrepareRenamings(const Scope &);
-  void PutSymbols(const Scope &);
+  void PutSymbols(const Scope &, UnorderedSymbolSet *hermetic);
   // Returns true if a derived type with bindings and "contains" was emitted
   bool PutComponents(const Symbol &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);

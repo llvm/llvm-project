@@ -647,6 +647,8 @@ inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
 }
 
+std::vector<const Object::value_type *> sortedElements(const Object &O);
+
 /// A "cursor" marking a position within a Value.
 /// The Value is a tree, and this is the path from the root to the current node.
 /// This is used to associate errors with particular subobjects.

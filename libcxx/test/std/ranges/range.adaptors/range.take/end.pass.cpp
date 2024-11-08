@@ -69,6 +69,20 @@ constexpr bool test() {
     assert(tv.end() == std::ranges::next(tv.begin(), 8));
   }
 
+  {
+    // __iterator<false> has base with type std::ranges::sentinel_t<NonSimpleViewNonSized>; adding a const qualifier
+    // would change the equality.
+    std::ranges::take_view<NonSimpleNonSizedView> tvns(NonSimpleNonSizedView{buffer, buffer + 8}, 0);
+    static_assert(!std::is_same_v<decltype(tvns.end().base()), std::ranges::sentinel_t<const NonSimpleNonSizedView>>);
+  }
+
+  {
+    // __iterator<true> has base with type std::ranges::sentinel_t<const NonSimpleViewNonSized>; adding a const qualifier
+    // would not change the equality.
+    std::ranges::take_view<SimpleViewNonSized> tvs(SimpleViewNonSized{buffer, buffer + 8}, 0);
+    static_assert(std::is_same_v<decltype(tvs.end().base()), std::ranges::sentinel_t<const SimpleViewNonSized>>);
+  }
+
   return true;
 }
 

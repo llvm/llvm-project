@@ -22,7 +22,7 @@ define internal void @func() {
 ; CHECK-LABEL: define {{[^@]+}}@func
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr null, align 4294967296
+; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr addrspace(5) null, align 4294967296
 ; CHECK-NEXT:    store i64 0, ptr [[I]], align 8
 ; CHECK-NEXT:    ret void
 ;

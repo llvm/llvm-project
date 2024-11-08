@@ -16,12 +16,16 @@
 
 #include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include <set>
 
 namespace llvm {
 class SPIRVSubtarget;
 
 class SPIRVTargetLowering : public TargetLowering {
   const SPIRVSubtarget &STI;
+
+  // Record of already processed machine functions
+  mutable std::set<const MachineFunction *> ProcessedMF;
 
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,
@@ -51,10 +55,24 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+  unsigned
+  getNumRegisters(LLVMContext &Context, EVT VT,
+                  std::optional<MVT> RegisterVT = std::nullopt) const override {
+    return 1;
+  }
+
   // Call the default implementation and finalize target lowering by inserting
   // extra instructions required to preserve validity of SPIR-V code imposed by
   // the standard.
   void finalizeLowering(MachineFunction &MF) const override;
+
+  MVT getPreferredSwitchConditionType(LLVMContext &Context,
+                                      EVT ConditionVT) const override {
+    return ConditionVT.getSimpleVT();
+  }
 };
 } // namespace llvm
 

@@ -90,7 +90,11 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
         CUList.push_back(BADCUOFFSET);
-      ForeignTUList.push_back(cast<DWARFTypeUnit>(&Unit)->getTypeHash());
+      const uint64_t TUHash = cast<DWARFTypeUnit>(&Unit)->getTypeHash();
+      if (!TUHashToIndexMap.count(TUHash)) {
+        TUHashToIndexMap.insert({TUHash, ForeignTUList.size()});
+        ForeignTUList.push_back(TUHash);
+      }
     } else {
       LocalTUList.push_back(CurrentUnitOffset);
     }
@@ -112,8 +116,6 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
 // Returns true if DW_TAG_variable should be included in .debug-names based on
 // section 6.1.1.1 for DWARF5 spec.
 static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
-  if (Die.findAttribute(dwarf::Attribute::DW_AT_declaration))
-    return false;
   const DIEValue LocAttrInfo =
       Die.findAttribute(dwarf::Attribute::DW_AT_location);
   if (!LocAttrInfo)
@@ -148,6 +150,8 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
 
 bool static canProcess(const DWARFUnit &Unit, const DIE &Die,
                        std::string &NameToUse, const bool TagsOnly) {
+  if (Die.findAttribute(dwarf::Attribute::DW_AT_declaration))
+    return false;
   switch (Die.getTag()) {
   case dwarf::DW_TAG_base_type:
   case dwarf::DW_TAG_class_type:
@@ -220,6 +224,7 @@ static uint64_t getEntryID(const BOLTDWARF5AccelTableData &Entry) {
 std::optional<BOLTDWARF5AccelTableData *>
 DWARF5AcceleratorTable::addAccelTableEntry(
     DWARFUnit &Unit, const DIE &Die, const std::optional<uint64_t> &DWOID,
+    const uint32_t NumberParentsInChain,
     std::optional<BOLTDWARF5AccelTableData *> &Parent) {
   if (Unit.getVersion() < 5 || !NeedToCreate)
     return std::nullopt;
@@ -230,8 +235,13 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     IsTU = Unit.isTypeUnit();
     DieTag = Die.getTag();
     if (IsTU) {
-      if (DWOID)
-        return ForeignTUList.size() - 1;
+      if (DWOID) {
+        const uint64_t TUHash = cast<DWARFTypeUnit>(&Unit)->getTypeHash();
+        auto Iter = TUHashToIndexMap.find(TUHash);
+        assert(Iter != TUHashToIndexMap.end() &&
+               "Could not find TU hash in map");
+        return Iter->second;
+      }
       return LocalTUList.size() - 1;
     }
     return CUList.size() - 1;
@@ -312,8 +322,14 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     // Keeping memory footprint down.
     if (ParentOffset)
       EntryRelativeOffsets.insert({*ParentOffset, 0});
+    bool IsParentRoot = false;
+    // If there is no parent and no valid Entries in parent chain this is a root
+    // to be marked with a flag.
+    if (!Parent && !NumberParentsInChain)
+      IsParentRoot = true;
     It.Values.push_back(new (Allocator) BOLTDWARF5AccelTableData(
-        Die.getOffset(), ParentOffset, DieTag, UnitID, IsTU, SecondIndex));
+        Die.getOffset(), ParentOffset, DieTag, UnitID, IsParentRoot, IsTU,
+        SecondIndex));
     return It.Values.back();
   };
 
@@ -462,7 +478,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
         Abbrev.addAttribute({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
         if (std::optional<uint64_t> Offset = Value->getParentDieOffset())
           Abbrev.addAttribute({dwarf::DW_IDX_parent, dwarf::DW_FORM_ref4});
-        else
+        else if (Value->isParentRoot())
           Abbrev.addAttribute(
               {dwarf::DW_IDX_parent, dwarf::DW_FORM_flag_present});
         FoldingSetNodeID ID;

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++23  -x c++ %s -verify
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected
+// RUN: %clang_cc1 -std=c++23  -x c++ %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected -fexperimental-new-constant-interpreter
 
 struct A{};
 struct B{ explicit operator bool() { return true; } };
@@ -26,7 +28,7 @@ bool f2();
 
 template <typename T>
 constexpr void f3() {
-  [[assume(T{})]]; // expected-error {{not contextually convertible to 'bool'}} expected-warning {{has side effects that will be discarded}} ext-warning {{C++23 extension}}
+  [[assume(T{})]]; // expected-error {{not contextually convertible to 'bool'}} expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
 }
 
 void g(int x) {
@@ -36,13 +38,13 @@ void g(int x) {
   S<false>{}.f();
   S<true>{}.g<char>();
   S<true>{}.g<int>();
-  [[assume(f2())]]; // expected-warning {{side effects that will be discarded}} ext-warning {{C++23 extension}}
+  [[assume(f2())]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
 
-  [[assume((x = 3))]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
-  [[assume(x++)]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
-  [[assume(++x)]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
-  [[assume([]{ return true; }())]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
-  [[assume(B{})]]; // expected-warning {{has side effects that will be discarded}} // ext-warning {{C++23 extension}}
+  [[assume((x = 3))]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+  [[assume(x++)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+  [[assume(++x)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+  [[assume([]{ return true; }())]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
   [[assume((1, 2))]]; // expected-warning {{has no effect}} // ext-warning {{C++23 extension}}
 
   f3<A>(); // expected-note {{in instantiation of}}
@@ -56,6 +58,11 @@ void g(int x) {
   [[assume(true)]] while (false) {} // expected-error {{only applies to empty statements}}
   [[assume(true)]] label:; // expected-error {{cannot be applied to a declaration}}
   [[assume(true)]] goto label; // expected-error {{only applies to empty statements}}
+
+  // Also check variant spellings.
+  __attribute__((__assume__(true))); // Should not issue a warning because it doesn't use the [[]] spelling.
+  __attribute__((assume(true))) {}; // expected-error {{only applies to empty statements}}
+  [[clang::assume(true)]] {}; // expected-error {{only applies to empty statements}}
 }
 
 // Check that 'x' is ODR-used here.
@@ -84,7 +91,7 @@ static_assert(S<false>{}.g<A>()); // expected-error {{not an integral constant e
 
 template <typename T>
 constexpr bool f4() {
-  [[assume(!T{})]]; // expected-error {{invalid argument type 'D'}} // expected-warning 2 {{side effects}} ext-warning {{C++23 extension}}
+  [[assume(!T{})]]; // expected-error {{invalid argument type 'D'}} // expected-warning 2 {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
   return sizeof(T) == sizeof(int);
 }
 
@@ -130,9 +137,33 @@ static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisf
 // Do not validate assumptions whose evaluation would have side-effects.
 constexpr int foo() {
   int a = 0;
-  [[assume(a++)]] [[assume(++a)]]; // expected-warning 2 {{has side effects that will be discarded}} ext-warning 2 {{C++23 extension}}
-  [[assume((a+=1))]]; // expected-warning {{has side effects that will be discarded}} ext-warning {{C++23 extension}}
+  [[assume(a++)]] [[assume(++a)]]; // expected-warning 2 {{assumption is ignored because it contains (potential) side-effects}} ext-warning 2 {{C++23 extension}}
+  [[assume((a+=1))]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} ext-warning {{C++23 extension}}
   return a;
 }
 
 static_assert(foo() == 0);
+
+template <bool ...val>
+void f() {
+    [[assume(val)]]; // expected-error {{expression contains unexpanded parameter pack}}
+}
+
+namespace gh71858 {
+int
+foo (int x, int y)
+{
+  __attribute__((assume(x == 42)));
+  __attribute__((assume(++y == 43))); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
+  return x + y;
+}
+}
+
+// Do not crash when assumptions are unreachable.
+namespace gh106898 {
+int foo () { 
+    while(1);
+    int a = 0, b = 1;
+    __attribute__((assume (a < b)));
+}
+}

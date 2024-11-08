@@ -283,7 +283,7 @@ public:
   }
 
   static TemplateArgument getEmptyPack() {
-    return TemplateArgument(std::nullopt);
+    return TemplateArgument(ArrayRef<TemplateArgument>());
   }
 
   /// Create a new template argument pack by copying the given set of
@@ -459,7 +459,7 @@ public:
              bool IncludeType) const;
 
   /// Debugging aid that dumps the template argument.
-  void dump(raw_ostream &Out) const;
+  void dump(raw_ostream &Out, const ASTContext &Context) const;
 
   /// Debugging aid that dumps the template argument to standard error.
   void dump() const;

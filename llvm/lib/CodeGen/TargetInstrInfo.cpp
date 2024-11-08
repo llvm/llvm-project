@@ -823,7 +823,9 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   }
 
   copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
-              SrcMO.getReg(), SrcMO.isKill());
+              SrcMO.getReg(), SrcMO.isKill(),
+              DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
+              SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
   if (MI->getNumOperands() > 2)
     transferImplicitOperands(MI, TRI);
@@ -919,7 +921,7 @@ bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
 //    instruction is known to not increase the critical path, then don't match
 //    that pattern.
 bool TargetInstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   bool Commute;
   if (isReassociationCandidate(Root, Commute)) {
@@ -941,13 +943,17 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
 }
 
 /// Return true when a code sequence can improve loop throughput.
-bool
-TargetInstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
+bool TargetInstrInfo::isThroughputPattern(unsigned Pattern) const {
   return false;
 }
 
+CombinerObjective
+TargetInstrInfo::getCombinerObjective(unsigned Pattern) const {
+  return CombinerObjective::Default;
+}
+
 std::pair<unsigned, unsigned>
-TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
+TargetInstrInfo::getReassociationOpcodes(unsigned Pattern,
                                          const MachineInstr &Root,
                                          const MachineInstr &Prev) const {
   bool AssocCommutRoot = isAssociativeAndCommutative(Root);
@@ -1036,7 +1042,7 @@ TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
 // Return a pair of boolean flags showing if the new root and new prev operands
 // must be swapped. See visual example of the rule in
 // TargetInstrInfo::getReassociationOpcodes.
-static std::pair<bool, bool> mustSwapOperands(MachineCombinerPattern Pattern) {
+static std::pair<bool, bool> mustSwapOperands(unsigned Pattern) {
   switch (Pattern) {
   default:
     llvm_unreachable("Unexpected pattern");
@@ -1051,13 +1057,34 @@ static std::pair<bool, bool> mustSwapOperands(MachineCombinerPattern Pattern) {
   }
 }
 
+void TargetInstrInfo::getReassociateOperandIndices(
+    const MachineInstr &Root, unsigned Pattern,
+    std::array<unsigned, 5> &OperandIndices) const {
+  switch (Pattern) {
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    OperandIndices = {1, 1, 1, 2, 2};
+    break;
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    OperandIndices = {2, 1, 2, 2, 1};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    OperandIndices = {1, 2, 1, 1, 2};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    OperandIndices = {2, 2, 2, 1, 1};
+    break;
+  default:
+    llvm_unreachable("unexpected MachineCombinerPattern");
+  }
+}
+
 /// Attempt the reassociation transformation to reduce critical path length.
 /// See the above comments before getMachineCombinerPatterns().
 void TargetInstrInfo::reassociateOps(
-    MachineInstr &Root, MachineInstr &Prev,
-    MachineCombinerPattern Pattern,
+    MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
+    ArrayRef<unsigned> OperandIndices,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -1065,29 +1092,10 @@ void TargetInstrInfo::reassociateOps(
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   const TargetRegisterClass *RC = Root.getRegClassConstraint(0, TII, TRI);
 
-  // This array encodes the operand index for each parameter because the
-  // operands may be commuted. Each row corresponds to a pattern value,
-  // and each column specifies the index of A, B, X, Y.
-  unsigned OpIdx[4][4] = {
-    { 1, 1, 2, 2 },
-    { 1, 2, 2, 1 },
-    { 2, 1, 1, 2 },
-    { 2, 2, 1, 1 }
-  };
-
-  int Row;
-  switch (Pattern) {
-  case MachineCombinerPattern::REASSOC_AX_BY: Row = 0; break;
-  case MachineCombinerPattern::REASSOC_AX_YB: Row = 1; break;
-  case MachineCombinerPattern::REASSOC_XA_BY: Row = 2; break;
-  case MachineCombinerPattern::REASSOC_XA_YB: Row = 3; break;
-  default: llvm_unreachable("unexpected MachineCombinerPattern");
-  }
-
-  MachineOperand &OpA = Prev.getOperand(OpIdx[Row][0]);
-  MachineOperand &OpB = Root.getOperand(OpIdx[Row][1]);
-  MachineOperand &OpX = Prev.getOperand(OpIdx[Row][2]);
-  MachineOperand &OpY = Root.getOperand(OpIdx[Row][3]);
+  MachineOperand &OpA = Prev.getOperand(OperandIndices[1]);
+  MachineOperand &OpB = Root.getOperand(OperandIndices[2]);
+  MachineOperand &OpX = Prev.getOperand(OperandIndices[3]);
+  MachineOperand &OpY = Root.getOperand(OperandIndices[4]);
   MachineOperand &OpC = Root.getOperand(0);
 
   Register RegA = OpA.getReg();
@@ -1126,11 +1134,62 @@ void TargetInstrInfo::reassociateOps(
     std::swap(KillX, KillY);
   }
 
+  unsigned PrevFirstOpIdx, PrevSecondOpIdx;
+  unsigned RootFirstOpIdx, RootSecondOpIdx;
+  switch (Pattern) {
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    PrevFirstOpIdx = OperandIndices[1];
+    PrevSecondOpIdx = OperandIndices[3];
+    RootFirstOpIdx = OperandIndices[2];
+    RootSecondOpIdx = OperandIndices[4];
+    break;
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    PrevFirstOpIdx = OperandIndices[1];
+    PrevSecondOpIdx = OperandIndices[3];
+    RootFirstOpIdx = OperandIndices[4];
+    RootSecondOpIdx = OperandIndices[2];
+    break;
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    PrevFirstOpIdx = OperandIndices[3];
+    PrevSecondOpIdx = OperandIndices[1];
+    RootFirstOpIdx = OperandIndices[2];
+    RootSecondOpIdx = OperandIndices[4];
+    break;
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    PrevFirstOpIdx = OperandIndices[3];
+    PrevSecondOpIdx = OperandIndices[1];
+    RootFirstOpIdx = OperandIndices[4];
+    RootSecondOpIdx = OperandIndices[2];
+    break;
+  default:
+    llvm_unreachable("unexpected MachineCombinerPattern");
+  }
+
+  // Basically BuildMI but doesn't add implicit operands by default.
+  auto buildMINoImplicit = [](MachineFunction &MF, const MIMetadata &MIMD,
+                              const MCInstrDesc &MCID, Register DestReg) {
+    return MachineInstrBuilder(
+               MF, MF.CreateMachineInstr(MCID, MIMD.getDL(), /*NoImpl=*/true))
+        .setPCSections(MIMD.getPCSections())
+        .addReg(DestReg, RegState::Define);
+  };
+
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
-      BuildMI(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR)
-          .addReg(RegX, getKillRegState(KillX))
-          .addReg(RegY, getKillRegState(KillY));
+      buildMINoImplicit(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR);
+  for (const auto &MO : Prev.explicit_operands()) {
+    unsigned Idx = MO.getOperandNo();
+    // Skip the result operand we'd already added.
+    if (Idx == 0)
+      continue;
+    if (Idx == PrevFirstOpIdx)
+      MIB1.addReg(RegX, getKillRegState(KillX));
+    else if (Idx == PrevSecondOpIdx)
+      MIB1.addReg(RegY, getKillRegState(KillY));
+    else
+      MIB1.add(MO);
+  }
+  MIB1.copyImplicitOps(Prev);
 
   if (SwapRootOperands) {
     std::swap(RegA, NewVR);
@@ -1138,9 +1197,20 @@ void TargetInstrInfo::reassociateOps(
   }
 
   MachineInstrBuilder MIB2 =
-      BuildMI(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC)
-          .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(KillNewVR));
+      buildMINoImplicit(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC);
+  for (const auto &MO : Root.explicit_operands()) {
+    unsigned Idx = MO.getOperandNo();
+    // Skip the result operand.
+    if (Idx == 0)
+      continue;
+    if (Idx == RootFirstOpIdx)
+      MIB2 = MIB2.addReg(RegA, getKillRegState(KillA));
+    else if (Idx == RootSecondOpIdx)
+      MIB2 = MIB2.addReg(NewVR, getKillRegState(KillNewVR));
+    else
+      MIB2 = MIB2.add(MO);
+  }
+  MIB2.copyImplicitOps(Root);
 
   // Propagate FP flags from the original instructions.
   // But clear poison-generating flags because those may not be valid now.
@@ -1177,32 +1247,24 @@ void TargetInstrInfo::reassociateOps(
 }
 
 void TargetInstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const {
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
 
   // Select the previous instruction in the sequence based on the input pattern.
-  MachineInstr *Prev = nullptr;
-  switch (Pattern) {
-  case MachineCombinerPattern::REASSOC_AX_BY:
-  case MachineCombinerPattern::REASSOC_XA_BY:
-    Prev = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
-    break;
-  case MachineCombinerPattern::REASSOC_AX_YB:
-  case MachineCombinerPattern::REASSOC_XA_YB:
-    Prev = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
-    break;
-  default:
-    llvm_unreachable("Unknown pattern for machine combiner");
-  }
+  std::array<unsigned, 5> OperandIndices;
+  getReassociateOperandIndices(Root, Pattern, OperandIndices);
+  MachineInstr *Prev =
+      MRI.getUniqueVRegDef(Root.getOperand(OperandIndices[0]).getReg());
 
   // Don't reassociate if Prev and Root are in different blocks.
   if (Prev->getParent() != Root.getParent())
     return;
 
-  reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
+  reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, OperandIndices,
+                 InstIdxForVirtReg);
 }
 
 MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
@@ -1470,8 +1532,7 @@ bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // since the split part may not be placed in a contiguous region. It may also
   // be more beneficial to augment the linker to ensure contiguous layout of
   // split functions within the same section as specified by the attribute.
-  if (MF.getFunction().hasSection() ||
-      MF.getFunction().hasFnAttribute("implicit-section-name"))
+  if (MF.getFunction().hasSection())
     return false;
 
   // We don't want to proceed further for cold functions
@@ -1691,7 +1752,7 @@ std::string TargetInstrInfo::createMIROperandComment(
       OS << Info;
     }
 
-    return OS.str();
+    return Flags;
   }
 
   int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
@@ -1725,7 +1786,7 @@ std::string TargetInstrInfo::createMIROperandComment(
       F.getRegMayBeFolded())
     OS << " foldable";
 
-  return OS.str();
+  return Flags;
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() = default;
@@ -1750,15 +1811,17 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(Attribute::NoUnwind);
 }
 
-outliner::InstrType TargetInstrInfo::getOutliningType(
-    MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+outliner::InstrType
+TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
+                                  MachineBasicBlock::iterator &MIT,
+                                  unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
   // NOTE: MI.isMetaInstruction() will match CFI_INSTRUCTION, but some targets
   // have support for outlining those. Special-case that here.
   if (MI.isCFIInstruction())
     // Just go right to the target implementation.
-    return getOutliningTypeImpl(MIT, Flags);
+    return getOutliningTypeImpl(MMI, MIT, Flags);
 
   // Be conservative about inline assembly.
   if (MI.isInlineAsm())
@@ -1824,7 +1887,7 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
   }
 
   // If we don't know, delegate to the target-specific hook.
-  return getOutliningTypeImpl(MIT, Flags);
+  return getOutliningTypeImpl(MMI, MIT, Flags);
 }
 
 bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,

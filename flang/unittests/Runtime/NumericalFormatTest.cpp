@@ -753,6 +753,8 @@ TEST(IOApiTests, FormatDoubleValues) {
       {"(F5.0,';')", 0.49999999999999994, "   0.;"},
       {"(F5.0,';')", 0.5, "   0.;"},
       {"(F5.0,';')", 0.5000000000000001, "   1.;"},
+      {"(ES0.0E0,';')", 0.666, "7.E-1;"},
+      {"(EN0.0E0,';')", 0.666, "666.E-3;"},
   };
 
   for (auto const &[format, value, expect] : individualTestCases) {
@@ -957,4 +959,21 @@ TEST(IOApiTests, EditDoubleInputValues) {
     ASSERT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
                            << "', want " << want << ", got " << u.raw;
   }
+}
+
+// regression test for confusing digit minimization
+TEST(IOApiTests, ConfusingMinimization) {
+  char buffer[8]{};
+  auto cookie{IONAME(BeginInternalListOutput)(buffer, sizeof buffer)};
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::uint16_t x{0x7bff}; // HUGE(0._2)
+  desc.Establish(TypeCode{CFI_type_half_float}, sizeof x, &x, 0, nullptr);
+  desc.Check();
+  EXPECT_TRUE(IONAME(OutputDescriptor)(cookie, desc));
+  auto status{IONAME(EndIoStatement)(cookie)};
+  EXPECT_EQ(status, 0);
+  std::string got{std::string{buffer, sizeof buffer}};
+  EXPECT_TRUE(CompareFormattedStrings(" 65504. ", got))
+      << "expected ' 65504. ', got '" << got << '\''; // not 65500.!
 }

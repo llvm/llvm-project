@@ -41,9 +41,7 @@ foreach(arch ${MSAN_TEST_ARCH})
   endif()
 endforeach()
 
-if(COMPILER_RT_INCLUDE_TESTS AND
-   COMPILER_RT_LIBCXX_PATH AND
-   COMPILER_RT_LIBCXXABI_PATH)
+if(COMPILER_RT_LIBCXX_PATH AND COMPILER_RT_LIBCXXABI_PATH)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
@@ -55,4 +53,3 @@ add_lit_testsuite(check-msan "Running the MemorySanitizer tests"
   ${MSAN_TESTSUITES}
   DEPENDS ${MSAN_TEST_DEPS}
   )
-set_target_properties(check-msan PROPERTIES FOLDER "Compiler-RT Misc")

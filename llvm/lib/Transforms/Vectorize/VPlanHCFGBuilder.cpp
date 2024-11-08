@@ -346,8 +346,23 @@ void PlainCFGBuilder::buildPlainCFG() {
   // latter.
   BB2VPBB[ThePreheaderBB] = VectorPreheaderVPBB;
   BasicBlock *LoopExitBB = TheLoop->getUniqueExitBlock();
+  Loop2Region[LI->getLoopFor(TheLoop->getHeader())] = TheRegion;
   assert(LoopExitBB && "Loops with multiple exits are not supported.");
   BB2VPBB[LoopExitBB] = cast<VPBasicBlock>(TheRegion->getSingleSuccessor());
+
+  // The existing vector region's entry and exiting VPBBs correspond to the loop
+  // header and latch.
+  VPBasicBlock *VectorHeaderVPBB = TheRegion->getEntryBasicBlock();
+  VPBasicBlock *VectorLatchVPBB = TheRegion->getExitingBasicBlock();
+  BB2VPBB[TheLoop->getHeader()] = VectorHeaderVPBB;
+  VectorHeaderVPBB->clearSuccessors();
+  VectorLatchVPBB->clearPredecessors();
+  if (TheLoop->getHeader() != TheLoop->getLoopLatch()) {
+    BB2VPBB[TheLoop->getLoopLatch()] = VectorLatchVPBB;
+  } else {
+    TheRegion->setExiting(VectorHeaderVPBB);
+    delete VectorLatchVPBB;
+  }
 
   // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for
@@ -413,10 +428,11 @@ void PlainCFGBuilder::buildPlainCFG() {
     // of VPBB and it should be set to the exit, i.e., non-header successor,
     // except for the top region, whose successor was set when creating VPlan's
     // skeleton.
-    if (TheRegion != Region)
+    if (TheRegion != Region) {
       Region->setOneSuccessor(isHeaderVPBB(Successor0) ? Successor1
                                                        : Successor0);
-    Region->setExiting(VPBB);
+      Region->setExiting(VPBB);
+    }
   }
 
   // 2. The whole CFG has been built at this point so all the input Values must

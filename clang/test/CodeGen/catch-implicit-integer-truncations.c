@@ -6,16 +6,16 @@
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_INT:.*]] = {{.*}} c"'unsigned int'\00" }
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_CHAR:.*]] = {{.*}} c"'unsigned char'\00" }
 
-// CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[UNSIGNED_CHAR]], i8 1 }
+// CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[UNSIGNED_CHAR]], i8 1, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER: @[[SIGNED_INT:.*]] = {{.*}} c"'int'\00" }
-// CHECK-SANITIZE-ANYRECOVER: @[[LINE_200_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[UNSIGNED_CHAR]], i8 2 }
+// CHECK-SANITIZE-ANYRECOVER: @[[LINE_200_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[UNSIGNED_CHAR]], i8 2, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER: @[[SIGNED_CHAR:.*]] = {{.*}} c"'signed char'\00" }
-// CHECK-SANITIZE-ANYRECOVER: @[[LINE_300_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2 }
-// CHECK-SANITIZE-ANYRECOVER: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2 }
+// CHECK-SANITIZE-ANYRECOVER: @[[LINE_300_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[SIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
 
 // CHECK-SANITIZE-ANYRECOVER: @[[UINT32:.*]] = {{.*}} c"'uint32_t' (aka 'unsigned int')\00" }
 // CHECK-SANITIZE-ANYRECOVER: @[[UINT8:.*]] = {{.*}} c"'uint8_t' (aka 'unsigned char')\00" }
-// CHECK-SANITIZE-ANYRECOVER: @[[LINE_500_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 500, i32 10 }, ptr @[[UINT32]], ptr @[[UINT8]], i8 1 }
+// CHECK-SANITIZE-ANYRECOVER: @[[LINE_500_UNSIGNED_TRUNCATION:.*]] = {{.*}}, i32 500, i32 10 }, ptr @[[UINT32]], ptr @[[UINT8]], i8 1, i32 0 }
 
 // ========================================================================== //
 // The expected true-positives. These are implicit conversions, and they truncate.

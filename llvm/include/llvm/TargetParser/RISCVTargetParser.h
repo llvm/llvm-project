@@ -24,6 +24,14 @@ class Triple;
 
 namespace RISCV {
 
+namespace RISCVExtensionBitmaskTable {
+struct RISCVExtensionBitmask {
+  const char *Name;
+  unsigned GroupID;
+  unsigned BitPosition;
+};
+} // namespace RISCVExtensionBitmaskTable
+
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 
@@ -35,7 +43,8 @@ bool parseTuneCPU(StringRef CPU, bool IsRV64);
 StringRef getMArchFromMcpu(StringRef CPU);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
-bool hasFastUnalignedAccess(StringRef CPU);
+bool hasFastScalarUnalignedAccess(StringRef CPU);
+bool hasFastVectorUnalignedAccess(StringRef CPU);
 
 } // namespace RISCV
 
@@ -61,7 +70,7 @@ enum {
 namespace RISCVVType {
 // Is this a SEW value that can be encoded into the VTYPE format.
 inline static bool isValidSEW(unsigned SEW) {
-  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 1024;
+  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 64;
 }
 
 // Is this a LMUL value that can be encoded into the VTYPE format.

@@ -18,19 +18,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// A simple structure that encodes a range of levels in the sparse tensors that
-/// forms a COO segment.
-struct COOSegment {
-  std::pair<Level, Level> lvlRange; // [low, high)
-  bool isSoA;
-
-  bool isAoS() const { return !isSoA; }
-  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
-  bool inSegment(Level l) const {
-    return l >= lvlRange.first && l < lvlRange.second;
-  }
-};
-
 //===----------------------------------------------------------------------===//
 /// A wrapper around `RankedTensorType`, which has three goals:
 ///
@@ -73,12 +60,6 @@ public:
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
 
-  // TODO: remove?
-  SparseTensorType(SparseTensorEncodingAttr enc)
-      : SparseTensorType(RankedTensorType::get(
-            SmallVector<Size>(enc.getDimRank(), ShapedType::kDynamic),
-            Float32Type::get(enc.getContext()), enc)) {}
-
   SparseTensorType &operator=(const SparseTensorType &) = delete;
   SparseTensorType(const SparseTensorType &) = default;
 
@@ -113,6 +94,22 @@ public:
 
   SparseTensorType withoutBitWidths() const {
     return withEncoding(enc.withoutBitWidths());
+  }
+
+  SparseTensorType withExplicitVal(Attribute explicitVal) const {
+    return withEncoding(enc.withExplicitVal(explicitVal));
+  }
+
+  SparseTensorType withoutExplicitVal() const {
+    return withEncoding(enc.withoutExplicitVal());
+  }
+
+  SparseTensorType withImplicitVal(Attribute implicitVal) const {
+    return withEncoding(enc.withImplicitVal(implicitVal));
+  }
+
+  SparseTensorType withoutImplicitVal() const {
+    return withEncoding(enc.withoutImplicitVal());
   }
 
   SparseTensorType
@@ -296,7 +293,7 @@ public:
   /// Returns the number of dimensions which have dynamic sizes.
   /// The return type is `int64_t` to maintain consistency with
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
-  int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
+  size_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
   ArrayRef<LevelType> getLvlTypes() const { return enc.getLvlTypes(); }
   LevelType getLvlType(Level l) const {
@@ -327,19 +324,21 @@ public:
   /// Returns the position-overhead bitwidth, defaulting to zero.
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
-  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
-  Type getCrdType() const {
-    if (getCrdWidth())
-      return IntegerType::get(getContext(), getCrdWidth());
-    return IndexType::get(getContext());
+  /// Returns the explicit value, defaulting to null Attribute for unset.
+  Attribute getExplicitVal() const {
+    return enc ? enc.getExplicitVal() : nullptr;
   }
 
-  /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
-  Type getPosType() const {
-    if (getPosWidth())
-      return IntegerType::get(getContext(), getPosWidth());
-    return IndexType::get(getContext());
+  /// Returns the implicit value, defaulting to null Attribute for 0.
+  Attribute getImplicitVal() const {
+    return enc ? enc.getImplicitVal() : nullptr;
   }
+
+  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+  Type getCrdType() const { return enc.getCrdElemType(); }
+
+  /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
+  Type getPosType() const { return enc.getPosElemType(); }
 
   /// Returns true iff this sparse tensor type has a trailing
   /// COO region starting at the given level. By default, it
@@ -351,13 +350,15 @@ public:
   /// no such COO region is found, then returns the level-rank.
   ///
   /// DEPRECATED: use getCOOSegment instead;
-  Level getAoSCOOStart() const;
+  Level getAoSCOOStart() const { return getEncoding().getAoSCOOStart(); };
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;
 
   /// Returns a list of COO segments in the sparse tensor types.
-  SmallVector<COOSegment> getCOOSegments() const;
+  SmallVector<COOSegment> getCOOSegments() const {
+    return getEncoding().getCOOSegments();
+  }
 
 private:
   // These two must be const, to ensure coherence of the memoized fields.

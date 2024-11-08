@@ -403,7 +403,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       // Such transposes do not materially effect the underlying vector and can
       // be omitted. EG: perm [1, 0, 2] applied to vector<1x1x8xi32>
       bool transposeNonOuterUnitDims = false;
-      auto operandShape = operands[it.index()].getType().cast<ShapedType>();
+      auto operandShape = cast<ShapedType>(operands[it.index()].getType());
       for (auto [index, dim] :
            llvm::enumerate(ArrayRef<int64_t>(perm).drop_back(1))) {
         if (dim != static_cast<int64_t>(index) &&
@@ -550,9 +550,7 @@ struct CastAwayConstantMaskLeadingOneDim
       return failure();
 
     int64_t dropDim = oldType.getRank() - newType.getRank();
-    SmallVector<int64_t> dimSizes;
-    for (auto attr : mask.getMaskDimSizes())
-      dimSizes.push_back(llvm::cast<IntegerAttr>(attr).getInt());
+    ArrayRef<int64_t> dimSizes = mask.getMaskDimSizes();
 
     // If any of the dropped unit dims has a size of `0`, the entire mask is a
     // zero mask, else the unit dim has no effect on the mask.
@@ -563,7 +561,7 @@ struct CastAwayConstantMaskLeadingOneDim
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 
     auto newMask = rewriter.create<vector::ConstantMaskOp>(
-        mask.getLoc(), newType, rewriter.getI64ArrayAttr(newDimSizes));
+        mask.getLoc(), newType, newDimSizes);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(mask, oldType, newMask);
     return success();
   }

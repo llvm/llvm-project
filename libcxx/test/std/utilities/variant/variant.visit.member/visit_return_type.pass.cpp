@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // The tested functionality needs deducing this.
-// UNSUPPORTED: clang-16 || clang-17
+// UNSUPPORTED: clang-17
 // XFAIL: apple-clang
 
 // <variant>
@@ -33,6 +33,9 @@ template <class... Ts>
 struct overloaded : Ts... {
   using Ts::operator()...;
 };
+
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 void test_overload_ambiguity() {
   using V = std::variant<float, long, std::string>;

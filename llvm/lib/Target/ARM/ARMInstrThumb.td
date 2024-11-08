@@ -675,7 +675,7 @@ def tSVC : T1pI<(outs), (ins imm0_255:$imm), IIC_Br,
 }
 
 // The assembler uses 0xDEFE for a trap instruction.
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def tTRAP : TI<(outs), (ins), IIC_Br,
                "trap", [(trap)]>, Encoding16, Sched<[WriteBr]> {
   let Inst = 0xdefe;
@@ -1399,12 +1399,6 @@ let hasPostISelHook = 1, Defs = [CPSR] in {
                 Requires<[IsThumb1Only]>,
                 Sched<[WriteALU]>;
 }
-
-
-def : T1Pat<(ARMsubs tGPR:$Rn, tGPR:$Rm), (tSUBSrr $Rn, $Rm)>;
-def : T1Pat<(ARMsubs tGPR:$Rn, imm0_7:$imm3), (tSUBSi3 $Rn, imm0_7:$imm3)>;
-def : T1Pat<(ARMsubs tGPR:$Rn, imm0_255:$imm8), (tSUBSi8 $Rn, imm0_255:$imm8)>;
-
 
 // Sign-extend byte
 def tSXTB :                     // A8.6.222

@@ -502,7 +502,7 @@ private:
     for (const AffineExpr l : order.getResults()) {
       unsigned loopId = llvm::cast<AffineDimExpr>(l).getPosition();
       auto itTp =
-          linalgOp.getIteratorTypes()[loopId].cast<linalg::IteratorTypeAttr>();
+          cast<linalg::IteratorTypeAttr>(linalgOp.getIteratorTypes()[loopId]);
       if (linalg::isReductionIterator(itTp.getValue()))
         break; // terminate at first reduction
       nest++;
@@ -557,9 +557,7 @@ private:
         unsigned lvl = llvm::cast<AffineDimExpr>(expr).getPosition();
         lvlSeq.push_back(std::make_pair(lvl, lvlSeq.size()));
       }
-      std::sort(lvlSeq.begin(), lvlSeq.end(), [](auto &lhs, auto &rhs) -> bool {
-        return lhs.first < rhs.first;
-      });
+      llvm::sort(lvlSeq, llvm::less_first());
       SmallVector<unsigned> perm =
           llvm::to_vector(llvm::make_second_range(lvlSeq));
       auto dimToLvl = AffineMap::getPermutationMap(perm, linalgOp.getContext());

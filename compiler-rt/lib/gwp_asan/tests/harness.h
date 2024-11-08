@@ -39,10 +39,6 @@ namespace test {
 // `optional/printf_sanitizer_common.cpp` which supplies the __sanitizer::Printf
 // for this purpose.
 Printf_t getPrintfFunction();
-
-// First call returns true, all the following calls return false.
-bool OnlyOnce();
-
 }; // namespace test
 }; // namespace gwp_asan
 
@@ -57,10 +53,7 @@ class DefaultGuardedPoolAllocator : public ::testing::Test {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
-    Opts.setDefaults();
     MaxSimultaneousAllocations = Opts.MaxSimultaneousAllocations;
-
-    Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
   }
 
@@ -78,12 +71,8 @@ public:
   InitNumSlots(decltype(gwp_asan::options::Options::MaxSimultaneousAllocations)
                    MaxSimultaneousAllocationsArg) {
     gwp_asan::options::Options Opts;
-    Opts.setDefaults();
-
     Opts.MaxSimultaneousAllocations = MaxSimultaneousAllocationsArg;
     MaxSimultaneousAllocations = MaxSimultaneousAllocationsArg;
-
-    Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
   }
 
@@ -100,10 +89,7 @@ class BacktraceGuardedPoolAllocator
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
-    Opts.setDefaults();
-
     Opts.Backtrace = gwp_asan::backtrace::getBacktraceFunction();
-    Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
 
     // In recoverable mode, capture GWP-ASan logs to an internal buffer so that

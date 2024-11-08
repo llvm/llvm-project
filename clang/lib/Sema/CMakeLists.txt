@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  Demangle
   FrontendHLSL
   FrontendOpenMP
   MC
@@ -14,6 +15,7 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
 
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
+  CheckExprLifetime.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
@@ -25,10 +27,16 @@ add_clang_library(clangSema
   Scope.cpp
   ScopeInfo.cpp
   Sema.cpp
+  SemaAMDGPU.cpp
+  SemaARM.cpp
+  SemaAVR.cpp
   SemaAccess.cpp
   SemaAttr.cpp
   SemaAPINotes.cpp
   SemaAvailability.cpp
+  SemaBPF.cpp
+  SemaBase.cpp
+  SemaBoundsSafety.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp
@@ -47,27 +55,42 @@ add_clang_library(clangSema
   SemaExprMember.cpp
   SemaExprObjC.cpp
   SemaFixItUtils.cpp
+  SemaFunctionEffects.cpp
   SemaHLSL.cpp
+  SemaHexagon.cpp
   SemaInit.cpp
   SemaLambda.cpp
   SemaLookup.cpp
+  SemaLoongArch.cpp
+  SemaM68k.cpp
+  SemaMIPS.cpp
+  SemaMSP430.cpp
   SemaModule.cpp
+  SemaNVPTX.cpp
+  SemaObjC.cpp
   SemaObjCProperty.cpp
   SemaOpenACC.cpp
+  SemaOpenCL.cpp
   SemaOpenMP.cpp
   SemaOverload.cpp
+  SemaPPC.cpp
   SemaPseudoObject.cpp
-  SemaRISCVVectorLookup.cpp
+  SemaRISCV.cpp
   SemaStmt.cpp
   SemaStmtAsm.cpp
   SemaStmtAttr.cpp
   SemaSYCL.cpp
+  SemaSwift.cpp
+  SemaSystemZ.cpp
   SemaTemplate.cpp
   SemaTemplateDeduction.cpp
+  SemaTemplateDeductionGuide.cpp
   SemaTemplateInstantiate.cpp
   SemaTemplateInstantiateDecl.cpp
   SemaTemplateVariadic.cpp
   SemaType.cpp
+  SemaWasm.cpp
+  SemaX86.cpp
   TypeLocBuilder.cpp
 
   DEPENDS

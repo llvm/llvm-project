@@ -67,8 +67,8 @@ endif()
 
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
+  LLVM_HAS_NVPTX_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
-  MLIR_ENABLE_CUDA_CONVERSIONS
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
@@ -101,9 +101,11 @@ configure_lit_site_cfg(
 set(MLIR_TEST_DEPENDS
   FileCheck count not split-file
   mlir-capi-ir-test
+  mlir-capi-irdl-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
+  mlir-capi-rewrite-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
   mlir-capi-transform-interpreter-test
@@ -113,6 +115,7 @@ set(MLIR_TEST_DEPENDS
   mlir-opt
   mlir-query
   mlir-reduce
+  mlir-rewrite
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server
@@ -146,6 +149,10 @@ endif()
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
+endif()
+
+if(MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
@@ -190,10 +197,8 @@ if(LLVM_BUILD_EXAMPLES)
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
-  add_subdirectory(mlir-spirv-cpu-runner)
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-spirv-cpu-runner
-    mlir_test_spirv_cpu_runner_c_wrappers
+    mlir_spirv_cpu_runtime
   )
 endif()
 
@@ -216,12 +221,12 @@ endif()
 add_custom_target(check-mlir-build-only
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
+set_target_properties(check-mlir-build-only PROPERTIES FOLDER "MLIR/Tests")
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
   )
-set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}

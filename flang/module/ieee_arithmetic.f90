@@ -8,7 +8,7 @@
 
 ! Fortran 2018 Clause 17
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 module ieee_arithmetic
   ! F18 Clause 17.1p1:
@@ -18,13 +18,20 @@ module ieee_arithmetic
   use __fortran_ieee_exceptions
 
   use __fortran_builtins, only: &
+    ieee_away => __builtin_ieee_away, &
+    ieee_down => __builtin_ieee_down, &
     ieee_fma => __builtin_fma, &
+    ieee_int => __builtin_ieee_int, &
     ieee_is_nan => __builtin_ieee_is_nan, &
     ieee_is_negative => __builtin_ieee_is_negative, &
     ieee_is_normal => __builtin_ieee_is_normal, &
+    ieee_nearest => __builtin_ieee_nearest, &
     ieee_next_after => __builtin_ieee_next_after, &
     ieee_next_down => __builtin_ieee_next_down, &
     ieee_next_up => __builtin_ieee_next_up, &
+    ieee_other => __builtin_ieee_other, &
+    ieee_real => __builtin_ieee_real, &
+    ieee_round_type => __builtin_ieee_round_type, &
     ieee_scalb => scale, &
     ieee_selected_real_kind => __builtin_ieee_selected_real_kind, &
     ieee_support_datatype => __builtin_ieee_support_datatype, &
@@ -33,10 +40,14 @@ module ieee_arithmetic
     ieee_support_inf => __builtin_ieee_support_inf, &
     ieee_support_io => __builtin_ieee_support_io, &
     ieee_support_nan => __builtin_ieee_support_nan, &
+    ieee_support_rounding => __builtin_ieee_support_rounding, &
     ieee_support_sqrt => __builtin_ieee_support_sqrt, &
     ieee_support_standard => __builtin_ieee_support_standard, &
     ieee_support_subnormal => __builtin_ieee_support_subnormal, &
-    ieee_support_underflow_control => __builtin_ieee_support_underflow_control
+    ieee_support_underflow_control => __builtin_ieee_support_underflow_control, &
+    ieee_to_zero => __builtin_ieee_to_zero, &
+    ieee_up => __builtin_ieee_up
+
 
   implicit none
 
@@ -45,13 +56,20 @@ module ieee_arithmetic
   private
 
   ! Explicitly export the symbols from __fortran_builtins
+  public :: ieee_away
+  public :: ieee_down
   public :: ieee_fma
+  public :: ieee_int
   public :: ieee_is_nan
   public :: ieee_is_negative
   public :: ieee_is_normal
+  public :: ieee_nearest
+  public :: ieee_other
   public :: ieee_next_after
   public :: ieee_next_down
   public :: ieee_next_up
+  public :: ieee_real
+  public :: ieee_round_type
   public :: ieee_scalb
   public :: ieee_selected_real_kind
   public :: ieee_support_datatype
@@ -60,10 +78,13 @@ module ieee_arithmetic
   public :: ieee_support_inf
   public :: ieee_support_io
   public :: ieee_support_nan
+  public :: ieee_support_rounding
   public :: ieee_support_sqrt
   public :: ieee_support_standard
   public :: ieee_support_subnormal
   public :: ieee_support_underflow_control
+  public :: ieee_to_zero
+  public :: ieee_up
 
   ! Explicitly export the symbols from __fortran_ieee_exceptions
   public :: ieee_flag_type
@@ -114,19 +135,6 @@ module ieee_arithmetic
     ieee_negative_denormal = ieee_negative_subnormal, &
     ieee_positive_denormal = ieee_positive_subnormal
 
-  type, public :: ieee_round_type
-    private
-    integer(kind=1) :: mode = 0
-  end type ieee_round_type
-
-  type(ieee_round_type), parameter, public :: &
-    ieee_to_zero = ieee_round_type(_FORTRAN_RUNTIME_IEEE_TO_ZERO), &
-    ieee_nearest = ieee_round_type(_FORTRAN_RUNTIME_IEEE_NEAREST), &
-    ieee_up = ieee_round_type(_FORTRAN_RUNTIME_IEEE_UP), &
-    ieee_down = ieee_round_type(_FORTRAN_RUNTIME_IEEE_DOWN), &
-    ieee_away = ieee_round_type(_FORTRAN_RUNTIME_IEEE_AWAY), &
-    ieee_other = ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
-
   interface operator(==)
     elemental logical function ieee_class_eq(x, y)
       import ieee_class_type
@@ -157,6 +165,8 @@ module ieee_arithmetic
   G(1) G(2) G(4) G(8) G(16)
 #define SPECIFICS_L(G) \
   G(1) G(2) G(4) G(8)
+
+#if FLANG_SUPPORT_R16
 #if __x86_64__
 #define SPECIFICS_R(G) \
   G(2) G(3) G(4) G(8) G(10) G(16)
@@ -164,12 +174,24 @@ module ieee_arithmetic
 #define SPECIFICS_R(G) \
   G(2) G(3) G(4) G(8) G(16)
 #endif
+#else
+#if __x86_64__
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8) G(10)
+#else
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8)
+#endif
+#endif
+
 #define SPECIFICS_II(G) \
   G(1,1) G(1,2) G(1,4) G(1,8) G(1,16) \
   G(2,1) G(2,2) G(2,4) G(2,8) G(2,16) \
   G(4,1) G(4,2) G(4,4) G(4,8) G(4,16) \
   G(8,1) G(8,2) G(8,4) G(8,8) G(8,16) \
   G(16,1) G(16,2) G(16,4) G(16,8) G(16,16)
+
+#if FLANG_SUPPORT_R16
 #if __x86_64__
 #define SPECIFICS_RI(G) \
   G(2,1) G(2,2) G(2,4) G(2,8) G(2,16) \
@@ -186,7 +208,24 @@ module ieee_arithmetic
   G(8,1) G(8,2) G(8,4) G(8,8) G(8,16) \
   G(16,1) G(16,2) G(16,4) G(16,8) G(16,16)
 #endif
+#else
+#if __x86_64__
+#define SPECIFICS_RI(G) \
+  G(2,1) G(2,2) G(2,4) G(2,8) \
+  G(3,1) G(3,2) G(3,4) G(3,8) \
+  G(4,1) G(4,2) G(4,4) G(4,8) \
+  G(8,1) G(8,2) G(8,4) G(8,8) \
+  G(10,1) G(10,2) G(10,4) G(10,8)
+#else
+#define SPECIFICS_RI(G) \
+  G(2,1) G(2,2) G(2,4) G(2,8) \
+  G(3,1) G(3,2) G(3,4) G(3,8) \
+  G(4,1) G(4,2) G(4,4) G(4,8) \
+  G(8,1) G(8,2) G(8,4) G(8,8)
+#endif
+#endif
 
+#if FLANG_SUPPORT_R16
 #if __x86_64__
 #define SPECIFICS_RR(G) \
   G(2,2) G(2,3) G(2,4) G(2,8) G(2,10) G(2,16) \
@@ -202,6 +241,22 @@ module ieee_arithmetic
   G(4,2) G(4,3) G(4,4) G(4,8) G(4,16) \
   G(8,2) G(8,3) G(8,4) G(8,8) G(8,16) \
   G(16,2) G(16,3) G(16,4) G(16,8) G(16,16)
+#endif
+#else
+#if __x86_64__
+#define SPECIFICS_RR(G) \
+  G(2,2) G(2,3) G(2,4) G(2,8) G(2,10) \
+  G(3,2) G(3,3) G(3,4) G(3,8) G(3,10) \
+  G(4,2) G(4,3) G(4,4) G(4,8) G(4,10) \
+  G(8,2) G(8,3) G(8,4) G(8,8) G(8,10) \
+  G(10,2) G(10,3) G(10,4) G(10,8) G(10,10)
+#else
+#define SPECIFICS_RR(G) \
+  G(2,2) G(2,3) G(2,4) G(2,8) \
+  G(3,2) G(3,3) G(3,4) G(3,8) \
+  G(4,2) G(4,3) G(4,4) G(4,8) \
+  G(8,2) G(8,3) G(8,4) G(8,8)
+#endif
 #endif
 
 #define IEEE_CLASS_R(XKIND) \
@@ -251,29 +306,6 @@ module ieee_arithmetic
   end interface ieee_get_underflow_mode
   public ::  ieee_get_underflow_mode
 #undef IEEE_GET_UNDERFLOW_MODE_L
-
-! When kind argument is present, kind(result) is value(kind), not kind(kind).
-! That is not known here, so return integer(16).
-#define IEEE_INT_R(AKIND) \
-  elemental integer function ieee_int_a##AKIND(a, round); \
-    import ieee_round_type; \
-    real(AKIND), intent(in) :: a; \
-    type(ieee_round_type), intent(in) :: round; \
-  end function ieee_int_a##AKIND;
-#define IEEE_INT_RI(AKIND, KKIND) \
-  elemental integer(16) function ieee_int_a##AKIND##_i##KKIND(a, round, kind); \
-    import ieee_round_type; \
-    real(AKIND), intent(in) :: a; \
-    type(ieee_round_type), intent(in) :: round; \
-    integer(KKIND), intent(in) :: kind; \
-  end function ieee_int_a##AKIND##_i##KKIND;
-  interface ieee_int
-    SPECIFICS_R(IEEE_INT_R)
-    SPECIFICS_RI(IEEE_INT_RI)
-  end interface ieee_int
-  public :: ieee_int
-#undef IEEE_INT_R
-#undef IEEE_INT_RI
 
 #define IEEE_IS_FINITE_R(XKIND) \
   elemental logical function ieee_is_finite_a##XKIND(x); \
@@ -435,38 +467,6 @@ module ieee_arithmetic
   public :: ieee_quiet_ne
 #undef IEEE_QUIET_NE_R
 
-! When kind argument is present, kind(result) is value(kind), not kind(kind).
-! That is not known here, so return real(16).
-#define IEEE_REAL_I(AKIND) \
-  elemental real function ieee_real_i##AKIND(a); \
-    integer(AKIND), intent(in) :: a; \
-  end function ieee_real_i##AKIND;
-#define IEEE_REAL_R(AKIND) \
-  elemental real function ieee_real_a##AKIND(a); \
-    real(AKIND), intent(in) :: a; \
-  end function ieee_real_a##AKIND;
-#define IEEE_REAL_II(AKIND, KKIND) \
-  elemental real(16) function ieee_real_i##AKIND##_i##KKIND(a, kind); \
-    integer(AKIND), intent(in) :: a; \
-    integer(KKIND), intent(in) :: kind; \
-  end function ieee_real_i##AKIND##_i##KKIND;
-#define IEEE_REAL_RI(AKIND, KKIND) \
-  elemental real(16) function ieee_real_a##AKIND##_i##KKIND(a, kind); \
-    real(AKIND), intent(in) :: a; \
-    integer(KKIND), intent(in) :: kind; \
-  end function ieee_real_a##AKIND##_i##KKIND;
-  interface ieee_real
-    SPECIFICS_I(IEEE_REAL_I)
-    SPECIFICS_R(IEEE_REAL_R)
-    SPECIFICS_II(IEEE_REAL_II)
-    SPECIFICS_RI(IEEE_REAL_RI)
-  end interface ieee_real
-  public :: ieee_real
-#undef IEEE_REAL_I
-#undef IEEE_REAL_R
-#undef IEEE_REAL_II
-#undef IEEE_REAL_RI
-
 #define IEEE_REM_RR(XKIND, YKIND) \
   elemental real(XKIND) function ieee_rem_a##XKIND##_a##YKIND(x, y); \
     real(XKIND), intent(in) :: x; \
@@ -585,22 +585,6 @@ module ieee_arithmetic
   end interface ieee_signbit
   public :: ieee_signbit
 #undef IEEE_SIGNBIT_R
-
-#define IEEE_SUPPORT_ROUNDING_R(XKIND) \
-  pure logical function ieee_support_rounding_a##XKIND(round_value, x); \
-    import ieee_round_type; \
-    type(ieee_round_type), intent(in) :: round_value; \
-    real(XKIND), intent(in) :: x(..); \
-  end function ieee_support_rounding_a##XKIND;
-  interface ieee_support_rounding
-    pure logical function ieee_support_rounding_0(round_value)
-      import ieee_round_type
-      type(ieee_round_type), intent(in) :: round_value
-    end function ieee_support_rounding_0
-    SPECIFICS_R(IEEE_SUPPORT_ROUNDING_R)
-  end interface ieee_support_rounding
-  public :: ieee_support_rounding
-#undef IEEE_SUPPORT_ROUNDING_R
 
 #define IEEE_UNORDERED_RR(XKIND, YKIND) \
   elemental logical function ieee_unordered_a##XKIND##_a##YKIND(x, y); \

@@ -17,8 +17,8 @@ define i8 @andv_nxv8i8(<vscale x 8 x i8> %a) {
 define i32 @andv_nxv8i32(<vscale x 8 x i32> %a) {
 ; CHECK-LABEL: andv_nxv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -71,8 +71,8 @@ define i16 @xorv_nxv2i16(<vscale x 2 x i16> %a) {
 define i32 @xorv_nxv8i32(<vscale x 8 x i32> %a) {
 ; CHECK-LABEL: xorv_nxv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -97,8 +97,8 @@ define i16 @uaddv_nxv4i16(<vscale x 4 x i16> %a) {
 define i16 @uaddv_nxv16i16(<vscale x 16 x i16> %a) {
 ; CHECK-LABEL: uaddv_nxv16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -127,8 +127,8 @@ define i32 @uaddv_nxv16i32(<vscale x 16 x i32> %a) {
 define i32 @umin_nxv2i32(<vscale x 2 x i32> %a) {
 ; CHECK-LABEL: umin_nxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0

@@ -6,25 +6,25 @@
 ;; Expect to see a range check whenever there is BTI, and not where there
 ;; isn't.
 
-; RUN: sed s/SPACE/4/ %s | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-TBB
+; RUN: sed s/SPACE/4/ %s | sed '/test_jumptable/s/{/#1 {/' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-TBB
 ; RUN: sed s/SPACE/4/ %s | sed '/test_jumptable/s/{/#0 {/' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=NOBTI-TBB
 ; RUN: sed s/SPACE/4/ %s | sed '/^..for-non-bti-build-sed-will-delete-everything-after-this-line/q' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=NOBTI-TBB
 ; RUN: sed s/SPACE/4/ %s | sed '/test_jumptable/s/{/#1 {/' | sed '/^..for-non-bti-build-sed-will-delete-everything-after-this-line/q' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-TBB
 
-; RUN: sed s/SPACE/400/ %s | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-TBH
+; RUN: sed s/SPACE/400/ %s | sed '/test_jumptable/s/{/#1 {/' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-TBH
 ; RUN: sed s/SPACE/400/ %s | sed '/test_jumptable/s/{/#0 {/' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=NOBTI-TBH
 ; RUN: sed s/SPACE/400/ %s | sed '/^..for-non-bti-build-sed-will-delete-everything-after-this-line/q' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=NOBTI-TBH
 ; RUN: sed s/SPACE/400/ %s | sed '/test_jumptable/s/{/#1 {/' | sed '/^..for-non-bti-build-sed-will-delete-everything-after-this-line/q' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-TBH
 
-; RUN: sed s/SPACE/400000/ %s | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-MOV
+; RUN: sed s/SPACE/400000/ %s | sed '/test_jumptable/s/{/#1 {/' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-MOV
 ; RUN: sed s/SPACE/400000/ %s | sed '/test_jumptable/s/{/#0 {/' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=NOBTI-MOV
 ; RUN: sed s/SPACE/400000/ %s | sed '/^..for-non-bti-build-sed-will-delete-everything-after-this-line/q' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=NOBTI-MOV
 ; RUN: sed s/SPACE/400000/ %s | sed '/test_jumptable/s/{/#1 {/' | sed '/^..for-non-bti-build-sed-will-delete-everything-after-this-line/q' | llc -mtriple=thumbv8.1m.main-linux-gnu -mattr=+pacbti -o - | FileCheck %s --check-prefix=BTI-MOV
 
 declare i32 @llvm.arm.space(i32, i32)
 
-attributes #0 = { "branch-target-enforcement"="false" }
-attributes #1 = { "branch-target-enforcement"="true"  }
+attributes #0 = { norecurse }
+attributes #1 = { norecurse "branch-target-enforcement" }
 
 define ptr @test_jumptable(ptr %src, ptr %dst) {
 entry:

@@ -51,6 +51,11 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
       // this builder will have the def ready.
       setInsertPt(*CurMBB, std::next(MII));
     } else if (!dominates(MI, CurrPos)) {
+      // Update the spliced machineinstr's debug location by merging it with the
+      // debug location of the instruction at the insertion point.
+      auto *Loc = DILocation::getMergedLocation(getDebugLoc().get(),
+                                                MI->getDebugLoc().get());
+      MI->setDebugLoc(Loc);
       CurMBB->splice(CurrPos, CurMBB, MI);
     }
     return MachineInstrBuilder(getMF(), MI);
@@ -68,17 +73,23 @@ bool CSEMIRBuilder::canPerformCSEForOpc(unsigned Opc) const {
 void CSEMIRBuilder::profileDstOp(const DstOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getDstOpKind()) {
-  case DstOp::DstType::Ty_RC:
+  case DstOp::DstType::Ty_RC: {
     B.addNodeIDRegType(Op.getRegClass());
     break;
+  }
   case DstOp::DstType::Ty_Reg: {
     // Regs can have LLT&(RB|RC). If those exist, profile them as well.
     B.addNodeIDReg(Op.getReg());
     break;
   }
-  default:
+  case DstOp::DstType::Ty_LLT: {
     B.addNodeIDRegType(Op.getLLTTy(*getMRI()));
     break;
+  }
+  case DstOp::DstType::Ty_VRegAttrs: {
+    B.addNodeIDRegType(Op.getVRegAttrs());
+    break;
+  }
   }
 }
 

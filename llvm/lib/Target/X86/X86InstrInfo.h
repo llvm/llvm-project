@@ -26,6 +26,12 @@
 namespace llvm {
 class X86Subtarget;
 
+// X86 MachineCombiner patterns
+enum X86MachineCombinerPattern : unsigned {
+  // X86 VNNI
+  DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
+};
+
 namespace X86 {
 
 enum AsmComments {
@@ -64,6 +70,18 @@ CondCode getCondFromCMov(const MachineInstr &MI);
 
 // Turn CFCMOV instruction into condition code.
 CondCode getCondFromCFCMov(const MachineInstr &MI);
+
+// Turn CCMP instruction into condition code.
+CondCode getCondFromCCMP(const MachineInstr &MI);
+
+// Turn condition code into condition flags for CCMP/CTEST.
+int getCCMPCondFlagsFromCondCode(CondCode CC);
+
+// Get the opcode of corresponding NF variant.
+unsigned getNFVariant(unsigned Opc);
+
+// Get the opcode of corresponding NonND variant.
+unsigned getNonNDVariant(unsigned Opc);
 
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
@@ -400,7 +418,8 @@ public:
                     Register FalseReg) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
@@ -566,14 +585,18 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
 
-  outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
 
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                           const outliner::OutlinedFunction &OF) const override;
@@ -607,16 +630,15 @@ protected:
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
 
   /// When getMachineCombinerPatterns() finds potential patterns,
   /// this function generates the instructions that could replace the
   /// original code sequence.
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;

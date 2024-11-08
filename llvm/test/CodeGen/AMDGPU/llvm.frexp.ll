@@ -183,11 +183,10 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX8-SDAG-LABEL: test_frexp_v2f16_v2i32:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX8-SDAG-NEXT:    v_frexp_mant_f16_e32 v1, v0
-; GFX8-SDAG-NEXT:    v_frexp_mant_f16_sdwa v3, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v1, v3
-; GFX8-SDAG-NEXT:    v_frexp_exp_i16_f16_e32 v1, v2
+; GFX8-SDAG-NEXT:    v_frexp_mant_f16_sdwa v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v1, v2
+; GFX8-SDAG-NEXT:    v_frexp_exp_i16_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX8-SDAG-NEXT:    v_frexp_exp_i16_f16_e32 v0, v0
 ; GFX8-SDAG-NEXT:    v_bfe_i32 v2, v1, 0, 16
 ; GFX8-SDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
@@ -197,11 +196,10 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX9-SDAG-LABEL: test_frexp_v2f16_v2i32:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-SDAG-NEXT:    v_frexp_mant_f16_e32 v2, v1
-; GFX9-SDAG-NEXT:    v_frexp_mant_f16_e32 v3, v0
-; GFX9-SDAG-NEXT:    v_pack_b32_f16 v3, v3, v2
-; GFX9-SDAG-NEXT:    v_frexp_exp_i16_f16_e32 v1, v1
+; GFX9-SDAG-NEXT:    v_frexp_mant_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-SDAG-NEXT:    v_frexp_mant_f16_e32 v2, v0
+; GFX9-SDAG-NEXT:    v_pack_b32_f16 v3, v2, v1
+; GFX9-SDAG-NEXT:    v_frexp_exp_i16_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX9-SDAG-NEXT:    v_frexp_exp_i16_f16_e32 v0, v0
 ; GFX9-SDAG-NEXT:    v_bfe_i32 v2, v1, 0, 16
 ; GFX9-SDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
@@ -246,27 +244,25 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX8-GISEL-LABEL: test_frexp_v2f16_v2i32:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX8-GISEL-NEXT:    v_frexp_mant_f16_e32 v3, v0
-; GFX8-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v0, v0
-; GFX8-GISEL-NEXT:    v_bfe_i32 v1, v0, 0, 16
-; GFX8-GISEL-NEXT:    v_frexp_mant_f16_sdwa v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; GFX8-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v2, v2
-; GFX8-GISEL-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v3, v0
+; GFX8-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v1, v0
+; GFX8-GISEL-NEXT:    v_frexp_mant_f16_sdwa v4, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_frexp_exp_i16_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX8-GISEL-NEXT:    v_bfe_i32 v2, v0, 0, 16
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v3, v4
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_frexp_v2f16_v2i32:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX9-GISEL-NEXT:    v_frexp_mant_f16_e32 v3, v0
-; GFX9-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v0, v0
-; GFX9-GISEL-NEXT:    v_bfe_i32 v1, v0, 0, 16
-; GFX9-GISEL-NEXT:    v_frexp_mant_f16_e32 v0, v2
-; GFX9-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v2, v2
-; GFX9-GISEL-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX9-GISEL-NEXT:    v_pack_b32_f16 v0, v3, v0
+; GFX9-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v1, v0
+; GFX9-GISEL-NEXT:    v_frexp_mant_f16_sdwa v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_frexp_exp_i16_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX9-GISEL-NEXT:    v_bfe_i32 v2, v0, 0, 16
+; GFX9-GISEL-NEXT:    v_pack_b32_f16 v0, v3, v4
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
   ret { <2 x half>, <2 x i32> } %result

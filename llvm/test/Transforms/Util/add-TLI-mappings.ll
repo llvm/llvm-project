@@ -14,10 +14,15 @@
 ; SVML-SAME:          ptr @__svml_log10f4,
 ; SVML-SAME:          ptr @__svml_log10f8,
 ; SVML-SAME:          ptr @__svml_log10f16
-; AMDLIBM-SAME:     [6 x ptr] [
+; AMDLIBM-SAME:     [11 x ptr] [
 ; AMDLIBM-SAME:       ptr @amd_vrd2_sin,
 ; AMDLIBM-SAME:       ptr @amd_vrd4_sin,
 ; AMDLIBM-SAME:       ptr @amd_vrd8_sin,
+; AMDLIBM-SAME:       ptr @amd_vrd4_sincos,
+; AMDLIBM-SAME:       ptr @amd_vrd8_sincos,
+; AMDLIBM-SAME:       ptr @amd_vrs4_sincosf,
+; AMDLIBM-SAME:       ptr @amd_vrs8_sincosf,
+; AMDLIBM-SAME:       ptr @amd_vrs16_sincosf
 ; AMDLIBM-SAME:       ptr @amd_vrs4_log10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs8_log10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs16_log10f
@@ -46,15 +51,21 @@
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl4l4_sincospif,
 ; SLEEFGNUABI_SAME;   ptr @_ZGVnN4v_log10f,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_log10f
-; ARMPL-SAME:       [10 x ptr] [
+; ARMPL-SAME:       [16 x ptr] [
 ; ARMPL-SAME:         ptr @armpl_vmodfq_f64,
+; ARMPL-SAME:         ptr @armpl_svmodf_f64_x,
 ; ARMPL-SAME:         ptr @armpl_vmodfq_f32,
+; ARMPL-SAME:         ptr @armpl_svmodf_f32_x,
 ; ARMPL-SAME:         ptr @armpl_vsinq_f64,
 ; ARMPL-SAME:         ptr @armpl_svsin_f64_x,
 ; ARMPL-SAME:         ptr @armpl_vsincosq_f64,
+; ARMPL-SAME:         ptr @armpl_svsincos_f64_x,
 ; ARMPL-SAME:         ptr @armpl_vsincosq_f32,
+; ARMPL-SAME:         ptr @armpl_svsincos_f32_x,
 ; ARMPL-SAME:         ptr @armpl_vsincospiq_f64,
+; ARMPL-SAME:         ptr @armpl_svsincospi_f64_x,
 ; ARMPL-SAME:         ptr @armpl_vsincospiq_f32,
+; ARMPL-SAME:         ptr @armpl_svsincospi_f32_x,
 ; ARMPL-SAME:         ptr @armpl_vlog10q_f32,
 ; ARMPL-SAME:         ptr @armpl_svlog10_f32_x
 ; COMMON-SAME:      ], section "llvm.metadata"
@@ -100,6 +111,7 @@ define void @sincos_f64(double %in, ptr %sin, ptr %cos) {
 ; COMMON-LABEL: @sincos_f64(
 ; SLEEFGNUABI:  call void @sincos(double %{{.*}}, ptr %{{.*}}, ptr %{{.*}}) #[[SINCOS:[0-9]+]]
 ; ARMPL:        call void @sincos(double %{{.*}}, ptr %{{.*}}, ptr %{{.*}}) #[[SINCOS:[0-9]+]]
+; AMDLIBM:        call void @sincos(double %{{.*}}, ptr %{{.*}}, ptr %{{.*}}) #[[SINCOS:[0-9]+]]
   call void @sincos(double %in, ptr %sin, ptr %cos)
   ret void
 }
@@ -110,6 +122,7 @@ define void @sincos_f32(float %in, ptr %sin, ptr %cos) {
 ; COMMON-LABEL: @sincos_f32(
 ; SLEEFGNUABI:  call void @sincosf(float %{{.*}}, ptr %{{.*}}, ptr %{{.*}}) #[[SINCOSF:[0-9]+]]
 ; ARMPL:        call void @sincosf(float %{{.*}}, ptr %{{.*}}, ptr %{{.*}}) #[[SINCOSF:[0-9]+]]
+; AMDLIBM:        call void @sincosf(float %{{.*}}, ptr %{{.*}}, ptr %{{.*}}) #[[SINCOSF:[0-9]+]]
   call void @sincosf(float %in, ptr %sin, ptr %cos)
   ret void
 }
@@ -139,7 +152,7 @@ declare void @sincospif(float, ptr, ptr) #0
 define float @call_llvm.log10.f32(float %in) {
 ; COMMON-LABEL: @call_llvm.log10.f32(
 ; SVML:         call float @llvm.log10.f32(float %{{.*}})
-; AMDLIBM:      call float @llvm.log10.f32(float %{{.*}})
+; AMDLIBM:      call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; LIBMVEC-X86:  call float @llvm.log10.f32(float %{{.*}})
 ; MASSV:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:   call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
@@ -165,6 +178,11 @@ declare float @llvm.log10.f32(float) #0
 ; AMDLIBM: declare <2 x double> @amd_vrd2_sin(<2 x double>)
 ; AMDLIBM: declare <4 x double> @amd_vrd4_sin(<4 x double>)
 ; AMDLIBM: declare <8 x double> @amd_vrd8_sin(<8 x double>)
+; AMDLIBM: declare void @amd_vrd4_sincos(<4 x double>, ptr, ptr)
+; AMDLIBM: declare void @amd_vrd8_sincos(<8 x double>, ptr, ptr)
+; AMDLIBM: declare void @amd_vrs4_sincosf(<4 x float>, ptr, ptr)
+; AMDLIBM: declare void @amd_vrs8_sincosf(<8 x float>, ptr, ptr)
+; AMDLIBM: declare void @amd_vrs16_sincosf(<16 x float>, ptr, ptr)
 ; AMDLIBM: declare <4 x float> @amd_vrs4_log10f(<4 x float>)
 ; AMDLIBM: declare <8 x float> @amd_vrs8_log10f(<8 x float>)
 ; AMDLIBM: declare <16 x float> @amd_vrs16_log10f(<16 x float>)
@@ -195,13 +213,19 @@ declare float @llvm.log10.f32(float) #0
 ; SLEEFGNUABI: declare <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float>, <vscale x 4 x i1>)
 
 ; ARMPL: declare <2 x double> @armpl_vmodfq_f64(<2 x double>, ptr)
+; ARMPL: declare <vscale x 2 x double> @armpl_svmodf_f64_x(<vscale x 2 x double>, ptr, <vscale x 2 x i1>)
 ; ARMPL: declare <4 x float> @armpl_vmodfq_f32(<4 x float>, ptr)
+; ARMPL: declare <vscale x 4 x float> @armpl_svmodf_f32_x(<vscale x 4 x float>, ptr, <vscale x 4 x i1>)
 ; ARMPL: declare <2 x double> @armpl_vsinq_f64(<2 x double>)
 ; ARMPL: declare <vscale x 2 x double> @armpl_svsin_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
 ; ARMPL: declare void @armpl_vsincosq_f64(<2 x double>, ptr, ptr)
+; ARMPL: declare void @armpl_svsincos_f64_x(<vscale x 2 x double>, ptr, ptr, <vscale x 2 x i1>)
 ; ARMPL: declare void @armpl_vsincosq_f32(<4 x float>, ptr, ptr)
+; ARMPL: declare void @armpl_svsincos_f32_x(<vscale x 4 x float>, ptr, ptr, <vscale x 4 x i1>)
 ; ARMPL: declare void @armpl_vsincospiq_f64(<2 x double>, ptr, ptr)
+; ARMPL: declare void @armpl_svsincospi_f64_x(<vscale x 2 x double>, ptr, ptr, <vscale x 2 x i1>)
 ; ARMPL: declare void @armpl_vsincospiq_f32(<4 x float>, ptr, ptr)
+; ARMPL: declare void @armpl_svsincospi_f32_x(<vscale x 4 x float>, ptr, ptr, <vscale x 4 x i1>)
 ; ARMPL: declare <4 x float> @armpl_vlog10q_f32(<4 x float>)
 ; ARMPL: declare <vscale x 4 x float> @armpl_svlog10_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
 
@@ -216,6 +240,17 @@ attributes #0 = { nounwind readnone }
 ; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_sin(amd_vrd2_sin),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N4v_sin(amd_vrd4_sin),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8v_sin(amd_vrd8_sin)" }
+; AMDLIBM:      attributes #[[SINCOS]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N4vl8l8_sincos(amd_vrd4_sincos),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8vl8l8_sincos(amd_vrd8_sincos)" }
+; AMDLIBM:      attributes #[[SINCOSF]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N4vl4l4_sincosf(amd_vrs4_sincosf),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8vl4l4_sincosf(amd_vrs8_sincosf),
+; AMDLIBM-SAME:   _ZGV_LLVM_N16vl4l4_sincosf(amd_vrs16_sincosf)" }
+; AMDLIBM:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(amd_vrs4_log10f),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_llvm.log10.f32(amd_vrs8_log10f),
+; AMDLIBM-SAME:   _ZGV_LLVM_N16v_llvm.log10.f32(amd_vrs16_log10f)" }
 
 ; MASSV:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; MASSV-SAME:   "_ZGV_LLVM_N2v_sin(__sind2)" }
@@ -255,20 +290,26 @@ attributes #0 = { nounwind readnone }
 ; SLEEFGNUABI-SAME:   _ZGVsMxv_llvm.log10.f32(_ZGVsMxv_log10f)" }
 
 ; ARMPL:      attributes #[[MODF]] = { "vector-function-abi-variant"=
-; ARMPL-SAME:    "_ZGV_LLVM_N2vl8_modf(armpl_vmodfq_f64)" }
+; ARMPL-SAME:    "_ZGV_LLVM_N2vl8_modf(armpl_vmodfq_f64),
+; ARMPL-SAME:    _ZGVsMxvl8_modf(armpl_svmodf_f64_x)" }
 ; ARMPL:      attributes #[[MODFF]] = { "vector-function-abi-variant"=
-; ARMPL-SAME:    "_ZGV_LLVM_N4vl4_modff(armpl_vmodfq_f32)" }
+; ARMPL-SAME:    "_ZGV_LLVM_N4vl4_modff(armpl_vmodfq_f32),
+; ARMPL-SAME:    _ZGVsMxvl4_modff(armpl_svmodf_f32_x)" }
 ; ARMPL:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N2v_sin(armpl_vsinq_f64),
-; ARMPL-SAME     _ZGVsMxv_sin(armpl_svsin_f64_x)" }
+; ARMPL-SAME:    _ZGVsMxv_sin(armpl_svsin_f64_x)" }
 ; ARMPL:      attributes #[[SINCOS]] = { "vector-function-abi-variant"=
-; ARMPL-SAME:    "_ZGV_LLVM_N2vl8l8_sincos(armpl_vsincosq_f64)" }
+; ARMPL-SAME:    "_ZGV_LLVM_N2vl8l8_sincos(armpl_vsincosq_f64),
+; ARMPL-SAME:    _ZGVsMxvl8l8_sincos(armpl_svsincos_f64_x)" }
 ; ARMPL:      attributes #[[SINCOSF]] = { "vector-function-abi-variant"=
-; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincosf(armpl_vsincosq_f32)" }
+; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincosf(armpl_vsincosq_f32),
+; ARMPL-SAME:    _ZGVsMxvl4l4_sincosf(armpl_svsincos_f32_x)" }
 ; ARMPL:      attributes #[[SINCOSPI]] = { "vector-function-abi-variant"=
-; ARMPL-SAME:    "_ZGV_LLVM_N2vl8l8_sincospi(armpl_vsincospiq_f64)" }
+; ARMPL-SAME:    "_ZGV_LLVM_N2vl8l8_sincospi(armpl_vsincospiq_f64),
+; ARMPL-SAME:    _ZGVsMxvl8l8_sincospi(armpl_svsincospi_f64_x)" }
 ; ARMPL:      attributes #[[SINCOSPIF]] = { "vector-function-abi-variant"=
-; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincospif(armpl_vsincospiq_f32)" }
+; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincospif(armpl_vsincospiq_f32),
+; ARMPL-SAME:    _ZGVsMxvl4l4_sincospif(armpl_svsincospi_f32_x)" }
 ; ARMPL:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4v_llvm.log10.f32(armpl_vlog10q_f32),
-; ARMPL-SAME     _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }
+; ARMPL-SAME:    _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }

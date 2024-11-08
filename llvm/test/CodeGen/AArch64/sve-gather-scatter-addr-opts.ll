@@ -13,10 +13,8 @@ define void @scatter_i8_index_offset_maximum(ptr %base, i64 %offset, <vscale x 4
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %t2 = insertelement <vscale x 4 x i64> undef, i64 33554431, i32 0
-  %t3 = shufflevector <vscale x 4 x i64> %t2, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-  %t4 = mul <vscale x 4 x i64> %t3, %step
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %t4 = mul <vscale x 4 x i64> splat(i64 33554431), %step
   %t5 = add <vscale x 4 x i64> %t1, %t4
   %t6 = getelementptr i8, ptr %base, <vscale x 4 x i64> %t5
   call void @llvm.masked.scatter.nxv4i8(<vscale x 4 x i8> %data, <vscale x 4 x ptr> %t6, i32 2, <vscale x 4 x i1> %pg)
@@ -34,10 +32,8 @@ define void @scatter_i16_index_offset_minimum(ptr %base, i64 %offset, <vscale x 
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %t2 = insertelement <vscale x 4 x i64> undef, i64 -33554432, i32 0
-  %t3 = shufflevector <vscale x 4 x i64> %t2, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-  %t4 = mul <vscale x 4 x i64> %t3, %step
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %t4 = mul <vscale x 4 x i64> splat(i64 -33554432), %step
   %t5 = add <vscale x 4 x i64> %t1, %t4
   %t6 = getelementptr i16, ptr %base, <vscale x 4 x i64> %t5
   call void @llvm.masked.scatter.nxv4i16(<vscale x 4 x i16> %data, <vscale x 4 x ptr> %t6, i32 2, <vscale x 4 x i1> %pg)
@@ -54,10 +50,8 @@ define <vscale x 4 x i8> @gather_i8_index_offset_8(ptr %base, i64 %offset, <vsca
 ; CHECK-NEXT:    ret
   %splat.insert0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %splat0 = shufflevector <vscale x 4 x i64> %splat.insert0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-  %splat.insert1 = insertelement <vscale x 4 x i64> undef, i64 1, i32 0
-  %splat1 = shufflevector <vscale x 4 x i64> %splat.insert1, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %t1 = mul <vscale x 4 x i64> %splat1, %step
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %t1 = mul <vscale x 4 x i64> splat(i64 1), %step
   %t2 = add <vscale x 4 x i64> %splat0, %t1
   %t3 = getelementptr i8, ptr %base, <vscale x 4 x i64> %t2
   %load = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr> %t3, i32 4, <vscale x 4 x i1> %pg, <vscale x 4 x i8> undef)
@@ -72,24 +66,24 @@ define void @scatter_f16_index_offset_var(ptr %base, i64 %offset, i64 %scale, <v
 ; CHECK-LABEL: scatter_f16_index_offset_var:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z2.d, x1
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    uunpklo z3.d, z0.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    movprfx z4, z2
 ; CHECK-NEXT:    mla z4.d, p1/m, z1.d, z2.d
-; CHECK-NEXT:    punpklo p2.h, p0.b
-; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    incd z1.d
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z4.d, lsl #1]
 ; CHECK-NEXT:    mad z1.d, p1/m, z2.d, z2.d
+; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z4.d, lsl #1]
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d, lsl #1]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
   %t2 = insertelement <vscale x 4 x i64> undef, i64 %scale, i32 0
   %t3 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %t4 = mul <vscale x 4 x i64> %t3, %step
   %t5 = add <vscale x 4 x i64> %t1, %t4
   %t6 = getelementptr half, ptr %base, <vscale x 4 x i64> %t5
@@ -101,26 +95,24 @@ define void @scatter_f16_index_offset_var(ptr %base, i64 %offset, i64 %scale, <v
 define void @scatter_i8_index_offset_maximum_plus_one(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_offset_maximum_plus_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    mov w8, #33554432 // =0x2000000
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
-; CHECK-NEXT:    index z1.d, #0, x8
 ; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    index z1.d, #0, x8
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    lsr x9, x9, #4
+; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    mov w10, #67108864 // =0x4000000
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1b { z2.d }, p1, [x8, z1.d]
 ; CHECK-NEXT:    madd x8, x9, x10, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %t2 = insertelement <vscale x 4 x i64> undef, i64 33554432, i32 0
-  %t3 = shufflevector <vscale x 4 x i64> %t2, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-  %t4 = mul <vscale x 4 x i64> %t3, %step
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %t4 = mul <vscale x 4 x i64> splat(i64 33554432), %step
   %t5 = add <vscale x 4 x i64> %t1, %t4
   %t6 = getelementptr i8, ptr %base, <vscale x 4 x i64> %t5
   call void @llvm.masked.scatter.nxv4i8(<vscale x 4 x i8> %data, <vscale x 4 x ptr> %t6, i32 2, <vscale x 4 x i1> %pg)
@@ -131,27 +123,25 @@ define void @scatter_i8_index_offset_maximum_plus_one(ptr %base, i64 %offset, <v
 define void @scatter_i8_index_offset_minimum_minus_one(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_offset_minimum_minus_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    mov x8, #-33554433 // =0xfffffffffdffffff
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
-; CHECK-NEXT:    index z1.d, #0, x8
 ; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    mov x10, #-2 // =0xfffffffffffffffe
+; CHECK-NEXT:    index z1.d, #0, x8
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    lsr x9, x9, #4
+; CHECK-NEXT:    mov x10, #-2 // =0xfffffffffffffffe
 ; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    movk x10, #64511, lsl #16
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    st1b { z2.d }, p1, [x8, z1.d]
 ; CHECK-NEXT:    madd x8, x9, x10, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %t2 = insertelement <vscale x 4 x i64> undef, i64 -33554433, i32 0
-  %t3 = shufflevector <vscale x 4 x i64> %t2, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-  %t4 = mul <vscale x 4 x i64> %t3, %step
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %t4 = mul <vscale x 4 x i64> splat(i64 -33554433), %step
   %t5 = add <vscale x 4 x i64> %t1, %t4
   %t6 = getelementptr i8, ptr %base, <vscale x 4 x i64> %t5
   call void @llvm.masked.scatter.nxv4i8(<vscale x 4 x i8> %data, <vscale x 4 x ptr> %t6, i32 2, <vscale x 4 x i1> %pg)
@@ -162,26 +152,24 @@ define void @scatter_i8_index_offset_minimum_minus_one(ptr %base, i64 %offset, <
 define void @scatter_i8_index_stride_too_big(ptr %base, i64 %offset, <vscale x 4 x i1> %pg, <vscale x 4 x i8> %data) #0 {
 ; CHECK-LABEL: scatter_i8_index_stride_too_big:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    mov x8, #4611686018427387904 // =0x4000000000000000
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
-; CHECK-NEXT:    index z1.d, #0, x8
 ; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    add x8, x0, x1
+; CHECK-NEXT:    index z1.d, #0, x8
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    lsr x9, x9, #4
+; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1b { z2.d }, p1, [x8, z1.d]
 ; CHECK-NEXT:    madd x8, x9, x10, x8
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x8, z1.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %t2 = insertelement <vscale x 4 x i64> undef, i64 4611686018427387904, i32 0
-  %t3 = shufflevector <vscale x 4 x i64> %t2, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-  %t4 = mul <vscale x 4 x i64> %t3, %step
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+  %t4 = mul <vscale x 4 x i64> splat(i64 4611686018427387904), %step
   %t5 = add <vscale x 4 x i64> %t1, %t4
   %t6 = getelementptr i8, ptr %base, <vscale x 4 x i64> %t5
   call void @llvm.masked.scatter.nxv4i8(<vscale x 4 x i8> %data, <vscale x 4 x ptr> %t6, i32 2, <vscale x 4 x i1> %pg)
@@ -200,7 +188,7 @@ define <vscale x 4 x i8> @gather_8i8_index_offset_8(ptr %base, i64 %offset, <vsc
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %t2 = add <vscale x 4 x i64> %t1, %step
   %t3 = getelementptr [8 x i8], ptr %base, <vscale x 4 x i64> %t2
   %t4 = bitcast <vscale x 4 x ptr> %t3 to <vscale x 4 x ptr>
@@ -221,7 +209,7 @@ define <vscale x 4 x float> @gather_f32_index_offset_8(ptr %base, i64 %offset, <
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %t2 = add <vscale x 4 x i64> %t1, %step
   %t3 = getelementptr [8 x float], ptr %base, <vscale x 4 x i64> %t2
   %t4 = bitcast <vscale x 4 x ptr> %t3 to <vscale x 4 x ptr>
@@ -241,7 +229,7 @@ define void @scatter_i8_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1>
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %t2 = add <vscale x 4 x i64> %t1, %step
   %t3 = getelementptr [8 x i8], ptr %base, <vscale x 4 x i64> %t2
   %t4 = bitcast <vscale x 4 x ptr> %t3 to <vscale x 4 x ptr>
@@ -262,7 +250,7 @@ define void @scatter_f16_index_offset_8(ptr %base, i64 %offset, <vscale x 4 x i1
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %t2 = add <vscale x 4 x i64> %t1, %step
   %t3 = getelementptr [8 x half], ptr %base, <vscale x 4 x i64> %t2
   %t4 = bitcast <vscale x 4 x ptr> %t3 to <vscale x 4 x ptr>
@@ -284,7 +272,7 @@ define void @scatter_f16_index_add_add(ptr %base, i64 %offset, i64 %offset2, <vs
   %splat.offset = shufflevector <vscale x 4 x i64> %splat.offset.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
   %splat.offset2.ins = insertelement <vscale x 4 x i64> undef, i64 %offset2, i32 0
   %splat.offset2 = shufflevector <vscale x 4 x i64> %splat.offset2.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %add1 = add <vscale x 4 x i64> %splat.offset, %step
   %add2 = add <vscale x 4 x i64> %add1, %splat.offset2
   %gep = getelementptr [8 x half], ptr %base, <vscale x 4 x i64> %add2
@@ -307,12 +295,10 @@ define void @scatter_f16_index_add_add_mul(ptr %base, i64 %offset, i64 %offset2,
   %splat.offset = shufflevector <vscale x 4 x i64> %splat.offset.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
   %splat.offset2.ins = insertelement <vscale x 4 x i64> undef, i64 %offset2, i32 0
   %splat.offset2 = shufflevector <vscale x 4 x i64> %splat.offset2.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %step = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %step = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %add1 = add <vscale x 4 x i64> %splat.offset, %step
   %add2 = add <vscale x 4 x i64> %add1, %splat.offset2
-  %splat.const8.ins = insertelement <vscale x 4 x i64> undef, i64 8, i32 0
-  %splat.const8 = shufflevector <vscale x 4 x i64> %splat.const8.ins, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
-  %mul = mul <vscale x 4 x i64> %add2, %splat.const8
+  %mul = mul <vscale x 4 x i64> %add2, splat(i64 8)
   %gep = getelementptr [8 x half], ptr %base, <vscale x 4 x i64> %mul
   %gep.bc = bitcast <vscale x 4 x ptr> %gep to <vscale x 4 x ptr>
   call void @llvm.masked.scatter.nxv4f16(<vscale x 4 x half> %data, <vscale x 4 x ptr> %gep.bc, i32 2, <vscale x 4 x i1> %pg)
@@ -350,9 +336,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets
 ; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
-  %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
-  %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  %offsets = add <vscale x 2 x i64> %vector_offsets, %scalar_offset.splat
+  %offsets = add <vscale x 2 x i64> %vector_offsets, splat(i64 1)
   %ptrs = getelementptr i64, ptr null, <vscale x 2 x i64> %offsets
   %data = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> %pg, <vscale x 2 x i64> undef)
   ret <vscale x 2 x i64> %data
@@ -428,9 +412,7 @@ define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 
 ; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
-  %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
-  %scalar_offset.splat = shufflevector <vscale x 2 x i64> %scalar_offset.ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  %offsets = add <vscale x 2 x i64> %vector_offsets, %scalar_offset.splat
+  %offsets = add <vscale x 2 x i64> %vector_offsets, splat(i64 1)
   %ptrs = getelementptr i64, ptr null, <vscale x 2 x i64> %offsets
   call void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64> %data, <vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> %pg)
   ret void
@@ -488,4 +470,4 @@ declare void @llvm.masked.scatter.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x ptr>
 declare void @llvm.masked.scatter.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv4f16(<vscale x 4 x half>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
 
-declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+declare <vscale x 4 x i64> @llvm.stepvector.nxv4i64()

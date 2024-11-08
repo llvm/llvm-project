@@ -29,7 +29,7 @@
 ;; of %retval.0.i is also replaced with %0.
 
 ; CHECK: if.then:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %0, metadata ![[THIS:[0-9]+]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(ptr %0, ![[THIS:[0-9]+]], !DIExpression(),
 ; CHECK: ![[THIS]] = !DILocalVariable(name: "this",
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

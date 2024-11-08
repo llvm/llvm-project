@@ -10,11 +10,11 @@
 #define _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__random/is_seed_sequence.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <iosfwd>
 #include <limits>
 
@@ -50,8 +50,8 @@ public:
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
 #else
-  static _LIBCPP_CONSTEXPR const result_type _Min = _Engine::min();
-  static _LIBCPP_CONSTEXPR const result_type _Max = _Engine::max();
+  static constexpr result_type _Min = _Engine::min();
+  static constexpr result_type _Max = _Engine::max();
 #endif
 
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }

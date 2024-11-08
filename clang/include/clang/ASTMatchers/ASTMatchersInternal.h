@@ -121,7 +121,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(std::nullopt); }
+  ResultT operator()() const { return Func({}); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -185,10 +185,6 @@ inline TypeSourceInfo *GetTypeSourceInfo(const BlockDecl &Node) {
 }
 inline TypeSourceInfo *GetTypeSourceInfo(const CXXNewExpr &Node) {
   return Node.getAllocatedTypeSourceInfo();
-}
-inline TypeSourceInfo *
-GetTypeSourceInfo(const ClassTemplateSpecializationDecl &Node) {
-  return Node.getTypeAsWritten();
 }
 
 /// Unifies obtaining the FunctionProtoType pointer from both
@@ -1940,6 +1936,11 @@ getTemplateSpecializationArgs(const ClassTemplateSpecializationDecl &D) {
 }
 
 inline ArrayRef<TemplateArgument>
+getTemplateSpecializationArgs(const VarTemplateSpecializationDecl &D) {
+  return D.getTemplateArgs().asArray();
+}
+
+inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const TemplateSpecializationType &T) {
   return T.template_arguments();
 }
@@ -1948,7 +1949,46 @@ inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const FunctionDecl &FD) {
   if (const auto* TemplateArgs = FD.getTemplateSpecializationArgs())
     return TemplateArgs->asArray();
-  return ArrayRef<TemplateArgument>();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->arguments();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->arguments();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const FunctionDecl &FD) {
+  if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
+    return Args->arguments();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const DeclRefExpr &DRE) {
+  if (const auto *Args = DRE.getTemplateArgs())
+    return {Args, DRE.getNumTemplateArgs()};
+  return {};
+}
+
+inline SmallVector<TemplateArgumentLoc>
+getTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
+  SmallVector<TemplateArgumentLoc> Args;
+  if (!T.isNull()) {
+    Args.reserve(T.getNumArgs());
+    for (unsigned I = 0; I < T.getNumArgs(); ++I)
+      Args.emplace_back(T.getArgLoc(I));
+  }
+  return Args;
 }
 
 struct NotEqualsBoundNodePredicate {

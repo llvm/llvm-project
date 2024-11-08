@@ -8,8 +8,8 @@ import re
 import subprocess
 import sys
 import os
+from packaging import version
 from urllib.parse import urlparse
-from pkg_resources import packaging
 
 # LLDB modules
 import lldb
@@ -35,6 +35,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read r0", substrs=["r0 = 0x"])
     elif arch in ["powerpc64le"]:
         test_case.expect("register read r0", substrs=["r0 = 0x"])
+    elif re.match("^rv(32|64)", arch):
+        test_case.expect("register read zero", substrs=["zero = 0x"])
     else:
         # TODO: Add check for other architectures
         test_case.fail(
@@ -93,11 +95,28 @@ def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
 
 
 def finalize_build_dictionary(dictionary):
+    # Provide uname-like platform name
+    platform_name_to_uname = {
+        "linux": "Linux",
+        "netbsd": "NetBSD",
+        "freebsd": "FreeBSD",
+        "windows": "Windows_NT",
+        "macosx": "Darwin",
+        "darwin": "Darwin",
+    }
+
+    if dictionary is None:
+        dictionary = {}
     if target_is_android():
-        if dictionary is None:
-            dictionary = {}
         dictionary["OS"] = "Android"
         dictionary["PIE"] = 1
+    elif platformIsDarwin():
+        dictionary["OS"] = "Darwin"
+    else:
+        dictionary["OS"] = platform_name_to_uname[getPlatform()]
+
+    dictionary["HOST_OS"] = platform_name_to_uname[getHostPlatform()]
+
     return dictionary
 
 
@@ -156,6 +175,22 @@ def findMainThreadCheckerDylib():
     with os.popen("xcode-select -p") as output:
         xcode_developer_path = output.read().strip()
         mtc_dylib_path = "%s/usr/lib/libMainThreadChecker.dylib" % xcode_developer_path
+        if os.path.isfile(mtc_dylib_path):
+            return mtc_dylib_path
+
+    return ""
+
+
+def findBacktraceRecordingDylib():
+    if not platformIsDarwin():
+        return ""
+
+    if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        return "/Developer/usr/lib/libBacktraceRecording.dylib"
+
+    with os.popen("xcode-select -p") as output:
+        xcode_developer_path = output.read().strip()
+        mtc_dylib_path = "%s/usr/lib/libBacktraceRecording.dylib" % xcode_developer_path
         if os.path.isfile(mtc_dylib_path):
             return mtc_dylib_path
 
@@ -247,17 +282,13 @@ def getCompiler():
     return module.getCompiler()
 
 
-def getCompilerBinary():
-    """Returns the compiler binary the test suite is running with."""
-    return getCompiler().split()[0]
-
-
 def getCompilerVersion():
     """Returns a string that represents the compiler version.
     Supports: llvm, clang.
     """
-    compiler = getCompilerBinary()
-    version_output = subprocess.check_output([compiler, "--version"], errors="replace")
+    version_output = subprocess.check_output(
+        [getCompiler(), "--version"], errors="replace"
+    )
     m = re.search("version ([0-9.]+)", version_output)
     if m:
         return m.group(1)
@@ -309,17 +340,17 @@ def expectedCompilerVersion(compiler_version):
         # Assume the compiler version is at or near the top of trunk.
         return operator in [">", ">=", "!", "!=", "not"]
 
-    version = packaging.version.parse(version_str)
-    test_compiler_version = packaging.version.parse(test_compiler_version_str)
+    actual_version = version.parse(version_str)
+    test_compiler_version = version.parse(test_compiler_version_str)
 
     if operator == ">":
-        return test_compiler_version > version
+        return test_compiler_version > actual_version
     if operator == ">=" or operator == "=>":
-        return test_compiler_version >= version
+        return test_compiler_version >= actual_version
     if operator == "<":
-        return test_compiler_version < version
+        return test_compiler_version < actual_version
     if operator == "<=" or operator == "=<":
-        return test_compiler_version <= version
+        return test_compiler_version <= actual_version
     if operator == "!=" or operator == "!" or operator == "not":
         return version_str not in test_compiler_version_str
     return version_str in test_compiler_version_str

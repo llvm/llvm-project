@@ -405,7 +405,7 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -485,7 +485,7 @@ define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -513,7 +513,7 @@ define i1 @nonnull3C(ptr %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -543,7 +543,7 @@ define i1 @nonnull3D(ptr %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a

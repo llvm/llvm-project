@@ -9,8 +9,61 @@
 #include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
+
+//===----------------------------------------------------------------------===//
+// Custom Operands.
+//
+// A table of custom operands shall describe "primary" operand names first
+// followed by aliases if any. It is not required but recommended to arrange
+// operands so that operand encoding match operand position in the table. This
+// will make getNameFromOperandTable() a bit more efficient. Unused slots in the
+// table shall have an empty name.
+//
+//===----------------------------------------------------------------------===//
+
+/// Map from the encoding of a sendmsg/hwreg asm operand to it's name.
+template <size_t N>
+static StringRef getNameFromOperandTable(const CustomOperand (&Table)[N],
+                                         unsigned Encoding,
+                                         const MCSubtargetInfo &STI) {
+  auto isValidIndexForEncoding = [&](size_t Idx) {
+    return Idx < N && Table[Idx].Encoding == Encoding &&
+           !Table[Idx].Name.empty() &&
+           (!Table[Idx].Cond || Table[Idx].Cond(STI));
+  };
+
+  // This is an optimization that should work in most cases. As a side effect,
+  // it may cause selection of an alias instead of a primary operand name in
+  // case of sparse tables.
+  if (isValidIndexForEncoding(Encoding))
+    return Table[Encoding].Name;
+
+  for (size_t Idx = 0; Idx != N; ++Idx)
+    if (isValidIndexForEncoding(Idx))
+      return Table[Idx].Name;
+
+  return "";
+}
+
+/// Map from a symbolic name for a sendmsg/hwreg asm operand to it's encoding.
+template <size_t N>
+static int64_t getEncodingFromOperandTable(const CustomOperand (&Table)[N],
+                                           StringRef Name,
+                                           const MCSubtargetInfo &STI) {
+  int64_t InvalidEncoding = OPR_ID_UNKNOWN;
+  for (const CustomOperand &Entry : Table) {
+    if (Entry.Name != Name)
+      continue;
+
+    if (!Entry.Cond || Entry.Cond(STI))
+      return Entry.Encoding;
+
+    InvalidEncoding = OPR_ID_UNSUPPORTED;
+  }
+
+  return InvalidEncoding;
+}
 
 namespace DepCtr {
 
@@ -34,10 +87,11 @@ const int DEP_CTR_SIZE =
 
 namespace SendMsg {
 
-// Disable lint checking for this block since it makes the table unreadable.
+// Disable lint checking here since it makes these tables unreadable.
 // NOLINTBEGIN
 // clang-format off
-const CustomOperand<const MCSubtargetInfo &> Msg[] = {
+
+static constexpr CustomOperand MsgOperands[] = {
   {{""}},
   {{"MSG_INTERRUPT"},           ID_INTERRUPT},
   {{"MSG_GS"},                  ID_GS_PreGFX11,             isNotGFX11Plus},
@@ -63,27 +117,47 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_RTN_GET_TBA_TO_PC"},   ID_RTN_GET_TBA_TO_PC,       isGFX11Plus},
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
 };
+
+static constexpr CustomOperand SysMsgOperands[] = {
+  {{""}},
+  {{"SYSMSG_OP_ECC_ERR_INTERRUPT"},  OP_SYS_ECC_ERR_INTERRUPT},
+  {{"SYSMSG_OP_REG_RD"},             OP_SYS_REG_RD},
+  {{"SYSMSG_OP_HOST_TRAP_ACK"},      OP_SYS_HOST_TRAP_ACK,      isNotGFX9Plus},
+  {{"SYSMSG_OP_TTRACE_PC"},          OP_SYS_TTRACE_PC},
+};
+
+static constexpr CustomOperand StreamMsgOperands[] = {
+  {{"GS_OP_NOP"},       OP_GS_NOP},
+  {{"GS_OP_CUT"},       OP_GS_CUT},
+  {{"GS_OP_EMIT"},      OP_GS_EMIT},
+  {{"GS_OP_EMIT_CUT"},  OP_GS_EMIT_CUT},
+};
+
 // clang-format on
 // NOLINTEND
 
-const int MSG_SIZE = static_cast<int>(
-    sizeof(Msg) / sizeof(CustomOperand<const MCSubtargetInfo &>));
+int64_t getMsgId(StringRef Name, const MCSubtargetInfo &STI) {
+  return getEncodingFromOperandTable(MsgOperands, Name, STI);
+}
 
-// These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members, see SIDefines.h.
-const char *const OpSysSymbolic[OP_SYS_LAST_] = {
-  nullptr,
-  "SYSMSG_OP_ECC_ERR_INTERRUPT",
-  "SYSMSG_OP_REG_RD",
-  "SYSMSG_OP_HOST_TRAP_ACK",
-  "SYSMSG_OP_TTRACE_PC"
-};
+StringRef getMsgName(uint64_t Encoding, const MCSubtargetInfo &STI) {
+  return getNameFromOperandTable(MsgOperands, Encoding, STI);
+}
 
-const char *const OpGsSymbolic[OP_GS_LAST_] = {
-  "GS_OP_NOP",
-  "GS_OP_CUT",
-  "GS_OP_EMIT",
-  "GS_OP_EMIT_CUT"
-};
+int64_t getMsgOpId(int64_t MsgId, StringRef Name, const MCSubtargetInfo &STI) {
+  if (MsgId == ID_SYSMSG)
+    return getEncodingFromOperandTable(SysMsgOperands, Name, STI);
+  return getEncodingFromOperandTable(StreamMsgOperands, Name, STI);
+}
+
+StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
+                       const MCSubtargetInfo &STI) {
+  assert(msgRequiresOp(MsgId, STI) && "must have an operand");
+
+  if (MsgId == ID_SYSMSG)
+    return getNameFromOperandTable(SysMsgOperands, Encoding, STI);
+  return getNameFromOperandTable(StreamMsgOperands, Encoding, STI);
+}
 
 } // namespace SendMsg
 
@@ -92,7 +166,7 @@ namespace Hwreg {
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
 // clang-format off
-const CustomOperand<const MCSubtargetInfo &> Opr[] = {
+static constexpr CustomOperand Operands[] = {
   {{""}},
   {{"HW_REG_MODE"},          ID_MODE},
   {{"HW_REG_STATUS"},        ID_STATUS},
@@ -155,8 +229,13 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
 // clang-format on
 // NOLINTEND
 
-const int OPR_SIZE = static_cast<int>(
-    sizeof(Opr) / sizeof(CustomOperand<const MCSubtargetInfo &>));
+int64_t getHwregId(StringRef Name, const MCSubtargetInfo &STI) {
+  return getEncodingFromOperandTable(Operands, Name, STI);
+}
+
+StringRef getHwreg(uint64_t Encoding, const MCSubtargetInfo &STI) {
+  return getNameFromOperandTable(Operands, Encoding, STI);
+}
 
 } // namespace Hwreg
 
@@ -566,14 +645,18 @@ unsigned const DfmtNfmt2UFmtGFX11[] = {
 
 namespace Swizzle {
 
+// clang-format off
 // This must be in sync with llvm::AMDGPU::Swizzle::Id enum members, see SIDefines.h.
-const char* const IdSymbolic[] = {
+const char *const IdSymbolic[] = {
   "QUAD_PERM",
   "BITMASK_PERM",
   "SWAP",
   "REVERSE",
   "BROADCAST",
+  "FFT",
+  "ROTATE",
 };
+// clang-format on
 
 } // namespace Swizzle
 
@@ -589,5 +672,19 @@ const char* const IdSymbolic[] = {
 
 } // namespace VGPRIndexMode
 
-} // namespace AMDGPU
-} // namespace llvm
+namespace UCVersion {
+
+ArrayRef<GFXVersion> getGFXVersions() {
+  // GFX6, GFX8 and GFX9 don't support s_version and there are no
+  // UC_VERSION_GFX* codes for them.
+  static const GFXVersion Versions[] = {{"UC_VERSION_GFX7", 0},
+                                        {"UC_VERSION_GFX10", 4},
+                                        {"UC_VERSION_GFX11", 6},
+                                        {"UC_VERSION_GFX12", 9}};
+
+  return Versions;
+}
+
+} // namespace UCVersion
+
+} // namespace llvm::AMDGPU

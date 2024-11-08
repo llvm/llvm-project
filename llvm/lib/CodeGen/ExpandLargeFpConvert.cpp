@@ -116,7 +116,8 @@ static void expandFPToI(Instruction *FPToI) {
   // fp80 conversion is implemented by fpext to fp128 first then do the
   // conversion.
   FPMantissaWidth = FPMantissaWidth == 63 ? 112 : FPMantissaWidth;
-  unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
+  unsigned FloatWidth =
+      PowerOf2Ceil(FloatVal->getType()->getScalarSizeInBits());
   unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   unsigned ExponentBias = (1 << (ExponentWidth - 1)) - 1;
   Value *ImplicitBit = Builder.CreateShl(
@@ -319,6 +320,7 @@ static void expandIToFP(Instruction *IToFP) {
   // FIXME: As there is no related builtins added in compliler-rt,
   // here currently utilized the fp32 <-> fp16 lib calls to implement.
   FPMantissaWidth = FPMantissaWidth == 10 ? 23 : FPMantissaWidth;
+  FPMantissaWidth = FPMantissaWidth == 7 ? 23 : FPMantissaWidth;
   unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
 
@@ -354,7 +356,7 @@ static void expandIToFP(Instruction *IToFP) {
   Entry->getTerminator()->eraseFromParent();
 
   Function *CTLZ =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz, IntTy);
+      Intrinsic::getOrInsertDeclaration(F->getParent(), Intrinsic::ctlz, IntTy);
   ConstantInt *True = Builder.getTrue();
 
   // entry:
@@ -547,7 +549,7 @@ static void expandIToFP(Instruction *IToFP) {
     Value *A40 =
         Builder.CreateBitCast(Or35, Type::getFP128Ty(Builder.getContext()));
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
-  } else if (IToFP->getType()->isHalfTy()) {
+  } else if (IToFP->getType()->isHalfTy() || IToFP->getType()->isBFloatTy()) {
     // Deal with "half" situation. This is a workaround since we don't have
     // floattihf.c currently as referring.
     Value *A40 =
@@ -609,7 +611,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
       if (I.getOperand(0)->getType()->isScalableTy())
         continue;
 
-      auto *IntTy = dyn_cast<IntegerType>(I.getType()->getScalarType());
+      auto *IntTy = cast<IntegerType>(I.getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
@@ -627,7 +629,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
         continue;
 
       auto *IntTy =
-          dyn_cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
+          cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 

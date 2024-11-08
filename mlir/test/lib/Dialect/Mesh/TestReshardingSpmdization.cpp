@@ -19,7 +19,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -38,14 +37,17 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
 
     SymbolTableCollection symbolTable;
     mesh::MeshOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-        op, op.getShard().getMesh());
+        op, cast<ShardingOp>(op.getSharding().getDefiningOp()).getMeshAttr());
 
     bool foundUser = false;
     for (auto user : op->getUsers()) {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
             mesh == symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-                        targetShardOp, targetShardOp.getShard().getMesh())) {
+                        targetShardOp,
+                        cast<ShardingOp>(
+                            targetShardOp.getSharding().getDefiningOp())
+                            .getMeshAttr())) {
           foundUser = true;
           break;
         }
@@ -60,19 +62,19 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
           symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-              targetShardOp, targetShardOp.getShard().getMesh()) != mesh) {
+              targetShardOp,
+              cast<ShardingOp>(targetShardOp.getSharding().getDefiningOp())
+                  .getMeshAttr()) != mesh) {
         continue;
       }
 
       ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
       ShapedType sourceShardShape =
-          shardShapedType(op.getResult().getType(), mesh, op.getShard());
-      TypedValue<ShapedType> sourceShard =
+          shardShapedType(op.getResult().getType(), mesh, op.getSharding());
+      TypedValue<ShapedType> sourceShard = cast<TypedValue<ShapedType>>(
           builder
-              .create<UnrealizedConversionCastOp>(sourceShardShape,
-                                                  op.getOperand())
-              ->getResult(0)
-              .cast<TypedValue<ShapedType>>();
+              .create<UnrealizedConversionCastOp>(sourceShardShape, op.getSrc())
+              ->getResult(0));
       TypedValue<ShapedType> targetShard =
           reshard(builder, mesh, op, targetShardOp, sourceShard);
       Value newTargetUnsharded =
