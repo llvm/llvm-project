@@ -5993,6 +5993,7 @@ Not all targets support this attribute:
   ``ifunc`` is replaced with a global function pointer, and the call is replaced
   with an indirect call. The function pointer is initialized by a constructor
   that calls the resolver.
+- Baremetal target supports it on AVR.
 - Other targets currently do not support this attribute.
   }];
 }
