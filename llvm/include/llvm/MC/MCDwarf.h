@@ -515,6 +515,7 @@ public:
     OpRegister,
     OpWindowSave,
     OpNegateRAState,
+    OpNegateRAStateWithPC,
     OpGnuArgsSize,
     OpLabel,
   };
@@ -640,6 +641,12 @@ public:
   /// .cfi_negate_ra_state AArch64 negate RA state.
   static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
     return MCCFIInstruction(OpNegateRAState, L, 0, INT64_C(0), Loc);
+  }
+
+  /// .cfi_negate_ra_state_with_pc AArch64 negate RA state with PC.
+  static MCCFIInstruction createNegateRAStateWithPC(MCSymbol *L,
+                                                    SMLoc Loc = {}) {
+    return MCCFIInstruction(OpNegateRAStateWithPC, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it

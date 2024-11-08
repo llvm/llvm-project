@@ -4695,8 +4695,7 @@ void SemaCodeCompletion::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
           0) {
     ParsedType T = DS.getRepAsType();
     if (!T.get().isNull() && T.get()->isObjCObjectOrInterfaceType())
-      AddClassMessageCompletions(SemaRef, S, T, std::nullopt, false, false,
-                                 Results);
+      AddClassMessageCompletions(SemaRef, S, T, {}, false, false, Results);
   }
 
   // Note that we intentionally suppress macro results here, since we do not
@@ -5059,7 +5058,7 @@ void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
   if (E.isInvalid())
     CodeCompleteExpression(S, PreferredType);
   else if (getLangOpts().ObjC)
-    CodeCompleteObjCInstanceMessage(S, E.get(), std::nullopt, false);
+    CodeCompleteObjCInstanceMessage(S, E.get(), {}, false);
 }
 
 /// The set of properties that have already been added, referenced by
@@ -7875,8 +7874,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertyGetter(Scope *S) {
   Results.EnterNewScope();
 
   VisitedSelectorSet Selectors;
-  AddObjCMethods(Class, true, MK_ZeroArgSelector, std::nullopt,
-                 SemaRef.CurContext, Selectors,
+  AddObjCMethods(Class, true, MK_ZeroArgSelector, {}, SemaRef.CurContext,
+                 Selectors,
                  /*AllowSameLength=*/true, Results);
   Results.ExitScope();
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
@@ -7904,8 +7903,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertySetter(Scope *S) {
   Results.EnterNewScope();
 
   VisitedSelectorSet Selectors;
-  AddObjCMethods(Class, true, MK_OneArgSelector, std::nullopt,
-                 SemaRef.CurContext, Selectors,
+  AddObjCMethods(Class, true, MK_OneArgSelector, {}, SemaRef.CurContext,
+                 Selectors,
                  /*AllowSameLength=*/true, Results);
 
   Results.ExitScope();
@@ -8203,8 +8202,7 @@ void SemaCodeCompletion::CodeCompleteObjCMessageReceiver(Scope *S) {
       if (Iface->getSuperClass()) {
         Results.AddResult(Result("super"));
 
-        AddSuperSendCompletion(SemaRef, /*NeedSuperKeyword=*/true, std::nullopt,
-                               Results);
+        AddSuperSendCompletion(SemaRef, /*NeedSuperKeyword=*/true, {}, Results);
       }
 
   if (getLangOpts().CPlusPlus11)

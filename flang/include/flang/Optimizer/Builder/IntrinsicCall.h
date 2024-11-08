@@ -289,6 +289,7 @@ struct IntrinsicLibrary {
   template <mlir::arith::CmpFPredicate pred>
   mlir::Value genIeeeQuietCompare(mlir::Type resultType,
                                   llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeReal(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeRint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <bool isFlag>
   void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);

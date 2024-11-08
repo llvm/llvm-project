@@ -278,6 +278,7 @@ private:
   DoubleDouble y_mid;
 };
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static Float128 range_reduction_small_f128(double x) {
   constexpr Float128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
@@ -300,7 +301,6 @@ static Float128 range_reduction_small_f128(double x) {
   return fputil::quick_mul(y, PI_OVER_128_F128);
 }
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
     {Sign::POS, 0, 0},
     {Sign::POS, -133, 0xc90a'afbd'1b33'efc9'c539'edcb'fda0'cf2c_u128},

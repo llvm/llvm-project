@@ -44,7 +44,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/VersionTuple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -89,21 +88,22 @@ Module::~Module() {
 
 void Module::removeDebugIntrinsicDeclarations() {
   auto *DeclareIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
   assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
          "Debug declare intrinsic should have had uses removed.");
   DeclareIntrinsicFn->eraseFromParent();
   auto *ValueIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
   assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
          "Debug value intrinsic should have had uses removed.");
   ValueIntrinsicFn->eraseFromParent();
   auto *AssignIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
   assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
          "Debug assign intrinsic should have had uses removed.");
   AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  auto *LabelntrinsicFn =
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
   assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
          "Debug label intrinsic should have had uses removed.");
   LabelntrinsicFn->eraseFromParent();

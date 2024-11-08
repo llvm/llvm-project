@@ -270,6 +270,12 @@ def FeatureAMXFP16     : SubtargetFeature<"amx-fp16", "HasAMXFP16", "true",
 def FeatureAMXCOMPLEX : SubtargetFeature<"amx-complex", "HasAMXCOMPLEX", "true",
                                          "Support AMX-COMPLEX instructions",
                                          [FeatureAMXTILE]>;
+def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
+                                     "Support AMX-FP8 instructions",
+                                     [FeatureAMXTILE]>;
+def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
+                                           "Support AMX amx-transpose instructions",
+                                           [FeatureAMXTILE]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",
@@ -351,6 +357,8 @@ def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
+def FeatureMOVRS   : SubtargetFeature<"movrs", "HasMOVRS", "true",
+                           "Enable MOVRS", []>;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
@@ -1528,7 +1536,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
-
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
@@ -1550,7 +1557,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4Features =
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
 
-
   list<SubtargetFeature> ZN5Tuning = ZN4Tuning;
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureVNNI,
                                                   FeatureMOVDIRI,
@@ -1561,7 +1567,6 @@ def ProcessorFeatures {
                                                   ];
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
-
 }
 
 //===----------------------------------------------------------------------===//
@@ -1910,7 +1915,7 @@ def : ProcModel<"znver2", Znver2Model, ProcessorFeatures.ZN2Features,
 def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
                 ProcessorFeatures.ZN3Tuning>;
 def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
-           ProcessorFeatures.ZN4Tuning>;
+                ProcessorFeatures.ZN4Tuning>;
 def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
                 ProcessorFeatures.ZN5Tuning>;
 

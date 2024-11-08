@@ -72,15 +72,20 @@ class DstOp {
     LLT LLTTy;
     Register Reg;
     const TargetRegisterClass *RC;
+    MachineRegisterInfo::VRegAttrs Attrs;
   };
 
 public:
-  enum class DstType { Ty_LLT, Ty_Reg, Ty_RC };
+  enum class DstType { Ty_LLT, Ty_Reg, Ty_RC, Ty_VRegAttrs };
   DstOp(unsigned R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(Register R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(DstType::Ty_Reg) {}
   DstOp(const LLT T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
   DstOp(const TargetRegisterClass *TRC) : RC(TRC), Ty(DstType::Ty_RC) {}
+  DstOp(MachineRegisterInfo::VRegAttrs Attrs)
+      : Attrs(Attrs), Ty(DstType::Ty_VRegAttrs) {}
+  DstOp(RegClassOrRegBank RCOrRB, LLT Ty)
+      : Attrs({RCOrRB, Ty}), Ty(DstType::Ty_VRegAttrs) {}
 
   void addDefToMIB(MachineRegisterInfo &MRI, MachineInstrBuilder &MIB) const {
     switch (Ty) {
@@ -93,6 +98,9 @@ public:
     case DstType::Ty_RC:
       MIB.addDef(MRI.createVirtualRegister(RC));
       break;
+    case DstType::Ty_VRegAttrs:
+      MIB.addDef(MRI.createVirtualRegister(Attrs));
+      break;
     }
   }
 
@@ -104,6 +112,8 @@ public:
       return LLTTy;
     case DstType::Ty_Reg:
       return MRI.getType(Reg);
+    case DstType::Ty_VRegAttrs:
+      return Attrs.Ty;
     }
     llvm_unreachable("Unrecognised DstOp::DstType enum");
   }
@@ -114,12 +124,13 @@ public:
   }
 
   const TargetRegisterClass *getRegClass() const {
-    switch (Ty) {
-    case DstType::Ty_RC:
-      return RC;
-    default:
-      llvm_unreachable("Not a RC Operand");
-    }
+    assert(Ty == DstType::Ty_RC && "Not a RC Operand");
+    return RC;
+  }
+
+  MachineRegisterInfo::VRegAttrs getVRegAttrs() const {
+    assert(Ty == DstType::Ty_VRegAttrs && "Not a VRegAttrs Operand");
+    return Attrs;
   }
 
   DstType getDstOpKind() const { return Ty; }
@@ -1255,7 +1266,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildICmp(CmpInst::Predicate Pred, const DstOp &Res,
-                                const SrcOp &Op0, const SrcOp &Op1);
+                                const SrcOp &Op0, const SrcOp &Op1,
+                                std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert a \p Res = G_FCMP \p Pred\p Op0, \p Op1
   ///
@@ -2007,6 +2019,13 @@ public:
   buildFFrexp(const DstOp &Fract, const DstOp &Exp, const SrcOp &Src,
               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FFREXP, {Fract, Exp}, {Src}, Flags);
+  }
+
+  /// Build and insert \p Sin, \p Cos = G_FSINCOS \p Src
+  MachineInstrBuilder
+  buildFSincos(const DstOp &Sin, const DstOp &Cos, const SrcOp &Src,
+               std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FSINCOS, {Sin, Cos}, {Src}, Flags);
   }
 
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1

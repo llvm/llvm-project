@@ -369,6 +369,7 @@ foreach Ext = ZfhExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_H, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_H, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_H, Ext>;
+  def : Pat<(f16 (fcanonicalize FPR16:$rs1)), (FMIN_H $rs1, $rs1)>;
 }
 
 /// Setcc
@@ -479,7 +480,7 @@ def : Pat<(riscv_fmv_x_anyexth FPR16INX:$src), (INSERT_SUBREG (XLenVT (IMPLICIT_
 def : Pat<(fcopysign FPR32INX:$rs1, FPR16INX:$rs2), (FSGNJ_S_INX $rs1, (FCVT_S_H_INX $rs2, FRM_RNE))>;
 } // Predicates = [HasStdExtZhinxmin]
 
-let Predicates = [HasStdExtZfh] in {
+let Predicates = [HasStdExtZfh, IsRV32] in {
 // half->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint (f16 FPR16:$rs1))), (FCVT_W_H $rs1, 0b001)>;
 def : Pat<(i32 (any_fp_to_uint (f16 FPR16:$rs1))), (FCVT_WU_H $rs1, 0b001)>;
@@ -499,7 +500,7 @@ def : Pat<(f16 (any_sint_to_fp (i32 GPR:$rs1))), (FCVT_H_W $rs1, FRM_DYN)>;
 def : Pat<(f16 (any_uint_to_fp (i32 GPR:$rs1))), (FCVT_H_WU $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZfh]
 
-let Predicates = [HasStdExtZhinx] in {
+let Predicates = [HasStdExtZhinx, IsRV32] in {
 // half->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR16INX:$rs1)), (FCVT_W_H_INX $rs1, 0b001)>;
 def : Pat<(i32 (any_fp_to_uint FPR16INX:$rs1)), (FCVT_WU_H_INX $rs1, 0b001)>;
@@ -517,7 +518,7 @@ def : Pat<(i32 (any_lround FPR16INX:$rs1)), (FCVT_W_H_INX $rs1, FRM_RMM)>;
 // [u]int->half. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_H_W_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_H_WU_INX $rs1, FRM_DYN)>;
-} // Predicates = [HasStdExtZhinx]
+} // Predicates = [HasStdExtZhinx, IsRV32]
 
 let Predicates = [HasStdExtZfh, IsRV64] in {
 // Use target specific isd nodes to help us remember the result is sign

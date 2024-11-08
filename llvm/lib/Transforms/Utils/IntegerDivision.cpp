@@ -157,8 +157,8 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
 
   BasicBlock *IBB = Builder.GetInsertBlock();
   Function *F = IBB->getParent();
-  Function *CTLZ = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                             DivTy);
+  Function *CTLZ =
+      Intrinsic::getOrInsertDeclaration(F->getParent(), Intrinsic::ctlz, DivTy);
 
   // Our CFG is going to look like:
   // +---------------------+

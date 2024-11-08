@@ -84,6 +84,26 @@ def ApplyFoldAddIntoDestPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.pad_vectorization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply patterns that vectorize tensor.pad.
+
+    These patterns rewrite tensor.pad Ops using vector.transfer_read and
+    vector.transfer_write operations. This is done either by:
+      1. Folding tensor.pad with an existing vector.transfer_read /
+      vector.transfer_write Op (generated prior to running these patterns). 
+      2. Rewriting it (when matched together with q tensor.insert_slice
+      consumer Op) as a vector.transfer_read + vector.transfer_write pair.
+
+    In both cases, these patterns look at producers and consumers for the
+    matched tensor.pad Op to find opportunities for vectorization.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -398,9 +418,10 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
 
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
-  let assemblyFormat =
-      "$target attr-dict `:` "
-      "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -435,9 +456,10 @@ def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
 
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);
-  let assemblyFormat =
-      "$target attr-dict `:` "
-      "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -480,7 +502,7 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   let assemblyFormat = [{
     $target
     (`iterator_interchange` `=` $iterator_interchange^)? attr-dict
-    `:` custom<SemiFunctionType>(type($target), type($transformed))
+    `:` custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
   let hasVerifier = 1;
 
@@ -1028,7 +1050,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          Variadic<TransformAnyParamTypeOrAnyHandle>:$pad_to_multiple_of,
          DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
                           $static_pad_to_multiple_of,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$nofold_flags,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
           "{}">:$transpose_paddings,
@@ -1055,13 +1077,13 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$paddingDimensions,
                    CArg<"ArrayRef<int64_t>", "{}">:$staticPadToMultipleOf,
-                   CArg<"ArrayRef<int64_t>", "{}">:$packPaddings,
+                   CArg<"ArrayRef<int64_t>", "{}">:$nofoldFlags,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
                    CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$paddingDimensions,
                    "ArrayRef<OpFoldResult>":$mixedPadToMultipleOf,
-                   CArg<"ArrayRef<int64_t>", "{}">:$packPaddings,
+                   CArg<"ArrayRef<int64_t>", "{}">:$nofoldFlags,
                    CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
                    CArg<"StringRef", "::mlir::bufferization::MaterializeInDestinationOp::getOperationName()">:$copyBackOp)>
   ];
@@ -1213,9 +1235,10 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
                        OptionalAttr<I64Attr>:$alignment);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat =
-    "$target attr-dict `:`"
-    "custom<SemiFunctionType>(type($target), type($transformed))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -1249,9 +1272,10 @@ def ReplaceOp : Op<Transform_Dialect, "structured.replace",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$replacement);
   let regions = (region SizedRegion<1>:$bodyRegion);
-  let assemblyFormat =
-      "$target attr-dict-with-keyword regions `:` "
-      "custom<SemiFunctionType>(type($target), type($replacement))";
+  let assemblyFormat = [{
+      $target attr-dict-with-keyword regions `:`
+      custom<SemiFunctionType>(type($target), type($replacement), "false")
+  }];
   let hasVerifier = 1;
 }
 
@@ -1290,9 +1314,10 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$result);
 
-  let assemblyFormat =
-    "$target attr-dict `:`"
-    "custom<SemiFunctionType>(type($target), type($result))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($result), "false")
+  }];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -2294,13 +2319,15 @@ def HoistRedundantVectorTransfersOp :
     function op.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   UnitAttr:$verify_non_zero_trip);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
 
   let builders = [
-    OpBuilder<(ins "Value":$target)>,
+    OpBuilder<(ins "Value":$target,
+               CArg<"bool", "false">:$verify_non_zero_trip)>,
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

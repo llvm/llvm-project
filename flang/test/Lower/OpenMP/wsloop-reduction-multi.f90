@@ -61,7 +61,6 @@
 !CHECK:          hlfir.assign %[[RES_Z]] to %[[PRV_Z_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 !CHECK:      return
 subroutine multiple_reduction(v)

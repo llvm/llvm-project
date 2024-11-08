@@ -271,15 +271,28 @@ public:
   /// Get the status of the entry at \p Path, if one exists.
   virtual llvm::ErrorOr<Status> status(const Twine &Path) = 0;
 
-  /// Get a \p File object for the file at \p Path, if one exists.
+  /// Get a \p File object for the text file at \p Path, if one exists.
   virtual llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) = 0;
 
+  /// Get a \p File object for the binary file at \p Path, if one exists.
+  /// Some non-ascii based file systems perform encoding conversions
+  /// when reading as a text file, and this function should be used if
+  /// a file's bytes should be read as-is. On most filesystems, this
+  /// is the same behaviour as openFileForRead.
+  virtual llvm::ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) {
+    return openFileForRead(Path);
+  }
+
   /// This is a convenience method that opens a file, gets its content and then
   /// closes the file.
+  /// The IsText parameter is used to distinguish whether the file should be
+  /// opened as a binary or text file.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(const Twine &Name, int64_t FileSize = -1,
-                   bool RequiresNullTerminator = true, bool IsVolatile = false);
+                   bool RequiresNullTerminator = true, bool IsVolatile = false,
+                   bool IsText = true);
 
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().

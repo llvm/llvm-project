@@ -182,6 +182,12 @@ private:
     case ELF::R_X86_64_64:
       Kind = x86_64::Pointer64;
       break;
+    case ELF::R_X86_64_SIZE32:
+      Kind = x86_64::Size32;
+      break;
+    case ELF::R_X86_64_SIZE64:
+      Kind = x86_64::Size64;
+      break;
     case ELF::R_X86_64_GOTPCREL:
       Kind = x86_64::RequestGOTAndTransformToDelta32;
       break;

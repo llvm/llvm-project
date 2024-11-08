@@ -33,6 +33,7 @@ namespace llvm::sandboxir {
 
 class DependencyGraph;
 class MemDGNode;
+class SchedBundle;
 
 /// SubclassIDs for isa/dyn_cast etc.
 enum class DGNodeID {
@@ -96,9 +97,20 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
+  /// The number of unscheduled successors.
+  unsigned UnscheduledSuccs = 0;
+  /// This is true if this node has been scheduled.
+  bool Scheduled = false;
+  /// The scheduler bundle that this node belongs to.
+  SchedBundle *SB = nullptr;
+
+  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void clearSchedBundle() { this->SB = nullptr; }
+  friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 
   DGNode(Instruction *I, DGNodeID ID) : I(I), SubclassID(ID) {}
-  friend class MemDGNode; // For constructor.
+  friend class MemDGNode;       // For constructor.
+  friend class DependencyGraph; // For UnscheduledSuccs
 
 public:
   DGNode(Instruction *I) : I(I), SubclassID(DGNodeID::DGNode) {
@@ -106,6 +118,19 @@ public:
   }
   DGNode(const DGNode &Other) = delete;
   virtual ~DGNode() = default;
+  /// \Returns the number of unscheduled successors.
+  unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
+  void decrUnscheduledSuccs() {
+    assert(UnscheduledSuccs > 0 && "Counting error!");
+    --UnscheduledSuccs;
+  }
+  /// \Returns true if all dependent successors have been scheduled.
+  bool ready() const { return UnscheduledSuccs == 0; }
+  /// \Returns true if this node has been scheduled.
+  bool scheduled() const { return Scheduled; }
+  void setScheduled(bool NewVal) { Scheduled = NewVal; }
+  /// \Returns the scheduling bundle that this node belongs to, or nullptr.
+  SchedBundle *getSchedBundle() const { return SB; }
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
   using iterator = PredIterator;
@@ -215,8 +240,16 @@ public:
   MemDGNode *getPrevNode() const { return PrevMemN; }
   /// \Returns the next Mem DGNode in instruction order.
   MemDGNode *getNextNode() const { return NextMemN; }
-  /// Adds the mem dependency edge PredN->this.
-  void addMemPred(MemDGNode *PredN) { MemPreds.insert(PredN); }
+  /// Adds the mem dependency edge PredN->this. This also increments the
+  /// UnscheduledSuccs counter of the predecessor if this node has not been
+  /// scheduled.
+  void addMemPred(MemDGNode *PredN) {
+    [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
+    assert(Inserted && "PredN already exists!");
+    if (!Scheduled) {
+      ++PredN->UnscheduledSuccs;
+    }
+  }
   /// \Returns true if there is a memory dependency N->this.
   bool hasMemPred(DGNode *N) const {
     if (auto *MN = dyn_cast<MemDGNode>(N))
@@ -284,6 +317,14 @@ private:
   /// \p DstN.
   void scanAndAddDeps(MemDGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
 
+  /// Sets the UnscheduledSuccs of all DGNodes in \p NewInterval based on
+  /// def-use edges.
+  void setDefUseUnscheduledSuccs(const Interval<Instruction> &NewInterval);
+
+  /// Create DAG nodes for instrs in \p NewInterval and update the MemNode
+  /// chain.
+  void createNewNodes(const Interval<Instruction> &NewInterval);
+
 public:
   DependencyGraph(AAResults &AA)
       : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
@@ -309,8 +350,19 @@ public:
     return It->second.get();
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
-  /// the interval spanning \p Instrs.
+  /// the range of instructions added to the DAG.
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
+  /// \Returns the range of instructions included in the DAG.
+  Interval<Instruction> getInterval() const { return DAGInterval; }
+  /// Called by the scheduler when a new instruction \p I has been created.
+  void notifyCreateInstr(Instruction *I) {
+    getOrCreateNode(I);
+    // TODO: Update the dependencies for the new node.
+  }
+  void clear() {
+    InstrToNodeMap.clear();
+    DAGInterval = {};
+  }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

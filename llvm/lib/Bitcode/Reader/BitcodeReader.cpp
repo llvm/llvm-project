@@ -798,7 +798,7 @@ private:
     if (Slot == Record.size())
       return true;
     unsigned ValID = Record[Slot++];
-    if (ValID != bitc::OB_METADATA) {
+    if (ValID != static_cast<unsigned>(bitc::OB_METADATA)) {
       unsigned TypeId;
       return getValueTypePair(Record, --Slot, InstNum, ResVal, TypeId,
                               ConstExprInsertBB);
@@ -876,7 +876,8 @@ private:
     } else {
       int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
       int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
-      return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
+      return ConstantRange(APInt(BitWidth, Start, true),
+                           APInt(BitWidth, End, true));
     }
   }
 
@@ -2066,6 +2067,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCallback;
   case bitc::ATTR_KIND_NO_CAPTURE:
     return Attribute::NoCapture;
+  case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
+    return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:
@@ -2162,8 +2165,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SANITIZE_REALTIME:
     return Attribute::SanitizeRealtime;
-  case bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE:
-    return Attribute::SanitizeRealtimeUnsafe;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
+    return Attribute::SanitizeRealtimeBlocking;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2656,7 +2659,8 @@ Error BitcodeReader::parseTypeTableBody() {
       }
       if (EltTys.size() != Record.size()-1)
         return error("Invalid named struct record");
-      Res->setBody(EltTys, Record[0]);
+      if (auto E = Res->setBodyOrError(EltTys, Record[0]))
+        return E;
       ContainedIDs.append(Record.begin() + 1, Record.end());
       ResultTy = Res;
       break;
@@ -5469,9 +5473,6 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (IsFP && Record.size() > OpNum+1)
         FMF = getDecodedFastMathFlags(Record[++OpNum]);
 
-      if (OpNum+1 != Record.size())
-        return error("Invalid record");
-
       if (IsFP) {
         if (!CmpInst::isFPPredicate(PredVal))
           return error("Invalid fcmp predicate");
@@ -5480,7 +5481,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!CmpInst::isIntPredicate(PredVal))
           return error("Invalid icmp predicate");
         I = new ICmpInst(PredVal, LHS, RHS);
+        if (Record.size() > OpNum + 1 &&
+            (Record[++OpNum] & (1 << bitc::ICMP_SAME_SIGN)))
+          cast<ICmpInst>(I)->setSameSign();
       }
+
+      if (OpNum + 1 != Record.size())
+        return error("Invalid record");
 
       ResTypeID = getVirtualTypeID(I->getType()->getScalarType());
       if (LHS->getType()->isVectorTy())
@@ -7034,11 +7041,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     // Remove incompatible attributes on function calls.
     if (auto *CI = dyn_cast<CallBase>(&I)) {
       CI->removeRetAttrs(AttributeFuncs::typeIncompatible(
-          CI->getFunctionType()->getReturnType()));
+          CI->getFunctionType()->getReturnType(), CI->getRetAttributes()));
 
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ++ArgNo)
         CI->removeParamAttrs(ArgNo, AttributeFuncs::typeIncompatible(
-                                        CI->getArgOperand(ArgNo)->getType()));
+                                        CI->getArgOperand(ArgNo)->getType(),
+                                        CI->getParamAttributes(ArgNo)));
     }
   }
 

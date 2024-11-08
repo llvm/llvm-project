@@ -10,11 +10,14 @@
 #include <cstdarg>
 #include <fstream>
 #include <mutex>
-#include <sstream>
 
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -866,42 +869,35 @@ int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
 bool StartDebuggingRequestHandler::DoExecute(
     lldb::SBDebugger debugger, char **command,
     lldb::SBCommandReturnObject &result) {
-  // Command format like: `startDebugging <launch|attach> <configuration>`
+  // Command format like: `start-debugging <launch|attach> <configuration>`
   if (!command) {
-    result.SetError("Invalid use of startDebugging");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("Invalid use of start-debugging, expected format "
+                    "`start-debugging <launch|attach> <configuration>`.");
     return false;
   }
 
   if (!command[0] || llvm::StringRef(command[0]).empty()) {
-    result.SetError("startDebugging request type missing.");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("start-debugging request type missing.");
     return false;
   }
 
   if (!command[1] || llvm::StringRef(command[1]).empty()) {
-    result.SetError("configuration missing.");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("start-debugging debug configuration missing.");
     return false;
   }
 
   llvm::StringRef request{command[0]};
   std::string raw_configuration{command[1]};
 
-  int i = 2;
-  while (command[i]) {
-    raw_configuration.append(" ").append(command[i]);
-  }
-
   llvm::Expected<llvm::json::Value> configuration =
       llvm::json::parse(raw_configuration);
 
   if (!configuration) {
     llvm::Error err = configuration.takeError();
-    std::string msg =
-        "Failed to parse json configuration: " + llvm::toString(std::move(err));
+    std::string msg = "Failed to parse json configuration: " +
+                      llvm::toString(std::move(err)) + "\n\n" +
+                      raw_configuration;
     result.SetError(msg.c_str());
-    result.SetStatus(lldb::eReturnStatusFailed);
     return false;
   }
 
@@ -965,6 +961,68 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   }
 
   result.Printf("lldb-dap repl-mode %s set.\n", new_mode.data());
+  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
+  return true;
+}
+
+// Sends a DAP event with an optional body.
+//
+// See
+// https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent
+bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
+                                        char **command,
+                                        lldb::SBCommandReturnObject &result) {
+  // Command format like: `send-event <name> <body>?`
+  if (!command || !command[0] || llvm::StringRef(command[0]).empty()) {
+    result.SetError("Not enough arguments found, expected format "
+                    "`lldb-dap send-event <name> <body>?`.");
+    return false;
+  }
+
+  llvm::StringRef name{command[0]};
+  // Events that are stateful and should be handled by lldb-dap internally.
+  const std::array internal_events{"breakpoint", "capabilities", "continued",
+                                   "exited",     "initialize",   "loadedSource",
+                                   "module",     "process",      "stopped",
+                                   "terminated", "thread"};
+  if (std::find(internal_events.begin(), internal_events.end(), name) !=
+      std::end(internal_events)) {
+    std::string msg =
+        llvm::formatv("Invalid use of lldb-dap send-event, event \"{0}\" "
+                      "should be handled by lldb-dap internally.",
+                      name)
+            .str();
+    result.SetError(msg.c_str());
+    return false;
+  }
+
+  llvm::json::Object event(CreateEventObject(name));
+
+  if (command[1] && !llvm::StringRef(command[1]).empty()) {
+    // See if we have unused arguments.
+    if (command[2]) {
+      result.SetError(
+          "Additional arguments found, expected `lldb-dap send-event "
+          "<name> <body>?`.");
+      return false;
+    }
+
+    llvm::StringRef raw_body{command[1]};
+
+    llvm::Expected<llvm::json::Value> body = llvm::json::parse(raw_body);
+
+    if (!body) {
+      llvm::Error err = body.takeError();
+      std::string msg = "Failed to parse custom event body: " +
+                        llvm::toString(std::move(err));
+      result.SetError(msg.c_str());
+      return false;
+    }
+
+    event.try_emplace("body", std::move(*body));
+  }
+
+  g_dap.SendJSON(llvm::json::Value(std::move(event)));
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
   return true;
 }

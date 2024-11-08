@@ -53,6 +53,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::mipsel:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
+    case llvm::Triple::systemz:
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -61,6 +62,23 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   } else {
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << XRayInstrument->getSpelling() << Triple.str();
+  }
+
+  if (Args.hasFlag(options::OPT_fxray_shared, options::OPT_fno_xray_shared,
+                   false)) {
+    XRayShared = true;
+
+    // DSO instrumentation is currently limited to x86_64
+    if (Triple.getArch() != llvm::Triple::x86_64) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-fxray-shared" << Triple.str();
+    }
+
+    unsigned PICLvl = std::get<1>(tools::ParsePICArgs(TC, Args));
+    if (!PICLvl) {
+      D.Diag(diag::err_opt_not_valid_without_opt) << "-fxray-shared"
+                                                  << "-fPIC";
+    }
   }
 
   // Both XRay and -fpatchable-function-entry use
@@ -176,6 +194,10 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_xray_ignore_loops);
   Args.addOptOutFlag(CmdArgs, options::OPT_fxray_function_index,
                      options::OPT_fno_xray_function_index);
+
+  if (XRayShared)
+    Args.addOptInFlag(CmdArgs, options::OPT_fxray_shared,
+                      options::OPT_fno_xray_shared);
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {

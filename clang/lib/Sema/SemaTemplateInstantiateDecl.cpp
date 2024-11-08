@@ -875,6 +875,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CUDAGridConstantAttr>(TmplAttr)) {
+      if (!New->hasAttr<CUDAGridConstantAttr>())
+        New->addAttr(A->clone(Context));
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -1345,7 +1351,7 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   if (Invalid)
     Field->setInvalidDecl();
 
-  if (!Field->getDeclName()) {
+  if (!Field->getDeclName() || Field->isPlaceholderVar(SemaRef.getLangOpts())) {
     // Keep track of where this decl came from.
     SemaRef.Context.setInstantiatedFromUnnamedFieldDecl(Field, D);
   }

@@ -2325,6 +2325,59 @@ std::pair<SDValue, MachinePointerInfo> ARMTargetLowering::computeAddrForCallArg(
   return std::make_pair(DstAddr, DstInfo);
 }
 
+// Returns the type of copying which is required to set up a byval argument to
+// a tail-called function. This isn't needed for non-tail calls, because they
+// always need the equivalent of CopyOnce, but tail-calls sometimes need two to
+// avoid clobbering another argument (CopyViaTemp), and sometimes can be
+// optimised to zero copies when forwarding an argument from the caller's
+// caller (NoCopy).
+ARMTargetLowering::ByValCopyKind ARMTargetLowering::ByValNeedsCopyForTailCall(
+    SelectionDAG &DAG, SDValue Src, SDValue Dst, ISD::ArgFlagsTy Flags) const {
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  ARMFunctionInfo *AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
+
+  // Globals are always safe to copy from.
+  if (isa<GlobalAddressSDNode>(Src) || isa<ExternalSymbolSDNode>(Src))
+    return CopyOnce;
+
+  // Can only analyse frame index nodes, conservatively assume we need a
+  // temporary.
+  auto *SrcFrameIdxNode = dyn_cast<FrameIndexSDNode>(Src);
+  auto *DstFrameIdxNode = dyn_cast<FrameIndexSDNode>(Dst);
+  if (!SrcFrameIdxNode || !DstFrameIdxNode)
+    return CopyViaTemp;
+
+  int SrcFI = SrcFrameIdxNode->getIndex();
+  int DstFI = DstFrameIdxNode->getIndex();
+  assert(MFI.isFixedObjectIndex(DstFI) &&
+         "byval passed in non-fixed stack slot");
+
+  int64_t SrcOffset = MFI.getObjectOffset(SrcFI);
+  int64_t DstOffset = MFI.getObjectOffset(DstFI);
+
+  // If the source is in the local frame, then the copy to the argument memory
+  // is always valid.
+  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
+  if (!FixedSrc ||
+      (FixedSrc && SrcOffset < -(int64_t)AFI->getArgRegsSaveSize()))
+    return CopyOnce;
+
+  // In the case of byval arguments split between registers and the stack,
+  // computeAddrForCallArg returns a FrameIndex which corresponds only to the
+  // stack portion, but the Src SDValue will refer to the full value, including
+  // the local stack memory that the register portion gets stored into. We only
+  // need to compare them for equality, so normalise on the full value version.
+  uint64_t RegSize = Flags.getByValSize() - MFI.getObjectSize(DstFI);
+  DstOffset -= RegSize;
+
+  // If the value is already in the correct location, then no copying is
+  // needed. If not, then we need to copy via a temporary.
+  if (SrcOffset == DstOffset)
+    return NoCopy;
+  else
+    return CopyViaTemp;
+}
+
 void ARMTargetLowering::PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG,
                                          SDValue Chain, SDValue &Arg,
                                          RegsToPassVector &RegsToPass,
@@ -2380,6 +2433,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   MachineFunction &MF = DAG.getMachineFunction();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MachineFunction::CallSiteInfo CSInfo;
   bool isStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   bool isThisReturn = false;
@@ -2408,8 +2462,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     isTailCall = false;
 
   // For both the non-secure calls and the returns from a CMSE entry function,
-  // the function needs to do some extra work afte r the call, or before the
-  // return, respectively, thus it cannot end with atail call
+  // the function needs to do some extra work after the call, or before the
+  // return, respectively, thus it cannot end with a tail call
   if (isCmseNSCall || AFI->isCmseNSEntryFunction())
     isTailCall = false;
 
@@ -2492,6 +2546,66 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   RegsToPassVector RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
+  // If we are doing a tail-call, any byval arguments will be written to stack
+  // space which was used for incoming arguments. If any the values being used
+  // are incoming byval arguments to this function, then they might be
+  // overwritten by the stores of the outgoing arguments. To avoid this, we
+  // need to make a temporary copy of them in local stack space, then copy back
+  // to the argument area.
+  DenseMap<unsigned, SDValue> ByValTemporaries;
+  SDValue ByValTempChain;
+  if (isTailCall) {
+    SmallVector<SDValue, 8> ByValCopyChains;
+    for (const CCValAssign &VA : ArgLocs) {
+      unsigned ArgIdx = VA.getValNo();
+      SDValue Src = OutVals[ArgIdx];
+      ISD::ArgFlagsTy Flags = Outs[ArgIdx].Flags;
+
+      if (!Flags.isByVal())
+        continue;
+
+      SDValue Dst;
+      MachinePointerInfo DstInfo;
+      std::tie(Dst, DstInfo) =
+          computeAddrForCallArg(dl, DAG, VA, SDValue(), true, SPDiff);
+      ByValCopyKind Copy = ByValNeedsCopyForTailCall(DAG, Src, Dst, Flags);
+
+      if (Copy == NoCopy) {
+        // If the argument is already at the correct offset on the stack
+        // (because we are forwarding a byval argument from our caller), we
+        // don't need any copying.
+        continue;
+      } else if (Copy == CopyOnce) {
+        // If the argument is in our local stack frame, no other argument
+        // preparation can clobber it, so we can copy it to the final location
+        // later.
+        ByValTemporaries[ArgIdx] = Src;
+      } else {
+        assert(Copy == CopyViaTemp && "unexpected enum value");
+        // If we might be copying this argument from the outgoing argument
+        // stack area, we need to copy via a temporary in the local stack
+        // frame.
+        int TempFrameIdx = MFI.CreateStackObject(
+            Flags.getByValSize(), Flags.getNonZeroByValAlign(), false);
+        SDValue Temp =
+            DAG.getFrameIndex(TempFrameIdx, getPointerTy(DAG.getDataLayout()));
+
+        SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
+        SDValue AlignNode =
+            DAG.getConstant(Flags.getNonZeroByValAlign().value(), dl, MVT::i32);
+
+        SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
+        SDValue Ops[] = {Chain, Temp, Src, SizeNode, AlignNode};
+        ByValCopyChains.push_back(
+            DAG.getNode(ARMISD::COPY_STRUCT_BYVAL, dl, VTs, Ops));
+        ByValTemporaries[ArgIdx] = Temp;
+      }
+    }
+    if (!ByValCopyChains.empty())
+      ByValTempChain =
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ByValCopyChains);
+  }
+
   // During a tail call, stores to the argument area must happen after all of
   // the function's incoming arguments have been loaded because they may alias.
   // This is done by folding in a TokenFactor from LowerFormalArguments, but
@@ -2529,6 +2643,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (isTailCall && VA.isMemLoc() && !AfterFormalArgLoads) {
       Chain = DAG.getStackArgumentTokenFactor(Chain);
+      if (ByValTempChain)
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain,
+                            ByValTempChain);
       AfterFormalArgLoads = true;
     }
 
@@ -2600,8 +2717,18 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       unsigned ByValArgsCount = CCInfo.getInRegsParamsCount();
       unsigned CurByValIdx = CCInfo.getInRegsParamsProcessed();
 
-      if (CurByValIdx < ByValArgsCount) {
+      SDValue ByValSrc;
+      bool NeedsStackCopy;
+      if (ByValTemporaries.contains(realArgIdx)) {
+        ByValSrc = ByValTemporaries[realArgIdx];
+        NeedsStackCopy = true;
+      } else {
+        ByValSrc = Arg;
+        NeedsStackCopy = !isTailCall;
+      }
 
+      // If part of the argument is in registers, load them.
+      if (CurByValIdx < ByValArgsCount) {
         unsigned RegBegin, RegEnd;
         CCInfo.getInRegsParamInfo(CurByValIdx, RegBegin, RegEnd);
 
@@ -2610,7 +2737,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned int i, j;
         for (i = 0, j = RegBegin; j < RegEnd; i++, j++) {
           SDValue Const = DAG.getConstant(4*i, dl, MVT::i32);
-          SDValue AddArg = DAG.getNode(ISD::ADD, dl, PtrVT, Arg, Const);
+          SDValue AddArg = DAG.getNode(ISD::ADD, dl, PtrVT, ByValSrc, Const);
           SDValue Load =
               DAG.getLoad(PtrVT, dl, Chain, AddArg, MachinePointerInfo(),
                           DAG.InferPtrAlign(AddArg));
@@ -2625,14 +2752,16 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         CCInfo.nextInRegsParam();
       }
 
-      if (Flags.getByValSize() > 4*offset) {
+      // If the memory part of the argument isn't already in the correct place
+      // (which can happen with tail calls), copy it into the argument area.
+      if (NeedsStackCopy && Flags.getByValSize() > 4 * offset) {
         auto PtrVT = getPointerTy(DAG.getDataLayout());
         SDValue Dst;
         MachinePointerInfo DstInfo;
         std::tie(Dst, DstInfo) =
             computeAddrForCallArg(dl, DAG, VA, StackPtr, isTailCall, SPDiff);
         SDValue SrcOffset = DAG.getIntPtrConstant(4*offset, dl);
-        SDValue Src = DAG.getNode(ISD::ADD, dl, PtrVT, Arg, SrcOffset);
+        SDValue Src = DAG.getNode(ISD::ADD, dl, PtrVT, ByValSrc, SrcOffset);
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize() - 4*offset, dl,
                                            MVT::i32);
         SDValue AlignNode =
@@ -2962,50 +3091,6 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   Size = std::max<int>(Size - Excess, 0);
 }
 
-/// MatchingStackOffset - Return true if the given stack call argument is
-/// already available in the same position (relatively) of the caller's
-/// incoming argument stack.
-static
-bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
-                         MachineFrameInfo &MFI, const MachineRegisterInfo *MRI,
-                         const TargetInstrInfo *TII) {
-  unsigned Bytes = Arg.getValueSizeInBits() / 8;
-  int FI = std::numeric_limits<int>::max();
-  if (Arg.getOpcode() == ISD::CopyFromReg) {
-    Register VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!VR.isVirtual())
-      return false;
-    MachineInstr *Def = MRI->getVRegDef(VR);
-    if (!Def)
-      return false;
-    if (!Flags.isByVal()) {
-      if (!TII->isLoadFromStackSlot(*Def, FI))
-        return false;
-    } else {
-      return false;
-    }
-  } else if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(Arg)) {
-    if (Flags.isByVal())
-      // ByVal argument is passed in as a pointer but it's now being
-      // dereferenced. e.g.
-      // define @foo(%struct.X* %A) {
-      //   tail call @bar(%struct.X* byval %A)
-      // }
-      return false;
-    SDValue Ptr = Ld->getBasePtr();
-    FrameIndexSDNode *FINode = dyn_cast<FrameIndexSDNode>(Ptr);
-    if (!FINode)
-      return false;
-    FI = FINode->getIndex();
-  } else
-    return false;
-
-  assert(FI != std::numeric_limits<int>::max());
-  if (!MFI.isFixedObjectIndex(FI))
-    return false;
-  return Offset == MFI.getObjectOffset(FI) && Bytes == MFI.getObjectSize(FI);
-}
-
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function. Note that this function also
@@ -3047,8 +3132,10 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     for (const CCValAssign &AL : ArgLocs)
       if (AL.isRegLoc())
         AddressRegisters.erase(AL.getLocReg());
-    if (AddressRegisters.empty())
+    if (AddressRegisters.empty()) {
+      LLVM_DEBUG(dbgs() << "false (no reg to hold function pointer)\n");
       return false;
+    }
   }
 
   // Look for obvious safe cases to perform tail call optimization that do not
@@ -3057,18 +3144,26 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // Exception-handling functions need a special set of instructions to indicate
   // a return to the hardware. Tail-calling another function would probably
   // break this.
-  if (CallerF.hasFnAttribute("interrupt"))
+  if (CallerF.hasFnAttribute("interrupt")) {
+    LLVM_DEBUG(dbgs() << "false (interrupt attribute)\n");
     return false;
+  }
 
-  if (canGuaranteeTCO(CalleeCC, getTargetMachine().Options.GuaranteedTailCallOpt))
+  if (canGuaranteeTCO(CalleeCC,
+                      getTargetMachine().Options.GuaranteedTailCallOpt)) {
+    LLVM_DEBUG(dbgs() << (CalleeCC == CallerCC ? "true" : "false")
+                      << " (guaranteed tail-call CC)\n");
     return CalleeCC == CallerCC;
+  }
 
   // Also avoid sibcall optimization if either caller or callee uses struct
   // return semantics.
   bool isCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   bool isCallerStructRet = MF.getFunction().hasStructRetAttr();
-  if (isCalleeStructRet || isCallerStructRet)
+  if (isCalleeStructRet != isCallerStructRet) {
+    LLVM_DEBUG(dbgs() << "false (struct-ret)\n");
     return false;
+  }
 
   // Externally-defined functions with weak linkage should not be
   // tail-called on ARM when the OS does not support dynamic
@@ -3081,8 +3176,11 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *GV = G->getGlobal();
     const Triple &TT = getTargetMachine().getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
+        (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
+         TT.isOSBinFormatMachO())) {
+      LLVM_DEBUG(dbgs() << "false (external weak linkage)\n");
       return false;
+    }
   }
 
   // Check that the call results are passed in the same way.
@@ -3091,70 +3189,44 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
           getEffectiveCallingConv(CalleeCC, isVarArg),
           getEffectiveCallingConv(CallerCC, CallerF.isVarArg()), MF, C, Ins,
           CCAssignFnForReturn(CalleeCC, isVarArg),
-          CCAssignFnForReturn(CallerCC, CallerF.isVarArg())))
+          CCAssignFnForReturn(CallerCC, CallerF.isVarArg()))) {
+    LLVM_DEBUG(dbgs() << "false (incompatible results)\n");
     return false;
+  }
   // The callee has to preserve all registers the caller needs to preserve.
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   if (CalleeCC != CallerCC) {
     const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
-    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
+    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved)) {
+      LLVM_DEBUG(dbgs() << "false (not all registers preserved)\n");
       return false;
+    }
   }
 
-  // If Caller's vararg or byval argument has been split between registers and
-  // stack, do not perform tail call, since part of the argument is in caller's
-  // local frame.
+  // If Caller's vararg argument has been split between registers and stack, do
+  // not perform tail call, since part of the argument is in caller's local
+  // frame.
   const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
-  if (AFI_Caller->getArgRegsSaveSize())
+  if (CLI.IsVarArg && AFI_Caller->getArgRegsSaveSize()) {
+    LLVM_DEBUG(dbgs() << "false (arg reg save area)\n");
     return false;
+  }
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
-  if (!Outs.empty()) {
-    if (CCInfo.getStackSize()) {
-      // Check if the arguments are already laid out in the right way as
-      // the caller's fixed stack objects.
-      MachineFrameInfo &MFI = MF.getFrameInfo();
-      const MachineRegisterInfo *MRI = &MF.getRegInfo();
-      const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-      for (unsigned i = 0, realArgIdx = 0, e = ArgLocs.size();
-           i != e;
-           ++i, ++realArgIdx) {
-        CCValAssign &VA = ArgLocs[i];
-        EVT RegVT = VA.getLocVT();
-        SDValue Arg = OutVals[realArgIdx];
-        ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
-        if (VA.getLocInfo() == CCValAssign::Indirect)
-          return false;
-        if (VA.needsCustom() && (RegVT == MVT::f64 || RegVT == MVT::v2f64)) {
-          // f64 and vector types are split into multiple registers or
-          // register/stack-slot combinations.  The types will not match
-          // the registers; give up on memory f64 refs until we figure
-          // out what to do about this.
-          if (!VA.isRegLoc())
-            return false;
-          if (!ArgLocs[++i].isRegLoc())
-            return false;
-          if (RegVT == MVT::v2f64) {
-            if (!ArgLocs[++i].isRegLoc())
-              return false;
-            if (!ArgLocs[++i].isRegLoc())
-              return false;
-          }
-        } else if (!VA.isRegLoc()) {
-          if (!MatchingStackOffset(Arg, VA.getLocMemOffset(), Flags,
-                                   MFI, MRI, TII))
-            return false;
-        }
-      }
-    }
-
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
-      return false;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals)) {
+    LLVM_DEBUG(dbgs() << "false (parameters in CSRs do not match)\n");
+    return false;
   }
 
+  // If the stack arguments for this call do not fit into our own save area then
+  // the call cannot be made tail.
+  if (CCInfo.getStackSize() > AFI_Caller->getArgumentStackSize())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "true\n");
   return true;
 }
 
@@ -5979,7 +6051,7 @@ static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                             DAG.getConstant((1 << BW) - 1, DL, VT));
   if (IsSigned)
     Max = DAG.getNode(ISD::SMAX, DL, VT, Max,
-                      DAG.getConstant(-(1 << BW), DL, VT));
+                      DAG.getSignedConstant(-(1 << BW), DL, VT));
   return Max;
 }
 
@@ -7879,6 +7951,8 @@ static bool IsQRMVEInstruction(const SDNode *N, const SDNode *Op) {
   case ISD::MUL:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
     return true;
   case ISD::SUB:
   case ISD::SSUBSAT:
@@ -19354,6 +19428,9 @@ bool ARMTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
 /// patterns (and we don't have the non-fused floating point instruction).
 bool ARMTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                    EVT VT) const {
+  if (Subtarget->useSoftFloat())
+    return false;
+
   if (!VT.isSimple())
     return false;
 
@@ -21141,30 +21218,26 @@ bool ARMTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
 
 Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
                                         ARM_MB::MemBOpt Domain) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-
   // First, if the target has no DMB, see what fallback we can use.
   if (!Subtarget->hasDataBarrier()) {
     // Some ARMv6 cpus can support data barriers with an mcr instruction.
     // Thumb1 and pre-v6 ARM mode use a libcall instead and should never get
     // here.
     if (Subtarget->hasV6Ops() && !Subtarget->isThumb()) {
-      Function *MCR = Intrinsic::getDeclaration(M, Intrinsic::arm_mcr);
       Value* args[6] = {Builder.getInt32(15), Builder.getInt32(0),
                         Builder.getInt32(0), Builder.getInt32(7),
                         Builder.getInt32(10), Builder.getInt32(5)};
-      return Builder.CreateCall(MCR, args);
+      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, {}, args);
     } else {
       // Instead of using barriers, atomic accesses on these subtargets use
       // libcalls.
       llvm_unreachable("makeDMB on a target so old that it has no barriers");
     }
   } else {
-    Function *DMB = Intrinsic::getDeclaration(M, Intrinsic::arm_dmb);
     // Only a full system barrier exists in the M-class architectures.
     Domain = Subtarget->isMClass() ? ARM_MB::SY : Domain;
     Constant *CDomain = Builder.getInt32(Domain);
-    return Builder.CreateCall(DMB, CDomain);
+    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, {}, CDomain);
   }
 }
 
@@ -21309,7 +21382,7 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
   return InsertFencesForAtomic;
 }
 
-bool ARMTargetLowering::useLoadStackGuardNode() const {
+bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
   // ROPI/RWPI are not supported currently.
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
 }
@@ -21417,9 +21490,9 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
   if (ValueTy->getPrimitiveSizeInBits() == 64) {
     Intrinsic::ID Int =
         IsAcquire ? Intrinsic::arm_ldaexd : Intrinsic::arm_ldrexd;
-    Function *Ldrex = Intrinsic::getDeclaration(M, Int);
 
-    Value *LoHi = Builder.CreateCall(Ldrex, Addr, "lohi");
+    Value *LoHi =
+        Builder.CreateIntrinsic(Int, {}, Addr, /*FMFSource=*/nullptr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
@@ -21433,8 +21506,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
 
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int = IsAcquire ? Intrinsic::arm_ldaex : Intrinsic::arm_ldrex;
-  Function *Ldrex = Intrinsic::getDeclaration(M, Int, Tys);
-  CallInst *CI = Builder.CreateCall(Ldrex, Addr);
+  CallInst *CI = Builder.CreateIntrinsic(Int, Tys, Addr);
 
   CI->addParamAttr(
       0, Attribute::get(M->getContext(), Attribute::ElementType, ValueTy));
@@ -21445,8 +21517,7 @@ void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
   if (!Subtarget->hasV7Ops())
     return;
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Builder.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::arm_clrex));
+  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {}, {});
 }
 
 Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
@@ -21461,19 +21532,18 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   if (Val->getType()->getPrimitiveSizeInBits() == 64) {
     Intrinsic::ID Int =
         IsRelease ? Intrinsic::arm_stlexd : Intrinsic::arm_strexd;
-    Function *Strex = Intrinsic::getDeclaration(M, Int);
     Type *Int32Ty = Type::getInt32Ty(M->getContext());
 
     Value *Lo = Builder.CreateTrunc(Val, Int32Ty, "lo");
     Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 32), Int32Ty, "hi");
     if (!Subtarget->isLittle())
       std::swap(Lo, Hi);
-    return Builder.CreateCall(Strex, {Lo, Hi, Addr});
+    return Builder.CreateIntrinsic(Int, {}, {Lo, Hi, Addr});
   }
 
   Intrinsic::ID Int = IsRelease ? Intrinsic::arm_stlex : Intrinsic::arm_strex;
   Type *Tys[] = { Addr->getType() };
-  Function *Strex = Intrinsic::getDeclaration(M, Int, Tys);
+  Function *Strex = Intrinsic::getOrInsertDeclaration(M, Int, Tys);
 
   CallInst *CI = Builder.CreateCall(
       Strex, {Builder.CreateZExtOrBitCast(
@@ -21601,14 +21671,13 @@ bool ARMTargetLowering::lowerInterleavedLoad(
       static const Intrinsic::ID LoadInts[3] = {Intrinsic::arm_neon_vld2,
                                                 Intrinsic::arm_neon_vld3,
                                                 Intrinsic::arm_neon_vld4};
-      Function *VldnFunc =
-          Intrinsic::getDeclaration(LI->getModule(), LoadInts[Factor - 2], Tys);
 
       SmallVector<Value *, 2> Ops;
       Ops.push_back(BaseAddr);
       Ops.push_back(Builder.getInt32(LI->getAlign().value()));
 
-      return Builder.CreateCall(VldnFunc, Ops, "vldN");
+      return Builder.CreateIntrinsic(LoadInts[Factor - 2], Tys, Ops,
+                                     /*FMFSource=*/nullptr, "vldN");
     } else {
       assert((Factor == 2 || Factor == 4) &&
              "expected interleave factor of 2 or 4 for MVE");
@@ -21616,12 +21685,11 @@ bool ARMTargetLowering::lowerInterleavedLoad(
           Factor == 2 ? Intrinsic::arm_mve_vld2q : Intrinsic::arm_mve_vld4q;
       Type *PtrTy = Builder.getPtrTy(LI->getPointerAddressSpace());
       Type *Tys[] = {VecTy, PtrTy};
-      Function *VldnFunc =
-          Intrinsic::getDeclaration(LI->getModule(), LoadInts, Tys);
 
       SmallVector<Value *, 2> Ops;
       Ops.push_back(BaseAddr);
-      return Builder.CreateCall(VldnFunc, Ops, "vldN");
+      return Builder.CreateIntrinsic(LoadInts, Tys, Ops, /*FMFSource=*/nullptr,
+                                     "vldN");
     }
   };
 
@@ -21762,14 +21830,11 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       Type *PtrTy = Builder.getPtrTy(SI->getPointerAddressSpace());
       Type *Tys[] = {PtrTy, SubVecTy};
 
-      Function *VstNFunc = Intrinsic::getDeclaration(
-          SI->getModule(), StoreInts[Factor - 2], Tys);
-
       SmallVector<Value *, 6> Ops;
       Ops.push_back(BaseAddr);
       append_range(Ops, Shuffles);
       Ops.push_back(Builder.getInt32(SI->getAlign().value()));
-      Builder.CreateCall(VstNFunc, Ops);
+      Builder.CreateIntrinsic(StoreInts[Factor - 2], Tys, Ops);
     } else {
       assert((Factor == 2 || Factor == 4) &&
              "expected interleave factor of 2 or 4 for MVE");
@@ -21777,15 +21842,13 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
           Factor == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
       Type *PtrTy = Builder.getPtrTy(SI->getPointerAddressSpace());
       Type *Tys[] = {PtrTy, SubVecTy};
-      Function *VstNFunc =
-          Intrinsic::getDeclaration(SI->getModule(), StoreInts, Tys);
 
       SmallVector<Value *, 6> Ops;
       Ops.push_back(BaseAddr);
       append_range(Ops, Shuffles);
       for (unsigned F = 0; F < Factor; F++) {
         Ops.push_back(Builder.getInt32(F));
-        Builder.CreateCall(VstNFunc, Ops);
+        Builder.CreateIntrinsic(StoreInts, Tys, Ops);
         Ops.pop_back();
       }
     }

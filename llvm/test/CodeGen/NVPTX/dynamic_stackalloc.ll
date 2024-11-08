@@ -18,7 +18,7 @@
 ; CHECK-32-NEXT:  cvta.local.u32  %r[[ALLOCA]], %r[[ALLOCA]];
 ; CHECK-32-NEXT:  { // callseq 0, 0
 ; CHECK-32-NEXT:  .param .b32 param0;
-; CHECK-32-NEXT:  st.param.b32  [param0+0], %r[[ALLOCA]];
+; CHECK-32-NEXT:  st.param.b32  [param0], %r[[ALLOCA]];
 
 ; CHECK-64:       ld.param.u64  %rd[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
 ; CHECK-64-NEXT:  add.s64 %rd[[SIZE2:[0-9]]], %rd[[SIZE]], 7;
@@ -27,7 +27,7 @@
 ; CHECK-64-NEXT:  cvta.local.u64  %rd[[ALLOCA]], %rd[[ALLOCA]];
 ; CHECK-64-NEXT:  { // callseq 0, 0
 ; CHECK-64-NEXT:  .param .b64 param0;
-; CHECK-64-NEXT:  st.param.b64  [param0+0], %rd[[ALLOCA]];
+; CHECK-64-NEXT:  st.param.b64  [param0], %rd[[ALLOCA]];
 
 ; CHECK-NEXT:     .param .b32 retval0;
 ; CHECK-NEXT:     call.uni (retval0),

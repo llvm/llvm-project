@@ -245,8 +245,9 @@ public:
   /// optimization and code generation without any link-time optimization. It
   /// typically correspond to frontend "-O[123]" options for optimization
   /// levels \c O1, \c O2 and \c O3 resp.
-  ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                                  bool LTOPreLink = false);
+  ModulePassManager buildPerModuleDefaultPipeline(
+      OptimizationLevel Level,
+      ThinOrFullLTOPhase Phase = ThinOrFullLTOPhase::None);
 
   /// Build a fat object default optimization pipeline.
   ///
@@ -296,8 +297,9 @@ public:
   /// Build an O0 pipeline with the minimal semantically required passes.
   ///
   /// This should only be used for non-LTO and LTO pre-link pipelines.
-  ModulePassManager buildO0DefaultPipeline(OptimizationLevel Level,
-                                           bool LTOPreLink = false);
+  ModulePassManager
+  buildO0DefaultPipeline(OptimizationLevel Level,
+                         ThinOrFullLTOPhase Phase = ThinOrFullLTOPhase::None);
 
   /// Build the default `AAManager` with the default alias analysis pipeline
   /// registered.
@@ -478,7 +480,8 @@ public:
   /// This extension point allows adding optimization right after passes that do
   /// basic simplification of the input IR.
   void registerPipelineEarlySimplificationEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase)> &C) {
     PipelineEarlySimplificationEPCallbacks.push_back(C);
   }
 
@@ -487,7 +490,8 @@ public:
   /// This extension point allows adding optimizations before the function
   /// optimization pipeline.
   void registerOptimizerEarlyEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase Phase)> &C) {
     OptimizerEarlyEPCallbacks.push_back(C);
   }
 
@@ -496,7 +500,8 @@ public:
   /// This extension point allows adding optimizations at the very end of the
   /// function optimization pipeline.
   void registerOptimizerLastEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase)> &C) {
     OptimizerLastEPCallbacks.push_back(C);
   }
 
@@ -627,9 +632,11 @@ public:
   void invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
                                         OptimizationLevel Level);
   void invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
-                                       OptimizationLevel Level);
+                                       OptimizationLevel Level,
+                                       ThinOrFullLTOPhase Phase);
   void invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
-                                      OptimizationLevel Level);
+                                      OptimizationLevel Level,
+                                      ThinOrFullLTOPhase Phase);
   void invokeFullLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
                                                       OptimizationLevel Level);
   void invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
@@ -637,7 +644,8 @@ public:
   void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                       OptimizationLevel Level);
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
-                                                    OptimizationLevel Level);
+                                                    OptimizationLevel Level,
+                                                    ThinOrFullLTOPhase Phase);
 
   static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
     if (!Name.consume_front(PassName))
@@ -752,9 +760,13 @@ private:
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
   // Module callbacks
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       OptimizerEarlyEPCallbacks;
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       OptimizerLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       FullLinkTimeOptimizationEarlyEPCallbacks;
@@ -762,7 +774,9 @@ private:
       FullLinkTimeOptimizationLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       PipelineEarlySimplificationEPCallbacks;
 
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>

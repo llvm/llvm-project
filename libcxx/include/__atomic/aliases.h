@@ -14,9 +14,10 @@
 #include <__atomic/contention_t.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/make_unsigned.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -37,12 +38,12 @@ using atomic_long   = atomic<long>;
 using atomic_ulong  = atomic<unsigned long>;
 using atomic_llong  = atomic<long long>;
 using atomic_ullong = atomic<unsigned long long>;
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 using atomic_char8_t = atomic<char8_t>;
 #endif
 using atomic_char16_t = atomic<char16_t>;
 using atomic_char32_t = atomic<char32_t>;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 using atomic_wchar_t = atomic<wchar_t>;
 #endif
 

@@ -7243,7 +7243,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
-    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
+    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
     Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;
