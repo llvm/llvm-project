@@ -989,27 +989,16 @@ def skipUnlessAArch64MTELinuxCompiler(func):
 
     def is_toolchain_with_mte():
         compiler_path = lldbplatformutil.getCompiler()
-        f_src = tempfile.NamedTemporaryFile(delete=False)
-        f_out = tempfile.NamedTemporaryFile(delete=False)
+        f = tempfile.NamedTemporaryFile(delete=False)
         if lldbplatformutil.getPlatform() == "windows":
             return "MTE tests are not compatible with 'windows'"
 
         # Note hostos may be Windows.
-        f_src.close()
-        f_out.close()
+        f.close()
 
-        with open(f_src.name, "w") as f:
-            f.write("int main() {}")
-        cmd = f"{compiler_path} -x c -o {f_out.name} {f_src.name}"
-        if os.popen(cmd).close() is not None:
-            try:
-                os.remove(f_src.name)
-            except OSError:
-                pass
-            try:
-                os.remove(f_out.name)
-            except OSError:
-                pass
+        cmd = f"{compiler_path} -x c -o {f.name} -"
+        if subprocess.run(cmd, input="int main() {}".encode()).returncode != 0:
+            os.remove(f.name)
             # Cannot compile at all, don't skip the test
             # so that we report the broken compiler normally.
             return None
@@ -1024,21 +1013,10 @@ def skipUnlessAArch64MTELinuxCompiler(func):
             int main() {
                 void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
             }"""
-        with open(f_src.name, "w") as f:
-            f.write(test_src)
-        cmd = (
-            f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f_out.name} {f_src.name}"
-        )
-        res = os.popen(cmd).close()
-        try:
-            os.remove(f_src.name)
-        except OSError:
-            pass
-        try:
-            os.remove(f_out.name)
-        except OSError:
-            pass
-        if res is not None:
+        cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.name} -"
+        res = subprocess.run(cmd, input=test_src.encode())
+        os.remove(f.name)
+        if res.returncode != 0:
             return "Toolchain does not support MTE"
         return None
 
