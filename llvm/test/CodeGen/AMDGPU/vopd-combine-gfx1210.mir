@@ -3433,3 +3433,34 @@ body:             |
     $vgpr5 = V_BFM_B32_e64 $vgpr0, $vgpr1, implicit $exec
     $vgpr6 = V_FMAC_F32_e64 0, $vgpr0, 1, $vgpr1, 0, $vgpr6, 0, 0, implicit $mode, implicit $exec
 ...
+
+---
+name:            vopd_combine_cndmask_e64_neg_cndmask_e64_neg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; SCHED-LABEL: name: vopd_combine_cndmask_e64_neg_cndmask_e64_neg
+    ; SCHED: $vgpr0 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr1 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr3 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vcc = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr6 = V_CNDMASK_B32_e64 1, killed $vgpr0, 0, killed $vgpr1, $vcc_lo, implicit $exec
+    ; SCHED-NEXT: $vgpr7 = V_CNDMASK_B32_e64 1, killed $vgpr3, 0, killed $vgpr4, killed $vcc_lo, implicit $exec
+    ;
+    ; PAIR-LABEL: name: vopd_combine_cndmask_e64_neg_cndmask_e64_neg
+    ; PAIR: $vgpr0 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr1 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr3 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vcc = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr6, $vgpr7 = V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_e96_gfx1210 1, killed $vgpr0, 0, killed $vgpr1, $vcc_lo, 1, killed $vgpr3, 0, killed $vgpr4, killed $vcc_lo, implicit $exec, implicit $exec, implicit $exec
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+    $vcc = IMPLICIT_DEF
+    $vgpr6 = V_CNDMASK_B32_e64 1, $vgpr0, 0, $vgpr1, $vcc_lo, implicit $exec
+    $vgpr7 = V_CNDMASK_B32_e64 1, $vgpr3, 0, $vgpr4, $vcc_lo, implicit $exec
+...

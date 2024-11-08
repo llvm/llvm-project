@@ -970,6 +970,10 @@ v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_cndmask_b32 v7, src_scc, v5, v
 // GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
+v_dual_cndmask_b32 v28, -v15, v15, s46 :: v_dual_cndmask_b32 v29, -v13, -v13, s46
+// GFX1210: v_dual_cndmask_b32 v28, -v15, v15, s46 :: v_dual_cndmask_b32 v29, -v13, -v13, s46 ; encoding: [0x0f,0x91,0x24,0xcf,0x0d,0x33,0x0f,0x2e,0x1c,0x0d,0x2e,0x1d]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
 v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_fmac_f32 v7, v1, v3
 // GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_fmac_f32 v7, v1, v3 ; encoding: [0x04,0x01,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error

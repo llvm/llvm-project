@@ -713,8 +713,8 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 
 def VOP2e_I32_I32_I32_I1 : VOP2e_SGPR<[i32, i32, i32, i1]> {
   let Src2VOPD3 = SSrc_i1;
-  let InsVOPD3X = (ins Int32VCSrcInputMods:$src0X_modifiers, Src0VOPD3:$src0X, FP32VRegSrcInputMods:$vsrc1X_modifiers, Src1VOPD3:$vsrc1X, Src2VOPD3:$vsrc2X);
-  let InsVOPD3Y = (ins Int32VCSrcInputMods:$src0Y_modifiers, Src0VOPD3:$src0Y, FP32VRegSrcInputMods:$vsrc1Y_modifiers, Src1VOPD3:$vsrc1Y, Src2VOPD3:$vsrc2Y);
+  let InsVOPD3X = (ins FP32VCSrcInputMods:$src0X_modifiers, Src0VOPD3:$src0X, FP32VRegSrcInputMods:$vsrc1X_modifiers, Src1VOPD3:$vsrc1X, Src2VOPD3:$vsrc2X);
+  let InsVOPD3Y = (ins FP32VCSrcInputMods:$src0Y_modifiers, Src0VOPD3:$src0Y, FP32VRegSrcInputMods:$vsrc1Y_modifiers, Src1VOPD3:$vsrc1Y, Src2VOPD3:$vsrc2Y);
   let AsmVOPD3X = "$vdstX, $src0X_modifiers, $vsrc1X_modifiers, $vsrc2X";
   let AsmVOPD3Y = "$vdstY, $src0Y_modifiers, $vsrc1Y_modifiers, $vsrc2Y";
 }

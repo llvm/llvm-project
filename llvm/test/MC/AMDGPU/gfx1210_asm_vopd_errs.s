@@ -313,3 +313,14 @@ v_dual_sub_nc_u32 v7, s1, -v0 :: v_dual_fma_f32 v255, -s105, v0, v1
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 // GFX12-NEXT:{{^}}v_dual_sub_nc_u32 v7, s1, -v0 :: v_dual_fma_f32 v255, -s105, v0, v1
 // GFX12-NEXT:{{^}}                          ^
+
+v_dual_cndmask_b32 v28, sext(v15), v15, s46 :: v_dual_cndmask_b32 v29, v13, -v13, s46
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// GFX12-NEXT:{{^}}v_dual_cndmask_b32 v28, sext(v15), v15, s46 :: v_dual_cndmask_b32 v29, v13, -v13, s46
+// GFX12-NEXT:{{^}}                        ^
+
+
+v_dual_cndmask_b32 v28, -v15, v15, s46 :: v_dual_cndmask_b32 v29, sext(v13), -v13, s46
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// GFX12-NEXT:{{^}}v_dual_cndmask_b32 v28, -v15, v15, s46 :: v_dual_cndmask_b32 v29, sext(v13), -v13, s46
+// GFX12-NEXT:{{^}}                                                                  ^
