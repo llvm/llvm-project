@@ -67,11 +67,9 @@ types specified within an ignorelist.
     int a = 2147483647; // INT_MAX
     ++a;                // Normally, an overflow with -fsanitize=signed-integer-overflow
   }
-
   $ cat ignorelist.txt
   [signed-integer-overflow]
   type:int
-
   $ clang -fsanitize=signed-integer-overflow -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
   # no signed-integer-overflow error
 
