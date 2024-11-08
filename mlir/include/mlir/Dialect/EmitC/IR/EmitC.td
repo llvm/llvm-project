@@ -1111,6 +1111,8 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
     ```mlir
     // Global variable with an initial value.
     emitc.global @x : !emitc.array<2xf32> = dense<0.0>
+    // Global variable with an initial values.
+    emitc.global @x : !emitc.array<3xi32> = dense<[0, 1, 2]>
     // External global variable
     emitc.global extern @x : !emitc.array<2xf32>
     // Constant global variable with internal linkage
