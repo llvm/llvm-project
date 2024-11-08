@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) {
   //   k = round(x * 32)
   //   y = x * 32 - k
   //
-  // Once k and y are computed, we then deduce the answer by the sine of sum
+  // Once k and y are computed, we then deduce the answer by the cosine of sum
   // formula:
   //   cos(x * pi) = cos((k + y) * pi/32)
   //               = cos(k * pi/32) * cos(y * pi/32) +
