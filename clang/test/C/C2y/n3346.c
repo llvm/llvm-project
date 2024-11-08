@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -std=c2y -Wall -pedantic -ffreestanding %s
-// RUN: %clang_cc1 -verify=expected,ped -Wall -pedantic -ffreestanding %s
+// RUN: %clang_cc1 -std=c99 -verify=expected,ped -Wall -pedantic -ffreestanding %s
 
 /* WG14 N3346: Yes
  * Slay Some Earthly Demons VIII
@@ -33,8 +33,6 @@ void test1(void) {
 
 void test2(void) {
   typedef __WCHAR_TYPE__ wchar_t;
-  typedef __CHAR16_TYPE__ char16_t;
-  typedef __CHAR32_TYPE__ char32_t;
 
   // The initializer for an array shall be either a string literal, optionally
   // enclosed in braces, or a brace-enclosed list of initializers for the
@@ -54,6 +52,9 @@ void test2(void) {
   wchar_t str8[] = { L"string literal" };
 
 #if __STDC_VERSION__ >= 201112L
+  typedef __CHAR16_TYPE__ char16_t;
+  typedef __CHAR32_TYPE__ char32_t;
+
   char str3[] = u8"string literal";
   char str4[] = { u8"string literal" };
 
@@ -61,12 +62,13 @@ void test2(void) {
   char16_t str10[] = { u"string literal" };
   char32_t str11[] = U"string literal";
   char32_t str12[] = { U"string literal" };
-#endif
 
-  wchar_t str13[] = "nope";      // expected-error {{initializing wide char array with non-wide string literal}}
-  wchar_t str14[] = { "nope" };  // expected-error-re {{incompatible pointer to integer conversion initializing 'wchar_t' (aka '{{.*}}') with an expression of type 'char[5]'}}
   char16_t str15[] = "nope";     // expected-error {{initializing wide char array with non-wide string literal}}
   char16_t str16[] = { "nope" }; // expected-error-re {{incompatible pointer to integer conversion initializing 'char16_t' (aka '{{.*}}') with an expression of type 'char[5]'}}
   char32_t str17[] = "nope";     // expected-error {{initializing wide char array with non-wide string literal}}
   char32_t str18[] = { "nope" }; // expected-error-re {{incompatible pointer to integer conversion initializing 'char32_t' (aka '{{.*}}') with an expression of type 'char[5]'}}
+#endif
+
+  wchar_t str13[] = "nope";      // expected-error {{initializing wide char array with non-wide string literal}}
+  wchar_t str14[] = { "nope" };  // expected-error-re {{incompatible pointer to integer conversion initializing 'wchar_t' (aka '{{.*}}') with an expression of type 'char[5]'}}
 }
