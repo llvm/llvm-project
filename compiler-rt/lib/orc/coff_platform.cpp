@@ -410,7 +410,7 @@ Error COFFPlatformRuntimeState::dlopenInitialize(
 }
 
 Error COFFPlatformRuntimeState::dlupdateImpl(void *DSOHandle) {
-  // Try to find JITDylib state by name.
+  // Try to find JITDylib state by header.
   auto *JDS = getJITDylibStateByHeader(DSOHandle);
 
   if (!JDS) {
@@ -432,9 +432,9 @@ Error COFFPlatformRuntimeState::dlupdateFull(JITDylibState &JDS) {
   // Call back to the JIT to push the initializers.
   Expected<COFFJITDylibDepInfoMap> DepInfoMap((COFFJITDylibDepInfoMap()));
   if (auto Err = WrapperFunction<SPSExpected<SPSCOFFJITDylibDepInfoMap>(
-          SPSExecutorAddr)>::call(&__orc_rt_coff_push_initializers_tag,
-                                  DepInfoMap,
-                                  ExecutorAddr::fromPtr(JDS.Header)))
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_coff_push_initializers_tag), DepInfoMap,
+               ExecutorAddr::fromPtr(JDS.Header)))
     return Err;
   if (!DepInfoMap)
     return DepInfoMap.takeError();
