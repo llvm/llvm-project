@@ -822,7 +822,7 @@ constexpr Float128 BIG_COEFFS[4]{
     {Sign::NEG, -128, 0x80000000'00000000'00000000'00000000_u128},
 };
 
-LIBC_INLINE double log1p_accurate(int e_x, int index,
+[[maybe_unused]] LIBC_INLINE double log1p_accurate(int e_x, int index,
                                   fputil::DoubleDouble m_x) {
   Float128 e_x_f128(static_cast<float>(e_x));
   Float128 sum = fputil::quick_mul(LOG_2, e_x_f128);
@@ -975,16 +975,16 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   double err_hi = ERR_HI[hi == 0.0];
 
   // Scaling factior = 2^(-xh_bits.get_exponent())
-  uint64_t s_u = (static_cast<uint64_t>(EXP_BIAS) << (FRACTION_LEN + 1)) -
-                 (x_u & FPBits_t::EXP_MASK);
-  // When the exponent of x is 2^1023, its inverse, 2^(-1023), is subnormal.
-  const double EXPONENT_CORRECTION[2] = {0.0, 0x1.0p-1023};
-  double scaling = FPBits_t(s_u).get_val() + EXPONENT_CORRECTION[s_u == 0];
+  int64_t s_u = static_cast<int64_t>(x_u & FPBits_t::EXP_MASK) -
+                (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
   // Normalize arguments:
   //   1 <= m_dd.hi < 2
   //   |m_dd.lo| < 2^-52.
   // This is exact.
-  fputil::DoubleDouble m_dd{scaling * x_dd.lo, scaling * x_dd.hi};
+  uint64_t m_hi = static_cast<uint64_t>(static_cast<int64_t>(x_u) - s_u);
+  uint64_t m_lo = (x_dd.lo != 0.0) ? FPBits_t(x_dd.lo).uintval() :
+                  static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u);
+  fputil::DoubleDouble m_dd{FPBits_t(m_lo).get_val(), FPBits_t(m_hi).get_val()};
 
   // Perform range reduction:
   //   r * m - 1 = r * (m_dd.hi + m_dd.lo) - 1
