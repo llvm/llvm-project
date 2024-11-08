@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 

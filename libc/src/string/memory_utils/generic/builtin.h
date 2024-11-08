@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
 #include <stddef.h> // size_t
