@@ -2204,6 +2204,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "exp10m1f",
+    additional_deps = [
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
     name = "exp2",
     additional_deps = [
         ":__support_fputil_double_double",
