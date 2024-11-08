@@ -3897,6 +3897,12 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
 void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                       MachineBasicBlock::iterator End,
                                       unsigned NumRegionInstrs) {
+  const MachineFunction &MF = *Begin->getMF();
+
+  // Allow the subtarget to override default policy.
+  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, NumRegionInstrs);
+
+  // After subtarget overrides, apply command line options.
   if (PostRADirection == MISchedPostRASched::TopDown) {
     RegionPolicy.OnlyTopDown = true;
     RegionPolicy.OnlyBottomUp = false;
