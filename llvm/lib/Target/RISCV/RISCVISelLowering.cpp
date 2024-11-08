@@ -17085,7 +17085,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
     // fold (bitconvert (fabs x)) -> (and (bitconvert x), (not signbit))
     if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
-        !Op0.getNode()->hasOneUse())
+        !Op0.getNode()->hasOneUse() || Subtarget.hasStdExtZdinx())
       break;
     SDValue NewSplitF64 =
         DAG.getNode(RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32),
