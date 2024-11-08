@@ -1703,6 +1703,13 @@ public:
   void Unparse(const IntrinsicStmt &x) { // R1519
     Word("INTRINSIC :: "), Walk(x.v, ", ");
   }
+  void Unparse(const CallStmt::StarOrExpr &x) {
+    if (x.v) {
+      Walk(*x.v);
+    } else {
+      Word("*");
+    }
+  }
   void Unparse(const CallStmt::Chevrons &x) { // CUDA
     Walk(std::get<0>(x.t)); // grid
     Word(","), Walk(std::get<1>(x.t)); // block

@@ -3066,11 +3066,17 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
     return false;
   }};
   if (const auto &chevrons{call.chevrons}) {
-    if (auto expr{Analyze(std::get<0>(chevrons->t))};
-        expr && checkLaunchArg(*expr, "grid")) {
-      result.emplace_back(*expr);
+    auto &starOrExpr{std::get<0>(chevrons->t)};
+    if (starOrExpr.v) {
+      if (auto expr{Analyze(*starOrExpr.v)};
+          expr && checkLaunchArg(*expr, "grid")) {
+        result.emplace_back(*expr);
+      } else {
+        return std::nullopt;
+      }
     } else {
-      return std::nullopt;
+      result.emplace_back(
+          AsGenericExpr(evaluate::Constant<evaluate::CInteger>{-1}));
     }
     if (auto expr{Analyze(std::get<1>(chevrons->t))};
         expr && checkLaunchArg(*expr, "block")) {
