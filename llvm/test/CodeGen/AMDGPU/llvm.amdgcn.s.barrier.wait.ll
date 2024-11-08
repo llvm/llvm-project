@@ -458,7 +458,7 @@ define void @test2_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspa
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst m0
 ; GFX12-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
+; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v2, v4, v2 :: v_dual_cndmask_b32 v3, v5, v3
 ; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-SDAG-NEXT:    global_load_b32 v1, v[2:3], off
