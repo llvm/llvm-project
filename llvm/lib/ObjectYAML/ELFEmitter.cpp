@@ -1655,7 +1655,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     VerDef.vd_flags = E.Flags.value_or(0);
     VerDef.vd_ndx = E.VersionNdx.value_or(0);
     VerDef.vd_hash = E.Hash.value_or(0);
-    VerDef.vd_aux = sizeof(Elf_Verdef);
+    VerDef.vd_aux = E.VDAux.value_or(sizeof(Elf_Verdef));
     VerDef.vd_cnt = E.VerNames.size();
     if (I == Section.Entries->size() - 1)
       VerDef.vd_next = 0;
