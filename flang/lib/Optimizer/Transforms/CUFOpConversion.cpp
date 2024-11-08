@@ -321,9 +321,15 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
             builder.createIntegerConstant(loc, builder.getIndexType(), width);
       } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
                      op.getInType())) {
-        mlir::Value width = builder.createIntegerConstant(
-            loc, builder.getIndexType(),
-            computeWidth(loc, seqTy.getEleTy(), kindMap));
+        std::size_t size = 0;
+        if (fir::isa_derived(seqTy.getEleTy())) {
+          mlir::Type structTy = typeConverter->convertType(seqTy.getEleTy());
+          size = dl->getTypeSizeInBits(structTy) / 8;
+        } else {
+          size = computeWidth(loc, seqTy.getEleTy(), kindMap);
+        }
+        mlir::Value width =
+            builder.createIntegerConstant(loc, builder.getIndexType(), size);
         mlir::Value nbElem;
         if (fir::sequenceWithNonConstantShape(seqTy)) {
           assert(!op.getShape().empty() && "expect shape with dynamic arrays");
@@ -580,8 +586,9 @@ struct CUFDataTransferOpConversion
               loc, i64Ty, seqTy.getConstantArraySize());
       }
       unsigned width = 0;
-      if (fir::isa_derived(dstTy)) {
-        mlir::Type structTy = typeConverter->convertType(dstTy);
+      if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
+        mlir::Type structTy =
+            typeConverter->convertType(fir::unwrapSequenceType(dstTy));
         width = dl->getTypeSizeInBits(structTy) / 8;
       } else {
         width = computeWidth(loc, dstTy, kindMap);
