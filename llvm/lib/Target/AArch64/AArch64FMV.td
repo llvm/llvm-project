@@ -78,7 +78,7 @@ def : FMVExtension<"sme2", "FEAT_SME2", "+sme2,+sme,+bf16", 580>;
 def : FMVExtension<"ssbs", "FEAT_SSBS2", "+ssbs", 490>;
 def : FMVExtension<"sve", "FEAT_SVE", "+sve,+fullfp16,+fp-armv8,+neon", 310>;
 def : FMVExtension<"sve2", "FEAT_SVE2", "+sve2,+sve,+fullfp16,+fp-armv8,+neon", 370>;
-def : FMVExtension<"sve2-aes", "FEAT_SVE_PMULL128", "+sve2,+sve,+aes,+sve-aes,+fullfp16,+fp-armv8,+neon", 380>;
+def : FMVExtension<"sve2-aes", "FEAT_SVE_PMULL128", "+sve2,+sve,+aes,+sve2-aes,+fullfp16,+fp-armv8,+neon", 380>;
 def : FMVExtension<"sve2-bitperm", "FEAT_SVE_BITPERM", "+sve2,+sve,+sve2-bitperm,+fullfp16,+fp-armv8,+neon", 400>;
 def : FMVExtension<"sve2-sha3", "FEAT_SVE_SHA3", "+sve2,+sve,+sve2-sha3,+fullfp16,+fp-armv8,+neon", 410>;
 def : FMVExtension<"sve2-sm4", "FEAT_SVE_SM4", "+sve2,+sve,+sve2-sm4,+fullfp16,+fp-armv8,+neon", 420>;

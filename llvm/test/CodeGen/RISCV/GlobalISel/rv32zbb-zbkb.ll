@@ -143,8 +143,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    bltu a6, a4, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    addi a5, a6, -32
-; CHECK-NEXT:    sll a7, a0, a5
+; CHECK-NEXT:    sll a7, a0, a6
 ; CHECK-NEXT:    j .LBB7_3
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    sll a3, a0, a2
@@ -162,8 +161,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    andi a6, a5, 63
 ; CHECK-NEXT:    bltu a6, a4, .LBB7_7
 ; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    addi a7, a6, -32
-; CHECK-NEXT:    srl a7, a1, a7
+; CHECK-NEXT:    srl a7, a1, a6
 ; CHECK-NEXT:    bnez a6, .LBB7_8
 ; CHECK-NEXT:    j .LBB7_9
 ; CHECK-NEXT:  .LBB7_7:
@@ -220,8 +218,7 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    addi a3, a5, -32
-; CHECK-NEXT:    srl a6, a1, a3
+; CHECK-NEXT:    srl a6, a1, a5
 ; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    bnez a5, .LBB9_3
 ; CHECK-NEXT:    j .LBB9_4
@@ -255,8 +252,7 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_6
 ; CHECK-NEXT:  .LBB9_8:
 ; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    addi a6, a5, -32
-; CHECK-NEXT:    sll a0, a0, a6
+; CHECK-NEXT:    sll a0, a0, a5
 ; CHECK-NEXT:    beqz a5, .LBB9_10
 ; CHECK-NEXT:  .LBB9_9:
 ; CHECK-NEXT:    mv a1, a0
