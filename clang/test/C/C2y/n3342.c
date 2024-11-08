@@ -23,7 +23,9 @@ const volatile f three; /* expected-warning {{'const' qualifier on function type
                            clang-warning {{'volatile' qualifier on function type 'f' (aka 'int (void)') has no effect and is a Clang extension}}
                          */
 
+#if __STDC_VERSION__ >= 201112L
 // Atomic types have an explicit constraint making it ill-formed.
 _Atomic f four;   // both-error {{_Atomic cannot be applied to function type 'f' (aka 'int (void)')}}
+#endif
 
 // There's no point to testing 'restrict' because that requires a pointer type.
