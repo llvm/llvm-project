@@ -41,7 +41,7 @@ DISASM-NEXT: 180001000: d65f03c0     ret
 DISASM-EMPTY:
 
 RUN: llvm-readobj --hex-dump=.test ref-alias-1.dll | FileCheck -check-prefix=TESTSEC %s
-TESTSEC: 0x180004000 00100000
+TESTSEC: 0x180005000 00100000
 
 The same test, but with a different input order.
 RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-alias-2.dll func.lib ref-alias.obj loadconfig-arm64ec.obj

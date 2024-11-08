@@ -90,6 +90,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
 
   const LLT nxv1s1 = LLT::scalable_vector(1, s1);
   const LLT nxv2s1 = LLT::scalable_vector(2, s1);
@@ -202,8 +203,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   getActionDefinitionsBuilder({G_ROTL, G_ROTR})
-      .legalFor(ST.hasStdExtZbb() || ST.hasStdExtZbkb(),
-                {{s32, s32}, {sXLen, sXLen}})
+      .legalFor(ST.hasStdExtZbb() || ST.hasStdExtZbkb(), {{sXLen, sXLen}})
+      .customFor(ST.is64Bit() && (ST.hasStdExtZbb() || ST.hasStdExtZbkb()),
+                 {{s32, s32}})
       .lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
@@ -224,7 +226,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   auto &CountZerosUndefActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
   if (ST.hasStdExtZbb()) {
-    CountZerosActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+    CountZerosActions.legalFor({{sXLen, sXLen}})
+        .customFor({{s32, s32}})
         .clampScalar(0, s32, sXLen)
         .widenScalarToNextPow2(0)
         .scalarSameSizeAs(1, 0);
@@ -236,9 +239,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
   if (ST.hasStdExtZbb()) {
-    CTPOPActions.legalFor({{s32, s32}, {sXLen, sXLen}})
-        .clampScalar(0, s32, sXLen)
-        .widenScalarToNextPow2(0)
+    CTPOPActions.legalFor({{sXLen, sXLen}})
+        .clampScalar(0, sXLen, sXLen)
         .scalarSameSizeAs(1, 0);
   } else {
     CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
@@ -532,16 +534,21 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalIf(typeIsScalarFPArith(0, ST))
       .lowerFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen)
-      .libcall();
+  auto &FPToIActions = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI});
+  FPToIActions.legalIf(all(typeInSet(0, {sXLen}), typeIsScalarFPArith(1, ST)));
+  if (ST.is64Bit())
+    FPToIActions.customIf(all(typeInSet(0, {s32}), typeIsScalarFPArith(1, ST)));
+  FPToIActions.widenScalarToNextPow2(0)
+      .minScalar(0, s32)
+      .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
+      .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {sXLen})))
       .widenScalarToNextPow2(1)
-      .clampScalar(1, s32, sXLen);
+      .minScalar(1, sXLen)
+      .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
+      .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.
@@ -1154,6 +1161,25 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+static unsigned getRISCVWOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case TargetOpcode::G_ROTL:
+    return RISCV::G_ROLW;
+  case TargetOpcode::G_ROTR:
+    return RISCV::G_RORW;
+  case TargetOpcode::G_CTLZ:
+    return RISCV::G_CLZW;
+  case TargetOpcode::G_CTTZ:
+    return RISCV::G_CTZW;
+  case TargetOpcode::G_FPTOSI:
+    return RISCV::G_FCVT_W_RV64;
+  case TargetOpcode::G_FPTOUI:
+    return RISCV::G_FCVT_WU_RV64;
+  }
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -1189,6 +1215,34 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
+  }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RTZ));
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
