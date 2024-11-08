@@ -4106,6 +4106,155 @@ public:
 
 } // namespace
 
+namespace {
+class LazySpecializationInfoLookupTrait {
+  ASTWriter &Writer;
+  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 64> Specs;
+
+public:
+  using key_type = unsigned;
+  using key_type_ref = key_type;
+
+  /// A start and end index into Specs, representing a sequence of decls.
+  using data_type = std::pair<unsigned, unsigned>;
+  using data_type_ref = const data_type &;
+
+  using hash_value_type = unsigned;
+  using offset_type = unsigned;
+
+  explicit LazySpecializationInfoLookupTrait(ASTWriter &Writer)
+      : Writer(Writer) {}
+
+  template <typename Col> data_type getData(Col &&C) {
+    unsigned Start = Specs.size();
+    for (auto *D : C) {
+      bool IsPartial = isa<ClassTemplatePartialSpecializationDecl,
+                           VarTemplatePartialSpecializationDecl>(D);
+      NamedDecl *ND = getDeclForLocalLookup(
+                           Writer.getLangOpts(), const_cast<NamedDecl *>(D));
+      Specs.push_back({GlobalDeclID(Writer.GetDeclRef(ND).getRawValue()),
+                       IsPartial});
+    }
+    return std::make_pair(Start, Specs.size());
+  }
+
+  data_type ImportData(
+      const reader::LazySpecializationInfoLookupTrait::data_type &FromReader) {
+    unsigned Start = Specs.size();
+    for (auto ID : FromReader)
+      Specs.push_back(ID);
+    return std::make_pair(Start, Specs.size());
+  }
+
+  static bool EqualKey(key_type_ref a, key_type_ref b) { return a == b; }
+
+  hash_value_type ComputeHash(key_type Name) { return Name; }
+
+  void EmitFileRef(raw_ostream &Out, ModuleFile *F) const {
+    assert(Writer.hasChain() &&
+           "have reference to loaded module file but no chain?");
+
+    using namespace llvm::support;
+    endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
+                            llvm::endianness::little);
+  }
+
+  std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &Out,
+                                                  key_type HashValue,
+                                                  data_type_ref Lookup) {
+    // 4 bytes for each slot.
+    unsigned KeyLen = 4;
+    unsigned DataLen = serialization::reader::LazySpecializationInfo::Length *
+                       (Lookup.second - Lookup.first);
+
+    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type HashValue, unsigned) {
+    using namespace llvm::support;
+
+    endian::Writer LE(Out, llvm::endianness::little);
+    LE.write<uint32_t>(HashValue);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref, data_type Lookup,
+                unsigned DataLen) {
+    using namespace llvm::support;
+
+    endian::Writer LE(Out, llvm::endianness::little);
+    uint64_t Start = Out.tell();
+    (void)Start;
+    for (unsigned I = Lookup.first, N = Lookup.second; I != N; ++I) {
+      LE.write<DeclID>(Specs[I].ID.getRawValue());
+      LE.write<bool>(Specs[I].IsPartial);
+    }
+    assert(Out.tell() - Start == DataLen && "Data length is wrong");
+  }
+};
+
+unsigned CalculateODRHashForSpecs(const Decl *Spec) {
+  ArrayRef<TemplateArgument> Args;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Spec))
+    Args = CTSD->getTemplateArgs().asArray();
+  else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(Spec))
+    Args = VTSD->getTemplateArgs().asArray();
+  else if (auto *FD = dyn_cast<FunctionDecl>(Spec))
+    Args = FD->getTemplateSpecializationArgs()->asArray();
+  else
+    llvm_unreachable("New Specialization Kind?");
+
+  return TemplateArgumentList::ComputeODRHash(Args);
+}
+} // namespace
+
+void ASTWriter::GenerateSpecializationInfoLookupTable(
+    const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+    llvm::SmallVectorImpl<char> &LookupTable) {
+  assert(D->isFirstDecl());
+
+  // Create the on-disk hash table representation.
+  MultiOnDiskHashTableGenerator<reader::LazySpecializationInfoLookupTrait,
+                                LazySpecializationInfoLookupTrait>
+      Generator;
+  LazySpecializationInfoLookupTrait Trait(*this);
+
+  llvm::DenseMap<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
+      SpecializationMaps;
+
+  for (auto *Specialization : Specializations) {
+    unsigned HashedValue = CalculateODRHashForSpecs(Specialization);
+
+    auto Iter = SpecializationMaps.find(HashedValue);
+    if (Iter == SpecializationMaps.end())
+      Iter = SpecializationMaps
+                 .try_emplace(HashedValue,
+                              llvm::SmallVector<const NamedDecl *, 4>())
+                 .first;
+
+    Iter->second.push_back(cast<NamedDecl>(Specialization));
+  }
+
+  for (auto Iter : SpecializationMaps)
+    Generator.insert(Iter.first, Trait.getData(Iter.second), Trait);
+
+  auto *Lookups =
+      Chain ? Chain->getLoadedSpecializationsLookupTables(D) : nullptr;
+  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+}
+
+uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
+    const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations) {
+
+  llvm::SmallString<4096> LookupTable;
+  GenerateSpecializationInfoLookupTable(D, Specializations, LookupTable);
+
+  uint64_t Offset = Stream.GetCurrentBitNo();
+  RecordData::value_type Record[] = {DECL_SPECIALIZATIONS};
+  Stream.EmitRecordWithBlob(DeclSpecializationsAbbrev, Record, LookupTable);
+
+  return Offset;
+}
+
 bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
                                        DeclContext *DC) {
   return Result.hasExternalDecls() &&
@@ -5650,7 +5799,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   // Keep writing types, declarations, and declaration update records
   // until we've emitted all of them.
   RecordData DeclUpdatesOffsetsRecord;
-  Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/5);
+  Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/6);
   DeclTypesBlockStartOffset = Stream.GetCurrentBitNo();
   WriteTypeAbbrevs();
   WriteDeclAbbrevs();
@@ -5724,6 +5873,9 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
                       FunctionToLambdaMapAbbrev);
   }
 
+  if (!SpecializationsUpdates.empty())
+    WriteSpecializationsUpdates();
+
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the
   // translation unit that do not come from other AST files.
@@ -5765,6 +5917,26 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   // Write the visible updates to DeclContexts.
   for (auto *DC : UpdatedDeclContexts)
     WriteDeclContextVisibleUpdate(Context, DC);
+}
+
+void ASTWriter::WriteSpecializationsUpdates() {
+  auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+  Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_SPECIALIZATION));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+  auto UpdateSpecializationAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  for (auto &SpecializationUpdate : SpecializationsUpdates) {
+    const NamedDecl *D = SpecializationUpdate.first;
+
+    llvm::SmallString<4096> LookupTable;
+    GenerateSpecializationInfoLookupTable(D, SpecializationUpdate.second,
+                                          LookupTable);
+
+    // Write the lookup table
+    RecordData::value_type Record[] = {UPDATE_SPECIALIZATION, getDeclID(D).getRawValue()};
+    Stream.EmitRecordWithBlob(UpdateSpecializationAbbrev, Record, LookupTable);
+  }
 }
 
 void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,

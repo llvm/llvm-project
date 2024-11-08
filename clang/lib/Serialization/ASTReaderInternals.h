@@ -119,6 +119,102 @@ struct DeclContextLookupTable {
   MultiOnDiskHashTable<ASTDeclContextNameLookupTrait> Table;
 };
 
+struct LazySpecializationInfo {
+  // The Decl ID for the specialization.
+  GlobalDeclID ID;
+  // Whether or not this specialization is partial.
+  bool IsPartial;
+
+  bool operator==(const LazySpecializationInfo &Other) {
+    assert(ID != Other.ID || IsPartial == Other.IsPartial);
+    return ID == Other.ID;
+  }
+
+  // Records the size record in OnDiskHashTable.
+  // sizeof() may return 8 due to align requirements.
+  static constexpr unsigned Length = sizeof(DeclID) + sizeof(IsPartial);
+};
+
+/// Class that performs lookup to specialized decls.
+class LazySpecializationInfoLookupTrait {
+  ASTReader &Reader;
+  ModuleFile &F;
+
+public:
+  // Maximum number of lookup tables we allow before condensing the tables.
+  static const int MaxTables = 4;
+
+  /// The lookup result is a list of global declaration IDs.
+  using data_type = SmallVector<LazySpecializationInfo, 4>;
+
+  struct data_type_builder {
+    data_type &Data;
+    llvm::DenseSet<LazySpecializationInfo> Found;
+
+    data_type_builder(data_type &D) : Data(D) {}
+
+    void insert(LazySpecializationInfo Info) {
+      // Just use a linear scan unless we have more than a few IDs.
+      if (Found.empty() && !Data.empty()) {
+        if (Data.size() <= 4) {
+          for (auto I : Found)
+            if (I == Info)
+              return;
+          Data.push_back(Info);
+          return;
+        }
+
+        // Switch to tracking found IDs in the set.
+        Found.insert(Data.begin(), Data.end());
+      }
+
+      if (Found.insert(Info).second)
+        Data.push_back(Info);
+    }
+  };
+  using hash_value_type = unsigned;
+  using offset_type = unsigned;
+  using file_type = ModuleFile *;
+
+  using external_key_type = unsigned;
+  using internal_key_type = unsigned;
+
+  explicit LazySpecializationInfoLookupTrait(ASTReader &Reader, ModuleFile &F)
+      : Reader(Reader), F(F) {}
+
+  static bool EqualKey(const internal_key_type &a, const internal_key_type &b) {
+    return a == b;
+  }
+
+  static hash_value_type ComputeHash(const internal_key_type &Key) {
+    return Key;
+  }
+
+  static internal_key_type GetInternalKey(const external_key_type &Name) {
+    return Name;
+  }
+
+  static std::pair<unsigned, unsigned>
+  ReadKeyDataLength(const unsigned char *&d);
+
+  internal_key_type ReadKey(const unsigned char *d, unsigned);
+
+  void ReadDataInto(internal_key_type, const unsigned char *d, unsigned DataLen,
+                    data_type_builder &Val);
+
+  static void MergeDataInto(const data_type &From, data_type_builder &To) {
+    To.Data.reserve(To.Data.size() + From.size());
+    for (LazySpecializationInfo Info : From)
+      To.insert(Info);
+  }
+
+  file_type ReadFileRef(const unsigned char *&d);
+};
+
+struct LazySpecializationInfoLookupTable {
+  MultiOnDiskHashTable<LazySpecializationInfoLookupTrait> Table;
+};
+
 /// Base class for the trait describing the on-disk hash table for the
 /// identifiers in an AST file.
 ///
@@ -287,5 +383,33 @@ using HeaderFileInfoLookupTable =
 } // namespace serialization
 
 } // namespace clang
+
+namespace llvm {
+// ID is unique in LazySpecializationInfo, it is redundant to calculate
+// IsPartial.
+template <>
+struct DenseMapInfo<clang::serialization::reader::LazySpecializationInfo> {
+  using LazySpecializationInfo =
+      clang::serialization::reader::LazySpecializationInfo;
+  using Wrapped = DenseMapInfo<clang::serialization::DeclID>;
+
+  static inline LazySpecializationInfo getEmptyKey() {
+    return {(clang::GlobalDeclID)Wrapped::getEmptyKey(), false};
+  }
+
+  static inline LazySpecializationInfo getTombstoneKey() {
+    return {(clang::GlobalDeclID)Wrapped::getTombstoneKey(), false};
+  }
+
+  static unsigned getHashValue(const LazySpecializationInfo &Key) {
+    return Wrapped::getHashValue(Key.ID.getRawValue());
+  }
+
+  static bool isEqual(const LazySpecializationInfo &LHS,
+                      const LazySpecializationInfo &RHS) {
+    return LHS.ID == RHS.ID;
+  }
+};
+} // end namespace llvm
 
 #endif // LLVM_CLANG_LIB_SERIALIZATION_ASTREADERINTERNALS_H

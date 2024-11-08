@@ -342,6 +342,9 @@ public:
   static void markIncompleteDeclChainImpl(Redeclarable<DeclT> *D);
   static void markIncompleteDeclChainImpl(...);
 
+  void ReadSpecializations(ModuleFile &M, Decl *D,
+                           llvm::BitstreamCursor &DeclsCursor);
+
   void ReadFunctionDefinition(FunctionDecl *FD);
   void Visit(Decl *D);
 
@@ -2430,6 +2433,14 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
 void ASTDeclReader::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 }
 
+void ASTDeclReader::ReadSpecializations(ModuleFile &M, Decl *D,
+                                        llvm::BitstreamCursor &DeclsCursor) {
+  uint64_t Offset = ReadLocalOffset();
+  bool Failed = Reader.ReadSpecializations(M, DeclsCursor, Offset, D);
+  (void)Failed;
+  assert(!Failed);
+}
+
 RedeclarableResult
 ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarable(D);
@@ -2471,6 +2482,7 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     SmallVector<LazySpecializationInfo, 32> SpecIDs;
     readDeclIDList(SpecIDs);
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
   }
 
   if (D->getTemplatedDecl()->TemplateOrInstantiation) {
@@ -2499,6 +2511,7 @@ void ASTDeclReader::VisitVarTemplateDecl(VarTemplateDecl *D) {
     SmallVector<LazySpecializationInfo, 32> SpecIDs;
     readDeclIDList(SpecIDs);
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
   }
 }
 
@@ -2600,6 +2613,7 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
     SmallVector<LazySpecializationInfo, 32> SpecIDs;
     readDeclIDList(SpecIDs);
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
   }
 }
 
@@ -3889,6 +3903,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   switch ((DeclCode)MaybeDeclCode.get()) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
+  case DECL_SPECIALIZATIONS:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
   case DECL_TYPEDEF:
     D = TypedefDecl::CreateDeserialized(Context, ID);
@@ -4352,12 +4367,14 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
   assert((PendingLazySpecializationIDs.empty() || isa<ClassTemplateDecl>(D) ||
           isa<FunctionTemplateDecl, VarTemplateDecl>(D)) &&
          "Must not have pending specializations");
+  /*
   if (auto *CTD = dyn_cast<ClassTemplateDecl>(D))
     ASTDeclReader::AddLazySpecializations(CTD, PendingLazySpecializationIDs);
   else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
     ASTDeclReader::AddLazySpecializations(FTD, PendingLazySpecializationIDs);
   else if (auto *VTD = dyn_cast<VarTemplateDecl>(D))
     ASTDeclReader::AddLazySpecializations(VTD, PendingLazySpecializationIDs);
+  */
   PendingLazySpecializationIDs.clear();
 
   // Load the pending visible updates for this decl context, if it has any.
@@ -4382,6 +4399,16 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
         GetDecl(LID);
       FunctionToLambdasMap.erase(IT);
     }
+  }
+
+  // Load the pending specializations update for this decl, if it has any.
+  if (auto I = PendingSpecializationsUpdates.find(ID);
+      I != PendingSpecializationsUpdates.end()) {
+    auto SpecializationUpdates = std::move(I->second);
+    PendingSpecializationsUpdates.erase(I);
+
+    for (const auto &Update : SpecializationUpdates)
+      AddSpecializations(D, Update.Data, *Update.Mod);
   }
 }
 
