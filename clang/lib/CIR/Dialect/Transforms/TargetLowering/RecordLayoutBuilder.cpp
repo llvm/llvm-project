@@ -437,9 +437,9 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
 
   // Reserve space for this field.
   if (!IsOverlappingEmptyField) {
-    // uint64_t EffectiveFieldSizeInBits = Context.toBits(EffectiveFieldSize);
+    uint64_t EffectiveFieldSizeInBits = Context.toBits(EffectiveFieldSize);
     if (IsUnion)
-      cir_cconv_unreachable("NYI");
+      setDataSize(std::max(getDataSizeInBits(), EffectiveFieldSizeInBits));
     else
       setDataSize(FieldOffset + EffectiveFieldSize);
 
