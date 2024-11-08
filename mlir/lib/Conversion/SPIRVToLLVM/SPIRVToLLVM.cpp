@@ -1951,8 +1951,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       GroupReducePattern<spirv::GroupNonUniformLogicalOrOp, /*Signed*/ false,
                          /*NonUniform*/ true>,
       GroupReducePattern<spirv::GroupNonUniformLogicalXorOp, /*Signed*/ false,
-                         /*NonUniform*/ true>
-      >(patterns.getContext(), typeConverter);
+                         /*NonUniform*/ true>>(patterns.getContext(),
+                                               typeConverter);
 
   patterns.add<GlobalVariablePattern>(clientAPI, patterns.getContext(),
                                       typeConverter);
