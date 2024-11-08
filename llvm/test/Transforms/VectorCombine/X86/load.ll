@@ -520,32 +520,18 @@ define <2 x float> @load_f32_insert_v2f32_asan(ptr align 16 dereferenceable(16) 
 
 declare ptr @getscaleptr()
 define void @PR47558_multiple_use_load(ptr nocapture nonnull %resultptr, ptr nocapture nonnull readonly %opptr) {
-; SSE2-LABEL: @PR47558_multiple_use_load(
-; SSE2-NEXT:    [[SCALEPTR:%.*]] = tail call nonnull align 16 dereferenceable(64) ptr @getscaleptr()
-; SSE2-NEXT:    [[OP:%.*]] = load <2 x float>, ptr [[OPPTR:%.*]], align 4
-; SSE2-NEXT:    [[SCALE:%.*]] = load float, ptr [[SCALEPTR]], align 16
-; SSE2-NEXT:    [[T1:%.*]] = insertelement <2 x float> undef, float [[SCALE]], i32 0
-; SSE2-NEXT:    [[T2:%.*]] = insertelement <2 x float> [[T1]], float [[SCALE]], i32 1
-; SSE2-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
-; SSE2-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
-; SSE2-NEXT:    [[RESULT0:%.*]] = insertelement <2 x float> undef, float [[T4]], i32 0
-; SSE2-NEXT:    [[T5:%.*]] = extractelement <2 x float> [[T3]], i32 1
-; SSE2-NEXT:    [[RESULT1:%.*]] = insertelement <2 x float> [[RESULT0]], float [[T5]], i32 1
-; SSE2-NEXT:    store <2 x float> [[RESULT1]], ptr [[RESULTPTR:%.*]], align 8
-; SSE2-NEXT:    ret void
-;
-; AVX2-LABEL: @PR47558_multiple_use_load(
-; AVX2-NEXT:    [[SCALEPTR:%.*]] = tail call nonnull align 16 dereferenceable(64) ptr @getscaleptr()
-; AVX2-NEXT:    [[OP:%.*]] = load <2 x float>, ptr [[OPPTR:%.*]], align 4
-; AVX2-NEXT:    [[SCALE:%.*]] = load float, ptr [[SCALEPTR]], align 16
-; AVX2-NEXT:    [[T1:%.*]] = insertelement <2 x float> undef, float [[SCALE]], i32 0
-; AVX2-NEXT:    [[T2:%.*]] = insertelement <2 x float> [[T1]], float [[SCALE]], i32 1
-; AVX2-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
-; AVX2-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
-; AVX2-NEXT:    [[RESULT0:%.*]] = insertelement <2 x float> undef, float [[T4]], i32 0
-; AVX2-NEXT:    [[RESULT1:%.*]] = shufflevector <2 x float> [[RESULT0]], <2 x float> [[T3]], <2 x i32> <i32 0, i32 3>
-; AVX2-NEXT:    store <2 x float> [[RESULT1]], ptr [[RESULTPTR:%.*]], align 8
-; AVX2-NEXT:    ret void
+; CHECK-LABEL: @PR47558_multiple_use_load(
+; CHECK-NEXT:    [[SCALEPTR:%.*]] = tail call nonnull align 16 dereferenceable(64) ptr @getscaleptr()
+; CHECK-NEXT:    [[OP:%.*]] = load <2 x float>, ptr [[OPPTR:%.*]], align 4
+; CHECK-NEXT:    [[SCALE:%.*]] = load float, ptr [[SCALEPTR]], align 16
+; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x float> undef, float [[SCALE]], i32 0
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x float> [[T1]], float [[SCALE]], i32 1
+; CHECK-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
+; CHECK-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
+; CHECK-NEXT:    [[RESULT0:%.*]] = insertelement <2 x float> undef, float [[T4]], i32 0
+; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <2 x float> [[RESULT0]], <2 x float> [[T3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[RESULT1]], ptr [[RESULTPTR:%.*]], align 8
+; CHECK-NEXT:    ret void
 ;
   %scaleptr = tail call nonnull align 16 dereferenceable(64) ptr @getscaleptr()
   %op = load <2 x float>, ptr %opptr, align 4
