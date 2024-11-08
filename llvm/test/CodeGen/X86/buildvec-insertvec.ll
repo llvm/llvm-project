@@ -738,9 +738,9 @@ define void @PR46461(i16 %x, ptr %y) {
 ; AVX1-LABEL: PR46461:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movzwl %di, %eax
+; AVX1-NEXT:    shrl %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)

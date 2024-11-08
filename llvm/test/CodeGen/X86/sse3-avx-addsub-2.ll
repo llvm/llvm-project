@@ -279,7 +279,7 @@ define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test11:
@@ -310,7 +310,7 @@ define <4 x float> @test12(<4 x float> %A, <4 x float> %B) {
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test12:
