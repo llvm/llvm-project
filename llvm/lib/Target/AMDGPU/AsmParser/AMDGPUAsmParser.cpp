@@ -807,6 +807,14 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
   }
 
+  bool isGSrcVGPROrZero_128() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
+  }
+
+  bool isGSrcVGPROrZero_256() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::i32);
+  }
+
   bool isVISrc_128_f32() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::f32);
   }
@@ -1892,6 +1900,7 @@ private:
   std::optional<unsigned>
   checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3);
   bool validateVOPD(const MCInst &Inst, const OperandVector &Operands);
+  bool validateVOPM(const MCInst &Inst, const OperandVector &Operands);
   bool tryVOPD(const MCInst &Inst);
   bool tryVOPD3(const MCInst &Inst);
   bool tryAnotherVOPDEncoding(const MCInst &Inst);
@@ -1927,7 +1936,6 @@ private:
                               const unsigned CPol);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
-  bool validateAuxData(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   bool validateRegOperands(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -4845,11 +4853,8 @@ AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (Opc == V_BPERMUTE_B32_gfx13 || Opc == V_MOV_2SRC_B64_gfx13 ||
-      Opc == V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32_gfx13 ||
-      Opc == V_PERMUTE_PAIR_BCAST_B32_gfx13 ||
-      Opc == V_PERMUTE_PAIR_GENSGPR_B32_gfx13 ||
-      Opc == V_SEND_VGPR_NEXT_B32_gfx13 || Opc == V_SEND_VGPR_PREV_B32_gfx13)
+  if (isVOPM(Opc) || Opc == V_SEND_VGPR_NEXT_B32_gfx13 ||
+      Opc == V_SEND_VGPR_PREV_B32_gfx13)
     return true;
 
   const MCRegisterInfo &MRI = *getMRI();
@@ -5581,9 +5586,24 @@ bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateAuxData(const MCInst &Inst,
-                                      const OperandVector &Operands) {
-  // TODO-GFX13: Validate.
+bool AMDGPUAsmParser::validateVOPM(const MCInst &Inst,
+                                   const OperandVector &Operands) {
+  const unsigned Opcode = Inst.getOpcode();
+  if (!isVOPM(Opcode))
+    return true;
+
+  // Validate srcC
+  auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srcC);
+  if (OpNum == -1)
+    return true;
+  const auto &Op = Inst.getOperand(OpNum);
+  if (Op.isImm() && Op.getImm() != 0) {
+    Error(getConstLoc(Operands), "only zero is supported as immediate operand");
+    return false;
+  }
+
+  // TODO-GFX13: Validate instruction modifiers (aux_data) against specific
+  // opcodes.
   return true;
 }
 
@@ -5720,7 +5740,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateSetVgprMSB(Inst, Operands)) {
     return false;
   }
-  if (!validateAuxData(Inst, Operands)) {
+  if (!validateVOPM(Inst, Operands)) {
     return false;
   }
 

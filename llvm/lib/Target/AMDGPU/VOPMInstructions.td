@@ -25,13 +25,26 @@ class VOPMProfile<list<ValueType> ArgTy, bit _HasAux,
   let HasModifiers = 0;
   let HasOMod = 0;
 
-  // Handle 10-bit source in analogous way to vdst.
-  let Src2RC64 = getVALUDstForVT<ArgVT[3]>.ret;
+  let DstVT = ArgVT[0];
+
+  let Src0VT = ArgVT[1];
+  let Src1VT = ArgVT[2];
+  let Src2VT = ArgVT[3];
   field ValueType Src3VT = ArgVT[4];
-  field RegisterOperand Src3RC64 = getVALUDstForVT<Src3VT>.ret;
+
+  let DstRC = getGVGPRforVT<DstVT>.ret;
+  let Src0RC64 = getGSrcVGPRForVT<Src0VT>.ret;
+  let Src1RC64 = getGSrcVGPRForVT<Src1VT>.ret;
+  let Src2RC64 = getGVGPRforVT<Src2VT>.ret;
+  field RegisterOperand Src3RC64 = getGVGPRforVT<Src3VT>.ret;
 }
 
-class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
+class VOPM {
+  Instruction Opcode = !cast<Instruction>(NAME);
+}
+
+class VOP2Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc64 {
+
   bits<10> vdst;
   bits<11> src0;
   bits<11> src1;
@@ -53,7 +66,7 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
 }
 
-class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
+class VOP3Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc96 {
 
   bits<10> vdst;
   bits<11> src0;
@@ -64,9 +77,7 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
 
   bit clamp;
 
-  // TODO-GFX13: Inst{9-0} = vdst;
-  let Inst{7-0} = vdst{7-0};
-  let Inst{9-8} = ?;      // vdst cont
+  let Inst{9-0} = vdst;
   let Inst{11-10} = ?;    // vdst_idx
 
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
@@ -75,20 +86,15 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
   let Inst{22-15} = op;
   let Inst{31-24} = 0xdd; // encoding
 
-  // TODO-GFX13: Inst{42-32} = src0;
-  let Inst{39-32} = src0{7-0};
-  let Inst{42} = src0{8};
+  let Inst{42-32} = src0;
   let Inst{44-43} = ?;    // src0_idx
 
-  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{52-45} = !if(pfl.HasSrc1, src1{7-0}, ?);
-  let Inst{55} = !if(pfl.HasSrc1, src1{8}, ?);
+  let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = ?;    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
-  // TODO-GFX13: Inst{73-64} = !if(pfl.HasSrc2, src2, ?);
-  let Inst{71-64} = !if(pfl.HasSrc2, src2{7-0}, ?);
+  let Inst{73-64} = !if(pfl.HasSrc2, src2, ?);
   let Inst{75-74} = ?;    // src2_idx
 
   let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
@@ -96,7 +102,7 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
   let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 }
 
-class VOP5Me <bits<8> op, VOPMProfile pfl> : Enc128 {
+class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   bits<10> vdst;
   bits<11> src0;
   bits<11> src1;
@@ -108,8 +114,7 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : Enc128 {
 
   bit clamp;
 
-  let Inst{7-0} = vdst{7-0};
-  let Inst{9-8} = ?;      // vdst cont
+  let Inst{9-0} = vdst;
   let Inst{11-10} = ?;    // vdst_idx
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
@@ -117,40 +122,31 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : Enc128 {
   let Inst{22-15} = op;
   let Inst{31-24} = 0xde; // encoding
 
-  // TODO-GFX13: Inst{42-32} = src0;
-  let Inst{39-32} = src0{7-0};
-  let Inst{42} = src0{8};
+  let Inst{42-32} = src0;
   let Inst{44-43} = ?;    // src0_idx
 
-  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{52-45} = !if(pfl.HasSrc1, src1{7-0}, ?);
-  let Inst{55} = !if(pfl.HasSrc1, src1{8}, ?);
+  let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = ?;    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
-  // TODO-GFX13: Inst{73-64} = src2;
-  let Inst{71-64} = src2{7-0};
+  let Inst{73-64} = src2;
   let Inst{75-74} = ?;    // src2_idx
 
   let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
 
   let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 
-  // TODO-GFX13: Inst{105-96} = src3;
-  let Inst{103-96} = src3{7-0};
-  let Inst{105} = ?;     // src3 cont
+  let Inst{105-96} = src3;
   let Inst{107-106} = ?; // src3_idx
 
-  // TODO-GFX13: Inst{117-108} = src4;
-  let Inst{115-108} = !if(pfl.HasSrc4, src4{7-0}, ?);
-  let Inst{117} = ?;     // src4 cont
+  let Inst{117-108} = !if(pfl.HasSrc4, src4, ?);
   let Inst{119-118} = ?; // src4_idx
 
   let Inst{127-120} = !if(pfl.HasAux, aux_data{25-18}, ?); // mod2
 }
 
-class VOP6Me <bits<8> op, VOPMProfile pfl> : Enc128 {
+class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   bits<10> vdst;
   bits<11> src0;
   bits<11> src1;
@@ -162,8 +158,7 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : Enc128 {
 
   bit clamp;
 
-  let Inst{7-0} = vdst{7-0};
-  let Inst{9-8} = ?;      // vdst cont
+  let Inst{9-0} = vdst;
   let Inst{11-10} = ?;    // vdst_idx
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
@@ -171,37 +166,26 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : Enc128 {
   let Inst{22-15} = op;
   let Inst{31-24} = 0xdf; // encoding
 
-  // TODO-GFX13: Inst{42-32} = src0;
-  let Inst{39-32} = src0{7-0};
-  let Inst{42} = src0{8};
+  let Inst{42-32} = src0;
   let Inst{44-43} = ?;    // src0_idx
 
-  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{52-45} = src1{7-0};
-  let Inst{55} = src1{8};
+  let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = ?;    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
-  // TODO-GFX13: Inst{73-64} = src2;
-  let Inst{71-64} = src2{7-0};
+  let Inst{73-64} = src2;
   let Inst{75-74} = ?;    // src2_idx
 
   let Inst{83-76} = !if(pfl.HasAux, aux_data{13-6}, ?); // mod1
 
-  // TODO-GFX13: Inst{93-84} = src5;
-  let Inst{91-84} = src5{7-0};
-  let Inst{93} = ?;     // src5 cont
+  let Inst{93-84} = src5;
   let Inst{95-94} = ?;   // src5_idx
 
-  // TODO-GFX13: Inst{105-96} = src3;
-  let Inst{103-96} = src3{7-0};
-  let Inst{105} = ?;     // src3 cont
+  let Inst{105-96} = src3;
   let Inst{107-106} = ?; // src3_idx
 
-  // TODO-GFX13: Inst{117-108} = src4;
-  let Inst{115-108} = !if(pfl.HasSrc4, src4{7-0}, ?);
-  let Inst{117} = ?;     // src4 cont
+  let Inst{117-108} = !if(pfl.HasSrc4, src4, ?);
   let Inst{119-118} = ?; // src4_idx
 
   let Inst{127-120} = !if(pfl.HasAux, aux_data{25-18}, ?); // mod2
@@ -393,13 +377,10 @@ class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgT
   dag WmmaInlineOutPat;
   bit isInt;
 
-  let Src0RC64 = getVOP3SrcForVT<ArgVT[1]>.ret; // srcA
-  let Src1RC64 = getVALUDstForVT<ArgVT[2]>.ret; // srcB
+  let Src0RC64 = getGSrcVGPRForVT<ArgVT[1]>.ret; // srcA
+  let Src1RC64 = getGVGPRforVT<ArgVT[2]>.ret; // srcB
   // srcC also supports inline 0
-  let Src2RC64 = !cond(!eq(ArgTy[3], v8f32) : VISrc_256_f32,
-                       !eq(ArgTy[3], v8i32) : VISrc_256_b32,
-                       !eq(ArgTy[3], v8f16) : VISrc_128_f16,
-                       !eq(ArgTy[3], v8bf16) : VISrc_128_bf16);
+  let Src2RC64 = getGSrcVGPROrZeroForVT<ArgVT[3]>.ret; // srcC
 }
 
 class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
@@ -437,7 +418,7 @@ class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Pro
   let isInt = 0;
 
   let HasAux = 1;
-  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, VOPDstOperand_VGPR_32:$src3, VOPDstOperand_VGPR_32:$src4, AuxData:$aux_data, Clamp0:$clamp);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, GVGPR_32:$src3, GVGPR_32:$src4, AuxData:$aux_data, Clamp0:$clamp);
 
   let WmmaInPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
   let WmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
@@ -1134,13 +1115,11 @@ multiclass VOP3M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
       bits<11> srcA;
       bits<10> srcB;
 
-      let Inst{39-32} = srcC{7-0};
-      let Inst{42} = srcC{8};
+      let Inst{42-32} = srcC;
 
-      let Inst{52-45} = srcA{7-0};
-      let Inst{55} = srcA{8};
+      let Inst{55-45} = srcA;
 
-      let Inst{71-64} = srcB{7-0};
+      let Inst{73-64} = srcB;
 
       bit signed_a;
       bit signed_b;
@@ -1175,13 +1154,11 @@ multiclass VOP5M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
       bits<11> srcA;
       bits<10> srcB;
 
-      let Inst{39-32} = srcC{7-0};
-      let Inst{42} = srcC{8};
+      let Inst{42-32} = srcC;
 
-      let Inst{52-45} = srcA{7-0};
-      let Inst{55} = srcA{8};
+      let Inst{55-45} = srcA;
 
-      let Inst{71-64} = srcB{7-0};
+      let Inst{73-64} = srcB;
 
       let AsmString = asmName # ps.Pfl.Asm64;
 
@@ -1655,3 +1632,19 @@ defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_FP8", "int_amdgcn_fma_from_tensor_bf1
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF8", "int_amdgcn_fma_from_tensor_bf16_bf8", "BF16_4B_OR_8B">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_F16", "int_amdgcn_fma_from_tensor_bf16_f16", "BF16_F16">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF16", "int_amdgcn_fma_from_tensor_bf16_bf16", "BF16_BF16">;
+
+
+//===----------------------------------------------------------------------===//
+// VOPM Utils
+//===----------------------------------------------------------------------===//
+
+class InfoTable <string Class>: GenericTable {
+  let FilterClass = Class;
+  let CppTypeName = "VOPMInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "isVOPMOpcodeHelper";
+}
+
+def VOPMInfoTable : InfoTable <"VOPM">;

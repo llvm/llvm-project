@@ -215,6 +215,36 @@ static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
                      AMDGPU::OperandSemantics::INT, Decoder);
 }
 
+template <AMDGPUDisassembler::OpWidthTy OpWidth>
+static DecodeStatus decodeGVGPR(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
+                                const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeGVGPROp(OpWidth, Imm));
+}
+
+template <AMDGPUDisassembler::OpWidthTy OpWidth>
+static DecodeStatus decodeGSrcVGPR(MCInst &Inst, unsigned Imm,
+                                   uint64_t /* Addr */,
+                                   const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeGSrcVGPROp(OpWidth, Imm));
+}
+
+template <AMDGPUDisassembler::OpWidthTy OpWidth>
+static DecodeStatus decodeGSrcVGPROrZero(MCInst &Inst, unsigned Imm,
+                                         uint64_t /* Addr */,
+                                         const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeGSrcVGPROrZeroOp(OpWidth, Imm));
+}
+
+static DecodeStatus decodeGSrcSimple(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeGSrcSimpleOp(Imm));
+}
+
 static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
                                     uint64_t /* Addr */,
                                     const MCDisassembler *Decoder,
@@ -1849,13 +1879,30 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
   }
 }
 
-MCOperand AMDGPUDisassembler::decodeGVGPR(OpWidthTy OpWidth,
-                                          unsigned Val) const {
+MCOperand AMDGPUDisassembler::decodeGVGPROp(OpWidthTy OpWidth,
+                                            unsigned Val) const {
   assert(isUInt<10>(Val));
   return createRegOperand(getVgprClassId(OpWidth), Val);
 }
 
-MCOperand AMDGPUDisassembler::decodeGSrcSimple(unsigned Val) const {
+MCOperand AMDGPUDisassembler::decodeGSrcVGPROp(OpWidthTy OpWidth,
+                                               unsigned Val) const {
+  assert(isUInt<11>(Val));
+  return createRegOperand(getVgprClassId(OpWidth), Val & 0x3ff);
+}
+
+MCOperand AMDGPUDisassembler::decodeGSrcVGPROrZeroOp(OpWidthTy OpWidth,
+                                                     unsigned Val) const {
+  assert(isUInt<11>(Val));
+  bool IsVGPR = Val & 0x400;
+  if (IsVGPR)
+    return createRegOperand(getVgprClassId(OpWidth), Val & 0x3ff);
+  if (Val == 128)
+    return decodeIntImmed(128);
+  return errOperand(Val, "Only register or immediate zero supported.");
+}
+
+MCOperand AMDGPUDisassembler::decodeGSrcSimpleOp(unsigned Val) const {
   assert(isUInt<11>(Val));
   bool IsVGPR = Val & 0x400;
   if (IsVGPR)

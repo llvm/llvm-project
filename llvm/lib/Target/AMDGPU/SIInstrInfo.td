@@ -2077,7 +2077,30 @@ class getVOPMSSrcForVT<ValueType VT>{
 // Return type of GVGPR operand.
 class getGVGPRforVT<ValueType VT>{
   RegisterOperand ret = !cond(!eq(VT.Size, 32)  : GVGPR_32,
-                              !eq(VT.Size, 64)  : GVGPR_64);
+                              !eq(VT.Size, 64)  : GVGPR_64,
+                              !eq(VT.Size, 96)  : GVGPR_96,
+                              !eq(VT.Size, 128) : GVGPR_128,
+                              !eq(VT.Size, 256) : GVGPR_256,
+                              1 : GVGPR_32); // unused
+}
+
+// Return type of GVGPR operand.
+class getGSrcVGPRForVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT.Size, 32)  : GSrcVGPR_32,
+                              !eq(VT.Size, 64)  : GSrcVGPR_64,
+                              !eq(VT.Size, 96)  : GSrcVGPR_96,
+                              !eq(VT.Size, 128) : GSrcVGPR_128,
+                              !eq(VT.Size, 160) : GSrcVGPR_160,
+                              !eq(VT.Size, 192) : GSrcVGPR_192,
+                              !eq(VT.Size, 256) : GSrcVGPR_256,
+                              !eq(VT.Size, 288) : GSrcVGPR_288,
+                              !eq(VT.Size, 576) : GSrcVGPR_576,
+                              1 : SSrc_bf16); // unused
+}
+
+class getGSrcVGPROrZeroForVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT.Size, 128) : GSrcVGPROrZero_128,
+                              !eq(VT.Size, 256) : GSrcVGPROrZero_256);
 }
 
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.

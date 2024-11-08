@@ -1304,22 +1304,44 @@ def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 
 class GVGPROp<RegisterClass regClass, string width> : RegisterOperand<regClass> {
   let EncoderMethod = "encodeGVGPR";
-  let DecoderMethod =
-    "[](MCInst & Inst, unsigned Val, uint64_t /*Addr*/, "
-    "const MCDisassembler *Decoder) { return addOperand(Inst, "
-    "static_cast<const AMDGPUDisassembler *>(Decoder)->decodeGVGPR(AMDGPUDisassembler::"# width # ", Val)); }";
+  let DecoderMethod = "decodeGVGPR<AMDGPUDisassembler::" # width # ">";
   let PrintMethod = "printGVGPR";
 }
 
 def GVGPR_32 : GVGPROp<VGPR_32, "OPW32">;
 def GVGPR_64 : GVGPROp<VReg_64, "OPW64">;
+def GVGPR_96 : GVGPROp<VReg_96, "OPW96">;
+def GVGPR_128 : GVGPROp<VReg_128, "OPW128">;
+def GVGPR_256 : GVGPROp<VReg_256, "OPW256">;
+
+class GSrcVGPROp<RegisterClass regClass, string width> : RegisterOperand<regClass> {
+  let EncoderMethod = "encodeGSrcVGPR";
+  let DecoderMethod = "decodeGSrcVGPR<AMDGPUDisassembler::" # width # ">";
+  let PrintMethod = "printGVGPR";
+}
+
+def GSrcVGPR_32 : GSrcVGPROp<VGPR_32, "OPW32">;
+def GSrcVGPR_64 : GSrcVGPROp<VReg_64, "OPW64">;
+def GSrcVGPR_96 : GSrcVGPROp<VReg_96, "OPW96">;
+def GSrcVGPR_128 : GSrcVGPROp<VReg_128, "OPW128">;
+def GSrcVGPR_160 : GSrcVGPROp<VReg_160, "OPW160">;
+def GSrcVGPR_192 : GSrcVGPROp<VReg_192, "OPW192">;
+def GSrcVGPR_256 : GSrcVGPROp<VReg_256, "OPW256">;
+def GSrcVGPR_288 : GSrcVGPROp<VReg_288, "OPW288">;
+def GSrcVGPR_576 : GSrcVGPROp<VReg_576, "OPW576">;
+
+class GSrcVGPROrZeroOp<RegisterClass regClass, string width> : RegOrImmOperand<regClass, "OPERAND_REG_INLINE_C_INT32"> {
+  let EncoderMethod = "encodeGSrcVGPROrZero";
+  let DecoderMethod = "decodeGSrcVGPROrZero<AMDGPUDisassembler::" # width # ">";
+  let PrintMethod = "printGSrcSimple";
+}
+
+def GSrcVGPROrZero_128 : GSrcVGPROrZeroOp<VReg_128, "OPW128">;
+def GSrcVGPROrZero_256 : GSrcVGPROrZeroOp<VReg_256, "OPW256">;
 
 def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
   let EncoderMethod = "encodeGSrcSimple";
-  let DecoderMethod =
-    "[](MCInst &Inst, unsigned Val, uint64_t /*Addr*/, "
-    "const MCDisassembler *Decoder) { return addOperand(Inst, "
-    "static_cast<const AMDGPUDisassembler *>(Decoder)->decodeGSrcSimple(Val)); }";
+  let DecoderMethod = "decodeGSrcSimple";
   let PrintMethod = "printGSrcSimple";
 }
 

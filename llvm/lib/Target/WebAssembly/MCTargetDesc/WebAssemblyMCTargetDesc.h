@@ -478,6 +478,22 @@ inline bool isMarker(unsigned Opc) {
   }
 }
 
+inline bool isEndMarker(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::END_BLOCK:
+  case WebAssembly::END_BLOCK_S:
+  case WebAssembly::END_LOOP:
+  case WebAssembly::END_LOOP_S:
+  case WebAssembly::END_TRY:
+  case WebAssembly::END_TRY_S:
+  case WebAssembly::END_TRY_TABLE:
+  case WebAssembly::END_TRY_TABLE_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool isTry(unsigned Opc) {
   switch (Opc) {
   case WebAssembly::TRY:
@@ -500,6 +516,20 @@ inline bool isCatch(unsigned Opc) {
   case WebAssembly::CATCH_S:
   case WebAssembly::CATCH_REF:
   case WebAssembly::CATCH_REF_S:
+  case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isCatchAll(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CATCH_ALL_LEGACY:
+  case WebAssembly::CATCH_ALL_LEGACY_S:
   case WebAssembly::CATCH_ALL:
   case WebAssembly::CATCH_ALL_S:
   case WebAssembly::CATCH_ALL_REF:
