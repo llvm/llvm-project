@@ -400,7 +400,8 @@ struct ConvertUpdateHaloOp
     } else {
       assert(isa<RankedTensorType>(op.getResult().getType()));
       rewriter.replaceOp(op, rewriter.create<bufferization::ToTensorOp>(
-                                 loc, op.getResult().getType(), array));
+                                 loc, op.getResult().getType(), array,
+                                 /*restrict=*/true, /*writable=*/true));
     }
     return mlir::success();
   }
