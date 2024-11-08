@@ -3076,7 +3076,7 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
       }
     } else {
       result.emplace_back(
-          AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
+          AsGenericExpr(evaluate::Constant<evaluate::CInteger>{-1}));
     }
     if (auto expr{Analyze(std::get<1>(chevrons->t))};
         expr && checkLaunchArg(*expr, "block")) {
