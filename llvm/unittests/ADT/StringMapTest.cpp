@@ -174,10 +174,15 @@ TEST_F(StringMapTest, SmallFullMapTest) {
 
   EXPECT_EQ(3u, Map.size());
   EXPECT_EQ(0, Map.lookup("eins"));
+  EXPECT_EQ(7, Map.lookup("eins", 7));
   EXPECT_EQ(2, Map.lookup("zwei"));
+  EXPECT_EQ(2, Map.lookup("zwei", 7));
   EXPECT_EQ(0, Map.lookup("drei"));
+  EXPECT_EQ(7, Map.lookup("drei", 7));
   EXPECT_EQ(4, Map.lookup("veir"));
+  EXPECT_EQ(4, Map.lookup("veir", 7));
   EXPECT_EQ(5, Map.lookup("funf"));
+  EXPECT_EQ(5, Map.lookup("funf", 7));
 }
 
 TEST_F(StringMapTest, CopyCtorTest) {

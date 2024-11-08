@@ -257,6 +257,15 @@ public:
     return ValueTy();
   }
 
+  /// lookup - Return the entry for the specified key, or a default
+  /// provided value if no such entry exists.
+  const ValueTy &lookup(StringRef Key, const ValueTy& Value) const {
+    const_iterator Iter = find(Key);
+    if (Iter != end())
+      return Iter->second;
+    return Value;
+  }
+
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   const ValueTy &at(StringRef Val) const {

@@ -228,10 +228,7 @@ const StringMap<VersionInfoFixedType> VersionInfoFixed::FixedFieldsInfoMap = {
 
 VersionInfoFixedType VersionInfoFixed::getFixedType(StringRef Type) {
   auto UpperType = Type.upper();
-  auto Iter = FixedFieldsInfoMap.find(UpperType);
-  if (Iter != FixedFieldsInfoMap.end())
-    return Iter->getValue();
-  return FtUnknown;
+  return FixedFieldsInfoMap.lookup(UpperType, FtUnknown);
 }
 
 bool VersionInfoFixed::isTypeSupported(VersionInfoFixedType Type) {
