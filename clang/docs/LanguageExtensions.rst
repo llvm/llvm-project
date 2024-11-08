@@ -5974,3 +5974,12 @@ Clang guarantees the following behaviors:
   padding bits are initialized to zero.
 
 Currently, the above extension only applies to C source code, not C++.
+
+Empty Objects in C
+==================
+The declaration of a structure or union type which has no named members is
+undefined behavior (C23 and earlier) or implementation-defined behavior (C2y).
+Clang allows the declaration of a structure or union type with no named members
+in all C language modes. `sizeof` for such a type returns `0`, which is
+different behavior than in C++ (where the size of such an object is typically
+`1`).
