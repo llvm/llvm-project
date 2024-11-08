@@ -686,9 +686,7 @@ void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
 void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
   auto iface = cast<ExactFlagInterface>(op);
 
-  bool value = inst->isExact();
-
-  iface.setIsExact(value);
+  iface.setIsExact(inst->isExact());
 }
 
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,

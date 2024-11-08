@@ -49,7 +49,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %mul_flag = llvm.mul %arg0, %arg0 overflow<nsw, nuw> : i32
   %shl_flag = llvm.shl %arg0, %arg0 overflow<nuw, nsw> : i32
 
-// Integer exact
+// Integer exact flag.
 // CHECK: {{.*}} = llvm.sdiv exact %[[I32]], %[[I32]] : i32
 // CHECK: {{.*}} = llvm.udiv exact %[[I32]], %[[I32]] : i32
 // CHECK: {{.*}} = llvm.ashr exact %[[I32]], %[[I32]] : i32
