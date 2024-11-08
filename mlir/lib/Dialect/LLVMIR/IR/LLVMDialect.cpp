@@ -143,6 +143,9 @@ static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
   if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op)) {
     printer.printOptionalAttrDict(
         filteredAttrs, /*elidedAttrs=*/{iface.getOverflowFlagsAttrName()});
+  } else if (auto iface = dyn_cast<ExactFlagInterface>(op)) {
+    printer.printOptionalAttrDict(filteredAttrs,
+                                  /*elidedAttrs=*/{iface.getIsExactName()});
   } else {
     printer.printOptionalAttrDict(filteredAttrs);
   }
