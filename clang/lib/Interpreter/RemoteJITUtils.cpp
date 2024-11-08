@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// FIXME: Unify this code with similar functionality in llvm-jitlink.
+//
+//===----------------------------------------------------------------------===//
 
 #include "clang/Interpreter/RemoteJITUtils.h"
 

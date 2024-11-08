@@ -152,7 +152,7 @@ public:
   llvm::Error Undo(unsigned N = 1);
 
   /// Link a dynamic library
-  llvm::Error LoadDynamicLibrary(const char *name, bool UseEPC = false);
+  llvm::Error LoadDynamicLibrary(const char *name);
 
   /// \returns the \c ExecutorAddr of a \c GlobalDecl. This interface uses
   /// the CodeGenModule's internal mangling cache to avoid recomputing the

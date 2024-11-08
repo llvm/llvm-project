@@ -13,6 +13,8 @@
 #include "clang/Interpreter/RemoteJITUtils.h"
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
@@ -62,7 +64,7 @@ static llvm::cl::opt<std::string> OOPExecutorConnect(
     llvm::cl::value_desc("<hostname>:<port>"));
 static llvm::cl::opt<std::string>
     OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
-                   llvm::cl::cat(OOPCategory));
+                   llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
 static llvm::cl::opt<bool> UseSharedMemory(
     "use-shared-memory",
     llvm::cl::desc("Use shared memory to transfer generated code and data"),
@@ -98,22 +100,21 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
           llvm::inconvertibleErrorCode());
   }
 
-  // Out-of-process executors must run with the ORC runtime for destructor
-  // support.
+  // Out-of-process executors require the ORC runtime.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
                                  OOPExecutorConnect.getNumOccurrences())) {
-    llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
+    llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
-    llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
-    llvm::sys::path::remove_filename(OrcPath); // Remove ./bin directory.
+    llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
+    llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
     llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
-    llvm::StringRef Path;
+    llvm::sys::path::append(BasePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
+                            CLANG_VERSION_MAJOR_STRING);
     if (SystemTriple.isOSBinFormatELF())
-      Path = "lib/clang/20/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
+      OrcRuntimePath =
+          BasePath.str().str() + "lib/x86_64-unknown-linux-gnu/liborc_rt.a";
     else if (SystemTriple.isOSBinFormatMachO())
-      Path = "lib/clang/20/lib/darwin/liborc_rt_osx.a";
-    llvm::sys::path::append(OrcPath, Path);
-    OrcRuntimePath = OrcPath.str().str();
+      OrcRuntimePath = BasePath.str().str() + "/lib/darwin/liborc_rt_osx.a";
   }
 
   // If -oop-executor was used but no value was specified then use a sensible
@@ -276,12 +277,10 @@ int main(int argc, const char **argv) {
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-  bool UseEPCSearchGen = false;
   if (EPC) {
     CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
     JB = ExitOnErr(
         clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
-    UseEPCSearchGen = true;
   }
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
@@ -354,8 +353,7 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err =
-                Interp->LoadDynamicLibrary(Input.data() + 5, UseEPCSearchGen))
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
