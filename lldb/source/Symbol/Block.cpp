@@ -230,7 +230,7 @@ Block *Block::GetContainingInlinedBlockWithCallSite(
     const auto *function_info = inlined_block->GetInlinedFunctionInfo();
 
     if (function_info &&
-        function_info->GetCallSite().FileAndLineEqual(find_call_site, true))
+        function_info->GetCallSite().FileAndLineEqual(find_call_site))
       return inlined_block;
     inlined_block = inlined_block->GetInlinedParent();
   }
