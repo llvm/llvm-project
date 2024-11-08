@@ -1056,6 +1056,7 @@ def ScopeOp : CIR_Op<"scope", [
     }
     ```
 
+    The blocks can be terminated by `cir.yield`, `cir.return` or `cir.throw`.
     If `cir.scope` yields no value, the `cir.yield` can be left out, and
     will be inserted implicitly.
   }];
