@@ -401,10 +401,10 @@ define void @s_minimum_f32(float inreg %src0, float inreg %src1) {
 ; GFX7-LABEL: s_minimum_f32:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s7
-; GFX7-NEXT:    v_min_f32_e32 v1, s6, v0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s17
+; GFX7-NEXT:    v_min_f32_e32 v1, s16, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, s6, v0
+; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, s16, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use v0
@@ -414,10 +414,10 @@ define void @s_minimum_f32(float inreg %src0, float inreg %src1) {
 ; GFX8-LABEL: s_minimum_f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s7
-; GFX8-NEXT:    v_min_f32_e32 v1, s6, v0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s17
+; GFX8-NEXT:    v_min_f32_e32 v1, s16, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, s6, v0
+; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, s16, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v0
@@ -427,10 +427,10 @@ define void @s_minimum_f32(float inreg %src0, float inreg %src1) {
 ; GFX9-LABEL: s_minimum_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s7
-; GFX9-NEXT:    v_min_f32_e32 v1, s6, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s17
+; GFX9-NEXT:    v_min_f32_e32 v1, s16, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s6, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s16, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v0
@@ -454,8 +454,8 @@ define void @s_minimum_f32(float inreg %src0, float inreg %src1) {
 ; GFX10-LABEL: s_minimum_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_min_f32_e64 v0, s6, s7
-; GFX10-NEXT:    v_cmp_o_f32_e64 vcc_lo, s6, s7
+; GFX10-NEXT:    v_min_f32_e64 v0, s16, s17
+; GFX10-NEXT:    v_cmp_o_f32_e64 vcc_lo, s16, s17
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use v0
@@ -782,14 +782,14 @@ define void @s_minimum_v2f32(<2 x float> inreg %src0, <2 x float> inreg %src1) {
 ; GFX7-LABEL: s_minimum_v2f32:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s17
-; GFX7-NEXT:    v_min_f32_e32 v1, s7, v0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s19
+; GFX7-NEXT:    v_min_f32_e32 v1, s17, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, s7, v0
-; GFX7-NEXT:    v_mov_b32_e32 v0, s16
+; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, s17, v0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX7-NEXT:    v_min_f32_e32 v3, s6, v0
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, s6, v0
+; GFX7-NEXT:    v_min_f32_e32 v3, s16, v0
+; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, s16, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use v[0:1]
@@ -799,14 +799,14 @@ define void @s_minimum_v2f32(<2 x float> inreg %src0, <2 x float> inreg %src1) {
 ; GFX8-LABEL: s_minimum_v2f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s17
-; GFX8-NEXT:    v_min_f32_e32 v1, s7, v0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s19
+; GFX8-NEXT:    v_min_f32_e32 v1, s17, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, s7, v0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s16
+; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, s17, v0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX8-NEXT:    v_min_f32_e32 v3, s6, v0
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, s6, v0
+; GFX8-NEXT:    v_min_f32_e32 v3, s16, v0
+; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, s16, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v[0:1]
@@ -816,14 +816,14 @@ define void @s_minimum_v2f32(<2 x float> inreg %src0, <2 x float> inreg %src1) {
 ; GFX9-LABEL: s_minimum_v2f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s17
-; GFX9-NEXT:    v_min_f32_e32 v1, s7, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s19
+; GFX9-NEXT:    v_min_f32_e32 v1, s17, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s7, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s16
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s17, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX9-NEXT:    v_min_f32_e32 v3, s6, v0
-; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s6, v0
+; GFX9-NEXT:    v_min_f32_e32 v3, s16, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, s16, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
@@ -851,11 +851,11 @@ define void @s_minimum_v2f32(<2 x float> inreg %src0, <2 x float> inreg %src1) {
 ; GFX10-LABEL: s_minimum_v2f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_min_f32_e64 v0, s7, s17
-; GFX10-NEXT:    v_cmp_o_f32_e64 vcc_lo, s7, s17
-; GFX10-NEXT:    v_min_f32_e64 v2, s6, s16
+; GFX10-NEXT:    v_min_f32_e64 v0, s17, s19
+; GFX10-NEXT:    v_cmp_o_f32_e64 vcc_lo, s17, s19
+; GFX10-NEXT:    v_min_f32_e64 v2, s16, s18
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v0, vcc_lo
-; GFX10-NEXT:    v_cmp_o_f32_e64 vcc_lo, s6, s16
+; GFX10-NEXT:    v_cmp_o_f32_e64 vcc_lo, s16, s18
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v2, vcc_lo
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use v[0:1]
