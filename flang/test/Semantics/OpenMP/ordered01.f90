@@ -67,12 +67,12 @@ program main
 
 contains
   subroutine work1()
-    !ERROR: THREADS, SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region
+    !ERROR: THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region
     !$omp ordered simd
   end subroutine work1
 
   subroutine work2()
-    !ERROR: THREADS, SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region
+    !ERROR: THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region
     !$omp ordered threads
   end subroutine work2
 
