@@ -10,30 +10,40 @@
 // <iterator>
 
 // __bounded_iter<_Iter>
+// __static_bounded_iter<_Iter>
 // __wrap_iter<_Iter>
 
 // Verify that libc++-wrapped iterators do not permit slicing conversion or construction.
 
 #include <array>
-#include <vector>
 #include <span>
 #include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 
 struct Base {};
 struct Derived : Base {};
 
-#ifdef _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
-static_assert(!std::is_convertible<std::array<Derived, 1>::iterator, std::array<Base, 1>::iterator>::value, "");
-static_assert(!std::is_convertible<std::array<Derived, 1>::iterator, std::array<Base, 1>::const_iterator>::value, "");
-static_assert(!std::is_convertible<std::array<Derived, 1>::const_iterator, std::array<Base, 1>::const_iterator>::value,
-              "");
-static_assert(!std::is_constructible<std::array<Base, 1>::iterator, std::array<Derived, 1>::iterator>::value, "");
-static_assert(!std::is_constructible<std::array<Base, 1>::const_iterator, std::array<Derived, 1>::iterator>::value, "");
-static_assert(
-    !std::is_constructible<std::array<Base, 1>::const_iterator, std::array<Derived, 1>::const_iterator>::value, "");
-#endif
+template <class B, class D, bool = std::is_pointer<typename std::array<B, 1>::iterator>::value>
+struct test_array_helper : std::true_type {
+  typedef typename std::array<B, 1>::iterator BaseIter;
+  typedef typename std::array<D, 1>::iterator DerivedIter;
+  typedef typename std::array<B, 1>::const_iterator BaseConstIter;
+  typedef typename std::array<D, 1>::const_iterator DerivedConstIter;
+
+  static_assert(!std::is_convertible<DerivedIter, BaseIter>::value, "");
+  static_assert(!std::is_convertible<DerivedIter, BaseConstIter>::value, "");
+  static_assert(!std::is_convertible<DerivedConstIter, BaseConstIter>::value, "");
+  static_assert(!std::is_constructible<BaseIter, DerivedIter>::value, "");
+  static_assert(!std::is_constructible<BaseConstIter, DerivedIter>::value, "");
+  static_assert(!std::is_constructible<BaseConstIter, DerivedConstIter>::value, "");
+};
+
+template <class B, class D>
+struct test_array_helper<B, D, true> : std::true_type {};
+
+static_assert(test_array_helper<Base, Derived>::value, "");
 
 static_assert(!std::is_convertible<std::vector<Derived>::iterator, std::vector<Base>::iterator>::value, "");
 static_assert(!std::is_convertible<std::vector<Derived>::iterator, std::vector<Base>::const_iterator>::value, "");

@@ -20,7 +20,6 @@
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/make_const_lvalue_ref.h>
@@ -77,10 +76,9 @@ struct __bounded_iter {
 
   template < class _OtherIterator,
              __enable_if_t<
-                 _And<is_constructible<_Iterator, const _OtherIterator&>,
-                      is_convertible<const _OtherIterator&, _Iterator>,
-                      _Or<is_same<reference, __iter_reference<_OtherIterator> >,
-                          is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
+                 _And< is_convertible<const _OtherIterator&, _Iterator>,
+                       _Or<is_same<reference, __iter_reference<_OtherIterator> >,
+                           is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
                  int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter(__bounded_iter<_OtherIterator> const& __other) _NOEXCEPT
       : __current_(__other.__current_),

@@ -21,7 +21,6 @@
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/make_const_lvalue_ref.h>
@@ -52,10 +51,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
   template <
       class _OtherIter,
-      __enable_if_t< _And<is_constructible<_Iter, const _OtherIter&>,
-                          is_convertible<const _OtherIter&, _Iter>,
-                          _Or<is_same<reference, __iter_reference<_OtherIter> >,
-                              is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIter> > > > >::value,
+      __enable_if_t< _And< is_convertible<const _OtherIter&, _Iter>,
+                           _Or<is_same<reference, __iter_reference<_OtherIter> >,
+                               is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIter> > > > >::value,
                      int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
       : __i_(__u.__i_) {}
