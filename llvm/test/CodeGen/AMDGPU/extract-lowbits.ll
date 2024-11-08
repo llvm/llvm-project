@@ -153,9 +153,11 @@ define i32 @bzhi32_d0(i32 %val, i32 %numlowbits) nounwind {
 ; GCN-LABEL: bzhi32_d0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 31, v1
 ; GCN-NEXT:    v_bfe_u32 v0, v0, 0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %numhighbits = sub i32 32, %numlowbits
+  %numlow5bits = and i32 %numlowbits, 31
+  %numhighbits = sub i32 32, %numlow5bits
   %highbitscleared = shl i32 %val, %numhighbits
   %masked = lshr i32 %highbitscleared, %numhighbits
   ret i32 %masked

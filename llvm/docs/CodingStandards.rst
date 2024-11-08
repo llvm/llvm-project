@@ -1713,6 +1713,17 @@ would help to avoid running into a "dangling else" situation.
     handleOtherDecl(D);
   }
 
+  // Use braces for the `else if` and `else` block to keep it uniform with the
+  // `if` block.
+  if (isa<FunctionDecl>(D)) {
+    verifyFunctionDecl(D);
+    handleFunctionDecl(D);
+  } else if (isa<GlobalVarDecl>(D)) {
+    handleGlobalVarDecl(D);
+  } else {
+    handleOtherDecl(D);
+  }
+
   // This should also omit braces.  The `for` loop contains only a single
   // statement, so it shouldn't have braces.  The `if` also only contains a
   // single simple statement (the `for` loop), so it also should omit braces.

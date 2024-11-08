@@ -44,7 +44,7 @@ unsigned char _InterlockedCompareExchange128_rel(__int64 volatile *_Destination,
                                                  __int64 *_ComparandResult);
 #endif
 
-#ifdef __x86_64__ && !defined(__arm64ec__)
+#if defined(__x86_64__) && !defined(__arm64ec__)
 unsigned __int64 _umul128(unsigned __int64, unsigned __int64,
                           unsigned __int64 *);
 unsigned __int64 __shiftleft128(unsigned __int64 _LowPart,

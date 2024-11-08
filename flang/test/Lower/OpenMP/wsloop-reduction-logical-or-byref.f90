@@ -58,7 +58,6 @@
 ! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
 ! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -107,7 +106,6 @@ end subroutine
 ! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
 ! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -188,7 +186,6 @@ end subroutine
 ! CHECK:                 %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i1) -> !fir.logical<4>
 ! CHECK:                 hlfir.assign %[[VAL_56]] to %[[VAL_29]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:                 omp.yield
-! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 

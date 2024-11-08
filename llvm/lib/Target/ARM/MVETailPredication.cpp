@@ -401,8 +401,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   case 8:  VCTPID = Intrinsic::arm_mve_vctp16; break;
   case 16: VCTPID = Intrinsic::arm_mve_vctp8; break;
   }
-  Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
-  Value *VCTPCall = Builder.CreateCall(VCTP, Processed);
+  Value *VCTPCall = Builder.CreateIntrinsic(VCTPID, {}, Processed);
   ActiveLaneMask->replaceAllUsesWith(VCTPCall);
 
   // Add the incoming value to the new phi.

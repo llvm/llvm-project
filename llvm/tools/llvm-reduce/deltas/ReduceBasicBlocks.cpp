@@ -45,12 +45,21 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (ChunkSuccessors.size() == Term->getNumSuccessors())
     return;
 
+  // TODO: Handle these without failing verifier.
+  if (isa<CatchSwitchInst>(Term))
+    return;
+
   bool IsBranch = isa<BranchInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
-    LandingPadInst *LP = Invoke->getLandingPadInst();
+    BasicBlock *UnwindDest = Invoke->getUnwindDest();
+    Instruction *LP = UnwindDest->getFirstNonPHI();
+
     // Remove landingpad instruction if the containing block isn't used by other
     // invokes.
-    if (none_of(LP->getParent()->users(), [Invoke](User *U) {
+
+    // TODO: Handle catchswitch, catchpad, catchret, and cleanupret
+    if (isa<LandingPadInst>(LP) &&
+        none_of(UnwindDest->users(), [Invoke](User *U) {
           return U != Invoke && isa<InvokeInst>(U);
         })) {
       LP->replaceAllUsesWith(getDefaultValue(LP->getType()));

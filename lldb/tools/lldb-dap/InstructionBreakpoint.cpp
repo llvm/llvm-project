@@ -9,6 +9,7 @@
 
 #include "InstructionBreakpoint.h"
 #include "DAP.h"
+#include "JSONUtils.h"
 
 namespace lldb_dap {
 

@@ -1120,13 +1120,13 @@ Error LTO::checkPartiallySplit() {
   if (!ThinLTO.CombinedIndex.partiallySplitLTOUnits())
     return Error::success();
 
-  Function *TypeTestFunc = RegularLTO.CombinedModule->getFunction(
-      Intrinsic::getName(Intrinsic::type_test));
-  Function *TypeCheckedLoadFunc = RegularLTO.CombinedModule->getFunction(
-      Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      RegularLTO.CombinedModule->getFunction(
-          Intrinsic::getName(Intrinsic::type_checked_load_relative));
+  const Module *Combined = RegularLTO.CombinedModule.get();
+  Function *TypeTestFunc =
+      Intrinsic::getDeclarationIfExists(Combined, Intrinsic::type_test);
+  Function *TypeCheckedLoadFunc =
+      Intrinsic::getDeclarationIfExists(Combined, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      Combined, Intrinsic::type_checked_load_relative);
 
   // First check if there are type tests / type checked loads in the
   // merged regular LTO module IR.
@@ -2084,7 +2084,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the second round of codegen\n");
   auto SecondRoundLTO = std::make_unique<SecondRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-      AddStream, Cache, std::move(IR.getResult()), CombinedHash);
+      AddStream, Cache, IR.getResult(), CombinedHash);
   return RunBackends(SecondRoundLTO.get());
 }
 

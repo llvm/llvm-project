@@ -43,7 +43,6 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 using namespace llvm;

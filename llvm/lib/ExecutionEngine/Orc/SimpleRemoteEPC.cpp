@@ -26,7 +26,7 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 
 Expected<tpctypes::DylibHandle>
 SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  return DylibMgr->open(DylibPath, 0);
+  return EPCDylibMgr->open(DylibPath, 0);
 }
 
 /// Async helper to chain together calls to DylibMgr::lookupAsync to fulfill all
@@ -34,9 +34,9 @@ SimpleRemoteEPC::loadDylib(const char *DylibPath) {
 /// FIXME: The dylib manager should support multiple LookupRequests natively.
 static void
 lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
-                         ArrayRef<SimpleRemoteEPC::LookupRequest> Request,
+                         ArrayRef<DylibManager::LookupRequest> Request,
                          std::vector<tpctypes::LookupResult> Result,
-                         SimpleRemoteEPC::SymbolLookupCompleteFn Complete) {
+                         DylibManager::SymbolLookupCompleteFn Complete) {
   if (Request.empty())
     return Complete(std::move(Result));
 
@@ -59,7 +59,7 @@ lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
 
 void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                                          SymbolLookupCompleteFn Complete) {
-  lookupSymbolsAsyncHelper(*DylibMgr, Request, {}, std::move(Complete));
+  lookupSymbolsAsyncHelper(*EPCDylibMgr, Request, {}, std::move(Complete));
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
@@ -357,7 +357,7 @@ Error SimpleRemoteEPC::setup(Setup S) {
 
   if (auto DM =
           EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
-    DylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+    EPCDylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
   else
     return DM.takeError();
 

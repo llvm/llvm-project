@@ -126,12 +126,8 @@ static void processOmpAtomicTODO(mlir::Type elementType,
     return;
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
-    // Based on assertion for supported element types in OMPIRBuilder.cpp
-    // createAtomicRead
-    mlir::Type unwrappedEleTy = fir::unwrapRefType(elementType);
-    bool supportedAtomicType = fir::isa_trivial(unwrappedEleTy);
-    if (!supportedAtomicType)
-      TODO(loc, "Unsupported atomic type");
+    assert(fir::isa_trivial(fir::unwrapRefType(elementType)) &&
+           "is supported type for omp atomic");
   }
 }
 
@@ -183,7 +179,11 @@ static inline void genOmpAccAtomicWriteStatement(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
+  // Create a conversion outside the capture block.
+  auto insertionPoint = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.setInsertionPointAfter(rhsExpr.getDefiningOp());
   rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
+  firOpBuilder.restoreInsertionPoint(insertionPoint);
 
   processOmpAtomicTODO<AtomicListT>(varType, loc);
 
@@ -414,10 +414,6 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  if (fromAddress.getType() != toAddress.getType())
-    fromAddress =
-        builder.create<fir::ConvertOp>(loc, toAddress.getType(), fromAddress);
   genOmpAccAtomicCaptureStatement(converter, fromAddress, toAddress,
                                   leftHandClauseList, rightHandClauseList,
                                   elementType, loc);
@@ -501,23 +497,12 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   // a `atomic.read`, `atomic.write`, or `atomic.update` operation
   // inside `atomic.capture`
   Fortran::lower::StatementContext stmtCtx;
-  mlir::Value stmt1LHSArg, stmt1RHSArg, stmt2LHSArg, stmt2RHSArg;
-  mlir::Type elementType;
   // LHS evaluations are common to all combinations of `atomic.capture`
-  stmt1LHSArg = fir::getBase(converter.genExprAddr(assign1.lhs, stmtCtx));
-  stmt2LHSArg = fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
+  mlir::Value stmt1LHSArg =
+      fir::getBase(converter.genExprAddr(assign1.lhs, stmtCtx));
+  mlir::Value stmt2LHSArg =
+      fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
 
-  // Operation specific RHS evaluations
-  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
-    // Atomic capture construct is of the form [capture-stmt, update-stmt] or
-    // of the form [capture-stmt, write-stmt]
-    stmt1RHSArg = fir::getBase(converter.genExprAddr(assign1.rhs, stmtCtx));
-    stmt2RHSArg = fir::getBase(converter.genExprValue(assign2.rhs, stmtCtx));
-  } else {
-    // Atomic capture construct is of the form [update-stmt, capture-stmt]
-    stmt1RHSArg = fir::getBase(converter.genExprValue(assign1.rhs, stmtCtx));
-    stmt2RHSArg = fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
-  }
   // Type information used in generation of `atomic.update` operation
   mlir::Type stmt1VarType =
       fir::getBase(converter.genExprValue(assign1.lhs, stmtCtx)).getType();
@@ -549,44 +534,46 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
-      elementType = converter.genType(fromExpr);
+      mlir::Type elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
-          converter, stmt1RHSArg, stmt1LHSArg,
+          converter, stmt2LHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType, loc);
       genOmpAccAtomicUpdateStatement<AtomicListT>(
-          converter, stmt1RHSArg, stmt2VarType, stmt2Var, stmt2Expr,
+          converter, stmt2LHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
     } else {
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
+      firOpBuilder.setInsertionPoint(atomicCaptureOp);
+      mlir::Value stmt2RHSArg =
+          fir::getBase(converter.genExprValue(assign2.rhs, stmtCtx));
+      firOpBuilder.setInsertionPointToStart(&block);
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
-      elementType = converter.genType(fromExpr);
+      mlir::Type elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
-          converter, stmt1RHSArg, stmt1LHSArg,
+          converter, stmt2LHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, elementType, loc);
       genOmpAccAtomicWriteStatement<AtomicListT>(
-          converter, stmt1RHSArg, stmt2RHSArg,
+          converter, stmt2LHSArg, stmt2RHSArg,
           /*leftHandClauseList=*/nullptr,
           /*rightHandClauseList=*/nullptr, loc);
     }
   } else {
     // Atomic capture construct is of the form [update-stmt, capture-stmt]
-    firOpBuilder.setInsertionPointToEnd(&block);
     const Fortran::semantics::SomeExpr &fromExpr =
         *Fortran::semantics::GetExpr(stmt2Expr);
-    elementType = converter.genType(fromExpr);
-    genOmpAccAtomicCaptureStatement<AtomicListT>(
-        converter, stmt1LHSArg, stmt2LHSArg,
-        /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr, elementType, loc);
-    firOpBuilder.setInsertionPointToStart(&block);
+    mlir::Type elementType = converter.genType(fromExpr);
     genOmpAccAtomicUpdateStatement<AtomicListT>(
         converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
         /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
+    genOmpAccAtomicCaptureStatement<AtomicListT>(
+        converter, stmt1LHSArg, stmt2LHSArg,
+        /*leftHandClauseList=*/nullptr,
+        /*rightHandClauseList=*/nullptr, elementType, loc);
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   if constexpr (std::is_same<AtomicListT,

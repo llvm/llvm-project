@@ -56,13 +56,14 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
-                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-                   DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
-                   DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                   DISubroutineTypeAttr>(attr);
+  return llvm::isa<
+      DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr, DIGenericSubrangeAttr,
+      DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
+      DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+      DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+      DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -70,8 +71,9 @@ bool DINodeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DIScopeAttr::classof(Attribute attr) {
-  return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(attr);
+  return llvm::isa<DICommonBlockAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                   DIFileAttr, DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//

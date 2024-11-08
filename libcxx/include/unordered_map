@@ -604,7 +604,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
+#include <__type_traits/container_traits.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/remove_const.h>
@@ -1830,6 +1832,16 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_map<_Key, _Tp, _Has
 
 #endif
 
+template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+struct __container_traits<unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc> > {
+  // http://eel.is/c++draft/unord.req.except#2
+  //  For unordered associative containers, if an exception is thrown by any operation
+  //  other than the container's hash function from within an insert or emplace function
+  //  inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
+      __nothrow_invokable<_Hash, const _Key&>::value;
+};
+
 template <class _Key,
           class _Tp,
           class _Hash  = hash<_Key>,
@@ -2519,6 +2531,16 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unordered_multimap<_Key, _Tp,
 }
 
 #endif
+
+template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+struct __container_traits<unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc> > {
+  // http://eel.is/c++draft/unord.req.except#2
+  //  For unordered associative containers, if an exception is thrown by any operation
+  //  other than the container's hash function from within an insert or emplace function
+  //  inserting a single element, the insertion has no effect.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
+      __nothrow_invokable<_Hash, const _Key&>::value;
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

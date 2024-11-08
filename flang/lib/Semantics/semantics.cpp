@@ -663,6 +663,10 @@ void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
   DoDumpSymbols(os, globalScope());
 }
 
+ProgramTree &SemanticsContext::SaveProgramTree(ProgramTree &&tree) {
+  return programTrees_.emplace_back(std::move(tree));
+}
+
 void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }
 
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {

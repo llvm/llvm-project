@@ -1287,7 +1287,8 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
       } words = {operands[2], operands[3]};
       value = APInt(64, llvm::bit_cast<uint64_t>(words), /*isSigned=*/true);
     } else if (bitwidth <= 32) {
-      value = APInt(bitwidth, operands[2], /*isSigned=*/true);
+      value = APInt(bitwidth, operands[2], /*isSigned=*/true,
+                    /*implicitTrunc=*/true);
     }
 
     auto attr = opBuilder.getIntegerAttr(intType, value);

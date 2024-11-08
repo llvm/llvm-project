@@ -355,6 +355,35 @@ Third-party Integrations
 
 Libc++ provides integration with a few third-party tools.
 
+Debugging libc++ internals in LLDB
+----------------------------------
+
+LLDB hides the implementation details of libc++ by default.
+
+E.g., when setting a breakpoint in a comparator passed to ``std::sort``, the
+backtrace will read as
+
+.. code-block::
+
+  (lldb) thread backtrace
+  * thread #1, name = 'a.out', stop reason = breakpoint 3.1
+    * frame #0: 0x000055555555520e a.out`my_comparator(a=1, b=8) at test-std-sort.cpp:6:3
+      frame #7: 0x0000555555555615 a.out`void std::__1::sort[abi:ne200000]<std::__1::__wrap_iter<int*>, bool (*)(int, int)>(__first=(item = 8), __last=(item = 0), __comp=(a.out`my_less(int, int) at test-std-sort.cpp:5)) at sort.h:1003:3
+      frame #8: 0x000055555555531a a.out`main at test-std-sort.cpp:24:3
+
+Note how the caller of ``my_comparator`` is shown as ``std::sort``. Looking at
+the frame numbers, we can see that frames #1 until #6 were hidden. Those frames
+represent internal implementation details such as ``__sort4`` and similar
+utility functions.
+
+To also show those implementation details, use ``thread backtrace -u``.
+Alternatively, to disable those compact backtraces, use ``frame recognizer list``
+and ``frame recognizer disable`` on the "libc++ frame recognizer".
+
+Futhermore, stepping into libc++ functions is disabled by default. This is controlled via the
+setting ``target.process.thread.step-avoid-regexp`` which defaults to ``^std::`` and can be
+disabled using ``settings set target.process.thread.step-avoid-regexp ""``.
+
 GDB Pretty printers for libc++
 ------------------------------
 

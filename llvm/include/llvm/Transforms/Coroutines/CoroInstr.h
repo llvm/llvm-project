@@ -124,7 +124,8 @@ public:
   IntrinsicInst *getCoroBegin() {
     for (User *U : users())
       if (auto *II = dyn_cast<IntrinsicInst>(U))
-        if (II->getIntrinsicID() == Intrinsic::coro_begin)
+        if (II->getIntrinsicID() == Intrinsic::coro_begin ||
+            II->getIntrinsicID() == Intrinsic::coro_begin_custom_abi)
           return II;
     llvm_unreachable("no coro.begin associated with coro.id");
   }
@@ -442,20 +443,30 @@ public:
   }
 };
 
-/// This class represents the llvm.coro.begin instructions.
+/// This class represents the llvm.coro.begin or llvm.coro.begin.custom.abi
+/// instructions.
 class CoroBeginInst : public IntrinsicInst {
-  enum { IdArg, MemArg };
+  enum { IdArg, MemArg, CustomABIArg };
 
 public:
   AnyCoroIdInst *getId() const {
     return cast<AnyCoroIdInst>(getArgOperand(IdArg));
   }
 
+  bool hasCustomABI() const {
+    return getIntrinsicID() == Intrinsic::coro_begin_custom_abi;
+  }
+
+  int getCustomABI() const {
+    return cast<ConstantInt>(getArgOperand(CustomABIArg))->getZExtValue();
+  }
+
   Value *getMem() const { return getArgOperand(MemArg); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::coro_begin;
+    return I->getIntrinsicID() == Intrinsic::coro_begin ||
+           I->getIntrinsicID() == Intrinsic::coro_begin_custom_abi;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

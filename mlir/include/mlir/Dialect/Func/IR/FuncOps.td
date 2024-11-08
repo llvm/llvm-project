@@ -251,7 +251,7 @@ def FuncOp : Func_Op<"func", [
 
     // A function that returns its argument twice:
     func.func @count(%x: i64) -> (i64, i64)
-      attributes {fruit: "banana"} {
+      attributes {fruit = "banana"} {
       return %x, %x: i64, i64
     }
 

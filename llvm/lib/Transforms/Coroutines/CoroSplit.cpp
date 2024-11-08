@@ -60,6 +60,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Coroutines/ABI.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
@@ -118,7 +119,6 @@ private:
 
   TargetTransformInfo &TTI;
 
-public:
   /// Create a cloner for a switch lowering.
   CoroCloner(Function &OrigF, const Twine &Suffix, coro::Shape &Shape,
              Kind FKind, TargetTransformInfo &TTI)
@@ -138,6 +138,30 @@ public:
            Shape.ABI == coro::ABI::RetconOnce || Shape.ABI == coro::ABI::Async);
     assert(NewF && "need existing function for continuation");
     assert(ActiveSuspend && "need active suspend point for continuation");
+  }
+
+public:
+  /// Create a clone for a switch lowering.
+  static Function *createClone(Function &OrigF, const Twine &Suffix,
+                               coro::Shape &Shape, Kind FKind,
+                               TargetTransformInfo &TTI) {
+    TimeTraceScope FunctionScope("CoroCloner");
+
+    CoroCloner Cloner(OrigF, Suffix, Shape, FKind, TTI);
+    Cloner.create();
+    return Cloner.getFunction();
+  }
+
+  /// Create a clone for a continuation lowering.
+  static Function *createClone(Function &OrigF, const Twine &Suffix,
+                               coro::Shape &Shape, Function *NewF,
+                               AnyCoroSuspendInst *ActiveSuspend,
+                               TargetTransformInfo &TTI) {
+    TimeTraceScope FunctionScope("CoroCloner");
+
+    CoroCloner Cloner(OrigF, Suffix, Shape, NewF, ActiveSuspend, TTI);
+    Cloner.create();
+    return Cloner.getFunction();
   }
 
   Function *getFunction() const {
@@ -351,7 +375,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
     if (auto *RetStructTy = dyn_cast<StructType>(RetTy)) {
       assert(RetStructTy->getNumElements() == NumReturns &&
              "numbers of returns should match resume function singature");
-      Value *ReturnValue = UndefValue::get(RetStructTy);
+      Value *ReturnValue = PoisonValue::get(RetStructTy);
       unsigned Idx = 0;
       for (Value *RetValEl : CoroResults->return_values())
         ReturnValue = Builder.CreateInsertValue(ReturnValue, RetValEl, Idx++);
@@ -382,7 +406,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 
     Value *ReturnValue = ConstantPointerNull::get(ContinuationTy);
     if (RetStructTy) {
-      ReturnValue = Builder.CreateInsertValue(UndefValue::get(RetStructTy),
+      ReturnValue = Builder.CreateInsertValue(PoisonValue::get(RetStructTy),
                                               ReturnValue, 0);
     }
     Builder.CreateRet(ReturnValue);
@@ -1280,7 +1304,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
-    CoroBegin->replaceAllUsesWith(UndefValue::get(CoroBegin->getType()));
+    CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
     break;
   }
 
@@ -1466,13 +1490,16 @@ struct SwitchCoroutineSplitter {
                     TargetTransformInfo &TTI) {
     assert(Shape.ABI == coro::ABI::Switch);
 
+    // Create a resume clone by cloning the body of the original function,
+    // setting new entry block and replacing coro.suspend an appropriate value
+    // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
-    auto *ResumeClone =
-        createClone(F, ".resume", Shape, CoroCloner::Kind::SwitchResume, TTI);
-    auto *DestroyClone =
-        createClone(F, ".destroy", Shape, CoroCloner::Kind::SwitchUnwind, TTI);
-    auto *CleanupClone =
-        createClone(F, ".cleanup", Shape, CoroCloner::Kind::SwitchCleanup, TTI);
+    auto *ResumeClone = CoroCloner::createClone(
+        F, ".resume", Shape, CoroCloner::Kind::SwitchResume, TTI);
+    auto *DestroyClone = CoroCloner::createClone(
+        F, ".destroy", Shape, CoroCloner::Kind::SwitchUnwind, TTI);
+    auto *CleanupClone = CoroCloner::createClone(
+        F, ".cleanup", Shape, CoroCloner::Kind::SwitchCleanup, TTI);
 
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
@@ -1562,17 +1589,6 @@ struct SwitchCoroutineSplitter {
   }
 
 private:
-  // Create a resume clone by cloning the body of the original function, setting
-  // new entry block and replacing coro.suspend an appropriate value to force
-  // resume or cleanup pass for every suspend point.
-  static Function *createClone(Function &F, const Twine &Suffix,
-                               coro::Shape &Shape, CoroCloner::Kind FKind,
-                               TargetTransformInfo &TTI) {
-    CoroCloner Cloner(F, Suffix, Shape, FKind, TTI);
-    Cloner.create();
-    return Cloner.getFunction();
-  }
-
   // Create an entry block for a resume function with a switch that will jump to
   // suspend points.
   static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
@@ -1742,7 +1758,7 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
   ResumeIntrinsic->replaceAllUsesWith(Val);
   ResumeIntrinsic->eraseFromParent();
   Suspend->setOperand(CoroSuspendAsyncInst::ResumeFunctionArg,
-                      UndefValue::get(Int8PtrTy));
+                      PoisonValue::get(Int8PtrTy));
 }
 
 /// Coerce the arguments in \p FnArgs according to \p FnTy in \p CallArgs.
@@ -1872,7 +1888,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto *Suspend = Shape.CoroSuspends[Idx];
     auto *Clone = Clones[Idx];
 
-    CoroCloner(F, "resume." + Twine(Idx), Shape, Clone, Suspend, TTI).create();
+    CoroCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone, Suspend,
+                            TTI);
   }
 }
 
@@ -2001,7 +2018,8 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto Suspend = Shape.CoroSuspends[i];
     auto Clone = Clones[i];
 
-    CoroCloner(F, "resume." + Twine(i), Shape, Clone, Suspend, TTI).create();
+    CoroCloner::createClone(F, "resume." + Twine(i), Shape, Clone, Suspend,
+                            TTI);
   }
 }
 
@@ -2200,20 +2218,24 @@ static void addPrepareFunction(const Module &M,
 
 static std::unique_ptr<coro::BaseABI>
 CreateNewABI(Function &F, coro::Shape &S,
-             std::function<bool(Instruction &)> IsMatCallback) {
+             std::function<bool(Instruction &)> IsMatCallback,
+             const SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs) {
+  if (S.CoroBegin->hasCustomABI()) {
+    unsigned CustomABI = S.CoroBegin->getCustomABI();
+    if (CustomABI >= GenCustomABIs.size())
+      llvm_unreachable("Custom ABI not found amoung those specified");
+    return GenCustomABIs[CustomABI](F, S);
+  }
+
   switch (S.ABI) {
   case coro::ABI::Switch:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::SwitchABI(F, S, IsMatCallback));
+    return std::make_unique<coro::SwitchABI>(F, S, IsMatCallback);
   case coro::ABI::Async:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AsyncABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AsyncABI>(F, S, IsMatCallback);
   case coro::ABI::Retcon:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AnyRetconABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   case coro::ABI::RetconOnce:
-    return std::unique_ptr<coro::BaseABI>(
-        new coro::AnyRetconABI(F, S, IsMatCallback));
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   }
   llvm_unreachable("Unknown ABI");
 }
@@ -2221,7 +2243,17 @@ CreateNewABI(Function &F, coro::Shape &S,
 CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
     : CreateAndInitABI([](Function &F, coro::Shape &S) {
         std::unique_ptr<coro::BaseABI> ABI =
-            CreateNewABI(F, S, coro::isTriviallyMaterializable);
+            CreateNewABI(F, S, coro::isTriviallyMaterializable, {});
+        ABI->init();
+        return ABI;
+      }),
+      OptimizeFrame(OptimizeFrame) {}
+
+CoroSplitPass::CoroSplitPass(
+    SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs, bool OptimizeFrame)
+    : CreateAndInitABI([=](Function &F, coro::Shape &S) {
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, coro::isTriviallyMaterializable, GenCustomABIs);
         ABI->init();
         return ABI;
       }),
@@ -2232,7 +2264,21 @@ CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
 CoroSplitPass::CoroSplitPass(std::function<bool(Instruction &)> IsMatCallback,
                              bool OptimizeFrame)
     : CreateAndInitABI([=](Function &F, coro::Shape &S) {
-        std::unique_ptr<coro::BaseABI> ABI = CreateNewABI(F, S, IsMatCallback);
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, IsMatCallback, {});
+        ABI->init();
+        return ABI;
+      }),
+      OptimizeFrame(OptimizeFrame) {}
+
+// For back compatibility, constructor takes a materializable callback and
+// creates a generator for an ABI with a modified materializable callback.
+CoroSplitPass::CoroSplitPass(
+    std::function<bool(Instruction &)> IsMatCallback,
+    SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs, bool OptimizeFrame)
+    : CreateAndInitABI([=](Function &F, coro::Shape &S) {
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, IsMatCallback, GenCustomABIs);
         ABI->init();
         return ABI;
       }),

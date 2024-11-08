@@ -40,7 +40,7 @@ M68kFrameLowering::M68kFrameLowering(const M68kSubtarget &STI, Align Alignment)
   StackPtr = TRI->getStackRegister();
 }
 
-bool M68kFrameLowering::hasFP(const MachineFunction &MF) const {
+bool M68kFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
