@@ -1487,7 +1487,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(NumDsts).getReg());
     if (DstTy.isVector()) {
       // This case is the converse of G_CONCAT_VECTORS.
-      if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
+      if (!SrcTy.isVector() ||
+          (SrcTy.getScalarType() != DstTy.getScalarType() &&
+           !SrcTy.isPointerVector()) ||
           SrcTy.isScalableVector() != DstTy.isScalableVector() ||
           SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
         report("G_UNMERGE_VALUES source operand does not match vector "
