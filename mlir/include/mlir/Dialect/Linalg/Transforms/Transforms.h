@@ -1788,7 +1788,7 @@ void populateSwapExtractSliceWithFillPatterns(RewritePatternSet &patterns);
 
 /// Add patterns to make explicit broadcasts and transforms in the
 /// input operands of a genericOp.
-void populateUnfoldProjectedPermutationPatterns(RewritePatternSet &patterns);
+void populateDecomposeProjectedPermutationPatterns(RewritePatternSet &patterns);
 
 /// Patterns to apply `splitReduction` below.
 void populateSplitReductionPattern(

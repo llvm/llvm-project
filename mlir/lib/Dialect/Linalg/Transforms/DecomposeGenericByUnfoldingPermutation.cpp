@@ -1,4 +1,4 @@
-//===- UnfoldProjectedPermutation.cpp - extract projected projections   ---===//
+//===- DecomposeGenericByUnfoldingPermutation.cpp                   -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,27 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include <utility>
-
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include <map>
 #include <optional>
-#include <vector>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::linalg;
 
 namespace {
 
-/// This file implements pattern to decompose the input operand(s) of a
-/// linalg.generic that has a `transpose`, `broadcast` or a mixture of two,
-/// into explicit transpose and broadcast. Having them folded into the
-/// linalg.generic is a good optimization but sometimes we may want to unwrap
-/// i.e. `unfold` them as explicit transpose and broadcast. This rewrite
-/// pattern helps do it for each input operand. This is useful for instance
-/// when trying to recognize named ops.
+/// This pattern decomposes the input operand(s) of a linalg.generic that has
+/// a `transpose`, `broadcast`, or a mixture of two, into explicit transpose
+/// and broadcast. Having them folded into the linalg.generic is a good
+/// optimization but sometimes we may want to unwrap, i.e., `unfold` them as
+/// explicit transpose and broadcast. This rewrite pattern helps do it for
+/// each input operand. This is useful for instance when trying to recognize
+/// named ops.
 ///
 /// The transpose, broadcast, or mixture of both, are expressed in the affine
 /// map of the operand. Technically it is essentially `projected permutation`.
@@ -69,28 +67,27 @@ namespace {
 ///
 /// Note that linalg.generic has been 'specialized' to linalg.div.
 ///
-/// To unfold it is more effective to transpose first and then do the broadcast.
-/// However, if transpose is done first, the permutation map needs to be
-/// expressed in terms of reduced dimension (as broadcast hasn't happened yet).
-/// Also, the broadcast dimensions in a linalg.generic come from other operands
-/// (those not broadcasted along that particular dimension). We work this out
-/// by computing the convex-polyhedron shape of the linalg.gneric iteration
-/// space from shapes of all the operands (inputs and outputs).
+/// To unfold it, it is more optimal to transpose first and then do the
+/// broadcast. However, if transpose is done first, the permutation map needs
+/// to be expressed in terms of reduced dimension as broadcast hasn't happened
+/// yet. Also, the broadcast dimensions in a linalg.generic come from other
+/// operands (those not broadcasted along that particular dimension). We work
+/// this out by computing the convex-polyhedron shape of the linalg.generic
+/// iteration space from shapes of all the operands, both inputs and outputs.
 ///
-struct UnfoldProjectedPermutation : public OpRewritePattern<GenericOp> {
+struct DecomposeProjectedPermutation : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override;
 };
 
-/// For the given `map` determine what dimensions are transposed
-/// and what dimensions are broadcasted.
+/// For the given `map`, determine what dimensions are transposed and what
+/// dimensions are broadcasted.
 /// Returns :
-///  `isTransposed, isBroadcast,
-///   transpose-permutation, broadcast-dimensions`
+///   transpose-permutation, broadcast-dimensions` (empty if not needed)
 ///
-std::tuple<bool, bool, SmallVector<int64_t>, SmallVector<int64_t>>
+std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 computeTransposeBroadcast(AffineMap &map) {
   assert(map.isProjectedPermutation(false) && "not a projection");
   int64_t minorSize = map.getNumResults();
@@ -116,36 +113,36 @@ computeTransposeBroadcast(AffineMap &map) {
     }
     broadcast.push_back(i);
   }
-  bool hasBroadcast = !broadcast.empty();
 
-  /// Consider an operand `x : tensor<7x8x9>` of a genericOp that has
-  /// affine map `affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d1)>`
-  /// `x`s access is both transposed and brodcast. But when specifying
-  /// the `linalg.transpose(x : tensor<7x8x9>)` the dimensions need to be
-  /// specified as `affine_map<(d0,d1,d2) -> (d1, d2, d0)` instead of
-  /// refering to d3, d4. Therefore, re-base the transpose dimensions so
-  /// that they start from d0.
-  std::map<int64_t, int64_t> minorMap;
-  for (int64_t i = 0; i < minorSize; ++i)
-    minorMap.insert({sortedResMap[i], i});
+  SmallVector<int64_t> permutation;
+  if (hasTranspose) {
+    /// Consider an operand `x : tensor<7x8x9>` of a genericOp that has
+    /// affine map `affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d1)>`
+    /// `x`s access is both transposed and brodcast. But when specifying
+    /// the `linalg.transpose(x : tensor<7x8x9>)` the dimensions need to be
+    /// specified as `affine_map<(d0,d1,d2) -> (d1, d2, d0)` instead of
+    /// refering to d3, d4. Therefore, re-base the transpose dimensions so
+    /// that they start from d0.
+    permutation.resize(minorSize);
+    std::map<int64_t, int64_t> minorMap;
+    for (int64_t i = 0; i < minorSize; ++i)
+      minorMap.insert({sortedResMap[i], i});
 
-  // Re-map the dimensions.
-  SmallVector<int64_t> remappedResult(minorSize);
-  for (int64_t i = 0; i < minorSize; ++i)
-    remappedResult[i] = minorMap[minorResult[i]];
+    // Re-map the dimensions.
+    SmallVector<int64_t> remappedResult(minorSize);
+    for (int64_t i = 0; i < minorSize; ++i)
+      remappedResult[i] = minorMap[minorResult[i]];
 
-  /// Calculate the permutation for the transpose.
-  SmallVector<int64_t> permutation(minorSize);
-  for (unsigned i = 0; i < minorSize; ++i) {
-    permutation[remappedResult[i]] = i;
+    /// Calculate the permutation for the transpose.
+    for (unsigned i = 0; i < minorSize; ++i) {
+      permutation[remappedResult[i]] = i;
+    }
   }
-
-  return {hasTranspose, hasBroadcast, permutation, broadcast};
+  return {permutation, broadcast};
 }
 
-LogicalResult
-UnfoldProjectedPermutation::matchAndRewrite(GenericOp op,
-                                            PatternRewriter &rewriter) const {
+LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
+    GenericOp op, PatternRewriter &rewriter) const {
   if (!op.hasPureTensorSemantics() || op.isSingleInputOutput() ||
       op.isSingleYieldOp() || !op.isAllParallelLoops())
     return failure();
@@ -183,10 +180,10 @@ UnfoldProjectedPermutation::matchAndRewrite(GenericOp op,
     if (map.isIdentity())
       continue;
 
-    auto [hasTranspose, hasBroadcast, permutation, broadcastedDims] =
-        computeTransposeBroadcast(map);
+    auto [permutation, broadcastedDims] = computeTransposeBroadcast(map);
 
-    if (hasTranspose) {
+    // Does it need transpose?
+    if (!permutation.empty()) {
       /// linalg.transpose permutes the dimensions of input using
       /// rule: dim(result, i) = dim(input, permutation[i])
       SmallVector<int64_t> transposedShape(map.getNumResults());
@@ -202,8 +199,8 @@ UnfoldProjectedPermutation::matchAndRewrite(GenericOp op,
       isChanged = true;
     }
 
-    // Does it require broadcast
-    if (hasBroadcast) {
+    // Does it require broadcast?
+    if (!broadcastedDims.empty()) {
       assert(broadcastedDims.size() && "should have non size broadcast");
       Value emptyTensor = rewriter.create<tensor::EmptyOp>(
           loc, outputShape, inputRTType.getElementType());
@@ -237,7 +234,7 @@ UnfoldProjectedPermutation::matchAndRewrite(GenericOp op,
 
 } // namespace
 
-void mlir::linalg::populateUnfoldProjectedPermutationPatterns(
+void mlir::linalg::populateDecomposeProjectedPermutationPatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<UnfoldProjectedPermutation>(patterns.getContext());
+  patterns.insert<DecomposeProjectedPermutation>(patterns.getContext());
 }

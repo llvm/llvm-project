@@ -347,7 +347,7 @@ struct LinalgSpecializeGenericOpsPass
 void LinalgSpecializeGenericOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgGenericOpsSpecializationPatterns(patterns);
-  populateUnfoldProjectedPermutationPatterns(patterns);
+  populateDecomposeProjectedPermutationPatterns(patterns);
 
   if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
