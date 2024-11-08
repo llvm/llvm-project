@@ -160,7 +160,7 @@ def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
 
 let ArchExtKindSpelling = "AEK_I8MM" in
 def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8", "FEAT_I8MM",
-  "Enable Matrix Multiply Int8 Extension">;
+  "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
 
 let ArchExtKindSpelling = "AEK_F32MM" in
 def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32", "FEAT_F32MM",
@@ -279,7 +279,7 @@ def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
 //===----------------------------------------------------------------------===//
 
 def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
-  "Enable BFloat16 Extension">;
+  "Enable BFloat16 Extension", [FeatureFPARMv8]>;
 
 def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
   "Enable Armv8.6-A Activity Monitors Virtualization support",
