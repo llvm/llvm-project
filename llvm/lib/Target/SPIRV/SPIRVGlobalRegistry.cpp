@@ -1143,6 +1143,9 @@ SPIRVGlobalRegistry::getScalarOrVectorComponentType(SPIRVType *Type) const {
   Register ScalarReg = Type->getOpcode() == SPIRV::OpTypeVector
                            ? Type->getOperand(1).getReg()
                            : Type->getOperand(0).getReg();
+  SPIRVType *ScalarType = getSPIRVTypeForVReg(ScalarReg);
+  assert(isScalarOrVectorOfType(Type->getOperand(0).getReg(),
+                                ScalarType->getOpcode()));
   return getSPIRVTypeForVReg(ScalarReg);
 }
 

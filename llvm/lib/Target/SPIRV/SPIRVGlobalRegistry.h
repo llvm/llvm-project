@@ -392,7 +392,7 @@ public:
   unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
 
   // Return the component type in a vector if the argument is associated with
-  // a vector type. Returns the argument itself for a scalar type, and nullptr
+  // a vector type. Returns the argument itself for other types, and nullptr
   // for a missing type.
   SPIRVType *getScalarOrVectorComponentType(Register VReg) const;
   SPIRVType *getScalarOrVectorComponentType(SPIRVType *Type) const;

@@ -1011,7 +1011,7 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
   }
 }
 
-static bool imageTypeHasUnknownFormat(SPIRVType *TypeInst) {
+static bool isImageTypeWithUnknownFormat(SPIRVType *TypeInst) {
   if (TypeInst->getOpcode() != SPIRV::OpTypeImage)
     return false;
   assert(TypeInst->getOperand(7).isImm() && "The image format must be an imm.");
@@ -1427,7 +1427,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
-    if (imageTypeHasUnknownFormat(TypeDef))
+    if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
