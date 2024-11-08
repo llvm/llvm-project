@@ -17,6 +17,9 @@
 
 #include <deque>
 #include <vector>
+#include <array>
 
 // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}Only contiguous iterators can be adapted by __bounded_iter.}}
-std::__bounded_iter<std::deque<int>::iterator> bit;
+std::__bounded_iter<std::deque<int>::iterator> bounded_iter;
+// expected-error-re@*:* {{static assertion failed due to requirement {{.*}}Only contiguous iterators can be adapted by __static_bounded_iter.}}
+std::__static_bounded_iter<std::deque<int>::iterator, 42> statically_bounded_iter;
