@@ -754,6 +754,13 @@ def BufferStore : DXILOp<69, bufferStore> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def UpdateCounter : DXILOp<70, bufferUpdateCounter> {
+  let Doc = "increments/decrements a buffer counter";
+  let arguments = [HandleTy, Int8Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let Doc = "checks whether a Sample, Gather, or Load operation "
             "accessed mapped tiles in a tiled resource";
@@ -822,6 +829,16 @@ def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
+  let Doc = "unsigned dot product of 4 x i8 vectors packed into i32, with "
+            "accumulate to i32";
+  let LLVMIntrinsic = int_dx_dot4add_u8packed;
+  let arguments = [Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
@@ -859,6 +876,15 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let Doc = "returns the index of the current lane in the wave";
   let LLVMIntrinsic = int_dx_wave_getlaneindex;
   let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveAllBitCount : DXILOp<135, waveAllOp> {
+  let Doc = "returns the count of bits set to 1 across the wave";
+  let LLVMIntrinsic = int_dx_wave_active_countbits;
+  let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];

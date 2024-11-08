@@ -1373,9 +1373,8 @@ Thunk::Thunk(Ctx &ctx, Symbol &d, int64_t a)
 Thunk::~Thunk() = default;
 
 static Thunk *addThunkAArch64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
-  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
-      type != R_AARCH64_PLT32)
-    Fatal(ctx) << "unrecognized relocation type";
+  assert(is_contained({R_AARCH64_CALL26, R_AARCH64_JUMP26, R_AARCH64_PLT32},
+                      type));
   bool mayNeedLandingPad =
       (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
       !isAArch64BTILandingPad(ctx, s, a);
