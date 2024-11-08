@@ -13,7 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 //===----------------------------------------------------------------------===//
 // General CIR parsing / printing
