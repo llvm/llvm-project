@@ -2205,33 +2205,26 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
     return false;
 
   // UDT types are not allowed
-  clang::QualType CanonicalType = QT.getCanonicalType();
-  if (CanonicalType->getAs<clang::RecordType>()) {
+  if (QT->isRecordType())
     return false;
-  }
+
+  if (QT->isBooleanType() || QT->isEnumeralType())
+    return false;
 
   // the only other valid builtin types are scalars or vectors
-  if (const BuiltinType *BT = CanonicalType->getAs<BuiltinType>()) {
-    if (BT->isBooleanType() || BT->isEnumeralType())
-      return false;
-
-    int TotalSizeInBytes = SemaRef.Context.getTypeSize(BT) / 8;
-
-    if (TotalSizeInBytes > 16)
+  if (QT->isArithmeticType()) {
+    if (SemaRef.Context.getTypeSize(QT) / 8 > 16)
       return false;
     return true;
   }
 
-  if (const VectorType *VT = CanonicalType->getAs<VectorType>()) {
+  if (const VectorType *VT = QT->getAs<VectorType>()) {
     int ArraySize = VT->getNumElements();
 
     if (ArraySize > 4)
       return false;
 
-    QualType ElTy = VT->getElementType();
-    int TotalSizeInBytes = (SemaRef.Context.getTypeSize(ElTy) / 8) * ArraySize;
-
-    if (TotalSizeInBytes > 16)
+    if (SemaRef.Context.getTypeSize(QT) / 8 > 16)
       return false;
     return true;
   }
