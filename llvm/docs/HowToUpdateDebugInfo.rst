@@ -77,12 +77,12 @@ When to merge instruction locations
 
 A transformation should merge instruction locations if it replaces multiple
 instructions with one or more new instructions, *and* the new instruction(s)
-produce the output of more than one of the original instructions. The API to
-use is ``Instruction::applyMergedLocation``, and the new location for each new
-instruction should be a merge of the locations of all the instructions whose
-output is produced the new instructions; typically, this includes any
-instruction being RAUWed by a new instruction, and excludes any instruction that
-only produces an intermediate value used by the RAUWed instruction.
+produce the output of more than one of the original instructions. The API to use
+is ``Instruction::applyMergedLocation``. For each new instruction I, its new
+location should be a merge of the locations of all instructions whose output is
+produced by I. Typically, this includes any instruction being RAUWed by a new
+instruction, and excludes any instruction that only produces an intermediate
+value used by the RAUWed instruction.
 
 The purpose of this rule is to ensure that a) the single merged instruction
 has a location with an accurate scope attached, and b) to prevent misleading
