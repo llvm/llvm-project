@@ -495,6 +495,12 @@ TYPE_PARSER(construct<OmpLastprivateClause>(
         pure(OmpLastprivateClause::LastprivateModifier::Conditional) / ":"),
     Parser<OmpObjectList>{}))
 
+// OMP 5.2 11.7.1 BIND ( PARALLEL | TEAMS | THREAD )
+TYPE_PARSER(construct<OmpBindClause>(
+    "PARALLEL" >> pure(OmpBindClause::Type::Parallel) ||
+    "TEAMS" >> pure(OmpBindClause::Type::Teams) ||
+    "THREAD" >> pure(OmpBindClause::Type::Thread)))
+
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
@@ -509,6 +515,8 @@ TYPE_PARSER(
     "ATOMIC_DEFAULT_MEM_ORDER" >>
         construct<OmpClause>(construct<OmpClause::AtomicDefaultMemOrder>(
             parenthesized(Parser<OmpAtomicDefaultMemOrderClause>{}))) ||
+    "BIND" >> construct<OmpClause>(construct<OmpClause::Bind>(
+                  parenthesized(Parser<OmpBindClause>{}))) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
                       parenthesized(scalarIntConstantExpr))) ||
     "COPYIN" >> construct<OmpClause>(construct<OmpClause::Copyin>(
@@ -697,6 +705,7 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "TEAMS DISTRIBUTE SIMD" >>
         pure(llvm::omp::Directive::OMPD_teams_distribute_simd),
     "TEAMS DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_teams_distribute),
+    "TEAMS LOOP" >> pure(llvm::omp::Directive::OMPD_teams_loop),
     "TILE" >> pure(llvm::omp::Directive::OMPD_tile),
     "UNROLL" >> pure(llvm::omp::Directive::OMPD_unroll)))))
 

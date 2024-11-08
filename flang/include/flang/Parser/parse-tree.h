@@ -3778,6 +3778,13 @@ struct OmpNumTasksClause {
 // update-clause -> UPDATE(task-dependence-type)    // since 5.0
 WRAPPER_CLASS(OmpUpdateClause, OmpTaskDependenceType);
 
+// OMP 5.2 11.7.1 bind-clause ->
+//                  BIND( PARALLEL | TEAMS | THREAD )
+struct OmpBindClause {
+  ENUM_CLASS(Type, Parallel, Teams, Thread)
+  WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Type);
+};
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
