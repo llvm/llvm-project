@@ -158,12 +158,14 @@ entry:
 define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
 ; CHECK-LABEL: define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { <2 x float> } { <2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000> }
+; CHECK-NEXT:    ret { <2 x float> } { <2 x float> splat (float 0xFFF0000000000000) }
 ;
 entry:
   ret { <2 x float>} { <2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000> }
 }
 
+; UTC_ARGS: --disable
+; FileCheck does not like the nested square brackets.
 define nofpclass(pinf) [ 1 x [ 1 x float ]] @ret_nofpclass_nested_array_ty_pinf__ninf() {
 ; CHECK-LABEL: @ret_nofpclass_nested_array_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
@@ -172,6 +174,7 @@ define nofpclass(pinf) [ 1 x [ 1 x float ]] @ret_nofpclass_nested_array_ty_pinf_
 entry:
   ret [ 1 x [ 1 x float ]] [[ 1 x float ] [float 0xFFF0000000000000]]
 }
+; UTC_ARGS: --enable
 
 define nofpclass(pzero) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pzero__nzero() {
 ; CHECK-LABEL: define nofpclass(pzero) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pzero__nzero() {

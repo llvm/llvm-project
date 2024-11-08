@@ -1786,6 +1786,12 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
+def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">, 
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
+def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">, 
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<directory>">,
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -4924,10 +4930,6 @@ def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Enable using library calls for save and restore">;
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
-def mforced_sw_shadow_stack : Flag<["-"], "mforced-sw-shadow-stack">, Group<m_riscv_Features_Group>,
-  HelpText<"Force using software shadow stack when shadow-stack enabled">;
-def mno_forced_sw_shadow_stack : Flag<["-"], "mno-forced-sw-shadow-stack">, Group<m_riscv_Features_Group>,
-  HelpText<"Not force using software shadow stack when shadow-stack enabled">;
 } // let Flags = [TargetSpecific]
 let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
@@ -6283,6 +6285,8 @@ def mno_80387 : Flag<["-"], "mno-80387">, Alias<mno_x87>;
 def mno_fp_ret_in_387 : Flag<["-"], "mno-fp-ret-in-387">, Alias<mno_x87>;
 def mmmx : Flag<["-"], "mmmx">, Group<m_x86_Features_Group>;
 def mno_mmx : Flag<["-"], "mno-mmx">, Group<m_x86_Features_Group>;
+def mamx_avx512 : Flag<["-"], "mamx-avx512">, Group<m_x86_Features_Group>;
+def mno_amx_avx512 : Flag<["-"], "mno-amx-avx512">, Group<m_x86_Features_Group>;
 def mamx_bf16 : Flag<["-"], "mamx-bf16">, Group<m_x86_Features_Group>;
 def mno_amx_bf16 : Flag<["-"], "mno-amx-bf16">, Group<m_x86_Features_Group>;
 def mamx_complex : Flag<["-"], "mamx-complex">, Group<m_x86_Features_Group>;
@@ -6295,6 +6299,8 @@ def mamx_fp8 : Flag<["-"], "mamx-fp8">, Group<m_x86_Features_Group>;
 def mno_amx_fp8 : Flag<["-"], "mno-amx-fp8">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
+def mamx_transpose : Flag<["-"], "mamx-transpose">, Group<m_x86_Features_Group>;
+def mno_amx_transpose : Flag<["-"], "mno-amx-transpose">, Group<m_x86_Features_Group>;
 def mcmpccxadd : Flag<["-"], "mcmpccxadd">, Group<m_x86_Features_Group>;
 def mno_cmpccxadd : Flag<["-"], "mno-cmpccxadd">, Group<m_x86_Features_Group>;
 def msse : Flag<["-"], "msse">, Group<m_x86_Features_Group>;

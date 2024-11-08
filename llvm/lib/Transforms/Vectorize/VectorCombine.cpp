@@ -405,13 +405,15 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
                                           const Instruction &I,
                                           ExtractElementInst *&ConvertToShuffle,
                                           unsigned PreferredExtractIndex) {
-  auto *Ext0IndexC = dyn_cast<ConstantInt>(Ext0->getOperand(1));
-  auto *Ext1IndexC = dyn_cast<ConstantInt>(Ext1->getOperand(1));
+  auto *Ext0IndexC = dyn_cast<ConstantInt>(Ext0->getIndexOperand());
+  auto *Ext1IndexC = dyn_cast<ConstantInt>(Ext1->getIndexOperand());
   assert(Ext0IndexC && Ext1IndexC && "Expected constant extract indexes");
 
   unsigned Opcode = I.getOpcode();
+  Value *Ext0Src = Ext0->getVectorOperand();
+  Value *Ext1Src = Ext1->getVectorOperand();
   Type *ScalarTy = Ext0->getType();
-  auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
+  auto *VecTy = cast<VectorType>(Ext0Src->getType());
   InstructionCost ScalarOpCost, VectorOpCost;
 
   // Get cost estimates for scalar and vector versions of the operation.
@@ -452,7 +454,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // Extra uses of the extracts mean that we include those costs in the
   // vector total because those instructions will not be eliminated.
   InstructionCost OldCost, NewCost;
-  if (Ext0->getOperand(0) == Ext1->getOperand(0) && Ext0Index == Ext1Index) {
+  if (Ext0Src == Ext1Src && Ext0Index == Ext1Index) {
     // Handle a special case. If the 2 extracts are identical, adjust the
     // formulas to account for that. The extra use charge allows for either the
     // CSE'd pattern or an unoptimized form with identical values:
@@ -513,12 +515,12 @@ static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
                                             unsigned NewIndex,
                                             IRBuilder<> &Builder) {
   // Shufflevectors can only be created for fixed-width vectors.
-  if (!isa<FixedVectorType>(ExtElt->getOperand(0)->getType()))
+  Value *X = ExtElt->getVectorOperand();
+  if (!isa<FixedVectorType>(X->getType()))
     return nullptr;
 
   // If the extract can be constant-folded, this code is unsimplified. Defer
   // to other passes to handle that.
-  Value *X = ExtElt->getVectorOperand();
   Value *C = ExtElt->getIndexOperand();
   assert(isa<ConstantInt>(C) && "Expected a constant index operand");
   if (isa<Constant>(X))
@@ -1032,9 +1034,11 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 /// a vector into vector operations followed by extract. Note: The SLP pass
 /// may miss this pattern because of implementation problems.
 bool VectorCombine::foldExtractedCmps(Instruction &I) {
+  auto *BI = dyn_cast<BinaryOperator>(&I);
+
   // We are looking for a scalar binop of booleans.
   // binop i1 (cmp Pred I0, C0), (cmp Pred I1, C1)
-  if (!I.isBinaryOp() || !I.getType()->isIntegerTy(1))
+  if (!BI || !I.getType()->isIntegerTy(1))
     return false;
 
   // The compare predicates should match, and each compare should have a
@@ -1060,6 +1064,8 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   ExtractElementInst *ConvertToShuf = getShuffleExtract(Ext0, Ext1);
   if (!ConvertToShuf)
     return false;
+  assert((ConvertToShuf == Ext0 || ConvertToShuf == Ext1) &&
+         "Unknown ExtractElementInst");
 
   // The original scalar pattern is:
   // binop i1 (cmp Pred (ext X, Index0), C0), (cmp Pred (ext X, Index1), C1)
@@ -1111,10 +1117,10 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   CmpC[Index0] = C0;
   CmpC[Index1] = C1;
   Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC));
-
   Value *Shuf = createShiftShuffle(VCmp, ExpensiveIndex, CheapIndex, Builder);
-  Value *VecLogic = Builder.CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
-                                        VCmp, Shuf);
+  Value *LHS = ConvertToShuf == Ext0 ? Shuf : VCmp;
+  Value *RHS = ConvertToShuf == Ext0 ? VCmp : Shuf;
+  Value *VecLogic = Builder.CreateBinOp(BI->getOpcode(), LHS, RHS);
   Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;
@@ -1478,7 +1484,9 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding a shuffled binop: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
-  if (NewCost >= OldCost)
+
+  // If costs are equal, still fold as we reduce instruction count.
+  if (NewCost > OldCost)
     return false;
 
   Value *Shuf0 = Builder.CreateShuffleVector(Op00, Op01, NewMask0);

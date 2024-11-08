@@ -16,13 +16,19 @@ void NormalUses() {
   // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop gang(dim:1)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   int Val;
   // CHECK-NEXT: DeclStmt
@@ -33,13 +39,19 @@ void NormalUses() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop gang(static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
@@ -49,14 +61,20 @@ void NormalUses() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc kernels
 #pragma acc loop gang(num:1) gang(static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
@@ -67,14 +85,20 @@ void NormalUses() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc parallel
 #pragma acc loop gang(dim:1, static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
@@ -82,41 +106,59 @@ void NormalUses() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop gang(static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: OpenACCAsteriskSizeExpr
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop gang(static:*)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: gang clause
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop gang
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 template<typename T, unsigned One>
@@ -132,37 +174,55 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: gang clause dim
   // CHECK-NEXT: DeclRefExpr{{.*}}'unsigned int' NonTypeTemplateParm{{.*}} 'One' 'unsigned int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop gang(dim:One)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 'Val' 'T'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop gang(static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: OpenACCAsteriskSizeExpr
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop gang(static:*)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
@@ -171,14 +231,20 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 'Val' 'T'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc parallel
 #pragma acc loop gang(dim:One) gang(static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
@@ -186,41 +252,59 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'unsigned int' NonTypeTemplateParm{{.*}} 'One' 'unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 'Val' 'T'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc parallel
 #pragma acc loop gang(dim:One, static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 'Val' 'T'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop gang(static:Val)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: gang clause
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop gang
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // Instantiation:
   // CHECK-NEXT: FunctionDecl{{.*}} used TemplateUses 'void (int)' implicit_instantiation
@@ -238,10 +322,16 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} 'unsigned int' depth 0 index 1 One
   // CHECK-NEXT: IntegerLiteral{{.*}}'unsigned int' 1
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
@@ -249,20 +339,32 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: gang clause static
   // CHECK-NEXT: OpenACCAsteriskSizeExpr
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
@@ -277,10 +379,16 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
@@ -294,10 +402,16 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
@@ -306,20 +420,32 @@ void TemplateUses(T Val) {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 'Val' 'int'
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: gang clause
   // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
-  // CHECK-NEXT: <<<NULL>>
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 }
 

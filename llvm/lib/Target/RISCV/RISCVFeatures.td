@@ -936,6 +936,13 @@ def FeatureStdExtSscsrind
     : RISCVExtension<"sscsrind", 1, 0,
                      "'Sscsrind' (Indirect CSR Access Supervisor Level)">;
 
+def FeatureStdExtSmdbltrp
+    : RISCVExtension<"smdbltrp", 1, 0,
+                     "'Smdbltrp' (Double Trap Machine Level)">;
+def FeatureStdExtSsdbltrp
+    : RISCVExtension<"ssdbltrp", 1, 0,
+                     "'Ssdbltrp' (Double Trap Supervisor Level)">;
+
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
@@ -1386,6 +1393,13 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+foreach nf = {2-8} in
+  def TuneOptimizedNF#nf#SegmentLoadStore :
+      SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
+                       "HasOptimizedNF"#nf#"SegmentLoadStore",
+                       "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are"
+                       "implemented as a wide memory op and shuffle">;
+
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
                       "true", "Experimental intrinsics">;
@@ -1447,8 +1461,3 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-def FeatureForcedSWShadowStack : SubtargetFeature<
-    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
-    "Implement shadow stack with software.">;
-def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

@@ -109,12 +109,9 @@ body:             |
     ; RV64ZBB_OR_RV64ZBKB: liveins: $x10, $x11
     ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
     ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[TRUNC]], [[TRUNC1]](s32)
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ROTL]](s32)
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROLW:%[0-9]+]]:_(s64) = G_ROLW [[COPY]], [[COPY1]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ROLW]](s64)
     ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %2(s64)
@@ -268,12 +265,9 @@ body:             |
     ; RV64ZBB_OR_RV64ZBKB: liveins: $x10, $x11
     ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
     ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[TRUNC]], [[TRUNC1]](s32)
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ROTR]](s32)
-    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[RORW:%[0-9]+]]:_(s64) = G_RORW [[COPY]], [[COPY1]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[RORW]](s64)
     ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %2:_(s64) = COPY $x10
     %0:_(s32) = G_TRUNC %2(s64)

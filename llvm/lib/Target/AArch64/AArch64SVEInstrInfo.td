@@ -3845,6 +3845,10 @@ let Predicates = [HasSVE2orSME] in {
 
   // SVE2 extract vector (immediate offset, constructive)
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
+  let AddedComplexity = 2 in {
+    def : Pat<(nxv16i8 (AArch64ext nxv16i8:$zn1, nxv16i8:$zn2, (i32 imm0_255:$imm))),
+              (EXT_ZZI_B (REG_SEQUENCE ZPR2, $zn1, zsub0, $zn2, zsub1), imm0_255:$imm)>;
+  }
 } // End HasSVE2orSME
 
 let Predicates = [HasSVE2] in {
@@ -3902,7 +3906,7 @@ let Predicates = [HasSVE2orSME] in {
   defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
 } // End HasSVE2orSME
 
-let Predicates = [HasSVE2AES] in {
+let Predicates = [HasSVE2, HasSVEAES] in {
   // SVE2 crypto destructive binary operations
   defm AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
   defm AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8, int_aarch64_sve_aesd, nxv16i8>;

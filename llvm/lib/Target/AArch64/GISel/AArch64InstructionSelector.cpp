@@ -2967,7 +2967,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (OpFlags & AArch64II::MO_GOT) {
-      I.setDesc(TII.get(AArch64::LOADgot));
+      I.setDesc(TII.get(MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+                            ? AArch64::LOADgotAUTH
+                            : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
@@ -5314,7 +5316,9 @@ bool AArch64InstructionSelector::selectUSMovFromExtend(
     return false;
   Register Src0 = Extract->getOperand(1).getReg();
 
-  const LLT &VecTy = MRI.getType(Src0);
+  const LLT VecTy = MRI.getType(Src0);
+  if (VecTy.isScalableVector())
+    return false;
 
   if (VecTy.getSizeInBits() != 128) {
     const MachineInstr *ScalarToVector = emitScalarToVector(
