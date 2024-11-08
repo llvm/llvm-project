@@ -3858,8 +3858,7 @@ def LifetimeBoundDocs : Documentation {
 The ``lifetimebound`` attribute on a function parameter or implicit object
 parameter indicates that objects that are referred to by that parameter may
 also be referred to by the return value of the annotated function (or, for a
-parameter of a constructor, by the value of the constructed object). It is only
-supported in C++.
+parameter of a constructor, by the value of the constructed object).
 
 By default, a reference is considered to refer to its referenced object, a
 pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
