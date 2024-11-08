@@ -304,6 +304,12 @@ C2y Feature Support
   behavior is a conforming GNU extension in those modes, but will no longer
   have an effect in C2y mode.
 
+- Updated conformance for `N3342 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3342.pdf>`_
+  which made qualified function types implementation-defined rather than
+  undefined. Clang has always accepted ``const`` and ``volatile`` qualified
+  function types by ignoring the qualifiers.
+
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
