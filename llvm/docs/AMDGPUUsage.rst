@@ -1701,7 +1701,10 @@ The AMDGPU backend supports the following calling conventions:
 
                                      Values in scalar registers as well as v0-v7 are not preserved. Values in
                                      VGPRs starting at v8 are not preserved for the active lanes, but must be
-                                     saved by the callee for inactive lanes when using WWM.
+                                     saved by the callee for inactive lanes when using WWM (a notable exception is
+                                     when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this
+                                     case the backend assumes that there are no inactive lanes upon entry; any inactive
+                                     lanes that need to be preserved must be explicitly present in the IR).
 
                                      Wave scratch is "empty" at function boundaries. There is no stack pointer input
                                      or output value, but functions are free to use scratch starting from an initial
