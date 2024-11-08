@@ -159,7 +159,7 @@ let Definition = "target" in {
     Desc<"The default disassembly flavor to use for x86 or x86-64 targets.">;
   def DisassemblyCPU: Property<"disassembly-cpu", "String">,
     DefaultStringValue<"">,
-    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu compiler flag.">;
+    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu clang flag.">;
   def DisassemblyFeatures: Property<"disassembly-features", "String">,
     DefaultStringValue<"">,
     Desc<"Specify additional CPU features for disassembling.">;
