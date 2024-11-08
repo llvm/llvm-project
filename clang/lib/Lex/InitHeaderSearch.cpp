@@ -346,8 +346,8 @@ void InitHeaderSearch::AddDefaultIncludePaths(
         AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
       } else {
         AddPath("/System/Library/Frameworks", System, true);
-        AddPath("/Library/Frameworks", System, true);
         AddPath("/System/Library/SubFrameworks", System, true);
+        AddPath("/Library/Frameworks", System, true);
       }
     }
     return;
