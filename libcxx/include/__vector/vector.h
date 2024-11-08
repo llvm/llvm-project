@@ -822,7 +822,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
-  std::swap(this->__end_cap(), __v.__end_cap());
+  std::swap(this->__end_cap(), __v.__end_cap_);
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
 }
@@ -852,7 +852,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
-  std::swap(this->__end_cap(), __v.__end_cap());
+  std::swap(this->__end_cap(), __v.__end_cap_);
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
   return __ret;
@@ -1381,7 +1381,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool vector<_Tp, _Allocator>::__invariants() const
 #if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool __format::__enable_insertable<vector<char>> = true;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #  endif
