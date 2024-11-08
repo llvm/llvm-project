@@ -6858,8 +6858,8 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       if ((SI = dyn_cast<StoreInst>(&I)) &&
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
         ValuesToIgnore.insert(&I);
-        auto I = DeadInvariantStoreOps.insert({SI->getPointerOperand(), {}});
-        I.first->second.push_back(SI->getValueOperand());
+        DeadInvariantStoreOps[SI->getPointerOperand()].push_back(
+            SI->getValueOperand());
       }
 
       if (VecValuesToIgnore.contains(&I) || ValuesToIgnore.contains(&I))
@@ -8084,9 +8084,9 @@ void VPRecipeBuilder::createSwitchEdgeMasks(SwitchInst *SI) {
     // ignored - they will get there anyhow.
     if (Dst == DefaultDst)
       continue;
-    auto I = Dst2Compares.insert({Dst, {}});
+    auto &Compares = Dst2Compares[Dst];
     VPValue *V = getVPValueOrAddLiveIn(C.getCaseValue());
-    I.first->second.push_back(Builder.createICmp(CmpInst::ICMP_EQ, Cond, V));
+    Compares.push_back(Builder.createICmp(CmpInst::ICMP_EQ, Cond, V));
   }
 
   // We need to handle 2 separate cases below for all entries in Dst2Compares,
