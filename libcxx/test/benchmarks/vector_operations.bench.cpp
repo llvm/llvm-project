@@ -14,6 +14,7 @@
 #include <deque>
 #include <functional>
 #include <vector>
+#include <string>
 #include <memory>
 
 #include "benchmark/benchmark.h"
