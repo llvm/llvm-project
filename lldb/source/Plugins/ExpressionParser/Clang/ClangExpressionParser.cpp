@@ -486,6 +486,19 @@ static std::string GetClangTargetABI(const ArchSpec &target_arch) {
     }
   }
 
+  if (target_arch.GetTriple().isLoongArch64()) {
+    switch (target_arch.GetFlags() & ArchSpec::eLoongArch_abi_mask) {
+    case ArchSpec::eLoongArch_abi_soft_float:
+      return "lp64s";
+    case ArchSpec::eLoongArch_abi_single_float:
+      return "lp64f";
+    case ArchSpec::eLoongArch_abi_double_float:
+      return "lp64d";
+    default:
+      return {};
+    }
+  }
+
   return {};
 }
 
@@ -544,6 +557,14 @@ static void SetupTargetOpts(CompilerInstance &compiler,
        compiler.getTargetOpts().ABI == "lp64d") ||
       (target_machine == llvm::Triple::riscv32 &&
        compiler.getTargetOpts().ABI == "ilp32d"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+d");
+
+  if ((target_machine == llvm::Triple::loongarch64 &&
+       compiler.getTargetOpts().ABI == "lp64f"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+f");
+
+  if ((target_machine == llvm::Triple::loongarch64 &&
+       compiler.getTargetOpts().ABI == "lp64d"))
     compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+d");
 }
 

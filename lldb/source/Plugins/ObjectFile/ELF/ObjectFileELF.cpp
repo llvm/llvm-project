@@ -1436,6 +1436,23 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     arch_spec.SetFlags(flags);
   }
 
+  if (arch_spec.GetMachine() == llvm::Triple::loongarch32 ||
+      arch_spec.GetMachine() == llvm::Triple::loongarch64) {
+    uint32_t flags = arch_spec.GetFlags();
+    switch (header.e_flags & llvm::ELF::EF_LOONGARCH_ABI_MODIFIER_MASK) {
+    case llvm::ELF::EF_LOONGARCH_ABI_SINGLE_FLOAT:
+      flags |= ArchSpec::eLoongArch_abi_single_float;
+      break;
+    case llvm::ELF::EF_LOONGARCH_ABI_DOUBLE_FLOAT:
+      flags |= ArchSpec::eLoongArch_abi_double_float;
+      break;
+    case llvm::ELF::EF_LOONGARCH_ABI_SOFT_FLOAT:
+      break;
+    }
+
+    arch_spec.SetFlags(flags);
+  }
+
   // If there are no section headers we are done.
   if (header.e_shnum == 0)
     return 0;
