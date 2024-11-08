@@ -301,7 +301,7 @@ template <typename TR, typename T> static TR CppToC(const std::complex<T> &x) {
   return r;
 }
 template <typename T, typename TA> static std::complex<T> CToCpp(const TA &x) {
-  TA &z{const_cast<TA&>(x)};
+  TA &z{const_cast<TA &>(x)};
   return std::complex<T>(reIm<T, TA>(z, CRI::Real), reIm<T, TA>(z, CRI::Imag));
 }
 #endif
