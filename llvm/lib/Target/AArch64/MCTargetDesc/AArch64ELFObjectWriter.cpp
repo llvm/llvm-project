@@ -165,6 +165,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       }
       if (SymLoc == AArch64MCExpr::VK_GOT && !IsNC)
         return R_CLS(ADR_GOT_PAGE);
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH && !IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADRP AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_ADR_GOT_PAGE)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_ADR_GOT_PAGE;
+      }
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL && !IsNC)
         return R_CLS(TLSIE_ADR_GOTTPREL_PAGE21);
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && !IsNC)
@@ -240,6 +249,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSLE_ADD_TPREL_LO12);
       if (RefKind == AArch64MCExpr::VK_TLSDESC_LO12)
         return R_CLS(TLSDESC_ADD_LO12);
+      if (RefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 && IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADD AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_ADD_LO12_NC)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_ADD_LO12_NC;
+      }
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return R_CLS(ADD_ABS_LO12_NC);
 
@@ -332,17 +350,23 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case AArch64::fixup_aarch64_ldst_imm12_scale8:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return R_CLS(LDST64_ABS_LO12_NC);
-      if (SymLoc == AArch64MCExpr::VK_GOT && IsNC) {
+      if ((SymLoc == AArch64MCExpr::VK_GOT ||
+           SymLoc == AArch64MCExpr::VK_GOT_AUTH) &&
+          IsNC) {
         AArch64MCExpr::VariantKind AddressLoc =
             AArch64MCExpr::getAddressFrag(RefKind);
+        bool IsAuth = (SymLoc == AArch64MCExpr::VK_GOT_AUTH);
         if (!IsILP32) {
           if (AddressLoc == AArch64MCExpr::VK_LO15)
             return ELF::R_AARCH64_LD64_GOTPAGE_LO15;
-          return ELF::R_AARCH64_LD64_GOT_LO12_NC;
+          return (IsAuth ? ELF::R_AARCH64_AUTH_LD64_GOT_LO12_NC
+                         : ELF::R_AARCH64_LD64_GOT_LO12_NC);
         }
-        Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
-                                        "relocation not supported (LP64 eqv: "
-                                        "LD64_GOT_LO12_NC)");
+        Ctx.reportError(Fixup.getLoc(),
+                        Twine("ILP32 64-bit load/store "
+                              "relocation not supported (LP64 eqv: ") +
+                            (IsAuth ? "AUTH_GOT_LO12_NC" : "LD64_GOT_LO12_NC") +
+                            Twine(')'));
         return ELF::R_AARCH64_NONE;
       }
       if (SymLoc == AArch64MCExpr::VK_DTPREL && !IsNC)

@@ -230,6 +230,20 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
+  }
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
+  }
+
   const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
   if (ABIArg) {
     Result.push_back(ABIArg->getAsString(Args));
@@ -286,6 +300,20 @@ static void getARMMultilibFlags(const Driver &D,
       Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
   if (BranchProtectionArg) {
     Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
+  }
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
   }
 }
 
@@ -899,7 +927,9 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
          Args.hasArg(options::OPT_fprofile_instr_generate) ||
          Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
          Args.hasArg(options::OPT_fcreate_profile) ||
-         Args.hasArg(options::OPT_forder_file_instrumentation);
+         Args.hasArg(options::OPT_forder_file_instrumentation) ||
+         Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage) ||
+         Args.hasArg(options::OPT_fprofile_generate_cold_function_coverage_EQ);
 }
 
 bool ToolChain::needsGCovInstrumentation(const llvm::opt::ArgList &Args) {
@@ -1097,6 +1127,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString();
+  case llvm::Triple::amdgcn: {
+    llvm::Triple Triple = getTriple();
+    if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "amdgcnspirv")
+      Triple.setArch(llvm::Triple::ArchType::spirv64);
+    return Triple.getTriple();
+  }
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:

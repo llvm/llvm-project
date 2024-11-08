@@ -3845,6 +3845,10 @@ let Predicates = [HasSVE2orSME] in {
 
   // SVE2 extract vector (immediate offset, constructive)
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
+  let AddedComplexity = 2 in {
+    def : Pat<(nxv16i8 (AArch64ext nxv16i8:$zn1, nxv16i8:$zn2, (i32 imm0_255:$imm))),
+              (EXT_ZZI_B (REG_SEQUENCE ZPR2, $zn1, zsub0, $zn2, zsub1), imm0_255:$imm)>;
+  }
 } // End HasSVE2orSME
 
 let Predicates = [HasSVE2] in {
@@ -4322,6 +4326,13 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE predicate count
   defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
   defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
+
+  // SVE reverse within elements, zeroing predicate
+  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
+  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
+  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
+  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
+  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//

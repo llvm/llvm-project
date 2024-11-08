@@ -680,17 +680,18 @@ macro(add_custom_libcxx name prefix)
 
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
+    PREFIX ${prefix}
     SOURCE_DIR ${LLVM_MAIN_SRC_DIR}/../runtimes
-    BINARY_DIR ${prefix}
+    BINARY_DIR ${prefix}/build
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
                ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
+               -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+               -DCMAKE_INSTALL_MESSAGE=LAZY
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
-               -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
                -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
                -DLIBCXXABI_ENABLE_SHARED=OFF
@@ -702,16 +703,17 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXX_INCLUDE_BENCHMARKS=OFF
                -DLIBCXX_INCLUDE_TESTS=OFF
                -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
+               -DLLVM_INCLUDE_TESTS=OFF
+               -DLLVM_INCLUDE_DOCS=OFF
                ${LIBCXX_CMAKE_ARGS}
-    INSTALL_COMMAND ""
-    STEP_TARGETS configure build
+    STEP_TARGETS configure build install
     BUILD_ALWAYS 1
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
     LIST_SEPARATOR |
     EXCLUDE_FROM_ALL TRUE
-    BUILD_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
+    INSTALL_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
     )
 
   if (CMAKE_GENERATOR MATCHES "Make")

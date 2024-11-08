@@ -138,6 +138,7 @@ private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
   bool IsExtendedListItem(const Symbol &sym);
+  std::optional<bool> IsContiguous(const parser::OmpObject &object);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -201,6 +202,7 @@ private:
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
+  void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Type &x);
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -221,6 +223,8 @@ private:
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckSharedBindingInOuterContext(
       const parser::OmpObjectList &ompObjectList);
+  void CheckIfContiguous(const parser::OmpObject &object);
+  const parser::Name *GetObjectName(const parser::OmpObject &object);
   const parser::OmpObjectList *GetOmpObjectList(const parser::OmpClause &);
   void CheckPredefinedAllocatorRestriction(const parser::CharBlock &source,
       const parser::OmpObjectList &ompObjectList);

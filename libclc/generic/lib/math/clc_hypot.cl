@@ -21,11 +21,14 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
+#include <clc/integer/clc_abs.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
 
 #include "config.h"
 #include "math.h"
-#include "../clcmacro.h"
 
 // Returns sqrt(x*x + y*y) with no overflow or underflow unless the result
 // warrants it
@@ -39,7 +42,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_hypot(float x, float y) {
   ux = c ? aux : auy;
   uy = c ? auy : aux;
 
-  int xexp = clamp((int)(ux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32, -126, 126);
+  int xexp =
+      __clc_clamp((int)(ux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32, -126, 126);
   float fx_exp = as_float((xexp + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
   float fi_exp = as_float((-xexp + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
   float fx = as_float(ux) * fi_exp;
@@ -80,12 +84,12 @@ _CLC_DEF _CLC_OVERLOAD double __clc_hypot(double x, double y) {
 
   // If the difference in exponents between x and y is large
   double s = x + y;
-  c = abs(xexp - yexp) > MANTLENGTH_DP64 + 1;
+  c = __clc_abs(xexp - yexp) > MANTLENGTH_DP64 + 1;
   r = c ? s : r;
 
   // Check for NaN
   // c = x != x | y != y;
-  c = isnan(x) | isnan(y);
+  c = __clc_isnan(x) | __clc_isnan(y);
   r = c ? as_double(QNANBITPATT_DP64) : r;
 
   // If either is Inf, we must return Inf

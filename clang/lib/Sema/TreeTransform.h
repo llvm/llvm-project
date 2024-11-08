@@ -2075,13 +2075,15 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPAllocateClause(Expr *Allocate, ArrayRef<Expr *> VarList,
+  OMPClause *RebuildOMPAllocateClause(Expr *Allocate,
+                                      OpenMPAllocateClauseModifier ACModifier,
+                                      ArrayRef<Expr *> VarList,
                                       SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation ColonLoc,
                                       SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPAllocateClause(
-        Allocate, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
+        Allocate, ACModifier, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -11128,8 +11130,8 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPAllocateClause(
-      Allocator, Vars, C->getBeginLoc(), C->getLParenLoc(), C->getColonLoc(),
-      C->getEndLoc());
+      Allocator, C->getAllocatorModifier(), Vars, C->getBeginLoc(),
+      C->getLParenLoc(), C->getColonLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11935,15 +11937,16 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
   SmallVector<Expr *> ValidVars;
 
   for (Expr *Var : TransformedVars) {
-    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(Var);
+    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(
+        ParsedClause.getDirectiveKind(), C.getReductionOp(), Var);
     if (Res.isUsable())
       ValidVars.push_back(Res.get());
   }
 
-  NewClause = OpenACCReductionClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), C.getReductionOp(), ValidVars,
-      ParsedClause.getEndLoc());
+  NewClause = Self.getSema().OpenACC().CheckReductionClause(
+      ExistingClauses, ParsedClause.getDirectiveKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      C.getReductionOp(), ValidVars, ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -12018,10 +12021,9 @@ void OpenACCClauseTransform<Derived>::VisitGangClause(
     TransformedIntExprs.push_back(ER.get());
   }
 
-  NewClause = OpenACCGangClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), TransformedGangKinds, TransformedIntExprs,
-      ParsedClause.getEndLoc());
+  NewClause = Self.getSema().OpenACC().CheckGangClause(
+      ExistingClauses, ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
 }
 } // namespace
 template <typename Derived>
