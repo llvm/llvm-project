@@ -4756,13 +4756,13 @@ public:
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
   ClassTemplateDecl *getStdTypeIdentity() const;
-  std::optional<QualType> InstantiateSpecializedTypeIdentity(QualType Subject);
-  bool IsTypeIdentitySpecialization(QualType Type) const;
-  bool IsTypeAwareOperatorNewOrDelete(const FunctionDecl *FnDecl) const;
-  bool IsTypeAwareOperatorNewOrDelete(const FunctionTemplateDecl *FnDecl) const;
-  bool IsTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
+  std::optional<QualType> instantiateSpecializedTypeIdentity(QualType Subject);
+  bool isTypeIdentitySpecialization(QualType Type) const;
+  bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FnDecl) const;
+  bool isTypeAwareOperatorNewOrDelete(const FunctionTemplateDecl *FnDecl) const;
+  bool isTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
   std::optional<FunctionDecl *>
-  InstantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
+  instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
                                   QualType AllocType);
 
   ValueDecl *tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,

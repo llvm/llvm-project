@@ -3360,9 +3360,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   const auto *proto = getType()->castAs<FunctionProtoType>();
   if (proto->getNumParams() < 2)
     return false;
-  bool IsTypeAwareAllocator =
-      proto->getParamType(0)->isTypeIdentitySpecialization();
-  if (IsTypeAwareAllocator)
+  if (proto->getParamType(0)->isTypeIdentitySpecialization())
     return false;
   if (proto->getNumParams() != 2 || proto->isVariadic())
     return false;
@@ -3492,7 +3490,7 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
   if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete)
     return false;
 
-  auto NumParams = getNumParams();
+  unsigned NumParams = getNumParams();
   unsigned DestroyingDeleteTagParam = 1;
   bool IsTypeAware = false;
   if (NumParams > 0)
@@ -3510,7 +3508,7 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
          RD->getIdentifier()->isStr("destroying_delete_t");
 }
 
-bool FunctionDecl::IsTypeAwareOperatorNewOrDelete() const {
+bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;
   if (getDeclName().getCXXOverloadedOperator() != OO_New &&

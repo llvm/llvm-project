@@ -3098,8 +3098,8 @@ bool Type::isStdByteType() const {
   return false;
 }
 
-TemplateDecl *Type::getSpecializedTemplateDecl() const {
-  const auto *DesugaredType = getUnqualifiedDesugaredType();
+const TemplateDecl *Type::getSpecializedTemplateDecl() const {
+  const Type *DesugaredType = getUnqualifiedDesugaredType();
   if (const auto *Specialization = DesugaredType->getAs<TemplateSpecializationType>())
     return Specialization->getTemplateName().getAsTemplateDecl();
   if (const auto *Record = DesugaredType->getAsCXXRecordDecl()) {

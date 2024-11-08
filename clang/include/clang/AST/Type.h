@@ -2703,7 +2703,7 @@ public:
     return static_cast<TypeDependence>(TypeBits.Dependence);
   }
 
-  TemplateDecl *getSpecializedTemplateDecl() const;
+  const TemplateDecl *getSpecializedTemplateDecl() const;
 
   /// Whether this type is an error type.
   bool containsErrors() const {

@@ -1393,7 +1393,7 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
   const FunctionProtoType *FPT = FD->getType()->castAs<FunctionProtoType>();
   auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
 
-  if (FD->IsTypeAwareOperatorNewOrDelete()) {
+  if (FD->isTypeAwareOperatorNewOrDelete()) {
     // Assume Sema has ensured a non-pointer first parameter is
     // a type identity
     Params.TypedAwareDelete = true;

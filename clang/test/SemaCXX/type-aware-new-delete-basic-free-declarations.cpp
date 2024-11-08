@@ -13,70 +13,70 @@ struct TestType {};
 template <typename T> struct TemplateTestType {};
 
 // Valid free declarations
-void *operator new(std::type_identity<int>, size_t);
-void *operator new(std::type_identity<int>, size_t, std::align_val_t);
-void *operator new(std::type_identity<int>, size_t, TestType&);
-template <typename T> void *operator new(std::type_identity<T>, size_t);
-template <typename T> void *operator new(std::type_identity<T>, size_t, TestType&);
-template <typename T> void *operator new(std::type_identity<TemplateTestType<T>>, size_t, TestType&);
-template <typename T, typename U> void *operator new(std::type_identity<T>, size_t, TemplateTestType<U>&);
-template <template <typename> class T> void *operator new(std::type_identity<T<int>>, size_t); 
+void *operator new(std::type_identity<int>, size_t); // #1
+void *operator new(std::type_identity<int>, size_t, std::align_val_t); // #2
+void *operator new(std::type_identity<int>, size_t, TestType&); // #3
+template <typename T> void *operator new(std::type_identity<T>, size_t); // #4
+template <typename T> void *operator new(std::type_identity<T>, size_t, TestType&); // #5
+template <typename T> void *operator new(std::type_identity<TemplateTestType<T>>, size_t, TestType&); // #6
+template <typename T, typename U> void *operator new(std::type_identity<T>, size_t, TemplateTestType<U>&); // #7
+template <template <typename> class T> void *operator new(std::type_identity<T<int>>, size_t); // #8
 #if defined(NO_TAA)
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
-//expected-error@-9 {{type aware allocation operators are disabled}}
+//expected-error@#1 {{type aware allocation operators are disabled}}
+//expected-error@#2 {{type aware allocation operators are disabled}}
+//expected-error@#3 {{type aware allocation operators are disabled}}
+//expected-error@#4 {{type aware allocation operators are disabled}}
+//expected-error@#5 {{type aware allocation operators are disabled}}
+//expected-error@#6 {{type aware allocation operators are disabled}}
+//expected-error@#7 {{type aware allocation operators are disabled}}
+//expected-error@#8 {{type aware allocation operators are disabled}}
 #endif
 
-void operator delete(std::type_identity<int>, void *);
-void operator delete(std::type_identity<int>, void *, std::align_val_t);
-void operator delete(std::type_identity<int>, void *, size_t);
-void operator delete(std::type_identity<int>, void *, size_t, std::align_val_t);
+void operator delete(std::type_identity<int>, void *); // #9
+void operator delete(std::type_identity<int>, void *, std::align_val_t); // #10
+void operator delete(std::type_identity<int>, void *, size_t); // #11
+void operator delete(std::type_identity<int>, void *, size_t, std::align_val_t); // #12
 #if defined(NO_TAA)
-//expected-error@-5 {{type aware allocation operators are disabled}}
-//expected-error@-5 {{type aware allocation operators are disabled}}
-//expected-error@-5 {{type aware allocation operators are disabled}}
-//expected-error@-5 {{type aware allocation operators are disabled}}
+//expected-error@#9 {{type aware allocation operators are disabled}}
+//expected-error@#10 {{type aware allocation operators are disabled}}
+//expected-error@#11 {{type aware allocation operators are disabled}}
+//expected-error@#12 {{type aware allocation operators are disabled}}
 #endif
 
-template <typename T> void operator delete(std::type_identity<T>, void *);
-template <typename T> void operator delete(std::type_identity<T>, void *, std::align_val_t);
-template <typename T> void operator delete(std::type_identity<T>, void *, size_t);
-template <typename T> void operator delete(std::type_identity<T>, void *, size_t, std::align_val_t);
+template <typename T> void operator delete(std::type_identity<T>, void *); // #13
+template <typename T> void operator delete(std::type_identity<T>, void *, std::align_val_t); // #14
+template <typename T> void operator delete(std::type_identity<T>, void *, size_t); // #15
+template <typename T> void operator delete(std::type_identity<T>, void *, size_t, std::align_val_t); // #16
 #if defined(NO_TAA)
-//expected-error@-5 {{type aware allocation operators are disabled}}
-//expected-error@-5 {{type aware allocation operators are disabled}}
-//expected-error@-5 {{type aware allocation operators are disabled}}
-//expected-error@-5 {{type aware allocation operators are disabled}}
+//expected-error@#13 {{type aware allocation operators are disabled}}
+//expected-error@#14 {{type aware allocation operators are disabled}}
+//expected-error@#15 {{type aware allocation operators are disabled}}
+//expected-error@#16 {{type aware allocation operators are disabled}}
 #endif
 
-template <typename T> void operator delete(std::type_identity<TemplateTestType<T>>, void *);
-template <template <typename> class T> void operator delete(std::type_identity<T<int>>, void *);
+template <typename T> void operator delete(std::type_identity<TemplateTestType<T>>, void *); // #17
+template <template <typename> class T> void operator delete(std::type_identity<T<int>>, void *); // #18
 #if defined(NO_TAA)
-//expected-error@-3 {{type aware allocation operators are disabled}}
-//expected-error@-3 {{type aware allocation operators are disabled}}
+//expected-error@#17 {{type aware allocation operators are disabled}}
+//expected-error@#18 {{type aware allocation operators are disabled}}
 #endif
 
 typedef std::type_identity<float> TypeIdentityAlias1;
-void *operator new(TypeIdentityAlias1, size_t);
+void *operator new(TypeIdentityAlias1, size_t); // #19
 #if defined(NO_TAA)
-//expected-error@-2 {{type aware allocation operators are disabled}}
+//expected-error@#19 {{type aware allocation operators are disabled}}
 #endif
 
 using TypeIdentityAlias2 = std::type_identity<double>;
-void *operator new(TypeIdentityAlias2, size_t);
+void *operator new(TypeIdentityAlias2, size_t); // #20
 #if defined(NO_TAA)
-//expected-error@-2 {{type aware allocation operators are disabled}}
+//expected-error@#20 {{type aware allocation operators are disabled}}
 #endif
 
 template <typename T> using TypeIdentityAlias3 = std::type_identity<T>;
-template <typename T> void *operator new(TypeIdentityAlias3<T>, size_t);
+template <typename T> void *operator new(TypeIdentityAlias3<T>, size_t); // #21
 #if defined(NO_TAA)
-//expected-error@-2 {{type aware allocation operators are disabled}}
+//expected-error@#21 {{type aware allocation operators are disabled}}
 #endif
 
 

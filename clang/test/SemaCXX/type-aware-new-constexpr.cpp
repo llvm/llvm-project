@@ -13,9 +13,8 @@ struct S1 {
   const int i;
 };
 
-void *operator new(std::type_identity<S1>, size_t sz);
-// expected-note@-1 {{candidate function not viable: no known conversion from 'type_identity<S2>' to 'type_identity<S1>' for 1st argument}}
-void operator delete(std::type_identity<S1>, void* ptr);
+void *operator new(std::type_identity<S1>, size_t sz); // #1
+void operator delete(std::type_identity<S1>, void* ptr); // #2
 
 constexpr int ensure_consteval_skips_typed_allocators() {
   // Verify we dont resolve typed allocators in const contexts
@@ -30,16 +29,19 @@ struct S2 {
   const int i;
 };
 
-void *operator new(std::type_identity<S2>, size_t sz) = delete;
-// expected-note@-1 {{candidate function has been explicitly deleted}}
-void operator delete(std::type_identity<S2>, void* ptr) = delete;
-// expected-note@-1 {{'operator delete' has been explicitly marked deleted here}}
+void *operator new(std::type_identity<S2>, size_t sz) = delete; // #3
+void operator delete(std::type_identity<S2>, void* ptr) = delete; // #4
 
 constexpr int ensure_constexpr_retains_types_at_runtime() {
   // Verify we dont resolve typed allocators in const contexts
-  S2 *s = new S2(); // expected-error {{call to deleted function 'operator new'}}
+  S2 *s = new S2();
+  // expected-error@-1 {{call to deleted function 'operator new'}}
+  // expected-note@#1 {{candidate function not viable: no known conversion from 'type_identity<S2>' to 'type_identity<S1>' for 1st argument}}
+  // expected-note@#3 {{candidate function has been explicitly deleted}}
   auto result = s->i;
-  delete s; // expected-error {{attempt to use a deleted function}}
+  delete s;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#4 {{'operator delete' has been explicitly marked deleted here}}
   return result;
 };
 
@@ -47,27 +49,29 @@ constexpr int ensure_constexpr_retains_types_at_runtime() {
 struct S3 {
   constexpr explicit S3() : i(5) {  }
   const int i;
-  template <typename T> void* operator new(std::type_identity<T>, size_t sz) = delete;
-  // expected-note@-1 {{candidate function [with T = S3] has been explicitly deleted}}
-  template <typename T> void operator delete(std::type_identity<T>, void *) = delete;
-  // expected-note@-1 {{'operator delete<S3>' has been explicitly marked deleted here}}
+  template <typename T> void* operator new(std::type_identity<T>, size_t sz) = delete; // #5
+  template <typename T> void operator delete(std::type_identity<T>, void *) = delete; // #6
 };
 
-template <typename T> void* operator new(std::type_identity<T>, size_t sz) = delete;
-template <typename T> void operator delete(std::type_identity<T>, void *) = delete;
+template <typename T> void* operator new(std::type_identity<T>, size_t sz) = delete; // #7
+template <typename T> void operator delete(std::type_identity<T>, void *) = delete; // #8
 
 constexpr int constexpr_vs_inclass_operators() {
   S3 *s;
   if consteval {
     s = ::new S3();
   } else {
-    s = new S3(); // expected-error {{call to deleted function 'operator new'}}
+    s = new S3();
+    // expected-error@-1 {{call to deleted function 'operator new'}}
+    // expected-note@#5 {{candidate function [with T = S3] has been explicitly deleted}}
   }
   auto result = s->i;
   if consteval {
     ::delete s;
   } else {
-    delete s; // expected-error {{attempt to use a deleted function}}
+    delete s;
+    // expected-error@-1 {{attempt to use a deleted function}}
+    // expected-note@#6 {{'operator delete<S3>' has been explicitly marked deleted here}}
   }
   return result;
 };

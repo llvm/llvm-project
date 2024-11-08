@@ -12,53 +12,53 @@ using size_t = __SIZE_TYPE__;
 
 // Basic valid declarations
 struct S {
-  void *operator new(std::type_identity<S>, size_t);
-  void operator delete(std::type_identity<S>, void *);
+  void *operator new(std::type_identity<S>, size_t); // #1
+  void operator delete(std::type_identity<S>, void *); // #2
 #if defined(NO_TAA)
-  //expected-error@-3 {{type aware allocation operators are disabled}}
-  //expected-error@-3 {{type aware allocation operators are disabled}}
+  //expected-error@#1 {{type aware allocation operators are disabled}}
+  //expected-error@#2 {{type aware allocation operators are disabled}}
 #endif
   void operator delete(S *, std::destroying_delete_t);
 };
 
 template <typename T> struct S2 {
-  void *operator new(std::type_identity<S2<T>>, size_t);
-  void operator delete(std::type_identity<S2<T>>, void *);
+  void *operator new(std::type_identity<S2<T>>, size_t); // #3
+  void operator delete(std::type_identity<S2<T>>, void *); // #4
 #if defined(NO_TAA)
-  //expected-error@-3 {{type aware allocation operators are disabled}}
-  //expected-error@-3 {{type aware allocation operators are disabled}}
+  //expected-error@#3 {{type aware allocation operators are disabled}}
+  //expected-error@#4 {{type aware allocation operators are disabled}}
 #endif
   void operator delete(S2 *, std::destroying_delete_t);
 };
 
 struct S3 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t);
-  template <typename T> void operator delete(std::type_identity<T>, void *);
+  template <typename T> void *operator new(std::type_identity<T>, size_t); // #5
+  template <typename T> void operator delete(std::type_identity<T>, void *); // #6
 #if defined(NO_TAA)
-  //expected-error@-3 {{type aware allocation operators are disabled}}
-  //expected-error@-3 {{type aware allocation operators are disabled}}
+  //expected-error@#5 {{type aware allocation operators are disabled}}
+  //expected-error@#6 {{type aware allocation operators are disabled}}
 #endif
   void operator delete(S3 *, std::destroying_delete_t);
 };
 
 struct S4 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t);
-  template <typename T> void operator delete(std::type_identity<T>, void *);
-  template <typename T> void operator delete(std::type_identity<T>, S4 *, std::destroying_delete_t); // #1
+  template <typename T> void *operator new(std::type_identity<T>, size_t); // #7
+  template <typename T> void operator delete(std::type_identity<T>, void *); // #8
+  template <typename T> void operator delete(std::type_identity<T>, S4 *, std::destroying_delete_t); // #9
 #if defined(NO_TAA)
-  //expected-error@-4 {{type aware allocation operators are disabled}}
-  //expected-error@-4 {{type aware allocation operators are disabled}}
-  //expected-error@-4 {{type aware allocation operators are disabled}}
+  //expected-error@#7 {{type aware allocation operators are disabled}}
+  //expected-error@#8 {{type aware allocation operators are disabled}}
+  //expected-error@#9 {{type aware allocation operators are disabled}}
 #elif defined(NO_TADD)
-  // expected-error@#1 {{type aware destroying delete is not permitted}}
+  // expected-error@#9 {{type aware destroying delete is not permitted}}
 #endif
 };
 
 struct S5 {
-  template <typename T> void operator delete(std::type_identity<T>, T *); // #2
+  template <typename T> void operator delete(std::type_identity<T>, T *); // #10
 #if defined(NO_TAA)
-  // expected-error@#2 {{type aware allocation operators are disabled}}
+  // expected-error@#10 {{type aware allocation operators are disabled}}
 #else
-  // expected-error@#2 {{'operator delete' cannot take a dependent type as first parameter; use 'void *'}}
+  // expected-error@#10 {{'operator delete' cannot take a dependent type as first parameter; use 'void *'}}
 #endif
 };

@@ -2474,13 +2474,13 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       getOverloadedOperator() != OO_Array_Delete)
     return false;
 
-  auto NumParams = getNumParams();
-  bool IsTypeAware = IsTypeAwareOperatorNewOrDelete();
+  unsigned NumParams = getNumParams();
+  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
 
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
-  if (auto *PrimaryTemplate = getPrimaryTemplate()) {
+  if (FunctionTemplateDecl *PrimaryTemplate = getPrimaryTemplate()) {
     // Addendum: a template instance is a usual deallocation function if there
     // is a single template parameter, that parameter is a type, only the first
     // parameter is dependent, and that parameter is a specialization of
@@ -2490,8 +2490,8 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       return false;
     }
 
-    auto *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
-    if (!SpecializedDecl->IsTypeAwareOperatorNewOrDelete()) {
+    FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
+    if (!SpecializedDecl->isTypeAwareOperatorNewOrDelete()) {
       // The underlying template decl must also be explicitly type aware
       // e.g. template <typename T> void operator delete(T, ...)
       // specialized on T=type_identity<X> is not usual

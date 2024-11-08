@@ -1599,13 +1599,13 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   SmallVector<Expr *, 3> NewArgs;
   if (IAP.PassTypeIdentity) {
-    auto SpecializedTypeIdentity =
-        S.InstantiateSpecializedTypeIdentity(PromiseType);
+    std::optional<QualType> SpecializedTypeIdentity =
+        S.instantiateSpecializedTypeIdentity(PromiseType);
     if (!SpecializedTypeIdentity)
       return false;
-    auto *SpecializedTypeInfo =
+    TypeSourceInfo *SpecializedTypeInfo =
         S.Context.getTrivialTypeSourceInfo(*SpecializedTypeIdentity, Loc);
-    auto TypeIdentity =
+    ExprResult TypeIdentity =
         S.BuildCXXTypeConstructExpr(SpecializedTypeInfo, Loc, {}, Loc, false);
     if (TypeIdentity.isInvalid())
       return false;
