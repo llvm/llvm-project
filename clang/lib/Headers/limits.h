@@ -116,7 +116,9 @@
    #pragma poison that could be used to deprecate a macro - the code should just
    use LLONG_MAX and friends.
  */
-#if (defined(__GNU_LIBRARY__) ? defined(__USE_GNU) : !defined(__STRICT_ANSI__)) || defined(__BIONIC__)
+#if (defined(__GNU_LIBRARY__) ? defined(__USE_GNU)                             \
+                              : !defined(__STRICT_ANSI__)) ||                  \
+    defined(__BIONIC__)
 
 #undef   LONG_LONG_MIN
 #undef   LONG_LONG_MAX
