@@ -15434,28 +15434,29 @@ The behavior of '``llvm.memset.inline.*``' is equivalent to the behavior of
 '``llvm.memset.*``', but the generated code is guaranteed not to call any
 external functions.
 
-.. _int_memset_pattern:
+.. _int_experimental_memset_pattern:
 
-'``llvm.memset.pattern``' Intrinsic
+'``llvm.experimental.memset.pattern``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
-This is an overloaded intrinsic. You can use ``llvm.memset.pattern`` on
-any integer bit width that is an integral number of bytes and for different
-address spaces. Not all targets support all bit widths however.
+This is an overloaded intrinsic. You can use
+``llvm.experimental.memset.pattern`` on any integer bit width that is an
+integral number of bytes and for different address spaces. Not all targets
+support all bit widths however.
 
 ::
 
-      declare void @llvm.memset.pattern.p0.i128.i64(ptr <dest>, i128 <val>,
-                                                    i64 <count>, i1 <isvolatile>)
+      declare void @llvm.experimental.memset.pattern.p0.i128.i64(ptr <dest>, i128 <val>,
+                                                                 i64 <count>, i1 <isvolatile>)
 
 Overview:
 """""""""
 
-The '``llvm.memset.pattern.*``' intrinsics fill a block of memory with
-a particular value. This may be expanded to an inline loop, a sequence of
+The '``llvm.experimental.memset.pattern.*``' intrinsics fill a block of memory
+with a particular value. This may be expanded to an inline loop, a sequence of
 stores, or a libcall depending on what is available for the target and the
 expected performance and code size impact.
 
@@ -15471,21 +15472,21 @@ The :ref:`align <attr_align>` parameter attribute can be provided
 for the first argument.
 
 If the ``isvolatile`` parameter is ``true``, the
-``llvm.memset.pattern`` call is a :ref:`volatile operation <volatile>`. The
-detailed access behavior is not very cleanly specified and it is unwise to
-depend on it.
+``llvm.experimental.memset.pattern`` call is a :ref:`volatile operation
+<volatile>`. The detailed access behavior is not very cleanly specified and it
+is unwise to depend on it.
 
 Semantics:
 """"""""""
 
-The '``llvm.memset.pattern*``' intrinsic fills memory starting at the
-destination location with the given pattern ``<count>`` times. If the argument
-is known to be aligned to some boundary, this can be specified as an attribute
-on the argument. The pattern fills will respect the endianness of the target:
-i.e. on little endian targets, the least significant byte of the pattern is
-first in memory, while the most significant byte is first in memory for big
-endian targets. The memory address is incremented by the allocation size of
-the type.
+The '``llvm.experimental.memset.pattern*``' intrinsic fills memory starting at
+the destination location with the given pattern ``<count>`` times. If the
+argument is known to be aligned to some boundary, this can be specified as an
+attribute on the argument. The pattern fills will respect the endianness of
+the target: i.e. on little endian targets, the least significant byte of the
+pattern is first in memory, while the most significant byte is first in memory
+for big endian targets. The memory address is incremented by the allocation
+size of the type.
 
 If ``<count>`` is 0, it is no-op modulo the behavior of attributes attached to
 the arguments.

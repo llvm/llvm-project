@@ -15,7 +15,7 @@ define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.pattern(ptr %a, i128 %value, i64 1, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i128 %value, i64 1, i1 0)
   ret void
 }
 
@@ -33,7 +33,7 @@ define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.pattern(ptr %a, i128 %value, i64 16, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i128 %value, i64 16, i1 0)
   ret void
 }
 
@@ -52,7 +52,7 @@ define void @memset_pattern_i127_x(ptr %a, i127 %value, i64 %x) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.pattern(ptr %a, i127 %value, i64 %x, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i127 %value, i64 %x, i1 0)
   ret void
 }
 
@@ -71,7 +71,7 @@ define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.pattern(ptr %a, i128 %value, i64 %x, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i128 %value, i64 %x, i1 0)
   ret void
 }
 
@@ -90,7 +90,7 @@ define void @memset_pattern_i256_x(ptr %a, i256 %value, i64 %x) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.pattern(ptr %a, i256 %value, i64 %x, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i256 %value, i64 %x, i1 0)
   ret void
 }
 
@@ -121,7 +121,7 @@ define void @memset_pattern_i15_x_alignment(ptr %a, i15 %value, i64 %x) nounwind
 ; CHECK:       [[SPLIT1]]:
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memset.pattern(ptr align 1 %a, i15 %value, i64 %x, i1 0)
-  call void @llvm.memset.pattern(ptr align 2 %a, i15 %value, i64 %x, i1 0)
+  call void @llvm.experimental.memset.pattern(ptr align 1 %a, i15 %value, i64 %x, i1 0)
+  call void @llvm.experimental.memset.pattern(ptr align 2 %a, i15 %value, i64 %x, i1 0)
   ret void
 }

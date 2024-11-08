@@ -47,7 +47,7 @@ define void @memset_1(ptr %a, i128 %value) nounwind {
 ; RV64-BOTH-NEXT:    bne a0, a3, .LBB0_1
 ; RV64-BOTH-NEXT:  # %bb.2: # %split
 ; RV64-BOTH-NEXT:    ret
-  tail call void @llvm.memset.pattern(ptr align 8 %a, i128 %value, i64 1, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr align 8 %a, i128 %value, i64 1, i1 0)
   ret void
 }
 
@@ -197,7 +197,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-FAST-NEXT:    bne a0, a3, .LBB1_1
 ; RV64-FAST-NEXT:  # %bb.2: # %split
 ; RV64-FAST-NEXT:    ret
-  tail call void @llvm.memset.pattern(ptr %a, i128 %value, i64 1, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i128 %value, i64 1, i1 0)
   ret void
 }
 
@@ -239,7 +239,7 @@ define void @memset_4(ptr %a, i128 %value) nounwind {
 ; RV64-BOTH-NEXT:    bne a0, a3, .LBB2_1
 ; RV64-BOTH-NEXT:  # %bb.2: # %split
 ; RV64-BOTH-NEXT:    ret
-  tail call void @llvm.memset.pattern(ptr align 8 %a, i128 %value, i64 4, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr align 8 %a, i128 %value, i64 4, i1 0)
   ret void
 }
 
@@ -292,6 +292,6 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV64-BOTH-NEXT:    bltu a4, a3, .LBB3_2
 ; RV64-BOTH-NEXT:  .LBB3_3: # %split
 ; RV64-BOTH-NEXT:    ret
-  tail call void @llvm.memset.pattern(ptr align 8 %a, i128 %value, i64 %x, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr align 8 %a, i128 %value, i64 %x, i1 0)
   ret void
 }

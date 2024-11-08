@@ -1007,7 +1007,7 @@ def int_memset_inline
        ImmArg<ArgIndex<3>>]>;
 
 // Memset variant that writes a given pattern.
-def int_memset_pattern
+def int_experimental_memset_pattern
     : Intrinsic<[],
       [llvm_anyptr_ty, // Destination.
        llvm_anyint_ty, // Pattern value.

@@ -19,6 +19,6 @@ define void @memset.pattern(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.pattern(ptr %a, i128 %value, i64 %x, i1 0)
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i128 %value, i64 %x, i1 0)
   ret void
 }

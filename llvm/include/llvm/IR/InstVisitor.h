@@ -296,7 +296,7 @@ private:
       case Intrinsic::memset:      DELEGATE(MemSetInst);
       case Intrinsic::memset_inline:
         DELEGATE(MemSetInlineInst);
-      case Intrinsic::memset_pattern:
+      case Intrinsic::experimental_memset_pattern:
         DELEGATE(MemSetPatternInst);
       case Intrinsic::vastart:     DELEGATE(VAStartInst);
       case Intrinsic::vaend:       DELEGATE(VAEndInst);
