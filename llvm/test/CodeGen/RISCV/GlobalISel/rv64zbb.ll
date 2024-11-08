@@ -265,7 +265,6 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
   ret i32 %4
 }
 
-; FIXME: We don't need the shift pair before the beqz for RV64I.
 define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-LABEL: ctlz_lshr_i32:
 ; RV64I:       # %bb.0:
