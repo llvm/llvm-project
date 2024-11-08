@@ -1080,6 +1080,29 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   return newFunction;
 }
 
+/// If the original function has debug info, we have to add a debug location
+/// to the new branch instruction from the artificial entry block.
+/// We use the debug location of the first instruction in the extracted
+/// blocks, as there is no other equivalent line in the source code.
+static void applyFirstDebugLoc(Function *oldFunction,
+                               ArrayRef<BasicBlock *> Blocks,
+                               Instruction *BranchI) {
+  if (oldFunction->getSubprogram()) {
+    any_of(Blocks, [&BranchI](const BasicBlock *BB) {
+      return any_of(*BB, [&BranchI](const Instruction &I) {
+        if (!I.getDebugLoc())
+          return false;
+        // Don't use source locations attached to debug-intrinsics: they could
+        // be from completely unrelated scopes.
+        if (isa<DbgInfoIntrinsic>(I))
+          return false;
+        BranchI->setDebugLoc(I.getDebugLoc());
+        return true;
+      });
+    });
+  }
+}
+
 /// Erase lifetime.start markers which reference inputs to the extraction
 /// region, and insert the referenced memory into \p LifetimesStart.
 ///
@@ -1792,24 +1815,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   newFuncRoot->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
 
   auto *BranchI = BranchInst::Create(header);
-  // If the original function has debug info, we have to add a debug location
-  // to the new branch instruction from the artificial entry block.
-  // We use the debug location of the first instruction in the extracted
-  // blocks, as there is no other equivalent line in the source code.
-  if (oldFunction->getSubprogram()) {
-    any_of(Blocks, [&BranchI](const BasicBlock *BB) {
-      return any_of(*BB, [&BranchI](const Instruction &I) {
-        if (!I.getDebugLoc())
-          return false;
-        // Don't use source locations attached to debug-intrinsics: they could
-        // be from completely unrelated scopes.
-        if (isa<DbgInfoIntrinsic>(I))
-          return false;
-        BranchI->setDebugLoc(I.getDebugLoc());
-        return true;
-      });
-    });
-  }
+  applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
   BranchI->insertInto(newFuncRoot, newFuncRoot->end());
 
   ValueSet SinkingCands, HoistingCands;
