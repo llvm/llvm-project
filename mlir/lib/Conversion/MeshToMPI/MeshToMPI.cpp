@@ -64,7 +64,8 @@ Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex,
   auto stride = b.create<arith::ConstantIndexOp>(loc, 1).getResult();
 
   for (int i = multiIndex.size() - 1; i >= 0; --i) {
-    linearIndex = b.create<arith::AddIOp>(loc, multiIndex[i], stride);
+    auto off = b.create<arith::MulIOp>(loc, multiIndex[i], stride);
+    linearIndex = b.create<arith::AddIOp>(loc, linearIndex, off);
     stride = b.create<arith::MulIOp>(loc, stride, dimensions[i]);
   }
 
@@ -169,6 +170,7 @@ struct ConvertNeighborsLinearIndicesOp
           return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
         });
     auto dimSz = dims[axes[0]];
+    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1).getResult();
     auto minus1 = rewriter.create<arith::ConstantIndexOp>(loc, -1).getResult();
     auto atBorder = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sle, orgIdx,
@@ -179,26 +181,28 @@ struct ConvertNeighborsLinearIndicesOp
           builder.create<scf::YieldOp>(loc, minus1);
         },
         [&](OpBuilder &builder, Location loc) {
-          mIdx[axes[0]] =
-              rewriter.create<arith::SubIOp>(op.getLoc(), orgIdx, dimSz)
+          SmallVector<Value> tmp = mIdx;
+          tmp[axes[0]] =
+              rewriter.create<arith::SubIOp>(op.getLoc(), orgIdx, one)
                   .getResult();
           builder.create<scf::YieldOp>(
-              loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
+              loc, multiToLinearIndex(loc, rewriter, tmp, dims));
         });
     atBorder = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sge, orgIdx,
-        rewriter.create<arith::AddIOp>(loc, dimSz, minus1).getResult());
+        rewriter.create<arith::SubIOp>(loc, dimSz, one).getResult());
     auto up = rewriter.create<scf::IfOp>(
         loc, atBorder,
         [&](OpBuilder &builder, Location loc) {
           builder.create<scf::YieldOp>(loc, minus1);
         },
         [&](OpBuilder &builder, Location loc) {
-          mIdx[axes[0]] =
-              rewriter.create<arith::AddIOp>(op.getLoc(), orgIdx, dimSz)
+          SmallVector<Value> tmp = mIdx;
+          tmp[axes[0]] =
+              rewriter.create<arith::AddIOp>(op.getLoc(), orgIdx, one)
                   .getResult();
           builder.create<scf::YieldOp>(
-              loc, multiToLinearIndex(loc, rewriter, mIdx, dims));
+              loc, multiToLinearIndex(loc, rewriter, tmp, dims));
         });
     rewriter.replaceOp(op, ValueRange{down.getResult(0), up.getResult(0)});
     return mlir::success();

@@ -162,20 +162,21 @@ def Mesh_NeighborsLinearIndicesOp : Mesh_Op<"neighbors_linear_indices", [
   DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
 ]> {
   let summary =
-      "For given split axes get the linear indices of the direct neighbor processes.";
+      "For given mesh index get the linear indices of the direct neighbor processes along the given split.";
   let description = [{
     Example:
     ```
-    %idx = mesh.neighbor_linear_index on @mesh for $device 
-               split_axes = $split_axes : index
+    mesh.mesh @mesh0(shape = 10x20x30)
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %c3 = arith.constant 3 : index
+    %idx = mesh.neighbors_linear_indices on @mesh[%c1, %c2, %c3] split_axes = [1] : index
     ```
-    Given `@mesh` with shape `(10, 20, 30)`,
-          `device` = `(1, 2, 3)`
-          `$split_axes` = `[1]`
-    returns two indices, `633` and `693`, which correspond to the index of the previous
-    process `(1, 1, 3)`, and the next process `(1, 3, 3) along the split axis `1`.
+    The above returns two indices, `633` and `693`, which correspond to the
+    index of the previous process `(1, 1, 3)`, and the next process 
+    `(1, 3, 3) along the split axis `1`.
 
-    A negative value is returned if `$device` has no neighbor in the given
+    A negative value is returned if there is no neighbor in the respective
     direction along the given `split_axes`.
   }];
   let arguments = (ins FlatSymbolRefAttr:$mesh,
