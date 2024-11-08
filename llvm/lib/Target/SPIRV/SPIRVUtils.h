@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
@@ -138,6 +139,10 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
+
+// Return a valid position for the OpVariable instruction inside a function,
+// i.e., at the beginning of the first block of the function.
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget

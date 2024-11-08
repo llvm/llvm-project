@@ -473,8 +473,11 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
             MI.getOperand(2).getImm() != SPIRV::InstructionSet::OpenCL_std)
           continue;
         switch (MI.getOperand(3).getImm()) {
+        case SPIRV::OpenCLExtInst::frexp:
+        case SPIRV::OpenCLExtInst::lgamma_r:
         case SPIRV::OpenCLExtInst::remquo: {
-          // The last operand must be of a pointer to the return type.
+          // The last operand must be of a pointer to i32 or vector of i32
+          // values.
           MachineIRBuilder MIB(MI);
           SPIRVType *Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
           SPIRVType *RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
@@ -487,8 +490,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                         Int32Type, RetType->getOperand(2).getImm(), MIB));
         } break;
         case SPIRV::OpenCLExtInst::fract:
-        case SPIRV::OpenCLExtInst::frexp:
-        case SPIRV::OpenCLExtInst::lgamma_r:
         case SPIRV::OpenCLExtInst::modf:
         case SPIRV::OpenCLExtInst::sincos:
           // The last operand must be of a pointer to the base type represented
