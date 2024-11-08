@@ -1545,7 +1545,9 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   // *start* with a step down to the correct virtual base subobject,
   // and hence will not require any further steps.
   if ((*Start)->isVirtual()) {
-    llvm_unreachable("NYI: Cast to virtual base class");
+    VBase = cast<CXXRecordDecl>(
+        (*Start)->getType()->castAs<RecordType>()->getDecl());
+    ++Start;
   }
 
   // Compute the static offset of the ultimate destination within its
@@ -1574,39 +1576,33 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
     if (sanitizePerformTypeCheck()) {
       llvm_unreachable("NYI: sanitizePerformTypeCheck");
     }
-    return builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy,
-                                       NonVirtualOffset.getQuantity(),
-                                       /*assumeNotNull=*/not NullCheckValue);
   }
 
   if (sanitizePerformTypeCheck()) {
     assert(!cir::MissingFeatures::sanitizeOther());
   }
 
-  // Conversion to a virtual base. cir.base_class_addr can't handle this.
-  // Generate the code to look up the address in the virtual table.
-
-  llvm_unreachable("NYI: Cast to virtual base class");
-
-  // This is just an outline of what the code might look like, since I can't
-  // actually test it.
-#if 0
-  mlir::Value VirtualOffset = ...; // This is a dynamic expression.  Creating
-                                   // it requires calling an ABI-specific
-                                   // function.
-  Value = ApplyNonVirtualAndVirtualOffset(getLoc(Loc), *this, Value,
-                                          NonVirtualOffset, VirtualOffset,
-                                          Derived, VBase);
-  Value = builder.createElementBitCast(Value.getPointer().getLoc(), Value,
-                                       BaseValueTy);
-  if (sanitizePerformTypeCheck()) {
-    // Do something here
+  // Compute the virtual offset.
+  mlir::Value VirtualOffset = nullptr;
+  if (VBase) {
+    VirtualOffset = CGM.getCXXABI().getVirtualBaseClassOffset(
+        getLoc(Loc), *this, Value, Derived, VBase);
+  } else {
+    Value = builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy,
+                                        NonVirtualOffset.getQuantity(),
+                                        /*assumeNotNull=*/not NullCheckValue);
   }
-  if (NullCheckValue) {
-    // Convert to 'derivedPtr == nullptr ? nullptr : basePtr'
-  }
-#endif
 
+  // Apply both offsets.
+  // FIXME: remove condition.
+  if (VBase)
+    Value = ApplyNonVirtualAndVirtualOffset(getLoc(Loc), *this, Value,
+                                            NonVirtualOffset, VirtualOffset,
+                                            Derived, VBase);
+
+  // Cast to the destination type.
+  if (VBase)
+    Value = Value.withElementType(BaseValueTy);
   return Value;
 }
 
