@@ -880,3 +880,12 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
+
+def WaveAllBitCount : DXILOp<135, waveAllOp> {
+  let Doc = "returns the count of bits set to 1 across the wave";
+  let LLVMIntrinsic = int_dx_wave_active_countbits;
+  let arguments = [Int1Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
