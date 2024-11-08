@@ -1,4 +1,4 @@
-//===-- Implementation header for cospif16 ----------------------*- C++ -*-===//
+//===-- Implementation header for tanpif16 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_COSPIF16_H
-#define LLVM_LIBC_SRC_MATH_COSPIF16_H
+#ifndef LLVM_LIBC_SRC_MATH_TANPIF16_H
+#define LLVM_LIBC_SRC_MATH_TANPIF16_H
 
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-float16 cospif16(float16 x);
+float16 tanpif16(float16 x);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_COSPIF16_H
+#endif // LLVM_LIBC_SRC_MATH_TANPIF16_H
