@@ -1912,29 +1912,26 @@ void SwiftASTContext::AddExtraClangCC1Args(
       GetCompilerInvocation().getClangModuleCachePath().str();
 
   // Remove non-existing modules in a systematic way.
-  bool module_missing = false;
-  auto CheckFileExists = [&](const char *file) {
-    if (!llvm::sys::fs::exists(file)) {
-      std::string warn;
-      llvm::raw_string_ostream(warn)
-          << "Nonexistent explicit module file " << file;
-      AddDiagnostic(eSeverityWarning, warn);
-      module_missing = true;
-    }
+  auto CheckFileExists = [&](const std::string &file) -> bool {
+    if (llvm::sys::fs::exists(file))
+      return true;
+    std::string warn;
+    llvm::raw_string_ostream(warn)
+        << "Nonexistent explicit module file " << file;
+    AddDiagnostic(eSeverityWarning, warn);
+    return false;
   };
-  llvm::for_each(invocation.getHeaderSearchOpts().PrebuiltModuleFiles,
-                 [&](const auto &mod) { CheckFileExists(mod.second.c_str()); });
-  llvm::for_each(invocation.getFrontendOpts().ModuleFiles,
-                 [&](const auto &mod) { CheckFileExists(mod.c_str()); });
-
-  // If missing, clear all the prebuilt module options and switch to implicit
-  // modules build.
-  if (module_missing) {
-    invocation.getHeaderSearchOpts().PrebuiltModuleFiles.clear();
-    invocation.getFrontendOpts().ModuleFiles.clear();
-    invocation.getLangOpts().ImplicitModules = true;
-    invocation.getHeaderSearchOpts().ImplicitModuleMaps = true;
+  for (auto it = invocation.getHeaderSearchOpts().PrebuiltModuleFiles.begin();
+       it != invocation.getHeaderSearchOpts().PrebuiltModuleFiles.end();) {
+    if (!CheckFileExists(it->second))
+      it = invocation.getHeaderSearchOpts().PrebuiltModuleFiles.erase(it);
+    else
+      ++it;
   }
+  invocation.getFrontendOpts().ModuleFiles.erase(
+      llvm::remove_if(invocation.getFrontendOpts().ModuleFiles,
+                      [&](const auto &mod) { return !CheckFileExists(mod); }),
+      invocation.getFrontendOpts().ModuleFiles.end());
 
   invocation.generateCC1CommandLine(
       [&](const llvm::Twine &arg) { dest.push_back(arg.str()); });
