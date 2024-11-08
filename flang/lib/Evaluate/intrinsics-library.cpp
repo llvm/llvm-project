@@ -15,6 +15,7 @@
 #include "fold-implementation.h"
 #include "host.h"
 #include "flang/Common/erfc-scaled.h"
+#include "flang/Common/idioms.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
 #include <cfloat>
@@ -307,7 +308,7 @@ static std::complex<HostT> CSqrt(const std::complex<HostT> &x) {
     res.real(reinterpret_cast<HostT(&)[2]>(r)[0]);
     res.imag(reinterpret_cast<HostT(&)[2]>(r)[1]);
   } else {
-    assert("bad complex component type");
+    DIE("bad complex component type");
   }
 #else
   res = std::sqrt(x);
