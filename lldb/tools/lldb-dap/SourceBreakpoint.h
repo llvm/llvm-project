@@ -10,7 +10,12 @@
 #define LLDB_TOOLS_LLDB_DAP_SOURCEBREAKPOINT_H
 
 #include "Breakpoint.h"
+#include "DAPForward.h"
+#include "lldb/API/SBError.h"
 #include "llvm/ADT/StringRef.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace lldb_dap {
 
@@ -31,8 +36,7 @@ struct SourceBreakpoint : public Breakpoint {
   uint32_t line;   ///< The source line of the breakpoint or logpoint
   uint32_t column; ///< An optional source column of the breakpoint
 
-  SourceBreakpoint() : Breakpoint(), line(0), column(0) {}
-  SourceBreakpoint(const llvm::json::Object &obj);
+  SourceBreakpoint(DAP &d, const llvm::json::Object &obj);
 
   // Set this breakpoint in LLDB as a new breakpoint
   void SetBreakpoint(const llvm::StringRef source_path);
