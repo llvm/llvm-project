@@ -2516,6 +2516,16 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
                                                     : "aarch64.neon.shadd";
     break;
   }
+
+  case NEON::BI__builtin_neon_vqmovn_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic) ? "aarch64.neon.uqxtn"
+                                                    : "aarch64.neon.sqxtn";
+    argTypes.push_back(builder.getExtendedOrTruncatedElementVectorType(
+        vTy, true /* extended */,
+        mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned()));
+    break;
+  }
+
   case NEON::BI__builtin_neon_vqmovun_v: {
     intrincsName = "aarch64.neon.sqxtun";
     argTypes.push_back(builder.getExtendedOrTruncatedElementVectorType(
