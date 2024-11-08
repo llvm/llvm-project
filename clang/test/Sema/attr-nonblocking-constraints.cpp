@@ -422,7 +422,6 @@ public:
 
   // This is a deliberate corruption of the real implementation for simplicity.
   constexpr expected(const expected&)
-    noexcept(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err>)
     requires(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err>)
   = default;
 };
@@ -435,9 +434,12 @@ void test() [[clang::nonblocking]]
 
 } // namespace ExpectedTest
 
-// Make sure that simple type traits don't cause violations.
+// Make sure a function call in a noexcept() clause is ignored.
+constexpr bool foo() [[clang::nonblocking(false)]] { return true; }
+void nb27() noexcept(foo()) [[clang::nonblocking]] {}
 
-void nb27() [[clang::nonblocking]] {
+// Make sure that simple type traits don't cause violations.
+void nb28() [[clang::nonblocking]] {
 	bool x = __is_constructible(int, const int&);
 }
 

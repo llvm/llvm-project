@@ -996,10 +996,10 @@ private:
         // will be traversed as part of the function -- unless we capture it
         // here and have TraverseStmt skip it.
         if (TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
-          FunctionProtoTypeLoc TL =
-              TSI->getTypeLoc().getAs<FunctionProtoTypeLoc>();
-          if (const FunctionProtoType *FPT = TL.getTypePtr())
-            NoexceptExpr = FPT->getNoexceptExpr();
+          if (FunctionProtoTypeLoc TL =
+                  TSI->getTypeLoc().getAs<FunctionProtoTypeLoc>())
+            if (const FunctionProtoType *FPT = TL.getTypePtr())
+              NoexceptExpr = FPT->getNoexceptExpr();
         }
       }
 
