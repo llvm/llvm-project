@@ -30,7 +30,7 @@ define hidden void @use_queue_ptr() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_queue_ptr:
-; GCN: s_swappc_b64 s[30:31], s[4:5]
+; GCN: s_swappc_b64 s[30:31], s[10:11]
 ; GCN: .amdhsa_user_sgpr_queue_ptr 0
 define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
   call void @use_queue_ptr()
@@ -489,7 +489,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; We have to pass the kernarg segment, but there are no kernel
 ; arguments so null is passed.
 ; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input_no_kernargs:
-; GCN: s_mov_b64 s[10:11], s[6:7]
+; GCN: s_mov_b64 s[10:11], s[8:9]
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 

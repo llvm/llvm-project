@@ -75,8 +75,8 @@ stack:
 body:             |
   bb.0:
     ; GFX8-LABEL: name: fold_s_add_i32__fi_imm_copy_to_virt_vgpr
-    ; GFX8: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = nuw V_ADD_CO_U32_e32 64, %stack.0, implicit-def dead $vcc, implicit $exec
-    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e32_]]
+    ; GFX8: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = nuw V_ADD_CO_U32_e64 64, %stack.0, 0, implicit $exec
+    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e64_]]
     ;
     ; GFX9-LABEL: name: fold_s_add_i32__fi_imm_copy_to_virt_vgpr
     ; GFX9: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = nuw V_ADD_U32_e64 64, %stack.0, 0, implicit $exec
@@ -98,8 +98,8 @@ stack:
 body:             |
   bb.0:
     ; GFX8-LABEL: name: fold_s_add_i32__imm_fi_copy_to_virt_vgpr
-    ; GFX8: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = nuw V_ADD_CO_U32_e32 64, %stack.0, implicit-def dead $vcc, implicit $exec
-    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e32_]]
+    ; GFX8: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = nuw V_ADD_CO_U32_e64 64, %stack.0, 0, implicit $exec
+    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e64_]]
     ;
     ; GFX9-LABEL: name: fold_s_add_i32__imm_fi_copy_to_virt_vgpr
     ; GFX9: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = nuw V_ADD_U32_e64 64, %stack.0, 0, implicit $exec
@@ -202,8 +202,8 @@ body:             |
     ; GFX8: liveins: $sgpr8
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
-    ; GFX8-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], %stack.0, implicit-def dead $vcc, implicit $exec
-    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e32_]]
+    ; GFX8-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY]], %stack.0, 0, implicit $exec
+    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e64_]]
     ;
     ; GFX9-LABEL: name: fold_s_add_i32__mov_fi_reg_copy_to_virt_vgpr
     ; GFX9: liveins: $sgpr8
@@ -239,8 +239,8 @@ body:             |
     ; GFX8: liveins: $sgpr8
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
-    ; GFX8-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], %stack.0, implicit-def dead $vcc, implicit $exec
-    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e32_]]
+    ; GFX8-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY]], %stack.0, 0, implicit $exec
+    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e64_]]
     ;
     ; GFX9-LABEL: name: fold_s_add_i32__reg_copy_mov_fi_to_virt_vgpr
     ; GFX9: liveins: $sgpr8
@@ -337,8 +337,8 @@ body:             |
     ; GFX8: liveins: $sgpr8
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
-    ; GFX8-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], %stack.0, implicit-def dead $vcc, implicit $exec
-    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e32_]]
+    ; GFX8-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY]], %stack.0, 0, implicit $exec
+    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e64_]]
     ;
     ; GFX9-LABEL: name: fold_s_add_i32__fi_reg_copy_to_virt_vgpr
     ; GFX9: liveins: $sgpr8
@@ -371,8 +371,8 @@ body:             |
     ; GFX8: liveins: $sgpr8
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
-    ; GFX8-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], %stack.0, implicit-def dead $vcc, implicit $exec
-    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e32_]]
+    ; GFX8-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY]], %stack.0, 0, implicit $exec
+    ; GFX8-NEXT: SI_RETURN implicit [[V_ADD_CO_U32_e64_]]
     ;
     ; GFX9-LABEL: name: fold_s_add_i32__reg_fi_copy_to_virt_vgpr
     ; GFX9: liveins: $sgpr8
@@ -389,6 +389,149 @@ body:             |
     ; GFX10-NEXT: SI_RETURN implicit [[V_ADD_U32_e64_]]
     %0:sreg_32 = COPY $sgpr8
     %1:sreg_32 = S_ADD_I32 %0, %stack.0, implicit-def dead $scc
+    %2:vgpr_32 = COPY %1
+    SI_RETURN implicit %2
+...
+
+---
+name:  fold_s_or_b32__mov_fi_const_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_or_b32__mov_fi_const_copy_to_virt_vgpr
+    ; CHECK: [[V_OR_B32_e32_:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 128, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_OR_B32_e32_]]
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_OR_B32 %0, 128, implicit-def dead $scc
+    %2:vgpr_32 = COPY %1
+    SI_RETURN implicit %2
+...
+
+---
+name:  fold_s_or_b32__const_copy_mov_fi_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_or_b32__const_copy_mov_fi_to_virt_vgpr
+    ; CHECK: [[V_OR_B32_e32_:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 128, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_OR_B32_e32_]]
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_OR_B32 128, %0, implicit-def dead $scc
+    %2:vgpr_32 = COPY %1
+    SI_RETURN implicit %2
+...
+
+---
+name:  fold_s_or_b32__fi_imm_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_or_b32__fi_imm_copy_to_virt_vgpr
+    ; CHECK: %1:vgpr_32 = disjoint V_OR_B32_e64 64, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit %1
+    %0:sreg_32 = disjoint S_OR_B32 %stack.0, 64, implicit-def dead $scc
+    %1:vgpr_32 = COPY %0
+    SI_RETURN implicit %1
+...
+
+---
+name:  fold_s_or_b32__imm_fi_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_or_b32__imm_fi_copy_to_virt_vgpr
+    ; CHECK: %1:vgpr_32 = disjoint V_OR_B32_e64 64, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit %1
+    %0:sreg_32 = disjoint S_OR_B32 64, %stack.0, implicit-def dead $scc
+    %1:vgpr_32 = COPY %0
+    SI_RETURN implicit %1
+...
+
+---
+name:  fold_s_and_b32__fi_imm_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_and_b32__fi_imm_copy_to_virt_vgpr
+    ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 64, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_AND_B32_e64_]]
+    %0:sreg_32 = S_AND_B32 %stack.0, 64, implicit-def dead $scc
+    %1:vgpr_32 = COPY %0
+    SI_RETURN implicit %1
+...
+
+---
+name:  fold_s_and_b32__fi_const_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_and_b32__fi_const_copy_to_virt_vgpr
+    ; CHECK: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 128, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_AND_B32_e32_]]
+    %0:sreg_32 = S_AND_B32 %stack.0, 128, implicit-def dead $scc
+    %1:vgpr_32 = COPY %0
+    SI_RETURN implicit %1
+...
+
+---
+name:  fold_s_mul_i32__fi_imm_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_mul_i32__fi_imm_copy_to_virt_vgpr
+    ; CHECK: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 64, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_MUL_LO_U32_e64_]]
+    %0:sreg_32 = S_MUL_I32 %stack.0, 64, implicit-def dead $scc
+    %1:vgpr_32 = COPY %0
+    SI_RETURN implicit %1
+...
+
+---
+name:  fold_s_mul_i32__fi_reg_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+      liveins: $sgpr4
+    ; CHECK-LABEL: name: fold_s_mul_i32__fi_reg_copy_to_virt_vgpr
+    ; CHECK: liveins: $sgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr4
+    ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[COPY]], %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_MUL_LO_U32_e64_]]
+    %0:sreg_32 = COPY $sgpr4
+    %1:sreg_32 = S_MUL_I32 %stack.0, %0, implicit-def dead $scc
+    %2:vgpr_32 = COPY %1
+    SI_RETURN implicit %2
+...
+
+---
+name:  fold_s_and_b32__mov_fi_const_copy_to_virt_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_s_and_b32__mov_fi_const_copy_to_virt_vgpr
+    ; CHECK: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 128, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_AND_B32_e32_]]
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_AND_B32 %0, 128, implicit-def dead $scc
     %2:vgpr_32 = COPY %1
     SI_RETURN implicit %2
 ...
