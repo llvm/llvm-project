@@ -823,7 +823,7 @@ constexpr Float128 BIG_COEFFS[4]{
 };
 
 [[maybe_unused]] LIBC_INLINE double log1p_accurate(int e_x, int index,
-                                  fputil::DoubleDouble m_x) {
+                                                   fputil::DoubleDouble m_x) {
   Float128 e_x_f128(static_cast<float>(e_x));
   Float128 sum = fputil::quick_mul(LOG_2, e_x_f128);
   sum = fputil::quick_add(sum, LOG_R1[index]);
@@ -982,8 +982,10 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   //   |m_dd.lo| < 2^-52.
   // This is exact.
   uint64_t m_hi = static_cast<uint64_t>(static_cast<int64_t>(x_u) - s_u);
-  uint64_t m_lo = (x_dd.lo != 0.0) ? FPBits_t(x_dd.lo).uintval() :
-                  static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u);
+  uint64_t m_lo =
+      (x_dd.lo != 0.0)
+          ? FPBits_t(x_dd.lo).uintval()
+          : static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u);
   fputil::DoubleDouble m_dd{FPBits_t(m_lo).get_val(), FPBits_t(m_hi).get_val()};
 
   // Perform range reduction:
