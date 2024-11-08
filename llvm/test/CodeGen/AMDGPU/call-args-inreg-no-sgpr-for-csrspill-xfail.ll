@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck -enable-var-scope %s
+; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -enable-var-scope %s
 
 ; CHECK: LLVM ERROR: failed to find free scratch register
 
