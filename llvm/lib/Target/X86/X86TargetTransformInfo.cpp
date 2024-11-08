@@ -1559,6 +1559,23 @@ InstructionCost X86TTIImpl::getShuffleCost(
       return TTI::TCC_Free;
   }
 
+  // Attempt to detect a cheaper inlane shuffle, avoiding 128-bit subvector
+  // permutation.
+  bool IsInLaneShuffle = false;
+  if (BaseTp->getPrimitiveSizeInBits() > 0 &&
+      (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
+      BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
+      Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
+    unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
+    unsigned NumEltsPerLane = Mask.size() / NumLanes;
+    if ((Mask.size() % NumLanes) == 0)
+      IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
+        return P.value() == PoisonMaskElem ||
+               ((P.value() % Mask.size()) / NumEltsPerLane) ==
+                   (P.index() / NumEltsPerLane);
+      });
+  }
+
   // Treat <X x bfloat> shuffles as <X x half>.
   if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
     LT.second = LT.second.changeVectorElementType(MVT::f16);
@@ -1897,6 +1914,25 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostTblEntry AVX2InLaneShuffleTbl[] = {
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 1}, // vpshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 1}, // vpshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8,  1}, // vpshufb
+
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,     2}, // 2*vshufpd + vblendpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,     2}, // 2*vshufps + vblendps
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,     2}, // 2*vpshufd + vpblendd
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,     2}, // 2*vpshufd + vpblendd
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16,    2}, // 2*vpshufb + vpor
+      {TTI::SK_PermuteTwoSrc, MVT::v16f16,    2}, // 2*vpshufb + vpor
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8,     2}, // 2*vpshufb + vpor
+  };
+
+  if (IsInLaneShuffle && ST->hasAVX2())
+    if (const auto *Entry =
+            CostTableLookup(AVX2InLaneShuffleTbl, Kind, LT.second))
+      return LT.first * Entry->Cost;
+
   static const CostTblEntry AVX2ShuffleTbl[] = {
       {TTI::SK_Broadcast, MVT::v4f64, 1},  // vbroadcastpd
       {TTI::SK_Broadcast, MVT::v8f32, 1},  // vbroadcastps
@@ -1971,6 +2007,36 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   if (ST->hasXOP())
     if (const auto *Entry = CostTableLookup(XOPShuffleTbl, Kind, LT.second))
+      return LT.first * Entry->Cost;
+
+  static const CostTblEntry AVX1InLaneShuffleTbl[] = {
+      {TTI::SK_PermuteSingleSrc, MVT::v4f64,  1},  // vpermilpd
+      {TTI::SK_PermuteSingleSrc, MVT::v4i64,  1},  // vpermilpd
+      {TTI::SK_PermuteSingleSrc, MVT::v8f32,  1},  // vpermilps
+      {TTI::SK_PermuteSingleSrc, MVT::v8i32,  1},  // vpermilps
+
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 4}, // vextractf128 + 2*pshufb
+                                                  // + vpor + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 4}, // vextractf128 + 2*pshufb
+                                                  // + vpor + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8,  4}, // vextractf128 + 2*pshufb
+                                                  // + vpor + vinsertf128
+
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,     2}, // 2*vshufpd + vblendpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,     2}, // 2*vshufps + vblendps
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,     2}, // 2*vpermilpd + vblendpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,     2}, // 2*vpermilps + vblendps
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16,    9}, // 2*vextractf128 + 4*pshufb
+                                                  // + 2*vpor + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v16f16,    9}, // 2*vextractf128 + 4*pshufb
+                                                  // + 2*vpor + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8,     9}, // 2*vextractf128 + 4*pshufb
+                                                  // + 2*vpor + vinsertf128
+  };
+
+  if (IsInLaneShuffle && ST->hasAVX())
+    if (const auto *Entry =
+            CostTableLookup(AVX1InLaneShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
 
   static const CostTblEntry AVX1ShuffleTbl[] = {
@@ -2296,7 +2362,10 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,   { 1, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32,  { 3, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v16f64,  MVT::v16f32,  { 4, 1, 1, 1 } }, // 2*vcvtps2pd+vextractf64x4
+    { ISD::FP_EXTEND, MVT::v16f32,  MVT::v16f16,  { 1, 1, 1, 1 } }, // vcvtph2ps
+    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
     { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,   { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v16f16,  MVT::v16f32,  { 1, 1, 1, 1 } }, // vcvtps2ph
 
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
@@ -2973,6 +3042,17 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v4i32,  MVT::v2i64,  { 1, 1, 1, 1 } }, // PSHUFD
   };
 
+  static const TypeConversionCostKindTblEntry F16ConversionTbl[] = {
+    { ISD::FP_ROUND,  MVT::f16,     MVT::f32,     { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v8f16,   MVT::v8f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v4f16,   MVT::v4f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::f32,     MVT::f16,     { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::f64,     MVT::f16,     { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
+    { ISD::FP_EXTEND, MVT::v8f32,   MVT::v8f16,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v4f32,   MVT::v4f16,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v4f64,   MVT::v4f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
+  };
+
   // Attempt to map directly to (simple) MVT types to let us match custom entries.
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
@@ -3034,6 +3114,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
           return *KindCost;
     }
 
+    if (ST->hasF16C()) {
+      if (const auto *Entry = ConvertCostTableLookup(F16ConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+    }
+
     if (ST->hasSSE41()) {
       if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
@@ -3046,6 +3133,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                      SimpleDstTy, SimpleSrcTy))
         if (auto KindCost = Entry->Cost[CostKind])
           return *KindCost;
+    }
+
+    if ((ISD == ISD::FP_ROUND && SimpleDstTy == MVT::f16) ||
+        (ISD == ISD::FP_EXTEND && SimpleSrcTy == MVT::f16)) {
+      // fp16 conversions not covered by any table entries require a libcall.
+      // Return a large (arbitrary) number to model this.
+      return InstructionCost(64);
     }
   }
 
@@ -3106,6 +3200,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                    LTDest.second, LTSrc.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return std::max(LTSrc.first, LTDest.first) * *KindCost;
+
+  if (ST->hasF16C()) {
+    if (const auto *Entry = ConvertCostTableLookup(F16ConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
+  }
 
   if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
@@ -6921,6 +7022,14 @@ bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
   // fully general vector.
   return true;
+}
+
+unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
+                                       Type *ScalarValTy) const {
+  if (ST->hasF16C() && ScalarMemTy->isHalfTy()) {
+    return 4;
+  }
+  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
 }
 
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,

@@ -24,6 +24,55 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER >= 20
+// C++20 bidirectional_iterator that does not satisfy the Cpp17BidirectionalIterator named requirement.
+template <class It>
+class cpp20_bidirectional_iterator_with_arrow {
+  It it_;
+
+public:
+  using iterator_category = std::input_iterator_tag;
+  using iterator_concept  = std::bidirectional_iterator_tag;
+  using value_type        = std::iterator_traits<It>::value_type;
+  using difference_type   = std::iterator_traits<It>::difference_type;
+
+  cpp20_bidirectional_iterator_with_arrow() : it_() {}
+  explicit cpp20_bidirectional_iterator_with_arrow(It it) : it_(it) {}
+
+  decltype(auto) operator*() const { return *it_; }
+
+  auto operator->() const {
+    if constexpr (std::is_pointer_v<It>) {
+      return it_;
+    } else {
+      return it_.operator->();
+    }
+  }
+
+  cpp20_bidirectional_iterator_with_arrow& operator++() {
+    ++it_;
+    return *this;
+  }
+  cpp20_bidirectional_iterator_with_arrow& operator--() {
+    --it_;
+    return *this;
+  }
+  cpp20_bidirectional_iterator_with_arrow operator++(int) { return cpp20_bidirectional_iterator_with_arrow(it_++); }
+  cpp20_bidirectional_iterator_with_arrow operator--(int) { return cpp20_bidirectional_iterator_with_arrow(it_--); }
+
+  friend bool
+  operator==(const cpp20_bidirectional_iterator_with_arrow& x, const cpp20_bidirectional_iterator_with_arrow& y) {
+    return x.it_ == y.it_;
+  }
+  friend bool
+  operator!=(const cpp20_bidirectional_iterator_with_arrow& x, const cpp20_bidirectional_iterator_with_arrow& y) {
+    return x.it_ != y.it_;
+  }
+
+  friend It base(const cpp20_bidirectional_iterator_with_arrow& i) { return i.it_; }
+};
+#endif
+
 class A
 {
     int data_;
@@ -112,6 +161,16 @@ int main(int, char**)
     constexpr RI it1 = std::make_reverse_iterator(&gC+1);
 
     static_assert(it1->get() == gC.get(), "");
+  }
+#endif
+#if TEST_STD_VER >= 20
+  {
+    // The underlying iterator models c++20 bidirectional_iterator,
+    // but does not satisfy c++17 BidirectionalIterator named requirement
+    B data[] = {1, 2, 3};
+    cpp20_bidirectional_iterator_with_arrow<B*> iter(data + 3);
+    auto ri = std::make_reverse_iterator(iter);
+    assert(ri->get() == 3);
   }
 #endif
   {

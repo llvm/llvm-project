@@ -243,6 +243,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 /// rather than the host device.
 void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(flangomp::createMapInfoFinalizationPass());
+  pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
@@ -263,10 +264,10 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
-  fir::addTargetRewritePass(pm);
-  fir::addCompilerGeneratedNamesConversionPass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
+  fir::addTargetRewritePass(pm);
+  fir::addCompilerGeneratedNamesConversionPass(pm);
 
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));

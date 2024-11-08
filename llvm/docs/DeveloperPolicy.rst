@@ -105,6 +105,13 @@ When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
 
+The LLVM project uses email to communicate to contributors outside of the
+GitHub platform about their past contributions. Primarily, our buildbot
+infrastructure uses emails to contact contributors about build and test
+failures. Therefore, the LLVM community requires contributors to have a public
+email address associated with their GitHub commits, so please ensure that "Keep
+my email addresses private" is disabled in your
+`account settings <https://github.com/settings/emails>`_.
 
 .. _code review:
 
@@ -194,7 +201,7 @@ within an area of a project:
     * aid release managers with backporting and other release-related
       activities,
     * be a point of contact for contributors who need help (answering questions
-      on Discord/Discourse/IRC or holding office hours).
+      on Discord/Discourse or holding office hours).
 
 Each top-level project in the monorepo will specify one or more
 lead maintainers who are responsible for ensuring community needs are

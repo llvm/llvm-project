@@ -50,6 +50,12 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+
+private:
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // namespace
 
@@ -180,7 +186,7 @@ static bool isFallThruRelocation(InputSection &is, InputFile *file,
     return false;
 
   uint64_t addrLoc = is.getOutputSection()->addr + is.outSecOff + r.offset;
-  uint64_t targetOffset = is.getRelocTargetVA(ctx, r, addrLoc);
+  uint64_t targetOffset = is.getRelocTargetVA(is.getCtx(), r, addrLoc);
 
   // If this jmp is a fall thru, the target offset is the beginning of the
   // next section.
@@ -401,8 +407,8 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -423,7 +429,7 @@ void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function (for -z rel).
   if (ctx.arg.writeAddends)
-    write64le(buf, s.getVA());
+    write64le(buf, s.getVA(ctx));
 }
 
 void X86_64::writePltHeader(uint8_t *buf) const {
@@ -460,7 +466,8 @@ RelType X86_64::getDynRel(RelType type) const {
   return R_X86_64_NONE;
 }
 
-static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
     // Convert
     //   .byte 0x66
@@ -483,9 +490,9 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, loc - 3)
+               << "R_X86_64_GOTPC32_TLSDESC must be used "
+                  "in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
@@ -500,7 +507,8 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
     // Convert
     //   .byte 0x66
@@ -524,9 +532,9 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, loc - 3)
+               << "R_X86_64_GOTPC32_TLSDESC must be used "
+                  "in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-2] = 0x8b;
@@ -541,7 +549,8 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
 // R_X86_64_TPOFF32 so that it does not use GOT.
-static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
+void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   uint8_t *inst = loc - 3;
   uint8_t reg = loc[-1] >> 3;
   uint8_t *regSlot = loc - 1;
@@ -573,8 +582,9 @@ static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
     memcpy(inst, "\x48\xc7", 2);
     *regSlot = 0xc0 | reg;
   } else {
-    error(getErrorLoc(ctx, loc - 3) +
-          "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
+    ErrAlways(ctx)
+        << getErrorLoc(ctx, loc - 3)
+        << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
   }
 
   // The original code used a PC relative relocation.
@@ -582,7 +592,8 @@ static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
   write32le(loc, val + 4);
 }
 
-static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   const uint8_t inst[] = {
       0x66, 0x66,                                           // .word 0x6666
       0x66,                                                 // .byte 0x66
@@ -617,8 +628,9 @@ static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     return;
   }
 
-  error(getErrorLoc(ctx, loc - 3) +
-        "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD");
+  ErrAlways(ctx)
+      << getErrorLoc(ctx, loc - 3)
+      << "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD";
 }
 
 // A JumpInstrMod at a specific offset indicates that the jump instruction
@@ -767,23 +779,23 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val);
 void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_X86_64_8:
-    checkIntUInt(loc, val, 8, rel);
+    checkIntUInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_X86_64_PC8:
-    checkInt(loc, val, 8, rel);
+    checkInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_X86_64_16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_X86_64_PC16:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_X86_64_32:
-    checkUInt(loc, val, 32, rel);
+    checkUInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_X86_64_32S:
@@ -794,7 +806,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_PLT32:
   case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_X86_64_64:
@@ -814,7 +826,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
@@ -826,7 +838,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     } else if (rel.expr == R_RELAX_TLS_GD_TO_IE) {
       relaxTlsGdToIe(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
@@ -834,7 +846,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.expr == R_RELAX_TLS_LD_TO_LE) {
       relaxTlsLdToLe(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
@@ -842,12 +854,12 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
   case R_X86_64_TPOFF32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
 
@@ -1021,7 +1033,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
   if (!ctx.arg.is64) {
-    error("target doesn't support split stacks");
+    ErrAlways(ctx) << "target doesn't support split stacks";
     return false;
   }
 

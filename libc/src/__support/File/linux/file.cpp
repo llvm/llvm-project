@@ -18,7 +18,7 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h" // For error macros
 
-#include <fcntl.h>       // For mode_t and other flags to the open syscall
+#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
 #include <sys/stat.h>    // For S_IS*, S_IF*, and S_IR* flags.
 #include <sys/syscall.h> // For syscall numbers
 

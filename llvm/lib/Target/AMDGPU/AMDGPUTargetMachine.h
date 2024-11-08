@@ -172,6 +172,7 @@ public:
   void addIRPasses(AddIRPass &) const;
   void addCodeGenPrepare(AddIRPass &) const;
   void addPreISel(AddIRPass &addPass) const;
+  void addILPOpts(AddMachinePass &) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
   void addMachineSSAOptimization(AddMachinePass &) const;

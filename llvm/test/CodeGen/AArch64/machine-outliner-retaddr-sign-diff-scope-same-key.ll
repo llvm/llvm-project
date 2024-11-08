@@ -7,8 +7,7 @@ define void @a() "sign-return-address"="all" {
 ; CHECK-LABEL:      a:                                     // @a
 ; V8A:              hint #25
 ; V83A:             paciasp
-; CHECK:            .cfi_negate_ra_state
-; CHECK-NEXT:       .cfi_def_cfa_offset
+; CHECK-NEXT:      .cfi_negate_ra_state
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -55,8 +54,7 @@ define void @c() "sign-return-address"="all" {
 ; CHECK-LABEL:         c:              // @c
 ; V8A:                 hint #25
 ; V83A:                paciasp
-; CHECK:              .cfi_negate_ra_state
-; CHECK-NEXT:         .cfi_def_cfa_offset
+; CHECK-NEXT          .cfi_negate_ra_state
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4

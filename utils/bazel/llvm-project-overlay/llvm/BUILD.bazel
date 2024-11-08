@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -31,7 +32,6 @@ exports_files([
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     "utils/lit/lit.py",
-    "utils/lldbDataFormatters.py",
 ])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
@@ -1158,6 +1158,7 @@ cc_library(
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1244,6 +1245,18 @@ cc_library(
         ":TargetParser",
         ":config",
     ],
+)
+
+filegroup(
+    name = "common_target_td_sources",
+    srcs = glob([
+        "include/llvm/CodeGen/*.td",
+        "include/llvm/Frontend/Directive/*.td",
+        "include/llvm/IR/Intrinsics*.td",
+        "include/llvm/TableGen/*.td",
+        "include/llvm/Target/*.td",
+        "include/llvm/Target/GlobalISel/*.td",
+    ]),
 )
 
 gentbl(
@@ -2218,7 +2231,8 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "SystemZ",
         "tbl_outs": [
             ("-gen-asm-matcher", "lib/Target/SystemZ/SystemZGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenAsmWriter.inc"),
+            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenGNUAsmWriter.inc"),
+            ("-gen-asm-writer -asmwriternum=1", "lib/Target/SystemZ/SystemZGenHLASMAsmWriter.inc"),
             ("-gen-callingconv", "lib/Target/SystemZ/SystemZGenCallingConv.inc"),
             ("-gen-dag-isel", "lib/Target/SystemZ/SystemZGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc"),
@@ -2320,18 +2334,6 @@ llvm_target_lib_list = [lib for lib in [
 cc_library(
     name = "x86_target_layering_problem_hdrs",
     textual_hdrs = ["lib/Target/X86/X86InstrInfo.h"],
-)
-
-filegroup(
-    name = "common_target_td_sources",
-    srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/Frontend/Directive/*.td",
-        "include/llvm/IR/Intrinsics*.td",
-        "include/llvm/TableGen/*.td",
-        "include/llvm/Target/*.td",
-        "include/llvm/Target/GlobalISel/*.td",
-    ]),
 )
 
 gentbl(

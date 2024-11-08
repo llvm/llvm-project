@@ -60,8 +60,8 @@ struct __bounded_iter {
 
   // Create a singular iterator.
   //
-  // Such an iterator points past the end of an empty span, so it is not dereferenceable.
-  // Observing operations like comparison and assignment are valid.
+  // Such an iterator points past the end of an empty range, so it is not dereferenceable.
+  // Operations like comparison and assignment are valid.
   _LIBCPP_HIDE_FROM_ABI __bounded_iter() = default;
 
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter const&) = default;
