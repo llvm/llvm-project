@@ -824,22 +824,14 @@ memprof::extractCallsFromIR(Module &M) {
           continue;
 
         StringRef CalleeName = CalledFunction->getName();
-        if (DIL->getInlinedAt()) {
-          for (; DIL; DIL = DIL->getInlinedAt()) {
-            uint64_t CallerGUID =
-                IndexedMemProfRecord::getGUID(DIL->getSubprogramLinkageName());
-            uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
-            LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
-            Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
-            CalleeName = DIL->getSubprogramLinkageName();
-          }
-        } else {
+        do {
           uint64_t CallerGUID =
               IndexedMemProfRecord::getGUID(DIL->getSubprogramLinkageName());
           uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
           LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
           Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
-        }
+          CalleeName = DIL->getSubprogramLinkageName();
+        } while ((DIL = DIL->getInlinedAt()));
       }
     }
   }
