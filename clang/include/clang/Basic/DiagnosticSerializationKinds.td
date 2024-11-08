@@ -36,10 +36,12 @@ def err_ast_file_targetopt_feature_mismatch : Error<
     "%select{AST file '%1' was|current translation unit is}0 compiled with the target "
     "feature '%2' but the %select{current translation unit is|AST file '%1' was}0 "
     "not">;
-def err_ast_file_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
-    "AST file '%3' but is currently %select{disabled|enabled}2">;
-def err_ast_file_langopt_value_mismatch : Error<
-  "%0 differs in AST file '%1' vs. current file">;
+def warn_ast_file_langopt_mismatch : Warning<"%0 was %select{disabled|enabled}1 in "
+    "AST file '%3' but is currently %select{disabled|enabled}2">,
+    InGroup<ModuleMismatchedOption>;
+def warn_ast_file_langopt_value_mismatch : Warning<
+  "%0 differs in AST file '%1' vs. current file">,
+  InGroup<ModuleMismatchedOption>;
 def err_ast_file_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the AST file '%1'">;
 def err_ast_file_modulecache_mismatch : Error<"AST file '%2' was compiled with module cache "

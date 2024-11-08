@@ -511,6 +511,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Clang now downgrades the inconsistent language options between modules to warnings instead of errors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
