@@ -303,6 +303,11 @@ C2y Feature Support
   undefined. Clang has always accepted ``const`` and ``volatile`` qualified
   function types by ignoring the qualifiers.
 
+- Updated conformance for `N3346 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3346.pdf>`_
+  which changes some undefined behavior around initialization to instead be
+  constraint violations. This paper adopts Clang's existing practice, so there
+  were no changes to compiler behavior.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
