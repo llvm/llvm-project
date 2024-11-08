@@ -1654,6 +1654,26 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   return true;
 }
 
+/// Add additional context that is otherwise hard to convey.
+static void AnnotateDiagnostics(DiagnosticManager &diagnostic_manager) {
+  bool append_missing_library_note = false;
+  for (auto &diag : diagnostic_manager.Diagnostics()) {
+    if (!diag || diag->GetSeverity() != eSeverityError)
+      continue;
+    const auto &detail = diag->GetDetail();
+    if (StringRef(detail.message).contains("has no member")) {
+      append_missing_library_note = true;
+      break;
+    }
+  }
+  if (append_missing_library_note)
+    diagnostic_manager.AddDiagnostic(
+        "If the member name is spelled correctly, this error could mean that "
+        "it depends on a (private) type from a module that has not been "
+        "imported into the current context.",
+        eSeverityInfo, eDiagnosticOriginLLDB);
+}
+
 SwiftExpressionParser::ParseResult
 SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                              uint32_t first_line, uint32_t last_line) {
@@ -1675,6 +1695,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
            "error expected");
     expr_diagnostics->PrintDiagnostics(diagnostic_manager, buffer_id,
                                        first_line, last_line);
+    AnnotateDiagnostics(diagnostic_manager);
   };
 
   // In the case of playgrounds, we turn all rewriting functionality off.

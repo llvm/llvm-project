@@ -45,6 +45,7 @@
 #include "llvm/ADT/ScopeExit.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <sstream>
 #include <type_traits>
 
@@ -4411,30 +4412,36 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     }
     case Node::Kind::Enum:
     case Node::Kind::BoundGenericEnum: {
+      std::string error;
       if (exe_scope)
         if (auto runtime =
                 SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
           ExecutionContext exe_ctx;
           exe_scope->CalculateExecutionContext(exe_ctx);
-          if (auto case_name = runtime->GetEnumCaseName(
-                  {weak_from_this(), type}, data, &exe_ctx)) {
+          auto case_name = runtime->GetEnumCaseName({weak_from_this(), type},
+                                                    data, &exe_ctx);
+          if (case_name && !case_name->empty()) {
             s.PutCString(*case_name);
             return true;
           }
+          if (!case_name)
+            error = toString(case_name.takeError());
         }
 
       // No result available from the runtime, fallback to the AST. This occurs
-      // for some Clang imported enums
+      // for some Clang imported enums.
       if (auto *swift_ast_context =
               GetSwiftASTContextFromExecutionScope(exe_scope)) {
         ExecutionContext exe_ctx;
         exe_scope->CalculateExecutionContext(exe_ctx);
-        return swift_ast_context->DumpTypeValue(
-            ReconstructType(type, &exe_ctx), s, format, data, data_offset,
-            data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
-            is_base_class);
+        if (swift_ast_context->DumpTypeValue(
+                ReconstructType(type, &exe_ctx), s, format, data, data_offset,
+                data_byte_size, bitfield_bit_size, bitfield_bit_offset,
+                exe_scope, is_base_class))
+          return true;
       }
-      return {};
+      s << error;
+      return false;
     }
     case Node::Kind::TypeAlias:
     case Node::Kind::BoundGenericTypeAlias: {
@@ -4448,7 +4455,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
             ReconstructType(type, exe_scope), s, format, data, data_offset,
             data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
             is_base_class);
-      return {};
+      return false;
     }
     default:
       assert(false && "Unhandled node kind");

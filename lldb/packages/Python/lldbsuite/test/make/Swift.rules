@@ -253,9 +253,11 @@ ifneq "$(FRAMEWORK)" ""
 	mkdir -p $(FRAMEWORK).framework/Versions/A/Headers
 	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules
 	mkdir -p $(FRAMEWORK).framework/Versions/A/Resources
+ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
 ifneq "$(MODULENAME)" ""
 	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule
 	cp -r $(MODULENAME).swiftmodule $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule/$(ARCH).swiftmodule
+endif
 endif
 	(cd $(FRAMEWORK).framework/Versions; ln -sf A Current)
 	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Headers Headers)

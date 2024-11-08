@@ -344,7 +344,7 @@ public:
 
   /// Determine the enum case name for the \p data value of the enum \p type.
   /// This is performed using Swift reflection.
-  std::optional<std::string> GetEnumCaseName(CompilerType type,
+  llvm::Expected<std::string> GetEnumCaseName(CompilerType type,
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 
