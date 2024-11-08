@@ -118,6 +118,20 @@ if.end:
   ret i64 %size
 }
 
+define dso_local i64 @pick_max_large(i1 %c) local_unnamed_addr {
+; CHECK-LABEL: @pick_max_large(
+; CHECK-NEXT:    [[BUFFER:%.*]] = alloca i8, i64 -7, align 1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr null, ptr [[BUFFER]]
+; CHECK-NEXT:    ret i64 -1
+;
+  %buffer = alloca i8, i64 -7 ; Actually a very large positive integer
+  %s = select i1 %c, ptr null, ptr %buffer
+  %objsize = tail call i64 @llvm.objectsize.i64.p0(ptr %s, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+
+}
+
+
 define i64 @pick_negative_offset(i32 %n) {
 ; CHECK-LABEL: @pick_negative_offset(
 ; CHECK-NEXT:  entry:
