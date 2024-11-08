@@ -3247,7 +3247,7 @@ struct FunctionReference {
 
 // R1521 call-stmt -> CALL procedure-designator [ chevrons ]
 //         [( [actual-arg-spec-list] )]
-// (CUDA) chevrons -> <<< * | scalar-expr, * | scalar-expr [,
+// (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
 //          scalar-int-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
   BOILERPLATE(CallStmt);
