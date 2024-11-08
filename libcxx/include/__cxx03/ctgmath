@@ -13,13 +13,13 @@
 /*
     ctgmath synopsis
 
-#include <ccomplex>
-#include <cmath>
+#include <__cxx03/ccomplex>
+#include <__cxx03/cmath>
 
 */
 
-#include <ccomplex>
-#include <cmath>
+#include <__cxx03/ccomplex>
+#include <__cxx03/cmath>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

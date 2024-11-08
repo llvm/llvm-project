@@ -358,10 +358,6 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
-  "UseFixedOverScalableIfEqualCost", "true",
-  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
-
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
@@ -797,6 +793,10 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
+def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+  "UseFixedOverScalableIfEqualCost", "true",
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -847,7 +847,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],

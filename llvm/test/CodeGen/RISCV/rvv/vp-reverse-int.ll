@@ -535,9 +535,13 @@ define <vscale x 128 x i8> @test_vp_reverse_nxv128i8(<vscale x 128 x i8> %src, i
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a3)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 
   %dst = call <vscale x 128 x i8> @llvm.experimental.vp.reverse.nxv128i8(<vscale x 128 x i8> %src, <vscale x 128 x i1> splat (i1 1), i32 %evl)

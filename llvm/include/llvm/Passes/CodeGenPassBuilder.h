@@ -60,6 +60,7 @@
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"

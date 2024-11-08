@@ -769,6 +769,7 @@ define <vscale x 1 x i64> @bitreverse_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vv v8, v9, v8
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitreverse_nxv1i64:
@@ -909,6 +910,7 @@ define <vscale x 2 x i64> @bitreverse_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vv v8, v10, v8
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitreverse_nxv2i64:
@@ -1049,6 +1051,7 @@ define <vscale x 4 x i64> @bitreverse_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vv v8, v12, v8
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitreverse_nxv4i64:
@@ -1202,7 +1205,9 @@ define <vscale x 8 x i64> @bitreverse_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitreverse_nxv8i64:

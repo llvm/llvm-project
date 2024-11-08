@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___CONCEPTS_SEMIREGULAR_H
 #define _LIBCPP___CONCEPTS_SEMIREGULAR_H
 
-#include <__concepts/constructible.h>
-#include <__concepts/copyable.h>
-#include <__config>
+#include <__cxx03/__concepts/constructible.h>
+#include <__cxx03/__concepts/copyable.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -38,7 +38,7 @@ define i32 @lshr8_i32(i32 %x) {
 define <2 x i32> @lshr16_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr16_v2i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = lshr <2 x i32> %x, <i32 16, i32 16>
@@ -222,7 +222,7 @@ define i16 @test7(i32 %A) {
 
 define <2 x i16> @test7_vector(<2 x i32> %A) {
 ; CHECK-LABEL: @test7_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[D:%.*]] = trunc nuw <2 x i32> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
@@ -246,7 +246,7 @@ define i16 @test8(i64 %A) {
 
 define <2 x i16> @test8_vector(<2 x i64> %A) {
 ; CHECK-LABEL: @test8_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 48, i64 48>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], splat (i64 48)
 ; CHECK-NEXT:    [[D:%.*]] = trunc nuw <2 x i64> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
@@ -447,7 +447,7 @@ define <2 x i32> @bs_xor32vec(<2 x i32> %a, <2 x i32> %b) #0 {
 
 define <2 x i32> @bs_and32ivec(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-LABEL: @bs_and32ivec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -1585053440, i32 -1585053440>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 -1585053440)
 ; CHECK-NEXT:    [[T2:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
@@ -458,7 +458,7 @@ define <2 x i32> @bs_and32ivec(<2 x i32> %a, <2 x i32> %b) #0 {
 
 define <2 x i32> @bs_or32ivec(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-LABEL: @bs_or32ivec(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], <i32 -1585053440, i32 -1585053440>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], splat (i32 -1585053440)
 ; CHECK-NEXT:    [[T2:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
@@ -469,7 +469,7 @@ define <2 x i32> @bs_or32ivec(<2 x i32> %a, <2 x i32> %b) #0 {
 
 define <2 x i32> @bs_xor32ivec(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-LABEL: @bs_xor32ivec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1585053440, i32 -1585053440>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], splat (i32 -1585053440)
 ; CHECK-NEXT:    [[T2:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
@@ -837,8 +837,8 @@ define i32 @bs_active_high7(i32 %0) {
 
 define <2 x i64> @bs_active_high4(<2 x i64> %0) {
 ; CHECK-LABEL: @bs_active_high4(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP0:%.*]], <i64 4, i64 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 240, i64 240>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP0:%.*]], splat (i64 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], splat (i64 240)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %2 = shl <2 x i64> %0, <i64 60, i64 60>
@@ -849,7 +849,7 @@ define <2 x i64> @bs_active_high4(<2 x i64> %0) {
 define <2 x i64> @bs_active_high_different(<2 x i64> %0) {
 ; CHECK-LABEL: @bs_active_high_different(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP0:%.*]], <i64 56, i64 57>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <2 x i64> [[TMP2]], <i64 56, i64 56>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <2 x i64> [[TMP2]], splat (i64 56)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %2 = shl <2 x i64> %0, <i64 56, i64 57>
@@ -932,7 +932,7 @@ define i32 @bs_active_byte_3h(i32 %0) {
 define <2 x i32> @bs_active_byte_3h_v2(<2 x i32> %0) {
 ; CHECK-LABEL: @bs_active_byte_3h_v2(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP0:%.*]], <i32 8388608, i32 65536>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <2 x i32> [[TMP2]], <i32 8, i32 8>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <2 x i32> [[TMP2]], splat (i32 8)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %2 = and <2 x i32> %0, <i32 8388608, i32 65536>  ; 0x0080'0000, 0x0001'0000
@@ -966,7 +966,7 @@ define i16 @bs_active_low1(i16 %0) {
 
 define <2 x i32> @bs_active_low8(<2 x i32> %0) {
 ; CHECK-LABEL: @bs_active_low8(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP0:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP0:%.*]], splat (i32 24)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %2 = and <2 x i32> %0, <i32 255, i32 255>
@@ -977,7 +977,7 @@ define <2 x i32> @bs_active_low8(<2 x i32> %0) {
 define <2 x i32> @bs_active_low_different(<2 x i32> %0) {
 ; CHECK-LABEL: @bs_active_low_different(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP0:%.*]], <i32 2, i32 128>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i32> [[TMP2]], <i32 24, i32 24>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i32> [[TMP2]], splat (i32 24)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %2 = and <2 x i32> %0, <i32 2, i32 128>
@@ -1060,7 +1060,7 @@ define i32 @bs_active_byte_2l(i32 %0) {
 define <2 x i64> @bs_active_byte_2l_v2(<2 x i64> %0) {
 ; CHECK-LABEL: @bs_active_byte_2l_v2(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP0:%.*]], <i64 256, i64 65280>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <2 x i64> [[TMP2]], <i64 40, i64 40>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <2 x i64> [[TMP2]], splat (i64 40)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %2 = and <2 x i64> %0, <i64 256, i64 65280>  ; 0x0100, 0xff00

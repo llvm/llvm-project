@@ -453,14 +453,9 @@ define void @fpround_v16xf32_v16xf16(ptr %s0, ptr %d0) {
 ;
 ; CHECK-F16C-LABEL: define void @fpround_v16xf32_v16xf16(
 ; CHECK-F16C-SAME: ptr [[S0:%.*]], ptr [[D0:%.*]]) #[[ATTR0]] {
-; CHECK-F16C-NEXT:    [[S8:%.*]] = getelementptr inbounds float, ptr [[S0]], i64 8
-; CHECK-F16C-NEXT:    [[D8:%.*]] = getelementptr inbounds half, ptr [[D0]], i64 8
-; CHECK-F16C-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[S0]], align 4
-; CHECK-F16C-NEXT:    [[TMP2:%.*]] = fptrunc <8 x float> [[TMP1]] to <8 x half>
-; CHECK-F16C-NEXT:    [[TMP3:%.*]] = load <8 x float>, ptr [[S8]], align 4
-; CHECK-F16C-NEXT:    [[TMP4:%.*]] = fptrunc <8 x float> [[TMP3]] to <8 x half>
-; CHECK-F16C-NEXT:    store <8 x half> [[TMP2]], ptr [[D0]], align 2
-; CHECK-F16C-NEXT:    store <8 x half> [[TMP4]], ptr [[D8]], align 2
+; CHECK-F16C-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[S0]], align 4
+; CHECK-F16C-NEXT:    [[TMP2:%.*]] = fptrunc <16 x float> [[TMP1]] to <16 x half>
+; CHECK-F16C-NEXT:    store <16 x half> [[TMP2]], ptr [[D0]], align 2
 ; CHECK-F16C-NEXT:    ret void
 ;
 ; CHECK-AVX512-LABEL: define void @fpround_v16xf32_v16xf16(

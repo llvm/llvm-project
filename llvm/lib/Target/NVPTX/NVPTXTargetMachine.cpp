@@ -302,6 +302,8 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // be eliminated by SROA.
   addPass(createSROAPass());
   addPass(createNVPTXLowerAllocaPass());
+  // TODO: Consider running InferAddressSpaces during opt, earlier in the
+  // compilation flow.
   addPass(createInferAddressSpacesPass());
   addPass(createNVPTXAtomicLowerPass());
 }
@@ -332,7 +334,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&PrologEpilogCodeInserterID);
   disablePass(&MachineLateInstrsCleanupID);
   disablePass(&MachineCopyPropagationID);
-  disablePass(&TailDuplicateID);
+  disablePass(&TailDuplicateLegacyID);
   disablePass(&StackMapLivenessID);
   disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
@@ -461,7 +463,7 @@ void NVPTXPassConfig::addOptimizedRegAlloc() {
 
 void NVPTXPassConfig::addMachineSSAOptimization() {
   // Pre-ra tail duplication.
-  if (addPass(&EarlyTailDuplicateID))
+  if (addPass(&EarlyTailDuplicateLegacyID))
     printAndVerify("After Pre-RegAlloc TailDuplicate");
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more

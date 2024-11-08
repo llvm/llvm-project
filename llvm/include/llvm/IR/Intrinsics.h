@@ -92,7 +92,7 @@ namespace Intrinsic {
   /// return the existing declaration.
   ///
   /// The \p Tys parameter is for intrinsics with overloaded types (e.g., those
-  /// using iAny, fAny, vAny, or iPTRAny).  For a declaration of an overloaded
+  /// using iAny, fAny, vAny, or pAny).  For a declaration of an overloaded
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
   Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
