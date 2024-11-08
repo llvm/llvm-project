@@ -78,11 +78,11 @@ When to merge instruction locations
 A transformation should merge instruction locations if it replaces multiple
 instructions with one or more new instructions, *and* the new instruction(s)
 produce the output of more than one of the original instructions. The API to
-use is ``Instruction::applyMergedLocation``, and the new location should be a
-merge of the locations of all the instructions whose output is produced in the
-new instructions; typically, this includes any instruction being RAUWed by a new
-instruction, and excludes any instruction that only produces an intermediate
-value used by the RAUWed instruction.
+use is ``Instruction::applyMergedLocation``, and the new location for each new
+instruction should be a merge of the locations of all the instructions whose
+output is produced the new instructions; typically, this includes any
+instruction being RAUWed by a new instruction, and excludes any instruction that
+only produces an intermediate value used by the RAUWed instruction.
 
 The purpose of this rule is to ensure that a) the single merged instruction
 has a location with an accurate scope attached, and b) to prevent misleading
@@ -108,7 +108,12 @@ Examples of transformations that should follow this rule include:
 * Scalar instructions being combined into a vector instruction, like
   ``(add A1, B1), (add A2, B2) => (add (A1, A2), (B1, B2))``. As the new vector
   ``add`` computes the result of both original ``add`` instructions
-  simultaneously, it should use a merge of the two locations.
+  simultaneously, it should use a merge of the two locations. Similarly, if
+  prior optimizations have already produced vectors ``(A1, A2)`` and
+  ``(B2, B1)``, then we might create a ``(shufflevector (1, 0), (B2, B1))``
+  instruction to produce ``(B1, B2)`` for the vector ``add``; in this case we've
+  created two instructions to replace the original ``adds``, so both new
+  instructions should use the merged location.
 
 Examples of transformations for which this rule *does not* apply include:
 
