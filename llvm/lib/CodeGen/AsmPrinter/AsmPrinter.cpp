@@ -1395,6 +1395,44 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 }
 
 static llvm::object::BBAddrMap::Features
+debugGetFeature1(const MachineFunction &MF, int NumMBBSectionRanges) {
+  return llvm::object::BBAddrMap::Features{true, false, false, false, true};
+}
+
+static llvm::object::BBAddrMap::Features
+debugGetFeature2(const MachineFunction &MF, int NumMBBSectionRanges) {
+  return llvm::object::BBAddrMap::Features{true, false, false, false,
+                                           SkipEmitBBEntries};
+}
+
+static llvm::object::BBAddrMap::Features
+debugGetFeature3(const MachineFunction &MF, int NumMBBSectionRanges) {
+  return {true, false, false, MF.hasBBSections() && NumMBBSectionRanges > 1,
+          static_cast<bool>(SkipEmitBBEntries)};
+}
+
+static llvm::object::BBAddrMap::Features
+debugGetFeature4(const MachineFunction &MF, int NumMBBSectionRanges) {
+  llvm::object::BBAddrMap::Features F = llvm::object::BBAddrMap::Features{
+      true, false, false, false, static_cast<bool>(SkipEmitBBEntries)};
+  return F;
+}
+
+static llvm::object::BBAddrMap::Features
+debugGetFeature5(const MachineFunction &MF, int NumMBBSectionRanges) {
+  llvm::object::BBAddrMap::Features F;
+  F.NoBBEntries = true;
+  return F;
+}
+
+static llvm::object::BBAddrMap::Features
+debugGetFeature6(const MachineFunction &MF, int NumMBBSectionRanges) {
+  llvm::object::BBAddrMap::Features F;
+  F.NoBBEntries = SkipEmitBBEntries;
+  return F;
+}
+
+static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
@@ -1425,11 +1463,22 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   }
   dbgs() << "getBBAddrMapFeature::SkipEmitBBEntries: " << SkipEmitBBEntries
          << "\n";
-  llvm::object::BBAddrMap::Features F1 = {true, false, false, false, true};
+  llvm::object::BBAddrMap::Features F1 = llvm::object::BBAddrMap::Features{
+      FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+      MF.hasBBSections() && NumMBBSectionRanges > 1, SkipEmitBBEntries};
   dbgs() << "F1.NoBBEntries: " << F1.NoBBEntries << "\n";
-  llvm::object::BBAddrMap::Features F2 =
-      llvm::object::BBAddrMap::Features{true, false, false, false, true};
-  dbgs() << "F2.NoBBEntries: " << F2.NoBBEntries << "\n";
+  auto DF1 = debugGetFeature1(MF, NumMBBSectionRanges);
+  dbgs() << "DF1.NoBBEntries: " << DF1.NoBBEntries << "\n";
+  auto DF2 = debugGetFeature2(MF, NumMBBSectionRanges);
+  dbgs() << "DF2.NoBBEntries: " << DF2.NoBBEntries << "\n";
+  auto DF3 = debugGetFeature3(MF, NumMBBSectionRanges);
+  dbgs() << "DF3.NoBBEntries: " << DF3.NoBBEntries << "\n";
+  auto DF4 = debugGetFeature4(MF, NumMBBSectionRanges);
+  dbgs() << "DF4.NoBBEntries: " << DF4.NoBBEntries << "\n";
+  auto DF5 = debugGetFeature5(MF, NumMBBSectionRanges);
+  dbgs() << "DF5.NoBBEntries: " << DF5.NoBBEntries << "\n";
+  auto DF6 = debugGetFeature6(MF, NumMBBSectionRanges);
+  dbgs() << "DF6.NoBBEntries: " << DF6.NoBBEntries << "\n";
 
   return llvm::object::BBAddrMap::Features{
       FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
