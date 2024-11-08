@@ -1859,7 +1859,7 @@ let ManualCodegen = [{
 }
 
 // 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
-def vfrsqrt7 : RVVFloatingUnaryVVBuiltin;
+defm vfrsqrt7 : RVVOutBuiltinSet<"vfrsqrt7", "xfd", [["v", "v", "vv"]]>;
 
 // 13.11. Vector Floating-Point MIN/MAX Instructions
 defm vfmin : RVVFloatingBinBuiltinSet;
