@@ -172,7 +172,7 @@ Status NativeRegisterContextDBReg_arm64::ClearAllHardwareBreakpoints() {
   // Read hardware breakpoint and watchpoint information.
   llvm::Error error = ReadHardwareDebugInfo();
   if (error)
-    return Status(std::move(error));
+    return Status::FromError(std::move(error));
 
   for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
     if (BreakpointIsEnabled(i)) {
@@ -191,7 +191,7 @@ Status NativeRegisterContextDBReg_arm64::ClearAllHardwareBreakpoints() {
         m_hbp_regs[i].control = tempControl;
         m_hbp_regs[i].address = tempAddr;
 
-        return Status(std::move(error));
+        return Status::FromError(std::move(error));
       }
     }
   }
@@ -356,7 +356,7 @@ Status NativeRegisterContextDBReg_arm64::ClearAllHardwareWatchpoints() {
   // Read hardware breakpoint and watchpoint information.
   llvm::Error error = ReadHardwareDebugInfo();
   if (error)
-    return Status(std::move(error));
+    return Status::FromError(std::move(error));
 
   for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
     if (WatchpointIsEnabled(i)) {
@@ -375,7 +375,7 @@ Status NativeRegisterContextDBReg_arm64::ClearAllHardwareWatchpoints() {
         m_hwp_regs[i].control = tempControl;
         m_hwp_regs[i].address = tempAddr;
 
-        return Status(std::move(error));
+        return Status::FromError(std::move(error));
       }
     }
   }
@@ -420,7 +420,7 @@ Status NativeRegisterContextDBReg_arm64::GetWatchpointHitIndex(
   // Read hardware breakpoint and watchpoint information.
   llvm::Error error = ReadHardwareDebugInfo();
   if (error)
-    return Status(std::move(error));
+    return Status::FromError(std::move(error));
 
   // Mask off ignored bits from watchpoint trap address.
   trap_addr = FixWatchpointHitAddress(trap_addr);

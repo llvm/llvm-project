@@ -167,8 +167,7 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
     StringRef symName = sym->getName();
-    if (!symName.empty() && symName[0] == '_')
-      symName = symName.substr(1);
+    symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
             dwarf->getVariableLoc(symName))
@@ -190,13 +189,14 @@ const Reloc *InputSection::getRelocAt(uint32_t off) const {
   return &*it;
 }
 
-void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
+void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
+                                       Symbol::ICFFoldKind foldKind) {
   align = std::max(align, copy->align);
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
   for (auto &copySym : copy->symbols)
-    copySym->wasIdenticalCodeFolded = true;
+    copySym->identicalCodeFoldingKind = foldKind;
 
   symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();

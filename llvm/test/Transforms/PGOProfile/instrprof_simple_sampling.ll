@@ -31,18 +31,18 @@ define void @f() {
 ;
 ; DEFAULTPERIOD-LABEL: define void @f() {
 ; DEFAULTPERIOD-NEXT:  [[ENTRY:.*:]]
-; DEFAULTPERIOD-NEXT:    [[TMP0:%.*]] = load i16, ptr @__llvm_profile_sampling, align 2
-; DEFAULTPERIOD-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], 1
-; DEFAULTPERIOD-NEXT:    [[TMP2:%.*]] = icmp uge i16 [[TMP1]], -1
+; DEFAULTPERIOD-NEXT:    [[TMP0:%.*]] = load i32, ptr @__llvm_profile_sampling, align 4
+; DEFAULTPERIOD-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
+; DEFAULTPERIOD-NEXT:    [[TMP2:%.*]] = icmp uge i32 [[TMP1]], 65536
 ; DEFAULTPERIOD-NEXT:    br i1 [[TMP2]], label %[[BB3:.*]], label %[[BB5:.*]], !prof [[PROF0:![0-9]+]]
 ; DEFAULTPERIOD:       [[BB3]]:
 ; DEFAULTPERIOD-NEXT:    [[PGOCOUNT:%.*]] = load i64, ptr @__profc_f, align 8
 ; DEFAULTPERIOD-NEXT:    [[TMP4:%.*]] = add i64 [[PGOCOUNT]], 1
 ; DEFAULTPERIOD-NEXT:    store i64 [[TMP4]], ptr @__profc_f, align 8
-; DEFAULTPERIOD-NEXT:    store i16 0, ptr @__llvm_profile_sampling, align 2
+; DEFAULTPERIOD-NEXT:    store i32 0, ptr @__llvm_profile_sampling, align 4
 ; DEFAULTPERIOD-NEXT:    br label %[[BB6:.*]]
 ; DEFAULTPERIOD:       [[BB5]]:
-; DEFAULTPERIOD-NEXT:    store i16 [[TMP1]], ptr @__llvm_profile_sampling, align 2
+; DEFAULTPERIOD-NEXT:    store i32 [[TMP1]], ptr @__llvm_profile_sampling, align 4
 ; DEFAULTPERIOD-NEXT:    br label %[[BB6]]
 ; DEFAULTPERIOD:       [[BB6]]:
 ; DEFAULTPERIOD-NEXT:    ret void
@@ -54,7 +54,7 @@ entry:
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ;.
-; PERIOD1009: [[PROF0]] = !{!"branch_weights", i32 1, i32 1009}
+; PERIOD1009: [[PROF0]] = !{!"branch_weights", i32 1, i32 1008}
 ;.
 ; DEFAULTPERIOD: [[PROF0]] = !{!"branch_weights", i32 1, i32 65535}
 ;.

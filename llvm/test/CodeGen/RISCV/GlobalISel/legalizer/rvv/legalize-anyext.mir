@@ -126,12 +126,10 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s1>) = COPY $v0
     ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
+    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[MV]](s64)
-    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[C3]](s32)
+    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C1]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[MV1]](s64)
     ; RV32-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SELECT [[COPY]](<vscale x 1 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV32-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x s64>)
@@ -276,12 +274,10 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x s1>) = COPY $v0
     ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
+    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[MV]](s64)
-    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[C3]](s32)
+    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C1]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[MV1]](s64)
     ; RV32-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SELECT [[COPY]](<vscale x 2 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV32-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 2 x s64>)
@@ -426,12 +422,10 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s1>) = COPY $v0
     ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
+    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[MV]](s64)
-    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[C3]](s32)
+    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C1]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[MV1]](s64)
     ; RV32-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SELECT [[COPY]](<vscale x 4 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV32-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 4 x s64>)
@@ -576,12 +570,10 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 8 x s1>) = COPY $v0
     ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
+    ; RV32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[MV]](s64)
-    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[C3]](s32)
+    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C1]](s32), [[C]](s32)
     ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[MV1]](s64)
     ; RV32-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SELECT [[COPY]](<vscale x 8 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
     ; RV32-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 8 x s64>)

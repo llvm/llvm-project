@@ -83,6 +83,7 @@ class LLVMConfig(object):
                 "UBSAN_SYMBOLIZER_PATH" "ASAN_OPTIONS",
                 "HWASAN_OPTIONS",
                 "MSAN_OPTIONS",
+                "RTSAN_OPTIONS",
                 "TSAN_OPTIONS",
                 "UBSAN_OPTIONS",
             ]

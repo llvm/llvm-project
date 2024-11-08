@@ -6,7 +6,7 @@ import re
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -77,12 +77,8 @@ def exclude_unsupported_files_for_aix(dirname):
         f = open(source_path, "r")
         try:
             data = f.read()
-            # -fprofile-instr-generate and rpath are not supported on AIX, exclude all tests with them.
-            if (
-                "%clang_profgen" in data
-                or "%clangxx_profgen" in data
-                or "-rpath" in data
-            ):
+            # rpath is not supported on AIX, exclude all tests with them.
+            if ( "-rpath" in data ):
                 config.excludes += [filename]
         finally:
             f.close()
@@ -166,6 +162,7 @@ if config.host_os not in [
     "NetBSD",
     "SunOS",
     "AIX",
+    "Haiku",
 ]:
     config.unsupported = True
 
@@ -179,3 +176,6 @@ if config.target_arch in ["armv7l"]:
 
 if config.android:
     config.unsupported = True
+
+if config.have_curl:
+    config.available_features.add("curl")

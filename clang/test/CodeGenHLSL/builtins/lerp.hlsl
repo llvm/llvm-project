@@ -56,21 +56,3 @@ float3 test_lerp_float3(float3 p0) { return lerp(p0, p0, p0); }
 // CHECK: %hlsl.lerp = call <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
 // CHECK: ret <4 x float> %hlsl.lerp
 float4 test_lerp_float4(float4 p0) { return lerp(p0, p0, p0); }
-
-// CHECK: %[[b:.*]] = load <2 x float>, ptr %p1.addr, align 8
-// CHECK: %[[c:.*]] = load <2 x float>, ptr %p1.addr, align 8
-// CHECK: %hlsl.lerp = call <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> %splat.splat, <2 x float> %[[b]], <2 x float> %[[c]])
-// CHECK: ret <2 x float> %hlsl.lerp
-float2 test_lerp_float2_splat(float p0, float2 p1) { return lerp(p0, p1, p1); }
-
-// CHECK: %[[b:.*]] = load <3 x float>, ptr %p1.addr, align 16
-// CHECK: %[[c:.*]] = load <3 x float>, ptr %p1.addr, align 16
-// CHECK: %hlsl.lerp = call <3 x float> @llvm.[[TARGET]].lerp.v3f32(<3 x float> %splat.splat, <3 x float> %[[b]], <3 x float> %[[c]])
-// CHECK: ret <3 x float> %hlsl.lerp
-float3 test_lerp_float3_splat(float p0, float3 p1) { return lerp(p0, p1, p1); }
-
-// CHECK: %[[b:.*]] = load <4 x float>, ptr %p1.addr, align 16
-// CHECK: %[[c:.*]] = load <4 x float>, ptr %p1.addr, align 16
-// CHECK: %hlsl.lerp = call <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> %splat.splat, <4 x float> %[[b]], <4 x float> %[[c]])
-// CHECK:  ret <4 x float> %hlsl.lerp
-float4 test_lerp_float4_splat(float p0, float4 p1) { return lerp(p0, p1, p1); }

@@ -28,23 +28,24 @@ l1:
   br label %exit
 
 ; CHECK: %[[#l2]] = OpLabel
-; CHECK:            OpBranchConditional %[[#]] %[[#l1:]] %[[#l3:]]
+; CHECK:            OpBranchConditional %[[#]] %[[#l1]] %[[#l3:]]
 l2:
   br i1 %b2, label %l1, label %l3
 
 ; CHECK: %[[#l3]] = OpLabel
-; CHECK:            OpBranchConditional %[[#]] %[[#l1:]] %[[#exit:]]
+; CHECK:            OpBranchConditional %[[#]] %[[#l1]] %[[#exit:]]
 l3:
   br i1 %b3, label %l1, label %exit
+
+; CHECK:      %[[#l1]] = OpLabel
+; CHECK-NEXT:            OpPhi
+; CHECK:                 OpBranch %[[#exit]]
 
 ; CHECK: %[[#exit]] = OpLabel
 ; CHECK:              OpReturn
 exit:
   ret void
 
-; CHECK:      %[[#l1]] = OpLabel
-; CHECK-NEXT:            OpPhi
-; CHECK:                 OpBranch %[[#exit:]]
 }
 
 ; CHECK: %[[#Case2]] = OpFunction
@@ -58,14 +59,18 @@ l1:
   br label %exit
 
 ; CHECK: %[[#l2]] = OpLabel
-; CHECK:            OpBranchConditional %[[#]] %[[#l1:]] %[[#l3:]]
+; CHECK:            OpBranchConditional %[[#]] %[[#l1]] %[[#l3:]]
 l2:
   br i1 %b2, label %l1, label %l3
 
 ; CHECK: %[[#l3]] = OpLabel
-; CHECK:            OpBranchConditional %[[#]] %[[#l1:]] %[[#exit:]]
+; CHECK:            OpBranchConditional %[[#]] %[[#l1]] %[[#exit:]]
 l3:
   br i1 %b3, label %l1, label %exit
+
+; CHECK: %[[#l1]] = OpLabel
+; CHECK-NEXT:       OpPhi
+; CHECK:            OpBranch %[[#exit]]
 
 ; CHECK: %[[#exit]] = OpLabel
 ; CHECK:              OpReturn
@@ -75,34 +80,35 @@ exit:
 
 ; CHECK: %[[#Case3]] = OpFunction
 define spir_func void @case3(i1 %b1, i1 %b2, i1 %b3, ptr addrspace(1) byval(%struct1) %_arg_str1, ptr addrspace(1) byval(%struct2) %_arg_str2) {
+
+; CHECK: OpBranchConditional %[[#]] %[[#l1:]] %[[#l2:]]
 entry:
   br i1 %b1, label %l1, label %l2
 
-; CHECK: OpBranchConditional %[[#]] %[[#l1:]] %[[#l2:]]
 l1:
   %str = phi ptr addrspace(1) [ %_arg_str1, %entry ], [ %str2, %l2 ], [ %str3, %l3 ]
   br label %exit
 
 ; CHECK: %[[#l2]] = OpLabel
 ; CHECK:            OpInBoundsPtrAccessChain
-; CHECK:            OpBranchConditional %[[#]] %[[#l1:]] %[[#l3:]]
+; CHECK:            OpBranchConditional %[[#]] %[[#l1]] %[[#l3:]]
 l2:
   %str2 = getelementptr inbounds %struct2, ptr addrspace(1) %_arg_str2, i32 1
   br i1 %b2, label %l1, label %l3
 
 ; CHECK: %[[#l3]] = OpLabel
 ; CHECK:            OpInBoundsPtrAccessChain
-; CHECK:            OpBranchConditional %[[#]] %[[#l1:]] %[[#exit:]]
+; CHECK:            OpBranchConditional %[[#]] %[[#l1]] %[[#exit:]]
 l3:
   %str3 = getelementptr inbounds %struct2, ptr addrspace(1) %_arg_str2, i32 2
   br i1 %b3, label %l1, label %exit
+
+; CHECK:      %[[#l1]] = OpLabel
+; CHECK-NEXT:            OpPhi
+; CHECK:                 OpBranch %[[#exit]]
 
 ; CHECK: %[[#exit]] = OpLabel
 ; CHECK:              OpReturn
 exit:
   ret void
-
-; CHECK:      %[[#l1]] = OpLabel
-; CHECK-NEXT:            OpPhi
-; CHECK:                 OpBranch %[[#exit:]]
 }

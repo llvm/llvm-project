@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <random>
 
 #include "test_macros.h"

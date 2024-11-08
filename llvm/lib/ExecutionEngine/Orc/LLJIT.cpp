@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -195,10 +197,14 @@ public:
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
     auto *AtExitCallbackTy = FunctionType::get(VoidTy, {}, false);
     auto *AtExitCallbackPtrTy = PointerType::getUnqual(AtExitCallbackTy);
-    addHelperAndWrapper(*M, "atexit",
-                        FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
-                        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
-                        {PlatformInstanceDecl, DSOHandle});
+    auto *AtExit = addHelperAndWrapper(
+        *M, "atexit", FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
+        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
+        {PlatformInstanceDecl, DSOHandle});
+    Attribute::AttrKind AtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (AtExitExtAttr != Attribute::None)
+      AtExit->addRetAttr(AtExitExtAttr);
 
     return J.addIRModule(JD, ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
@@ -471,12 +477,16 @@ private:
     auto *CxaAtExitCallbackTy = FunctionType::get(VoidTy, {BytePtrTy}, false);
     auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(CxaAtExitCallbackTy);
 
-    addHelperAndWrapper(
+    auto *CxaAtExit = addHelperAndWrapper(
         *M, "__cxa_atexit",
         FunctionType::get(IntTy, {CxaAtExitCallbackPtrTy, BytePtrTy, BytePtrTy},
                           false),
         GlobalValue::DefaultVisibility, "__lljit.cxa_atexit_helper",
         {PlatformInstanceDecl});
+    Attribute::AttrKind CxaAtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (CxaAtExitExtAttr != Attribute::None)
+      CxaAtExit->addRetAttr(CxaAtExitExtAttr);
 
     return ThreadSafeModule(std::move(M), std::move(Ctx));
   }
@@ -602,6 +612,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -612,9 +623,28 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
+  StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
+  bool dlupdate = false;
+  const Triple &TT = ES.getTargetTriple();
+  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
+    if (InitializedDylib.contains(&JD)) {
+      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+      dlupdate = true;
+    } else
+      InitializedDylib.insert(&JD);
+  }
 
-  if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
+  if (auto WrapperAddr =
+          ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
+    if (dlupdate) {
+      int32_t result;
+      auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
+                                                 result, DSOHandles[&JD]);
+      if (result)
+        return make_error<StringError>("dlupdate failed",
+                                       inconvertibleErrorCode());
+      return E;
+    }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
                                            int32_t(ORC_RT_RTLD_LAZY));
@@ -641,6 +671,7 @@ Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
       return make_error<StringError>("dlclose failed",
                                      inconvertibleErrorCode());
     DSOHandles.erase(&JD);
+    InitializedDylib.erase(&JD);
   } else
     return WrapperAddr.takeError();
   return Error::success();
@@ -1149,7 +1180,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
       StaticVCRuntime = VCRuntime->second;
     }
     if (auto P = COFFPlatform::Create(
-            ES, *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
+            *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
             LoadAndLinkDynLibrary(J), StaticVCRuntime, VCRuntimePath))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
@@ -1162,8 +1193,8 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
     if (!G)
       return G.takeError();
 
-    if (auto P = ELFNixPlatform::Create(ES, *ObjLinkingLayer, PlatformJD,
-                                        std::move(*G)))
+    if (auto P =
+            ELFNixPlatform::Create(*ObjLinkingLayer, PlatformJD, std::move(*G)))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
       return P.takeError();
@@ -1175,8 +1206,8 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
     if (!G)
       return G.takeError();
 
-    if (auto P = MachOPlatform::Create(ES, *ObjLinkingLayer, PlatformJD,
-                                       std::move(*G)))
+    if (auto P =
+            MachOPlatform::Create(*ObjLinkingLayer, PlatformJD, std::move(*G)))
       ES.setPlatform(std::move(*P));
     else
       return P.takeError();
@@ -1270,9 +1301,12 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     return;
   }
 
+  // Create the IP Layer.
+  IPLayer = std::make_unique<IRPartitionLayer>(*ES, *InitHelperTransformLayer);
+
   // Create the COD layer.
-  CODLayer = std::make_unique<CompileOnDemandLayer>(
-      *ES, *InitHelperTransformLayer, *LCTMgr, std::move(ISMBuilder));
+  CODLayer = std::make_unique<CompileOnDemandLayer>(*ES, *IPLayer, *LCTMgr,
+                                                    std::move(ISMBuilder));
 
   if (*S.SupportConcurrentCompilation)
     CODLayer->setCloneToNewContextOnEmit(true);

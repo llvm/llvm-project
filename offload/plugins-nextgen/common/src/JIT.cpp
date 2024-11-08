@@ -51,7 +51,7 @@ namespace {
 
 bool isImageBitcode(const __tgt_device_image &Image) {
   StringRef Binary(reinterpret_cast<const char *>(Image.ImageStart),
-                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+                   utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
 
   return identify_magic(Binary) == file_magic::bitcode;
 }
@@ -69,7 +69,7 @@ createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
 Expected<std::unique_ptr<Module>>
 createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   StringRef Data((const char *)Image.ImageStart,
-                 target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+                 utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
       Data, /*BufferName=*/"", /*RequiresNullTerminator=*/false);
   return createModuleFromMemoryBuffer(MB, Context);

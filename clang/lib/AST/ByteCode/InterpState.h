@@ -68,13 +68,16 @@ public:
   bool keepEvaluatingAfterFailure() const override {
     return Parent.keepEvaluatingAfterFailure();
   }
+  bool keepEvaluatingAfterSideEffect() const override {
+    return Parent.keepEvaluatingAfterSideEffect();
+  }
   bool checkingPotentialConstantExpression() const override {
     return Parent.checkingPotentialConstantExpression();
   }
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();
   }
-  bool inConstantContext() const { return Parent.InConstantContext; }
+  bool inConstantContext() const;
   bool hasActiveDiagnostic() override { return Parent.hasActiveDiagnostic(); }
   void setActiveDiagnostic(bool Flag) override {
     Parent.setActiveDiagnostic(Flag);
@@ -83,6 +86,7 @@ public:
     Parent.setFoldFailureDiagnostic(Flag);
   }
   bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
+  bool noteSideEffect() override { return Parent.noteSideEffect(); }
 
   /// Reports overflow and return true if evaluation should continue.
   bool reportOverflow(const Expr *E, const llvm::APSInt &Value);
@@ -112,6 +116,7 @@ public:
 
 private:
   friend class EvaluationResult;
+  friend class InterpStateCCOverride;
   /// AST Walker state.
   State &Parent;
   /// Dead block chain.
@@ -120,6 +125,7 @@ private:
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   DynamicAllocator Alloc;
+  std::optional<bool> ConstantContextOverride;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -138,6 +144,26 @@ public:
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+};
+
+class InterpStateCCOverride final {
+public:
+  InterpStateCCOverride(InterpState &Ctx, bool Value)
+      : Ctx(Ctx), OldCC(Ctx.ConstantContextOverride) {
+    // We only override this if the new value is true.
+    Enabled = Value;
+    if (Enabled)
+      Ctx.ConstantContextOverride = Value;
+  }
+  ~InterpStateCCOverride() {
+    if (Enabled)
+      Ctx.ConstantContextOverride = OldCC;
+  }
+
+private:
+  bool Enabled;
+  InterpState &Ctx;
+  std::optional<bool> OldCC;
 };
 
 } // namespace interp

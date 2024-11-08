@@ -43,17 +43,17 @@ public:
     GUIDNumMap HashIdxMap;
   };
 
-  static std::tuple<std::vector<yaml::bolt::InlineTreeInfo>, InlineTreeMapTy>
+  static std::tuple<std::vector<yaml::bolt::InlineTreeNode>, InlineTreeMapTy>
   convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
                       const InlineTreeDesc &InlineTree, uint64_t GUID);
+
+  static std::tuple<yaml::bolt::ProfilePseudoProbeDesc, InlineTreeDesc>
+  convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);
 
   static yaml::bolt::BinaryFunctionProfile
   convert(const BinaryFunction &BF, bool UseDFS,
           const InlineTreeDesc &InlineTree,
           const BoltAddressTranslation *BAT = nullptr);
-
-  static std::tuple<yaml::bolt::PseudoProbeDesc, InlineTreeDesc>
-  convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);
 
   /// Set CallSiteInfo destination fields from \p Symbol and return a target
   /// BinaryFunction for that symbol.
@@ -71,8 +71,8 @@ private:
     uint32_t InlineSite;
   };
   static std::vector<InlineTreeNode>
-  getInlineTree(const MCPseudoProbeDecoder &Decoder,
-                const MCDecodedPseudoProbeInlineTree *Root);
+  collectInlineTree(const MCPseudoProbeDecoder &Decoder,
+                    const MCDecodedPseudoProbeInlineTree &Root);
 
   // 0 - block probe, 1 - indirect call, 2 - direct call
   using ProbeList = std::array<SmallVector<uint64_t, 0>, 3>;

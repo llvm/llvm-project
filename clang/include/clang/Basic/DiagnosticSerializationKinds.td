@@ -51,9 +51,9 @@ def note_pch_vfsoverlay_files : Note<"%select{PCH|current translation unit}0 has
 def note_pch_vfsoverlay_empty : Note<"%select{PCH|current translation unit}0 has no VFS overlays">;
 
 def err_ast_file_version_too_old : Error<
-    "%select{PCH|module|AST}0 file '%1' uses an older PCH format that is no longer supported">;
+    "%select{PCH|module|AST}0 file '%1' uses an older format that is no longer supported">;
 def err_ast_file_version_too_new : Error<
-    "%select{PCH|module|AST}0 file '%1' uses a newer PCH format that cannot be read">;
+    "%select{PCH|module|AST}0 file '%1' uses a newer format that cannot be read">;
 def err_ast_file_different_branch : Error<
     "%select{PCH|module|AST}0 file '%1' built from a different branch (%2) than the compiler (%3)">;
 def err_ast_file_with_compiler_errors : Error<

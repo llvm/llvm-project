@@ -372,7 +372,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI queue(queue&& __q, const _Alloc& __a) : c(std::move(__q.c), __a) {}
 #endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
 
   _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
@@ -416,7 +416,7 @@ public:
     swap(c, __q.c);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 
   template <class _T1, class _OtherContainer>
   friend _LIBCPP_HIDE_FROM_ABI bool
@@ -649,7 +649,7 @@ public:
 
 #endif
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
   _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.front(); }
 
@@ -678,7 +678,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(priority_queue& __q)
       _NOEXCEPT_(__is_nothrow_swappable_v<container_type>&& __is_nothrow_swappable_v<value_compare>);
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 };
 
 #if _LIBCPP_STD_VER >= 17

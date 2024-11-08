@@ -74,10 +74,9 @@
 ; GFX11-FLATSCR: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, v0
 
 ; MUBUF-DAG: v_add{{_|_nc_}}{{i|u}}32_e32 [[HI_OFF:v[0-9]+]],{{.*}} 0x200, [[CLAMP_IDX]]
-; MUBUF-DAG: v_add{{_|_nc_}}{{i|u}}32_e32 [[LO_OFF:v[0-9]+]],{{.*}} {{v2|0}}, [[CLAMP_IDX]]
-; FLATSCR: v_add{{_|_nc_}}{{u32|b32}}_e32 [[LO_OFF:v[0-9]+]],{{.*}} {{v2|0}}, [[CLAMP_IDX]]
+; FLATSCR:  v_mov_b32_e32 [[LO_OFF:v[0-9]+]], [[CLAMP_IDX]]
 
-; MUBUF: buffer_load_dword {{v[0-9]+}}, [[LO_OFF]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen
+; MUBUF: buffer_load_dword {{v[0-9]+}}, [[CLAMP_IDX]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; MUBUF: buffer_load_dword {{v[0-9]+}}, [[HI_OFF]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; FLATSCR: scratch_load_dword {{v[0-9]+}}, [[LO_OFF]], off
 ; GFX11-FLATSCR: scratch_load_b32 {{v[0-9]+}}, [[CLAMP_IDX]], off{{$}}

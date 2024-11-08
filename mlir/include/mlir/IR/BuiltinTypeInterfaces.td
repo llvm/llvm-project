@@ -166,7 +166,7 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
 
     /// If this is a ranked type, return the number of dimensions with dynamic
     /// size. Otherwise, abort.
-    int64_t getNumDynamicDims() const {
+    size_t getNumDynamicDims() const {
       return llvm::count_if($_type.getShape(), ::mlir::ShapedType::isDynamic);
     }
 

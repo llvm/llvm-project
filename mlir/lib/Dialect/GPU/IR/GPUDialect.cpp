@@ -621,12 +621,23 @@ LogicalResult gpu::SubgroupReduceOp::verify() {
                        << getType();
   }
 
-  if (auto clusterSize = getClusterSize()) {
+  auto clusterSize = getClusterSize();
+  if (clusterSize) {
     uint32_t size = *clusterSize;
     if (!llvm::isPowerOf2_32(size)) {
       return emitOpError() << "cluster size " << size
                            << " is not a power of two";
     }
+  }
+
+  uint32_t stride = getClusterStride();
+  if (stride != 1 && !clusterSize) {
+    return emitOpError() << "cluster stride can only be specified if cluster "
+                            "size is specified";
+  }
+  if (!llvm::isPowerOf2_32(stride)) {
+    return emitOpError() << "cluster stride " << stride
+                         << " is not a power of two";
   }
 
   return success();
@@ -2034,8 +2045,7 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AllocOp::verify() {
   auto memRefType = llvm::cast<MemRefType>(getMemref().getType());
 
-  if (static_cast<int64_t>(getDynamicSizes().size()) !=
-      memRefType.getNumDynamicDims())
+  if (getDynamicSizes().size() != memRefType.getNumDynamicDims())
     return emitOpError("dimension operand count does not equal memref "
                        "dynamic dimension count");
 

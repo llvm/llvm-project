@@ -139,10 +139,8 @@ static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
   SmallPtrSet<Instruction *, 8> VisitedInstr;
 
   std::function<bool(Instruction * I)> ProcessInstr = [&](Instruction *I) {
-    if (VisitedInstr.count(I))
+    if (!VisitedInstr.insert(I).second)
       return true;
-
-    VisitedInstr.insert(I);
 
     if (AftBlocks.count(I->getParent()))
       for (auto &U : I->operands())
