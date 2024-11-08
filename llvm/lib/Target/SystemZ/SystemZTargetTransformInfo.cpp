@@ -468,17 +468,28 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
 }
 
+static bool isFreeEltLoad(Value *Op) {
+  if (isa<LoadInst>(Op) && Op->hasOneUse()) {
+    const Instruction *UserI = cast<Instruction>(*Op->user_begin());
+    return !isa<StoreInst>(UserI); // Prefer MVC
+  }
+  return false;
+}
+
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
   if (Insert && Ty->isIntOrIntVectorTy(64)) {
-    // VLVGP will insert two GPRs with one instruction.
+    // VLVGP will insert two GPRs with one instruction, while VLE will load
+    // an element directly with no extra cost
+    assert((VL.empty() || VL.size() == NumElts) &&
+           "Type does not match the number of values.");
     InstructionCost CurrVectorCost = 0;
     for (unsigned Idx = 0; Idx < NumElts; ++Idx) {
-      if (DemandedElts[Idx])
+      if (DemandedElts[Idx] && !(VL.size() && isFreeEltLoad(VL[Idx])))
         ++CurrVectorCost;
       if (Idx % 2 == 1) {
         Cost += std::min(InstructionCost(1), CurrVectorCost);
@@ -489,7 +500,7 @@ InstructionCost SystemZTTIImpl::getScalarizationOverhead(
   }
 
   Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                          CostKind);
+                                          CostKind, VL);
   return Cost;
 }
 
@@ -1142,7 +1153,7 @@ InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    Value *Op1) {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
-    if (Op1 != nullptr && Op1->hasOneUse() && isa<LoadInst>(Op1))
+    if (Op1 != nullptr && isFreeEltLoad(Op1))
       return 0;
 
     // vlvgp will insert two grs into a vector register, so count half the

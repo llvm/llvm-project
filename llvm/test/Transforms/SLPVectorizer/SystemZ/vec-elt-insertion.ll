@@ -6,15 +6,17 @@
 ; Test functions that (at least currently) only gets vectorized if the
 ; insertion cost for an element load is counted as free.
 
+declare double @llvm.fmuladd.f64(double, double, double)
+
 ; This function needs the free element load to be recognized in SLP
 ; getGatherCost().
-define void @fun0(ptr nocapture %0, double %1) {
+define void @fun0(ptr %0, double %1) {
 ; CHECK-LABEL: define void @fun0(
-; CHECK-SAME: ptr nocapture [[TMP0:%.*]], double [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[TMP0:%.*]], double [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], splat (double 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP6]], <2 x double> zeroinitializer)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP6]], <2 x double> [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
@@ -43,12 +45,11 @@ define void @fun0(ptr nocapture %0, double %1) {
   ret void
 }
 
-
 ; This function needs the element-load to be recognized in SystemZ
 ; getVectorInstrCost().
 define void @fun1(double %0) {
 ; CHECK-LABEL: define void @fun1(
-; CHECK-SAME: double [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: double [[TMP0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
@@ -102,13 +103,11 @@ define void @fun1(double %0) {
   br label %2
 }
 
-declare double @llvm.fmuladd.f64(double, double, double)
-
 ; This should *not* be vectorized as the insertion into the vector isn't free,
 ; which is recognized in SystemZTTImpl::getScalarizationOverhead().
 define void @fun2(ptr %0, ptr %Dst) {
 ; CHECK-LABEL: define void @fun2(
-; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[DST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[BB4:.*]], label %[[BB5:.*]]
@@ -137,3 +136,55 @@ define void @fun2(ptr %0, ptr %Dst) {
   store i64 0, ptr %8, align 8
   br label %5
 }
+
+; This should *not* be vectorized as the load is immediately stored, in which
+; case MVC is preferred.
+define void @fun3(ptr %0)  {
+; CHECK-LABEL: define void @fun3(
+; CHECK-SAME: ptr [[TMP0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr inttoptr (i64 568 to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 40
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 48
+; CHECK-NEXT:    br label %[[BB5:.*]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    store ptr null, ptr [[TMP3]], align 8, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr inttoptr (i64 64 to ptr), align 8, !tbaa [[TBAA8:![0-9]+]]
+; CHECK-NEXT:    store ptr [[TMP6]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call i64 [[TMP0]](ptr noundef poison, i64 noundef poison)
+; CHECK-NEXT:    br label %[[BB5]]
+;
+  %2 = load ptr, ptr inttoptr (i64 568 to ptr), align 8
+  %3 = getelementptr inbounds nuw i8, ptr %2, i64 40
+  %4 = getelementptr inbounds nuw i8, ptr %2, i64 48
+  br label %5
+
+5:
+  store ptr null, ptr %3, align 8, !tbaa !1
+  %6 = load ptr, ptr inttoptr (i64 64 to ptr), align 8, !tbaa !9
+  store ptr %6, ptr %4, align 8
+  %7 = tail call i64 %0(ptr noundef poison, i64 noundef poison)
+  br label %5
+}
+
+!1 = !{!2, !7, i64 40}
+!2 = !{!"arc", !3, i64 0, !6, i64 8, !7, i64 16, !7, i64 24, !8, i64 32, !7, i64 40, !7, i64 48, !6, i64 56, !6, i64 64}
+!3 = !{!"int", !4, i64 0}
+!4 = !{!"omnipotent char", !5, i64 0}
+!5 = !{!"Simple C/C++ TBAA"}
+!6 = !{!"long", !4, i64 0}
+!7 = !{!"any pointer", !4, i64 0}
+!8 = !{!"short", !4, i64 0}
+!9 = !{!10, !7, i64 64}
+!10 = !{!"node", !6, i64 0, !3, i64 8, !7, i64 16, !7, i64 24, !7, i64 32, !7, i64 40, !7, i64 48, !7, i64 56, !7, i64 64, !7, i64 72, !6, i64 80, !6, i64 88, !3, i64 96, !3, i64 100}
+;.
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META6:![0-9]+]], i64 40}
+; CHECK: [[META1]] = !{!"arc", [[META2:![0-9]+]], i64 0, [[META5:![0-9]+]], i64 8, [[META6]], i64 16, [[META6]], i64 24, [[META7:![0-9]+]], i64 32, [[META6]], i64 40, [[META6]], i64 48, [[META5]], i64 56, [[META5]], i64 64}
+; CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+; CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[META5]] = !{!"long", [[META3]], i64 0}
+; CHECK: [[META6]] = !{!"any pointer", [[META3]], i64 0}
+; CHECK: [[META7]] = !{!"short", [[META3]], i64 0}
+; CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META6]], i64 64}
+; CHECK: [[META9]] = !{!"node", [[META5]], i64 0, [[META2]], i64 8, [[META6]], i64 16, [[META6]], i64 24, [[META6]], i64 32, [[META6]], i64 40, [[META6]], i64 48, [[META6]], i64 56, [[META6]], i64 64, [[META6]], i64 72, [[META5]], i64 80, [[META5]], i64 88, [[META2]], i64 96, [[META2]], i64 100}
+;.

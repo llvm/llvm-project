@@ -777,10 +777,12 @@ public:
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.
-  InstructionCost getScalarizationOverhead(VectorType *InTy,
-                                           const APInt &DemandedElts,
-                                           bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind) {
+  InstructionCost getScalarizationOverhead(
+      VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
+      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = std::nullopt) {
+    assert((VL.empty() ||
+            VL.size() == cast<FixedVectorType>(InTy)->getNumElements()) &&
+           "Type does not match the values.");
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -795,9 +797,11 @@ public:
     for (int i = 0, e = Ty->getNumElements(); i < e; ++i) {
       if (!DemandedElts[i])
         continue;
-      if (Insert)
+      if (Insert) {
+        Value *InsertedVal = VL.size() ? VL[i] : nullptr;
         Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
-                                            CostKind, i, nullptr, nullptr);
+                                            CostKind, i, nullptr, InsertedVal);
+      }
       if (Extract)
         Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
                                             CostKind, i, nullptr, nullptr);

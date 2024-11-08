@@ -13497,17 +13497,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
               TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
               I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
     } else {
-      // Add insertion costs for all elements, but not for loads that can be
-      // loaded directly into a vector element for free.
-      APInt FreeEltLoads = APInt::getZero(VL.size());
-      if (TTI->supportsEfficientVectorElementLoadStore())
-        for (unsigned I : seq<unsigned>(VL.size()))
-          if (VL[I]->hasOneUse() && isa<LoadInst>(VL[I]))
-            FreeEltLoads.setBit(I);
-      APInt DemandedElts = ~ShuffledElements & ~FreeEltLoads;
-      Cost = TTI->getScalarizationOverhead(VecTy, DemandedElts,
+      Cost = TTI->getScalarizationOverhead(VecTy,
+                                           /*DemandedElts*/ ~ShuffledElements,
                                            /*Insert*/ true,
-                                           /*Extract*/ false, CostKind);
+                                           /*Extract*/ false, CostKind, VL);
     }
   }
   if (DuplicateNonConst)
