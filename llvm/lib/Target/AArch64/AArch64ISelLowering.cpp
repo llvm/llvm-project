@@ -21823,15 +21823,6 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
       !(InputVT == MVT::nxv16i8 && AccVT == MVT::nxv8i16))
     return SDValue();
 
-  // To do this transformation, output element size needs to be double input
-  // element size, and output number of elements needs to be half the input
-  // number of elements
-  if (InputVT.getVectorElementType().getSizeInBits() * 2 !=
-          AccElemVT.getSizeInBits() ||
-      AccVT.getVectorElementCount() * 2 != InputVT.getVectorElementCount() ||
-      AccVT.isScalableVector() != InputVT.isScalableVector())
-    return SDValue();
-
   bool InputIsSigned = ExtInputOpcode == ISD::SIGN_EXTEND;
   auto BottomIntrinsic = InputIsSigned ? Intrinsic::aarch64_sve_saddwb
                                        : Intrinsic::aarch64_sve_uaddwb;
