@@ -87,6 +87,17 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
             OOPExecutorConnect.ArgStr + " can be specified",
         llvm::inconvertibleErrorCode());
 
+  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+  // TODO: Remove once out-of-process execution support is implemented for
+  // non-Unix platforms.
+  if ((!SystemTriple.isOSBinFormatELF() &&
+       !SystemTriple.isOSBinFormatMachO()) &&
+      (OOPExecutor.getNumOccurrences() ||
+       OOPExecutorConnect.getNumOccurrences()))
+    return llvm::make_error<llvm::StringError>(
+        "Out-of-process execution is only supported on Unix platforms",
+        llvm::inconvertibleErrorCode());
+
   // If -slab-allocate is passed, check that we're not trying to use it in
   // -oop-executor or -oop-executor-connect mode.
   //
@@ -100,6 +111,7 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
           llvm::inconvertibleErrorCode());
   }
 
+
   // Out-of-process executors require the ORC runtime.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
                                  OOPExecutorConnect.getNumOccurrences())) {
@@ -107,7 +119,6 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
         ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
     llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
-    llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
     llvm::sys::path::append(BasePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
                             CLANG_VERSION_MAJOR_STRING);
     if (SystemTriple.isOSBinFormatELF())
@@ -115,7 +126,11 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
           BasePath.str().str() + "lib/x86_64-unknown-linux-gnu/liborc_rt.a";
     else if (SystemTriple.isOSBinFormatMachO())
       OrcRuntimePath = BasePath.str().str() + "/lib/darwin/liborc_rt_osx.a";
-  }
+    else
+      return llvm::make_error<llvm::StringError>(
+          "Out-of-process execution is not supported on non-unix platforms",
+          llvm::inconvertibleErrorCode());
+    }
 
   // If -oop-executor was used but no value was specified then use a sensible
   // default.
