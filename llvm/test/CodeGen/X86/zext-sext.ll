@@ -11,34 +11,32 @@ define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-LABEL: func:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq (%rsi), %rax
-; CHECK-NEXT:    movl $4, %r8d
-; CHECK-NEXT:    subq %rax, %r8
+; CHECK-NEXT:    movl $4, %esi
+; CHECK-NEXT:    subq %rax, %rsi
 ; CHECK-NEXT:    movq (%rdx), %rax
 ; CHECK-NEXT:    movswl 8(%rdi), %edx
-; CHECK-NEXT:    movswl (%rax,%r8,2), %eax
+; CHECK-NEXT:    movswl (%rax,%rsi,2), %eax
 ; CHECK-NEXT:    imull %edx, %eax
 ; CHECK-NEXT:    addl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    cmpl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    setl %dl
 ; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
-; CHECK-NEXT:    setge %r8b
-; CHECK-NEXT:    andb %dl, %r8b
-; CHECK-NEXT:    movzbl %r8b, %edx
-; CHECK-NEXT:    movslq %eax, %r8
-; CHECK-NEXT:    movq %r8, %r9
+; CHECK-NEXT:    setge %sil
+; CHECK-NEXT:    andb %dl, %sil
+; CHECK-NEXT:    movzbl %sil, %edx
+; CHECK-NEXT:    movslq %eax, %rsi
+; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    negl %edx
-; CHECK-NEXT:    subq %rax, %r9
+; CHECK-NEXT:    subq %rax, %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl $-2, %edx
-; CHECK-NEXT:    cmovneq %rax, %r9
-; CHECK-NEXT:    testl %r8d, %r8d
-; CHECK-NEXT:    cmovnsq %rax, %r9
+; CHECK-NEXT:    cmovneq %rax, %rdi
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    cmovnsq %rax, %rdi
 ; CHECK-NEXT:    movq (%rcx), %rax
-; CHECK-NEXT:    subq %r9, %r8
-; CHECK-NEXT:    leaq -2138875574(%rax,%r8), %rax
+; CHECK-NEXT:    subq %rdi, %rsi
+; CHECK-NEXT:    leaq -2138875574(%rax,%rsi), %rax
 ; CHECK-NEXT:    movq %rax, (%rcx)
-; CHECK-NEXT:    movl $0, (%rdi)
-; CHECK-NEXT:    movl $0, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
   %tmp103 = getelementptr inbounds [40 x i16], ptr %a, i64 0, i64 4

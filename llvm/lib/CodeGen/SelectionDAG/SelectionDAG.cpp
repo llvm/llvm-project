@@ -6224,8 +6224,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
     if (OpOpcode == ISD::UNDEF)
-      // sext(undef) = 0, because the top bits will all be the same.
-      return getConstant(0, DL, VT);
+      // sext(undef) = undef in a conservative way, because not all of the bits
+      // are zero and there is no mechanism tracking the undef part.
+      return getUNDEF(VT);
     break;
   case ISD::ZERO_EXTEND:
     assert(VT.isInteger() && N1.getValueType().isInteger() &&
@@ -6244,8 +6245,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
     }
     if (OpOpcode == ISD::UNDEF)
-      // zext(undef) = 0, because the top bits will be zero.
-      return getConstant(0, DL, VT);
+      // zext(undef) = undef in a conservative way, because not all of the bits
+      // are zero and there is no mechanism tracking the undef part.
+      return getUNDEF(VT);
 
     // Skip unnecessary zext_inreg pattern:
     // (zext (trunc x)) -> x iff the upper bits are known zero.
