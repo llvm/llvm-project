@@ -164,8 +164,8 @@ private:
                  unsigned comparisonOpcode, MachineInstr &I) const;
   bool selectCross(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
-  bool selectClip(Register ResVReg, const SPIRVType *ResType,
-                  MachineInstr &I) const;
+  bool selectDiscard(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
 
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
@@ -2157,19 +2157,15 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectClip(Register ResVReg,
-                                          const SPIRVType *ResType,
-                                          MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I) const {
 
   unsigned Opcode;
 
-  if (STI.isAtLeastSPIRVVer(VersionTuple(1, 6))) {
-    if (!STI.canUseExtension(
-            SPIRV::Extension::SPV_EXT_demote_to_helper_invocation))
-      report_fatal_error(
-          "llvm.spv.clip intrinsic: this instruction requires the following "
-          "SPIR-V extension: SPV_EXT_demote_to_helper_invocation",
-          false);
+  if (STI.canUseExtension(
+          SPIRV::Extension::SPV_EXT_demote_to_helper_invocation) ||
+      STI.isAtLeastSPIRVVer(llvm::VersionTuple(1, 6))) {
     Opcode = SPIRV::OpDemoteToHelperInvocation;
   } else {
     Opcode = SPIRV::OpKill;
@@ -2838,8 +2834,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     selectHandleFromBinding(ResVReg, ResType, I);
     return true;
   }
-  case Intrinsic::spv_clip: {
-    return selectClip(ResVReg, ResType, I);
+  case Intrinsic::spv_discard: {
+    return selectDiscard(ResVReg, ResType, I);
   }
   default: {
     std::string DiagMsg;

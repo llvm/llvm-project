@@ -1,9 +1,15 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV15
-; RUN: llc -verify-machineinstrs -spirv-ext=+SPV_EXT_demote_to_helper_invocation -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV15
+; RUN: llc -verify-machineinstrs -spirv-ext=+SPV_EXT_demote_to_helper_invocation -O0 -mtriple=spirv1.5-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-EXTENSION,WITH-CAPABILITY
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-CAPABILITY
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -spirv-ext=+SPV_EXT_demote_to_helper_invocation -mtriple=spirv1.5-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 
 ; Make sure lowering is correctly generating spirv code.
+
+; WITH-CAPABILITY-DAG: OpCapability DemoteToHelperInvocation
+; WITH-EXTENSION-DAG: OpExtension "SPV_EXT_demote_to_helper_invocation"
 
 ; CHECK-DAG:   %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG:   %[[#void:]]  = OpTypeVoid
@@ -12,15 +18,11 @@
 ; CHECK-DAG:   %[[#v4float:]] = OpTypeVector %[[#float]] 4
 ; CHECK-DAG:   %[[#fzero:]] = OpConstant %[[#float]] 0
 ; CHECK-DAG:   %[[#v4fzero:]] = OpConstantNull %[[#v4float]]
-; SPIRV16-DAG: %[[#vecfuncopptr:]] = OpTypePointer Function %[[#v4float]]
-; SPIRV16-DAG: %[[#funcopptr:]] = OpTypePointer Function %[[#float]]
 
 define void @test_scalar(float noundef %Buf) {
 entry:
 ; CHECK-LABEL: ; -- Begin function test_scalar
-; SPIRV16:     %[[#param:]] = OpVariable %[[#funcopptr]] Function
-; SPIRV16:     %[[#load:]] = OpLoad %[[#float]] %[[#param]] Aligned 4
-; SPIRV15:     %[[#load:]] = OpFunctionParameter %[[#float]]
+; CHECK:       %[[#load:]] = OpFunctionParameter %[[#float]]
 ; CHECK:       %[[#cmplt:]] = OpFOrdLessThan %[[#bool]] %[[#load]] %[[#fzero]]
 ; CHECK:       OpBranchConditional %[[#cmplt]] %[[#truel:]] %[[#endl:]]
 ; CHECK:       %[[#truel]] = OpLabel
@@ -37,20 +39,18 @@ entry:
   br i1 %2, label %lt0, label %end
 
 lt0:                                              ; preds = %entry
-  call void @llvm.spv.clip()
+  call void @llvm.spv.discard()
   br label %end
 
 end:                                              ; preds = %lt0, %entry
   ret void
 }
-declare void @llvm.spv.clip()
+declare void @llvm.spv.discard()
 
 define void @test_vector(<4 x float> noundef %Buf) {
 entry:
 ; CHECK-LABEL: ; -- Begin function test_vector
-; SPIRV16:     %[[#param:]] = OpVariable %[[#vecfuncopptr]] Function
-; SPIRV16:     %[[#loadvec:]] = OpLoad %[[#v4float]] %[[#param]] Aligned 16
-; SPIRV15:     %[[#loadvec:]] = OpFunctionParameter %[[#v4float]]
+; CHECK:       %[[#loadvec:]] = OpFunctionParameter %[[#v4float]]
 ; CHECK:       %[[#cmplt:]] = OpFOrdLessThan %[[#v4bool]] %[[#loadvec]] %[[#v4fzero]]
 ; CHECK:       %[[#opany:]] = OpAny %[[#bool]] %[[#cmplt]]
 ; CHECK:       OpBranchConditional %[[#opany]]  %[[#truel:]] %[[#endl:]]
@@ -69,7 +69,7 @@ entry:
   br i1 %3, label %lt0, label %end
 
 lt0:                                              ; preds = %entry
-  call void @llvm.spv.clip()
+  call void @llvm.spv.discard()
   br label %end
 
 end:                                              ; preds = %lt0, %entry

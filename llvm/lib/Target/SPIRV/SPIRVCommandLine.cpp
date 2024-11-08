@@ -30,6 +30,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
         {"SPV_EXT_arithmetic_fence",
          SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
+        {"SPV_EXT_demote_to_helper_invocation",
+         SPIRV::Extension::Extension::SPV_EXT_demote_to_helper_invocation},
         {"SPV_INTEL_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
         {"SPV_INTEL_cache_controls",
@@ -75,9 +77,7 @@ static const std::map<std::string, SPIRV::Extension::Extension>
         {"SPV_KHR_cooperative_matrix",
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
         {"SPV_KHR_non_semantic_info",
-         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
-        {"SPV_EXT_demote_to_helper_invocation",
-         SPIRV::Extension::Extension::SPV_EXT_demote_to_helper_invocation}};
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,

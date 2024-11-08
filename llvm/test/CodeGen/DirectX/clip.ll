@@ -6,7 +6,7 @@
 define void @test_scalar(float noundef %p) #0 {
 entry:
   %0 = fcmp olt float %p, 0.000000e+00
-  call void @llvm.dx.clip(i1 %0)
+  call void @llvm.dx.discard(i1 %0)
   ret void
 }
 
@@ -24,6 +24,8 @@ define void @test_vector(<4 x float> noundef %p) #0 {
 entry:
   %0 = fcmp olt <4 x float> %p, zeroinitializer
   %1 = call i1 @llvm.dx.any.v4i1(<4 x i1> %0)
-  call void @llvm.dx.clip(i1 %1)
+  call void @llvm.dx.discard(i1 %1)
   ret void
 }
+
+declare void @llvm.dx.discard(i1)

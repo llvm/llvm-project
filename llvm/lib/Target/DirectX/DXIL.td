@@ -772,7 +772,7 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
 
 def Discard : DXILOp<82, discard> {
   let Doc = "discard the current pixel";
-  let LLVMIntrinsic = int_dx_clip;
+  let LLVMIntrinsic = int_dx_discard;
   let arguments = [Int1Ty];
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [pixel]>];
@@ -871,15 +871,6 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
-  let Doc = "returns the index of the current lane in the wave";
-  let LLVMIntrinsic = int_dx_wave_getlaneindex;
-  let arguments = [];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
-}
-
 def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
   let LLVMIntrinsic = int_dx_wave_readlane;
@@ -890,24 +881,10 @@ def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def AnnotateHandle : DXILOp<217, annotateHandle> {
-  let Doc = "annotate handle with resource properties";
-  let arguments = [HandleTy, ResPropsTy];
-  let result = HandleTy;
-  let stages = [Stages<DXIL1_6, [all_stages]>];
-}
-
-def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
-  let Doc = "create resource handle from binding";
-  let arguments = [ResBindTy, Int32Ty, Int1Ty];
-  let result = HandleTy;
-  let stages = [Stages<DXIL1_6, [all_stages]>];
-}
-
-def WaveAllBitCount : DXILOp<135, waveAllOp> {
-  let Doc = "returns the count of bits set to 1 across the wave";
-  let LLVMIntrinsic = int_dx_wave_active_countbits;
-  let arguments = [Int1Ty];
+def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
+  let Doc = "returns the index of the current lane in the wave";
+  let LLVMIntrinsic = int_dx_wave_getlaneindex;
+  let arguments = [];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
