@@ -74,7 +74,7 @@ namespace {
 struct BCEAtom {
   BCEAtom() = default;
   BCEAtom(GetElementPtrInst *GEP, LoadInst *LoadI, int BaseId, APInt Offset)
-      : GEP(GEP), LoadI(LoadI), BaseId(BaseId), Offset(Offset) {}
+      : GEP(GEP), LoadI(LoadI), BaseId(BaseId), Offset(std::move(Offset)) {}
 
   BCEAtom(const BCEAtom &) = delete;
   BCEAtom &operator=(const BCEAtom &) = delete;
@@ -151,7 +151,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     LLVM_DEBUG(dbgs() << "from non-zero AddressSpace\n");
     return {};
   }
-  const auto &DL = LoadI->getModule()->getDataLayout();
+  const auto &DL = LoadI->getDataLayout();
   if (!isDereferenceablePointer(Addr, LoadI->getType(), DL)) {
     LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     // We need to make sure that we can do comparison in any order, so we
@@ -325,7 +325,7 @@ std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
   auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1), BaseId);
   if (!Rhs.BaseId)
     return std::nullopt;
-  const auto &DL = CmpI->getModule()->getDataLayout();
+  const auto &DL = CmpI->getDataLayout();
   return BCECmp(std::move(Lhs), std::move(Rhs),
                 DL.getTypeSizeInBits(CmpI->getOperand(0)->getType()), CmpI);
 }
@@ -658,7 +658,7 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     unsigned IntBits = TLI.getIntSize();
 
     // Create memcmp() == 0.
-    const auto &DL = Phi.getModule()->getDataLayout();
+    const auto &DL = Phi.getDataLayout();
     Value *const MemCmpCall = emitMemCmp(
         Lhs, Rhs,
         ConstantInt::get(Builder.getIntNTy(SizeTBits), TotalSizeBits / 8),

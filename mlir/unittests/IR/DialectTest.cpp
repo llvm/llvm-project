@@ -8,6 +8,7 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/Support/TypeID.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -140,15 +141,22 @@ namespace {
 /// A dummy extension that increases a counter when being applied and
 /// recursively adds additional extensions.
 struct DummyExtension : DialectExtension<DummyExtension, TestDialect> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DummyExtension)
+
   DummyExtension(int *counter, int numRecursive)
       : DialectExtension(), counter(counter), numRecursive(numRecursive) {}
 
   void apply(MLIRContext *ctx, TestDialect *dialect) const final {
     ++(*counter);
     DialectRegistry nestedRegistry;
-    for (int i = 0; i < numRecursive; ++i)
-      nestedRegistry.addExtension(
-          std::make_unique<DummyExtension>(counter, /*numRecursive=*/0));
+    for (int i = 0; i < numRecursive; ++i) {
+      // Create unique TypeIDs for these recursive extensions so they don't get
+      // de-duplicated.
+      auto extension =
+          std::make_unique<DummyExtension>(counter, /*numRecursive=*/0);
+      auto typeID = TypeID::getFromOpaquePointer(extension.get());
+      nestedRegistry.addExtension(typeID, std::move(extension));
+    }
     // Adding additional extensions may trigger a reallocation of the
     // `extensions` vector in the dialect registry.
     ctx->appendDialectRegistry(nestedRegistry);
@@ -166,20 +174,56 @@ TEST(Dialect, NestedDialectExtension) {
 
   // Add an extension that adds 100 more extensions.
   int counter1 = 0;
-  registry.addExtension(std::make_unique<DummyExtension>(&counter1, 100));
+  registry.addExtension(TypeID::get<DummyExtension>(),
+                        std::make_unique<DummyExtension>(&counter1, 100));
   // Add one more extension. This should not crash.
   int counter2 = 0;
-  registry.addExtension(std::make_unique<DummyExtension>(&counter2, 0));
+  registry.addExtension(TypeID::getFromOpaquePointer(&counter2),
+                        std::make_unique<DummyExtension>(&counter2, 0));
 
   // Load dialect and apply extensions.
   MLIRContext context(registry);
   Dialect *testDialect = context.getOrLoadDialect<TestDialect>();
   ASSERT_TRUE(testDialect != nullptr);
 
-  // Extensions may be applied multiple times. Make sure that each expected
+  // Extensions are de-duplicated by typeID. Make sure that each expected
   // extension was applied at least once.
   EXPECT_GE(counter1, 101);
   EXPECT_GE(counter2, 1);
+}
+
+TEST(Dialect, SubsetWithExtensions) {
+  DialectRegistry registry1, registry2;
+  registry1.insert<TestDialect>();
+  registry2.insert<TestDialect>();
+
+  // Validate that the registries are equivalent.
+  ASSERT_TRUE(registry1.isSubsetOf(registry2));
+  ASSERT_TRUE(registry2.isSubsetOf(registry1));
+
+  // Add extensions to registry2.
+  int counter = 0;
+  registry2.addExtension(TypeID::get<DummyExtension>(),
+                         std::make_unique<DummyExtension>(&counter, 0));
+
+  // Expect that (1) is a subset of (2) but not the other way around.
+  ASSERT_TRUE(registry1.isSubsetOf(registry2));
+  ASSERT_FALSE(registry2.isSubsetOf(registry1));
+
+  // Add extensions to registry1.
+  registry1.addExtension(TypeID::get<DummyExtension>(),
+                         std::make_unique<DummyExtension>(&counter, 0));
+
+  // Expect that (1) and (2) are equivalent.
+  ASSERT_TRUE(registry1.isSubsetOf(registry2));
+  ASSERT_TRUE(registry2.isSubsetOf(registry1));
+
+  // Load dialect and apply extensions.
+  MLIRContext context(registry1);
+  context.getOrLoadDialect<TestDialect>();
+  context.appendDialectRegistry(registry2);
+  // Expect that the extension as only invoked once.
+  ASSERT_EQ(counter, 1);
 }
 
 } // namespace

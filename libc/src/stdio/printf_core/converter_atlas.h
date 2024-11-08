@@ -31,11 +31,21 @@
 #include "src/stdio/printf_core/float_hex_converter.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+// defines convert_fixed
+#include "src/stdio/printf_core/fixed_converter.h"
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 #include "src/stdio/printf_core/write_int_converter.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 
 // defines convert_pointer
 #include "src/stdio/printf_core/ptr_converter.h"
+
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+// defines convert_strerror
+#include "src/stdio/printf_core/strerror_converter.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_ATLAS_H

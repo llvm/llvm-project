@@ -66,9 +66,10 @@
 ; SPV-DAG: %[[#ones_16:]] = OpConstantComposite %[[#vec_16]] %[[#one_16]] %[[#one_16]]
 ; SPV-DAG: %[[#ones_32:]] = OpConstantComposite %[[#vec_32]] %[[#one_32]] %[[#one_32]]
 ; SPV-DAG: %[[#ones_64:]] = OpConstantComposite %[[#vec_64]] %[[#one_64]] %[[#one_64]]
+; SPV-DAG: %[[#pointer:]] = OpTypePointer CrossWorkgroup %[[#float]]
 
 ; SPV-DAG: OpFunction
-; SPV-DAG: %[[#A:]] = OpFunctionParameter %[[#]]
+; SPV-DAG: %[[#A:]] = OpFunctionParameter %[[#pointer]]
 ; SPV-DAG: %[[#B:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1s:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1v:]] = OpFunctionParameter %[[#]]

@@ -12,6 +12,8 @@
 
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -19,15 +21,53 @@
 #include <cstddef>
 
 using namespace llvm;
+using namespace TableGen::Emitter;
 
 const size_t MAX_LINE_LEN = 80U;
 
-namespace llvm::TableGen::Emitter {
-ManagedStatic<cl::opt<FnT>, OptCreatorT> Action;
-void *OptCreatorT::call() {
-  return new cl::opt<FnT>(cl::desc("Action to perform:"));
+// CommandLine options of class type are not directly supported with some
+// specific exceptions like std::string which are safe to copy. In our case,
+// the `FnT` function_ref object is also safe to copy. So provide a
+// specialization of `OptionValue` for `FnT` type that stores it as a copy.
+// This is essentially similar to OptionValue<std::string> specialization for
+// strings.
+template <> struct cl::OptionValue<FnT> final : cl::OptionValueCopy<FnT> {
+  OptionValue() = default;
+
+  OptionValue(const FnT &V) { this->setValue(V); }
+
+  OptionValue<FnT> &operator=(const FnT &V) {
+    setValue(V);
+    return *this;
+  }
+};
+
+namespace {
+struct OptCreatorT {
+  static void *call() {
+    return new cl::opt<FnT>(cl::desc("Action to perform:"));
+  }
+};
+} // namespace
+
+static ManagedStatic<cl::opt<FnT>, OptCreatorT> CallbackFunction;
+
+Opt::Opt(StringRef Name, FnT CB, StringRef Desc, bool ByDefault) {
+  if (ByDefault)
+    CallbackFunction->setInitialValue(CB);
+  CallbackFunction->getParser().addLiteralOption(Name, CB, Desc);
 }
-} // namespace llvm::TableGen::Emitter
+
+/// Apply callback specified on the command line. Returns true if no callback
+/// was applied.
+bool llvm::TableGen::Emitter::ApplyCallback(const RecordKeeper &Records,
+                                            raw_ostream &OS) {
+  FnT Fn = CallbackFunction->getValue();
+  if (!Fn)
+    return true;
+  Fn(Records, OS);
+  return false;
+}
 
 static void printLine(raw_ostream &OS, const Twine &Prefix, char Fill,
                       StringRef Suffix) {
@@ -59,7 +99,7 @@ void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
   printLine(OS, Prefix + "Automatically generated file, do not edit!", ' ',
             Suffix);
 
-  // Print the filename of source file
+  // Print the filename of source file.
   if (!Record.getInputFilename().empty())
     printLine(
         OS, Prefix + "From: " + sys::path::filename(Record.getInputFilename()),

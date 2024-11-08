@@ -1,4 +1,4 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-FINAL %s
 
 ; Make sure we do not remove the terminator of the entry block. The interesting

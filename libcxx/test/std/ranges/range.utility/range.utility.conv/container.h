@@ -10,12 +10,11 @@
 #define RANGES_RANGE_UTILITY_RANGE_UTILITY_CONV_CONTAINER_H
 
 #include <algorithm>
-#include <concepts>
 #include <cstddef>
 
 enum class CtrChoice { Invalid, DefaultCtrAndInsert, BeginEndPair, FromRangeT, DirectCtr };
 
-enum class InserterChoice { Invalid, Insert, PushBack };
+enum class InserterChoice { Invalid, Insert, Emplace, PushBack, EmplaceBack };
 
 // Allows checking that `ranges::to` correctly follows the order of priority of different constructors -- e.g., if
 // 3 constructors are available, the `from_range_t` constructor is chosen in favor of the constructor taking two
@@ -38,7 +37,7 @@ struct Container {
 
   constexpr explicit Container(std::ranges::input_range auto&& in)
     requires(Rank >= CtrChoice::DirectCtr)
-      : ctr_choice(CtrChoice::DirectCtr), size_(std::ranges::size(in)) {
+      : ctr_choice(CtrChoice::DirectCtr), size_(static_cast<int>(std::ranges::size(in))) {
     std::ranges::copy(in, begin());
   }
 
@@ -54,7 +53,7 @@ struct Container {
 
   constexpr Container(std::from_range_t, std::ranges::input_range auto&& in)
     requires(Rank >= CtrChoice::FromRangeT)
-      : ctr_choice(CtrChoice::FromRangeT), size_(std::ranges::size(in)) {
+      : ctr_choice(CtrChoice::FromRangeT), size_(static_cast<int>(std::ranges::size(in))) {
     std::ranges::copy(in, begin());
   }
 
@@ -70,7 +69,7 @@ struct Container {
   template <class Iter>
   constexpr Container(Iter b, Iter e)
     requires(Rank >= CtrChoice::BeginEndPair)
-      : ctr_choice(CtrChoice::BeginEndPair), size_(e - b) {
+      : ctr_choice(CtrChoice::BeginEndPair), size_(static_cast<int>(e - b)) {
     std::ranges::copy(b, e, begin());
   }
 
@@ -97,26 +96,49 @@ struct Container {
   constexpr std::size_t size() const { return size_; }
 
   template <class T>
+  constexpr void emplace_back(T val)
+    requires(Inserter >= InserterChoice::EmplaceBack)
+  {
+    inserter_choice = InserterChoice::EmplaceBack;
+    __push_back_impl(val);
+  }
+
+  template <class T>
   constexpr void push_back(T val)
     requires(Inserter >= InserterChoice::PushBack)
   {
     inserter_choice = InserterChoice::PushBack;
-    buffer_[size_]  = val;
+    __push_back_impl(val);
+  }
+
+  template <class T>
+  constexpr void __push_back_impl(T val) {
+    buffer_[size_] = val;
     ++size_;
+  }
+
+  template <class T>
+  constexpr ElementType* emplace(ElementType* where, T val)
+    requires(Inserter >= InserterChoice::Emplace)
+  {
+    inserter_choice = InserterChoice::Emplace;
+    return __insert_impl(where, val);
   }
 
   template <class T>
   constexpr ElementType* insert(ElementType* where, T val)
     requires(Inserter >= InserterChoice::Insert)
   {
-    assert(size() + 1 <= Capacity);
-
     inserter_choice = InserterChoice::Insert;
+    return __insert_impl(where, val);
+  }
 
+  template <class T>
+  constexpr ElementType* __insert_impl(ElementType* where, T val) {
+    assert(size() + 1 <= Capacity);
     std::shift_right(where, end(), 1);
     *where = val;
     ++size_;
-
     return where;
   }
 

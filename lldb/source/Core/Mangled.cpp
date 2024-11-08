@@ -19,6 +19,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
@@ -42,20 +43,27 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
-  if (name.startswith("?"))
+  if (name.starts_with("?"))
     return Mangled::eManglingSchemeMSVC;
 
-  if (name.startswith("_R"))
+  if (name.starts_with("_R"))
     return Mangled::eManglingSchemeRustV0;
 
-  if (name.startswith("_D"))
-    return Mangled::eManglingSchemeD;
+  if (name.starts_with("_D")) {
+    // A dlang mangled name begins with `_D`, followed by a numeric length. One
+    // known exception is the symbol `_Dmain`.
+    // See `SymbolName` and `LName` in
+    // https://dlang.org/spec/abi.html#name_mangling
+    llvm::StringRef buf = name.drop_front(2);
+    if (!buf.empty() && (llvm::isDigit(buf.front()) || name == "_Dmain"))
+      return Mangled::eManglingSchemeD;
+  }
 
-  if (name.startswith("_Z"))
+  if (name.starts_with("_Z"))
     return Mangled::eManglingSchemeItanium;
 
   // ___Z is a clang extension of block invocations
-  if (name.startswith("___Z"))
+  if (name.starts_with("___Z"))
     return Mangled::eManglingSchemeItanium;
 
   // Swift's older style of mangling used "_T" as a mangling prefix. This can
@@ -64,16 +72,16 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   // for select old-style swift mangled names. The known cases are ObjC classes
   // and protocols. Classes are either prefixed with "_TtC" or "_TtGC".
   // Protocols are prefixed with "_TtP".
-  if (name.startswith("_TtC") || name.startswith("_TtGC") ||
-      name.startswith("_TtP"))
+  if (name.starts_with("_TtC") || name.starts_with("_TtGC") ||
+      name.starts_with("_TtP"))
     return Mangled::eManglingSchemeSwift;
 
   // Swift 4.2 used "$S" and "_$S".
   // Swift 5 and onward uses "$s" and "_$s".
   // Swift also uses "@__swiftmacro_" as a prefix for mangling filenames.
-  if (name.startswith("$S") || name.startswith("_$S") ||
-      name.startswith("$s") || name.startswith("_$s") ||
-      name.startswith("@__swiftmacro_"))
+  if (name.starts_with("$S") || name.starts_with("_$S") ||
+      name.starts_with("$s") || name.starts_with("_$s") ||
+      name.starts_with("@__swiftmacro_"))
     return Mangled::eManglingSchemeSwift;
 
   return Mangled::eManglingSchemeNone;
@@ -125,7 +133,7 @@ void Mangled::SetValue(ConstString name) {
 }
 
 // Local helpers for different demangling implementations.
-static char *GetMSVCDemangledStr(std::string_view M) {
+static char *GetMSVCDemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::microsoftDemangle(
       M, nullptr, nullptr,
       llvm::MSDemangleFlags(
@@ -169,27 +177,29 @@ static char *GetItaniumDemangledStr(const char *M) {
   return demangled_cstr;
 }
 
-static char *GetRustV0DemangledStr(std::string_view M) {
+static char *GetRustV0DemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::rustDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", M, demangled_cstr);
     else
-      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle", M);
+      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle",
+               static_cast<std::string_view>(M));
   }
 
   return demangled_cstr;
 }
 
-static char *GetDLangDemangledStr(std::string_view M) {
+static char *GetDLangDemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::dlangDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOG(log, "demangled dlang: {0} -> \"{1}\"", M, demangled_cstr);
     else
-      LLDB_LOG(log, "demangled dlang: {0} -> error: failed to demangle", M);
+      LLDB_LOG(log, "demangled dlang: {0} -> error: failed to demangle",
+               static_cast<std::string_view>(M));
   }
 
   return demangled_cstr;
@@ -308,6 +318,8 @@ ConstString Mangled::GetDemangledName() const {
 }
 
 ConstString Mangled::GetDisplayDemangledName() const {
+  if (Language *lang = Language::FindPlugin(GuessLanguage()))
+    return lang->GetDisplayDemangledName(*this);
   return GetDemangledName();
 }
 

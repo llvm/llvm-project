@@ -12,12 +12,15 @@
 #include "llvm/MC/MCObjectStreamer.h"
 
 namespace llvm {
+class XCOFFObjectWriter;
 
 class MCXCOFFStreamer : public MCObjectStreamer {
 public:
   MCXCOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                   std::unique_ptr<MCObjectWriter> OW,
                   std::unique_ptr<MCCodeEmitter> Emitter);
+
+  XCOFFObjectWriter &getWriter();
 
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -33,10 +36,7 @@ public:
                                             MCSymbolAttr Visibility) override;
   void emitXCOFFRefDirective(const MCSymbol *Symbol) override;
   void emitXCOFFRenameDirective(const MCSymbol *Name,
-                                StringRef Rename) override {
-    report_fatal_error("emitXCOFFRenameDirective is not implemented yet on "
-                       "object generation path");
-  }
+                                StringRef Rename) override;
   void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;

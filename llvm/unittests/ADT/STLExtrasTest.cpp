@@ -15,6 +15,7 @@
 #include <climits>
 #include <cstddef>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <tuple>
 #include <type_traits>
@@ -405,6 +406,14 @@ std::vector<int>::const_iterator end(const some_struct &s) {
   return s.data.end();
 }
 
+std::vector<int>::const_reverse_iterator rbegin(const some_struct &s) {
+  return s.data.rbegin();
+}
+
+std::vector<int>::const_reverse_iterator rend(const some_struct &s) {
+  return s.data.rend();
+}
+
 void swap(some_struct &lhs, some_struct &rhs) {
   // make swap visible as non-adl swap would even seem to
   // work with std::swap which defaults to moving
@@ -495,6 +504,43 @@ TEST(STLExtrasTest, ConcatRange) {
   EXPECT_EQ(Expected, Test);
 }
 
+template <typename T> struct Iterator {
+  int i = 0;
+  T operator*() const { return i; }
+  Iterator &operator++() {
+    ++i;
+    return *this;
+  }
+  bool operator==(Iterator RHS) const { return i == RHS.i; }
+};
+
+template <typename T> struct RangeWithValueType {
+  int i;
+  RangeWithValueType(int i) : i(i) {}
+  Iterator<T> begin() { return Iterator<T>{0}; }
+  Iterator<T> end() { return Iterator<T>{i}; }
+};
+
+TEST(STLExtrasTest, ValueReturn) {
+  RangeWithValueType<int> R(1);
+  auto C = concat<int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), int>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
+TEST(STLExtrasTest, ReferenceReturn) {
+  RangeWithValueType<const int&> R(1);
+  auto C = concat<const int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), const int &>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
 TEST(STLExtrasTest, PartitionAdaptor) {
   std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -573,6 +619,8 @@ TEST(STLExtrasTest, ADLTest) {
 
   EXPECT_EQ(*adl_begin(s), 1);
   EXPECT_EQ(*(adl_end(s) - 1), 5);
+  EXPECT_EQ(*adl_rbegin(s), 5);
+  EXPECT_EQ(*(adl_rend(s) - 1), 1);
 
   adl_swap(s, s2);
   EXPECT_EQ(s.swap_val, "lhs");
@@ -821,6 +869,26 @@ TEST(STLExtrasTest, AllEqual) {
   EXPECT_FALSE(all_equal(V));
 }
 
+// Test to verify that all_equal works with a container that does not
+// model the random access iterator concept.
+TEST(STLExtrasTest, AllEqualNonRandomAccess) {
+  std::list<int> V;
+  static_assert(!std::is_convertible_v<
+                std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                std::random_access_iterator_tag>);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_equal(V));
+}
+
 TEST(STLExtrasTest, AllEqualInitializerList) {
   EXPECT_TRUE(all_equal({1}));
   EXPECT_TRUE(all_equal({1, 1}));
@@ -995,6 +1063,19 @@ TEST(STLExtras, Unique) {
   std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
 
   auto I = llvm::unique(V, [](int a, int b) { return a == b; });
+
+  EXPECT_EQ(I, V.begin() + 4);
+
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(5, V[1]);
+  EXPECT_EQ(4, V[2]);
+  EXPECT_EQ(3, V[3]);
+}
+
+TEST(STLExtras, UniqueNoPred) {
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
+
+  auto I = llvm::unique(V);
 
   EXPECT_EQ(I, V.begin() + 4);
 
@@ -1323,6 +1404,33 @@ TEST(STLExtrasTest, LessSecond) {
     std::tuple<int, int> B(1, 0);
     EXPECT_FALSE(less_second()(A, B));
     EXPECT_TRUE(less_second()(B, A));
+  }
+}
+
+TEST(STLExtrasTest, Mismatch) {
+  {
+    const int MMIndex = 5;
+    StringRef First = "FooBar";
+    StringRef Second = "FooBaz";
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.begin() + MMIndex);
+    EXPECT_EQ(MMSecond, Second.begin() + MMIndex);
+  }
+
+  {
+    SmallVector<int> First = {0, 1, 2};
+    SmallVector<int> Second = {0, 1, 2, 3};
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.end());
+    EXPECT_EQ(MMSecond, Second.begin() + 3);
+  }
+
+  {
+    SmallVector<int> First = {0, 1};
+    SmallVector<int> Empty;
+    auto [MMFirst, MMEmpty] = mismatch(First, Empty);
+    EXPECT_EQ(MMFirst, First.begin());
+    EXPECT_EQ(MMEmpty, Empty.begin());
   }
 }
 

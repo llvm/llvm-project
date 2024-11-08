@@ -16,6 +16,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -23,7 +24,7 @@ def Affine_Dialect : Dialect {
   let name = "affine";
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
 }
 
 // Base class for Affine dialect ops.
@@ -63,14 +64,11 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
   // has a constant builder. That way we wouldn't need to explicitly specify the
   // result types here.
   let builders = [
-    OpBuilder<(ins "AffineMap":$map, "ValueRange":$mapOperands),
-    [{
-      build($_builder, $_state, $_builder.getIndexType(), map, mapOperands);
-    }]>,
     OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(),
-            AffineMap::inferFromExprList(exprList).front(), mapOperands);
+            AffineMap::inferFromExprList(exprList, $_builder.getContext())
+                                        .front(), mapOperands);
     }]>
   ];
 
@@ -120,8 +118,8 @@ def AffineForOp : Affine_Op<"for",
     [AttrSizedOperandSegments, AutomaticAllocationScope,
      ImplicitAffineTerminator, ConditionallySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
-     ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
-      "getSingleUpperBound", "getYieldedValuesMutable",
+     ["getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
+      "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands"]>]> {
@@ -541,13 +539,6 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
   let results = (outs Index);
 
-  let builders = [
-    OpBuilder<(ins "AffineMap":$affineMap, "ValueRange":$mapOperands),
-    [{
-      build($_builder, $_state, $_builder.getIndexType(), affineMap, mapOperands);
-    }]>
-  ];
-
   let extraClassDeclaration = [{
     static StringRef getMapAttrStrName() { return "map"; }
     AffineMap getAffineMap() { return getMap(); }
@@ -751,7 +742,8 @@ def AffineParallelOp : Affine_Op<"parallel",
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch",
-  [DeclareOpInterfaceMethods<AffineMapAccessInterface>]> {
+  [DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+   MemRefsNormalizable]> {
   let summary = "affine prefetch operation";
   let description = [{
     The `affine.prefetch` op prefetches data from a memref location described
@@ -1068,7 +1060,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 //===----------------------------------------------------------------------===//
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [Pure]> {
+    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and
@@ -1092,18 +1084,102 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
     ```
   }];
 
-  let arguments = (ins Index:$linear_index, Variadic<Index>:$basis);
+  let arguments = (ins Index:$linear_index,
+    Variadic<Index>:$dynamic_basis,
+    DenseI64ArrayAttr:$static_basis);
   let results = (outs Variadic<Index>:$multi_index);
 
   let assemblyFormat = [{
-    $linear_index `into` ` ` `(` $basis `)` attr-dict `:` type($multi_index)
+    $linear_index `into` ` `
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
+    attr-dict `:` type($multi_index)
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis)>
+    OpBuilder<(ins "Value":$linear_index, "ValueRange":$basis)>,
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis)>,
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<int64_t>":$basis)>
   ];
 
+  let extraClassDeclaration = [{
+    /// Returns a vector with all the static and dynamic basis values.
+    SmallVector<OpFoldResult> getMixedBasis() {
+      OpBuilder builder(getContext());
+      return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
+    }
+  }];
+
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AffineLinearizeIndexOp
+//===----------------------------------------------------------------------===//
+def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
+    [Pure, AttrSizedOperandSegments]> {
+  let summary = "linearize an index";
+  let description = [{
+    The `affine.linearize_index` operation takes a sequence of index values and a
+    basis of the same length and linearizes the indices using that basis.
+
+    That is, for indices `%idx_1` through `%idx_N` and basis elements `b_1` through `b_N`,
+    it computes
+
+    ```
+    sum(i = 1 to N) %idx_i * product(j = i + 1 to N) B_j
+    ```
+
+    If the `disjoint` property is present, this is an optimization hint that,
+    for all `i`, `0 <= %idx_i < B_i` - that is, no index affects any other index,
+    except that `%idx_0` may be negative to make the index as a whole negative.
+
+    Note that the outputs of `affine.delinearize_index` are, by definition, `disjoint`.
+
+    Example:
+
+    ```mlir
+    %linear_index = affine.linearize_index [%index_0, %index_1, %index_2] (2, 3, 5) : index
+    ```
+
+    In the above example, `%linear_index` conceptually holds the following:
+
+    ```mlir
+    #map = affine_map<()[s0, s1, s2] -> (s0 * 15 + s1 * 5 + s2)>
+    %linear_index = affine.apply #map()[%index_0, %index_1, %index_2]
+    ```
+  }];
+
+  let arguments = (ins Variadic<Index>:$multi_index,
+    Variadic<Index>:$dynamic_basis,
+    DenseI64ArrayAttr:$static_basis,
+    UnitProperty:$disjoint);
+  let results = (outs Index:$linear_index);
+
+  let assemblyFormat = [{
+    (`disjoint` $disjoint^)? ` `
+    `[` $multi_index `]` `by` ` `
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
+    attr-dict `:` type($linear_index)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$multi_index, "ValueRange":$basis, CArg<"bool", "false">:$disjoint)>,
+    OpBuilder<(ins "ValueRange":$multi_index, "ArrayRef<OpFoldResult>":$basis, CArg<"bool", "false">:$disjoint)>,
+    OpBuilder<(ins "ValueRange":$multi_index, "ArrayRef<int64_t>":$basis, CArg<"bool", "false">:$disjoint)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return a vector with all the static and dynamic basis values.
+    SmallVector<OpFoldResult> getMixedBasis() {
+      OpBuilder builder(getContext());
+      return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
+    }
+
+  }];
+
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 #endif // AFFINE_OPS

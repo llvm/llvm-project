@@ -8,10 +8,10 @@
 
 #include "LibStdcpp.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <memory>
 #include <vector>
@@ -26,11 +26,11 @@ class LibStdcppUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -84,11 +84,11 @@ ValueObjectSP LibStdcppUniquePtrSyntheticFrontEnd::GetTuple() {
   return obj_child_sp;
 }
 
-bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
+lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   ValueObjectSP tuple_sp = GetTuple();
 
   if (!tuple_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   std::unique_ptr<SyntheticChildrenFrontEnd> tuple_frontend(
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
@@ -110,13 +110,13 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   }
   m_obj_obj = nullptr;
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
-LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx == 0 && m_ptr_obj)
     return m_ptr_obj->GetSP();
   if (idx == 1 && m_del_obj)
@@ -135,7 +135,8 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   return lldb::ValueObjectSP();
 }
 
-size_t LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t>
+LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   if (m_del_obj)
     return 2;
   return 1;

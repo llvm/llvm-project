@@ -15,6 +15,11 @@ void raw_ptr() {
   // CHECK-NEXT:{{^     | }}                     ^
   auto foo4 = [=](){ (void) ref_countable; };
   // CHECK: warning: Implicitly captured raw-pointer 'ref_countable' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]
+
+  // Confirm that the checker respects [[clang::suppress]].
+  RefCountable* suppressed_ref_countable = nullptr;
+  [[clang::suppress]] auto foo5 = [suppressed_ref_countable](){};
+  // CHECK-NOT: warning: Captured raw-pointer 'suppressed_ref_countable' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]
 }
 
 void references() {

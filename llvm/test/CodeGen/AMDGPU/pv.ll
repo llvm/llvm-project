@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 < %s | FileCheck %s
+; RUN: llc -mtriple=r600 < %s | FileCheck %s
 
 ; CHECK: DOT4 * T{{[0-9]\.W}} (MASKED)
 ; CHECK: MAX T{{[0-9].[XYZW]}}, 0.0, PV.X

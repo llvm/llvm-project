@@ -1,8 +1,6 @@
 // Tests the driver when targeting the NVPTX architecture directly without a
 // host toolchain to perform CUDA mappings.
 
-// REQUIRES: nvptx-registered-target
-
 //
 // Test the generated phases when targeting NVPTX.
 //
@@ -34,8 +32,8 @@
 // RUN:   | FileCheck -check-prefix=ARGS %s
 
 //      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
-// ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
-// ARGS-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_61" {{.*}} "[[CUBIN]].cubin"
+// ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].o" "[[PTX]].s" "-c"
+// ARGS-NEXT: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}"[[CUBIN]].o"
 
 //
 // Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
@@ -57,17 +55,7 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK %s
 
-// LINK: nvlink{{.*}}"-o" "a.out" "-arch" "sm_61" {{.*}} "{{.*}}.cubin"
-
-//
-// Test the generated arguments default to a value with no architecture. 
-//
-// RUN: %clang --target=nvptx64-nvidia-cuda -### --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=DEFAULT %s
-
-//      DEFAULT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_52" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
-// DEFAULT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_52" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
-// DEFAULT-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_52" {{.*}} "[[CUBIN]].cubin"
+// LINK: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}[[CUBIN:.+]].o
 
 //
 // Test to ensure that we enable handling global constructors in a freestanding
@@ -77,3 +65,51 @@
 // RUN:   | FileCheck -check-prefix=LOWERING %s
 
 // LOWERING: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-mllvm" "--nvptx-lower-global-ctor-dtor"
+
+//
+// Test passing arguments directly to nvlink.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINKER-ARGS %s
+
+// LINKER-ARGS: clang-nvlink-wrapper{{.*}}"-v"{{.*}}"a" "b"
+
+// Tests for handling a missing architecture.
+//
+// RUN: not %clang -target nvptx64-nvidia-cuda %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING %s
+// RUN: not %clang -target nvptx64-nvidia-cuda -march=generic %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING %s
+
+// MISSING: error: must pass in an explicit nvptx64 gpu architecture to 'ptxas'
+// MISSING: error: must pass in an explicit nvptx64 gpu architecture to 'nvlink'
+
+// Do not error when performing LTO.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -flto %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=MISSING-LTO %s
+
+// MISSING-LTO-NOT: error: must pass in an explicit nvptx64 gpu architecture to 'nvlink'
+
+// RUN: %clang -target nvptx64-nvidia-cuda -flto -c %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=GENERIC %s
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 -march=generic -flto -c %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=GENERIC %s
+
+// GENERIC-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"
+
+//
+// Test forwarding the necessary +ptx feature.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=FEATURE %s
+
+// FEATURE: clang-nvlink-wrapper{{.*}}"--plugin-opt=-mattr=+ptx63"
+
+//
+// Test including the libc startup files and libc
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -stdlib -startfiles \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
+
+// STARTUP: clang-nvlink-wrapper{{.*}}"-lc" "-lm" "{{.*}}crt1.o"

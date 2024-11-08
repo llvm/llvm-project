@@ -16,8 +16,8 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/TransformUtils.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -72,6 +72,11 @@ struct TestTensorTransforms
       llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
       llvm::cl::init(false)};
 
+  Option<bool> testBubbleUpExpandShapePatterns{
+      *this, "test-expand-shape-bubbling",
+      llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
+      llvm::cl::init(false)};
+
   Option<bool> testFoldIntoPackAndUnpack{
       *this, "test-fold-into-pack-and-unpack",
       llvm::cl::desc("Test folding ops into tensor.pack and tensor.unpack"),
@@ -84,9 +89,9 @@ struct TestTensorTransforms
           "the extract_slice of collapse_shape pattern"),
       llvm::cl::init(false)};
 
-  Option<bool> testSimplifyPackPatterns{
-      *this, "test-simplify-pack-patterns",
-      llvm::cl::desc("Test patterns to simplify tensor.pack"),
+  Option<bool> testSimplifyPackUnpackPatterns{
+      *this, "test-simplify-pack-unpack-patterns",
+      llvm::cl::desc("Test patterns to simplify tensor.pack and tensor.unpack"),
       llvm::cl::init(false)};
 
   Option<bool> testTrackingListener{
@@ -99,6 +104,12 @@ struct TestTensorTransforms
 static void applyReassociativeReshapeFoldingPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void applyBubbleUpExpandShapePatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateBubbleUpExpandShapePatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -137,9 +148,9 @@ applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
-static void applySimplifyPackPatterns(Operation *rootOp) {
+static void applySimplifyPackUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
-  tensor::populateSimplifyTensorPack(patterns);
+  tensor::populateSimplifyPackAndUnpackPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -376,8 +387,8 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
 
 void TestTensorTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
-  if (testSimplifyPackPatterns)
-    applySimplifyPackPatterns(rootOp);
+  if (testSimplifyPackUnpackPatterns)
+    applySimplifyPackUnpackPatterns(rootOp);
   if (testFoldConstantExtractSlice)
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)
@@ -386,6 +397,8 @@ void TestTensorTransforms::runOnOperation() {
     applyDropRedundantInsertSliceRankExpansionPatterns(rootOp);
   if (testReassociativeReshapeFolding)
     applyReassociativeReshapeFoldingPatterns(rootOp);
+  if (testBubbleUpExpandShapePatterns)
+    applyBubbleUpExpandShapePatterns(rootOp);
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);
   if (testRewriteExtractSliceWithTiledCollapseShape) {

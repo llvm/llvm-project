@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN: name: negated_cond_vop2
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF

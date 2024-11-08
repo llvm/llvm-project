@@ -30,11 +30,11 @@
 // CHECK-DAG:       %[[VAL_24:.*]] = sparse_tensor.lvl %[[VAL_5]], %[[VAL_2]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_5]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_1]] to %[[VAL_7]] step %[[VAL_2]] {
+// CHECK:             %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_8]] : index
+// CHECK:             %[[VAL_14:.*]] = arith.muli %[[VAL_10]], %[[VAL_24]] : index
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_8]] step %[[VAL_2]] {
-// CHECK:               %[[VAL_12:.*]] = arith.muli %[[VAL_8]], %[[VAL_10]] : index
-// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_11]] : index
-// CHECK:               %[[VAL_14:.*]] = arith.muli %[[VAL_24]], %[[VAL_10]] : index
-// CHECK:               %[[VAL_15:.*]] = arith.addi %[[VAL_14]], %[[VAL_11]] : index
+// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_15:.*]] = arith.addi %[[VAL_11]], %[[VAL_14]] : index
 // CHECK:               %[[VAL_16:.*]] = arith.index_cast %[[VAL_11]] : index to i64
 // CHECK:               %[[VAL_17:.*]] = arith.index_cast %[[VAL_10]] : index to i64
 // CHECK:               %[[VAL_18:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xi64>
@@ -95,7 +95,7 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xi64>
 // CHECK:               %[[VAL_23:.*]] = arith.muli %[[VAL_21]], %[[VAL_22]] : i64
 // CHECK:               %[[VAL_24:.*]] = arith.muli %[[VAL_20]], %[[VAL_23]] : i64
-// CHECK:               %[[Y:.*]] = sparse_tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK:               %[[Y:.*]] = tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:               scf.yield %[[Y]]
 // CHECK:             }
 // CHECK:             scf.yield %[[L]]

@@ -100,6 +100,12 @@ void AttributePool::takePool(AttributePool &pool) {
   pool.Attrs.clear();
 }
 
+void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
+  assert(&Pool != this && "AttributePool can't take attributes from itself");
+  llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
+  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
+}
+
 namespace {
 
 #include "clang/Sema/AttrParsedAttrImpl.inc"
@@ -219,7 +225,7 @@ bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
     // atributes.
     return false;
 
-  assert(isStandardAttributeSyntax());
+  assert(isStandardAttributeSyntax() || isAlignas());
 
   // We have historically allowed some type attributes with standard attribute
   // syntax to slide to the decl-specifier-seq, so we have to keep supporting

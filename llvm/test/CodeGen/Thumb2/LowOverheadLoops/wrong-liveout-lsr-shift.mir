@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - --verify-machineinstrs | FileCheck %s
 
 --- |
-  define dso_local arm_aapcs_vfpcc signext i16 @wrong_liveout_shift(i8* nocapture readonly %b, i8* nocapture readonly %c, i32 %N) {
+  define dso_local arm_aapcs_vfpcc signext i16 @wrong_liveout_shift(ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
   entry:
     %cmp11 = icmp eq i32 %N, 0
     %0 = add i32 %N, 7
@@ -20,23 +20,23 @@
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
-    %lsr.iv20 = phi i8* [ %scevgep21, %vector.body ], [ %c, %vector.ph ]
-    %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %b, %vector.ph ]
+    %lsr.iv20 = phi ptr [ %scevgep21, %vector.body ], [ %c, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %b, %vector.ph ]
     %vec.phi = phi <8 x i16> [ <i16 32767, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %vector.ph ], [ %15, %vector.body ]
     %8 = phi i32 [ %start, %vector.ph ], [ %16, %vector.body ]
     %9 = phi i32 [ %N, %vector.ph ], [ %11, %vector.body ]
-    %lsr.iv2022 = bitcast i8* %lsr.iv20 to <8 x i8>*
-    %lsr.iv19 = bitcast i8* %lsr.iv to <8 x i8>*
+    %lsr.iv2022 = bitcast ptr %lsr.iv20 to ptr
+    %lsr.iv19 = bitcast ptr %lsr.iv to ptr
     %10 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %9)
     %11 = sub i32 %9, 8
-    %wide.masked.load = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %lsr.iv19, i32 1, <8 x i1> %10, <8 x i8> undef)
+    %wide.masked.load = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %lsr.iv19, i32 1, <8 x i1> %10, <8 x i8> undef)
     %12 = zext <8 x i8> %wide.masked.load to <8 x i16>
-    %wide.masked.load16 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %lsr.iv2022, i32 1, <8 x i1> %10, <8 x i8> undef)
+    %wide.masked.load16 = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %lsr.iv2022, i32 1, <8 x i1> %10, <8 x i8> undef)
     %13 = zext <8 x i8> %wide.masked.load16 to <8 x i16>
     %14 = mul nuw <8 x i16> %13, %12
     %15 = sub <8 x i16> %vec.phi, %14
-    %scevgep = getelementptr i8, i8* %lsr.iv, i32 8
-    %scevgep21 = getelementptr i8, i8* %lsr.iv20, i32 8
+    %scevgep = getelementptr i8, ptr %lsr.iv, i32 8
+    %scevgep21 = getelementptr i8, ptr %lsr.iv20, i32 8
     %16 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %8, i32 1)
     %17 = icmp ne i32 %16, 0
     br i1 %17, label %vector.body, label %middle.block
@@ -53,7 +53,7 @@
     %a.0.lcssa = phi i16 [ 32767, %entry ], [ %20, %middle.block ]
     ret i16 %a.0.lcssa
   }
-  declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32 immarg, <8 x i1>, <8 x i8>)
+  declare <8 x i8> @llvm.masked.load.v8i8.p0(ptr, i32 immarg, <8 x i1>, <8 x i8>)
   declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)

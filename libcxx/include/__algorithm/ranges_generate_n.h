@@ -13,26 +13,27 @@
 #include <__concepts/invocable.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/invoke.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __generate_n {
-
-struct __fn {
+struct __generate_n {
   template <input_or_output_iterator _OutIter, copy_constructible _Func>
     requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
   _LIBCPP_HIDE_FROM_ABI constexpr _OutIter
@@ -46,15 +47,15 @@ struct __fn {
   }
 };
 
-} // namespace __generate_n
-
 inline namespace __cpo {
-inline constexpr auto generate_n = __generate_n::__fn{};
+inline constexpr auto generate_n = __generate_n{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_GENERATE_N_H

@@ -1,6 +1,10 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Pointer assignment constraints 10.2.2.2 (see also assign02.f90)
 
+module m0
+  procedure(),pointer,save :: p
+end
+
 module m
   interface
     subroutine s(i)
@@ -324,4 +328,10 @@ contains
     !ERROR: Statement function 'sf' may not be the target of a pointer assignment
     ptr => sf
   end subroutine
+
+  subroutine s15
+    use m0
+    intrinsic sin
+    p=>sin ! ok
+  end
 end

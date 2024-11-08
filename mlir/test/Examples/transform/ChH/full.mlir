@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter \
+// RUN: mlir-opt %s --transform-interpreter \
 // RUN:             --test-transform-dialect-erase-schedule \
 // RUN:             --math-uplift-to-fma \
 // RUN:             --convert-bufferization-to-memref \
@@ -115,9 +115,9 @@ module attributes { transform.with_named_sequence } {
   // have no effect on the Halide IR as of 294f80c49bf3bb8582446613c25fcce03b82.
   // Also note that the order of dimensions in Halide is inverted, e.g., co and
   // n are the outermost loops in the respective reorder directives.
-  transform.sequence failures(propagate) {
+  transform.named_sequence @__transform_main(
   // This argument will point to the top-level module.
-  ^bb0(%arg0: !transform.any_op):
+      %arg0: !transform.any_op) {
 
     // 1. Find the operations we are going to transform usnig their names. This
     // is a simplistic approach that works when there are few operations in the
@@ -380,27 +380,29 @@ module attributes { transform.with_named_sequence } {
 // immediately adjacent fma on vector<64xf32>.
 
 // CHECK:      %[[R0:.+]] = llvm.mlir.undef : !llvm.array<5 x vector<64xf32>>
-// CHECK-NEXT: %[[LINE0:.+]] = llvm.extractvalue %[[V:.+]][0] : !llvm.array<5 x vector<64xf32>>
+
+// CHECK:      %[[V:.+]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE0:.+]] = llvm.extractvalue %[[V]][0] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA0:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE0]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R1:.+]] = llvm.insertvalue %[[FMA0]], %[[R0]][0]
 
-// CHECK-NEXT: %[[LINE1:.+]] = llvm.extractvalue %[[V:.+]][1] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE1:.+]] = llvm.extractvalue %[[V]][1] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA1:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE1]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R2:.+]] = llvm.insertvalue %[[FMA1]], %[[R1]][1]
 
-// CHECK-NEXT: %[[LINE2:.+]] = llvm.extractvalue %[[V:.+]][2] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE2:.+]] = llvm.extractvalue %[[V]][2] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA2:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE2]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R3:.+]] = llvm.insertvalue %[[FMA2]], %[[R2]][2]
 
-// CHECK-NEXT: %[[LINE3:.+]] = llvm.extractvalue %[[V:.+]][3] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE3:.+]] = llvm.extractvalue %[[V]][3] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA3:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE3]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R4:.+]] = llvm.insertvalue %[[FMA3]], %[[R3]][3]
 
-// CHECK-NEXT: %[[LINE4:.+]] = llvm.extractvalue %[[V:.+]][4] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE4:.+]] = llvm.extractvalue %[[V]][4] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA4:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE4]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R5:.+]] = llvm.insertvalue %[[FMA4]], %[[R4]][4]

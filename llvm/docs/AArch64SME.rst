@@ -22,26 +22,32 @@ Below we describe the LLVM IR attributes and their relation to the C/C++
 level ACLE attributes:
 
 ``aarch64_pstate_sm_enabled``
-    is used for functions with ``__attribute__((arm_streaming))``
+    is used for functions with ``__arm_streaming``
 
 ``aarch64_pstate_sm_compatible``
-    is used for functions with ``__attribute__((arm_streaming_compatible))``
+    is used for functions with ``__arm_streaming_compatible``
 
 ``aarch64_pstate_sm_body``
-  is used for functions with ``__attribute__((arm_locally_streaming))`` and is
+  is used for functions with ``__arm_locally_streaming`` and is
   only valid on function definitions (not declarations)
 
-``aarch64_pstate_za_new``
-  is used for functions with ``__attribute__((arm_new_za))``
+``aarch64_new_za``
+  is used for functions with ``__arm_new("za")``
 
-``aarch64_pstate_za_shared``
-  is used for functions with ``__attribute__((arm_shared_za))``
+``aarch64_in_za``
+  is used for functions with ``__arm_in("za")``
 
-``aarch64_pstate_za_preserved``
-  is used for functions with ``__attribute__((arm_preserves_za))``
+``aarch64_out_za``
+  is used for functions with ``__arm_out("za")``
+
+``aarch64_inout_za``
+  is used for functions with ``__arm_inout("za")``
+
+``aarch64_preserves_za``
+  is used for functions with ``__arm_preserves("za")``
 
 ``aarch64_expanded_pstate_za``
-  is used for functions with ``__attribute__((arm_new_za))``
+  is used for functions with ``__arm_new_za``
 
 Clang must ensure that the above attributes are added both to the
 function's declaration/definition as well as to their call-sites. This is
@@ -89,11 +95,10 @@ Restrictions on attributes
 * It is not allowed for a function to be decorated with both
   ``aarch64_pstate_sm_compatible`` and ``aarch64_pstate_sm_enabled``.
 
-* It is not allowed for a function to be decorated with both
-  ``aarch64_pstate_za_new`` and ``aarch64_pstate_za_preserved``.
-
-* It is not allowed for a function to be decorated with both
-  ``aarch64_pstate_za_new`` and ``aarch64_pstate_za_shared``.
+* It is not allowed for a function to be decorated with more than one of the
+  following attributes:
+  ``aarch64_new_za``, ``aarch64_in_za``, ``aarch64_out_za``, ``aarch64_inout_za``,
+  ``aarch64_preserves_za``.
 
 These restrictions also apply in the higher level SME ACLE, which means we can
 emit diagnostics in Clang to signal users about incorrect behaviour.
@@ -426,7 +431,7 @@ to toggle PSTATE.ZA using intrinsics. This also makes it simpler to setup a
 lazy-save mechanism for calls to private-ZA functions (i.e. functions that may
 either directly or indirectly clobber ZA state).
 
-For the purpose of handling functions marked with ``aarch64_pstate_za_new``,
+For the purpose of handling functions marked with ``aarch64_new_za``,
 we have introduced a new LLVM IR pass (SMEABIPass) that is run just before
 SelectionDAG. Any such functions dealt with by this pass are marked with
 ``aarch64_expanded_pstate_za``.

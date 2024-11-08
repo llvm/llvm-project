@@ -6,6 +6,51 @@
 ; RUN: llc < %s -mtriple=x86_64-- -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefixes=X64,FASTISEL-X64
 ; RUN: llc < %s -mtriple=x86_64-- -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=X64,GISEL-X64
 
+define i1 @xor_i1(i1 %a, i1 %b) {
+; SDAG-X86-LABEL: xor_i1:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: xor_i1:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; FASTISEL-X86-NEXT:    retl
+;
+; GISEL-X86-LABEL: xor_i1:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    xorb %cl, %al
+; GISEL-X86-NEXT:    # kill: def $al killed $al killed $eax
+; GISEL-X86-NEXT:    retl
+;
+; SDAG-X64-LABEL: xor_i1:
+; SDAG-X64:       # %bb.0:
+; SDAG-X64-NEXT:    movl %edi, %eax
+; SDAG-X64-NEXT:    xorl %esi, %eax
+; SDAG-X64-NEXT:    # kill: def $al killed $al killed $eax
+; SDAG-X64-NEXT:    retq
+;
+; FASTISEL-X64-LABEL: xor_i1:
+; FASTISEL-X64:       # %bb.0:
+; FASTISEL-X64-NEXT:    movl %edi, %eax
+; FASTISEL-X64-NEXT:    xorb %sil, %al
+; FASTISEL-X64-NEXT:    # kill: def $al killed $al killed $eax
+; FASTISEL-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: xor_i1:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    movl %esi, %eax
+; GISEL-X64-NEXT:    xorb %dil, %al
+; GISEL-X64-NEXT:    # kill: def $al killed $al killed $eax
+; GISEL-X64-NEXT:    retq
+  %c = xor i1 %a, %b
+  ret i1 %c
+}
+
 define i8 @xor_i8(i8 %a, i8 %b) {
 ; SDAG-X86-LABEL: xor_i8:
 ; SDAG-X86:       # %bb.0:

@@ -78,32 +78,7 @@ public:
   CreateScriptCommandObject(const char *class_name) override;
 
   StructuredData::ObjectSP
-  CreateScriptedThreadPlan(const char *class_name,
-                           const StructuredDataImpl &args_data,
-                           std::string &error_str,
-                           lldb::ThreadPlanSP thread_plan) override;
-
-  StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
-
-  bool ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,
-                                      Event *event,
-                                      bool &script_error) override;
-
-  bool ScriptedThreadPlanShouldStop(StructuredData::ObjectSP implementor_sp,
-                                    Event *event, bool &script_error) override;
-
-  bool ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp,
-                                 bool &script_error) override;
-
-  lldb::StateType
-  ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
-                                bool &script_error) override;
-
-  bool
-  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
-                                lldb_private::Stream *s,
-                                bool &script_error) override;
 
   StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
@@ -117,24 +92,23 @@ public:
       StructuredData::GenericSP implementor_sp) override;
 
   StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data,
-                         Status &error) override;
-
-  bool ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                                  ExecutionContext &exc_ctx,
-                                  lldb::StreamSP stream_sp) override;
-
-  StructuredData::GenericSP
   CreateFrameRecognizer(const char *class_name) override;
 
   lldb::ValueObjectListSP
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
+  bool ShouldHide(const StructuredData::ObjectSP &implementor,
+                  lldb::StackFrameSP frame_sp) override;
+
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
+  lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
+
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
+
+  lldb::ScriptedThreadPlanInterfaceSP
+  CreateScriptedThreadPlanInterface() override;
 
   lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() override;
 
@@ -182,6 +156,24 @@ public:
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
+  bool RunScriptBasedParsedCommand(
+      StructuredData::GenericSP impl_obj_sp, Args &args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) override;
+
+  std::optional<std::string>
+  GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
+                                     Args &args) override;
+
+  StructuredData::DictionarySP HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) override;
+
+  StructuredData::DictionarySP HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_options,
+      size_t char_in_arg) override;
+
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
 
@@ -212,6 +204,20 @@ public:
 
   bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                    std::string &dest) override;
+                                   
+  StructuredData::ObjectSP
+  GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  StructuredData::ObjectSP
+  GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  bool SetOptionValueForCommandObject(StructuredData::GenericSP cmd_obj_sp,
+                                      ExecutionContext *exe_ctx,
+                                      llvm::StringRef long_option, 
+                                      llvm::StringRef value) override;
+
+  void OptionParsingStartedForCommandObject(
+      StructuredData::GenericSP cmd_obj_sp) override;
 
   bool CheckObjectExists(const char *name) override {
     if (!name || !name[0])

@@ -21,10 +21,17 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer
-    MLIRTestRewrite
-    MLIRTestTransformDialect
-    MLIRTestTransforms
     )
+  set(test_libs
+    ${test_libs}
+    MLIRTestTransformDialect
+    MLIRTestTransforms)
+
+  if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+    set(test_libs
+      ${test_libs}
+      MLIRTestRewrite)
+  endif()
 endif()
 
 set(LIBS
@@ -40,6 +47,7 @@ set(LIBS
   MLIRLspServerLib
   MLIRParser
   MLIRPass
+  MLIRTensorAllExtensions
   MLIRTransforms
   MLIRTransformUtils
   MLIRSupport

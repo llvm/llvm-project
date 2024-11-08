@@ -32,8 +32,8 @@ class UnwindSignalTestCase(TestBase):
         self.assertTrue(
             thread and thread.IsValid(), "Thread should be stopped due to a signal"
         )
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There should be data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There should be data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0),

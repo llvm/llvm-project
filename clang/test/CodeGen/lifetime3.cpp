@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-llvm-passes %s      | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK,O2
-// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-lifetime-markers %s | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK
-// RUN: %clang_cc1 -S -emit-llvm -o - -O0 %s                           | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK 
+// RUN: %clang_cc1 -emit-llvm -o - -O2 -disable-llvm-passes %s      | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK,O2
+// RUN: %clang_cc1 -emit-llvm -o - -O2 -disable-lifetime-markers %s | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK
+// RUN: %clang_cc1 -emit-llvm -o - -O0 %s                           | FileCheck %s --implicit-check-not="call void @llvm.lifetime" --check-prefixes=CHECK 
 
 extern int bar(char *A, int n);
 

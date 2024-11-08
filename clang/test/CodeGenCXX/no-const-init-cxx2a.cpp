@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -std=c++2a | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -std=c++2a -fexperimental-new-constant-interpreter | FileCheck %s
 
 // CHECK-DAG: @p = {{.*}} null
 // CHECK-DAG: @_ZGR1p_ = {{.*}} null

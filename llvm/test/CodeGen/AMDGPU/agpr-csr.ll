@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX90A %s
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX908 %s
 
 ; GCN-LABEL: {{^}}func_empty:
 ; GCN-NOT: buffer_

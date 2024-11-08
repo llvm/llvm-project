@@ -498,3 +498,100 @@ define i1 @orcond.111.inv.all.conds(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.
   %outer.sel = select i1 %not.outer.cond, i1 true, i1 %inner.sel
   ret i1 %outer.sel
 }
+
+define i8 @test_implied_true(i8 %x) {
+; CHECK-LABEL: @test_implied_true(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i8 0, i8 20
+; CHECK-NEXT:    ret i8 [[SEL2]]
+;
+  %cmp1 = icmp slt i8 %x, 10
+  %cmp2 = icmp slt i8 %x, 0
+  %sel1 = select i1 %cmp1, i8 0, i8 5
+  %sel2 = select i1 %cmp2, i8 %sel1, i8 20
+  ret i8 %sel2
+}
+
+define <2 x i8> @test_implied_true_vec(<2 x i8> %x) {
+; CHECK-LABEL: @test_implied_true_vec(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP2]], <2 x i8> zeroinitializer, <2 x i8> splat (i8 20)
+; CHECK-NEXT:    ret <2 x i8> [[SEL2]]
+;
+  %cmp1 = icmp slt <2 x i8> %x, <i8 10, i8 10>
+  %cmp2 = icmp slt <2 x i8> %x, zeroinitializer
+  %sel1 = select <2 x i1> %cmp1, <2 x i8> zeroinitializer, <2 x i8> <i8 5, i8 5>
+  %sel2 = select <2 x i1> %cmp2, <2 x i8> %sel1, <2 x i8> <i8 20, i8 20>
+  ret <2 x i8> %sel2
+}
+
+define i8 @test_implied_true_falseval(i8 %x) {
+; CHECK-LABEL: @test_implied_true_falseval(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i8 20, i8 0
+; CHECK-NEXT:    ret i8 [[SEL2]]
+;
+  %cmp1 = icmp slt i8 %x, 10
+  %cmp2 = icmp sgt i8 %x, 0
+  %sel1 = select i1 %cmp1, i8 0, i8 5
+  %sel2 = select i1 %cmp2, i8 20, i8 %sel1
+  ret i8 %sel2
+}
+
+define i8 @test_implied_false(i8 %x) {
+; CHECK-LABEL: @test_implied_false(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i8 5, i8 20
+; CHECK-NEXT:    ret i8 [[SEL2]]
+;
+  %cmp1 = icmp sgt i8 %x, 10
+  %cmp2 = icmp slt i8 %x, 0
+  %sel1 = select i1 %cmp1, i8 0, i8 5
+  %sel2 = select i1 %cmp2, i8 %sel1, i8 20
+  ret i8 %sel2
+}
+
+; Negative tests
+
+define i8 @test_imply_fail(i8 %x) {
+; CHECK-LABEL: @test_imply_fail(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[X:%.*]], -10
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i8 0, i8 5
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i8 [[SEL1]], i8 20
+; CHECK-NEXT:    ret i8 [[SEL2]]
+;
+  %cmp1 = icmp slt i8 %x, -10
+  %cmp2 = icmp slt i8 %x, 0
+  %sel1 = select i1 %cmp1, i8 0, i8 5
+  %sel2 = select i1 %cmp2, i8 %sel1, i8 20
+  ret i8 %sel2
+}
+
+define <2 x i8> @test_imply_type_mismatch(<2 x i8> %x, i8 %y) {
+; CHECK-LABEL: @test_imply_type_mismatch(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 10)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[SEL1:%.*]] = select <2 x i1> [[CMP1]], <2 x i8> zeroinitializer, <2 x i8> splat (i8 5)
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], <2 x i8> [[SEL1]], <2 x i8> splat (i8 20)
+; CHECK-NEXT:    ret <2 x i8> [[SEL2]]
+;
+  %cmp1 = icmp slt <2 x i8> %x, <i8 10, i8 10>
+  %cmp2 = icmp slt i8 %y, 0
+  %sel1 = select <2 x i1> %cmp1, <2 x i8> zeroinitializer, <2 x i8> <i8 5, i8 5>
+  %sel2 = select i1 %cmp2, <2 x i8> %sel1, <2 x i8> <i8 20, i8 20>
+  ret <2 x i8> %sel2
+}
+
+define <4 x i1> @test_dont_crash(i1 %cond, <4 x i1> %a, <4 x i1> %b) {
+; CHECK-LABEL: @test_dont_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <4 x i1> [[A:%.*]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i1> [[SEL]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i1> [[AND]]
+;
+entry:
+  %sel = select i1 %cond, <4 x i1> %a, <4 x i1> zeroinitializer
+  %and = and <4 x i1> %sel, %b
+  ret <4 x i1> %and
+}

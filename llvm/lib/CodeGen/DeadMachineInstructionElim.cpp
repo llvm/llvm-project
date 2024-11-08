@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
@@ -28,53 +29,60 @@ using namespace llvm;
 STATISTIC(NumDeletes,          "Number of dead instructions deleted");
 
 namespace {
-  class DeadMachineInstructionElim : public MachineFunctionPass {
-    bool runOnMachineFunction(MachineFunction &MF) override;
+class DeadMachineInstructionElimImpl {
+  const MachineRegisterInfo *MRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  LiveRegUnits LivePhysRegs;
 
-    const MachineRegisterInfo *MRI = nullptr;
-    const TargetInstrInfo *TII = nullptr;
-    LiveRegUnits LivePhysRegs;
+public:
+  bool runImpl(MachineFunction &MF);
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    DeadMachineInstructionElim() : MachineFunctionPass(ID) {
-     initializeDeadMachineInstructionElimPass(*PassRegistry::getPassRegistry());
-    }
+private:
+  bool isDead(const MachineInstr *MI) const;
+  bool eliminateDeadMI(MachineFunction &MF);
+};
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+class DeadMachineInstructionElim : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-  private:
-    bool isDead(const MachineInstr *MI) const;
+  DeadMachineInstructionElim() : MachineFunctionPass(ID) {
+    initializeDeadMachineInstructionElimPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool eliminateDeadMI(MachineFunction &MF);
-  };
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    return DeadMachineInstructionElimImpl().runImpl(MF);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+} // namespace
+
+PreservedAnalyses
+DeadMachineInstructionElimPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  if (!DeadMachineInstructionElimImpl().runImpl(MF))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
+
 char DeadMachineInstructionElim::ID = 0;
 char &llvm::DeadMachineInstructionElimID = DeadMachineInstructionElim::ID;
 
 INITIALIZE_PASS(DeadMachineInstructionElim, DEBUG_TYPE,
                 "Remove dead machine instructions", false, false)
 
-bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
-  // Technically speaking inline asm without side effects and no defs can still
-  // be deleted. But there is so much bad inline asm code out there, we should
-  // let them be.
-  if (MI->isInlineAsm())
-    return false;
-
-  // Don't delete frame allocation labels.
-  if (MI->getOpcode() == TargetOpcode::LOCAL_ESCAPE)
-    return false;
-
-  // Don't delete instructions with side effects.
-  bool SawStore = false;
-  if (!MI->isSafeToMove(nullptr, SawStore) && !MI->isPHI())
-    return false;
-
-  // Examine each operand.
+bool DeadMachineInstructionElimImpl::isDead(const MachineInstr *MI) const {
+  // Instructions without side-effects are dead iff they only define dead regs.
+  // This function is hot and this loop returns early in the common case,
+  // so only perform additional checks before this if absolutely necessary.
   for (const MachineOperand &MO : MI->all_defs()) {
     Register Reg = MO.getReg();
     if (Reg.isPhysical()) {
@@ -98,14 +106,21 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
     }
   }
 
-  // If there are no defs with uses, the instruction is dead.
-  return true;
-}
-
-bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+  // Technically speaking inline asm without side effects and no defs can still
+  // be deleted. But there is so much bad inline asm code out there, we should
+  // let them be.
+  if (MI->isInlineAsm())
     return false;
 
+  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
+  if (MI->isLifetimeMarker())
+    return true;
+
+  // If there are no defs with uses, the instruction might be dead.
+  return MI->wouldBeTriviallyDead();
+}
+
+bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
   const TargetSubtargetInfo &ST = MF.getSubtarget();
@@ -118,7 +133,7 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
   return AnyChanges;
 }
 
-bool DeadMachineInstructionElim::eliminateDeadMI(MachineFunction &MF) {
+bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
   bool AnyChanges = false;
 
   // Loop over all instructions in all blocks, from bottom to top, so that it's

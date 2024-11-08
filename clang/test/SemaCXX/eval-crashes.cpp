@@ -25,11 +25,9 @@ namespace pr33140_0b {
 }
 
 namespace pr33140_2 {
-  // FIXME: The declaration of 'b' below should lifetime-extend two int
-  // temporaries.
-  struct A { int &&r = 0; }; // expected-note 2{{initializing field 'r' with default member initializer}}
+  struct A { int &&r = 0; };
   struct B { A x, y; };
-  B b = {}; // expected-warning 2{{not supported}}
+  B b = {};
 }
 
 namespace pr33140_3 {
@@ -60,4 +58,14 @@ struct array {
   int (&data)[2];
   array() : data(*new int[1][2]) {}
 };
+}
+
+namespace GH96670 {
+inline constexpr long ullNil = -1;
+
+template<typename T = long, const T &Nil = ullNil>
+struct Test {};
+
+inline constexpr long lNil = -1;
+Test<long, lNil> c;
 }

@@ -29,6 +29,7 @@ module m
     type(t1) x1
     !WARNING: 'x1a' of derived type 't1' does not have a FINAL subroutine for its rank (1)
     type(t1), allocatable :: x1a(:)
+    type(t1), parameter :: namedConst = t1() ! ok
     !ERROR: 'x2' may not be a local variable in a pure subprogram
     !BECAUSE: 'x2' has an impure FINAL procedure 'final'
     type(t2) x2

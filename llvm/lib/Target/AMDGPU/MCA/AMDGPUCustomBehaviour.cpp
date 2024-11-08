@@ -13,22 +13,23 @@
 
 #include "AMDGPUCustomBehaviour.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/WithColor.h"
 
-namespace llvm {
-namespace mca {
+namespace llvm::mca {
 
 void AMDGPUInstrPostProcess::postProcessInstruction(
     std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
   switch (MCI.getOpcode()) {
   case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
   case AMDGPU::S_WAITCNT_EXPCNT:
   case AMDGPU::S_WAITCNT_LGKMCNT:
   case AMDGPU::S_WAITCNT_VMCNT:
   case AMDGPU::S_WAITCNT_VSCNT:
+  case AMDGPU::S_WAITCNT_VSCNT_soft:
   case AMDGPU::S_WAITCNT_EXPCNT_gfx10:
   case AMDGPU::S_WAITCNT_LGKMCNT_gfx10:
   case AMDGPU::S_WAITCNT_VMCNT_gfx10:
@@ -77,10 +78,12 @@ unsigned AMDGPUCustomBehaviour::checkCustomHazard(ArrayRef<InstRef> IssuedInst,
   default:
     return 0;
   case AMDGPU::S_WAITCNT: // This instruction
+  case AMDGPU::S_WAITCNT_soft:
   case AMDGPU::S_WAITCNT_EXPCNT:
   case AMDGPU::S_WAITCNT_LGKMCNT:
   case AMDGPU::S_WAITCNT_VMCNT:
-  case AMDGPU::S_WAITCNT_VSCNT: // to this instruction are all pseudo.
+  case AMDGPU::S_WAITCNT_VSCNT:
+  case AMDGPU::S_WAITCNT_VSCNT_soft: // to this instruction are all pseudo.
   case AMDGPU::S_WAITCNT_EXPCNT_gfx10:
   case AMDGPU::S_WAITCNT_LGKMCNT_gfx10:
   case AMDGPU::S_WAITCNT_VMCNT_gfx10:
@@ -328,8 +331,7 @@ bool AMDGPUCustomBehaviour::isAlwaysGDS(uint16_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT || isGWS(Opcode);
 }
 
-} // namespace mca
-} // namespace llvm
+} // namespace llvm::mca
 
 using namespace llvm;
 using namespace mca;

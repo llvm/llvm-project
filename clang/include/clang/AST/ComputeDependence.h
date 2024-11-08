@@ -63,6 +63,7 @@ class ArrayTypeTraitExpr;
 class ExpressionTraitExpr;
 class CXXNoexceptExpr;
 class PackExpansionExpr;
+class PackIndexingExpr;
 class SubstNonTypeTemplateParmExpr;
 class CoroutineSuspendExpr;
 class DependentCoawaitExpr;
@@ -93,7 +94,7 @@ class DesignatedInitExpr;
 class ParenListExpr;
 class PseudoObjectExpr;
 class AtomicExpr;
-class OMPArraySectionExpr;
+class ArraySectionExpr;
 class OMPArrayShapingExpr;
 class OMPIteratorExpr;
 class ObjCArrayLiteral;
@@ -106,6 +107,7 @@ class ObjCSubscriptRefExpr;
 class ObjCIsaExpr;
 class ObjCIndirectCopyRestoreExpr;
 class ObjCMessageExpr;
+class OpenACCAsteriskSizeExpr;
 
 // The following functions are called from constructors of `Expr`, so they
 // should not access anything beyond basic
@@ -131,7 +133,8 @@ ExprDependence computeDependence(ArrayInitLoopExpr *E);
 ExprDependence computeDependence(ImplicitValueInitExpr *E);
 ExprDependence computeDependence(InitListExpr *E);
 ExprDependence computeDependence(ExtVectorElementExpr *E);
-ExprDependence computeDependence(BlockExpr *E);
+ExprDependence computeDependence(BlockExpr *E,
+                                 bool ContainsUnexpandedParameterPack);
 ExprDependence computeDependence(AsTypeExpr *E);
 ExprDependence computeDependence(DeclRefExpr *E, const ASTContext &Ctx);
 ExprDependence computeDependence(RecoveryExpr *E);
@@ -150,6 +153,7 @@ ExprDependence computeDependence(ArrayTypeTraitExpr *E);
 ExprDependence computeDependence(ExpressionTraitExpr *E);
 ExprDependence computeDependence(CXXNoexceptExpr *E, CanThrowResult CT);
 ExprDependence computeDependence(PackExpansionExpr *E);
+ExprDependence computeDependence(PackIndexingExpr *E);
 ExprDependence computeDependence(SubstNonTypeTemplateParmExpr *E);
 ExprDependence computeDependence(CoroutineSuspendExpr *E);
 ExprDependence computeDependence(DependentCoawaitExpr *E);
@@ -187,7 +191,7 @@ ExprDependence computeDependence(ParenListExpr *E);
 ExprDependence computeDependence(PseudoObjectExpr *E);
 ExprDependence computeDependence(AtomicExpr *E);
 
-ExprDependence computeDependence(OMPArraySectionExpr *E);
+ExprDependence computeDependence(ArraySectionExpr *E);
 ExprDependence computeDependence(OMPArrayShapingExpr *E);
 ExprDependence computeDependence(OMPIteratorExpr *E);
 
@@ -201,6 +205,7 @@ ExprDependence computeDependence(ObjCSubscriptRefExpr *E);
 ExprDependence computeDependence(ObjCIsaExpr *E);
 ExprDependence computeDependence(ObjCIndirectCopyRestoreExpr *E);
 ExprDependence computeDependence(ObjCMessageExpr *E);
+ExprDependence computeDependence(OpenACCAsteriskSizeExpr *E);
 
 } // namespace clang
 #endif

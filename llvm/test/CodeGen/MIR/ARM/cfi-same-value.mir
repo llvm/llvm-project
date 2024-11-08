@@ -1,12 +1,12 @@
 # RUN: llc -mtriple=arm-linux-unknown-gnueabi -run-pass none -o - %s | FileCheck %s
 
 --- |
-  declare void @dummy_use(i32*, i32)
+  declare void @dummy_use(ptr, i32)
 
   define void @test_basic() #0 {
   entry:
     %mem = alloca i32, i32 10
-    call void @dummy_use(i32* %mem, i32 10)
+    call void @dummy_use(ptr %mem, i32 10)
     ret void
   }
 

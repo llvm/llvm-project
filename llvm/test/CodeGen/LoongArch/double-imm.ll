@@ -36,15 +36,13 @@ define double @f64_constant_pi() nounwind {
 ; LA32-LABEL: f64_constant_pi:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI2_0)
-; LA32-NEXT:    fld.d $fa0, $a0, 0
+; LA32-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI2_0)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f64_constant_pi:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI2_0)
-; LA64-NEXT:    fld.d $fa0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI2_0)
 ; LA64-NEXT:    ret
   ret double 3.1415926535897931159979634685441851615905761718750
 }
@@ -61,9 +59,7 @@ define double @f64_add_fimm1(double %a) nounwind {
 ;
 ; LA64-LABEL: f64_add_fimm1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $zero, 1
-; LA64-NEXT:    movgr2fr.d $fa1, $a0
-; LA64-NEXT:    ffint.d.l $fa1, $fa1
+; LA64-NEXT:    vldi $vr1, -912
 ; LA64-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LA64-NEXT:    ret
   %1 = fadd double %a, 1.0
@@ -81,9 +77,7 @@ define double @f64_positive_fimm1() nounwind {
 ;
 ; LA64-LABEL: f64_positive_fimm1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $zero, 1
-; LA64-NEXT:    movgr2fr.d $fa0, $a0
-; LA64-NEXT:    ffint.d.l $fa0, $fa0
+; LA64-NEXT:    vldi $vr0, -912
 ; LA64-NEXT:    ret
   ret double 1.0
 }

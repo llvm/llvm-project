@@ -21,26 +21,17 @@ namespace llvm {
 class AsmPrinter;
 class DILocation;
 
-class PseudoProbeHandler : public AsmPrinterHandler {
+class PseudoProbeHandler {
   // Target of pseudo probe emission.
   AsmPrinter *Asm;
   // Name to GUID map, used as caching/memoization for speed.
   DenseMap<StringRef, uint64_t> NameGuidMap;
 
 public:
-  PseudoProbeHandler(AsmPrinter *A) : Asm(A){};
-  ~PseudoProbeHandler() override;
+  PseudoProbeHandler(AsmPrinter *A) : Asm(A) {};
 
   void emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
                        uint64_t Attr, const DILocation *DebugLoc);
-
-  // Unused.
-  void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
-  void endModule() override {}
-  void beginFunction(const MachineFunction *MF) override {}
-  void endFunction(const MachineFunction *MF) override {}
-  void beginInstruction(const MachineInstr *MI) override {}
-  void endInstruction() override {}
 };
 
 } // namespace llvm

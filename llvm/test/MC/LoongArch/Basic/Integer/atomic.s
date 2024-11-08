@@ -21,6 +21,14 @@ ll.w $tp, $s4, 220
 # CHECK-ASM: encoding: [0xd3,0x39,0x00,0x21]
 sc.w $t7, $t2, 56
 
+# CHECK-ASM-AND-OBJ: llacq.w $t1, $t2
+# CHECK-ASM: encoding: [0xcd,0x81,0x57,0x38]
+llacq.w $t1, $t2
+
+# CHECK-ASM-AND-OBJ: screl.w $t1, $t2
+# CHECK-ASM: encoding: [0xcd,0x85,0x57,0x38]
+screl.w $t1, $t2
+
 
 
 #############################################################
@@ -28,6 +36,14 @@ sc.w $t7, $t2, 56
 #############################################################
 
 .ifdef LA64
+
+# CHECK64-ASM-AND-OBJ: amswap.b $a2, $t0, $s1
+# CHECK64-ASM: encoding: [0x06,0x33,0x5c,0x38]
+amswap.b $a2, $t0, $s1, 0
+
+# CHECK64-ASM-AND-OBJ: amswap.h $a2, $t0, $s1
+# CHECK64-ASM: encoding: [0x06,0xb3,0x5c,0x38]
+amswap.h $a2, $t0, $s1, 0
 
 # CHECK64-ASM-AND-OBJ: amswap.w $a2, $t0, $s1
 # CHECK64-ASM: encoding: [0x06,0x33,0x60,0x38]
@@ -41,6 +57,14 @@ amswap.w $zero, $t0, $zero
 # CHECK64-ASM: encoding: [0xa0,0x00,0x6a,0x38]
 amadd_db.w $zero, $zero, $a1
 
+# CHECK64-ASM-AND-OBJ: amswap.b $a2, $t0, $s1
+# CHECK64-ASM: encoding: [0x06,0x33,0x5c,0x38]
+amswap.b $a2, $t0, $s1
+
+# CHECK64-ASM-AND-OBJ: amswap.h $a2, $t0, $s1
+# CHECK64-ASM: encoding: [0x06,0xb3,0x5c,0x38]
+amswap.h $a2, $t0, $s1
+
 # CHECK64-ASM-AND-OBJ: amswap.w $a2, $t0, $s1
 # CHECK64-ASM: encoding: [0x06,0x33,0x60,0x38]
 amswap.w $a2, $t0, $s1
@@ -48,6 +72,14 @@ amswap.w $a2, $t0, $s1
 # CHECK64-ASM-AND-OBJ: amswap.d $tp, $t2, $fp
 # CHECK64-ASM: encoding: [0xc2,0xba,0x60,0x38]
 amswap.d $tp, $t2, $fp
+
+# CHECK64-ASM-AND-OBJ: amadd.b $a4, $t0, $r21
+# CHECK64-ASM: encoding: [0xa8,0x32,0x5d,0x38]
+amadd.b $a4, $t0, $r21
+
+# CHECK64-ASM-AND-OBJ: amadd.h $a1, $t5, $s6
+# CHECK64-ASM: encoding: [0xa5,0xc7,0x5d,0x38]
+amadd.h $a1, $t5, $s6
 
 # CHECK64-ASM-AND-OBJ: amadd.w $a4, $t0, $r21
 # CHECK64-ASM: encoding: [0xa8,0x32,0x61,0x38]
@@ -113,6 +145,14 @@ ammin.wu $a4, $t6, $s7
 # CHECK64-ASM: encoding: [0x27,0xc3,0x68,0x38]
 ammin.du $a3, $t4, $s2
 
+# CHECK64-ASM-AND-OBJ: amswap_db.b $a2, $t0, $s1
+# CHECK64-ASM: encoding: [0x06,0x33,0x5e,0x38]
+amswap_db.b $a2, $t0, $s1
+
+# CHECK64-ASM-AND-OBJ: amswap_db.h $tp, $t2, $fp
+# CHECK64-ASM: encoding: [0xc2,0xba,0x5e,0x38]
+amswap_db.h $tp, $t2, $fp
+
 # CHECK64-ASM-AND-OBJ: amswap_db.w $a2, $t0, $s1
 # CHECK64-ASM: encoding: [0x06,0x33,0x69,0x38]
 amswap_db.w $a2, $t0, $s1
@@ -120,6 +160,14 @@ amswap_db.w $a2, $t0, $s1
 # CHECK64-ASM-AND-OBJ: amswap_db.d $tp, $t2, $fp
 # CHECK64-ASM: encoding: [0xc2,0xba,0x69,0x38]
 amswap_db.d $tp, $t2, $fp
+
+# CHECK64-ASM-AND-OBJ: amadd_db.b $zero, $zero, $a1
+# CHECK64-ASM: encoding: [0xa0,0x00,0x5f,0x38]
+amadd_db.b $zero, $zero, $a1
+
+# CHECK64-ASM-AND-OBJ: amadd_db.h $a4, $t0, $r21
+# CHECK64-ASM: encoding: [0xa8,0xb2,0x5f,0x38]
+amadd_db.h $a4, $t0, $r21
 
 # CHECK64-ASM-AND-OBJ: amadd_db.w $a4, $t0, $r21
 # CHECK64-ASM: encoding: [0xa8,0x32,0x6a,0x38]
@@ -185,6 +233,38 @@ ammin_db.wu $a4, $t6, $s7
 # CHECK64-ASM: encoding: [0x27,0xc3,0x71,0x38]
 ammin_db.du $a3, $t4, $s2
 
+# CHECK64-ASM-AND-OBJ: amcas.b $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0x39,0x58,0x38]
+amcas.b $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas.h $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0xb9,0x58,0x38]
+amcas.h $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas.w $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0x39,0x59,0x38]
+amcas.w $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas.d $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0xb9,0x59,0x38]
+amcas.d $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas_db.b $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0x39,0x5a,0x38]
+amcas_db.b $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas_db.h $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0xb9,0x5a,0x38]
+amcas_db.h $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas_db.w $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0x39,0x5b,0x38]
+amcas_db.w $t1, $t2, $t3
+
+# CHECK64-ASM-AND-OBJ: amcas_db.d $t1, $t2, $t3
+# CHECK64-ASM: encoding: [0xed,0xb9,0x5b,0x38]
+amcas_db.d $t1, $t2, $t3
+
 # CHECK64-ASM-AND-OBJ: ll.d $s2, $s4, 16
 # CHECK64-ASM: encoding: [0x79,0x13,0x00,0x22]
 ll.d $s2, $s4, 16
@@ -192,6 +272,18 @@ ll.d $s2, $s4, 16
 # CHECK64-ASM-AND-OBJ: sc.d $t5, $t5, 244
 # CHECK64-ASM: encoding: [0x31,0xf6,0x00,0x23]
 sc.d $t5, $t5, 244
+
+# CHECK64-ASM-AND-OBJ: sc.q $t7, $t2, $t5
+# CHECK64-ASM: encoding: [0x33,0x3a,0x57,0x38]
+sc.q $t7, $t2, $t5
+
+# CHECK64-ASM-AND-OBJ: llacq.d $t1, $t2
+# CHECK64-ASM: encoding: [0xcd,0x89,0x57,0x38]
+llacq.d $t1, $t2
+
+# CHECK64-ASM-AND-OBJ: screl.d $t1, $t2
+# CHECK64-ASM: encoding: [0xcd,0x8d,0x57,0x38]
+screl.d $t1, $t2
 
 .endif
 

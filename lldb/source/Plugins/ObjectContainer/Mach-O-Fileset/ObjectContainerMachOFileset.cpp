@@ -159,9 +159,9 @@ ParseFileset(DataExtractor &data, mach_header header,
       fileset_entry_command entry;
       data.CopyData(load_cmd_offset, sizeof(fileset_entry_command), &entry);
       lldb::offset_t entry_id_offset = load_cmd_offset + entry.entry_id.offset;
-      const char *id = data.GetCStr(&entry_id_offset);
-      entries.emplace_back(entry.vmaddr + slide, entry.fileoff,
-                           std::string(id));
+      if (const char *id = data.GetCStr(&entry_id_offset))
+        entries.emplace_back(entry.vmaddr + slide, entry.fileoff,
+                             std::string(id));
     }
 
     offset = load_cmd_offset + lc.cmdsize;

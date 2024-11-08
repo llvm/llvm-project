@@ -6477,42 +6477,42 @@ vec_cnttz(__vector unsigned long long __a) {
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_popcnt(__vector signed char __a) {
-  return __builtin_s390_vpopctb((__vector unsigned char)__a);
+  return __builtin_elementwise_popcount((__vector unsigned char)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_popcnt(__vector unsigned char __a) {
-  return __builtin_s390_vpopctb(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned short
 vec_popcnt(__vector signed short __a) {
-  return __builtin_s390_vpopcth((__vector unsigned short)__a);
+  return __builtin_elementwise_popcount((__vector unsigned short)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned short
 vec_popcnt(__vector unsigned short __a) {
-  return __builtin_s390_vpopcth(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned int
 vec_popcnt(__vector signed int __a) {
-  return __builtin_s390_vpopctf((__vector unsigned int)__a);
+  return __builtin_elementwise_popcount((__vector unsigned int)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned int
 vec_popcnt(__vector unsigned int __a) {
-  return __builtin_s390_vpopctf(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_popcnt(__vector signed long long __a) {
-  return __builtin_s390_vpopctg((__vector unsigned long long)__a);
+  return __builtin_elementwise_popcount((__vector unsigned long long)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_popcnt(__vector unsigned long long __a) {
-  return __builtin_s390_vpopctg(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 /*-- vec_rl -----------------------------------------------------------------*/
@@ -8359,7 +8359,9 @@ vec_min(__vector double __a, __vector double __b) {
 
 static inline __ATTRS_ai __vector unsigned char
 vec_add_u128(__vector unsigned char __a, __vector unsigned char __b) {
-  return __builtin_s390_vaq(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         ((__int128)__a + (__int128)__b);
 }
 
 /*-- vec_addc ---------------------------------------------------------------*/
@@ -8388,7 +8390,9 @@ vec_addc(__vector unsigned long long __a, __vector unsigned long long __b) {
 
 static inline __ATTRS_ai __vector unsigned char
 vec_addc_u128(__vector unsigned char __a, __vector unsigned char __b) {
-  return __builtin_s390_vaccq(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vaccq((unsigned __int128)__a, (unsigned __int128)__b);
 }
 
 /*-- vec_adde_u128 ----------------------------------------------------------*/
@@ -8396,7 +8400,10 @@ vec_addc_u128(__vector unsigned char __a, __vector unsigned char __b) {
 static inline __ATTRS_ai __vector unsigned char
 vec_adde_u128(__vector unsigned char __a, __vector unsigned char __b,
               __vector unsigned char __c) {
-  return __builtin_s390_vacq(__a, __b, __c);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vacq((unsigned __int128)__a, (unsigned __int128)__b,
+                             (unsigned __int128)__c);
 }
 
 /*-- vec_addec_u128 ---------------------------------------------------------*/
@@ -8404,7 +8411,10 @@ vec_adde_u128(__vector unsigned char __a, __vector unsigned char __b,
 static inline __ATTRS_ai __vector unsigned char
 vec_addec_u128(__vector unsigned char __a, __vector unsigned char __b,
                __vector unsigned char __c) {
-  return __builtin_s390_vacccq(__a, __b, __c);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vacccq((unsigned __int128)__a, (unsigned __int128)__b,
+                               (unsigned __int128)__c);
 }
 
 /*-- vec_avg ----------------------------------------------------------------*/
@@ -8478,7 +8488,9 @@ vec_gfmsum(__vector unsigned int __a, __vector unsigned int __b) {
 static inline __ATTRS_o_ai __vector unsigned char
 vec_gfmsum_128(__vector unsigned long long __a,
                __vector unsigned long long __b) {
-  return __builtin_s390_vgfmg(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vgfmg(__a, __b);
 }
 
 /*-- vec_gfmsum_accum -------------------------------------------------------*/
@@ -8507,7 +8519,9 @@ static inline __ATTRS_o_ai __vector unsigned char
 vec_gfmsum_accum_128(__vector unsigned long long __a,
                      __vector unsigned long long __b,
                      __vector unsigned char __c) {
-  return __builtin_s390_vgfmag(__a, __b, __c);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vgfmag(__a, __b, (unsigned __int128)__c);
 }
 
 /*-- vec_mladd --------------------------------------------------------------*/
@@ -8797,15 +8811,24 @@ vec_mulo(__vector unsigned int __a, __vector unsigned int __b) {
 /*-- vec_msum_u128 ----------------------------------------------------------*/
 
 #if __ARCH__ >= 12
+extern __ATTRS_o __vector unsigned char
+vec_msum_u128(__vector unsigned long long __a, __vector unsigned long long __b,
+              __vector unsigned char __c, int __d)
+  __constant_range(__d, 0, 15);
+
 #define vec_msum_u128(X, Y, Z, W) \
-  ((__vector unsigned char)__builtin_s390_vmslg((X), (Y), (Z), (W)));
+  ((__typeof__((vec_msum_u128)((X), (Y), (Z), (W)))) \
+   (unsigned __int128 __attribute__((__vector_size__(16)))) \
+   __builtin_s390_vmslg((X), (Y), (unsigned __int128)(Z), (W)))
 #endif
 
 /*-- vec_sub_u128 -----------------------------------------------------------*/
 
 static inline __ATTRS_ai __vector unsigned char
 vec_sub_u128(__vector unsigned char __a, __vector unsigned char __b) {
-  return __builtin_s390_vsq(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         ((__int128)__a - (__int128)__b);
 }
 
 /*-- vec_subc ---------------------------------------------------------------*/
@@ -8834,7 +8857,9 @@ vec_subc(__vector unsigned long long __a, __vector unsigned long long __b) {
 
 static inline __ATTRS_ai __vector unsigned char
 vec_subc_u128(__vector unsigned char __a, __vector unsigned char __b) {
-  return __builtin_s390_vscbiq(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vscbiq((unsigned __int128)__a, (unsigned __int128)__b);
 }
 
 /*-- vec_sube_u128 ----------------------------------------------------------*/
@@ -8842,7 +8867,10 @@ vec_subc_u128(__vector unsigned char __a, __vector unsigned char __b) {
 static inline __ATTRS_ai __vector unsigned char
 vec_sube_u128(__vector unsigned char __a, __vector unsigned char __b,
               __vector unsigned char __c) {
-  return __builtin_s390_vsbiq(__a, __b, __c);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vsbiq((unsigned __int128)__a, (unsigned __int128)__b,
+                              (unsigned __int128)__c);
 }
 
 /*-- vec_subec_u128 ---------------------------------------------------------*/
@@ -8850,7 +8878,10 @@ vec_sube_u128(__vector unsigned char __a, __vector unsigned char __b,
 static inline __ATTRS_ai __vector unsigned char
 vec_subec_u128(__vector unsigned char __a, __vector unsigned char __b,
                __vector unsigned char __c) {
-  return __builtin_s390_vsbcbiq(__a, __b, __c);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vsbcbiq((unsigned __int128)__a, (unsigned __int128)__b,
+                                (unsigned __int128)__c);
 }
 
 /*-- vec_sum2 ---------------------------------------------------------------*/
@@ -8869,12 +8900,16 @@ vec_sum2(__vector unsigned int __a, __vector unsigned int __b) {
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_sum_u128(__vector unsigned int __a, __vector unsigned int __b) {
-  return __builtin_s390_vsumqf(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vsumqf(__a, __b);
 }
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_sum_u128(__vector unsigned long long __a, __vector unsigned long long __b) {
-  return __builtin_s390_vsumqg(__a, __b);
+  return (__vector unsigned char)
+         (unsigned __int128 __attribute__((__vector_size__(16))))
+         __builtin_s390_vsumqg(__a, __b);
 }
 
 /*-- vec_sum4 ---------------------------------------------------------------*/

@@ -5,7 +5,7 @@
 ; inserted at a point where LR is live.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 define hidden void @_ZTv0_n24_N2C6D1Ev(ptr %this) minsize sspreq "target-features"="+harden-sls-retbr" {
 ; CHECK-LABEL: _ZTv0_n24_N2C6D1Ev:
@@ -18,7 +18,8 @@ define hidden void @_ZTv0_n24_N2C6D1Ev(ptr %this) minsize sspreq "target-feature
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN2C6D1Ev
 ; CHECK-NEXT:    dsb sy
 ; CHECK-NEXT:    isb
@@ -45,7 +46,8 @@ define hidden void @_ZTv0_n24_N2C6D0Ev(ptr %this) minsize sspreq "target-feature
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN2C6D0Ev
 ; CHECK-NEXT:    dsb sy
 ; CHECK-NEXT:    isb
@@ -71,7 +73,8 @@ define hidden void @_ZTv0_n24_N3C10D1Ev(ptr %this) minsize sspreq "target-featur
 ; CHECK-NEXT:    b.ne .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN3C10D1Ev
 ; CHECK-NEXT:    dsb sy
 ; CHECK-NEXT:    isb
@@ -97,7 +100,8 @@ define hidden void @_ZTv0_n24_N3C10D0Ev(ptr %this) minsize sspreq "target-featur
 ; CHECK-NEXT:    b.ne .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_1
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b _ZN3C10D0Ev
 ; CHECK-NEXT:    dsb sy
 ; CHECK-NEXT:    isb

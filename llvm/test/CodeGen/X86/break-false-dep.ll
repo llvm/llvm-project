@@ -138,7 +138,7 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; SSE-LINUX-NEXT:    movl $1, %eax
 ; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
 ; SSE-LINUX-NEXT:    xorps %xmm1, %xmm1
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB6_3: # %for.body
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    xorps %xmm2, %xmm2
@@ -167,7 +167,7 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; SSE-WIN-NEXT:    movl $1, %eax
 ; SSE-WIN-NEXT:    xorps %xmm0, %xmm0
 ; SSE-WIN-NEXT:    xorps %xmm1, %xmm1
-; SSE-WIN-NEXT:    .p2align 4, 0x90
+; SSE-WIN-NEXT:    .p2align 4
 ; SSE-WIN-NEXT:  .LBB6_3: # %for.body
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    xorps %xmm2, %xmm2
@@ -196,7 +196,7 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; AVX1-NEXT:    movl $1, %eax
 ; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB6_3: # %for.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vcvtsi2ss %eax, %xmm4, %xmm2
@@ -223,7 +223,7 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; AVX512VL-NEXT:    movl $1, %eax
 ; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    .p2align 4, 0x90
+; AVX512VL-NEXT:    .p2align 4
 ; AVX512VL-NEXT:  .LBB6_3: # %for.body
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VL-NEXT:    vcvtsi2ss %eax, %xmm3, %xmm2
@@ -276,7 +276,7 @@ define i64 @loopdep2(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movq (%rdi), %rax
 ; SSE-LINUX-NEXT:    movl $1, %ecx
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB7_1: # %loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
@@ -310,7 +310,7 @@ define i64 @loopdep2(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-WIN-NEXT:    movq (%rcx), %rax
 ; SSE-WIN-NEXT:    movl $1, %ecx
-; SSE-WIN-NEXT:    .p2align 4, 0x90
+; SSE-WIN-NEXT:    .p2align 4
 ; SSE-WIN-NEXT:  .LBB7_1: # %loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    xorps %xmm0, %xmm0
@@ -355,7 +355,7 @@ define i64 @loopdep2(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    movq (%rcx), %rax
 ; AVX-NEXT:    movl $1, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB7_1: # %loop
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -418,12 +418,12 @@ define dso_local void @loopdep3() {
 ; SSE-LINUX-LABEL: loopdep3:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    xorl %eax, %eax
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; SSE-LINUX-NEXT:    # =>This Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    # Child Loop BB8_2 Depth 2
 ; SSE-LINUX-NEXT:    movq $-4096, %rcx # imm = 0xF000
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB8_2: # %for.body3
 ; SSE-LINUX-NEXT:    # Parent Loop BB8_1 Depth=1
 ; SSE-LINUX-NEXT:    # => This Inner Loop Header: Depth=2
@@ -478,13 +478,13 @@ define dso_local void @loopdep3() {
 ; SSE-WIN-NEXT:    leaq y(%rip), %r8
 ; SSE-WIN-NEXT:    leaq z(%rip), %r9
 ; SSE-WIN-NEXT:    leaq w(%rip), %r10
-; SSE-WIN-NEXT:    .p2align 4, 0x90
+; SSE-WIN-NEXT:    .p2align 4
 ; SSE-WIN-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; SSE-WIN-NEXT:    # =>This Loop Header: Depth=1
 ; SSE-WIN-NEXT:    # Child Loop BB8_2 Depth 2
 ; SSE-WIN-NEXT:    movq %rcx, %r11
 ; SSE-WIN-NEXT:    xorl %esi, %esi
-; SSE-WIN-NEXT:    .p2align 4, 0x90
+; SSE-WIN-NEXT:    .p2align 4
 ; SSE-WIN-NEXT:  .LBB8_2: # %for.body3
 ; SSE-WIN-NEXT:    # Parent Loop BB8_1 Depth=1
 ; SSE-WIN-NEXT:    # => This Inner Loop Header: Depth=2
@@ -554,13 +554,13 @@ define dso_local void @loopdep3() {
 ; AVX-NEXT:    leaq y(%rip), %r8
 ; AVX-NEXT:    leaq z(%rip), %r9
 ; AVX-NEXT:    leaq w(%rip), %r10
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; AVX-NEXT:    # =>This Loop Header: Depth=1
 ; AVX-NEXT:    # Child Loop BB8_2 Depth 2
 ; AVX-NEXT:    movq %rcx, %r11
 ; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB8_2: # %for.body3
 ; AVX-NEXT:    # Parent Loop BB8_1 Depth=1
 ; AVX-NEXT:    # => This Inner Loop Header: Depth=2
@@ -1114,7 +1114,7 @@ define i64 @loopclearence(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movq (%rdi), %rax
 ; SSE-LINUX-NEXT:    movl $1, %ecx
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB12_1: # %loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    xorps %xmm4, %xmm4
@@ -1155,7 +1155,7 @@ define i64 @loopclearence(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-WIN-NEXT:    movaps %xmm8, (%rsp) # 16-byte Spill
 ; SSE-WIN-NEXT:    movq (%rcx), %rax
 ; SSE-WIN-NEXT:    movl $1, %ecx
-; SSE-WIN-NEXT:    .p2align 4, 0x90
+; SSE-WIN-NEXT:    .p2align 4
 ; SSE-WIN-NEXT:  .LBB12_1: # %loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
@@ -1205,7 +1205,7 @@ define i64 @loopclearence(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    movq (%rcx), %rax
 ; AVX-NEXT:    movl $1, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB12_1: # %loop
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vcvtsi2sd %rcx, %xmm5, %xmm4
@@ -1288,7 +1288,7 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-LINUX-NEXT:    #NO_APP
 ; SSE-LINUX-NEXT:    movl $1, %eax
 ; SSE-LINUX-NEXT:    xorl %ecx, %ecx
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB13_1: # %inner_loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    movq %rcx, %r8
@@ -1360,7 +1360,7 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    movl $1, %r8d
 ; SSE-WIN-NEXT:    xorl %r9d, %r9d
-; SSE-WIN-NEXT:    .p2align 4, 0x90
+; SSE-WIN-NEXT:    .p2align 4
 ; SSE-WIN-NEXT:  .LBB13_1: # %inner_loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    movq %r9, %r10
@@ -1443,7 +1443,7 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX1-NEXT:    #NO_APP
 ; AVX1-NEXT:    movl $1, %r8d
 ; AVX1-NEXT:    xorl %r9d, %r9d
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB13_1: # %inner_loop
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    movq %r9, %r10
@@ -1523,7 +1523,7 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX512VL-NEXT:    #NO_APP
 ; AVX512VL-NEXT:    movl $1, %r8d
 ; AVX512VL-NEXT:    xorl %r9d, %r9d
-; AVX512VL-NEXT:    .p2align 4, 0x90
+; AVX512VL-NEXT:    .p2align 4
 ; AVX512VL-NEXT:  .LBB13_1: # %inner_loop
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VL-NEXT:    movq %r9, %r10

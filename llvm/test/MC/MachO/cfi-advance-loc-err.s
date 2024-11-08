@@ -9,6 +9,11 @@ _foo:
   subq $8, %rsp
   .cfi_adjust_cfa_offset 8
 
+  .alt_entry _bar
+_bar: # alt_entry label can appear here as it is not an atom
+  addq $8, %rsp
+  .cfi_adjust_cfa_offset -8
+
 tmp0: # non-private label cannot appear here
   addq $8, %rsp
 # CHECK: :[[#@LINE+1]]:3: error: invalid CFI advance_loc expression

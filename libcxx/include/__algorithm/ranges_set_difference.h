@@ -30,6 +30,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -39,9 +42,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using set_difference_result = in_out_result<_InIter, _OutIter>;
 
-namespace __set_difference {
-
-struct __fn {
+struct __set_difference {
   template <input_iterator _InIter1,
             sentinel_for<_InIter1> _Sent1,
             input_iterator _InIter2,
@@ -90,14 +91,15 @@ struct __fn {
   }
 };
 
-} // namespace __set_difference
-
 inline namespace __cpo {
-inline constexpr auto set_difference = __set_difference::__fn{};
+inline constexpr auto set_difference = __set_difference{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
+
 #endif // _LIBCPP___ALGORITHM_RANGES_SET_DIFFERENCE_H

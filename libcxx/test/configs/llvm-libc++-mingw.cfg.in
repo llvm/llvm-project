@@ -5,13 +5,13 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
+    '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++'
+    '-nostdlib++ -L %{lib-dir} -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --prepend_env PATH=%{lib} -- '
+    '%{executor} --execdir %T --prepend_env PATH=%{install-prefix}/bin -- '
 ))
 
 import os, site

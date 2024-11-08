@@ -100,10 +100,10 @@ static GlobalVariable *createRelLookupTable(Function &Func,
       ArrayType::get(Type::getInt32Ty(M.getContext()), NumElts);
 
   GlobalVariable *RelLookupTable = new GlobalVariable(
-    M, IntArrayTy, LookupTable.isConstant(), LookupTable.getLinkage(),
-    nullptr, "reltable." + Func.getName(), &LookupTable,
-    LookupTable.getThreadLocalMode(), LookupTable.getAddressSpace(),
-    LookupTable.isExternallyInitialized());
+      M, IntArrayTy, LookupTable.isConstant(), LookupTable.getLinkage(),
+      nullptr, LookupTable.getName() + ".rel", &LookupTable,
+      LookupTable.getThreadLocalMode(), LookupTable.getAddressSpace(),
+      LookupTable.isExternallyInitialized());
 
   uint64_t Idx = 0;
   SmallVector<Constant *, 64> RelLookupTableContents(NumElts);
@@ -151,7 +151,7 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
   // GEP might not be immediately followed by a LOAD, like it can be hoisted
   // outside the loop or another instruction might be inserted them in between.
   Builder.SetInsertPoint(Load);
-  Function *LoadRelIntrinsic = llvm::Intrinsic::getDeclaration(
+  Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
       &M, Intrinsic::load_relative, {Index->getType()});
 
   // Create a call to load.relative intrinsic that computes the target address

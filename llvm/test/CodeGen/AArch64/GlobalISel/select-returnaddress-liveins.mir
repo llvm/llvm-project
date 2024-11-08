@@ -5,7 +5,7 @@
   define void @lr_other_block() { ret void }
   define void @already_live_in() { ret void }
   define void @multi_use() { ret void }
-  declare i8* @llvm.returnaddress(i32 immarg)
+  declare ptr @llvm.returnaddress(i32 immarg)
 ...
 ---
 name:            lr_other_block

@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -25,9 +26,9 @@
 #include <cassert>
 #include <concepts>
 #include <format>
+#include <memory>
 #include <vector>
 
-#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
@@ -41,7 +42,8 @@ constexpr void test_parse(StringViewT fmt, std::size_t offset) {
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  // std::to_address works around LWG3989 and MSVC STL's iterator debugging mechanism.
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 }
 
 template <class CharT>

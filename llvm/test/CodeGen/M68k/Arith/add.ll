@@ -14,36 +14,36 @@ define i64 @test1(i64 %A, i32 %B) nounwind {
   ret i64 %tmp5
 }
 
-define void @test2(i32* inreg %a) nounwind {
+define void @test2(ptr inreg %a) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l %d0, %a0
 ; CHECK-NEXT:    add.l #128, (%a0)
 ; CHECK-NEXT:    rts
-  %aa = load i32, i32* %a
+  %aa = load i32, ptr %a
   %b = add i32 %aa, 128
-  store i32 %b, i32* %a
+  store i32 %b, ptr %a
   ret void
 }
 
-define fastcc void @test2_fast(i32* inreg %a) nounwind {
+define fastcc void @test2_fast(ptr inreg %a) nounwind {
 ; CHECK-LABEL: test2_fast:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    add.l #128, (%a0)
 ; CHECK-NEXT:    rts
-  %aa = load i32, i32* %a
+  %aa = load i32, ptr %a
   %b = add i32 %aa, 128
-  store i32 %b, i32* %a
+  store i32 %b, ptr %a
   ret void
 }
 
-define fastcc void @test3(i64* inreg %a) nounwind {
+define fastcc void @test3(ptr inreg %a) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (%a0), %d0
-; CHECK-NEXT:    move.l #0, %d1
+; CHECK-NEXT:    moveq #0, %d1
 ; CHECK-NEXT:    move.l #-2147483648, %d2
 ; CHECK-NEXT:    add.l (4,%a0), %d2
 ; CHECK-NEXT:    addx.l %d0, %d1
@@ -52,20 +52,21 @@ define fastcc void @test3(i64* inreg %a) nounwind {
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
-  %aa = load i64, i64* %a
+  %aa = load i64, ptr %a
   %b = add i64 %aa, 2147483648
-  store i64 %b, i64* %a
+  store i64 %b, ptr %a
   ret void
 }
 
-define fastcc void @test4(i64* inreg %a) nounwind {
+define fastcc void @test4(ptr inreg %a) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (%a0), %d0
-; CHECK-NEXT:    move.l #0, %d1
-; CHECK-NEXT:    move.l #128, %d2
+; CHECK-NEXT:    moveq #0, %d1
+; CHECK-NEXT:    moveq #127, %d2
+; CHECK-NEXT:    not.b %d2
 ; CHECK-NEXT:    add.l (4,%a0), %d2
 ; CHECK-NEXT:    addx.l %d0, %d1
 ; CHECK-NEXT:    move.l %d2, (4,%a0)
@@ -73,9 +74,9 @@ define fastcc void @test4(i64* inreg %a) nounwind {
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
-  %aa = load i64, i64* %a
+  %aa = load i64, ptr %a
   %b = add i64 %aa, 128
-  store i64 %b, i64* %a
+  store i64 %b, ptr %a
   ret void
 }
 

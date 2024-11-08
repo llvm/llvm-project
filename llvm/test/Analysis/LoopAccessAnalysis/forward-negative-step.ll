@@ -3,8 +3,6 @@
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
-; FIXME: This should be vectorizable
-
 ; void vectorizable_Read_Write(int *A) {
 ;  for (unsigned i = 1022; i >= 0; i--)
 ;    A[i+1] = A[i] + 1;
@@ -13,10 +11,9 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 define void @vectorizable_Read_Write(ptr nocapture %A) {
 ; CHECK-LABEL: 'vectorizable_Read_Write'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.A, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep.A.plus.1, align 4
 ; CHECK-EMPTY:
@@ -47,13 +44,13 @@ exit:
   ret void
 }
 
-; FIXME: There's a forward dependency that prevents forwarding here.
 define void @neg_step_ForwardButPreventsForwarding(ptr nocapture %A, ptr noalias %B) {
 ; CHECK-LABEL: 'neg_step_ForwardButPreventsForwarding'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Forward:
+; CHECK-NEXT:        ForwardButPreventsForwarding:
 ; CHECK-NEXT:            store i32 0, ptr %gep.A, align 4 ->
 ; CHECK-NEXT:            %l = load i32, ptr %gep.A.plus.1, align 4
 ; CHECK-EMPTY:

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SectionPriorities.h"
+#include "BPSectionOrderer.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
@@ -236,7 +237,7 @@ DenseMap<const InputSection *, size_t> CallGraphSort::run() {
         // section.
         for (Symbol *sym : isec->getFile()->symbols) {
           if (auto *d = dyn_cast_or_null<Defined>(sym)) {
-            if (d->isec == isec)
+            if (d->isec() == isec)
               os << sym->getName() << "\n";
           }
         }
@@ -258,7 +259,7 @@ macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (it == priorities.end())
     return std::nullopt;
   const SymbolPriorityEntry &entry = it->second;
-  const InputFile *f = sym->isec->getFile();
+  const InputFile *f = sym->isec()->getFile();
   if (!f)
     return entry.anyObjectFile;
   // We don't use toString(InputFile *) here because it returns the full path
@@ -287,7 +288,7 @@ void macho::PriorityBuilder::extractCallGraphProfile() {
       if (fromSym && toSym &&
           (!hasOrderFile ||
            (!getSymbolPriority(fromSym) && !getSymbolPriority(toSym))))
-        callGraphProfile[{fromSym->isec, toSym->isec}] += entry.count;
+        callGraphProfile[{fromSym->isec(), toSym->isec()}] += entry.count;
     }
   }
 }
@@ -352,7 +353,15 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 DenseMap<const InputSection *, size_t>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, size_t> sectionPriorities;
-  if (config->callGraphProfileSort) {
+  if (!config->irpgoProfileSortProfilePath.empty() ||
+      config->functionOrderForCompression || config->dataOrderForCompression) {
+    TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
+    sectionPriorities = runBalancedPartitioning(
+        highestAvailablePriority, config->irpgoProfileSortProfilePath,
+        config->functionOrderForCompression, config->dataOrderForCompression,
+        config->compressionSortStartupFunctions,
+        config->verboseBpSectionOrderer);
+  } else if (config->callGraphProfileSort) {
     // Sort sections by the profile data provided by __LLVM,__cg_profile
     // sections.
     //
@@ -370,7 +379,7 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     std::optional<size_t> symbolPriority = getSymbolPriority(sym);
     if (!symbolPriority)
       return;
-    size_t &priority = sectionPriorities[sym->isec];
+    size_t &priority = sectionPriorities[sym->isec()];
     priority = std::max(priority, *symbolPriority);
   };
 

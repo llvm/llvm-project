@@ -51,8 +51,8 @@ enum NodeType : unsigned {
   CallSeqEnd,
   CallPrototype,
   ProxyReg,
-  FUN_SHFL_CLAMP,
-  FUN_SHFR_CLAMP,
+  FSHL_CLAMP,
+  FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
   IMAD,
@@ -61,12 +61,17 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+  FCOPYSIGN,
+  DYNAMIC_STACKALLOC,
+  STACKRESTORE,
+  STACKSAVE,
+  BrxStart,
+  BrxItem,
+  BrxEnd,
   Dummy,
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LoadV4,
-  LDGV2, // LDG.v2
-  LDGV4, // LDG.v4
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
@@ -240,6 +245,12 @@ enum NodeType : unsigned {
   TexUnifiedCubeArrayS32FloatLevel,
   TexUnifiedCubeArrayU32Float,
   TexUnifiedCubeArrayU32FloatLevel,
+  TexUnifiedCubeFloatFloatGrad,
+  TexUnifiedCubeS32FloatGrad,
+  TexUnifiedCubeU32FloatGrad,
+  TexUnifiedCubeArrayFloatFloatGrad,
+  TexUnifiedCubeArrayS32FloatGrad,
+  TexUnifiedCubeArrayU32FloatGrad,
   Tld4UnifiedR2DFloatFloat,
   Tld4UnifiedG2DFloatFloat,
   Tld4UnifiedB2DFloatFloat,
@@ -455,6 +466,9 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
+                                     const DataLayout &DL) const;
+
   /// getFunctionParamOptimizedAlign - since function arguments are passed via
   /// .param space, we may want to increase their alignment in a way that
   /// ensures that we can effectively vectorize their loads & stores. We can
@@ -513,6 +527,10 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
+
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,
@@ -568,6 +586,11 @@ public:
     return true;
   }
 
+  // The default is the same as pointer type, but brx.idx only accepts i32
+  MVT getJumpTableRegTy(const DataLayout &) const override { return MVT::i32; }
+
+  unsigned getJumpTableEncoding() const override;
+
   bool enableAggressiveFMAFusion(EVT VT) const override { return true; }
 
   // The default is to transform llvm.ctlz(x, false) (where false indicates that
@@ -597,15 +620,25 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
 
+  SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
@@ -619,15 +652,25 @@ private:
 
   SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
+  unsigned getNumRegisters(LLVMContext &Context, EVT VT,
+                           std::optional<MVT> RegisterVT) const override;
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-  Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
-                             unsigned Idx, const DataLayout &DL) const;
+  Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                             const DataLayout &DL) const;
 };
 
 } // namespace llvm

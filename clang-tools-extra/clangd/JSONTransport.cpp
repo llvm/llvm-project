@@ -107,8 +107,7 @@ public:
         return error(std::make_error_code(std::errc::operation_canceled),
                      "Got signal, shutting down");
       if (ferror(In))
-        return llvm::errorCodeToError(
-            std::error_code(errno, std::system_category()));
+        return llvm::errorCodeToError(llvm::errnoAsErrorCode());
       if (readRawMessage(JSON)) {
         ThreadCrashReporter ScopedReporter([&JSON]() {
           auto &OS = llvm::errs();
@@ -240,7 +239,7 @@ bool JSONTransport::readStandardMessage(std::string &JSON) {
     // We allow comments in headers. Technically this isn't part
 
     // of the LSP specification, but makes writing tests easier.
-    if (LineRef.startswith("#"))
+    if (LineRef.starts_with("#"))
       continue;
 
     // Content-Length is a mandatory header, and the only one we handle.
@@ -304,7 +303,7 @@ bool JSONTransport::readDelimitedMessage(std::string &JSON) {
   while (readLine(In, Line)) {
     InMirror << Line;
     auto LineRef = Line.str().trim();
-    if (LineRef.startswith("#")) // comment
+    if (LineRef.starts_with("#")) // comment
       continue;
 
     // found a delimiter

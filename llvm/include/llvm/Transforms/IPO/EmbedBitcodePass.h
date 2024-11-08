@@ -22,16 +22,27 @@
 
 namespace llvm {
 class Module;
-class ModulePass;
 class Pass;
+
+struct EmbedBitcodeOptions {
+  EmbedBitcodeOptions() : EmbedBitcodeOptions(false, false) {}
+  EmbedBitcodeOptions(bool IsThinLTO, bool EmitLTOSummary)
+      : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary) {}
+  bool IsThinLTO;
+  bool EmitLTOSummary;
+};
 
 /// Pass embeds a copy of the module optimized with the provided pass pipeline
 /// into a global variable.
 class EmbedBitcodePass : public PassInfoMixin<EmbedBitcodePass> {
-  ModulePassManager MPM;
+  bool IsThinLTO;
+  bool EmitLTOSummary;
 
 public:
-  EmbedBitcodePass() {}
+  EmbedBitcodePass(EmbedBitcodeOptions Opts)
+      : EmbedBitcodePass(Opts.IsThinLTO, Opts.EmitLTOSummary) {}
+  EmbedBitcodePass(bool IsThinLTO, bool EmitLTOSummary)
+      : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 

@@ -74,6 +74,13 @@ program main
    !$omp end distribute
   !$omp end teams
 
+  !$omp target teams
+    !$omp distribute
+    do i = 1, 10
+    end do
+    !$omp end distribute
+  !$omp end target teams
+
   !$omp teams 
       !ERROR: Only `DISTRIBUTE` or `PARALLEL` regions are allowed to be strictly nested inside `TEAMS` region.
       !$omp task

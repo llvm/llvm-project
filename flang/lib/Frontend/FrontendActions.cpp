@@ -21,6 +21,8 @@
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -42,6 +44,8 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,12 +56,14 @@
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -65,12 +71,16 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
 
-#include "flang/Tools/CLOptions.inc"
+namespace llvm {
+extern cl::opt<bool> PrintPipelinePasses;
+} // namespace llvm
 
 using namespace Fortran::frontend;
 
@@ -121,12 +131,12 @@ static bool saveMLIRTempFile(const CompilerInvocation &ci,
 bool PrescanAction::beginSourceFileAction() { return runPrescan(); }
 
 bool PrescanAndParseAction::beginSourceFileAction() {
-  return runPrescan() && runParse();
+  return runPrescan() && runParse(/*emitMessages=*/true);
 }
 
 bool PrescanAndSemaAction::beginSourceFileAction() {
-  return runPrescan() && runParse() && runSemanticChecks() &&
-         generateRtTypeTables();
+  return runPrescan() && runParse(/*emitMessages=*/false) &&
+         runSemanticChecks() && generateRtTypeTables();
 }
 
 bool PrescanAndSemaDebugAction::beginSourceFileAction() {
@@ -135,113 +145,8 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
   // from exiting early (i.e. in the presence of semantic errors). We should
   // never do this in actions intended for end-users or otherwise regular
   // compiler workflows!
-  return runPrescan() && runParse() && (runSemanticChecks() || true) &&
-         (generateRtTypeTables() || true);
-}
-
-// Get feature string which represents combined explicit target features
-// for AMD GPU and the target features specified by the user
-static std::string
-getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
-                                           const TargetOptions &targetOpts,
-                                           const llvm::Triple triple) {
-  llvm::StringRef cpu = targetOpts.cpu;
-  llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
-  // Get the set of implicit target features
-  llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
-
-  // Add target features specified by the user
-  for (auto &userFeature : targetOpts.featuresAsWritten) {
-    std::string userKeyString = userFeature.substr(1);
-    implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
-  }
-
-  if (!llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap,
-                                           errorMsg)) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Unsupported feature ID: %0");
-    ci.getDiagnostics().Report(diagID) << errorMsg.data();
-    return std::string();
-  }
-
-  llvm::SmallVector<std::string> featuresVec;
-  for (auto &implicitFeatureItem : implicitFeaturesMap) {
-    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
-                           implicitFeatureItem.first().str())
-                              .str());
-  }
-  llvm::sort(featuresVec);
-  return llvm::join(featuresVec, ",");
-}
-
-// Get feature string which represents combined explicit target features
-// for NVPTX and the target features specified by the user/
-// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
-static std::string
-getExplicitAndImplicitNVPTXTargetFeatures(CompilerInstance &ci,
-                                          const TargetOptions &targetOpts,
-                                          const llvm::Triple triple) {
-  llvm::StringRef cpu = targetOpts.cpu;
-  llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
-  bool ptxVer = false;
-
-  // Add target features specified by the user
-  for (auto &userFeature : targetOpts.featuresAsWritten) {
-    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
-    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
-    // Check if the user provided a PTX version
-    if (userKeyString.startswith("ptx"))
-      ptxVer = true;
-  }
-
-  // Set the default PTX version to `ptx61` if none was provided.
-  // TODO: set the default PTX version based on the chip.
-  if (!ptxVer)
-    implicitFeaturesMap["ptx61"] = true;
-
-  // Set the compute capability.
-  implicitFeaturesMap[cpu.str()] = true;
-
-  llvm::SmallVector<std::string> featuresVec;
-  for (auto &implicitFeatureItem : implicitFeaturesMap) {
-    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
-                           implicitFeatureItem.first().str())
-                              .str());
-  }
-  llvm::sort(featuresVec);
-  return llvm::join(featuresVec, ",");
-}
-
-// Produces the string which represents target feature
-static std::string getTargetFeatures(CompilerInstance &ci) {
-  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
-
-  // Clang does not append all target features to the clang -cc1 invocation.
-  // Some target features are parsed implicitly by clang::TargetInfo child
-  // class. Clang::TargetInfo classes are the basic clang classes and
-  // they cannot be reused by Flang.
-  // That's why we need to extract implicit target features and add
-  // them to the target features specified by the user
-  if (triple.isAMDGPU()) {
-    return getExplicitAndImplicitAMDGPUTargetFeatures(ci, targetOpts, triple);
-  } else if (triple.isNVPTX()) {
-    return getExplicitAndImplicitNVPTXTargetFeatures(ci, targetOpts, triple);
-  }
-  return llvm::join(targetOpts.featuresAsWritten.begin(),
-                    targetOpts.featuresAsWritten.end(), ",");
-}
-
-static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
-                              const llvm::DataLayout &dl) {
-  mlir::MLIRContext *context = mlirModule.getContext();
-  mlirModule->setAttr(
-      mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
-      mlir::StringAttr::get(context, dl.getStringRepresentation()));
-  mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
-  mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+  return runPrescan() && runParse(/*emitMessages=*/false) &&
+         (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
 static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
@@ -272,12 +177,6 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
   const llvm::Triple triple(targetOpts.triple);
   const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
 
-  // TODO: Share address spaces enumeration between Clang and Flang.
-  // Currently this enumeration is defined in Clang specific class
-  // defined in file: clang/lib/Basic/Targets/AMDGPU.h .
-  // and we need to move it to LLVM directory.
-  const int constantAddressSpace = 4;
-
   if (!triple.isAMDGPU()) {
     return;
   }
@@ -286,7 +185,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     return;
   }
 
-  mlir::ConversionPatternRewriter builder(mlirModule.getContext());
+  mlir::IRRewriter builder(mlirModule.getContext());
   unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
   auto int32Type = builder.getI32Type();
 
@@ -308,7 +207,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     originalGVOp.setValueAttr(
         builder.getIntegerAttr(int32Type, oclcABIVERsion));
     originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-    originalGVOp.setAddrSpace(constantAddressSpace);
+    originalGVOp.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
     originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
     return;
   }
@@ -319,7 +218,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
       /* Name */ codeObjectVersionGlobalOpName,
       /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
   covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-  covInfo.setAddrSpace(constantAddressSpace);
+  covInfo.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
   builder.setInsertionPointToStart(mlirModule.getBody());
   builder.insert(covInfo);
@@ -334,7 +233,7 @@ bool CodeGenAction::beginSourceFileAction() {
     llvm::SMDiagnostic err;
     llvmModule = llvm::parseIRFile(getCurrentInput().getFile(), err, *llvmCtx);
     if (!llvmModule || llvm::verifyModule(*llvmModule, &llvm::errs())) {
-      err.print("flang-new", llvm::errs());
+      err.print("flang", llvm::errs());
       unsigned diagID = ci.getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "Could not parse IR");
       ci.getDiagnostics().Report(diagID);
@@ -351,6 +250,8 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::support::loadNonCodegenDialects(*mlirCtx);
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
+
+  const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
   // If the input is an MLIR file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
@@ -369,10 +270,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
-    if (!setUpTargetMachine())
-      return false;
-    const llvm::DataLayout &dl = tm->createDataLayout();
-    setMLIRDataLayout(*mlirModule, dl);
+    const llvm::DataLayout &dl = targetMachine.createDataLayout();
+    fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
 
@@ -384,8 +283,8 @@ bool CodeGenAction::beginSourceFileAction() {
     ci.getDiagnostics().Report(diagID);
     return false;
   }
-  bool res = runPrescan() && runParse() && runSemanticChecks() &&
-             generateRtTypeTables();
+  bool res = runPrescan() && runParse(/*emitMessages=*/false) &&
+             runSemanticChecks() && generateRtTypeTables();
   if (!res)
     return res;
 
@@ -401,26 +300,19 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features);
+      ci.getInvocation().getFrontendOpts().features, targetMachine,
+      ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
-
-  if (!setUpTargetMachine())
-    return false;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
     setOffloadModuleInterfaceAttributes(*mlirModule,
                                         ci.getInvocation().getLangOpts());
-    setOffloadModuleInterfaceTargetAttribute(*mlirModule, tm->getTargetCPU(),
-                                             tm->getTargetFeatureString());
     setOpenMPVersionAttribute(*mlirModule,
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
-
-  const llvm::DataLayout &dl = tm->createDataLayout();
-  setMLIRDataLayout(*mlirModule, dl);
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
@@ -434,6 +326,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
+  (void)mlir::applyPassManagerCLOptions(pm);
   // Add OpenMP-related passes
   // WARNING: These passes must be run immediately after the lowering to ensure
   // that the FIR is correct with respect to OpenMP operations/attributes.
@@ -516,7 +409,9 @@ void PrintPreprocessedAction::executeAction() {
 
   // Format or dump the prescanner's output
   CompilerInstance &ci = this->getInstance();
-  if (ci.getInvocation().getPreprocessorOpts().noReformat) {
+  if (ci.getInvocation().getPreprocessorOpts().showMacros) {
+    ci.getParsing().EmitPreprocessorMacros(outForPP);
+  } else if (ci.getInvocation().getPreprocessorOpts().noReformat) {
     ci.getParsing().DumpCookedChars(outForPP);
   } else {
     ci.getParsing().EmitPreprocessedSource(
@@ -529,7 +424,7 @@ void PrintPreprocessedAction::executeAction() {
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.isOutputStreamNull()) {
     // Send the output to the pre-defined output buffer.
-    ci.writeOutputStream(outForPP.str());
+    ci.writeOutputStream(buf);
     return;
   }
 
@@ -540,7 +435,7 @@ void PrintPreprocessedAction::executeAction() {
     return;
   }
 
-  (*os) << outForPP.str();
+  (*os) << buf;
 }
 
 void DebugDumpProvenanceAction::executeAction() {
@@ -589,6 +484,15 @@ void DebugUnparseWithSymbolsAction::executeAction() {
       llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
 
   // Report fatal semantic errors
+  reportFatalSemanticErrors();
+}
+
+void DebugUnparseWithModulesAction::executeAction() {
+  auto &parseTree{*getInstance().getParsing().parseTree()};
+  CompilerInstance &ci{getInstance()};
+  Fortran::semantics::UnparseWithModules(
+      llvm::outs(), ci.getSemantics().context(), parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8);
   reportFatalSemanticErrors();
 }
 
@@ -821,19 +725,75 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
-// TODO: We should get this from TargetInfo. However, that depends on
-// too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
-getVScaleRange(CompilerInstance &ci,
-               const Fortran::frontend::LangOptions &langOpts) {
+getAArch64VScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+
   if (langOpts.VScaleMin || langOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
 
-  std::string featuresStr = getTargetFeatures(ci);
+  std::string featuresStr = ci.getTargetFeatures();
   if (featuresStr.find("+sve") != std::string::npos)
     return std::pair<unsigned, unsigned>(1, 16);
 
+  return std::nullopt;
+}
+
+static std::optional<std::pair<unsigned, unsigned>>
+getRISCVVScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+  const auto targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  auto parseResult = llvm::RISCVISAInfo::parseFeatures(
+      triple.isRISCV64() ? 64 : 32, targetOpts.featuresAsWritten);
+  if (!parseResult) {
+    std::string buffer;
+    llvm::raw_string_ostream outputErrMsg(buffer);
+    handleAllErrors(parseResult.takeError(), [&](llvm::StringError &errMsg) {
+      outputErrMsg << errMsg.getMessage();
+    });
+    ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
+        << buffer;
+    return std::nullopt;
+  }
+
+  llvm::RISCVISAInfo *const isaInfo = parseResult->get();
+
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned vscaleMin = isaInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
+
+  if (langOpts.VScaleMin || langOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    vscaleMin = std::max(vscaleMin, langOpts.VScaleMin);
+    unsigned vscaleMax = langOpts.VScaleMax;
+    if (vscaleMax != 0 && vscaleMax < vscaleMin)
+      vscaleMax = vscaleMin;
+    return std::pair<unsigned, unsigned>(vscaleMin ? vscaleMin : 1, vscaleMax);
+  }
+
+  if (vscaleMin > 0) {
+    unsigned vscaleMax = isaInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(vscaleMin, vscaleMax);
+  }
+
+  return std::nullopt;
+}
+
+// TODO: We should get this from TargetInfo. However, that depends on
+// too much of clang, so for now, replicate the functionality.
+static std::optional<std::pair<unsigned, unsigned>>
+getVScaleRange(CompilerInstance &ci) {
+  const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
+
+  if (triple.isAArch64())
+    return getAArch64VScaleRange(ci);
+  if (triple.isRISCV())
+    return getRISCVVScaleRange(ci);
+
+  // All other architectures that don't support scalable vectors (i.e. don't
+  // need vscale)
   return std::nullopt;
 }
 
@@ -843,9 +803,14 @@ void CodeGenAction::generateLLVMIR() {
 
   CompilerInstance &ci = this->getInstance();
   auto opts = ci.getInvocation().getCodeGenOpts();
+  auto mathOpts = ci.getInvocation().getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
   fir::support::registerLLVMTranslation(*mlirCtx);
 
   // Set-up the MLIR pass manager
@@ -855,22 +820,19 @@ void CodeGenAction::generateLLVMIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
-  MLIRToLLVMPassPipelineConfig config(level, opts);
+  MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  fir::registerDefaultInlinerPass(config);
 
-  const auto targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
-
-  // Only get the vscale range if AArch64.
-  if (triple.isAArch64()) {
-    auto langOpts = ci.getInvocation().getLangOpts();
-    if (auto vsr = getVScaleRange(ci, langOpts)) {
-      config.VScaleMin = vsr->first;
-      config.VScaleMax = vsr->second;
-    }
+  if (auto vsr = getVScaleRange(ci)) {
+    config.VScaleMin = vsr->first;
+    config.VScaleMax = vsr->second;
   }
 
+  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
+    config.NSWOnLoopVarInc = true;
+
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, config);
+  fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
@@ -909,38 +871,17 @@ void CodeGenAction::generateLLVMIR() {
       llvmModule->setPIELevel(
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
-}
 
-bool CodeGenAction::setUpTargetMachine() {
-  CompilerInstance &ci = this->getInstance();
-
-  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  const std::string &theTriple = targetOpts.triple;
-
-  // Create `Target`
-  std::string error;
-  const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(theTriple, error);
-  if (!theTarget) {
-    ci.getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
-        << error;
-    return false;
+  // Set mcmodel level LLVM module flags
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(opts.CodeModel);
+  if (cm.has_value()) {
+    const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
+    llvmModule->setCodeModel(*cm);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
+    }
   }
-
-  // Create `TargetMachine`
-  const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
-  std::optional<llvm::CodeGenOptLevel> OptLevelOrNone =
-      llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
-  assert(OptLevelOrNone && "Invalid optimization level!");
-  llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
-  std::string featuresStr = getTargetFeatures(ci);
-  tm.reset(theTarget->createTargetMachine(
-      theTriple, /*CPU=*/targetOpts.cpu,
-      /*Features=*/featuresStr, llvm::TargetOptions(),
-      /*Reloc::Model=*/CGOpts.getRelocationModel(),
-      /*CodeModel::Model=*/std::nullopt, OptLevel));
-  assert(tm && "Failed to create TargetMachine");
-  return true;
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -954,7 +895,6 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"ll");
   case BackendActionTy::Backend_EmitFIR:
-    LLVM_FALLTHROUGH;
   case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"mlir");
@@ -1020,6 +960,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   auto &diags = getInstance().getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
+  llvm::TargetMachine *targetMachine = &getInstance().getTargetMachine();
   // Create the analysis managers.
   llvm::LoopAnalysisManager lam;
   llvm::FunctionAnalysisManager fam;
@@ -1033,7 +974,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
   si.registerCallbacks(pic, &mam);
-  llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
+  llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &pluginFile : opts.LLVMPassPlugins) {
@@ -1075,6 +1016,22 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC)
     mpm.addPass(llvm::BitcodeWriterPass(os));
+  else if (action == BackendActionTy::Backend_EmitLL)
+    mpm.addPass(llvm::PrintModulePass(os));
+
+  // FIXME: This should eventually be replaced by a first-class driver option.
+  // This should be done for both flang and clang simultaneously.
+  // Print a textual, '-passes=' compatible, representation of pipeline if
+  // requested. In this case, don't run the passes. This mimics the behavior of
+  // clang.
+  if (llvm::PrintPipelinePasses) {
+    mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
+      auto passName = pic.getPassNameForClassName(className);
+      return passName.empty() ? className : passName;
+    });
+    llvm::outs() << "\n";
+    return;
+  }
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
@@ -1133,8 +1090,7 @@ public:
     msgStream << diagInfo.getMsg();
 
     // Emit message.
-    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName())
-                         << msgStream.str();
+    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName()) << msg;
   }
 
   void optimizationRemarkHandler(
@@ -1226,6 +1182,54 @@ void CodeGenAction::embedOffloadObjects() {
   }
 }
 
+void CodeGenAction::linkBuiltinBCLibs() {
+  auto options = clang::FileSystemOptions();
+  clang::FileManager fileManager(options);
+  CompilerInstance &ci = this->getInstance();
+  const auto &cgOpts = ci.getInvocation().getCodeGenOpts();
+
+  std::vector<std::unique_ptr<llvm::Module>> modules;
+
+  // Load LLVM modules
+  for (llvm::StringRef bcLib : cgOpts.BuiltinBCLibs) {
+    auto BCBuf = fileManager.getBufferForFile(bcLib);
+    if (!BCBuf) {
+      auto diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "could not open '%0' for linking");
+      ci.getDiagnostics().Report(diagID) << bcLib;
+      return;
+    }
+
+    llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
+        getOwningLazyBitcodeModule(std::move(*BCBuf), *llvmCtx);
+    if (!ModuleOrErr) {
+      auto diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "error loading '%0' for linking");
+      ci.getDiagnostics().Report(diagID) << bcLib;
+      return;
+    }
+    modules.push_back(std::move(ModuleOrErr.get()));
+  }
+
+  // Link modules and internalize functions
+  for (auto &module : modules) {
+    bool Err;
+    Err = llvm::Linker::linkModules(
+        *llvmModule, std::move(module), llvm::Linker::Flags::LinkOnlyNeeded,
+        [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+          llvm::internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+            return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+          });
+        });
+    if (Err) {
+      auto diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "link error when linking '%0'");
+      ci.getDiagnostics().Report(diagID) << module->getSourceFileName();
+      return;
+    }
+  }
+}
+
 static void reportOptRecordError(llvm::Error e, clang::DiagnosticsEngine &diags,
                                  const CodeGenOptions &codeGenOpts) {
   handleAllErrors(
@@ -1296,12 +1300,17 @@ void CodeGenAction::executeAction() {
   if (!llvmModule)
     generateLLVMIR();
 
+  // If generating the LLVM module failed, abort! No need for further error
+  // reporting since generateLLVMIR() does this already.
+  if (!llvmModule)
+    return;
+
   // Set the triple based on the targetmachine (this comes compiler invocation
   // and the command-line target option if specified, or the default if not
   // given on the command-line).
-  if (!setUpTargetMachine())
-    return;
-  const std::string &theTriple = tm->getTargetTriple().str();
+  llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+
+  const std::string &theTriple = targetMachine.getTargetTriple().str();
 
   if (llvmModule->getTargetTriple() != theTriple) {
     diags.Report(clang::diag::warn_fe_override_module) << theTriple;
@@ -1311,7 +1320,11 @@ void CodeGenAction::executeAction() {
   // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
-  llvmModule->setDataLayout(tm->createDataLayout());
+  llvmModule->setDataLayout(targetMachine.createDataLayout());
+
+  // Link in builtin bitcode libraries
+  if (!codeGenOpts.BuiltinBCLibs.empty())
+    linkBuiltinBCLibs();
 
   // Embed offload objects specified with -fembed-offload-object
   if (!codeGenOpts.OffloadObjects.empty())
@@ -1346,13 +1359,8 @@ void CodeGenAction::executeAction() {
   // Run LLVM's middle-end (i.e. the optimizer).
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
 
-  if (action == BackendActionTy::Backend_EmitLL) {
-    llvmModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream(),
-                      /*AssemblyAnnotationWriter=*/nullptr);
-    return;
-  }
-
-  if (action == BackendActionTy::Backend_EmitBC) {
+  if (action == BackendActionTy::Backend_EmitLL ||
+      action == BackendActionTy::Backend_EmitBC) {
     // This action has effectively been completed in runOptimizationPipeline.
     return;
   }
@@ -1361,7 +1369,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, *tm, action, *llvmModule, codeGenOpts,
+        diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }

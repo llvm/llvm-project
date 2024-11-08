@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=gfx902 -mattr=+xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK,GFX9 %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX9 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64,-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx902 -mattr=+xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64,-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK %s
 
 # GCN-LABEL: name: break_smem_clause_simple_load_smrd8_ptr_hidden_bundle
 # GCN: bb.0:

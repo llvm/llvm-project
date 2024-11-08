@@ -70,8 +70,8 @@ define float @test5(float %p) #0 {
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB3_1: ## %if.end
 ; ALL-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 {%k1} = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; ALL-NEXT:    retq
 entry:
   %cmp = fcmp oeq float %p, 0.000000e+00

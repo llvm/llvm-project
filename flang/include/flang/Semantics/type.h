@@ -29,6 +29,13 @@ namespace Fortran::parser {
 struct Keyword;
 }
 
+namespace Fortran::evaluate { // avoid including all of Evaluate/tools.h
+template <typename T>
+std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
+extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
+} // namespace Fortran::evaluate
+
 namespace Fortran::semantics {
 
 class Scope;
@@ -110,6 +117,11 @@ public:
     return category_ == that.category_ && expr_ == that.expr_;
   }
   bool operator!=(const ParamValue &that) const { return !(*this == that); }
+  bool IsEquivalentInInterface(const ParamValue &that) const {
+    return (category_ == that.category_ &&
+        expr_.has_value() == that.expr_.has_value() &&
+        (!expr_ || evaluate::AreEquivalentInInterface(*expr_, *that.expr_)));
+  }
   std::string AsFortran() const;
 
 private:
@@ -259,6 +271,7 @@ public:
   DerivedTypeSpec(DerivedTypeSpec &&);
 
   const SourceName &name() const { return name_; }
+  const Symbol &originalTypeSymbol() const { return originalTypeSymbol_; }
   const Symbol &typeSymbol() const { return typeSymbol_; }
   const Scope *scope() const { return scope_; }
   // Return scope_ if it is set, or the typeSymbol_ scope otherwise.
@@ -306,7 +319,7 @@ public:
   }
   // For TYPE IS & CLASS IS: kind type parameters must be
   // explicit and equal, len type parameters are ignored.
-  bool Match(const DerivedTypeSpec &) const;
+  bool MatchesOrExtends(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
   std::string VectorTypeAsFortran() const;
 
@@ -319,7 +332,8 @@ public:
 
 private:
   SourceName name_;
-  const Symbol &typeSymbol_;
+  const Symbol &originalTypeSymbol_;
+  const Symbol &typeSymbol_; // == originalTypeSymbol_.GetUltimate()
   const Scope *scope_{nullptr}; // same as typeSymbol_.scope() unless PDT
   bool cooked_{false};
   bool evaluated_{false};
@@ -328,8 +342,9 @@ private:
   ParameterMapType parameters_;
   Category category_{Category::DerivedType};
   bool RawEquals(const DerivedTypeSpec &that) const {
-    return &typeSymbol_ == &that.typeSymbol_ && cooked_ == that.cooked_ &&
-        rawParameters_ == that.rawParameters_;
+    return &typeSymbol_ == &that.typeSymbol_ &&
+        &originalTypeSymbol_ == &that.originalTypeSymbol_ &&
+        cooked_ == that.cooked_ && rawParameters_ == that.rawParameters_;
   }
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeSpec &);
@@ -458,9 +473,6 @@ inline DerivedTypeSpec *DeclTypeSpec::AsDerived() {
 inline const DerivedTypeSpec *DeclTypeSpec::AsDerived() const {
   return const_cast<DeclTypeSpec *>(this)->AsDerived();
 }
-
-bool IsInteroperableIntrinsicType(
-    const DeclTypeSpec &, const common::LanguageFeatureControl &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TYPE_H_

@@ -1,22 +1,22 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+c -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump --mattr=+c -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+c --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+zca -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zca < %s \
-# RUN:     | llvm-objdump --mattr=+zca -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+zca --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+c -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump --mattr=+c -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+c --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zca -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zca < %s \
-# RUN:     | llvm-objdump --mattr=+zca -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+zca --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # RUN: not llvm-mc -triple riscv32 \
@@ -147,6 +147,10 @@ c.sub a4, a5
 # CHECK-ASM: encoding: [0x01,0x00]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 c.nop
+# CHECK-ASM-AND-OBJ: c.nop
+# CHECK-ASM: encoding: [0x01,0x00]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+c.addi x0, 0
 # CHECK-ASM-AND-OBJ: c.ebreak
 # CHECK-ASM: encoding: [0x02,0x90]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}

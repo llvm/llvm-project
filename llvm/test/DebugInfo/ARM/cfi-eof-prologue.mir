@@ -19,65 +19,65 @@
 
 --- |
   %struct.B = type { %struct.A }
-  %struct.A = type { i32 (...)** }
+  %struct.A = type { ptr }
 
-  @_ZTV1B = external unnamed_addr constant [4 x i8*]
+  @_ZTV1B = external unnamed_addr constant [4 x ptr]
 
   ; Function Attrs: nounwind
-  define %struct.B* @_ZN1BC2Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !31 {
+  define ptr @_ZN1BC2Ev(ptr %this) unnamed_addr #0 align 2 !dbg !31 {
   entry:
-    tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !33, metadata !DIExpression()), !dbg !35
-    %0 = bitcast %struct.B* %this to %struct.A*, !dbg !36
-    %call = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #0, !dbg !36
-    %1 = bitcast %struct.B* %this to i32 (...)***, !dbg !36
-    store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1B, i32 0, i32 2) to i32 (...)**), i32 (...)*** %1, align 4, !dbg !36, !tbaa !37
-    ret %struct.B* %this, !dbg !36
+    tail call void @llvm.dbg.value(metadata ptr %this, metadata !33, metadata !DIExpression()), !dbg !35
+    %0 = bitcast ptr %this to ptr, !dbg !36
+    %call = tail call ptr @_ZN1AC2Ev(ptr %0) #0, !dbg !36
+    %1 = bitcast ptr %this to ptr, !dbg !36
+    store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV1B, i32 0, i32 2), ptr %1, align 4, !dbg !36, !tbaa !37
+    ret ptr %this, !dbg !36
   }
 
-  declare %struct.A* @_ZN1AC2Ev(%struct.A*)
+  declare ptr @_ZN1AC2Ev(ptr)
 
   ; Function Attrs: nounwind
-  define %struct.B* @_ZN1BC1Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !40 {
+  define ptr @_ZN1BC1Ev(ptr %this) unnamed_addr #0 align 2 !dbg !40 {
   entry:
-    tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !42, metadata !DIExpression()), !dbg !43
-    tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !33, metadata !DIExpression()) #0, !dbg !44
-    %0 = bitcast %struct.B* %this to %struct.A*, !dbg !46
-    %call.i = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #0, !dbg !46
-    %1 = bitcast %struct.B* %this to i32 (...)***, !dbg !46
-    store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1B, i32 0, i32 2) to i32 (...)**), i32 (...)*** %1, align 4, !dbg !46, !tbaa !37
-    ret %struct.B* %this, !dbg !45
+    tail call void @llvm.dbg.value(metadata ptr %this, metadata !42, metadata !DIExpression()), !dbg !43
+    tail call void @llvm.dbg.value(metadata ptr %this, metadata !33, metadata !DIExpression()) #0, !dbg !44
+    %0 = bitcast ptr %this to ptr, !dbg !46
+    %call.i = tail call ptr @_ZN1AC2Ev(ptr %0) #0, !dbg !46
+    %1 = bitcast ptr %this to ptr, !dbg !46
+    store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV1B, i32 0, i32 2), ptr %1, align 4, !dbg !46, !tbaa !37
+    ret ptr %this, !dbg !45
   }
 
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-  declare void @_Unwind_SjLj_Register({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
+  declare void @_Unwind_SjLj_Register(ptr)
 
-  declare void @_Unwind_SjLj_Unregister({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
+  declare void @_Unwind_SjLj_Unregister(ptr)
 
   ; Function Attrs: nounwind readnone
-  declare i8* @llvm.frameaddress(i32) #2
+  declare ptr @llvm.frameaddress(i32) #2
 
   ; Function Attrs: nounwind
-  declare i8* @llvm.stacksave() #0
+  declare ptr @llvm.stacksave() #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackrestore(i8*) #0
+  declare void @llvm.stackrestore(ptr) #0
 
   ; Function Attrs: nounwind
   declare void @llvm.eh.sjlj.setup.dispatch() #0
 
   ; Function Attrs: nounwind readnone
-  declare i8* @llvm.eh.sjlj.lsda() #2
+  declare ptr @llvm.eh.sjlj.lsda() #2
 
   ; Function Attrs: nounwind readnone
   declare void @llvm.eh.sjlj.callsite(i32) #2
 
   ; Function Attrs: nounwind
-  declare void @llvm.eh.sjlj.functioncontext(i8*) #0
+  declare void @llvm.eh.sjlj.functioncontext(ptr) #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind  "target-features"="+v8m" }
   attributes #1 = { nounwind readnone speculatable }

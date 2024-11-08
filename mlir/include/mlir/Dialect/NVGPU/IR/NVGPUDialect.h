@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
@@ -25,8 +26,16 @@ constexpr int kWarpSize = 32;
 
 /// M size of wgmma.mma_async instruction
 constexpr int kWgmmaSizeM = 64;
-/// Maximum tensor dimension that TMA supports
-constexpr int kMaxTMATensorDimension = 5;
+
+/// Maximum TMA tile dimension (tensorRank) must be non-zero and less than or
+/// equal to the maximum supported dimensionality of 5.
+constexpr unsigned kMaxTMATensorDimension = 5;
+/// Maximum TMA tile size (boxDim), which specifies number of elements
+/// to be traversed along each of the kMaxTMATensorDimension (tensorRank)
+/// dimensions, must be non-zero and less than or equal to 256.
+constexpr unsigned kMaxTMADimension = 256;
+/// Last dimension of 2D+ TMA must be 128 bytes
+constexpr unsigned kMaxTMALastdimByte = 128;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"

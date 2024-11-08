@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// MSVC warning C4244: 'initializing': conversion from '_Ty' to '_Ty', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // <mdspan>
 
 // template<class OtherElementType, class OtherExtents,
@@ -36,9 +39,10 @@
 //   || !is_convertible_v<const OtherAccessor&, accessor_type>
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -79,8 +79,9 @@ func.func @generalize_matmul_tensor_f16f64i32(%A : tensor<16x8xf16>, %B: tensor<
 // -----
 
 func.func @generalize_matmul_unsigned_tensor_i16i64i32(%A : tensor<16x8xi16>, %B: tensor<8x32xi64>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.matmul_unsigned ins(%A, %B: tensor<16x8xi16>, tensor<8x32xi64>)
-                              outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
+  %0 = linalg.matmul { cast = #linalg.type_fn<cast_unsigned> }
+                       ins(%A, %B: tensor<16x8xi16>, tensor<8x32xi64>)
+                       outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
   return %0: tensor<16x32xi32>
 }
 
@@ -92,8 +93,9 @@ func.func @generalize_matmul_unsigned_tensor_i16i64i32(%A : tensor<16x8xi16>, %B
 // -----
 
 func.func @generalize_matmul_unsigned_tensor_i16i64f32(%A : tensor<16x8xi16>, %B: tensor<8x32xi64>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.matmul_unsigned ins(%A, %B: tensor<16x8xi16>, tensor<8x32xi64>)
-                              outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+  %0 = linalg.matmul { cast = #linalg.type_fn<cast_unsigned> }
+                       ins(%A, %B: tensor<16x8xi16>, tensor<8x32xi64>)
+                       outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
 
@@ -105,8 +107,9 @@ func.func @generalize_matmul_unsigned_tensor_i16i64f32(%A : tensor<16x8xi16>, %B
 // -----
 
 func.func @generalize_matmul_unsigned_tensor_f16f64i32(%A : tensor<16x8xf16>, %B: tensor<8x32xf64>, %C: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.matmul_unsigned ins(%A, %B: tensor<16x8xf16>, tensor<8x32xf64>)
-                              outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
+  %0 = linalg.matmul { cast = #linalg.type_fn<cast_unsigned> }
+                       ins(%A, %B: tensor<16x8xf16>, tensor<8x32xf64>)
+                       outs(%C: tensor<16x32xi32>) -> tensor<16x32xi32>
   return %0: tensor<16x32xi32>
 }
 

@@ -22,13 +22,13 @@ define void @test0(i1 %c1) personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_BLAM:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    invoke void @foo()
-; CHECK-NEXT:    to label [[BB3:%.*]] unwind label [[BB4:%.*]]
+; CHECK-NEXT:            to label [[BB3:%.*]] unwind label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    invoke void @foo()
-; CHECK-NEXT:    to label [[BB3]] unwind label [[BB4]]
+; CHECK-NEXT:            to label [[BB3]] unwind label [[BB4]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb4:
@@ -37,7 +37,7 @@ define void @test0(i1 %c1) personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[TMP5:%.*]] = catchpad within [[TMP4]] [ptr null]
 ; CHECK-NEXT:    invoke void @foo() [ "funclet"(token [[TMP5]]) ]
-; CHECK-NEXT:    to label [[BB6:%.*]] unwind label [[BB7]]
+; CHECK-NEXT:            to label [[BB6:%.*]] unwind label [[BB7]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb7:
@@ -89,10 +89,10 @@ define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @foo()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH1:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[CATCH_DISPATCH1:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[CALL:%.*]] = invoke i32 @baz()
-; CHECK-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT1:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       invoke.cont1:
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
@@ -101,7 +101,7 @@ define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[AP_0:%.*]] = phi i8 [ 1, [[IF_THEN]] ], [ 0, [[INVOKE_CONT1]] ]
 ; CHECK-NEXT:    invoke void @foo()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    br label [[TRY_CONT:%.*]]
 ; CHECK:       catch.dispatch:
@@ -114,17 +114,16 @@ define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    catchret from [[TMP1]] to label [[TRY_CONT]]
 ; CHECK:       rethrow:
 ; CHECK-NEXT:    invoke void @llvm.wasm.rethrow() #[[ATTR0:[0-9]+]] [ "funclet"(token [[TMP1]]) ]
-; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH1]]
+; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH1]]
 ; CHECK:       catch.dispatch1:
 ; CHECK-NEXT:    [[AP_2:%.*]] = phi i8 [ [[AP_1]], [[CATCH_DISPATCH]] ], [ [[AP_1]], [[RETHROW]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label %catch.start1] unwind to caller
 ; CHECK:       catch.start1:
 ; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [ptr null]
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[AP_2]], 1
-; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = trunc i8 [[AP_2]] to i1
 ; CHECK-NEXT:    br i1 [[TOBOOL1_NOT]], label [[IF_END1:%.*]], label [[IF_THEN1:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    br label [[IF_END1]]
+; CHECK-NEXT:    br label [[IF_THEN1]]
 ; CHECK:       if.end1:
 ; CHECK-NEXT:    catchret from [[TMP3]] to label [[TRY_CONT]]
 ; CHECK:       try.cont:

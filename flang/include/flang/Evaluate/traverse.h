@@ -45,7 +45,9 @@
 #include <type_traits>
 
 namespace Fortran::evaluate {
-template <typename Visitor, typename Result> class Traverse {
+template <typename Visitor, typename Result,
+    bool TraverseAssocEntityDetails = true>
+class Traverse {
 public:
   explicit Traverse(Visitor &v) : visitor_{v} {}
 
@@ -108,12 +110,13 @@ public:
   }
   Result operator()(const Symbol &symbol) const {
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (const auto *assoc{
-            ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
-      return visitor_(assoc->expr());
-    } else {
-      return visitor_.Default();
+    if constexpr (TraverseAssocEntityDetails) {
+      if (const auto *assoc{
+              ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+        return visitor_(assoc->expr());
+      }
     }
+    return visitor_.Default();
   }
   Result operator()(const StaticDataObject &) const {
     return visitor_.Default();
@@ -214,7 +217,7 @@ public:
     return CombineContents(x);
   }
   Result operator()(const semantics::DerivedTypeSpec &x) const {
-    return Combine(x.typeSymbol(), x.parameters());
+    return Combine(x.originalTypeSymbol(), x.parameters());
   }
   Result operator()(const StructureConstructorValues::value_type &x) const {
     return visitor_(x.second);
@@ -284,7 +287,8 @@ private:
 // For validity checks across an expression: if any operator() result is
 // false, so is the overall result.
 template <typename Visitor, bool DefaultValue,
-    typename Base = Traverse<Visitor, bool>>
+    bool TraverseAssocEntityDetails = true,
+    typename Base = Traverse<Visitor, bool, TraverseAssocEntityDetails>>
 struct AllTraverse : public Base {
   explicit AllTraverse(Visitor &v) : Base{v} {}
   using Base::operator();
@@ -296,7 +300,8 @@ struct AllTraverse : public Base {
 // is truthful is the final result.  Works for Booleans, pointers,
 // and std::optional<>.
 template <typename Visitor, typename Result = bool,
-    typename Base = Traverse<Visitor, Result>>
+    bool TraverseAssocEntityDetails = true,
+    typename Base = Traverse<Visitor, Result, TraverseAssocEntityDetails>>
 class AnyTraverse : public Base {
 public:
   explicit AnyTraverse(Visitor &v) : Base{v} {}
@@ -315,7 +320,8 @@ private:
 };
 
 template <typename Visitor, typename Set,
-    typename Base = Traverse<Visitor, Set>>
+    bool TraverseAssocEntityDetails = true,
+    typename Base = Traverse<Visitor, Set, TraverseAssocEntityDetails>>
 struct SetTraverse : public Base {
   explicit SetTraverse(Visitor &v) : Base{v} {}
   using Base::operator();

@@ -14,6 +14,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 // This is a correctly-rounded algorithm for log2(x) in single precision with
@@ -51,48 +52,50 @@
 // Dept. of Comp. Sci., Rutgets U., Technical Report DCS-TR-758, Nov. 2021.
 // https://arxiv.org/pdf/2111.12852.pdf.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
   // Hard to round value(s).
   using fputil::round_result_slightly_up;
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   // log2(1.0f) = 0.0f.
   if (LIBC_UNLIKELY(x_u == 0x3f80'0000U))
     return 0.0f;
 
   // Exceptional inputs.
-  if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
-    if (xbits.is_zero()) {
+  if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval() ||
+                    x_u > FPBits::max_normal().uintval())) {
+    if (x == 0.0f) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<float>(FPBits::neg_inf());
+      return FPBits::inf(Sign::NEG).get_val();
     }
-    if (xbits.get_sign() && !xbits.is_nan()) {
+    if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except(FE_INVALID);
-      return FPBits::build_quiet_nan(0);
+      return FPBits::quiet_nan().get_val();
     }
     if (xbits.is_inf_or_nan()) {
       return x;
     }
     // Normalize denormal inputs.
-    xbits.set_val(xbits.get_val() * 0x1.0p23f);
+    xbits = FPBits(xbits.get_val() * 0x1.0p23f);
     m -= 23;
   }
 
-  m += xbits.get_unbiased_exponent();
+  m += xbits.get_biased_exponent();
   int index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
-  float u = static_cast<float>(xbits);
+  float u = xbits.get_val();
   double v;
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
@@ -118,4 +121,4 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 #
 # This script builds picolibc (https://github.com/picolibc/picolibc) from
@@ -69,12 +69,8 @@ picolibc_source_dir="${build_dir}/picolibc-source"
 picolibc_build_dir="${build_dir}/picolibc-build"
 mkdir -p "${picolibc_source_dir}"
 mkdir -p "${picolibc_build_dir}"
-# Download the version of picolibc that was the latest at the time this script was written.
-# Following changes are required and were introduced after version 1.8.5:
-# - updated semihost arguments handling,
-# - added missing macros in stdio.h
-# Version following 1.8.5, was not released by the time of writing.
-picolibc_commit="4b9b8ef01d18cf0563348ad4af4ae89a7277e7ca"
+# Download a known good version of picolibc.
+picolibc_commit="48fbc2009c6473293d03d5ec6f190565c6223a5c"
 curl -L "https://github.com/picolibc/picolibc/archive/${picolibc_commit}.zip" --output "${picolibc_source_dir}/picolibc.zip"
 unzip -q "${picolibc_source_dir}/picolibc.zip" -d "${picolibc_source_dir}"
 mv "${picolibc_source_dir}/picolibc-${picolibc_commit}"/* "${picolibc_source_dir}"

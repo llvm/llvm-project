@@ -121,22 +121,13 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
     } else
-      error = args_or.takeError();
+      error = Status::FromError(args_or.takeError());
 
     if (error.Success()) {
       if (options->VerifyOptions(result))
         return true;
     } else {
-      const char *error_cstr = error.AsCString();
-      if (error_cstr) {
-        // We got an error string, lets use that
-        result.AppendError(error_cstr);
-      } else {
-        // No error string, output the usage information into result
-        options->GenerateOptionUsage(
-            result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-      }
+      result.SetError(error.takeError());
     }
     result.SetStatus(eReturnStatusFailed);
     return false;
@@ -305,6 +296,43 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   }
 }
 
+void CommandObject::HandleArgumentCompletion(
+    CompletionRequest &request, OptionElementVector &opt_element_vector) {
+  size_t num_arg_entries = GetNumArgumentEntries();
+  if (num_arg_entries != 1)
+    return;
+
+  CommandArgumentEntry *entry_ptr = GetArgumentEntryAtIndex(0);
+  if (!entry_ptr) {
+    assert(entry_ptr && "We said there was one entry, but there wasn't.");
+    return; // Not worth crashing if asserts are off...
+  }
+  
+  CommandArgumentEntry &entry = *entry_ptr;
+  // For now, we only handle the simple case of one homogenous argument type.
+  if (entry.size() != 1)
+    return;
+
+  // Look up the completion type, and if it has one, invoke it:
+  const CommandObject::ArgumentTableEntry *arg_entry =
+      FindArgumentDataByType(entry[0].arg_type);
+  const ArgumentRepetitionType repeat = entry[0].arg_repetition;
+
+  if (arg_entry == nullptr || arg_entry->completion_type == lldb::eNoCompletion)
+    return;
+
+  // FIXME: This should be handled higher in the Command Parser.
+  // Check the case where this command only takes one argument, and don't do
+  // the completion if we aren't on the first entry:
+  if (repeat == eArgRepeatPlain && request.GetCursorIndex() != 0)
+    return;
+
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+      GetCommandInterpreter(), arg_entry->completion_type, request, nullptr);
+
+}
+
+
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
@@ -353,6 +381,24 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
     return false;
   }
   return true;
+}
+
+void CommandObject::AddSimpleArgumentList(
+    CommandArgumentType arg_type, ArgumentRepetitionType repetition_type) {
+
+  CommandArgumentEntry arg_entry;
+  CommandArgumentData simple_arg;
+
+  // Define the first (and only) variant of this arg.
+  simple_arg.arg_type = arg_type;
+  simple_arg.arg_repetition = repetition_type;
+
+  // There is only one variant this argument could be; put it into the argument
+  // entry.
+  arg_entry.push_back(simple_arg);
+
+  // Push the data for the first argument into the m_arguments vector.
+  m_arguments.push_back(arg_entry);
 }
 
 int CommandObject::GetNumArgumentEntries() { return m_arguments.size(); }
@@ -445,6 +491,23 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairStar) ||
          (arg_repeat_type == eArgRepeatPairRange) ||
          (arg_repeat_type == eArgRepeatPairRangeOptional);
+}
+
+std::optional<ArgumentRepetitionType> 
+CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
+  return llvm::StringSwitch<ArgumentRepetitionType>(string)
+  .Case("plain", eArgRepeatPlain)  
+  .Case("optional", eArgRepeatOptional)
+  .Case("plus", eArgRepeatPlus)
+  .Case("star", eArgRepeatStar) 
+  .Case("range", eArgRepeatRange)
+  .Case("pair-plain", eArgRepeatPairPlain)
+  .Case("pair-optional", eArgRepeatPairOptional)
+  .Case("pair-plus", eArgRepeatPairPlus)
+  .Case("pair-star", eArgRepeatPairStar)
+  .Case("pair-range", eArgRepeatPairRange)
+  .Case("pair-range-optional", eArgRepeatPairRangeOptional)
+  .Default({});
 }
 
 static CommandObject::CommandArgumentEntry
@@ -640,20 +703,24 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   }
 }
 
-void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
-                                       CommandArgumentType ID,
-                                       CommandArgumentType IDRange) {
+void CommandObject::AddIDsArgumentData(CommandObject::IDType type) {
+  CommandArgumentEntry arg;
   CommandArgumentData id_arg;
   CommandArgumentData id_range_arg;
 
   // Create the first variant for the first (and only) argument for this
   // command.
-  id_arg.arg_type = ID;
+  switch (type) {
+  case eBreakpointArgs:
+    id_arg.arg_type = eArgTypeBreakpointID;
+    id_range_arg.arg_type = eArgTypeBreakpointIDRange;
+    break;
+  case eWatchpointArgs:
+    id_arg.arg_type = eArgTypeWatchpointID;
+    id_range_arg.arg_type = eArgTypeWatchpointIDRange;
+    break;
+  }
   id_arg.arg_repetition = eArgRepeatOptional;
-
-  // Create the second variant for the first (and only) argument for this
-  // command.
-  id_range_arg.arg_type = IDRange;
   id_range_arg.arg_repetition = eArgRepeatOptional;
 
   // The first (and only) argument for this command could be either an id or an
@@ -661,6 +728,7 @@ void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
   // this command.
   arg.push_back(id_arg);
   arg.push_back(id_range_arg);
+  m_arguments.push_back(arg);
 }
 
 const char *CommandObject::GetArgumentTypeAsCString(
@@ -681,17 +749,23 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
-}
+Target &CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object.
+  if (Target *target = m_exe_ctx.GetTargetPtr())
+    return *target;
 
-Target &CommandObject::GetSelectedTarget() {
-  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
-                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
-                        eCommandRequiresThread | eCommandRequiresProcess |
-                        eCommandRequiresRegContext) &&
-         "GetSelectedTarget called from object that may have no target");
-  return *m_interpreter.GetDebugger().GetSelectedTarget();
+  // Fallback to the command interpreter's execution context in case we get
+  // called after DoExecute has finished. For example, when doing multi-line
+  // expression that uses an input reader or breakpoint callbacks.
+  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
+    return *target;
+
+  // Finally, if we have no other target, get the selected target.
+  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
+    return *target_sp;
+
+  // We only have the dummy target.
+  return GetDummyTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {
@@ -748,6 +822,7 @@ void CommandObjectParsed::Execute(const char *args_string,
           Cleanup();
           return;
         }
+        m_interpreter.IncreaseCommandUsage(*this);
         DoExecute(cmd_args, result);
       }
     }

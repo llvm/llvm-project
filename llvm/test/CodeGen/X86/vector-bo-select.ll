@@ -1270,7 +1270,7 @@ define <16 x float> @fdiv_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vbroadcastss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
+; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm2 {%k1} = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, <16 x float> %y
@@ -1306,14 +1306,14 @@ define <8 x float> @fadd_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; SSE42-NEXT:    movaps %xmm0, %xmm4
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm6 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm0
 ; SSE42-NEXT:    movaps {{.*#+}} xmm6 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; SSE42-NEXT:    movaps %xmm6, %xmm7
 ; SSE42-NEXT:    blendvps %xmm0, %xmm3, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm0 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm0, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -1327,7 +1327,7 @@ define <8 x float> @fadd_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
@@ -1407,26 +1407,26 @@ define <8 x double> @fadd_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; SSE42-NEXT:    movapd %xmm0, %xmm9
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm10, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm0
 ; SSE42-NEXT:    movapd {{.*#+}} xmm10 = [-0.0E+0,-0.0E+0]
 ; SSE42-NEXT:    movapd %xmm10, %xmm11
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm7, %xmm11
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm7, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm0
 ; SSE42-NEXT:    movapd %xmm10, %xmm7
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm0
 ; SSE42-NEXT:    movapd %xmm10, %xmm6
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm5, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm0 = [1,2]
 ; SSE42-NEXT:    pand %xmm0, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm8
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
@@ -1442,12 +1442,12 @@ define <8 x double> @fadd_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX2-NEXT:    vblendvpd %ymm5, %ymm3, %ymm6, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vblendvpd %ymm4, %ymm2, %ymm6, %ymm2
@@ -1467,28 +1467,45 @@ define <8 x double> @fadd_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 }
 
 define <8 x float> @fsub_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> noundef %x, <8 x float> noundef %y) {
-; SSE-LABEL: fsub_v8f32_cast_cond:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
-; SSE-NEXT:    movdqa %xmm4, %xmm6
-; SSE-NEXT:    pand %xmm5, %xmm6
-; SSE-NEXT:    pcmpeqd %xmm5, %xmm6
-; SSE-NEXT:    pand %xmm3, %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm4
-; SSE-NEXT:    pand %xmm2, %xmm4
-; SSE-NEXT:    subps %xmm4, %xmm0
-; SSE-NEXT:    subps %xmm6, %xmm1
-; SSE-NEXT:    retq
+; SSE2-LABEL: fsub_v8f32_cast_cond:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %edi, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
+; SSE2-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-NEXT:    pand %xmm5, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm4
+; SSE2-NEXT:    subps %xmm4, %xmm0
+; SSE2-NEXT:    subps %xmm6, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: fsub_v8f32_cast_cond:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movd %edi, %xmm4
+; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm5 = [16,32,64,128]
+; SSE42-NEXT:    movdqa %xmm4, %xmm6
+; SSE42-NEXT:    pand %xmm5, %xmm6
+; SSE42-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE42-NEXT:    pand %xmm3, %xmm6
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; SSE42-NEXT:    pand %xmm3, %xmm4
+; SSE42-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE42-NEXT:    pand %xmm2, %xmm4
+; SSE42-NEXT:    subps %xmm4, %xmm0
+; SSE42-NEXT:    subps %xmm6, %xmm1
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: fsub_v8f32_cast_cond:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
@@ -1556,22 +1573,22 @@ define <8 x double> @fsub_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm8
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm8
 ; SSE42-NEXT:    pand %xmm10, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm8
 ; SSE42-NEXT:    pand %xmm7, %xmm8
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm10
 ; SSE42-NEXT:    pand %xmm7, %xmm10
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm10
 ; SSE42-NEXT:    pand %xmm6, %xmm10
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm7
 ; SSE42-NEXT:    pand %xmm6, %xmm7
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm7
 ; SSE42-NEXT:    pand %xmm5, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm5 = [1,2]
 ; SSE42-NEXT:    pand %xmm5, %xmm9
 ; SSE42-NEXT:    pcmpeqq %xmm5, %xmm9
 ; SSE42-NEXT:    pand %xmm4, %xmm9
@@ -1585,11 +1602,11 @@ define <8 x double> @fsub_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
@@ -1636,14 +1653,14 @@ define <8 x float> @fmul_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; SSE42-NEXT:    movaps %xmm0, %xmm4
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm6 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm0
 ; SSE42-NEXT:    movaps {{.*#+}} xmm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE42-NEXT:    movaps %xmm6, %xmm7
 ; SSE42-NEXT:    blendvps %xmm0, %xmm3, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm0 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm0, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -1657,7 +1674,7 @@ define <8 x float> @fmul_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
@@ -1737,26 +1754,26 @@ define <8 x double> @fmul_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; SSE42-NEXT:    movapd %xmm0, %xmm9
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm10, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm0
 ; SSE42-NEXT:    movapd {{.*#+}} xmm10 = [1.0E+0,1.0E+0]
 ; SSE42-NEXT:    movapd %xmm10, %xmm11
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm7, %xmm11
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm7, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm0
 ; SSE42-NEXT:    movapd %xmm10, %xmm7
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm0
 ; SSE42-NEXT:    movapd %xmm10, %xmm6
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm5, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm0 = [1,2]
 ; SSE42-NEXT:    pand %xmm0, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm8
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
@@ -1772,12 +1789,12 @@ define <8 x double> @fmul_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vblendvpd %ymm5, %ymm3, %ymm6, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vblendvpd %ymm4, %ymm2, %ymm6, %ymm2
@@ -1824,14 +1841,14 @@ define <8 x float> @fdiv_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; SSE42-NEXT:    movaps %xmm0, %xmm4
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm6 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm0
 ; SSE42-NEXT:    movaps {{.*#+}} xmm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE42-NEXT:    movaps %xmm6, %xmm7
 ; SSE42-NEXT:    blendvps %xmm0, %xmm3, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm0 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm0, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -1845,7 +1862,7 @@ define <8 x float> @fdiv_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
@@ -1925,26 +1942,26 @@ define <8 x double> @fdiv_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; SSE42-NEXT:    movapd %xmm0, %xmm9
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm10, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm0
 ; SSE42-NEXT:    movapd {{.*#+}} xmm11 = [1.0E+0,1.0E+0]
 ; SSE42-NEXT:    movapd %xmm11, %xmm10
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm7, %xmm10
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm7, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm0
 ; SSE42-NEXT:    movapd %xmm11, %xmm7
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm0
 ; SSE42-NEXT:    movapd %xmm11, %xmm6
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm5, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm0 = [1,2]
 ; SSE42-NEXT:    pand %xmm0, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm8
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
@@ -1960,12 +1977,12 @@ define <8 x double> @fdiv_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vblendvpd %ymm5, %ymm3, %ymm6, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vblendvpd %ymm4, %ymm2, %ymm6, %ymm2
@@ -2089,28 +2106,45 @@ define <8 x i32> @add_v8i32_commute(<8 x i1> %b, <8 x i32> noundef %x, <8 x i32>
 }
 
 define <8 x i32> @add_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef %x, <8 x i32> noundef %y) {
-; SSE-LABEL: add_v8i32_cast_cond:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
-; SSE-NEXT:    movdqa %xmm4, %xmm6
-; SSE-NEXT:    pand %xmm5, %xmm6
-; SSE-NEXT:    pcmpeqd %xmm5, %xmm6
-; SSE-NEXT:    pand %xmm3, %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm4
-; SSE-NEXT:    pand %xmm2, %xmm4
-; SSE-NEXT:    paddd %xmm4, %xmm0
-; SSE-NEXT:    paddd %xmm6, %xmm1
-; SSE-NEXT:    retq
+; SSE2-LABEL: add_v8i32_cast_cond:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %edi, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
+; SSE2-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-NEXT:    pand %xmm5, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm4
+; SSE2-NEXT:    paddd %xmm4, %xmm0
+; SSE2-NEXT:    paddd %xmm6, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: add_v8i32_cast_cond:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movd %edi, %xmm4
+; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm5 = [16,32,64,128]
+; SSE42-NEXT:    movdqa %xmm4, %xmm6
+; SSE42-NEXT:    pand %xmm5, %xmm6
+; SSE42-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE42-NEXT:    pand %xmm3, %xmm6
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; SSE42-NEXT:    pand %xmm3, %xmm4
+; SSE42-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE42-NEXT:    pand %xmm2, %xmm4
+; SSE42-NEXT:    paddd %xmm4, %xmm0
+; SSE42-NEXT:    paddd %xmm6, %xmm1
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: add_v8i32_cast_cond:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
@@ -2178,22 +2212,22 @@ define <8 x i64> @add_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm8
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm8
 ; SSE42-NEXT:    pand %xmm10, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm8
 ; SSE42-NEXT:    pand %xmm7, %xmm8
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm10
 ; SSE42-NEXT:    pand %xmm7, %xmm10
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm10
 ; SSE42-NEXT:    pand %xmm6, %xmm10
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm7
 ; SSE42-NEXT:    pand %xmm6, %xmm7
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm7
 ; SSE42-NEXT:    pand %xmm5, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm5 = [1,2]
 ; SSE42-NEXT:    pand %xmm5, %xmm9
 ; SSE42-NEXT:    pcmpeqq %xmm5, %xmm9
 ; SSE42-NEXT:    pand %xmm4, %xmm9
@@ -2207,11 +2241,11 @@ define <8 x i64> @add_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
@@ -2525,28 +2559,45 @@ define <16 x i32> @sub_v16i32_commute_swap(<16 x i1> %b, <16 x i32> noundef %x, 
 }
 
 define <8 x i32> @sub_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef %x, <8 x i32> noundef %y) {
-; SSE-LABEL: sub_v8i32_cast_cond:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
-; SSE-NEXT:    movdqa %xmm4, %xmm6
-; SSE-NEXT:    pand %xmm5, %xmm6
-; SSE-NEXT:    pcmpeqd %xmm5, %xmm6
-; SSE-NEXT:    pand %xmm3, %xmm6
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm4
-; SSE-NEXT:    pand %xmm2, %xmm4
-; SSE-NEXT:    psubd %xmm4, %xmm0
-; SSE-NEXT:    psubd %xmm6, %xmm1
-; SSE-NEXT:    retq
+; SSE2-LABEL: sub_v8i32_cast_cond:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %edi, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
+; SSE2-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-NEXT:    pand %xmm5, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE2-NEXT:    pand %xmm3, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm4
+; SSE2-NEXT:    psubd %xmm4, %xmm0
+; SSE2-NEXT:    psubd %xmm6, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: sub_v8i32_cast_cond:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movd %edi, %xmm4
+; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm5 = [16,32,64,128]
+; SSE42-NEXT:    movdqa %xmm4, %xmm6
+; SSE42-NEXT:    pand %xmm5, %xmm6
+; SSE42-NEXT:    pcmpeqd %xmm5, %xmm6
+; SSE42-NEXT:    pand %xmm3, %xmm6
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; SSE42-NEXT:    pand %xmm3, %xmm4
+; SSE42-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE42-NEXT:    pand %xmm2, %xmm4
+; SSE42-NEXT:    psubd %xmm4, %xmm0
+; SSE42-NEXT:    psubd %xmm6, %xmm1
+; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: sub_v8i32_cast_cond:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
@@ -2614,22 +2665,22 @@ define <8 x i64> @sub_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm8
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm8
 ; SSE42-NEXT:    pand %xmm10, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm8
 ; SSE42-NEXT:    pand %xmm7, %xmm8
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm10
 ; SSE42-NEXT:    pand %xmm7, %xmm10
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm10
 ; SSE42-NEXT:    pand %xmm6, %xmm10
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm7
 ; SSE42-NEXT:    pand %xmm6, %xmm7
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm7
 ; SSE42-NEXT:    pand %xmm5, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm5 = [1,2]
 ; SSE42-NEXT:    pand %xmm5, %xmm9
 ; SSE42-NEXT:    pcmpeqq %xmm5, %xmm9
 ; SSE42-NEXT:    pand %xmm4, %xmm9
@@ -2643,11 +2694,11 @@ define <8 x i64> @sub_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
@@ -2848,14 +2899,14 @@ define <8 x i32> @mul_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; SSE42-NEXT:    movdqa %xmm0, %xmm4
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm6 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm0
 ; SSE42-NEXT:    movaps {{.*#+}} xmm6 = [1,1,1,1]
 ; SSE42-NEXT:    movaps %xmm6, %xmm7
 ; SSE42-NEXT:    blendvps %xmm0, %xmm3, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm0 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm0, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -2869,7 +2920,7 @@ define <8 x i32> @mul_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1,1,1,1,1,1,1,1]
@@ -2901,83 +2952,83 @@ define <8 x i64> @mul_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; SSE2-LABEL: mul_v8i64_cast_cond:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm8
-; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm8[0,1,0,1]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [64,128]
-; SSE2-NEXT:    movdqa %xmm9, %xmm10
-; SSE2-NEXT:    pand %xmm8, %xmm10
-; SSE2-NEXT:    pcmpeqd %xmm8, %xmm10
-; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm10[1,0,3,2]
-; SSE2-NEXT:    pand %xmm10, %xmm8
-; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [1,1]
+; SSE2-NEXT:    movdqa %xmm10, %xmm9
+; SSE2-NEXT:    pand %xmm8, %xmm9
+; SSE2-NEXT:    pcmpeqd %xmm8, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm9[1,0,3,2]
+; SSE2-NEXT:    pand %xmm9, %xmm8
+; SSE2-NEXT:    movdqa {{.*#+}} xmm11 = [1,1]
 ; SSE2-NEXT:    pand %xmm8, %xmm7
-; SSE2-NEXT:    pandn %xmm10, %xmm8
+; SSE2-NEXT:    pandn %xmm11, %xmm8
 ; SSE2-NEXT:    por %xmm7, %xmm8
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
-; SSE2-NEXT:    movdqa %xmm9, %xmm11
-; SSE2-NEXT:    pand %xmm7, %xmm11
-; SSE2-NEXT:    pcmpeqd %xmm7, %xmm11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm11[1,0,3,2]
-; SSE2-NEXT:    pand %xmm11, %xmm7
-; SSE2-NEXT:    pand %xmm7, %xmm6
-; SSE2-NEXT:    pandn %xmm10, %xmm7
-; SSE2-NEXT:    por %xmm6, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
-; SSE2-NEXT:    movdqa %xmm9, %xmm11
-; SSE2-NEXT:    pand %xmm6, %xmm11
-; SSE2-NEXT:    pcmpeqd %xmm6, %xmm11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm11[1,0,3,2]
-; SSE2-NEXT:    pand %xmm11, %xmm6
-; SSE2-NEXT:    pand %xmm6, %xmm5
-; SSE2-NEXT:    pandn %xmm10, %xmm6
-; SSE2-NEXT:    por %xmm5, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
-; SSE2-NEXT:    pand %xmm5, %xmm9
-; SSE2-NEXT:    pcmpeqd %xmm5, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[1,0,3,2]
-; SSE2-NEXT:    pand %xmm9, %xmm5
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    pandn %xmm10, %xmm5
-; SSE2-NEXT:    por %xmm4, %xmm5
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [16,32]
+; SSE2-NEXT:    movdqa %xmm10, %xmm12
+; SSE2-NEXT:    pand %xmm9, %xmm12
+; SSE2-NEXT:    pcmpeqd %xmm9, %xmm12
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm12[1,0,3,2]
+; SSE2-NEXT:    pand %xmm12, %xmm9
+; SSE2-NEXT:    pand %xmm9, %xmm6
+; SSE2-NEXT:    pandn %xmm11, %xmm9
+; SSE2-NEXT:    por %xmm6, %xmm9
+; SSE2-NEXT:    movdqa {{.*#+}} xmm12 = [4,8]
+; SSE2-NEXT:    movdqa %xmm10, %xmm13
+; SSE2-NEXT:    pand %xmm12, %xmm13
+; SSE2-NEXT:    pcmpeqd %xmm12, %xmm13
+; SSE2-NEXT:    pshufd {{.*#+}} xmm12 = xmm13[1,0,3,2]
+; SSE2-NEXT:    pand %xmm13, %xmm12
+; SSE2-NEXT:    pand %xmm12, %xmm5
+; SSE2-NEXT:    pandn %xmm11, %xmm12
+; SSE2-NEXT:    por %xmm5, %xmm12
+; SSE2-NEXT:    movdqa {{.*#+}} xmm13 = [1,2]
+; SSE2-NEXT:    pand %xmm13, %xmm10
+; SSE2-NEXT:    pcmpeqd %xmm13, %xmm10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm13 = xmm10[1,0,3,2]
+; SSE2-NEXT:    pand %xmm10, %xmm13
+; SSE2-NEXT:    pand %xmm13, %xmm4
+; SSE2-NEXT:    pandn %xmm11, %xmm13
+; SSE2-NEXT:    por %xmm4, %xmm13
+; SSE2-NEXT:    movdqa %xmm0, %xmm10
+; SSE2-NEXT:    pmuludq %xmm13, %xmm10
+; SSE2-NEXT:    movdqa %xmm0, %xmm11
+; SSE2-NEXT:    psrlq $32, %xmm11
+; SSE2-NEXT:    pmuludq %xmm13, %xmm11
 ; SSE2-NEXT:    psrlq $32, %xmm4
-; SSE2-NEXT:    pmuludq %xmm5, %xmm4
-; SSE2-NEXT:    movdqa %xmm5, %xmm9
-; SSE2-NEXT:    psrlq $32, %xmm9
-; SSE2-NEXT:    pmuludq %xmm0, %xmm9
-; SSE2-NEXT:    paddq %xmm4, %xmm9
-; SSE2-NEXT:    psllq $32, %xmm9
-; SSE2-NEXT:    pmuludq %xmm5, %xmm0
-; SSE2-NEXT:    paddq %xmm9, %xmm0
+; SSE2-NEXT:    pmuludq %xmm4, %xmm0
+; SSE2-NEXT:    paddq %xmm11, %xmm0
+; SSE2-NEXT:    psllq $32, %xmm0
+; SSE2-NEXT:    paddq %xmm10, %xmm0
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    psrlq $32, %xmm4
-; SSE2-NEXT:    pmuludq %xmm6, %xmm4
-; SSE2-NEXT:    movdqa %xmm6, %xmm5
+; SSE2-NEXT:    pmuludq %xmm12, %xmm4
+; SSE2-NEXT:    movdqa %xmm1, %xmm10
+; SSE2-NEXT:    psrlq $32, %xmm10
+; SSE2-NEXT:    pmuludq %xmm12, %xmm10
 ; SSE2-NEXT:    psrlq $32, %xmm5
-; SSE2-NEXT:    pmuludq %xmm1, %xmm5
-; SSE2-NEXT:    paddq %xmm4, %xmm5
-; SSE2-NEXT:    psllq $32, %xmm5
-; SSE2-NEXT:    pmuludq %xmm6, %xmm1
-; SSE2-NEXT:    paddq %xmm5, %xmm1
+; SSE2-NEXT:    pmuludq %xmm5, %xmm1
+; SSE2-NEXT:    paddq %xmm10, %xmm1
+; SSE2-NEXT:    psllq $32, %xmm1
+; SSE2-NEXT:    paddq %xmm4, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psrlq $32, %xmm4
-; SSE2-NEXT:    pmuludq %xmm7, %xmm4
-; SSE2-NEXT:    movdqa %xmm7, %xmm5
+; SSE2-NEXT:    pmuludq %xmm9, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
 ; SSE2-NEXT:    psrlq $32, %xmm5
-; SSE2-NEXT:    pmuludq %xmm2, %xmm5
-; SSE2-NEXT:    paddq %xmm4, %xmm5
-; SSE2-NEXT:    psllq $32, %xmm5
-; SSE2-NEXT:    pmuludq %xmm7, %xmm2
+; SSE2-NEXT:    pmuludq %xmm9, %xmm5
+; SSE2-NEXT:    psrlq $32, %xmm6
+; SSE2-NEXT:    pmuludq %xmm6, %xmm2
 ; SSE2-NEXT:    paddq %xmm5, %xmm2
+; SSE2-NEXT:    psllq $32, %xmm2
+; SSE2-NEXT:    paddq %xmm4, %xmm2
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    psrlq $32, %xmm4
 ; SSE2-NEXT:    pmuludq %xmm8, %xmm4
-; SSE2-NEXT:    movdqa %xmm8, %xmm5
+; SSE2-NEXT:    movdqa %xmm3, %xmm5
 ; SSE2-NEXT:    psrlq $32, %xmm5
-; SSE2-NEXT:    pmuludq %xmm3, %xmm5
-; SSE2-NEXT:    paddq %xmm4, %xmm5
-; SSE2-NEXT:    psllq $32, %xmm5
-; SSE2-NEXT:    pmuludq %xmm8, %xmm3
+; SSE2-NEXT:    pmuludq %xmm8, %xmm5
+; SSE2-NEXT:    psrlq $32, %xmm7
+; SSE2-NEXT:    pmuludq %xmm7, %xmm3
 ; SSE2-NEXT:    paddq %xmm5, %xmm3
+; SSE2-NEXT:    psllq $32, %xmm3
+; SSE2-NEXT:    paddq %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: mul_v8i64_cast_cond:
@@ -2985,26 +3036,26 @@ define <8 x i64> @mul_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; SSE42-NEXT:    movdqa %xmm0, %xmm9
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm10, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm0
 ; SSE42-NEXT:    movapd {{.*#+}} xmm10 = [1,1]
 ; SSE42-NEXT:    movapd %xmm10, %xmm11
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm7, %xmm11
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm7 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm7, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm7, %xmm0
 ; SSE42-NEXT:    movapd %xmm10, %xmm7
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
 ; SSE42-NEXT:    pand %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm0
 ; SSE42-NEXT:    movapd %xmm10, %xmm6
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm5, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm0 = [1,2]
 ; SSE42-NEXT:    pand %xmm0, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm8
 ; SSE42-NEXT:    movdqa %xmm8, %xmm0
@@ -3056,12 +3107,12 @@ define <8 x i64> @mul_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [1,1,1,1]
 ; AVX2-NEXT:    vblendvpd %ymm5, %ymm3, %ymm6, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vblendvpd %ymm4, %ymm2, %ymm6, %ymm2
@@ -3086,11 +3137,11 @@ define <8 x i64> @mul_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX512-LABEL: mul_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm2
-; AVX512-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
-; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm3
-; AVX512-NEXT:    vpmuludq %zmm1, %zmm3, %zmm3
-; AVX512-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm2
+; AVX512-NEXT:    vpmuludq %zmm1, %zmm2, %zmm2
+; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm3
+; AVX512-NEXT:    vpmuludq %zmm3, %zmm0, %zmm3
+; AVX512-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
 ; AVX512-NEXT:    vpsllq $32, %zmm2, %zmm2
 ; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm0 {%k1}
@@ -3564,12 +3615,12 @@ define <8 x i32> @shl_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm4
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm5 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm4, %xmm6
 ; SSE42-NEXT:    pand %xmm5, %xmm6
 ; SSE42-NEXT:    pcmpeqd %xmm5, %xmm6
 ; SSE42-NEXT:    pand %xmm3, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm3, %xmm4
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm4
 ; SSE42-NEXT:    pand %xmm2, %xmm4
@@ -3588,7 +3639,7 @@ define <8 x i32> @shl_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
@@ -3672,22 +3723,22 @@ define <8 x i64> @shl_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm8
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm8
 ; SSE42-NEXT:    pand %xmm10, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm8
 ; SSE42-NEXT:    pand %xmm7, %xmm8
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm10 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm7
 ; SSE42-NEXT:    pand %xmm10, %xmm7
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm7
 ; SSE42-NEXT:    pand %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm10
 ; SSE42-NEXT:    pand %xmm6, %xmm10
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm10
 ; SSE42-NEXT:    pand %xmm5, %xmm10
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm5 = [1,2]
 ; SSE42-NEXT:    pand %xmm5, %xmm9
 ; SSE42-NEXT:    pcmpeqq %xmm5, %xmm9
 ; SSE42-NEXT:    pand %xmm4, %xmm9
@@ -3717,11 +3768,11 @@ define <8 x i64> @shl_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
@@ -4394,12 +4445,12 @@ define <8 x i32> @lshr_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm4
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm6 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm4
 ; SSE42-NEXT:    pand %xmm6, %xmm4
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm4
 ; SSE42-NEXT:    pand %xmm3, %xmm4
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm3, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm5
 ; SSE42-NEXT:    pand %xmm2, %xmm5
@@ -4439,7 +4490,7 @@ define <8 x i32> @lshr_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
@@ -4523,22 +4574,22 @@ define <8 x i64> @lshr_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm8
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm8
 ; SSE42-NEXT:    pand %xmm10, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm8
 ; SSE42-NEXT:    pand %xmm7, %xmm8
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm10 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm7
 ; SSE42-NEXT:    pand %xmm10, %xmm7
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm7
 ; SSE42-NEXT:    pand %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm6 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm10
 ; SSE42-NEXT:    pand %xmm6, %xmm10
 ; SSE42-NEXT:    pcmpeqq %xmm6, %xmm10
 ; SSE42-NEXT:    pand %xmm5, %xmm10
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm5 = [1,2]
 ; SSE42-NEXT:    pand %xmm5, %xmm9
 ; SSE42-NEXT:    pcmpeqq %xmm5, %xmm9
 ; SSE42-NEXT:    pand %xmm4, %xmm9
@@ -4568,11 +4619,11 @@ define <8 x i64> @lshr_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
@@ -5245,12 +5296,12 @@ define <8 x i32> @ashr_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm4
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm6 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm6 = [16,32,64,128]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm4
 ; SSE42-NEXT:    pand %xmm6, %xmm4
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm4
 ; SSE42-NEXT:    pand %xmm3, %xmm4
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE42-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; SSE42-NEXT:    pand %xmm3, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm5
 ; SSE42-NEXT:    pand %xmm2, %xmm5
@@ -5290,7 +5341,7 @@ define <8 x i32> @ashr_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
@@ -5402,22 +5453,22 @@ define <8 x i64> @ashr_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd %edi, %xmm8
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[0,1,0,1]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [64,128]
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm10 = [64,128]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm8
 ; SSE42-NEXT:    pand %xmm10, %xmm8
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm8
 ; SSE42-NEXT:    pand %xmm7, %xmm8
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [16,32]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm10 = [16,32]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm7
 ; SSE42-NEXT:    pand %xmm10, %xmm7
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm7
 ; SSE42-NEXT:    pand %xmm6, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm10 = [4,8]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm10 = [4,8]
 ; SSE42-NEXT:    movdqa %xmm9, %xmm6
 ; SSE42-NEXT:    pand %xmm10, %xmm6
 ; SSE42-NEXT:    pcmpeqq %xmm10, %xmm6
 ; SSE42-NEXT:    pand %xmm5, %xmm6
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2]
+; SSE42-NEXT:    pmovsxbq {{.*#+}} xmm5 = [1,2]
 ; SSE42-NEXT:    pand %xmm5, %xmm9
 ; SSE42-NEXT:    pcmpeqq %xmm5, %xmm9
 ; SSE42-NEXT:    pand %xmm4, %xmm9
@@ -5475,11 +5526,11 @@ define <8 x i64> @ashr_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm4
 ; AVX2-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [16,32,64,128]
+; AVX2-NEXT:    vpmovzxbq {{.*#+}} ymm5 = [16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm6
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm6, %ymm5
 ; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [1,2,4,8]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpeqq %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
@@ -5732,7 +5783,7 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm2 {%k1} = [1,1,1,1,1,1,1,1]
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm2, %xmm0
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
@@ -5793,7 +5844,7 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; AVX512VL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 {%k1} = [1,1,1,1,1,1,1,1]
 ; AVX512VL-NEXT:    vextracti32x4 $3, %zmm2, %xmm0
 ; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512VL-NEXT:    vextracti32x4 $3, %zmm1, %xmm3

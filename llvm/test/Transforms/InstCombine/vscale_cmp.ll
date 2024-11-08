@@ -3,7 +3,7 @@
 
 define <vscale x 2 x i1> @sge(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sge(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge <vscale x 2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %cmp = icmp sge <vscale x 2 x i8> %x, zeroinitializer

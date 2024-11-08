@@ -624,7 +624,7 @@ iterates over the pairs in the returned array.
 
 .. code-block:: text
 
-  ArrayRef<std::pair<Record *, SMRange>>
+  ArrayRef<std::pair<const Record *, SMRange>>
       Superclasses = Prototype->getSuperClasses();
   for (const auto &SuperPair : Superclasses) {
     ...
@@ -761,7 +761,7 @@ over time. The output looks like this.
 
   -------------------- Global Variables (5) --------------------
 
-  AMDGPUBufferIntrinsics = [int_amdgcn_buffer_load_format, ...
+  AMDGPUBufferIntrinsics = [int_amdgcn_s_buffer_load, ...
   AMDGPUImageDimAtomicIntrinsics = [int_amdgcn_image_atomic_swap_1d, ...
   ...
   -------------------- Classes (758) --------------------

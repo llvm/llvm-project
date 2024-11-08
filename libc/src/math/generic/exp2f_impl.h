@@ -17,14 +17,14 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 
-#include <errno.h>
-
 #include "explogxf.h"
 
-namespace LIBC_NAMESPACE::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace generic {
 
 LIBC_INLINE float exp2f(float x) {
   constexpr uint32_t EXVAL1 = 0x3b42'9d37U;
@@ -71,18 +71,18 @@ LIBC_INLINE float exp2f(float x) {
     }
 
     // x >= 128
-    if (!xbits.get_sign()) {
+    if (xbits.is_pos()) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-          return FPBits::max_normal();
+          return FPBits::max_normal().get_val();
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
-      return x + FPBits::inf();
+      return x + FPBits::inf().get_val();
     }
     // x <= -150
     if (x_u >= 0xc316'0000U) {
@@ -93,7 +93,7 @@ LIBC_INLINE float exp2f(float x) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return FPBits::min_denormal();
+        return FPBits::min_subnormal().get_val();
       if (x != 0.0f) {
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_UNDERFLOW);
@@ -137,7 +137,7 @@ LIBC_INLINE float exp2f(float x) {
   // exp_hi = shift hi to the exponent field of double precision.
   int64_t exp_hi =
       static_cast<int64_t>(static_cast<uint64_t>(k >> ExpBase::MID_BITS)
-                           << fputil::FloatProperties<double>::MANTISSA_WIDTH);
+                           << fputil::FPBits<double>::FRACTION_LEN);
   // mh = 2^hi * 2^mid
   // mh_bits = bit field of mh
   int64_t mh_bits = ExpBase::EXP_2_MID[k & ExpBase::MID_MASK] + exp_hi;
@@ -160,6 +160,7 @@ LIBC_INLINE float exp2f(float x) {
   return static_cast<float>(fputil::multiply_add(p, dx_sq * mh, c1 * mh));
 }
 
-} // namespace LIBC_NAMESPACE::generic
+} // namespace generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXP2F_IMPL_H

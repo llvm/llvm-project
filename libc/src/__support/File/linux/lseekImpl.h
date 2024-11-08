@@ -9,16 +9,17 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H
 
+#include "hdr/types/off_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
-#include <unistd.h>      // For off_t.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE ErrorOr<off_t> lseekimpl(int fd, off_t offset, int whence) {
@@ -45,6 +46,6 @@ LIBC_INLINE ErrorOr<off_t> lseekimpl(int fd, off_t offset, int whence) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H

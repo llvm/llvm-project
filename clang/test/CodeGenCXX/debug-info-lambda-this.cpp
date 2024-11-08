@@ -21,7 +21,8 @@ int main() {
   return 0;
 }
 
-// CHECK: !{![[FOO_THIS:[0-9]+]], ![[FOO_AA:[0-9]+]], ![[FOO_OPERATOR:[0-9]+]]}
+// CHECK: distinct !DICompositeType(tag: DW_TAG_class_type, name: "<lambda_1>", {{.*}}, elements: ![[ELEMENT_TAG:[0-9]+]]
+// CHECK: ![[ELEMENT_TAG]] = !{![[FOO_THIS:[0-9]+]], ![[FOO_AA:[0-9]+]], ![[FOO_OPERATOR:[0-9]+]]}
 // CHECK-NEXT: ![[FOO_THIS]] = !DIDerivedType(tag: DW_TAG_member, name: "__this", scope: ![[#]], file: ![[#]], line: [[#]], baseType: ![[#]], size: [[#]])
 // CHECK-NEXT: ![[FOO_AA]] = !DIDerivedType(tag: DW_TAG_member, name: "aa", scope: ![[#]], file: ![[#]], line: [[#]], baseType: ![[#]], size: [[#]], offset: [[#]])
 // CHECK-NEXT: ![[FOO_OPERATOR]] = !DISubprogram(name: "operator()", scope: ![[#]], file: ![[#]], line: [[#]], type: ![[#]], scopeLine: [[#]], flags: DIFlagPublic | DIFlagPrototyped, spFlags: 0)

@@ -1,14 +1,14 @@
-# RUN: llc -march=amdgcn -run-pass register-coalescer -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass register-coalescer -o - %s | FileCheck %s
 
 # Check that coalescer does not create wider register tuple than in source
 
-# CHECK:  - { id: 2, class: vreg_64, preferred-register: '' }
-# CHECK:  - { id: 3, class: vreg_64, preferred-register: '' }
-# CHECK:  - { id: 4, class: vreg_64, preferred-register: '' }
-# CHECK:  - { id: 5, class: vreg_96, preferred-register: '' }
-# CHECK:  - { id: 6, class: vreg_96, preferred-register: '' }
-# CHECK:  - { id: 7, class: vreg_128, preferred-register: '' }
-# CHECK:  - { id: 8, class: vreg_128, preferred-register: '' }
+# CHECK:  - { id: 2, class: vreg_64, preferred-register: '', flags: [  ] }
+# CHECK:  - { id: 3, class: vreg_64, preferred-register: '', flags: [  ] }
+# CHECK:  - { id: 4, class: vreg_64, preferred-register: '', flags: [  ] }
+# CHECK:  - { id: 5, class: vreg_96, preferred-register: '', flags: [  ] }
+# CHECK:  - { id: 6, class: vreg_96, preferred-register: '', flags: [  ] }
+# CHECK:  - { id: 7, class: vreg_128, preferred-register: '', flags: [  ] }
+# CHECK:  - { id: 8, class: vreg_128, preferred-register: '', flags: [  ] }
 # No more registers shall be defined
 # CHECK-NEXT: liveins:
 # CHECK:    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %4,

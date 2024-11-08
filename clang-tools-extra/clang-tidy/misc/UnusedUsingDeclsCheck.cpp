@@ -25,6 +25,13 @@ AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
   return false;
 }
 
+AST_MATCHER_P(Type, asTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
+              DeclMatcher) {
+  if (const TagDecl *ND = Node.getAsTagDecl())
+    return DeclMatcher.matches(*ND, Finder, Builder);
+  return false;
+}
+
 } // namespace
 
 // A function that helps to tell whether a TargetDecl in a UsingDecl will be
@@ -39,21 +46,8 @@ static bool shouldCheckDecl(const Decl *TargetDecl) {
 
 UnusedUsingDeclsCheck::UnusedUsingDeclsCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  std::optional<StringRef> HeaderFileExtensionsOption =
-      Options.get("HeaderFileExtensions");
-  RawStringHeaderFileExtensions =
-      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
-  if (HeaderFileExtensionsOption) {
-    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                    HeaderFileExtensions,
-                                    utils::defaultFileExtensionDelimiters())) {
-      this->configurationDiag("Invalid header file extension: '%0'")
-          << RawStringHeaderFileExtensions;
-    }
-  } else
-    HeaderFileExtensions = Context->getHeaderFileExtensions();
-}
+    : ClangTidyCheck(Name, Context),
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
@@ -74,7 +68,8 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
   Finder->addMatcher(
       loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
-                         hasUnqualifiedDesugaredType(type().bind("usedType")))),
+                         hasUnqualifiedDesugaredType(
+                             type(asTagDecl(tagDecl().bind("used")))))),
       this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
@@ -117,8 +112,10 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     for (const auto *UsingShadow : Using->shadows()) {
       const auto *TargetDecl = UsingShadow->getTargetDecl()->getCanonicalDecl();
-      if (shouldCheckDecl(TargetDecl))
+      if (shouldCheckDecl(TargetDecl)) {
         Context.UsingTargetDecls.insert(TargetDecl);
+        UsingTargetDeclsCache.insert(TargetDecl);
+      }
     }
     if (!Context.UsingTargetDecls.empty())
       Contexts.push_back(Context);
@@ -147,12 +144,6 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   // marked after a corresponding using decl has been found.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
     RemoveNamedDecl(Used);
-    return;
-  }
-
-  if (const auto *T = Result.Nodes.getNodeAs<Type>("usedType")) {
-    if (const auto *ND = T->getAsTagDecl())
-      RemoveNamedDecl(ND);
     return;
   }
 
@@ -201,13 +192,16 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
   if (!D)
     return;
+  const Decl *CanonicalDecl = D->getCanonicalDecl();
+  if (!UsingTargetDeclsCache.contains(CanonicalDecl))
+    return;
   // FIXME: Currently, we don't handle the using-decls being used in different
   // scopes (such as different namespaces, different functions). Instead of
   // giving an incorrect message, we mark all of them as used.
-  //
-  // FIXME: Use a more efficient way to find a matching context.
   for (auto &Context : Contexts) {
-    if (Context.UsingTargetDecls.contains(D->getCanonicalDecl()))
+    if (Context.IsUsed)
+      continue;
+    if (Context.UsingTargetDecls.contains(CanonicalDecl))
       Context.IsUsed = true;
   }
 }
@@ -224,6 +218,7 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
     }
   }
   Contexts.clear();
+  UsingTargetDeclsCache.clear();
 }
 
 } // namespace clang::tidy::misc

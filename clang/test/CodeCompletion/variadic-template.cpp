@@ -8,7 +8,7 @@ void f() {
   // The important thing is that we provide OVERLOAD signature in all those cases.
   //
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-5):7 %s -o - | FileCheck --check-prefix=CHECK-1 %s
-  // CHECK-1: OVERLOAD: [#void#]fun(<#T x#>, Args args...)
+  // CHECK-1: OVERLOAD: [#void#]fun(<#T x#>)
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-7):10 %s -o - | FileCheck --check-prefix=CHECK-2 %s
   // CHECK-2: OVERLOAD: [#void#]fun(int x)
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-9):13 %s -o - | FileCheck --check-prefix=CHECK-3 %s

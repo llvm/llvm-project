@@ -24,16 +24,12 @@ define void @subrecurrences(i32 %outer_l, i32 %inner_l, i32 %val) {
 ; CHECK-NEXT:    --> (1 /u {{\{\{}}-1,+,-1}<nw><%outer>,+,1}<nsw><%inner>) U: [0,2) S: [0,2) Exits: (1 /u {(-1 + %inner_l),+,-1}<nw><%outer>) LoopDispositions: { %inner: Computable, %outer: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @subrecurrences
 ; CHECK-NEXT:  Loop %inner: backedge-taken count is %inner_l
-; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is %inner_l
-; CHECK-NEXT:  Loop %inner: Predicated backedge-taken count is %inner_l
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer: backedge-taken count is %outer_l
-; CHECK-NEXT:  Loop %outer: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %outer: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %outer: symbolic max backedge-taken count is %outer_l
-; CHECK-NEXT:  Loop %outer: Predicated backedge-taken count is %outer_l
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %outer: Trip multiple is 1
 ;
 entry:

@@ -15,6 +15,17 @@ def SDT_LoongArchVreplve : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<0>,
                                          SDTCisSameAs<0, 1>, SDTCisInt<2>]>;
 def SDT_LoongArchVecCond : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 
+def SDT_LoongArchVShuf : SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                       SDTCisInt<1>, SDTCisVec<1>,
+                                       SDTCisSameAs<0, 2>,
+                                       SDTCisSameAs<2, 3>]>;
+def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                     SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                        SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
+def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
+def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
+
 // Target nodes.
 def loongarch_vreplve : SDNode<"LoongArchISD::VREPLVE", SDT_LoongArchVreplve>;
 def loongarch_vall_nonzero : SDNode<"LoongArchISD::VALL_NONZERO",
@@ -22,14 +33,33 @@ def loongarch_vall_nonzero : SDNode<"LoongArchISD::VALL_NONZERO",
 def loongarch_vany_nonzero : SDNode<"LoongArchISD::VANY_NONZERO",
                                     SDT_LoongArchVecCond>;
 def loongarch_vall_zero : SDNode<"LoongArchISD::VALL_ZERO",
-                                SDT_LoongArchVecCond>;
+                                 SDT_LoongArchVecCond>;
 def loongarch_vany_zero : SDNode<"LoongArchISD::VANY_ZERO",
-                                SDT_LoongArchVecCond>;
+                                 SDT_LoongArchVecCond>;
 
 def loongarch_vpick_sext_elt : SDNode<"LoongArchISD::VPICK_SEXT_ELT",
                                       SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>>;
 def loongarch_vpick_zext_elt : SDNode<"LoongArchISD::VPICK_ZEXT_ELT",
                                       SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>>;
+
+def loongarch_vshuf: SDNode<"LoongArchISD::VSHUF", SDT_LoongArchVShuf>;
+def loongarch_vpickev: SDNode<"LoongArchISD::VPICKEV", SDT_LoongArchV2R>;
+def loongarch_vpickod: SDNode<"LoongArchISD::VPICKOD", SDT_LoongArchV2R>;
+def loongarch_vpackev: SDNode<"LoongArchISD::VPACKEV", SDT_LoongArchV2R>;
+def loongarch_vpackod: SDNode<"LoongArchISD::VPACKOD", SDT_LoongArchV2R>;
+def loongarch_vilvl: SDNode<"LoongArchISD::VILVL", SDT_LoongArchV2R>;
+def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
+
+def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
+def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
+def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
+def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
+
+def immZExt1 : ImmLeaf<i64, [{return isUInt<1>(Imm);}]>;
+def immZExt2 : ImmLeaf<i64, [{return isUInt<2>(Imm);}]>;
+def immZExt3 : ImmLeaf<i64, [{return isUInt<3>(Imm);}]>;
+def immZExt4 : ImmLeaf<i64, [{return isUInt<4>(Imm);}]>;
+def immZExt8 : ImmLeaf<i64, [{return isUInt<8>(Imm);}]>;
 
 class VecCond<SDPatternOperator OpNode, ValueType TyNode,
               RegisterClass RC = LSX128>
@@ -95,6 +125,29 @@ def vsplati64_imm_eq_63 : PatFrags<(ops), [(build_vector),
          Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 63;
 }]>;
 
+def vsplatf32_fpimm_eq_1
+  : PatFrags<(ops), [(bitconvert (v4i32 (build_vector))),
+                     (bitconvert (v8i32 (build_vector)))], [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  N = N->getOperand(0).getNode();
+
+  return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == EltTy.getSizeInBits() &&
+         Imm == APFloat(+1.0f).bitcastToAPInt();
+}]>;
+def vsplatf64_fpimm_eq_1
+  : PatFrags<(ops), [(bitconvert (v2i64 (build_vector))),
+                     (bitconvert (v4i64 (build_vector)))], [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  N = N->getOperand(0).getNode();
+
+  return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == EltTy.getSizeInBits() &&
+         Imm == APFloat(+1.0).bitcastToAPInt();
+}]>;
+
 def vsplati8imm7   : PatFrag<(ops node:$reg),
                              (and node:$reg, vsplati8_imm_eq_7)>;
 def vsplati16imm15 : PatFrag<(ops node:$reg),
@@ -152,6 +205,29 @@ def lsxsplatf64 : PatFrag<(ops node:$e0),
 def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
   return CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
+}]>;
+
+// FP immediate of VLDI patterns.
+def f32imm_vldi : PatLeaf<(fpimm), [{
+  const auto &TLI =
+      *static_cast<const LoongArchTargetLowering*>(getTargetLowering());
+  return TLI.isFPImmVLDILegal(N->getValueAPF(), MVT::f32);
+}]>;
+def f64imm_vldi : PatLeaf<(fpimm), [{
+  const auto &TLI =
+      *static_cast<const LoongArchTargetLowering*>(getTargetLowering());
+  return TLI.isFPImmVLDILegal(N->getValueAPF(), MVT::f64);
+}]>;
+
+def to_f32imm_vldi : SDNodeXForm<fpimm, [{
+  uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
+  x = (0b11011 << 8) | (((x >> 24) & 0xc0) ^ 0x40) | ((x >> 19) & 0x3f);
+  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+}]>;
+def to_f64imm_vldi : SDNodeXForm<fpimm, [{
+  uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
+  x = (0b11100 << 8) | (((x >> 56) & 0xc0) ^ 0x40) | ((x >> 48) & 0x3f);
+  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -614,7 +690,9 @@ def VMSKGEZ_B : LSX2R_VV<0x729c5000>;
 
 def VMSKNZ_B : LSX2R_VV<0x729c6000>;
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def VLDI : LSX1RI13_VI<0x73e00000>;
+}
 
 def VAND_V : LSX3R_VVV<0x71260000>;
 def VOR_V : LSX3R_VVV<0x71268000>;
@@ -869,6 +947,10 @@ def VFRECIP_S : LSX2R_VV<0x729cf400>;
 def VFRECIP_D : LSX2R_VV<0x729cf800>;
 def VFRSQRT_S : LSX2R_VV<0x729d0400>;
 def VFRSQRT_D : LSX2R_VV<0x729d0800>;
+def VFRECIPE_S : LSX2R_VV<0x729d1400>;
+def VFRECIPE_D : LSX2R_VV<0x729d1800>;
+def VFRSQRTE_S : LSX2R_VV<0x729d2400>;
+def VFRSQRTE_D : LSX2R_VV<0x729d2800>;
 
 def VFCVTL_S_H : LSX2R_VV<0x729de800>;
 def VFCVTH_S_H : LSX2R_VV<0x729dec00>;
@@ -1160,6 +1242,10 @@ def PseudoVBZ_W : VecCond<loongarch_vall_zero, v4i32>;
 def PseudoVBZ_D : VecCond<loongarch_vall_zero, v2i64>;
 def PseudoVBZ : VecCond<loongarch_vany_zero, v16i8>;
 
+let usesCustomInserter = 1 in
+def PseudoCTPOP : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                         [(set GPR:$rd, (ctpop GPR:$rj))]>;
+
 } // Predicates = [HasExtLSX]
 
 multiclass PatVr<SDPatternOperator OpNode, string Inst> {
@@ -1170,6 +1256,13 @@ multiclass PatVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(v4i32 (OpNode (v4i32 LSX128:$vj))),
             (!cast<LAInst>(Inst#"_W") LSX128:$vj)>;
   def : Pat<(v2i64 (OpNode (v2i64 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj)>;
+}
+
+multiclass PatVrF<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v4f32 (OpNode (v4f32 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_S") LSX128:$vj)>;
+  def : Pat<(v2f64 (OpNode (v2f64 LSX128:$vj))),
             (!cast<LAInst>(Inst#"_D") LSX128:$vj)>;
 }
 
@@ -1259,6 +1352,65 @@ multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_W") LSX128:$vj, uimm5:$imm)>;
   def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 (SplatPat_uimm6 uimm6:$imm))),
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
+}
+
+multiclass PatCCVrSimm5<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj),
+                          (v16i8 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, simm5:$imm)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj),
+                          (v8i16 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, simm5:$imm)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj),
+                          (v4i32 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, simm5:$imm)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj),
+                          (v2i64 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, simm5:$imm)>;
+}
+
+multiclass PatCCVrUimm5<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj),
+                          (v16i8 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_BU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj),
+                          (v8i16 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_HU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj),
+                          (v4i32 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_WU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj),
+                          (v2i64 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_DU") LSX128:$vj, uimm5:$imm)>;
+}
+
+multiclass PatCCVrVr<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj), (v16i8 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj), (v8i16 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj), (v4i32 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj), (v2i64 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatCCVrVrU<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj), (v16i8 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_BU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj), (v8i16 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_HU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj), (v4i32 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_WU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj), (v2i64 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_DU") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatCCVrVrF<CondCode CC, string Inst> {
+  def : Pat<(v4i32 (setcc (v4f32 LSX128:$vj), (v4f32 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_S") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (setcc (v2f64 LSX128:$vj), (v2f64 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
 }
 
 let Predicates = [HasExtLSX] in {
@@ -1448,6 +1600,12 @@ def : Pat<(xor (v4i32 LSX128:$vj), (v4i32 (vsplat_uimm_pow2 uimm5:$imm))),
 def : Pat<(xor (v2i64 LSX128:$vj), (v2i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (VBITREVI_D LSX128:$vj, uimm6:$imm)>;
 
+// Vector bswaps
+def : Pat<(bswap (v8i16 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b10110001)>;
+def : Pat<(bswap (v4i32 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b00011011)>;
+def : Pat<(bswap (v2i64 LSX128:$vj)),
+          (VSHUF4I_W (VSHUF4I_B LSX128:$vj, 0b00011011), 0b10110001)>;
+
 // VFADD_{S/D}
 defm : PatVrVrF<fadd, "VFADD">;
 
@@ -1465,6 +1623,83 @@ def : Pat<(fma v4f32:$vj, v4f32:$vk, v4f32:$va),
           (VFMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
 def : Pat<(fma v2f64:$vj, v2f64:$vk, v2f64:$va),
           (VFMADD_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFMSUB_{S/D}
+def : Pat<(fma v4f32:$vj, v4f32:$vk, (fneg v4f32:$va)),
+          (VFMSUB_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fma v2f64:$vj, v2f64:$vk, (fneg v2f64:$va)),
+          (VFMSUB_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFNMADD_{S/D}
+def : Pat<(fneg (fma v4f32:$vj, v4f32:$vk, v4f32:$va)),
+          (VFNMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fneg (fma v2f64:$vj, v2f64:$vk, v2f64:$va)),
+          (VFNMADD_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+def : Pat<(fma_nsz (fneg v4f32:$vj), v4f32:$vk, (fneg v4f32:$va)),
+          (VFNMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, (fneg v2f64:$va)),
+          (VFNMADD_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFNMSUB_{S/D}
+def : Pat<(fneg (fma v4f32:$vj, v4f32:$vk, (fneg v4f32:$va))),
+          (VFNMSUB_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fneg (fma v2f64:$vj, v2f64:$vk, (fneg v2f64:$va))),
+          (VFNMSUB_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+def : Pat<(fma_nsz (fneg v4f32:$vj), v4f32:$vk, v4f32:$va),
+          (VFNMSUB_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, v2f64:$va),
+          (VFNMSUB_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFSQRT_{S/D}
+defm : PatVrF<fsqrt, "VFSQRT">;
+
+// VFRECIP_{S/D}
+def : Pat<(fdiv vsplatf32_fpimm_eq_1, v4f32:$vj),
+          (VFRECIP_S v4f32:$vj)>;
+def : Pat<(fdiv vsplatf64_fpimm_eq_1, v2f64:$vj),
+          (VFRECIP_D v2f64:$vj)>;
+
+// VFRSQRT_{S/D}
+def : Pat<(fdiv vsplatf32_fpimm_eq_1, (fsqrt v4f32:$vj)),
+          (VFRSQRT_S v4f32:$vj)>;
+def : Pat<(fdiv vsplatf64_fpimm_eq_1, (fsqrt v2f64:$vj)),
+          (VFRSQRT_D v2f64:$vj)>;
+
+// VSEQ[I]_{B/H/W/D}
+defm : PatCCVrSimm5<SETEQ, "VSEQI">;
+defm : PatCCVrVr<SETEQ, "VSEQ">;
+
+// VSLE[I]_{B/H/W/D}[U]
+defm : PatCCVrSimm5<SETLE, "VSLEI">;
+defm : PatCCVrUimm5<SETULE, "VSLEI">;
+defm : PatCCVrVr<SETLE, "VSLE">;
+defm : PatCCVrVrU<SETULE, "VSLE">;
+
+// VSLT[I]_{B/H/W/D}[U]
+defm : PatCCVrSimm5<SETLT, "VSLTI">;
+defm : PatCCVrUimm5<SETULT, "VSLTI">;
+defm : PatCCVrVr<SETLT, "VSLT">;
+defm : PatCCVrVrU<SETULT, "VSLT">;
+
+// VFCMP.cond.{S/D}
+defm : PatCCVrVrF<SETEQ, "VFCMP_CEQ">;
+defm : PatCCVrVrF<SETOEQ, "VFCMP_CEQ">;
+defm : PatCCVrVrF<SETUEQ, "VFCMP_CUEQ">;
+
+defm : PatCCVrVrF<SETLE, "VFCMP_CLE">;
+defm : PatCCVrVrF<SETOLE, "VFCMP_CLE">;
+defm : PatCCVrVrF<SETULE, "VFCMP_CULE">;
+
+defm : PatCCVrVrF<SETLT, "VFCMP_CLT">;
+defm : PatCCVrVrF<SETOLT, "VFCMP_CLT">;
+defm : PatCCVrVrF<SETULT, "VFCMP_CULT">;
+
+defm : PatCCVrVrF<SETNE, "VFCMP_CNE">;
+defm : PatCCVrVrF<SETONE, "VFCMP_CNE">;
+defm : PatCCVrVrF<SETUNE, "VFCMP_CUNE">;
+
+defm : PatCCVrVrF<SETO, "VFCMP_COR">;
+defm : PatCCVrVrF<SETUO, "VFCMP_CUN">;
 
 // VINSGR2VR_{B/H/W/D}
 def : Pat<(vector_insert v16i8:$vd, GRLenVT:$rj, uimm4:$imm),
@@ -1511,6 +1746,128 @@ def : Pat<(loongarch_vreplve v4i32:$vj, GRLenVT:$rk),
           (VREPLVE_W v4i32:$vj, GRLenVT:$rk)>;
 def : Pat<(loongarch_vreplve v2i64:$vj, GRLenVT:$rk),
           (VREPLVE_D v2i64:$vj, GRLenVT:$rk)>;
+
+// VSHUF_{B/H/W/D}
+def : Pat<(loongarch_vshuf v16i8:$va, v16i8:$vj, v16i8:$vk),
+          (VSHUF_B v16i8:$vj, v16i8:$vk, v16i8:$va)>;
+def : Pat<(loongarch_vshuf v8i16:$vd, v8i16:$vj, v8i16:$vk),
+          (VSHUF_H v8i16:$vd, v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vshuf v4i32:$vd, v4i32:$vj, v4i32:$vk),
+          (VSHUF_W v4i32:$vd, v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vshuf v2i64:$vd, v2i64:$vj, v2i64:$vk),
+          (VSHUF_D v2i64:$vd, v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vshuf v4i32:$vd, v4f32:$vj, v4f32:$vk),
+          (VSHUF_W v4i32:$vd, v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vshuf v2i64:$vd, v2f64:$vj, v2f64:$vk),
+          (VSHUF_D v2i64:$vd, v2f64:$vj, v2f64:$vk)>;
+
+// VPICKEV_{B/H/W/D}
+def : Pat<(loongarch_vpickev v16i8:$vj, v16i8:$vk),
+          (VPICKEV_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(loongarch_vpickev v8i16:$vj, v8i16:$vk),
+          (VPICKEV_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vpickev v4i32:$vj, v4i32:$vk),
+          (VPICKEV_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vpickev v2i64:$vj, v2i64:$vk),
+          (VPICKEV_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vpickev v4f32:$vj, v4f32:$vk),
+          (VPICKEV_W v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vpickev v2f64:$vj, v2f64:$vk),
+          (VPICKEV_D v2f64:$vj, v2f64:$vk)>;
+
+// VPICKOD_{B/H/W/D}
+def : Pat<(loongarch_vpickod v16i8:$vj, v16i8:$vk),
+          (VPICKOD_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(loongarch_vpickod v8i16:$vj, v8i16:$vk),
+          (VPICKOD_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vpickod v4i32:$vj, v4i32:$vk),
+          (VPICKOD_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vpickod v2i64:$vj, v2i64:$vk),
+          (VPICKOD_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vpickod v4f32:$vj, v4f32:$vk),
+          (VPICKOD_W v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vpickod v2f64:$vj, v2f64:$vk),
+          (VPICKOD_D v2f64:$vj, v2f64:$vk)>;
+
+// VPACKEV_{B/H/W/D}
+def : Pat<(loongarch_vpackev v16i8:$vj, v16i8:$vk),
+          (VPACKEV_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(loongarch_vpackev v8i16:$vj, v8i16:$vk),
+          (VPACKEV_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vpackev v4i32:$vj, v4i32:$vk),
+          (VPACKEV_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vpackev v2i64:$vj, v2i64:$vk),
+          (VPACKEV_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vpackev v4f32:$vj, v4f32:$vk),
+          (VPACKEV_W v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vpackev v2f64:$vj, v2f64:$vk),
+          (VPACKEV_D v2f64:$vj, v2f64:$vk)>;
+
+// VPACKOD_{B/H/W/D}
+def : Pat<(loongarch_vpackod v16i8:$vj, v16i8:$vk),
+          (VPACKOD_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(loongarch_vpackod v8i16:$vj, v8i16:$vk),
+          (VPACKOD_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vpackod v4i32:$vj, v4i32:$vk),
+          (VPACKOD_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vpackod v2i64:$vj, v2i64:$vk),
+          (VPACKOD_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vpackod v4f32:$vj, v4f32:$vk),
+          (VPACKOD_W v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vpackod v2f64:$vj, v2f64:$vk),
+          (VPACKOD_D v2f64:$vj, v2f64:$vk)>;
+
+// VILVL_{B/H/W/D}
+def : Pat<(loongarch_vilvl v16i8:$vj, v16i8:$vk),
+          (VILVL_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(loongarch_vilvl v8i16:$vj, v8i16:$vk),
+          (VILVL_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vilvl v4i32:$vj, v4i32:$vk),
+          (VILVL_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vilvl v2i64:$vj, v2i64:$vk),
+          (VILVL_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vilvl v4f32:$vj, v4f32:$vk),
+          (VILVL_W v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vilvl v2f64:$vj, v2f64:$vk),
+          (VILVL_D v2f64:$vj, v2f64:$vk)>;
+
+// VILVH_{B/H/W/D}
+def : Pat<(loongarch_vilvh v16i8:$vj, v16i8:$vk),
+          (VILVH_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(loongarch_vilvh v8i16:$vj, v8i16:$vk),
+          (VILVH_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(loongarch_vilvh v4i32:$vj, v4i32:$vk),
+          (VILVH_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(loongarch_vilvh v2i64:$vj, v2i64:$vk),
+          (VILVH_D v2i64:$vj, v2i64:$vk)>;
+def : Pat<(loongarch_vilvh v4f32:$vj, v4f32:$vk),
+          (VILVH_W v4f32:$vj, v4f32:$vk)>;
+def : Pat<(loongarch_vilvh v2f64:$vj, v2f64:$vk),
+          (VILVH_D v2f64:$vj, v2f64:$vk)>;
+
+// VSHUF4I_{B/H/W}
+def : Pat<(loongarch_vshuf4i v16i8:$vj, immZExt8:$ui8),
+          (VSHUF4I_B v16i8:$vj, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i v8i16:$vj, immZExt8:$ui8),
+        (VSHUF4I_H v8i16:$vj, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i v4i32:$vj, immZExt8:$ui8),
+        (VSHUF4I_W v4i32:$vj, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i v4f32:$vj, immZExt8:$ui8),
+        (VSHUF4I_W v4f32:$vj, immZExt8:$ui8)>;
+
+// VREPLVEI_{B/H/W/D}
+def : Pat<(loongarch_vreplvei v16i8:$vj, immZExt4:$ui4),
+          (VREPLVEI_B v16i8:$vj, immZExt4:$ui4)>;
+def : Pat<(loongarch_vreplvei v8i16:$vj, immZExt3:$ui3),
+        (VREPLVEI_H v8i16:$vj, immZExt3:$ui3)>;
+def : Pat<(loongarch_vreplvei v4i32:$vj, immZExt2:$ui2),
+        (VREPLVEI_W v4i32:$vj, immZExt2:$ui2)>;
+def : Pat<(loongarch_vreplvei v2i64:$vj, immZExt1:$ui1),
+        (VREPLVEI_D v2i64:$vj, immZExt1:$ui1)>;
+def : Pat<(loongarch_vreplvei v4f32:$vj, immZExt2:$ui2),
+        (VREPLVEI_W v4f32:$vj, immZExt2:$ui2)>;
+def : Pat<(loongarch_vreplvei v2f64:$vj, immZExt1:$ui1),
+        (VREPLVEI_D v2f64:$vj, immZExt1:$ui1)>;
 
 // VREPLVEI_{W/D}
 def : Pat<(lsxsplatf32 FPR32:$fj),
@@ -1563,6 +1920,40 @@ def : Pat<(f32 (vector_extract v4f32:$vj, i64:$rk)),
           (f32 (EXTRACT_SUBREG (VREPLVE_W v4f32:$vj, i64:$rk), sub_32))>;
 def : Pat<(f64 (vector_extract v2f64:$vj, i64:$rk)),
           (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, i64:$rk), sub_64))>;
+
+// vselect
+def : Pat<(v16i8 (vselect LSX128:$vd, (v16i8 (SplatPat_uimm8 uimm8:$imm)),
+                          LSX128:$vj)),
+          (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
+  def  : Pat<(vt (vselect LSX128:$va, LSX128:$vk, LSX128:$vj)),
+             (VBITSEL_V LSX128:$vj, LSX128:$vk, LSX128:$va)>;
+
+// fneg
+def : Pat<(fneg (v4f32 LSX128:$vj)), (VBITREVI_W LSX128:$vj, 31)>;
+def : Pat<(fneg (v2f64 LSX128:$vj)), (VBITREVI_D LSX128:$vj, 63)>;
+
+// VFFINT_{S_W/D_L}
+def : Pat<(v4f32 (sint_to_fp v4i32:$vj)), (VFFINT_S_W v4i32:$vj)>;
+def : Pat<(v2f64 (sint_to_fp v2i64:$vj)), (VFFINT_D_L v2i64:$vj)>;
+
+// VFFINT_{S_WU/D_LU}
+def : Pat<(v4f32 (uint_to_fp v4i32:$vj)), (VFFINT_S_WU v4i32:$vj)>;
+def : Pat<(v2f64 (uint_to_fp v2i64:$vj)), (VFFINT_D_LU v2i64:$vj)>;
+
+// VFTINTRZ_{W_S/L_D}
+def : Pat<(v4i32 (fp_to_sint v4f32:$vj)), (VFTINTRZ_W_S v4f32:$vj)>;
+def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
+
+// VFTINTRZ_{W_SU/L_DU}
+def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
+def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+
+// Vector loads floating-point constants
+def : Pat<(f32 f32imm_vldi:$in),
+          (f32 (EXTRACT_SUBREG (VLDI (to_f32imm_vldi f32imm_vldi:$in)), sub_32))>;
+def : Pat<(f64 f64imm_vldi:$in),
+          (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
 } // Predicates = [HasExtLSX]
 
@@ -1848,6 +2239,51 @@ foreach Inst = ["VFLOGB_D", "VFCLASS_D", "VFSQRT_D", "VFRECIP_D", "VFRSQRT_D",
                 "VFTINT_L_D", "VFTINTRZ_LU_D", "VFTINT_LU_D"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2f64 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
+
+// 128-Bit vector FP approximate reciprocal operation
+let Predicates = [HasFrecipe] in {
+foreach Inst = ["VFRECIPE_S", "VFRSQRTE_S"] in
+  def : Pat<(deriveLSXIntrinsic<Inst>.ret (v4f32 LSX128:$vj)),
+            (!cast<LAInst>(Inst) LSX128:$vj)>;
+foreach Inst = ["VFRECIPE_D", "VFRSQRTE_D"] in
+  def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2f64 LSX128:$vj)),
+            (!cast<LAInst>(Inst) LSX128:$vj)>;
+
+def : Pat<(loongarch_vfrecipe v4f32:$src), 
+          (VFRECIPE_S v4f32:$src)>;
+def : Pat<(loongarch_vfrecipe v2f64:$src), 
+          (VFRECIPE_D v2f64:$src)>;
+def : Pat<(loongarch_vfrsqrte v4f32:$src), 
+          (VFRSQRTE_S v4f32:$src)>;
+def : Pat<(loongarch_vfrsqrte v2f64:$src), 
+          (VFRSQRTE_D v2f64:$src)>;
+}
+
+// Vector floating-point conversion
+def : Pat<(f32 (fceil FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRP_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (fceil FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRP_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+def : Pat<(f32 (ffloor FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRM_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (ffloor FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRM_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+def : Pat<(f32 (ftrunc FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRZ_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (ftrunc FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRZ_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+def : Pat<(f32 (froundeven FPR32:$fj)),
+          (f32 (EXTRACT_SUBREG (VFRINTRNE_S (VREPLVEI_W
+               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+def : Pat<(f64 (froundeven FPR64:$fj)),
+          (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
+               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

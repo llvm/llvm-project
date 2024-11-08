@@ -1886,8 +1886,8 @@ drps
 # CHECK-NEXT:  1      3     0.50                        fccmpe	d9, d31, #0, le
 # CHECK-NEXT:  1      3     0.50                        fccmpe	d3, d0, #15, gt
 # CHECK-NEXT:  1      3     0.50                        fccmpe	d31, d5, #7, ne
-# CHECK-NEXT:  1      4     0.50                        fcsel	s3, s20, s9, pl
-# CHECK-NEXT:  1      4     0.50                        fcsel	d9, d10, d11, mi
+# CHECK-NEXT:  1      3     0.50                        fcsel	s3, s20, s9, pl
+# CHECK-NEXT:  1      3     0.50                        fcsel	d9, d10, d11, mi
 # CHECK-NEXT:  1      4     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      4     0.50                        fabs	s2, s3
 # CHECK-NEXT:  1      4     0.50                        fneg	s4, s5

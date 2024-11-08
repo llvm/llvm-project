@@ -59,7 +59,7 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    andl $-4, %edx
 ; AVX-NEXT:    leaq 48(%rsi), %rdi
 ; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    {vex} vpdpwssd -48(%rdi), %xmm1, %xmm0
 ; AVX-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
@@ -80,7 +80,7 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    addq %rcx, %rsi
 ; AVX-NEXT:    shll $4, %eax
 ; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
 ; AVX-NEXT:    addq $16, %rcx
@@ -106,7 +106,7 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    andl $-4, %edx
 ; AVX512-NEXT:    leaq 48(%rsi), %rdi
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpdpwssd -48(%rdi), %xmm1, %xmm0
 ; AVX512-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
@@ -127,7 +127,7 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    addq %rcx, %rsi
 ; AVX512-NEXT:    shll $4, %eax
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
 ; AVX512-NEXT:    addq $16, %rcx
@@ -187,17 +187,17 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
   %40 = load <8 x i16>, ptr %39, align 16
   %41 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %40)
   %42 = add <4 x i32> %41, %37
-  %43 = or i64 %36, 1
+  %43 = or disjoint i64 %36, 1
   %44 = getelementptr inbounds <2 x i64>, ptr %3, i64 %43
   %45 = load <8 x i16>, ptr %44, align 16
   %46 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %45)
   %47 = add <4 x i32> %46, %42
-  %48 = or i64 %36, 2
+  %48 = or disjoint i64 %36, 2
   %49 = getelementptr inbounds <2 x i64>, ptr %3, i64 %48
   %50 = load <8 x i16>, ptr %49, align 16
   %51 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %50)
   %52 = add <4 x i32> %51, %47
-  %53 = or i64 %36, 3
+  %53 = or disjoint i64 %36, 3
   %54 = getelementptr inbounds <2 x i64>, ptr %3, i64 %53
   %55 = load <8 x i16>, ptr %54, align 16
   %56 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %7, <8 x i16> %55)
@@ -225,7 +225,7 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    andl $-2, %edi
 ; AVX-NEXT:    movl $16, %r8d
 ; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vmovdqa (%rsi,%r8), %xmm1
 ; AVX-NEXT:    vpmaddwd -16(%rdx,%r8), %xmm0, %xmm2
@@ -265,7 +265,7 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    andl $-2, %edi
 ; AVX512-NEXT:    movl $16, %r8d
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqa (%rsi,%r8), %xmm1
 ; AVX512-NEXT:    vpmaddwd -16(%rdx,%r8), %xmm0, %xmm2
@@ -328,7 +328,7 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
   %29 = load <4 x i32>, ptr %28, align 16
   %30 = tail call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %29, <4 x i32> %7, <4 x i32> %27)
   store <4 x i32> %30, ptr %28, align 16
-  %31 = or i64 %24, 1
+  %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <2 x i64>, ptr %3, i64 %31
   %33 = load <4 x i32>, ptr %32, align 16
   %34 = getelementptr inbounds <2 x i64>, ptr %1, i64 %31
@@ -406,7 +406,7 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    andl $-4, %edx
 ; AVX-NEXT:    leaq 96(%rsi), %rdi
 ; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    {vex} vpdpwssd -96(%rdi), %ymm1, %ymm0
 ; AVX-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
@@ -427,7 +427,7 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    addq %rcx, %rsi
 ; AVX-NEXT:    shll $5, %eax
 ; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
 ; AVX-NEXT:    addq $32, %rcx
@@ -453,7 +453,7 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    andl $-4, %edx
 ; AVX512-NEXT:    leaq 96(%rsi), %rdi
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpdpwssd -96(%rdi), %ymm1, %ymm0
 ; AVX512-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
@@ -474,7 +474,7 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    addq %rcx, %rsi
 ; AVX512-NEXT:    shll $5, %eax
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
 ; AVX512-NEXT:    addq $32, %rcx
@@ -534,17 +534,17 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
   %40 = load <16 x i16>, ptr %39, align 32
   %41 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %40)
   %42 = add <8 x i32> %41, %37
-  %43 = or i64 %36, 1
+  %43 = or disjoint i64 %36, 1
   %44 = getelementptr inbounds <4 x i64>, ptr %3, i64 %43
   %45 = load <16 x i16>, ptr %44, align 32
   %46 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %45)
   %47 = add <8 x i32> %46, %42
-  %48 = or i64 %36, 2
+  %48 = or disjoint i64 %36, 2
   %49 = getelementptr inbounds <4 x i64>, ptr %3, i64 %48
   %50 = load <16 x i16>, ptr %49, align 32
   %51 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %50)
   %52 = add <8 x i32> %51, %47
-  %53 = or i64 %36, 3
+  %53 = or disjoint i64 %36, 3
   %54 = getelementptr inbounds <4 x i64>, ptr %3, i64 %53
   %55 = load <16 x i16>, ptr %54, align 32
   %56 = tail call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %7, <16 x i16> %55)
@@ -579,7 +579,7 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    andl $-2, %edi
 ; AVX-NEXT:    movl $32, %r8d
 ; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  .LBB5_7: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vmovdqa (%rsi,%r8), %ymm1
 ; AVX-NEXT:    vpmaddwd -32(%rdx,%r8), %ymm0, %ymm2
@@ -620,7 +620,7 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    andl $-2, %edi
 ; AVX512-NEXT:    movl $32, %r8d
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB5_7: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqa (%rsi,%r8), %ymm1
 ; AVX512-NEXT:    vpmaddwd -32(%rdx,%r8), %ymm0, %ymm2
@@ -684,7 +684,7 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
   %29 = load <8 x i32>, ptr %28, align 32
   %30 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %29, <8 x i32> %7, <8 x i32> %27)
   store <8 x i32> %30, ptr %28, align 32
-  %31 = or i64 %24, 1
+  %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <4 x i64>, ptr %3, i64 %31
   %33 = load <8 x i32>, ptr %32, align 32
   %34 = getelementptr inbounds <4 x i64>, ptr %1, i64 %31

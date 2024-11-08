@@ -38,58 +38,28 @@ struct PatchableFunction : public MachineFunctionPass {
 }
 
 bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
+  MachineBasicBlock &FirstMBB = *MF.begin();
+
   if (MF.getFunction().hasFnAttribute("patchable-function-entry")) {
-    MachineBasicBlock &FirstMBB = *MF.begin();
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     // The initial .loc covers PATCHABLE_FUNCTION_ENTER.
     BuildMI(FirstMBB, FirstMBB.begin(), DebugLoc(),
             TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
     return true;
-  }
-
-  if (!MF.getFunction().hasFnAttribute("patchable-function"))
-    return false;
-
+  } else if (MF.getFunction().hasFnAttribute("patchable-function")) {
 #ifndef NDEBUG
-  Attribute PatchAttr = MF.getFunction().getFnAttribute("patchable-function");
-  StringRef PatchType = PatchAttr.getValueAsString();
-  assert(PatchType == "prologue-short-redirect" && "Only possibility today!");
+    Attribute PatchAttr = MF.getFunction().getFnAttribute("patchable-function");
+    StringRef PatchType = PatchAttr.getValueAsString();
+    assert(PatchType == "prologue-short-redirect" && "Only possibility today!");
 #endif
-
-  auto &FirstMBB = *MF.begin();
-  auto *TII = MF.getSubtarget().getInstrInfo();
-
-  MachineBasicBlock::iterator FirstActualI = llvm::find_if(
-      FirstMBB, [](const MachineInstr &MI) { return !MI.isMetaInstruction(); });
-
-  if (FirstActualI == FirstMBB.end()) {
-    // As of Microsoft documentation on /hotpatch feature, we must ensure that
-    // "the first instruction of each function is at least two bytes, and no
-    // jump within the function goes to the first instruction"
-
-    // When the first MBB is empty, insert a patchable no-op. This ensures the
-    // first instruction is patchable in two special cases:
-    // - the function is empty (e.g. unreachable)
-    // - the function jumps back to the first instruction, which is in a
-    // successor MBB.
-    BuildMI(&FirstMBB, DebugLoc(), TII->get(TargetOpcode::PATCHABLE_OP))
-        .addImm(2)
-        .addImm(TargetOpcode::PATCHABLE_OP);
+    auto *TII = MF.getSubtarget().getInstrInfo();
+    BuildMI(FirstMBB, FirstMBB.begin(), DebugLoc(),
+            TII->get(TargetOpcode::PATCHABLE_OP))
+        .addImm(2);
     MF.ensureAlignment(Align(16));
     return true;
   }
-
-  auto MIB = BuildMI(FirstMBB, FirstActualI, FirstActualI->getDebugLoc(),
-                     TII->get(TargetOpcode::PATCHABLE_OP))
-                 .addImm(2)
-                 .addImm(FirstActualI->getOpcode());
-
-  for (auto &MO : FirstActualI->operands())
-    MIB.add(MO);
-
-  FirstActualI->eraseFromParent();
-  MF.ensureAlignment(Align(16));
-  return true;
+  return false;
 }
 
 char PatchableFunction::ID = 0;

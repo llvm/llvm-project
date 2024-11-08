@@ -24,19 +24,21 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __binary_search {
-struct __fn {
+struct __binary_search {
   template <forward_iterator _Iter,
             sentinel_for<_Iter> _Sent,
             class _Type,
             class _Proj                                                             = identity,
             indirect_strict_weak_order<const _Type*, projected<_Iter, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__lower_bound<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
     return __ret != __last && !std::invoke(__comp, __value, std::invoke(__proj, *__ret));
@@ -46,7 +48,7 @@ struct __fn {
             class _Type,
             class _Proj                                                                          = identity,
             indirect_strict_weak_order<const _Type*, projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
   operator()(_Range&& __r, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
     auto __last  = ranges::end(__r);
@@ -54,15 +56,16 @@ struct __fn {
     return __ret != __last && !std::invoke(__comp, __value, std::invoke(__proj, *__ret));
   }
 };
-} // namespace __binary_search
 
 inline namespace __cpo {
-inline constexpr auto binary_search = __binary_search::__fn{};
+inline constexpr auto binary_search = __binary_search{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_BINARY_SEARCH_H

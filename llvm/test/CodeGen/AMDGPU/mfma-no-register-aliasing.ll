@@ -1,8 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY908 %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A %s
-; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A-GISEL %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a -sgpr-regalloc=fast -vgpr-regalloc=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,FAST %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -early-live-intervals -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GREEDY,GREEDY90A-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -sgpr-regalloc=fast -vgpr-regalloc=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,FAST %s
 
 ; Check that Dst and SrcC of MFMA instructions reading more than 4 registers as SrcC
 ; is either completely disjoint or exactly the same, but does not alias.

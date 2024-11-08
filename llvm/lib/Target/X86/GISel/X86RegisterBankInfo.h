@@ -32,7 +32,8 @@ protected:
   static RegisterBankInfo::PartialMapping PartMappings[];
   static RegisterBankInfo::ValueMapping ValMappings[];
 
-  static PartialMappingIdx getPartialMappingIdx(const LLT &Ty, bool isFP);
+  static PartialMappingIdx getPartialMappingIdx(const MachineInstr &MI,
+                                                const LLT &Ty, bool isFP);
   static const RegisterBankInfo::ValueMapping *
   getValueMapping(PartialMappingIdx Idx, unsigned NumOperands);
 };
@@ -61,11 +62,24 @@ private:
                        const SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx,
                        SmallVectorImpl<const ValueMapping *> &OpdsMapping);
 
+  // Maximum recursion depth for hasFPConstraints.
+  const unsigned MaxFPRSearchDepth = 2;
+
+  /// \returns true if \p MI only uses and defines FPRs.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                        const TargetRegisterInfo &TRI,
+                        unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only uses FPRs.
+  bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only defines FPRs.
+  bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+
 public:
   X86RegisterBankInfo(const TargetRegisterInfo &TRI);
-
-  const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const override;
 
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;

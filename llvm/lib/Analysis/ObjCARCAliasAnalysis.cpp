@@ -29,9 +29,7 @@
 
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 #define DEBUG_TYPE "objc-arc-aa"
@@ -142,5 +140,5 @@ ModRefInfo ObjCARCAAResult::getModRefInfo(const CallBase *Call,
 AnalysisKey ObjCARCAA::Key;
 
 ObjCARCAAResult ObjCARCAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return ObjCARCAAResult(F.getParent()->getDataLayout());
+  return ObjCARCAAResult(F.getDataLayout());
 }

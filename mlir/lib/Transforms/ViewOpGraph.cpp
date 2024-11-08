@@ -8,6 +8,7 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
@@ -45,7 +46,7 @@ static std::string strFromOs(function_ref<void(raw_ostream &)> func) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   func(os);
-  return os.str();
+  return buf;
 }
 
 /// Escape special characters such as '\n' and quotation marks.
@@ -92,6 +93,7 @@ public:
       processOperation(getOperation());
       emitAllEdgeStmts();
     });
+    markAllAnalysesPreserved();
   }
 
   /// Create a CFG graph for a region. Used in `Region::viewGraph`.
@@ -126,6 +128,12 @@ private:
   /// Emit all edges. This function should be called after all nodes have been
   /// emitted.
   void emitAllEdgeStmts() {
+    if (printDataFlowEdges) {
+      for (const auto &[value, node, label] : dataFlowEdges) {
+        emitEdgeStmt(valueToNode[value], node, label, kLineStyleDataFlow);
+      }
+    }
+
     for (const std::string &edge : edges)
       os << edge << ";\n";
     edges.clear();
@@ -191,7 +199,7 @@ private:
     std::string buf;
     llvm::raw_string_ostream ss(buf);
     attr.print(ss);
-    os << truncateString(ss.str());
+    os << truncateString(buf);
   }
 
   /// Append an edge to the list of edges.
@@ -254,7 +262,7 @@ private:
         std::string buf;
         llvm::raw_string_ostream ss(buf);
         interleaveComma(op->getResultTypes(), ss);
-        os << truncateString(ss.str()) << ")";
+        os << truncateString(buf) << ")";
       }
 
       // Print attributes.
@@ -313,9 +321,8 @@ private:
     if (printDataFlowEdges) {
       unsigned numOperands = op->getNumOperands();
       for (unsigned i = 0; i < numOperands; i++)
-        emitEdgeStmt(valueToNode[op->getOperand(i)], node,
-                     /*label=*/numOperands == 1 ? "" : std::to_string(i),
-                     kLineStyleDataFlow);
+        dataFlowEdges.push_back({op->getOperand(i), node,
+                                 numOperands == 1 ? "" : std::to_string(i)});
     }
 
     for (Value result : op->getResults())
@@ -344,6 +351,8 @@ private:
   std::vector<std::string> edges;
   /// Mapping of SSA values to Graphviz nodes/clusters.
   DenseMap<Value, Node> valueToNode;
+  /// Output for data flow edges is delayed until the end to handle cycles
+  std::vector<std::tuple<Value, Node, std::string>> dataFlowEdges;
   /// Counter for generating unique node/subgraph identifiers.
   int counter = 0;
 

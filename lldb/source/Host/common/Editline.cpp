@@ -10,9 +10,8 @@
 #include <iomanip>
 #include <optional>
 
-#include "lldb/Host/Editline.h"
-
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timeout.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Locale.h"
@@ -30,20 +30,6 @@
 
 using namespace lldb_private;
 using namespace lldb_private::line_editor;
-
-// Workaround for what looks like an OS X-specific issue, but other platforms
-// may benefit from something similar if issues arise.  The libedit library
-// doesn't explicitly initialize the curses termcap library, which it gets away
-// with until TERM is set to VT100 where it stumbles over an implementation
-// assumption that may not exist on other platforms.  The setupterm() function
-// would normally require headers that don't work gracefully in this context,
-// so the function declaration has been hoisted here.
-#if defined(__APPLE__)
-extern "C" {
-int setupterm(char *term, int fildes, int *errret);
-}
-#define USE_SETUPTERM_WORKAROUND
-#endif
 
 // Editline uses careful cursor management to achieve the illusion of editing a
 // multi-line block of text with a single line editor.  Preserving this
@@ -458,7 +444,9 @@ StringList Editline::GetInputAsStringList(int line_count) {
     if (line_count == 0)
       break;
 #if LLDB_EDITLINE_USE_WCHAR
-    lines.AppendString(m_utf8conv.to_bytes(line));
+    std::string buffer;
+    llvm::convertWideToUTF8(line, buffer);
+    lines.AppendString(buffer);
 #else
     lines.AppendString(line);
 #endif
@@ -650,7 +638,9 @@ unsigned char Editline::BreakLineCommand(int ch) {
     if (m_fix_indentation_callback) {
       StringList lines = GetInputAsStringList(m_current_line_index + 1);
 #if LLDB_EDITLINE_USE_WCHAR
-      lines.AppendString(m_utf8conv.to_bytes(new_line_fragment));
+      std::string buffer;
+      llvm::convertWideToUTF8(new_line_fragment, buffer);
+      lines.AppendString(buffer);
 #else
       lines.AppendString(new_line_fragment);
 #endif
@@ -698,8 +688,9 @@ unsigned char Editline::EndOrAddLineCommand(int ch) {
       m_input_lines.clear();
       for (unsigned index = 0; index < lines.GetSize(); index++) {
 #if LLDB_EDITLINE_USE_WCHAR
-        m_input_lines.insert(m_input_lines.end(),
-                             m_utf8conv.from_bytes(lines[index]));
+        std::wstring wbuffer;
+        llvm::ConvertUTF8toWide(lines[index], wbuffer);
+        m_input_lines.insert(m_input_lines.end(), wbuffer);
 #else
         m_input_lines.insert(m_input_lines.end(), lines[index]);
 #endif
@@ -883,7 +874,9 @@ unsigned char Editline::FixIndentationCommand(int ch) {
     currentLine = currentLine.erase(0, -indent_correction);
   }
 #if LLDB_EDITLINE_USE_WCHAR
-  m_input_lines[m_current_line_index] = m_utf8conv.from_bytes(currentLine);
+  std::wstring wbuffer;
+  llvm::ConvertUTF8toWide(currentLine, wbuffer);
+  m_input_lines[m_current_line_index] = wbuffer;
 #else
   m_input_lines[m_current_line_index] = currentLine;
 #endif
@@ -978,8 +971,14 @@ void Editline::DisplayCompletions(
       break;
 
     fprintf(editline.m_output_file, "More (Y/n/a): ");
-    char reply = 'n';
-    int got_char = el_getc(editline.m_editline, &reply);
+    // The type for the output and the type for the parameter are different,
+    // to allow interoperability with older versions of libedit. The container
+    // for the reply must be as wide as what our implementation is using,
+    // but libedit may use a narrower type depending on the build
+    // configuration.
+    EditLineGetCharType reply = L'n';
+    int got_char = el_wgetc(editline.m_editline,
+                            reinterpret_cast<EditLineCharType *>(&reply));
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
@@ -1023,8 +1022,11 @@ unsigned char Editline::TabCommand(int ch) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
       // Terminate the current argument with a quote if it started with a quote.
-      if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
+      Args &parsedLine = request.GetParsedLine();
+      if (!parsedLine.empty() && request.GetCursorIndex() < parsedLine.size() &&
+          request.GetParsedArg().IsQuoted()) {
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
+      }
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
@@ -1393,35 +1395,6 @@ Editline::Editline(const char *editline_name, FILE *input_file,
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
-
-#ifdef USE_SETUPTERM_WORKAROUND
-  if (m_output_file) {
-    const int term_fd = fileno(m_output_file);
-    if (term_fd != -1) {
-      static std::recursive_mutex *g_init_terminal_fds_mutex_ptr = nullptr;
-      static std::set<int> *g_init_terminal_fds_ptr = nullptr;
-      static llvm::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, [&]() {
-        g_init_terminal_fds_mutex_ptr =
-            new std::recursive_mutex(); // NOTE: Leak to avoid C++ destructor
-                                        // chain issues
-        g_init_terminal_fds_ptr = new std::set<int>(); // NOTE: Leak to avoid
-                                                       // C++ destructor chain
-                                                       // issues
-      });
-
-      // We must make sure to initialize the terminal a given file descriptor
-      // only once. If we do this multiple times, we start leaking memory.
-      std::lock_guard<std::recursive_mutex> guard(
-          *g_init_terminal_fds_mutex_ptr);
-      if (g_init_terminal_fds_ptr->find(term_fd) ==
-          g_init_terminal_fds_ptr->end()) {
-        g_init_terminal_fds_ptr->insert(term_fd);
-        setupterm((char *)0, term_fd, (int *)0);
-      }
-    }
-  }
-#endif
 }
 
 Editline::~Editline() {
@@ -1536,7 +1509,7 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
     } else {
       m_history_sp->Enter(input);
 #if LLDB_EDITLINE_USE_WCHAR
-      line = m_utf8conv.to_bytes(SplitLines(input)[0]);
+      llvm::convertWideToUTF8(SplitLines(input)[0], line);
 #else
       line = SplitLines(input)[0];
 #endif
@@ -1588,6 +1561,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
+    SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);
   }
@@ -1607,23 +1581,22 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
   out = (unsigned char)ch;
   return true;
 #else
-  std::codecvt_utf8<wchar_t> cvt;
   llvm::SmallString<4> input;
   for (;;) {
-    const char *from_next;
-    wchar_t *to_next;
-    std::mbstate_t state = std::mbstate_t();
     input.push_back(ch);
-    switch (cvt.in(state, input.begin(), input.end(), from_next, &out, &out + 1,
-                   to_next)) {
-    case std::codecvt_base::ok:
+    auto *cur_ptr = reinterpret_cast<const llvm::UTF8 *>(input.begin());
+    auto *end_ptr = reinterpret_cast<const llvm::UTF8 *>(input.end());
+    llvm::UTF32 code_point = 0;
+    llvm::ConversionResult cr = llvm::convertUTF8Sequence(
+        &cur_ptr, end_ptr, &code_point, llvm::lenientConversion);
+    switch (cr) {
+    case llvm::conversionOK:
+      out = code_point;
       return out != (EditLineGetCharType)WEOF;
-
-    case std::codecvt_base::error:
-    case std::codecvt_base::noconv:
+    case llvm::targetExhausted:
+    case llvm::sourceIllegal:
       return false;
-
-    case std::codecvt_base::partial:
+    case llvm::sourceExhausted:
       lldb::ConnectionStatus status;
       size_t read_count = m_input_connection.Read(
           &ch, 1, std::chrono::seconds(0), status, nullptr);

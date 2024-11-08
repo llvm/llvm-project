@@ -18,7 +18,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   constexpr char fNAME[] = "testdata/unlocked_read_and_write.test";
@@ -36,8 +35,8 @@ TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   ASSERT_EQ(size_t(0),
             LIBC_NAMESPACE::fread_unlocked(data, 1, sizeof(READ_SIZE), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror_unlocked(f), 0);
-  ASSERT_NE(libc_errno, 0);
-  libc_errno = 0;
+  ASSERT_ERRNO_FAILURE();
+  LIBC_NAMESPACE::libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr_unlocked(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror_unlocked(f), 0);
@@ -57,8 +56,8 @@ TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   ASSERT_EQ(size_t(0),
             LIBC_NAMESPACE::fwrite_unlocked(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror_unlocked(f), 0);
-  ASSERT_NE(libc_errno, 0);
-  libc_errno = 0;
+  ASSERT_ERRNO_FAILURE();
+  LIBC_NAMESPACE::libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr_unlocked(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror_unlocked(f), 0);

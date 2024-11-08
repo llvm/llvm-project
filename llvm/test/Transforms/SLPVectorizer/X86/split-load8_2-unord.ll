@@ -7,26 +7,18 @@ define dso_local void @_Z4testP1S(ptr %p) local_unnamed_addr {
 ; CHECK-LABEL: @_Z4testP1S(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 0
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 15
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 7
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 6
 ; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 4
 ; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 12
-; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 13
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 14
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 5
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x ptr> poison, ptr [[ARRAYIDX1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x ptr> [[TMP2]], ptr [[ARRAYIDX6]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> [[TMP3]], ptr [[ARRAYIDX13]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr> [[TMP4]], ptr [[ARRAYIDX20]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x ptr> [[TMP5]], ptr [[ARRAYIDX27]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x ptr> [[TMP6]], ptr [[ARRAYIDX34]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x ptr> [[TMP7]], ptr [[ARRAYIDX41]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x ptr> [[TMP8]], ptr [[ARRAYIDX48]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP9]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <8 x i32> [[TMP10]], [[TMP1]]
-; CHECK-NEXT:    store <8 x i32> [[TMP11]], ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARRAYIDX27]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[ARRAYIDX41]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[ARRAYIDX20]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP3]], <8 x i32> <i32 1, i32 7, i32 6, i32 4, i32 poison, i32 poison, i32 0, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP0]], i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <8 x i32> [[TMP6]], [[TMP2]]
+; CHECK-NEXT:    store <8 x i32> [[TMP7]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -101,13 +93,12 @@ define dso_local void @test_unordered_splits(ptr nocapture %p) local_unnamed_add
 ; CHECK-NEXT:    [[P2:%.*]] = alloca [16 x i32], align 16
 ; CHECK-NEXT:    [[G10:%.*]] = getelementptr inbounds [16 x i32], ptr [[P1]], i32 0, i64 4
 ; CHECK-NEXT:    [[G20:%.*]] = getelementptr inbounds [16 x i32], ptr [[P2]], i32 0, i64 12
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[G10]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[G20]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 7, i32 5, i32 6, i32 4>
-; CHECK-NEXT:    store <8 x i32> [[SHUFFLE]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[G10]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[G20]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP2]], <4 x i32> [[TMP1]], i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 7, i32 5, i32 6, i32 4>
+; CHECK-NEXT:    store <8 x i32> [[TMP4]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -158,18 +149,15 @@ define dso_local void @test_cost_splits(ptr nocapture %p) local_unnamed_addr {
 ; CHECK-NEXT:    [[G12:%.*]] = getelementptr inbounds [16 x i32], ptr [[P2]], i32 0, i64 6
 ; CHECK-NEXT:    [[G20:%.*]] = getelementptr inbounds [16 x i32], ptr [[P3]], i32 0, i64 12
 ; CHECK-NEXT:    [[G22:%.*]] = getelementptr inbounds [16 x i32], ptr [[P4]], i32 0, i64 14
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[G10]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[G12]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[G20]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[G22]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i32> [[TMP12]], <8 x i32> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
-; CHECK-NEXT:    store <8 x i32> [[TMP14]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[G10]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[G12]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[G20]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[G22]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> poison, <2 x i32> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP4]], <2 x i32> [[TMP1]], i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP2]], i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP3]], i64 6)
+; CHECK-NEXT:    store <8 x i32> [[TMP7]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

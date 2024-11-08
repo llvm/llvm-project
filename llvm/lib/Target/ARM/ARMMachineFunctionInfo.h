@@ -15,12 +15,17 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <utility>
 
 namespace llvm {
+
+namespace yaml {
+struct ARMFunctionInfo;
+} // end namespace yaml
 
 class ARMSubtarget;
 
@@ -249,13 +254,9 @@ public:
       return -1U;
   }
 
-  DenseMap<const MachineBasicBlock*, unsigned>::iterator getCoalescedWeight(
-                                                  MachineBasicBlock* MBB) {
-    auto It = CoalescedWeights.find(MBB);
-    if (It == CoalescedWeights.end()) {
-      It = CoalescedWeights.insert(std::make_pair(MBB, 0)).first;
-    }
-    return It;
+  DenseMap<const MachineBasicBlock *, unsigned>::iterator
+  getCoalescedWeight(MachineBasicBlock *MBB) {
+    return CoalescedWeights.try_emplace(MBB, 0).first;
   }
 
   /// Indicate to the backend that \c GV has had its storage changed to inside
@@ -293,7 +294,28 @@ public:
   }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
+
+  void initializeBaseYamlFields(const yaml::ARMFunctionInfo &YamlMFI);
 };
+
+namespace yaml {
+struct ARMFunctionInfo final : public yaml::MachineFunctionInfo {
+  bool LRSpilled;
+
+  ARMFunctionInfo() = default;
+  ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~ARMFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<ARMFunctionInfo> {
+  static void mapping(IO &YamlIO, ARMFunctionInfo &MFI) {
+    YamlIO.mapOptional("isLRSpilled", MFI.LRSpilled);
+  }
+};
+
+} // end namespace yaml
 
 } // end namespace llvm
 

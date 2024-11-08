@@ -9,10 +9,7 @@ macro(get_bits_for_arch arch bits)
   endif()
 endmacro()
 
-set(ASAN_ABI_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
-if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND ASAN_ABI_TEST_DEPS asan_abi)
-endif()
+set(ASAN_ABI_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} asan_abi)
 
 set(ASAN_ABI_TEST_ARCH ${ASAN_ABI_SUPPORTED_ARCH})
 if(APPLE)
@@ -81,4 +78,3 @@ add_lit_testsuite(check-asan-abi "Running the AddressSanitizerABI tests"
   ${ASAN_ABI_TESTSUITES}
   ${exclude_from_check_all}
   DEPENDS ${ASAN_ABI_TEST_DEPS})
-set_target_properties(check-asan-abi PROPERTIES FOLDER "Compiler-RT Misc")

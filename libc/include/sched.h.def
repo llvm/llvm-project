@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SCHED_H
 #define LLVM_LIBC_SCHED_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/sched-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/sched-macros.h"
 
 %%public_api()
 
-#endif // LLVM_LIBC_SCHED_H 
+#endif // LLVM_LIBC_SCHED_H

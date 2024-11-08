@@ -75,7 +75,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
@@ -87,9 +88,9 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI,
                             Register VReg) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   // Branch analysis.

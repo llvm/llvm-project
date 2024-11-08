@@ -157,7 +157,7 @@ define i32 @test_gep_i32ptr(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i32, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 64
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1

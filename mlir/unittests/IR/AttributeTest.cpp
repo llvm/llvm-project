@@ -351,6 +351,21 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   EXPECT_FALSE(isa<DenseBoolResourceElementsAttr>(i32ResourceAttr));
 }
 
+TEST(DenseResourceElementsAttrTest, CheckNotMutableAllocateAndCopy) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Create a i32 attribute.
+  std::vector<int32_t> data = {10, 20, 30};
+  auto type = RankedTensorType::get(data.size(), builder.getI32Type());
+  Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
+      type, "resource",
+      HeapAsmResourceBlob::allocateAndCopyInferAlign<int32_t>(
+          data, /*is_mutable=*/false));
+
+  EXPECT_TRUE(isa<DenseI32ResourceElementsAttr>(i32ResourceAttr));
+}
+
 TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
   MLIRContext context;
   Builder builder(&context);
@@ -481,6 +496,24 @@ TEST(CopyCountAttr, CopyCount) {
   EXPECT_EQ(counter1, 0);
   EXPECT_EQ(test::CopyCount::counter, 0);
 #endif
+}
+
+// Test stripped printing using test dialect attribute.
+TEST(CopyCountAttr, PrintStripped) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  // Doesn't matter which dialect attribute is used, just chose TestCopyCount
+  // given proximity.
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  Attribute res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << "|" << res << "|";
+  res.printStripped(os << "[");
+  os << "]";
+  EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
 
 } // namespace

@@ -44,7 +44,7 @@ ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
       "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
 
       // CSRs
-      "fflags", "frm", "vtype", "vl", "vxsat", "vxrm"
+      "fflags", "frm", "vtype", "vl", "vxsat", "vxrm", "sf.vcix_state"
     };
   // clang-format on
   return llvm::ArrayRef(GCCRegNames);
@@ -96,12 +96,21 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // An address that is held in a general-purpose register.
     Info.setAllowsMemory();
     return true;
-  case 'S': // A symbolic address
+  case 's':
+  case 'S': // A symbol or label reference with a constant offset
     Info.setAllowsRegister();
     return true;
+  case 'c':
+    // A RVC register - GPR or FPR
+    if (Name[1] == 'r' || Name[1] == 'f') {
+      Info.setAllowsRegister();
+      Name += 1;
+      return true;
+    }
+    return false;
   case 'v':
     // A vector register.
-    if (Name[1] == 'r' || Name[1] == 'm') {
+    if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
       Info.setAllowsRegister();
       Name += 1;
       return true;
@@ -113,6 +122,8 @@ bool RISCVTargetInfo::validateAsmConstraint(
 std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
+  // c* and v* are two-letter constraints on RISC-V.
+  case 'c':
   case 'v':
     R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;
@@ -131,7 +142,7 @@ static unsigned getVersionValue(unsigned MajorVersion, unsigned MinorVersion) {
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__riscv");
-  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  bool Is64Bit = getTriple().isRISCV64();
   Builder.defineMacro("__riscv_xlen", Is64Bit ? "64" : "32");
   StringRef CodeModel = getTargetOpts().CodeModel;
   unsigned FLen = ISAInfo->getFLen();
@@ -145,6 +156,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_cmodel_medlow");
   else if (CodeModel == "medium")
     Builder.defineMacro("__riscv_cmodel_medany");
+  else if (CodeModel == "large")
+    Builder.defineMacro("__riscv_cmodel_large");
 
   StringRef ABIName = getABI();
   if (ABIName == "ilp32f" || ABIName == "lp64f")
@@ -154,7 +167,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__riscv_float_abi_soft");
 
-  if (ABIName == "ilp32e")
+  if (ABIName == "ilp32e" || ABIName == "lp64e")
     Builder.defineMacro("__riscv_abi_rve");
 
   Builder.defineMacro("__riscv_arch_test");
@@ -163,12 +176,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     auto ExtName = Extension.first;
     auto ExtInfo = Extension.second;
 
-    Builder.defineMacro(
-        Twine("__riscv_", ExtName),
-        Twine(getVersionValue(ExtInfo.MajorVersion, ExtInfo.MinorVersion)));
+    Builder.defineMacro(Twine("__riscv_", ExtName),
+                        Twine(getVersionValue(ExtInfo.Major, ExtInfo.Minor)));
   }
 
-  if (ISAInfo->hasExtension("m") || ISAInfo->hasExtension("zmmul"))
+  if (ISAInfo->hasExtension("zmmul"))
     Builder.defineMacro("__riscv_mul");
 
   if (ISAInfo->hasExtension("m")) {
@@ -211,10 +223,17 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_v_fixed_vlen",
                         Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
 
-  if (FastUnalignedAccess)
+  if (FastScalarUnalignedAccess)
     Builder.defineMacro("__riscv_misaligned_fast");
   else
     Builder.defineMacro("__riscv_misaligned_avoid");
+
+  if (ISAInfo->hasExtension("e")) {
+    if (Is64Bit)
+      Builder.defineMacro("__riscv_64e");
+    else
+      Builder.defineMacro("__riscv_32e");
+  }
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
@@ -227,52 +246,12 @@ static constexpr Builtin::Info BuiltinInfo[] = {
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCV.def"
+#include "clang/Basic/BuiltinsRISCV.inc"
 };
 
 ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
   return llvm::ArrayRef(BuiltinInfo,
                         clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
-}
-
-static std::vector<std::string>
-collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
-  auto ParseResult =
-      llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesNeedOverride);
-
-  if (!ParseResult) {
-    consumeError(ParseResult.takeError());
-    return std::vector<std::string>();
-  }
-
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-
-  std::vector<std::string> NonISAExtFeatureVec;
-
-  llvm::copy_if(FeaturesNeedOverride, std::back_inserter(NonISAExtFeatureVec),
-                [&](const std::string &Feat) {
-                  return !llvm::is_contained(ImpliedFeatures, Feat);
-                });
-
-  return NonISAExtFeatureVec;
-}
-
-static std::vector<std::string>
-resolveTargetAttrOverride(const std::vector<std::string> &FeaturesVec,
-                          int XLen) {
-  auto I = llvm::find(FeaturesVec, "__RISCV_TargetAttrNeedOverride");
-  if (I == FeaturesVec.end())
-    return FeaturesVec;
-
-  ArrayRef<std::string> FeaturesNeedOverride(&*FeaturesVec.begin(), &*I);
-  std::vector<std::string> NonISAExtFeature =
-      collectNonISAExtFeature(FeaturesNeedOverride, XLen);
-
-  std::vector<std::string> ResolvedFeature(++I, FeaturesVec.end());
-  ResolvedFeature.insert(ResolvedFeature.end(), NonISAExtFeature.begin(),
-                         NonISAExtFeature.end());
-
-  return ResolvedFeature;
 }
 
 bool RISCVTargetInfo::initFeatureMap(
@@ -281,17 +260,15 @@ bool RISCVTargetInfo::initFeatureMap(
 
   unsigned XLen = 32;
 
-  if (getTriple().getArch() == llvm::Triple::riscv64) {
+  if (getTriple().isRISCV64()) {
     Features["64bit"] = true;
     XLen = 64;
   } else {
     Features["32bit"] = true;
   }
 
-  std::vector<std::string> NewFeaturesVec =
-      resolveTargetAttrOverride(FeaturesVec, XLen);
-
-  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, NewFeaturesVec);
+  std::vector<std::string> AllFeatures = FeaturesVec;
+  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesVec);
   if (!ParseResult) {
     std::string Buffer;
     llvm::raw_string_ostream OutputErrMsg(Buffer);
@@ -302,14 +279,9 @@ bool RISCVTargetInfo::initFeatureMap(
     return false;
   }
 
-  // RISCVISAInfo makes implications for ISA features
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-  // Add non-ISA features like `relax` and `save-restore` back
-  for (const std::string &Feature : NewFeaturesVec)
-    if (!llvm::is_contained(ImpliedFeatures, Feature))
-      ImpliedFeatures.push_back(Feature);
-
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, ImpliedFeatures);
+  // Append all features, not just new ones, so we override any negatives.
+  llvm::append_range(AllFeatures, (*ParseResult)->toFeatures());
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, AllFeatures);
 }
 
 std::optional<std::pair<unsigned, unsigned>>
@@ -336,21 +308,19 @@ RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.
 bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
-  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  bool Is64Bit = getTriple().isRISCV64();
   auto Result = llvm::StringSwitch<std::optional<bool>>(Feature)
                     .Case("riscv", true)
                     .Case("riscv32", !Is64Bit)
                     .Case("riscv64", Is64Bit)
                     .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
+                    .Case("experimental", HasExperimental)
                     .Default(std::nullopt);
   if (Result)
     return *Result;
 
-  if (ISAInfo->isSupportedExtensionFeature(Feature))
-    return ISAInfo->hasExtension(Feature);
-
-  return false;
+  return ISAInfo->hasExtension(Feature);
 }
 
 /// Perform initialization based on the user configured set of features.
@@ -376,8 +346,17 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
     HasLegalHalfType = true;
 
-  FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
+  FastScalarUnalignedAccess =
+      llvm::is_contained(Features, "+unaligned-scalar-mem");
 
+  if (llvm::is_contained(Features, "+experimental"))
+    HasExperimental = true;
+
+  if (ABI == "ilp32e" && ISAInfo->hasExtension("d")) {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << "ILP32E cannot be used with the D ISA extension";
+    return false;
+  }
   return true;
 }
 
@@ -403,17 +382,31 @@ void RISCVTargetInfo::fillValidTuneCPUList(
   llvm::RISCV::fillValidTuneCPUArchList(Values, Is64Bit);
 }
 
+static void populateNegativeRISCVFeatures(std::vector<std::string> &Features) {
+  auto RII = llvm::RISCVISAInfo::parseArchString(
+      "rv64i", /* EnableExperimentalExtension */ true);
+
+  if (llvm::errorToBool(RII.takeError()))
+    llvm_unreachable("unsupport rv64i");
+
+  std::vector<std::string> FeatStrings =
+      (*RII)->toFeatures(/* AddAllExtensions */ true);
+  Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+}
+
 static void handleFullArchString(StringRef FullArchStr,
                                  std::vector<std::string> &Features) {
-  Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
-  if (!RII) {
-    consumeError(RII.takeError());
+  if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
-    Features.push_back("+" + FullArchStr.str());
+    Features.push_back(FullArchStr.str());
   } else {
-    std::vector<std::string> FeatStrings = (*RII)->toFeatureVector();
+    // Append a full list of features, including any negative extensions so that
+    // we override the CPU's features.
+    populateNegativeRISCVFeatures(Features);
+    std::vector<std::string> FeatStrings =
+        (*RII)->toFeatures(/* AddAllExtensions */ true);
     Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
   }
 }
@@ -430,14 +423,14 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
     Feature = Feature.trim();
     StringRef AttrString = Feature.split("=").second.trim();
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       // Override last features
       Ret.Features.clear();
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
 
-      if (AttrString.startswith("+")) {
+      if (AttrString.starts_with("+")) {
         // EXTENSION like arch=+v,+zbb
         SmallVector<StringRef, 1> Exts;
         AttrString.split(Exts, ",");
@@ -457,7 +450,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
         // full-arch-string like arch=rv64gcv
         handleFullArchString(AttrString, Ret.Features);
       }
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
 
@@ -471,12 +464,47 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
           handleFullArchString(MarchFromCPU, Ret.Features);
         }
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
 
       Ret.Tune = AttrString;
+    } else if (Feature.starts_with("priority")) {
+      // Skip because it only use for FMV.
     }
   }
   return Ret;
+}
+
+TargetInfo::CallingConvCheckResult
+RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  default:
+    return CCCR_Warning;
+  case CC_C:
+  case CC_RISCVVectorCall:
+    return CCCR_OK;
+  }
+}
+
+bool RISCVTargetInfo::validateCpuSupports(StringRef Feature) const {
+  // Only allow extensions we have a known bit position for in the
+  // __riscv_feature_bits structure.
+  return -1 != llvm::RISCVISAInfo::getRISCVFeaturesBitsInfo(Feature).second;
+}
+
+bool RISCVTargetInfo::isValidFeatureName(StringRef Name) const {
+  return llvm::RISCVISAInfo::isSupportedExtensionFeature(Name);
+}
+
+bool RISCVTargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if (RegName == "ra" || RegName == "sp" || RegName == "gp" ||
+      RegName == "tp" || RegName.starts_with("x") || RegName.starts_with("a") ||
+      RegName.starts_with("s") || RegName.starts_with("t")) {
+    unsigned XLen = getTriple().isArch64Bit() ? 64 : 32;
+    HasSizeMismatch = RegSize != XLen;
+    return true;
+  }
+  return false;
 }

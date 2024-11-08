@@ -4,8 +4,8 @@ This document outlines how MLIR models side effects and how speculation works in
 MLIR.
 
 This rationale only applies to operations used in
-[CFG regions](../LangRef.md#control-flow-and-ssacfg-regions). Side effect
-modeling in [graph regions](../LangRef.md#graph-regions) is TBD.
+[CFG regions](../LangRef.md/#control-flow-and-ssacfg-regions). Side effect
+modeling in [graph regions](../LangRef.md/#graph-regions) is TBD.
 
 [TOC]
 
@@ -79,9 +79,9 @@ When adding a new op, ask:
 
 1. Does it read from or write to the heap or stack? It should probably implement
    `MemoryEffectsOpInterface`.
-1. Does these side effects ordered? It should probably set the stage of
-   side effects to make analysis more accurate.
-1. Does These side effects act on every single value of resource? It probably
+1. Are these side effects ordered? The op should probably set the stage of
+   side effects to make analyses more accurate.
+1. Do these side effects act on every single value of a resource? It probably
    should set the FullEffect on effect.
 1. Does it have side effects that must be preserved, like a volatile store or a
    syscall? It should probably implement `MemoryEffectsOpInterface` and model
@@ -106,9 +106,9 @@ add side effect correctly.
 
 ### SIMD compute operation
 
-If we have a SIMD backend dialect with a "simd.abs" operation, which reads all
+Consider a SIMD backend dialect with a "simd.abs" operation which reads all
 values from the source memref, calculates their absolute values, and writes them
-to the target memref.
+to the target memref:
 
 ```mlir
   func.func @abs(%source : memref<10xf32>, %target : memref<10xf32>) {
@@ -139,10 +139,10 @@ A typical approach is as follows:
   }
 ```
 
-In the above example, we attach the side effect [MemReadAt<0, FullEffect>] to
+In the above example, we attach the side effect `[MemReadAt<0, FullEffect>]` to
 the source, indicating that the abs operation reads each individual value from
 the source during stage 0. Likewise, we attach the side effect
-[MemWriteAt<1, FullEffect>] to the target, indicating that the abs operation
+`[MemWriteAt<1, FullEffect>]` to the target, indicating that the abs operation
 writes to each individual value within the target during stage 1 (after reading
 from the source).
 
@@ -174,7 +174,7 @@ A typical approach is as follows:
   }
 ```
 
-In the above example, we attach the side effect [MemReadAt<0, PartialEffect>] to
+In the above example, we attach the side effect `[MemReadAt<0, PartialEffect>]` to
 the source, indicating that the load operation reads parts of values from the
 memref during stage 0. Since side effects typically occur at stage 0 and are
-partial by default, we can abbreviate it as "[MemRead]".
+partial by default, we can abbreviate it as `[MemRead]`.

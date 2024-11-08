@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
 
 # CHECK: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK: %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

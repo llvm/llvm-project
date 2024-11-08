@@ -28,12 +28,12 @@ class ObjCPropertyAttributeOrderFixer : public TokenAnalyzer {
   void analyzeObjCPropertyDecl(const SourceManager &SourceMgr,
                                const AdditionalKeywords &Keywords,
                                tooling::Replacements &Fixes,
-                               const FormatToken *Tok) const;
+                               const FormatToken *Tok);
 
   void sortPropertyAttributes(const SourceManager &SourceMgr,
                               tooling::Replacements &Fixes,
                               const FormatToken *BeginTok,
-                              const FormatToken *EndTok) const;
+                              const FormatToken *EndTok);
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,

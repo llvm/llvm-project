@@ -9,11 +9,9 @@
 #ifndef MLIR_TRANSFORMS_SROA_H
 #define MLIR_TRANSFORMS_SROA_H
 
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Statistic.h"
-#include <variant>
 
 namespace mlir {
 
@@ -29,29 +27,14 @@ struct SROAStatistics {
   llvm::Statistic *maxSubelementAmount = nullptr;
 };
 
-/// Pattern applying SROA to the regions of the operations on which it
-/// matches.
-class SROAPattern
-    : public OpInterfaceRewritePattern<DestructurableAllocationOpInterface> {
-public:
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
-
-  SROAPattern(MLIRContext *context, SROAStatistics statistics = {},
-              PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern(context, benefit), statistics(statistics) {}
-
-  LogicalResult matchAndRewrite(DestructurableAllocationOpInterface allocator,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  SROAStatistics statistics;
-};
-
-/// Attempts to destructure the slots of destructurable allocators. Returns
-/// failure if no slot was destructured.
+/// Attempts to destructure the slots of destructurable allocators. Iteratively
+/// retries the destructuring of all slots as destructuring one slot might
+/// enable subsequent destructuring. Returns failure if no slot was
+/// destructured.
 LogicalResult tryToDestructureMemorySlots(
     ArrayRef<DestructurableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, SROAStatistics statistics = {});
+    OpBuilder &builder, const DataLayout &dataLayout,
+    SROAStatistics statistics = {});
 
 } // namespace mlir
 

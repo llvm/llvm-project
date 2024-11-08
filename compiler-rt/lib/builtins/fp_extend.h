@@ -37,16 +37,7 @@ static const int srcSigFracBits = 52;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 11;
 
-static inline int src_rep_t_clz_impl(src_rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int src_rep_t_clz_impl(src_rep_t a) { return __builtin_clzll(a); }
 #define src_rep_t_clz src_rep_t_clz_impl
 
 #elif defined SRC_80
@@ -80,6 +71,21 @@ static inline int src_rep_t_clz_impl(src_rep_t a) {
 }
 
 #define src_rep_t_clz src_rep_t_clz_impl
+
+#elif defined SRC_BFLOAT16
+#ifdef COMPILER_RT_HAS_BFLOAT16
+typedef __bf16 src_t;
+#else
+typedef uint16_t src_t;
+#endif
+typedef uint16_t src_rep_t;
+#define SRC_REP_C UINT16_C
+static const int srcBits = sizeof(src_t) * CHAR_BIT;
+static const int srcSigFracBits = 7;
+// -1 accounts for the sign bit.
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 8;
+#define src_rep_t_clz __builtin_clz
 
 #else
 #error Source should be half, single, or double precision!

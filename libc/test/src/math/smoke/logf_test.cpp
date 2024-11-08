@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/logf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <stdint.h>
 
@@ -27,3 +27,28 @@ TEST_F(LlvmLibcLogfTest, SpecialNumbers) {
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(-1.0f), FE_INVALID);
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::logf(1.0f));
 }
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcLogfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(-0x1.9d1d9fccf477p6f, LIBC_NAMESPACE::logf(min_denormal));
+}
+
+TEST_F(LlvmLibcLogfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::logf(min_denormal));
+}
+
+TEST_F(LlvmLibcLogfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(FPBits::inf(Sign::NEG).get_val(),
+               LIBC_NAMESPACE::logf(min_denormal));
+}
+
+#endif

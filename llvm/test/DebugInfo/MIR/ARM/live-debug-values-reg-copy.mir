@@ -40,7 +40,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }

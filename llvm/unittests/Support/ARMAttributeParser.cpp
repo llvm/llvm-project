@@ -31,8 +31,8 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
   raw_string_ostream OS(buffer);
   AttributeSection Section(Tag, Value);
   Section.write(OS);
-  ArrayRef<uint8_t> Bytes(
-    reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
+  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(buffer.c_str()),
+                          buffer.size());
 
   ARMAttributeParser Parser;
   cantFail(Parser.parse(Bytes, llvm::endianness::little));

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=fiji  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}reduction_fadd_v4f16:
 ; GFX9:      v_pk_add_f16 [[ADD:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}

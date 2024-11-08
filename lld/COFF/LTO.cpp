@@ -86,11 +86,12 @@ lto::Config BitcodeCompiler::createConfig() {
   c.CSIRProfile = std::string(ctx.config.ltoCSProfileFile);
   c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
   c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
+  c.SampleProfile = ctx.config.ltoSampleProfileName;
   c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
   c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
 
   if (ctx.config.emit == EmitKind::LLVM) {
-    c.PostInternalizeModuleHook = [this](size_t task, const Module &m) {
+    c.PreCodeGenModuleHook = [this](size_t task, const Module &m) {
       if (std::unique_ptr<raw_fd_ostream> os =
               openLTOOutputFile(ctx.config.outputFile))
         WriteBitcodeToFile(m, *os, false);
@@ -117,6 +118,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
         std::string(ctx.config.thinLTOPrefixReplaceOld),
         std::string(ctx.config.thinLTOPrefixReplaceNew),
         std::string(ctx.config.thinLTOPrefixReplaceNativeObject),

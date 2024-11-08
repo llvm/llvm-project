@@ -1,4 +1,4 @@
-;; RUN: llc -mtriple=aarch64-eabi -mattr=+v8.5a %s -o - | FileCheck %s
+;; RUN: llc -mtriple=aarch64 -mattr=+v8.5a %s -o - | FileCheck %s
 
 declare i32 @g(i32) #5
 
@@ -61,12 +61,12 @@ entry:
 ;; CHECK:       paciasp
 ;; CHECK:       retaa
 
-attributes #0 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="none" }
-attributes #1 = { nounwind "branch-target-enforcement"="true"  "sign-return-address"="none" }
-attributes #2 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" }
-attributes #3 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" }
-attributes #4 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="all" "sign-return-address-key"="a_key" }
-attributes #5 = { nounwind }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind "branch-target-enforcement" }
+attributes #2 = { nounwind "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" }
+attributes #3 = { nounwind "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" }
+attributes #4 = { nounwind "sign-return-address"="all" "sign-return-address-key"="a_key" }
+attributes #5 = { nounwind "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 

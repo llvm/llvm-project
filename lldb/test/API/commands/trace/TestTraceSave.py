@@ -103,7 +103,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
             with open(session_file_path) as session_file:
                 session = json.load(session_file)
                 # We expect tsc conversion info
-                self.assertTrue("tscPerfZeroConversion" in session)
+                self.assertIn("tscPerfZeroConversion", session)
                 # We expect at least one cpu
                 self.assertGreater(len(session["cpus"]), 0)
 
@@ -152,18 +152,18 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
                     copied_process = find(
                         lambda proc: proc["pid"] == process["pid"], copy["processes"]
                     )
-                    self.assertTrue(copied_process is not None)
+                    self.assertIsNotNone(copied_process)
 
                     for thread in process["threads"]:
                         copied_thread = find(
                             lambda thr: thr["tid"] == thread["tid"],
                             copied_process["threads"],
                         )
-                        self.assertTrue(copied_thread is not None)
+                        self.assertIsNotNone(copied_thread)
 
                 for cpu in original["cpus"]:
                     copied_cpu = find(lambda cor: cor["id"] == cpu["id"], copy["cpus"])
-                    self.assertTrue(copied_cpu is not None)
+                    self.assertIsNotNone(copied_cpu)
 
     def testSaveTrace(self):
         self.expect(
@@ -179,11 +179,11 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         res = lldb.SBCommandReturnObject()
 
         ci.HandleCommand("thread trace dump instructions -c 10 --forwards", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         first_ten_instructions = res.GetOutput()
 
         ci.HandleCommand("thread trace dump instructions -c 10", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         last_ten_instructions = res.GetOutput()
 
         # Now, save the trace to <trace_copy_dir>
@@ -203,11 +203,11 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
 
         # Compare with instructions saved at the first time
         ci.HandleCommand("thread trace dump instructions -c 10 --forwards", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         self.assertEqual(res.GetOutput(), first_ten_instructions)
 
         ci.HandleCommand("thread trace dump instructions -c 10", res)
-        self.assertEqual(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         self.assertEqual(res.GetOutput(), last_ten_instructions)
 
     def testSaveKernelTrace(self):
@@ -225,7 +225,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
             original_file = json.load(original_file)
             with open(copied_trace_file) as copy_file:
                 copy_file = json.load(copy_file)
-                self.assertTrue("kernel" in copy_file)
+                self.assertIn("kernel", copy_file)
 
                 self.assertEqual(
                     os.path.basename(original_file["kernel"]["file"]),

@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/__support/memory_size.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 static inline constexpr size_t SAFE_MEM_SIZE_TEST_LIMIT =
     static_cast<size_t>(cpp::numeric_limits<cpp::make_signed_t<size_t>>::max());
@@ -49,6 +50,13 @@ TEST(LlvmLibcMemSizeTest, Addition) {
   ASSERT_FALSE((max + SafeMemSize{static_cast<size_t>(1)}).valid());
   ASSERT_FALSE((third + third + third + third).valid());
   ASSERT_FALSE((half + half + half).valid());
+
+  ASSERT_FALSE((SafeMemSize{static_cast<size_t>(-1)} +
+                SafeMemSize{static_cast<size_t>(2)})
+                   .valid());
+  ASSERT_FALSE((SafeMemSize{static_cast<size_t>(2)} +
+                SafeMemSize{static_cast<size_t>(-1)})
+                   .valid());
 }
 
 TEST(LlvmLibcMemSizeTest, Multiplication) {
@@ -75,11 +83,22 @@ TEST(LlvmLibcMemSizeTest, AlignUp) {
       auto safe_size = SafeMemSize{size};
       auto safe_aligned_size = safe_size.align_up(alignment);
       ASSERT_TRUE(safe_aligned_size.valid());
-      ASSERT_EQ(static_cast<size_t>(safe_aligned_size) % alignment, size_t{0});
+      ASSERT_EQ(static_cast<size_t>(safe_aligned_size) % alignment, size_t(0));
     }
   }
   auto max = SafeMemSize{SAFE_MEM_SIZE_TEST_LIMIT};
   ASSERT_FALSE(max.align_up(8).valid());
 }
+
+TEST(LlvmLibcBlockBitTest, OffsetTo) {
+  ASSERT_EQ(SafeMemSize::offset_to(0, 512), size_t(0));
+  ASSERT_EQ(SafeMemSize::offset_to(1, 512), size_t(511));
+  ASSERT_EQ(SafeMemSize::offset_to(2, 512), size_t(510));
+  ASSERT_EQ(SafeMemSize::offset_to(13, 1), size_t(0));
+  ASSERT_EQ(SafeMemSize::offset_to(13, 4), size_t(3));
+  for (unsigned int i = 0; i < 31; ++i) {
+    ASSERT_EQ((SafeMemSize::offset_to(i, 1u << i) + i) % (1u << i), size_t(0));
+  }
+}
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

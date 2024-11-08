@@ -8,8 +8,9 @@
 
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // GPU architectures are 64-bit but use 32-bit general purpose registers.
@@ -34,14 +35,15 @@ LIBC_INLINE constexpr bitmask_t repeat_byte(bitmask_t byte) {
   return byte;
 }
 
-using BitMask = BitMaskAdaptor<bitmask_t, repeat_byte(0x80), 0x8ull>;
+using BitMask = BitMaskAdaptor<bitmask_t, 0x8ul>;
 using IteratableBitMask = IteratableBitMaskAdaptor<BitMask>;
 
 struct Group {
+  LIBC_INLINE_VAR static constexpr bitmask_t MASK = repeat_byte(0x80ul);
   bitmask_t data;
 
   // Load a group of control words from an arbitary address.
-  LIBC_INLINE static Group load(const void *__restrict addr) {
+  LIBC_INLINE static Group load(const void *addr) {
     union {
       bitmask_t value;
       char bytes[sizeof(bitmask_t)];
@@ -49,6 +51,11 @@ struct Group {
     for (size_t i = 0; i < sizeof(bitmask_t); ++i)
       data.bytes[i] = static_cast<const char *>(addr)[i];
     return {data.value};
+  }
+
+  // Load a group of control words from an aligned address.
+  LIBC_INLINE static Group load_aligned(const void *addr) {
+    return *static_cast<const Group *>(addr);
   }
 
   // Find out the lanes equal to the given byte and return the bitmask
@@ -95,17 +102,24 @@ struct Group {
     //  - The check for key equality will catch these.
     //  - This only happens if there is at least 1 true match.
     //  - The chance of this happening is very low (< 1% chance per byte).
-    auto cmp = data ^ repeat_byte(byte);
-    auto result = LIBC_NAMESPACE::Endian::to_little_endian(
-        (cmp - repeat_byte(0x01)) & ~cmp & repeat_byte(0x80));
-    return {result};
+    static constexpr bitmask_t ONES = repeat_byte(0x01ul);
+    auto cmp = data ^ repeat_byte(static_cast<bitmask_t>(byte) & 0xFFul);
+    auto result =
+        LIBC_NAMESPACE::Endian::to_little_endian((cmp - ONES) & ~cmp & MASK);
+    return {BitMask{result}};
   }
 
   // Find out the lanes equal to EMPTY or DELETE (highest bit set) and
   // return the bitmask with corresponding bits set.
   LIBC_INLINE BitMask mask_available() const {
-    return {LIBC_NAMESPACE::Endian::to_little_endian(data) & repeat_byte(0x80)};
+    bitmask_t le_data = LIBC_NAMESPACE::Endian::to_little_endian(data);
+    return {le_data & MASK};
+  }
+
+  LIBC_INLINE IteratableBitMask occupied() const {
+    bitmask_t available = mask_available().word;
+    return {BitMask{available ^ MASK}};
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

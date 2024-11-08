@@ -6,7 +6,9 @@ add_llvm_component_library(LLVMOrcDebugging
   DebugInfoSupport.cpp
   DebuggerSupport.cpp
   DebuggerSupportPlugin.cpp
+  LLJITUtilsCBindings.cpp
   PerfSupportPlugin.cpp
+  VTuneSupportPlugin.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc/Debugging/

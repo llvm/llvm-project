@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=SI,GCN %s
-; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=CI,GCN,SICIVI %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=VI,GCN,SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=SI,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=CI,GCN,SICIVI %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=VI,GCN,SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:
@@ -88,11 +88,13 @@ entry:
   ret void
 }
 
-; GFX9_10 can use a signed immediate byte offset
+; GFX9+ can use a signed immediate byte offset but not without sgpr[offset]
 ; GCN-LABEL: {{^}}smrd6:
 ; SICIVI: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, -4
 ; SICIVI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x0
-; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], -0x4
+; GFX9_10: s_add_u32 s0, s6, -4
+; GFX9_10: s_addc_u32 s1, s7, -1
+; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x0
 define amdgpu_kernel void @smrd6(ptr addrspace(1) %out, ptr addrspace(4) %ptr) #0 {
 entry:
   %tmp = getelementptr i32, ptr addrspace(4) %ptr, i64 -1

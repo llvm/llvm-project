@@ -346,6 +346,88 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DL, get(And), Reg).addReg(Reg).addImm(Mask);
 }
 
+// Convert MOVI to the appropriate instruction (sequence) for setting
+// the register to an immediate value.
+bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
+  Register Reg = MIB->getOperand(0).getReg();
+  int64_t Imm = MIB->getOperand(1).getImm();
+  bool IsAddressReg = false;
+
+  const auto *DR32 = RI.getRegClass(M68k::DR32RegClassID);
+  const auto *AR32 = RI.getRegClass(M68k::AR32RegClassID);
+  const auto *AR16 = RI.getRegClass(M68k::AR16RegClassID);
+
+  if (AR16->contains(Reg) || AR32->contains(Reg))
+    IsAddressReg = true;
+
+  // We need to assign to the full register to make IV happy
+  Register SReg =
+      MVTSize == MVT::i32
+          ? Reg
+          : Register(RI.getMatchingMegaReg(Reg, IsAddressReg ? AR32 : DR32));
+  assert(SReg && "No viable MEGA register available");
+
+  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
+
+  // Sign extention doesn't matter if we only use the bottom 8 bits
+  if (MVTSize == MVT::i8 || (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
+    LLVM_DEBUG(dbgs() << "MOVEQ\n");
+
+    MIB->setDesc(get(M68k::MOVQ));
+    MIB->getOperand(0).setReg(SReg);
+
+    // Counter the effects of sign-extension with a bitwise not.
+    // This is only faster and smaller for 32 bit values.
+  } else if (DR32->contains(Reg) && isUInt<8>(Imm)) {
+    LLVM_DEBUG(dbgs() << "MOVEQ and NOT\n");
+
+    MachineBasicBlock &MBB = *MIB->getParent();
+    DebugLoc DL = MIB->getDebugLoc();
+
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex8Lo);
+    assert(SubReg && "No viable SUB register available");
+
+    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOVQ), SReg).addImm(~Imm & 0xFF);
+    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::NOT8d), SubReg).addReg(SubReg);
+
+    MIB->removeFromParent();
+
+    // Special case for setting address register to NULL (0)
+  } else if (IsAddressReg && Imm == 0) {
+    LLVM_DEBUG(dbgs() << "SUBA\n");
+
+    MachineBasicBlock &MBB = *MIB->getParent();
+    DebugLoc DL = MIB->getDebugLoc();
+
+    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::SUB32ar), SReg)
+        .addReg(SReg, RegState::Undef)
+        .addReg(SReg, RegState::Undef);
+
+    MIB->removeFromParent();
+
+    // movea.w implicitly sign extends to the full register width,
+    // so exploit that if the immediate fits in the correct range.
+    //
+    // TODO: use lea imm.w, %an for further constants when 16-bit
+    // absolute addressing is implemented.
+  } else if (AR32->contains(Reg) && isUInt<16>(Imm)) {
+    LLVM_DEBUG(dbgs() << "MOVEA w/ implicit extend\n");
+
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo);
+    assert(SubReg && "No viable SUB register available");
+
+    MIB->setDesc(get(M68k::MOV16ai));
+    MIB->getOperand(0).setReg(SubReg);
+
+    // Fall back to a move with immediate
+  } else {
+    LLVM_DEBUG(dbgs() << "MOVE\n");
+    MIB->setDesc(get(MVTSize == MVT::i16 ? M68k::MOV16ri : M68k::MOV32ri));
+  }
+
+  return true;
+}
+
 bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
                                   MVT MVTSrc) const {
   unsigned Move = MVTDst == MVT::i16 ? M68k::MOV16rr : M68k::MOV32rr;
@@ -629,7 +711,8 @@ bool M68kInstrInfo::isPCRelRegisterOperandLegal(
 void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 const DebugLoc &DL, MCRegister DstReg,
-                                MCRegister SrcReg, bool KillSrc) const {
+                                MCRegister SrcReg, bool KillSrc,
+                                bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
 
   // First deal with the normal symmetric copies.

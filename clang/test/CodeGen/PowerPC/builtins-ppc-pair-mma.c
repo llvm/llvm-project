@@ -25,13 +25,13 @@ void test1(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP1]], 0
 // CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[RESP:%.*]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP1]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <16 x i8>, ptr [[RESP]], i64 1
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[RESP]], i64 16
 // CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP1]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <16 x i8>, ptr [[RESP]], i64 2
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[RESP]], i64 32
 // CHECK-NEXT:    store <16 x i8> [[TMP5]], ptr [[TMP6]], align 16
 // CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP1]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <16 x i8>, ptr [[RESP]], i64 3
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[RESP]], i64 48
 // CHECK-NEXT:    store <16 x i8> [[TMP7]], ptr [[TMP8]], align 16
 // CHECK-NEXT:    ret void
 //
@@ -60,7 +60,7 @@ void test3(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[TMP1]], 0
 // CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[RESP:%.*]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[TMP1]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <16 x i8>, ptr [[RESP]], i64 1
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[RESP]], i64 16
 // CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    ret void
 //
@@ -1072,7 +1072,7 @@ void test76(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[TMP1]], 0
 // CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[RESP:%.*]], align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[TMP1]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <16 x i8>, ptr [[RESP]], i64 1
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[RESP]], i64 16
 // CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    ret void
 //

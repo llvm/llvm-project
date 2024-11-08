@@ -21,6 +21,9 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -137,7 +140,20 @@ struct PragmaSTDC_CX_LIMITED_RANGEHandler : public PragmaHandler {
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &Tok) override {
     tok::OnOffSwitch OOS;
-    PP.LexOnOffSwitch(OOS);
+    if (PP.LexOnOffSwitch(OOS))
+      return;
+
+    MutableArrayRef<Token> Toks(
+        PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
+
+    Toks[0].startToken();
+    Toks[0].setKind(tok::annot_pragma_cx_limited_range);
+    Toks[0].setLocation(Tok.getLocation());
+    Toks[0].setAnnotationEndLoc(Tok.getLocation());
+    Toks[0].setAnnotationValue(
+        reinterpret_cast<void *>(static_cast<uintptr_t>(OOS)));
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                        /*IsReinject=*/false);
   }
 };
 
@@ -831,6 +847,11 @@ void Parser::HandlePragmaFPContract() {
     FPC = LangOptions::FPM_Off;
     break;
   case tok::OOS_DEFAULT:
+    // According to ISO C99 standard chapter 7.3.4, the default value
+    // for the pragma is ``off'. '-fcomplex-arithmetic=basic',
+    // '-fcx-limited-range', '-fcx-fortran-rules' and
+    // '-fcomplex-arithmetic=improved' control the default value of these
+    // pragmas.
     FPC = getLangOpts().getDefaultFPContractMode();
     break;
   }
@@ -886,6 +907,31 @@ void Parser::HandlePragmaFEnvRound() {
 
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
   Actions.ActOnPragmaFEnvRound(PragmaLoc, RM);
+}
+
+void Parser::HandlePragmaCXLimitedRange() {
+  assert(Tok.is(tok::annot_pragma_cx_limited_range));
+  tok::OnOffSwitch OOS = static_cast<tok::OnOffSwitch>(
+      reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+
+  LangOptions::ComplexRangeKind Range;
+  switch (OOS) {
+  case tok::OOS_ON:
+    Range = LangOptions::CX_Basic;
+    break;
+  case tok::OOS_OFF:
+    Range = LangOptions::CX_Full;
+    break;
+  case tok::OOS_DEFAULT:
+    // According to ISO C99 standard chapter 7.3.4, the default value
+    // for the pragma is ``off'. -fcomplex-arithmetic controls the default value
+    // of these pragmas.
+    Range = getLangOpts().getComplexRange();
+    break;
+  }
+
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  Actions.ActOnPragmaCXLimitedRange(PragmaLoc, Range);
 }
 
 StmtResult Parser::HandlePragmaCaptured()
@@ -1525,7 +1571,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
       ConsumeToken(); // Consume the constant expression eof terminator.
 
       if (Arg2Error || R.isInvalid() ||
-          Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation()))
+          Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation(),
+                                    /*AllowZero=*/false))
         return false;
 
       // Argument is a constant expression with an integer type.
@@ -1550,7 +1597,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     ConsumeToken(); // Consume the constant expression eof terminator.
 
     if (R.isInvalid() ||
-        Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation()))
+        Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation(),
+                                  /*AllowZero=*/true))
       return false;
 
     // Argument is a constant expression with an integer type.
@@ -1878,7 +1926,8 @@ void Parser::HandlePragmaAttribute() {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
       // FIXME: suppress completion of unsupported attributes?
-      Actions.CodeCompleteAttribute(AttributeCommonInfo::Syntax::AS_GNU);
+      Actions.CodeCompletion().CodeCompleteAttribute(
+          AttributeCommonInfo::Syntax::AS_GNU);
       return SkipToEnd();
     }
 
@@ -2077,6 +2126,7 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
 //   pack '(' [integer] ')'
 //   pack '(' 'show' ')'
 //   pack '(' ('push' | 'pop') [',' identifier] [, integer] ')'
+//   pack '(' 'packed' | 'full' | 'twobyte' | 'reset' ')' with -fzos-extensions
 void PragmaPackHandler::HandlePragma(Preprocessor &PP,
                                      PragmaIntroducer Introducer,
                                      Token &PackTok) {
@@ -2106,9 +2156,34 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
                  ? Sema::PSK_Push_Set
                  : Sema::PSK_Set;
   } else if (Tok.is(tok::identifier)) {
+    // Map pragma pack options to pack (integer).
+    auto MapPack = [&](const char *Literal) {
+      Action = Sema::PSK_Push_Set;
+      Alignment = Tok;
+      Alignment.setKind(tok::numeric_constant);
+      Alignment.setLiteralData(Literal);
+      Alignment.setLength(1);
+    };
+
     const IdentifierInfo *II = Tok.getIdentifierInfo();
     if (II->isStr("show")) {
       Action = Sema::PSK_Show;
+      PP.Lex(Tok);
+    } else if (II->isStr("packed") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(packed) is the same as #pragma pack(1)
+      MapPack("1");
+      PP.Lex(Tok);
+    } else if (II->isStr("full") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(full) is the same as #pragma pack(4)
+      MapPack("4");
+      PP.Lex(Tok);
+    } else if (II->isStr("twobyte") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(twobyte) is the same as #pragma pack(2)
+      MapPack("2");
+      PP.Lex(Tok);
+    } else if (II->isStr("reset") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(reset) is the same as #pragma pack(pop) on XL
+      Action = Sema::PSK_Pop;
       PP.Lex(Tok);
     } else {
       if (II->isStr("push")) {
@@ -3857,8 +3932,8 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
   }
 
   if (Info->isStr("begin"))
-    Actions.PushForceCUDAHostDevice();
-  else if (!Actions.PopForceCUDAHostDevice())
+    Actions.CUDA().PushForceHostDevice();
+  else if (!Actions.CUDA().PopForceHostDevice())
     PP.Diag(FirstTok.getLocation(),
             diag::err_pragma_cannot_end_force_cuda_host_device);
 
@@ -4106,7 +4181,7 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
   }
 
   if (II->isStr("vector"))
-    Actions.DeclareRISCVVBuiltins = true;
+    Actions.RISCV().DeclareRVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
-    Actions.DeclareRISCVSiFiveVectorBuiltins = true;
+    Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
 }

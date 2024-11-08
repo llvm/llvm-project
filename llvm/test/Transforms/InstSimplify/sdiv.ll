@@ -12,7 +12,7 @@ define i32 @negated_operand(i32 %x) {
 
 define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @negated_operand_commute_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 -1)
 ;
   %negx = sub nsw <2 x i32> zeroinitializer, %x
   %div = sdiv <2 x i32> %negx, %x
@@ -31,7 +31,7 @@ define i32 @knownnegation(i32 %x, i32 %y) {
 
 define <2 x i32> @knownnegation_commute_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @knownnegation_commute_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 -1)
 ;
   %xy = sub nsw <2 x i32> %x, %y
   %yx = sub nsw <2 x i32> %y, %x
@@ -158,11 +158,11 @@ define <2 x i32> @knownnegation_commute_vec_bad3(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %div
 }
 
-define <3 x i32> @negated_operand_vec_undef(<3 x i32> %x) {
-; CHECK-LABEL: @negated_operand_vec_undef(
-; CHECK-NEXT:    ret <3 x i32> <i32 -1, i32 -1, i32 -1>
+define <3 x i32> @negated_operand_vec_poison(<3 x i32> %x) {
+; CHECK-LABEL: @negated_operand_vec_poison(
+; CHECK-NEXT:    ret <3 x i32> splat (i32 -1)
 ;
-  %negx = sub nsw <3 x i32> <i32 0, i32 undef, i32 0>, %x
+  %negx = sub nsw <3 x i32> <i32 0, i32 poison, i32 0>, %x
   %div = sdiv <3 x i32> %negx, %x
   ret <3 x i32> %div
 }

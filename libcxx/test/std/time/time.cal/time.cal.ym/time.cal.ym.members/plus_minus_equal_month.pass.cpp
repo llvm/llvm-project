@@ -14,8 +14,9 @@
 // constexpr year_month& operator-=(const months& d) noexcept;
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -36,6 +37,16 @@ constexpr bool test() {
     assert(ym.year() == y);
     assert(static_cast<unsigned>((ym).month()) == i + 1);
     assert(ym.year() == y);
+  }
+
+  { // Test year wrapping
+    year_month ym{year{2020}, month{4}};
+
+    ym += months{12};
+    assert((ym == year_month{year{2021}, month{4}}));
+
+    ym -= months{12};
+    assert((ym == year_month{year{2020}, month{4}}));
   }
 
   return true;

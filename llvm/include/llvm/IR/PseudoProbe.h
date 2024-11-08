@@ -44,26 +44,51 @@ public:
   // 32-bit integer which is organized as:
   //  [2:0] - 0x7, this is reserved for regular discriminator,
   //          see DWARF discriminator encoding rule
-  //  [18:3] - probe id
+  //  if the [28:28] bit is zero:
+  //    [18:3] for probe id.
+  //  else:
+  //    [15:3] for probe id, [18:16] for dwarf base discriminator.
   //  [25:19] - probe distribution factor
-  //  [28:26] - probe type, see PseudoProbeType
-  //  [31:29] - reserved for probe attributes
-  static uint32_t packProbeData(uint32_t Index, uint32_t Type, uint32_t Flags,
-                                uint32_t Factor) {
+  //  [27:26] - probe type, see PseudoProbeType
+  //  [28:28] - indicates whether dwarf base discriminator is encoded.
+  //  [30:29] - reserved for probe attributes
+  static uint32_t
+  packProbeData(uint32_t Index, uint32_t Type, uint32_t Flags, uint32_t Factor,
+                std::optional<uint32_t> DwarfBaseDiscriminator) {
     assert(Index <= 0xFFFF && "Probe index too big to encode, exceeding 2^16");
-    assert(Type <= 0x7 && "Probe type too big to encode, exceeding 7");
+    assert(Type <= 0x3 && "Probe type too big to encode, exceeding 3");
     assert(Flags <= 0x7);
     assert(Factor <= 100 &&
            "Probe distribution factor too big to encode, exceeding 100");
-    return (Index << 3) | (Factor << 19) | (Type << 26) | 0x7;
+    uint32_t V = (Index << 3) | (Factor << 19) | (Type << 26) | 0x7;
+    // If both the probe id and dwarf base discriminator is small, the probe id
+    // space is shared with the dwarf base discriminator, this is to make the
+    // probe-based build compatible with the dwarf-based profile.
+    // Pack the dwarf base discriminator into [18:16] and set the [28:28] bit.
+    if (Index <= 0x1FFF && DwarfBaseDiscriminator &&
+        *DwarfBaseDiscriminator <= 0x7)
+      V |= (1 << 28) | (*DwarfBaseDiscriminator << 16);
+    return V;
   }
 
   static uint32_t extractProbeIndex(uint32_t Value) {
+    if (isDwarfBaseDiscriminatorEncoded(Value))
+      return (Value >> 3) & 0x1FFF;
     return (Value >> 3) & 0xFFFF;
   }
 
+  static std::optional<uint32_t> extractDwarfBaseDiscriminator(uint32_t Value) {
+    if (isDwarfBaseDiscriminatorEncoded(Value))
+      return (Value >> 16) & 0x7;
+    return std::nullopt;
+  }
+
+  static bool isDwarfBaseDiscriminatorEncoded(uint32_t Value) {
+    return Value & 0x10000000;
+  }
+
   static uint32_t extractProbeType(uint32_t Value) {
-    return (Value >> 26) & 0x7;
+    return (Value >> 26) & 0x3;
   }
 
   static uint32_t extractProbeAttributes(uint32_t Value) {

@@ -39,19 +39,18 @@ namespace elf {
 class InputSection;
 class Symbol;
 
-// If --reproduce is specified, all input files are written to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> tar;
-
 // Opens a given file.
-std::optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(Ctx &, StringRef path);
 
 // Add symbols in File to the symbol table.
-void parseFile(InputFile *file);
-
-void parseArmCMSEImportLib(InputFile *file);
+void parseFile(Ctx &, InputFile *file);
+void parseFiles(Ctx &, const std::vector<InputFile *> &files);
 
 // The root class of input files.
 class InputFile {
+public:
+  Ctx &ctx;
+
 protected:
   std::unique_ptr<Symbol *[]> symbols;
   uint32_t numSymbols = 0;
@@ -63,14 +62,17 @@ public:
     SharedKind,
     BitcodeKind,
     BinaryKind,
+    InternalKind,
   };
 
+  InputFile(Ctx &, Kind k, MemoryBufferRef m);
   Kind kind() const { return fileKind; }
 
   bool isElf() const {
     Kind k = kind();
     return k == ObjKind || k == SharedKind;
   }
+  bool isInternal() const { return kind() == InternalKind; }
 
   StringRef getName() const { return mb.getBufferIdentifier(); }
   MemoryBufferRef mb;
@@ -81,6 +83,7 @@ public:
     assert(fileKind == ObjKind || fileKind == BinaryKind);
     return sections;
   }
+  void cacheDecodedCrel(size_t i, InputSectionBase *s) { sections[i] = s; }
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
@@ -94,6 +97,18 @@ public:
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return {symbols.get(), numSymbols};
+  }
+
+  Symbol &getSymbol(uint32_t symbolIndex) const {
+    assert(fileKind == ObjKind);
+    if (symbolIndex >= numSymbols)
+      fatal(toString(this) + ": invalid symbol index");
+    return *this->symbols[symbolIndex];
+  }
+
+  template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
+    uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
+    return getSymbol(symIndex);
   }
 
   // Get filename to use for linker script processing.
@@ -115,8 +130,6 @@ public:
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.
   uint32_t groupId;
-  static bool isInGroup;
-  static uint32_t nextGroupId;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -126,8 +139,8 @@ public:
   uint8_t osabi = 0;
   uint8_t abiVersion = 0;
 
-  // True if this is a relocatable object file/bitcode file between --start-lib
-  // and --end-lib.
+  // True if this is a relocatable object file/bitcode file in an ar archive
+  // or between --start-lib and --end-lib.
   bool lazy = false;
 
   // True if this is an argument for --just-symbols. Usually false.
@@ -151,9 +164,6 @@ public:
   // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
   bool ppc64DisableTLSRelax = false;
 
-protected:
-  InputFile(Kind k, MemoryBufferRef m);
-
 public:
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
@@ -168,7 +178,7 @@ private:
 
 class ELFFileBase : public InputFile {
 public:
-  ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef m);
+  ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->isElf(); }
 
   void init();
@@ -218,6 +228,7 @@ protected:
 public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.
@@ -231,8 +242,8 @@ public:
     return this->ELFFileBase::getObj<ELFT>();
   }
 
-  ObjFile(ELFKind ekind, MemoryBufferRef m, StringRef archiveName)
-      : ELFFileBase(ObjKind, ekind, m) {
+  ObjFile(Ctx &ctx, ELFKind ekind, MemoryBufferRef m, StringRef archiveName)
+      : ELFFileBase(ctx, ObjKind, ekind, m) {
     this->archiveName = archiveName;
   }
 
@@ -242,18 +253,7 @@ public:
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                  const Elf_Shdr &sec);
 
-  Symbol &getSymbol(uint32_t symbolIndex) const {
-    if (symbolIndex >= numSymbols)
-      fatal(toString(this) + ": invalid symbol index");
-    return *this->symbols[symbolIndex];
-  }
-
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
-
-  template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
-    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
-    return getSymbol(symIndex);
-  }
 
   std::optional<llvm::DILineInfo> getDILineInfo(const InputSectionBase *,
                                                 uint64_t);
@@ -297,8 +297,7 @@ private:
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
-                                   uint32_t info);
+  InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
                                        StringRef name);
 
@@ -328,7 +327,7 @@ private:
 
 class BitcodeFile : public InputFile {
 public:
-  BitcodeFile(MemoryBufferRef m, StringRef archiveName,
+  BitcodeFile(Ctx &, MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
@@ -341,7 +340,7 @@ public:
 // .so file.
 class SharedFile : public ELFFileBase {
 public:
-  SharedFile(MemoryBufferRef m, StringRef defaultSoName);
+  SharedFile(Ctx &, MemoryBufferRef m, StringRef defaultSoName);
 
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;
@@ -375,15 +374,19 @@ private:
 
 class BinaryFile : public InputFile {
 public:
-  explicit BinaryFile(MemoryBufferRef m) : InputFile(BinaryKind, m) {}
+  explicit BinaryFile(Ctx &ctx, MemoryBufferRef m)
+      : InputFile(ctx, BinaryKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == BinaryKind; }
   void parse();
 };
 
-ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
-                           bool lazy = false);
+InputFile *createInternalFile(Ctx &, StringRef name);
+ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
+                           StringRef archiveName = "", bool lazy = false);
 
-std::string replaceThinLTOSuffix(StringRef path);
+std::string replaceThinLTOSuffix(Ctx &, StringRef path);
+
+const ELFSyncStream &operator<<(const ELFSyncStream &, const InputFile *);
 
 } // namespace elf
 } // namespace lld

@@ -9,7 +9,7 @@ define dso_local i32 @p() local_unnamed_addr !dbg !11 {
 entry:
   %conv = load i32, ptr @a, align 4, !dbg !14
   %0 = and i32 %conv, 65535, !dbg !14
-  ; CHECK: metadata !DIExpression(DW_OP_constu, 65535, DW_OP_and, DW_OP_stack_value))
+  ; CHECK: !DIExpression(DW_OP_constu, 65535, DW_OP_and, DW_OP_stack_value),
   call void @llvm.dbg.value(metadata i32 %0, metadata !15, metadata !DIExpression()), !dbg !14
   %1 = lshr i32 %0, 12, !dbg !14
   %2 = and i32 %1, 8, !dbg !14

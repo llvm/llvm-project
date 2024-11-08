@@ -117,10 +117,6 @@ get_debugserver_codesign_identity(debugserver_codesign_identity)
 # Override locally, so the identity is used for targets created in this scope.
 set(LLVM_CODESIGNING_IDENTITY ${debugserver_codesign_identity})
 
-# Use the same identity later in the test suite.
-set_property(GLOBAL PROPERTY
-  LLDB_DEBUGSERVER_CODESIGN_IDENTITY ${debugserver_codesign_identity})
-
 if(APPLE)
   set(LIBCOMPRESSION compression)
   if(APPLE_EMBEDDED)

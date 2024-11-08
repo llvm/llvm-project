@@ -6,16 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H
+#define LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H
+
+#include "src/__support/CPP/bit.h" // has_single_bit
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/bit.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/string/memory_utils/utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 template <class T> LIBC_INLINE bool mul_overflow(T a, T b, T *res) {
-#if LIBC_HAS_BUILTIN(__builtin_mul_overflow)
+#if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(a, b, res);
 #else
   T max = cpp::numeric_limits<T>::max();
@@ -37,17 +42,28 @@ private:
 public:
   LIBC_INLINE_VAR static constexpr size_t MAX_MEM_SIZE =
       static_cast<size_t>(cpp::numeric_limits<type>::max());
+
   LIBC_INLINE explicit SafeMemSize(size_t value)
       : value(value <= MAX_MEM_SIZE ? static_cast<type>(value) : -1) {}
+
+  LIBC_INLINE static constexpr size_t offset_to(size_t val, size_t align) {
+    return (-val) & (align - 1);
+  }
+
   LIBC_INLINE operator size_t() { return static_cast<size_t>(value); }
+
   LIBC_INLINE bool valid() { return value >= 0; }
+
   LIBC_INLINE SafeMemSize operator+(const SafeMemSize &other) {
     type result;
-    if (LIBC_UNLIKELY((value | other.value) < 0))
+    if (LIBC_UNLIKELY((value | other.value) < 0)) {
       result = -1;
-    result = value + other.value;
+    } else {
+      result = value + other.value;
+    }
     return SafeMemSize{result};
   }
+
   LIBC_INLINE SafeMemSize operator*(const SafeMemSize &other) {
     type result;
     if (LIBC_UNLIKELY((value | other.value) < 0))
@@ -56,11 +72,12 @@ public:
       result = -1;
     return SafeMemSize{result};
   }
+
   LIBC_INLINE SafeMemSize align_up(size_t alignment) {
-    if (!is_power_of_two(alignment) || alignment > MAX_MEM_SIZE || !valid())
+    if (!cpp::has_single_bit(alignment) || alignment > MAX_MEM_SIZE || !valid())
       return SafeMemSize{type{-1}};
 
-    type offset = LIBC_NAMESPACE::offset_to<size_t>(value, alignment);
+    type offset = offset_to(value, alignment);
 
     if (LIBC_UNLIKELY(offset > static_cast<type>(MAX_MEM_SIZE) - value))
       return SafeMemSize{type{-1}};
@@ -69,4 +86,6 @@ public:
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H

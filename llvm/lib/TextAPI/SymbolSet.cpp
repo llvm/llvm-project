@@ -11,7 +11,7 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-Symbol *SymbolSet::addGlobalImpl(SymbolKind Kind, StringRef Name,
+Symbol *SymbolSet::addGlobalImpl(EncodeKind Kind, StringRef Name,
                                  SymbolFlags Flags) {
   Name = copyString(Name);
   auto Result = Symbols.try_emplace(SymbolsMapKey{Kind, Name}, nullptr);
@@ -21,13 +21,28 @@ Symbol *SymbolSet::addGlobalImpl(SymbolKind Kind, StringRef Name,
   return Result.first->second;
 }
 
-Symbol *SymbolSet::addGlobal(SymbolKind Kind, StringRef Name, SymbolFlags Flags,
+Symbol *SymbolSet::addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                              const Target &Targ) {
   auto *Sym = addGlobalImpl(Kind, Name, Flags);
   Sym->addTarget(Targ);
   return Sym;
 }
 
-const Symbol *SymbolSet::findSymbol(SymbolKind Kind, StringRef Name) const {
-  return Symbols.lookup({Kind, Name});
+const Symbol *SymbolSet::findSymbol(EncodeKind Kind, StringRef Name,
+                                    ObjCIFSymbolKind ObjCIF) const {
+  if (auto result = Symbols.lookup({Kind, Name}))
+    return result;
+  if ((ObjCIF == ObjCIFSymbolKind::None) || (ObjCIF > ObjCIFSymbolKind::EHType))
+    return nullptr;
+  assert(ObjCIF <= ObjCIFSymbolKind::EHType &&
+         "expected single ObjCIFSymbolKind enum value");
+  // Non-complete ObjC Interfaces are represented as global symbols.
+  if (ObjCIF == ObjCIFSymbolKind::Class)
+    return Symbols.lookup(
+        {EncodeKind::GlobalSymbol, (ObjC2ClassNamePrefix + Name).str()});
+  if (ObjCIF == ObjCIFSymbolKind::MetaClass)
+    return Symbols.lookup(
+        {EncodeKind::GlobalSymbol, (ObjC2MetaClassNamePrefix + Name).str()});
+  return Symbols.lookup(
+      {EncodeKind::GlobalSymbol, (ObjC2EHTypePrefix + Name).str()});
 }

@@ -130,7 +130,7 @@ body:             |
     %22:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @c
     %10:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @e
     %13:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @a
-    %14:g8rc_and_g8rc_nox0 = ADDItocL killed %13, @a, implicit $x2
+    %14:g8rc_and_g8rc_nox0 = ADDItocL8 killed %13, @a, implicit $x2
 
   bb.2.while.body:
     successors: %bb.4(0x30000000), %bb.3(0x50000000)

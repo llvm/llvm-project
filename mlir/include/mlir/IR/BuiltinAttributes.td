@@ -454,9 +454,15 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     Examples:
 
     ```mlir
-    // A tensor referencing a builtin dialect resource, `resource_1`, with two
-    // unsigned i32 elements.
-    dense_resource<resource_1> : tensor<2xui32>
+    "example.user_op"() {attr = dense_resource<blob1> : tensor<3xi64> } : () -> ()
+
+    {-#
+    dialect_resources: {
+        builtin: {
+          blob1: "0x08000000010000000000000002000000000000000300000000000000"
+        }
+      }
+    #-}
     ```
   }];
   let parameters = (ins
@@ -695,8 +701,11 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
         return $_get(type.getContext(), type, apValue);
       }
 
+      // TODO: Avoid implicit trunc?
+      // See https://github.com/llvm/llvm-project/issues/112510.
       IntegerType intTy = ::llvm::cast<IntegerType>(type);
-      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger());
+      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger(),
+                    /*implicitTrunc=*/true);
       return $_get(type.getContext(), type, apValue);
     }]>
   ];
@@ -1006,6 +1015,10 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
   let extraClassDeclaration = [{
     /// Print the attribute to the given output stream.
     void print(raw_ostream &os) const;
+
+    /// Returns true if this layout is static, i.e. the strides and offset all
+    /// have a known value > 0.
+    bool hasStaticLayout() const;
   }];
 }
 

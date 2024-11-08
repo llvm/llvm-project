@@ -49,7 +49,7 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
 
     for (OpOperand *in : op.getDpsInputOperands()) {
       // Skip non-tensor operands.
-      if (!in->get().getType().isa<RankedTensorType>())
+      if (!isa<RankedTensorType>(in->get().getType()))
         continue;
 
       // Find tensor.empty ops on the reverse SSA use-def chain. Only follow
@@ -60,7 +60,10 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       config.alwaysIncludeLeaves = false;
       SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
           in->get(), /*condition=*/
-          [&](Value val) { return val.getDefiningOp<tensor::EmptyOp>(); },
+          [&](Value val) {
+            return val.getDefiningOp<tensor::EmptyOp>() &&
+                   val.getType() == in->get().getType();
+          },
           config);
       if (emptyTensors.empty())
         continue;
@@ -84,7 +87,7 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       }
 
       // Turn the "in" into an "out".
-      rewriter.updateRootInPlace(op, [&]() {
+      rewriter.modifyOpInPlace(op, [&]() {
         out->set(in->get());
         // The original "in" could be removed entirely here (because it will no
         // longer have any uses in the payload), but we delegate this to

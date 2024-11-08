@@ -30,9 +30,6 @@
 
 #include "lldb/Host/Config.h"
 
-#if LLDB_EDITLINE_USE_WCHAR
-#include <codecvt>
-#endif
 #include <locale>
 #include <sstream>
 #include <vector>
@@ -75,6 +72,8 @@ using EditLineCharType = char;
 // to wchar_t. It is not possible to detect differentiate between the two
 // versions exactly, but this is a pretty good approximation and allows us to
 // build against almost any editline version out there.
+// It does, however, require extra care when invoking el_getc, as the type
+// of the input is a single char buffer, but the callback will write a wchar_t.
 #if LLDB_EDITLINE_USE_WCHAR || defined(EL_CLIENTDATA) || LLDB_HAVE_EL_RFUNC_T
 using EditLineGetCharType = wchar_t;
 #else
@@ -364,9 +363,6 @@ private:
   void SetEditLinePromptCallback(EditlinePromptCallbackType callbackFn);
   void SetGetCharacterFunction(EditlineGetCharCallbackType callbackFn);
 
-#if LLDB_EDITLINE_USE_WCHAR
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> m_utf8conv;
-#endif
   ::EditLine *m_editline = nullptr;
   EditlineHistorySP m_history_sp;
   bool m_in_history = false;

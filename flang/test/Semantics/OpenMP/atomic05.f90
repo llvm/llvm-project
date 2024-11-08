@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags -fopenmp-version=50
 
 ! This tests the various semantics related to the clauses of various OpenMP atomic constructs
 

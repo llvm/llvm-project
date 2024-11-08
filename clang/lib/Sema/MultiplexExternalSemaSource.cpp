@@ -46,7 +46,7 @@ void MultiplexExternalSemaSource::AddSource(ExternalSemaSource *Source) {
 // ExternalASTSource.
 //===----------------------------------------------------------------------===//
 
-Decl *MultiplexExternalSemaSource::GetExternalDecl(uint32_t ID) {
+Decl *MultiplexExternalSemaSource::GetExternalDecl(GlobalDeclID ID) {
   for(size_t i = 0; i < Sources.size(); ++i)
     if (Decl *Result = Sources[i]->GetExternalDecl(ID))
       return Result;
@@ -343,7 +343,7 @@ bool MultiplexExternalSemaSource::MaybeDiagnoseMissingCompleteType(
 }
 
 void MultiplexExternalSemaSource::AssignedLambdaNumbering(
-    const CXXRecordDecl *Lambda) {
+    CXXRecordDecl *Lambda) {
   for (auto *Source : Sources)
     Source->AssignedLambdaNumbering(Lambda);
 }

@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -74,22 +75,8 @@ module {
     return %0 : tensor<?xcomplex<f64>, #SparseVector>
   }
 
-  func.func @dump(%arg0: tensor<?xcomplex<f64>, #SparseVector>, %d: index) {
-    %c0 = arith.constant 0 : index
-    %c1 = arith.constant 1 : index
-    %mem = sparse_tensor.values %arg0 : tensor<?xcomplex<f64>, #SparseVector> to memref<?xcomplex<f64>>
-    scf.for %i = %c0 to %d step %c1 {
-       %v = memref.load %mem[%i] : memref<?xcomplex<f64>>
-       %real = complex.re %v : complex<f64>
-       %imag = complex.im %v : complex<f64>
-       vector.print %real : f64
-       vector.print %imag : f64
-    }
-    return
-  }
-
   // Driver method to call and verify complex kernels.
-  func.func @entry() {
+  func.func @main() {
     // Setup sparse vectors.
     %v1 = arith.constant sparse<
        [ [0], [28], [31] ],
@@ -111,23 +98,26 @@ module {
     //
     // Verify the results.
     //
-    // CHECK: 511.13
-    // CHECK-NEXT: 2
-    // CHECK-NEXT: 1
-    // CHECK-NEXT: 0
-    // CHECK-NEXT: 5
-    // CHECK-NEXT: 4
-    // CHECK-NEXT: 8
-    // CHECK-NEXT: 6
-    // CHECK-NEXT: 6
-    // CHECK-NEXT: 8
-    // CHECK-NEXT: 15
-    // CHECK-NEXT: 18
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 4
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 28, 31 )
+    // CHECK-NEXT: values : ( ( 511.13, 2 ), ( 1, 0 ), ( 5, 4 ), ( 8, 6 ) )
+    // CHECK-NEXT: ----
     //
-    %d1 = arith.constant 4 : index
-    %d2 = arith.constant 2 : index
-    call @dump(%0, %d1) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
-    call @dump(%1, %d2) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
+    // CHECK-NEXT: ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 2
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 28, 31 )
+    // CHECK-NEXT: values : ( ( 6, 8 ), ( 15, 18 ) )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %0 : tensor<?xcomplex<f64>, #SparseVector>
+    sparse_tensor.print %1 : tensor<?xcomplex<f64>, #SparseVector>
 
     // Release the resources.
     bufferization.dealloc_tensor %sv1 : tensor<?xcomplex<f64>, #SparseVector>

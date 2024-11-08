@@ -1,4 +1,5 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=licm %s -S | FileCheck %s
 
 ;; Ensure that we correctly merge the DIAssignID's from the sunk stores, add it
 ;; to the new new store instruction, and update the dbg.assign intrinsics using
@@ -19,9 +20,9 @@
 ;; this test is useless.
 ; CHECK-NOT: store i32 %inc, ptr %c.addr
 ;; Check that the two dbg.assigns now have the same (merged) !DIAssingID ID.
-; CHECK: call void @llvm.dbg.assign(metadata i32 %inc, metadata ![[VAR_C:[0-9]+]], metadata !DIExpression(), metadata ![[ID:[0-9]+]], metadata ptr %c.addr, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(i32 %inc, ![[VAR_C:[0-9]+]], !DIExpression(), ![[ID:[0-9]+]], ptr %c.addr, !DIExpression(),
 ; CHECK-NOT: store i32 %inc, ptr %c.addr
-; CHECK: call void @llvm.dbg.assign(metadata i32 %inc, metadata ![[VAR_C]], metadata !DIExpression(), metadata ![[ID]], metadata ptr %c.addr, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(i32 %inc, ![[VAR_C]], !DIExpression(), ![[ID]], ptr %c.addr, !DIExpression(),
 
 ; CHECK-LABEL: for.cond.for.end_crit_edge:
 ; CHECK-NEXT: %[[PHI:.*]] = phi i32 [ %inc, %for.inc ]

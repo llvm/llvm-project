@@ -75,15 +75,15 @@
 --- |
   target triple = "i386-unknown-linux-gnu"
   
-  %struct.A = type { i32 (...)**, i32 }
+  %struct.A = type { ptr, i32 }
   
   ; Function Attrs: nounwind
   define i32 @_Z3bari(i32 %b) #0 !dbg !10 {
   entry:
     %b.addr = alloca i32, align 4
-    store i32 %b, i32* %b.addr, align 4
+    store i32 %b, ptr %b.addr, align 4
     call void @llvm.dbg.value(metadata i32 0, metadata !14, metadata !DIExpression()), !dbg !15
-    %0 = load i32, i32* %b.addr, align 4, !dbg !16
+    %0 = load i32, ptr %b.addr, align 4, !dbg !16
     call void @llvm.dbg.value(metadata i32 1, metadata !14, metadata !DIExpression()), !dbg !15
     %add = add nsw i32 %0, 4, !dbg !16
     ret i32 %add, !dbg !16
@@ -95,43 +95,43 @@
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
   
-  define void @_Z3baz1A(%struct.A* %a) #2 !dbg !17 {
+  define void @_Z3baz1A(ptr %a) #2 !dbg !17 {
   entry:
     %z = alloca i32, align 4
-    call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !21
-    call void @llvm.dbg.declare(metadata i32* %z, metadata !22, metadata !DIExpression()), !dbg !23
-    store i32 2, i32* %z, align 4, !dbg !23
-    %var = getelementptr inbounds %struct.A, %struct.A* %a, i32 0, i32 1, !dbg !24
-    %0 = load i32, i32* %var, align 4, !dbg !24
+    call void @llvm.dbg.declare(metadata ptr %a, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !21
+    call void @llvm.dbg.declare(metadata ptr %z, metadata !22, metadata !DIExpression()), !dbg !23
+    store i32 2, ptr %z, align 4, !dbg !23
+    %var = getelementptr inbounds %struct.A, ptr %a, i32 0, i32 1, !dbg !24
+    %0 = load i32, ptr %var, align 4, !dbg !24
     %cmp = icmp sgt i32 %0, 2, !dbg !24
     br i1 %cmp, label %if.then, label %if.end, !dbg !24
   
   if.then:                                          ; preds = %entry
-    %1 = load i32, i32* %z, align 4, !dbg !26
+    %1 = load i32, ptr %z, align 4, !dbg !26
     %inc = add nsw i32 %1, 1, !dbg !26
-    store i32 %inc, i32* %z, align 4, !dbg !26
+    store i32 %inc, ptr %z, align 4, !dbg !26
     br label %if.end, !dbg !26
   
   if.end:                                           ; preds = %if.then, %entry
-    %call = call signext i8 @_ZN1A3fooEv(%struct.A* %a), !dbg !27
+    %call = call signext i8 @_ZN1A3fooEv(ptr %a), !dbg !27
     %conv = sext i8 %call to i32, !dbg !27
     %cmp1 = icmp eq i32 %conv, 97, !dbg !27
     br i1 %cmp1, label %if.then2, label %if.end4, !dbg !27
   
   if.then2:                                         ; preds = %if.end
-    %2 = load i32, i32* %z, align 4, !dbg !29
+    %2 = load i32, ptr %z, align 4, !dbg !29
     %inc3 = add nsw i32 %2, 1, !dbg !29
-    store i32 %inc3, i32* %z, align 4, !dbg !29
+    store i32 %inc3, ptr %z, align 4, !dbg !29
     br label %if.end4, !dbg !29
   
   if.end4:                                          ; preds = %if.then2, %if.end
     ret void, !dbg !30
   }
   
-  declare signext i8 @_ZN1A3fooEv(%struct.A*) #2
+  declare signext i8 @_ZN1A3fooEv(ptr) #2
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
   
   attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }

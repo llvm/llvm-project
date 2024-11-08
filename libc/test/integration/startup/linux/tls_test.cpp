@@ -10,7 +10,6 @@
 #include "src/sys/mman/mmap.h"
 #include "test/IntegrationTest/test.h"
 
-#include <errno.h>
 #include <sys/mman.h>
 
 constexpr int threadLocalDataSize = 101;
@@ -28,11 +27,11 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   // set in errno. Since errno is implemented using a thread
   // local var, this helps us test setting of errno and
   // reading it back.
-  ASSERT_TRUE(libc_errno == 0);
+  ASSERT_ERRNO_SUCCESS();
   void *addr = LIBC_NAMESPACE::mmap(nullptr, 0, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_TRUE(addr == MAP_FAILED);
-  ASSERT_TRUE(libc_errno == EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   return 0;
 }

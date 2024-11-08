@@ -14,7 +14,6 @@
 #define LLVM_XRAY_BLOCKVERIFIER_H
 
 #include "llvm/XRay/FDRRecords.h"
-#include <bitset>
 
 namespace llvm {
 namespace xray {

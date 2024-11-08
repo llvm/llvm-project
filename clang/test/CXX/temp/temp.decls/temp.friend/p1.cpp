@@ -17,7 +17,7 @@ public:
       for (U count = n.count_; count; --count)
         x += a;
       return x;
-    } 
+    }
   };
 
   friend Num operator+(const Num &a, const Num &b) {
@@ -145,7 +145,7 @@ namespace test5 {
 
 namespace Dependent {
   template<typename T, typename Traits> class X;
-  template<typename T, typename Traits> 
+  template<typename T, typename Traits>
   X<T, Traits> operator+(const X<T, Traits>&, const T*);
 
   template<typename T, typename Traits> class X {
@@ -174,7 +174,7 @@ namespace test7 {
 
   // This shouldn't crash.
   template <class T> class D {
-    friend class A; // expected-error {{template 'A' cannot be referenced with a class specifier}}
+    friend class A; // expected-error {{template 'A' cannot be referenced with the 'class' specifier}}
   };
   template class D<int>;
 }
@@ -249,7 +249,7 @@ namespace test11 {
   };
 
   template struct Foo::IteratorImpl<int>;
-  template struct Foo::IteratorImpl<long>;  
+  template struct Foo::IteratorImpl<long>;
 }
 
 // PR6827

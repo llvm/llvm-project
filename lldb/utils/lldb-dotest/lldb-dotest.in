@@ -1,4 +1,5 @@
 #!@Python3_EXECUTABLE@
+import os
 import subprocess
 import sys
 
@@ -8,11 +9,13 @@ arch = '@LLDB_TEST_ARCH@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
+make = '@LLDB_TEST_MAKE_CONFIGURED@'
 lldb_build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
 llvm_tools_dir = "@LLVM_TOOLS_DIR_CONFIGURED@"
+lldb_obj_root = "@LLDB_BINARY_DIR@"
 has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
@@ -33,6 +36,7 @@ if __name__ == '__main__':
     cmd.extend(['--executable', executable])
     cmd.extend(['--compiler', compiler])
     cmd.extend(['--dsymutil', dsymutil])
+    cmd.extend(['--make', make])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
     cmd.extend(['--llvm-tools-dir', llvm_tools_dir])
     if has_libcxx:
@@ -44,6 +48,7 @@ if __name__ == '__main__':
         cmd.extend(['--framework', lldb_framework_dir])
     if lldb_build_intel_pt == "1":
         cmd.extend(['--enable-plugin', 'intel-pt'])
+    cmd.extend(['--lldb-obj-root', lldb_obj_root])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))

@@ -2,6 +2,47 @@ add_subdirectory(CPP)
 add_subdirectory(macros)
 
 add_header_library(
+  block
+  HDRS
+    block.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
+  freelist
+  HDRS
+    freelist.h
+  DEPENDS
+    libc.src.__support.fixedvector
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.span
+)
+
+add_header_library(
+  freelist_heap
+  HDRS
+    freelist_heap.h
+  DEPENDS
+    .block
+    .freelist
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.libc_assert
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
+
+add_header_library(
   blockstore
   HDRS
     blockstore.h
@@ -34,9 +75,19 @@ add_header_library(
   HDRS
     math_extras.h
   DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  sign
+  HDRS
+    sign.h
+  DEPENDS
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
@@ -66,6 +117,8 @@ add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
+  DEPENDS
+    libc.hdr.types.wint_t
 )
 
 add_header_library(
@@ -94,6 +147,7 @@ add_header_library(
   HDRS
     integer_to_string.h
   DEPENDS
+    .big_int
     libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
@@ -135,14 +189,30 @@ add_header_library(
     .str_to_num_result
     .uint128
     libc.src.__support.common
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.bit
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
     libc.src.errno.errno
+)
+
+add_header_library(
+  integer_literals
+  HDRS
+    integer_literals.h
+  DEPENDS
+    .uint128
+    libc.src.__support.CPP.limits
+)
+
+add_header_library(
+  complex_type
+  HDRS
+    complex_type.h
 )
 
 add_header_library(
@@ -172,6 +242,9 @@ add_header_library(
   HDRS
     char_vector.h
   DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
     libc.src.__support.common
 )
 
@@ -184,36 +257,26 @@ add_header_library(
 )
 
 add_header_library(
-  integer_utils
+  big_int
   HDRS
-    integer_utils.h
+    big_int.h
   DEPENDS
-    .bit
-    .number_pair
-    libc.src.__support.common
-    libc.src.__support.CPP.type_traits
-)
-
-add_header_library(
-  uint
-  HDRS
-    UInt.h
-  DEPENDS
-    .bit
-    .integer_utils
     .math_extras
     .number_pair
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
   uint128
   HDRS
-    UInt128.h
+    uint128.h
   DEPENDS
-    .uint
+    .big_int
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -223,6 +286,7 @@ add_header_library(
   DEPENDS
     .integer_to_string
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -230,8 +294,9 @@ add_header_library(
   HDRS
     hash.h
   DEPENDS
-    .bit
     .uint128
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.macros.attributes
 )
 
@@ -247,6 +312,14 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  intrusive_list
+  HDRS
+    intrusive_list.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+)
+
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
@@ -260,3 +333,7 @@ add_subdirectory(threads)
 add_subdirectory(File)
 
 add_subdirectory(HashTable)
+
+add_subdirectory(fixed_point)
+
+add_subdirectory(time)

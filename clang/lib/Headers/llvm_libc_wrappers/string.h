@@ -51,13 +51,13 @@ char *strcpy(char *__restrict, const char *__restrict) __LIBC_ATTRS;
 size_t strcspn(const char *, const char *) __LIBC_ATTRS;
 char *strdup(const char *) __LIBC_ATTRS;
 size_t strlen(const char *) __LIBC_ATTRS;
-char *strncat(char *, const char *, size_t) __LIBC_ATTRS;
+char *strncat(char *__restrict, const char *__restrict, size_t) __LIBC_ATTRS;
 int strncmp(const char *, const char *, size_t) __LIBC_ATTRS;
 char *strncpy(char *__restrict, const char *__restrict, size_t) __LIBC_ATTRS;
 char *strndup(const char *, size_t) __LIBC_ATTRS;
 size_t strnlen(const char *, size_t) __LIBC_ATTRS;
 size_t strspn(const char *, const char *) __LIBC_ATTRS;
-char *strtok(char *__restrict, const char *) __LIBC_ATTRS;
+char *strtok(char *__restrict, const char *__restrict) __LIBC_ATTRS;
 char *strtok_r(char *__restrict, const char *__restrict,
                char **__restrict) __LIBC_ATTRS;
 size_t strxfrm(char *__restrict, const char *__restrict, size_t) __LIBC_ATTRS;

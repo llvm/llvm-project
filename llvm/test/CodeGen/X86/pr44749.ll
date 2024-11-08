@@ -6,19 +6,20 @@ define i32 @a() {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    movb $0, %al
 ; CHECK-NEXT:    callq _b
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
-; CHECK-NEXT:    movq _calloc@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    subq $-1, %rax
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movq _calloc@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    addq $1, %rdx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movl $1, %ecx
+; CHECK-NEXT:    cmpq $0, %rdx
+; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+2,0.0E+0]
 ; CHECK-NEXT:    subsd %xmm2, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm3 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [3.1400000000000001E+0,0.0E+0]
 ; CHECK-NEXT:    cmplesd %xmm1, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    andpd %xmm3, %xmm1
@@ -30,7 +31,8 @@ define i32 @a() {
 entry:
   %call = call i32 (...) @b()
   %conv = sitofp i32 %call to double
-  %sel = select i1 icmp ne (ptr getelementptr (i8, ptr @calloc, i64 1), ptr null), i32 1, i32 0
+  %cmp2 = icmp ne ptr getelementptr (i8, ptr @calloc, i64 1), null
+  %sel = select i1 %cmp2, i32 1, i32 0
   %sitofp = sitofp i32 %sel to double
   %fsub = fsub double %sitofp, 1.000000e+02
   %cmp = fcmp ole double %fsub, %conv

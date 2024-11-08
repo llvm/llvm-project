@@ -23,9 +23,10 @@
 // Returns: true if x.extents() == y.extents() is true, OFFSET(y) == 0 is true, and each of x.stride(r) == y.stride(r) is true for r in the range [0, x.extents().rank()). Otherwise, false.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -142,7 +143,7 @@ constexpr void test_comparison_same_rank() {
 template <class OtherLayout, class E1, class E2, class... OtherArgs>
 constexpr void test_comparison_with(
     bool expect_equal, E1 e1, std::array<typename E1::index_type, E1::rank()> strides, E2 e2, OtherArgs... other_args) {
-  typename std::layout_stride::template mapping<E1> map(e1, strides);
+  std::layout_stride::mapping<E1> map(e1, strides);
   typename OtherLayout::template mapping<E2> other_map(e2, other_args...);
 
   assert((map == other_map) == expect_equal);

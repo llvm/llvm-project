@@ -1,10 +1,10 @@
 ! Check that for parallel do, reduction is only processed for the loop
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: flang -fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK: omp.parallel {
-! CHECK: omp.wsloop reduction(@add_reduction_i_32
+! CHECK: omp.wsloop reduction(@add_reduction_i32
 subroutine sb
   integer :: x
   x = 0

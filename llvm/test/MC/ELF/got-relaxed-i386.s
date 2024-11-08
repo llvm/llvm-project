@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple i386-pc-linux %s -o - | llvm-readobj -r - | FileCheck %s
-// RUN: llvm-mc -filetype=obj -relax-relocations=false -triple i386-pc-linux %s -o - | llvm-readobj -r - | FileCheck --check-prefix=OLD %s
+// RUN: llvm-mc -filetype=obj -x86-relax-relocations=false -triple i386-pc-linux %s -o - | llvm-readobj -r - | FileCheck --check-prefix=OLD %s
 
         movl mov@GOT(%ebx), %eax
         mull mul@GOT(%ebx)

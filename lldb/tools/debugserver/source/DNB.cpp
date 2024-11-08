@@ -475,9 +475,17 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
         extern int communication_fd;
 
         if (communication_fd == -1) {
-          fprintf(stderr, "Trying to attach to a translated process with the "
-                          "native debugserver, exiting...\n");
-          exit(1);
+          DNBLogError("Trying to attach to a translated process with the "
+                      "native debugserver, exiting...\n");
+          return INVALID_NUB_PROCESS_ARCH;
+        }
+
+        struct stat st;
+        if (::stat(translated_debugserver, &st) != 0) {
+          DNBLogError("Translated inferior process but Rosetta debugserver not "
+                      "found at %s",
+                      translated_debugserver);
+          return INVALID_NUB_PROCESS_ARCH;
         }
 
         snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
@@ -1060,6 +1068,14 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
         plo_pthread_tsd_entry_size);
   }
   return INVALID_NUB_ADDRESS;
+}
+
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetMainBinaryCPUTypes(pid);
+  return {};
 }
 
 JSONGenerator::ObjectSP

@@ -114,9 +114,8 @@ public:
           uint64_t CallsiteCount = 0;
           LineLocation Callsite = Callee->getCallSiteLoc();
           if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
-            SampleRecord::CallTargetMap &TargetCounts = CallTargets.get();
-            auto It = TargetCounts.find(CalleeSamples->getFunction());
-            if (It != TargetCounts.end())
+            auto It = CallTargets->find(CalleeSamples->getFunction());
+            if (It != CallTargets->end())
               CallsiteCount = It->second;
           }
           Weight = std::max(CallsiteCount, CalleeEntryCount);
@@ -157,10 +156,8 @@ private:
     ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
                                CalleeIt->second, Weight);
     auto &Edges = ProfiledFunctions[CallerName]->Edges;
-    auto EdgeIt = Edges.find(Edge);
-    if (EdgeIt == Edges.end()) {
-      Edges.insert(Edge);
-    } else {
+    auto [EdgeIt, Inserted] = Edges.insert(Edge);
+    if (!Inserted) {
       // Accumulate weight to the existing edge.
       Edge.Weight += EdgeIt->Weight;
       Edges.erase(EdgeIt);

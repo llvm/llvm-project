@@ -27,7 +27,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 #include <utility>
 
 using namespace llvm;
@@ -61,15 +60,15 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
 
-  SizeOffsetEvalType SizeOffset = ObjSizeEval.compute(Ptr);
+  SizeOffsetValue SizeOffset = ObjSizeEval.compute(Ptr);
 
-  if (!ObjSizeEval.bothKnown(SizeOffset)) {
+  if (!SizeOffset.bothKnown()) {
     ++ChecksUnable;
     return nullptr;
   }
 
-  Value *Size   = SizeOffset.first;
-  Value *Offset = SizeOffset.second;
+  Value *Size = SizeOffset.Size;
+  Value *Offset = SizeOffset.Offset;
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
   Type *IndexTy = DL.getIndexType(Ptr->getType());
@@ -144,7 +143,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
@@ -194,14 +193,13 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     IRB.SetInsertPoint(TrapBB);
 
     Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
 
     CallInst *TrapCall;
     if (DebugTrapBB) {
-      TrapCall =
-          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+      TrapCall = IRB.CreateIntrinsic(
+          IntrID, {}, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
     } else {
-      TrapCall = IRB.CreateCall(F, {});
+      TrapCall = IRB.CreateIntrinsic(IntrID, {}, {});
     }
 
     TrapCall->setDoesNotReturn();

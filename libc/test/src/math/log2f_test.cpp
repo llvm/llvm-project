@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/log2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <stdint.h>
 
@@ -39,7 +39,7 @@ TEST_F(LlvmLibcLog2fTest, TrickyInputs) {
       0x3f80079bU, 0x3f81d0b5U, 0x3f82e602U, 0x3f83c98dU, 0x3f8cba39U};
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
                                    LIBC_NAMESPACE::log2f(x), 0.5);
   }
@@ -49,16 +49,17 @@ TEST_F(LlvmLibcLog2fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
-    if (isnan(x) || isinf(x))
+    float x = FPBits(v).get_val();
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::log2f(x);
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (isnan(result) || isinf(result) || libc_errno != 0)
+    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
+        LIBC_NAMESPACE::libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
                                    LIBC_NAMESPACE::log2f(x), 0.5);

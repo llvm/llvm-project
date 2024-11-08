@@ -39,4 +39,8 @@ module m1
   logical, parameter :: test_modulo_r12b = sign(1., modulo(huge(0.), -tiny(0.))) == -1.
   logical, parameter :: test_modulo_r13a = modulo(huge(0.), tiny(0.)) == 0.
   logical, parameter :: test_modulo_r13b = sign(1., modulo(-huge(0.), -tiny(0.))) == -1.
+
+  logical, parameter :: test_mod_r14 = mod(1e22, 1.7) == .99592876
+  logical, parameter :: test_modulo_r14 = modulo(1e22, -1.7) == -.7040713
+
 end module

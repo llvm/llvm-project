@@ -67,6 +67,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 
 using namespace mlir;
@@ -277,20 +278,24 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
 
 /// Return "true" if the given function signature has tensor semantics.
 static bool hasTensorSignature(func::FuncOp funcOp) {
-  auto isaTensor = [](Type t) { return isa<TensorType>(t); };
-  return llvm::any_of(funcOp.getFunctionType().getInputs(), isaTensor) ||
-         llvm::any_of(funcOp.getFunctionType().getResults(), isaTensor);
+  return llvm::any_of(funcOp.getFunctionType().getInputs(),
+                      llvm::IsaPred<TensorType>) ||
+         llvm::any_of(funcOp.getFunctionType().getResults(),
+                      llvm::IsaPred<TensorType>);
 }
 
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
-/// callee-caller order (i.e. callees without callers first).
+/// callee-caller order (i.e., callees without callers first). Store all
+/// remaining functions (i.e., the ones that call each other recursively) in
+/// `remainingFuncOps`.
+///
 /// Store the map of FuncOp to all its callers in `callerMap`.
-/// Return `failure()` if a cycle of calls is detected or if we are unable to
-/// retrieve the called FuncOp from any func::CallOp.
-static LogicalResult
-getFuncOpsOrderedByCalls(ModuleOp moduleOp,
-                         SmallVectorImpl<func::FuncOp> &orderedFuncOps,
-                         FuncCallerMap &callerMap) {
+///
+/// Return `failure()` if we are unable to retrieve the called FuncOp from
+/// any func::CallOp.
+static LogicalResult getFuncOpsOrderedByCalls(
+    ModuleOp moduleOp, SmallVectorImpl<func::FuncOp> &orderedFuncOps,
+    SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
   // symbols of all nested func::CallOp).
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
@@ -324,19 +329,25 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   });
   if (res.wasInterrupted())
     return failure();
+
   // Iteratively remove function operations that do not call any of the
-  // functions remaining in the callCounter map and add them to the worklist.
+  // functions remaining in the callCounter map and add them to ordered list.
   while (!numberCallOpsContainedInFuncOp.empty()) {
     auto it = llvm::find_if(numberCallOpsContainedInFuncOp,
                             [](auto entry) { return entry.getSecond() == 0; });
     if (it == numberCallOpsContainedInFuncOp.end())
-      return moduleOp.emitOpError(
-          "expected callgraph to be free of circular dependencies.");
+      break;
     orderedFuncOps.push_back(it->getFirst());
     for (auto callee : calledBy[it->getFirst()])
       numberCallOpsContainedInFuncOp[callee]--;
     numberCallOpsContainedInFuncOp.erase(it);
   }
+
+  // Put all other functions in the list of remaining functions. These are
+  // functions that call each other circularly.
+  for (auto it : numberCallOpsContainedInFuncOp)
+    remainingFuncOps.push_back(it.first);
+
   return success();
 }
 
@@ -376,16 +387,23 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
 
-  // A list of functions in the order in which they are analyzed + bufferized.
+  // A list of non-circular functions in the order in which they are analyzed
+  // and bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
+  // A list of all other functions. I.e., functions that call each other
+  // recursively. For these, we analyze the function body but not the function
+  // boundary.
+  SmallVector<func::FuncOp> remainingFuncOps;
 
   // A mapping of FuncOps to their callers.
   FuncCallerMap callerMap;
 
-  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
+  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
+                                      remainingFuncOps, callerMap)))
     return failure();
 
-  // Analyze ops.
+  // Analyze functions in order. Starting with functions that are not calling
+  // any other functions.
   for (func::FuncOp funcOp : orderedFuncOps) {
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
@@ -409,6 +427,25 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
   }
 
+  // Analyze all other functions. All function boundary analyses are skipped.
+  for (func::FuncOp funcOp : remainingFuncOps) {
+    if (!state.getOptions().isOpAllowed(funcOp))
+      continue;
+
+    // Gather equivalence info for CallOps.
+    equivalenceAnalysis(funcOp, state, funcState);
+
+    // Analyze funcOp.
+    if (failed(analyzeOp(funcOp, state, statistics)))
+      return failure();
+
+    // TODO: We currently skip all function argument analyses for functions
+    // that call each other circularly. These analyses do not support recursive
+    // calls yet. The `BufferizableOpInterface` implementations of `func`
+    // dialect ops return conservative results in the absence of analysis
+    // information.
+  }
+
   return success();
 }
 
@@ -427,14 +464,26 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
 
-  // A list of functions in the order in which they are analyzed + bufferized.
+  // A list of non-circular functions in the order in which they are analyzed
+  // and bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
+  // A list of all other functions. I.e., functions that call each other
+  // recursively. For these, we analyze the function body but not the function
+  // boundary.
+  SmallVector<func::FuncOp> remainingFuncOps;
 
   // A mapping of FuncOps to their callers.
   FuncCallerMap callerMap;
 
-  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
+  // Try to bufferize functions in calling order. I.e., first bufferize
+  // functions that do not call other functions. This allows us to infer
+  // accurate buffer types for function return values. Functions that call
+  // each other recursively are bufferized in an unspecified order at the end.
+  // We may use unnecessarily "complex" (in terms of layout map) buffer types.
+  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
+                                      remainingFuncOps, callerMap)))
     return failure();
+  llvm::append_range(orderedFuncOps, remainingFuncOps);
 
   // Bufferize functions.
   for (func::FuncOp funcOp : orderedFuncOps) {
@@ -456,6 +505,15 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
     // Change buffer return types to more precise layout maps.
     if (options.inferFunctionResultLayout)
       foldMemRefCasts(funcOp);
+  }
+
+  // Bufferize all other ops.
+  for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
+    // Functions were already bufferized.
+    if (isa<func::FuncOp>(&op))
+      continue;
+    if (failed(bufferizeOp(&op, options, statistics)))
+      return failure();
   }
 
   // Post-pass cleanup of function argument attributes.

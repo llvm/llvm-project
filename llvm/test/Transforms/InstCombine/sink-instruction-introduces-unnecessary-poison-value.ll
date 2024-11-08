@@ -1,7 +1,5 @@
 ; RUN: opt -passes=instcombine -S -o - < %s | FileCheck %s
-; FIXME RemoveDIs project: this can't yet be enabled because we haven't
-; implemented instcombine sinking.
-; run: opt -passes=instcombine -S -o - < %s --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; When the 'int Four = Two;' is sunk into the 'case 0:' block,
 ; the debug value for 'Three' is set incorrectly to 'poison'.
@@ -24,8 +22,8 @@
 
 ; CHECK-LABEL: sw.bb:
 ; CHECK: %[[REG:[0-9]+]] = load i32, ptr @"?Two{{.*}}
-; CHECK: call void @llvm.dbg.value(metadata i32 %[[REG]], metadata ![[DBG1:[0-9]+]], {{.*}}
-; CHECK: call void @llvm.dbg.value(metadata i32 %[[REG]], metadata ![[DBG2:[0-9]+]], {{.*}}
+; CHECK: #dbg_value(i32 %[[REG]], ![[DBG1:[0-9]+]], {{.*}}
+; CHECK: #dbg_value(i32 %[[REG]], ![[DBG2:[0-9]+]], {{.*}}
 ; CHECK-DAG: ![[DBG1]] = !DILocalVariable(name: "Four"{{.*}})
 ; CHECK-DAG: ![[DBG2]] = !DILocalVariable(name: "Three"{{.*}})
 

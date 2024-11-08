@@ -15,7 +15,7 @@
 #include "int_lib.h"
 #include "int_math.h"
 
-#if defined(CRT_HAS_TF_MODE)
+#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
 
 // Returns: the product of a + ib and c + id
 

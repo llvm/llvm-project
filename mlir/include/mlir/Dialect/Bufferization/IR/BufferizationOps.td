@@ -1,4 +1,4 @@
-//===- BufferizationOps.td - Bufferization op definitions ----------*- tablegen -*-===//
+//===- BufferizationOps.td - Bufferization op definitions --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,7 @@
 #define BUFFERIZATION_OPS
 
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -216,8 +217,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
-        [AllShapesMatch<["source", "dest"]>,
-         AllElementTypesMatch<["source", "dest"]>,
+        [AllElementTypesMatch<["source", "dest"]>,
          BufferizableOpInterface, DestinationStyleOpInterface,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
          DeclareOpInterfaceMethods<SubsetOpInterface,
@@ -238,9 +238,9 @@ def Bufferization_MaterializeInDestinationOp
     memref, `source` materializes in `dest`, which is already a buffer. The op
     has no results in that case.
 
-    `source`, `dest` and `result` (if present) must have the same shape and
-    element type. If the op has a result, the types of `result` and `dest` must
-    match exactly (e.g., including any tensor encodings).
+    `source`, `dest` and `result` (if present) must have the same runtime shape
+    and element type. If the op has a result, the types of `result` and `dest`
+    must match exactly (e.g., including any tensor encodings).
 
     By default, this op bufferizes to a memcpy from the future buffer of the
     `source` tensor to the future buffer of the `dest` tensor or to the `dest`
@@ -602,7 +602,7 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     ```
     Deallocation will be called on `%a0` if `%cond0` is 'true' and neither
     `%r0`, `%r1`, or `%r2` are aliases of `%a0`. `%a1` will be deallocated when
-    `%cond1` is set to 'true' and none of `%r0`, %r1`, `%r2`, and `%a0` are
+    `%cond1` is set to 'true' and none of `%r0`, `%r1`, `%r2`, and `%a0` are
     aliases.
 
     Note that this can be an expensive operation if there are many operands that

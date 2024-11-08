@@ -200,7 +200,7 @@ function(_OPENMP_TARGET_DEVICE_GET_FLAGS LANG DEVICE OPENMP_FLAG_VAR OPENMP_LIB_
     file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
       "Compilation successful, adding flags for ${DEVICE}.\n\n")
 
-    # Clang has a seperate library for target offloading.
+    # Clang has a separate library for target offloading.
     if(CMAKE_${LANG}_COMPILER_ID STREQUAL "Clang")
       find_library(OpenMPTarget_libomptarget_LIBRARY
         NAMES omptarget

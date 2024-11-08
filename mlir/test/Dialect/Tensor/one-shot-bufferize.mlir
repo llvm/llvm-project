@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -209,6 +209,21 @@ func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tenso
   }
   // CHECK: }
   return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_insert_full_slice_in_place
+// CHECK-NOT:     memref.alloc()
+func.func @parallel_insert_full_slice_in_place(%2: tensor<2xf32>) -> tensor<2xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %3 = scf.forall (%arg0) in (1) shared_outs(%arg2 = %2) -> (tensor<2xf32>) {
+    %fill = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<2xf32>) -> tensor<2xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %fill into %arg2[0] [2] [1] : tensor<2xf32> into tensor<2xf32>
+    }
+  } {mapping = [#gpu.thread<linear_dim_0>]}
+  return %3 : tensor<2xf32>
 }
 
 // -----

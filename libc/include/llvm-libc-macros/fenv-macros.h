@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_FENV_MACROS_H
-#define __LLVM_LIBC_MACROS_FENV_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FENV_MACROS_H
+#define LLVM_LIBC_MACROS_FENV_MACROS_H
 
-#define FE_DIVBYZERO 1
-#define FE_INEXACT 2
-#define FE_INVALID 4
-#define FE_OVERFLOW 8
-#define FE_UNDERFLOW 16
+#define FE_DIVBYZERO 0x1
+#define FE_INEXACT 0x2
+#define FE_INVALID 0x4
+#define FE_OVERFLOW 0x8
+#define FE_UNDERFLOW 0x10
+#define __FE_DENORM 0x20
 #define FE_ALL_EXCEPT                                                          \
   (FE_DIVBYZERO | FE_INEXACT | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW)
 
@@ -24,4 +25,4 @@
 
 #define FE_DFL_ENV ((fenv_t *)-1)
 
-#endif // __LLVM_LIBC_MACROS_FENV_MACROS_H
+#endif // LLVM_LIBC_MACROS_FENV_MACROS_H

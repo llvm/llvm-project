@@ -99,14 +99,12 @@ public:
         handler = (LogHandlerKind)OptionArgParser::ToOptionEnum(
             option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
-          error.SetErrorStringWithFormat(
-              "unrecognized value for log handler '%s'",
-              option_arg.str().c_str());
+          return Status::FromErrorStringWithFormatv(
+              "unrecognized value for log handler '{0}'", option_arg);
         break;
       case 'b':
-        error =
-            buffer_size.SetValueFromString(option_arg, eVarSetOperationAssign);
-        break;
+        return buffer_size.SetValueFromString(option_arg,
+                                              eVarSetOperationAssign);
       case 'v':
         log_options |= LLDB_LOG_OPTION_VERBOSE;
         break;
@@ -206,7 +204,7 @@ protected:
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
         m_options.buffer_size.GetCurrentValue(), m_options.handler,
         error_stream);
-    result.GetErrorStream() << error_stream.str();
+    result.GetErrorStream() << error;
 
     if (success)
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -275,7 +273,7 @@ protected:
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      result.GetErrorStream() << error_stream.str();
+      result.GetErrorStream() << error;
     }
   }
 };
@@ -288,19 +286,7 @@ public:
                             "List the log categories for one or more log "
                             "channels.  If none specified, lists them all.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData channel_arg;
-
-    // Define the first (and only) variant of this arg.
-    channel_arg.arg_type = eArgTypeLogChannel;
-    channel_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(channel_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeLogChannel, eArgRepeatStar);
   }
 
   ~CommandObjectLogList() override = default;
@@ -327,7 +313,7 @@ protected:
       if (success)
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }
-    result.GetOutputStream() << output_stream.str();
+    result.GetOutputStream() << output;
   }
 };
 class CommandObjectLogDump : public CommandObjectParsed {
@@ -335,19 +321,7 @@ public:
   CommandObjectLogDump(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "log dump",
                             "dump circular buffer logs", nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData channel_arg;
-
-    // Define the first (and only) variant of this arg.
-    channel_arg.arg_type = eArgTypeLogChannel;
-    channel_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(channel_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeLogChannel);
   }
 
   ~CommandObjectLogDump() override = default;
@@ -430,7 +404,7 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.SetStatus(eReturnStatusFailed);
-      result.GetErrorStream() << error_stream.str();
+      result.GetErrorStream() << error;
     }
   }
 
@@ -444,19 +418,7 @@ public:
       : CommandObjectParsed(interpreter, "log timers enable",
                             "enable LLDB internal performance timers",
                             "log timers enable <depth>") {
-    CommandArgumentEntry arg;
-    CommandArgumentData depth_arg;
-
-    // Define the first (and only) variant of this arg.
-    depth_arg.arg_type = eArgTypeCount;
-    depth_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(depth_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeCount, eArgRepeatOptional);
   }
 
   ~CommandObjectLogTimerEnable() override = default;
@@ -559,19 +521,7 @@ public:
       : CommandObjectParsed(interpreter, "log timers increment",
                             "increment LLDB internal performance timers",
                             "log timers increment <bool>") {
-    CommandArgumentEntry arg;
-    CommandArgumentData bool_arg;
-
-    // Define the first (and only) variant of this arg.
-    bool_arg.arg_type = eArgTypeBoolean;
-    bool_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(bool_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeBoolean);
   }
 
   ~CommandObjectLogTimerIncrement() override = default;

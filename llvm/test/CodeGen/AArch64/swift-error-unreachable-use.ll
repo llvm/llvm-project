@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple aarch64-apple-macosx %s -filetype asm -o - | FileCheck %s
 ; Regression test for https://github.com/llvm/llvm-project/issues/59751
 
-define void @"func"(i32** swifterror %0) #0 {
+define void @"func"(ptr swifterror %0) #0 {
 ; CHECK-LABEL: func:
 ; CHECK:       {{.*}}%bb.0:
 ; CHECK-NEXT:    b {{\.?}}LBB0_2
@@ -23,9 +23,9 @@ common.ret:
   ret void
 
 UelOc2l.exit:
-  %a = getelementptr inbounds [754 x i8*], [754 x i8*]* undef, i32 undef, i32 undef
-  %b = load i8*, i8** %a, align 8
-  %c = bitcast i8* %b to void ()*
+  %a = getelementptr inbounds [754 x ptr], ptr undef, i32 undef, i32 undef
+  %b = load ptr, ptr %a, align 8
+  %c = bitcast ptr %b to ptr
   call void %c()
   br label %common.ret
 

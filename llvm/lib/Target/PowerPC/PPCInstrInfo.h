@@ -14,8 +14,10 @@
 #define LLVM_LIB_TARGET_POWERPC_PPCINSTRINFO_H
 
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -82,6 +84,19 @@ enum SpillOpcodeKey {
   SOK_SPESpill,
   SOK_PairedG8Spill,
   SOK_LastOpcodeSpill // This must be last on the enum.
+};
+
+// PPC MachineCombiner patterns
+enum PPCMachineCombinerPattern : unsigned {
+  // These are patterns matched by the PowerPC to reassociate FMA chains.
+  REASSOC_XY_AMM_BMM = MachineCombinerPattern::TARGET_PATTERN_START,
+  REASSOC_XMM_AMM_BMM,
+
+  // These are patterns matched by the PowerPC to reassociate FMA and FSUB to
+  // reduce register pressure.
+  REASSOC_XY_BCA,
+  REASSOC_XY_BAC,
+
 };
 
 // Define list of load and store spill opcodes.
@@ -223,7 +238,7 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   ArrayRef<unsigned> getLoadOpcodesForSpillArray() const;
   unsigned getSpillIndex(const TargetRegisterClass *RC) const;
   int16_t getFMAOpIdxInfo(unsigned Opcode) const;
-  void reassociateFMA(MachineInstr &Root, MachineCombinerPattern Pattern,
+  void reassociateFMA(MachineInstr &Root, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
@@ -283,6 +298,32 @@ public:
     return false;
   }
 
+  static bool hasPCRelFlag(unsigned TF) {
+    return TF == PPCII::MO_PCREL_FLAG || TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+           TF == PPCII::MO_TPREL_PCREL_FLAG || TF == PPCII::MO_TLS_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_PCREL_FLAG;
+  }
+
+  static bool hasGOTFlag(unsigned TF) {
+    return TF == PPCII::MO_GOT_FLAG || TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_PCREL_FLAG;
+  }
+
+  static bool hasTLSFlag(unsigned TF) {
+    return TF == PPCII::MO_TLSGD_FLAG || TF == PPCII::MO_TPREL_FLAG ||
+           TF == PPCII::MO_TLSLD_FLAG || TF == PPCII::MO_TLSGDM_FLAG ||
+           TF == PPCII::MO_GOT_TLSGD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TLSLD_PCREL_FLAG ||
+           TF == PPCII::MO_GOT_TPREL_PCREL_FLAG || TF == PPCII::MO_TPREL_LO ||
+           TF == PPCII::MO_TPREL_HA || TF == PPCII::MO_DTPREL_LO ||
+           TF == PPCII::MO_TLSLD_LO || TF == PPCII::MO_TLS ||
+           TF == PPCII::MO_TPREL_PCREL_FLAG || TF == PPCII::MO_TLS_PCREL_FLAG;
+  }
+
   ScheduleHazardRecognizer *
   CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
                                const ScheduleDAG *DAG) const override;
@@ -323,7 +364,7 @@ public:
   /// When getMachineCombinerPatterns() finds patterns, this function generates
   /// the instructions that could replace the original code sequence
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
@@ -331,15 +372,16 @@ public:
   /// Return true when there is potentially a faster code sequence for a fma
   /// chain ending in \p Root. All potential patterns are output in the \p
   /// P array.
-  bool getFMAPatterns(MachineInstr &Root,
-                      SmallVectorImpl<MachineCombinerPattern> &P,
+  bool getFMAPatterns(MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
                       bool DoRegPressureReduce) const;
+
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in <Root>. All potential patterns are
   /// output in the <Pattern> array.
   bool getMachineCombinerPatterns(MachineInstr &Root,
-                                  SmallVectorImpl<MachineCombinerPattern> &P,
+                                  SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
 
   /// On PowerPC, we leverage machine combiner pass to reduce register pressure
@@ -353,7 +395,7 @@ public:
   /// Fixup the placeholders we put in genAlternativeCodeSequence() for
   /// MachineCombiner.
   void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
@@ -377,10 +419,10 @@ public:
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              Register &SrcReg, Register &DstReg,
                              unsigned &SubIdx) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
@@ -413,7 +455,8 @@ public:
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -453,7 +496,7 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
   bool onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
@@ -516,7 +559,7 @@ public:
   /// loaded/stored (e.g. 1, 2, 4, 8).
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, unsigned &Width,
+                                    int64_t &Offset, LocationSize &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   bool optimizeCmpPostRA(MachineInstr &MI) const;
@@ -526,13 +569,15 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   /// Returns true if the two given memory operations should be scheduled
   /// adjacent.
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
+                           int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
 
@@ -554,9 +599,6 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
-
-  ArrayRef<std::pair<unsigned, const char *>>
-  getSerializableBitmaskMachineOperandTargetFlags() const override;
 
   // Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.
   bool expandVSXMemPseudo(MachineInstr &MI) const;
@@ -584,6 +626,10 @@ public:
                       const MachineRegisterInfo *MRI) const {
     return isSignOrZeroExtended(Reg, 0, MRI).second;
   }
+  void promoteInstr32To64ForElimEXTSW(const Register &Reg,
+                                      MachineRegisterInfo *MRI,
+                                      unsigned BinOpDepth,
+                                      LiveVariables *LV) const;
 
   bool convertToImmediateForm(MachineInstr &MI,
                               SmallSet<Register, 4> &RegsToUpdate,

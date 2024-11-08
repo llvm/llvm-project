@@ -35,6 +35,7 @@ define void @test1(i32 %c) nounwind {
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.2.for.end:
   ; AIX64-NEXT:   BLR8 implicit $lr8, implicit $rm
+  ;
   ; AIX32-LABEL: name: test1
   ; AIX32: bb.0.entry:
   ; AIX32-NEXT:   successors: %bb.1(0x80000000)
@@ -57,6 +58,7 @@ define void @test1(i32 %c) nounwind {
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.2.for.end:
   ; AIX32-NEXT:   BLR implicit $lr, implicit $rm
+  ;
   ; LE64-LABEL: name: test1
   ; LE64: bb.0.entry:
   ; LE64-NEXT:   successors: %bb.1(0x80000000)
@@ -134,6 +136,7 @@ define void @test2(i32 %c, i32 %d) nounwind {
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.3.for.end:
   ; AIX64-NEXT:   BLR8 implicit $lr8, implicit $rm
+  ;
   ; AIX32-LABEL: name: test2
   ; AIX32: bb.0.entry:
   ; AIX32-NEXT:   successors: %bb.1(0x50000000), %bb.3(0x30000000)
@@ -163,6 +166,7 @@ define void @test2(i32 %c, i32 %d) nounwind {
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.3.for.end:
   ; AIX32-NEXT:   BLR implicit $lr, implicit $rm
+  ;
   ; LE64-LABEL: name: test2
   ; LE64: bb.0.entry:
   ; LE64-NEXT:   successors: %bb.1(0x50000000), %bb.3(0x30000000)
@@ -257,6 +261,7 @@ define void @test3(i32 %c, i32 %d) nounwind {
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.3.for.end:
   ; AIX64-NEXT:   BLR8 implicit $lr8, implicit $rm
+  ;
   ; AIX32-LABEL: name: test3
   ; AIX32: bb.0.entry:
   ; AIX32-NEXT:   successors: %bb.1(0x50000000), %bb.3(0x30000000)
@@ -289,6 +294,7 @@ define void @test3(i32 %c, i32 %d) nounwind {
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.3.for.end:
   ; AIX32-NEXT:   BLR implicit $lr, implicit $rm
+  ;
   ; LE64-LABEL: name: test3
   ; LE64: bb.0.entry:
   ; LE64-NEXT:   successors: %bb.1(0x50000000), %bb.3(0x30000000)
@@ -352,15 +358,23 @@ for.end:                                          ; preds = %for.body, %entry
 define i32 @test4(i32 %inp) {
   ; AIX64-LABEL: name: test4
   ; AIX64: bb.0.entry:
-  ; AIX64-NEXT:   successors: %bb.1(0x80000000)
+  ; AIX64-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; AIX64-NEXT:   liveins: $x3
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT:   [[COPY:%[0-9]+]]:g8rc = COPY $x3
   ; AIX64-NEXT:   [[COPY1:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[COPY]].sub_32
   ; AIX64-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[COPY1]], 1
   ; AIX64-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
-  ; AIX64-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[COPY1]], [[LI]], [[CMPWI]].sub_lt
-  ; AIX64-NEXT:   [[SUBF:%[0-9]+]]:gprc = SUBF [[ISEL]], [[COPY1]]
+  ; AIX64-NEXT:   BCC 12, [[CMPWI]], %bb.4
+  ; AIX64-NEXT: {{  $}}
+  ; AIX64-NEXT: bb.3.entry:
+  ; AIX64-NEXT:   successors: %bb.4(0x80000000)
+  ; AIX64-NEXT: {{  $}}
+  ; AIX64-NEXT: bb.4.entry:
+  ; AIX64-NEXT:   successors: %bb.1(0x80000000)
+  ; AIX64-NEXT: {{  $}}
+  ; AIX64-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.3, [[COPY1]], %bb.0
+  ; AIX64-NEXT:   [[SUBF:%[0-9]+]]:gprc = SUBF [[PHI]], [[COPY1]]
   ; AIX64-NEXT:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
   ; AIX64-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], killed [[SUBF]], %subreg.sub_32
   ; AIX64-NEXT:   [[RLDICL:%[0-9]+]]:g8rc_and_g8rc_nox0 = RLDICL killed [[INSERT_SUBREG]], 0, 32
@@ -375,25 +389,34 @@ define i32 @test4(i32 %inp) {
   ; AIX64-NEXT:   B %bb.2
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.2.return:
-  ; AIX64-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-lo) @tls_var, $x2 :: (load (s64) from got)
+  ; AIX64-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgdm) @tls_var, $x2 :: (load (s64) from got)
   ; AIX64-NEXT:   [[LDtoc1:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgd) @tls_var, $x2 :: (load (s64) from got)
   ; AIX64-NEXT:   [[TLSGDAIX8_:%[0-9]+]]:g8rc = TLSGDAIX8 killed [[LDtoc1]], killed [[LDtoc]]
   ; AIX64-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[TLSGDAIX8_]].sub_32
-  ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 killed [[COPY2]], [[ISEL]]
+  ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 killed [[COPY2]], [[PHI]]
   ; AIX64-NEXT:   [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
   ; AIX64-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF1]], killed [[ADD4_]], %subreg.sub_32
   ; AIX64-NEXT:   $x3 = COPY [[INSERT_SUBREG1]]
   ; AIX64-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ;
   ; AIX32-LABEL: name: test4
   ; AIX32: bb.0.entry:
-  ; AIX32-NEXT:   successors: %bb.1(0x80000000)
+  ; AIX32-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; AIX32-NEXT:   liveins: $r3
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT:   [[COPY:%[0-9]+]]:gprc_and_gprc_nor0 = COPY $r3
   ; AIX32-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[COPY]], 1
   ; AIX32-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
-  ; AIX32-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[COPY]], [[LI]], [[CMPWI]].sub_lt
-  ; AIX32-NEXT:   [[SUBF:%[0-9]+]]:gprc_and_gprc_nor0 = SUBF [[ISEL]], [[COPY]]
+  ; AIX32-NEXT:   BCC 12, [[CMPWI]], %bb.4
+  ; AIX32-NEXT: {{  $}}
+  ; AIX32-NEXT: bb.3.entry:
+  ; AIX32-NEXT:   successors: %bb.4(0x80000000)
+  ; AIX32-NEXT: {{  $}}
+  ; AIX32-NEXT: bb.4.entry:
+  ; AIX32-NEXT:   successors: %bb.1(0x80000000)
+  ; AIX32-NEXT: {{  $}}
+  ; AIX32-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.3, [[COPY]], %bb.0
+  ; AIX32-NEXT:   [[SUBF:%[0-9]+]]:gprc_and_gprc_nor0 = SUBF [[PHI]], [[COPY]]
   ; AIX32-NEXT:   [[ADDI:%[0-9]+]]:gprc = ADDI killed [[SUBF]], 1
   ; AIX32-NEXT:   MTCTRloop killed [[ADDI]], implicit-def dead $ctr
   ; AIX32-NEXT: {{  $}}
@@ -405,12 +428,13 @@ define i32 @test4(i32 %inp) {
   ; AIX32-NEXT:   B %bb.2
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.2.return:
-  ; AIX32-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-lo) @tls_var, $r2 :: (load (s32) from got)
+  ; AIX32-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgdm) @tls_var, $r2 :: (load (s32) from got)
   ; AIX32-NEXT:   [[LWZtoc1:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgd) @tls_var, $r2 :: (load (s32) from got)
   ; AIX32-NEXT:   [[TLSGDAIX:%[0-9]+]]:gprc = TLSGDAIX killed [[LWZtoc1]], killed [[LWZtoc]]
-  ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 killed [[TLSGDAIX]], [[ISEL]]
+  ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 killed [[TLSGDAIX]], [[PHI]]
   ; AIX32-NEXT:   $r3 = COPY [[ADD4_]]
   ; AIX32-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
+  ;
   ; LE64-LABEL: name: test4
   ; LE64: bb.0.entry:
   ; LE64-NEXT:   successors: %bb.1(0x80000000)

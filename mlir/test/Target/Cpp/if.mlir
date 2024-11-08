@@ -49,19 +49,19 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 
 
 func.func @test_if_yield(%arg0: i1, %arg1: f32) {
-  %0 = arith.constant 0 : i8
-  %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-  %y = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f64
+  %0 = "emitc.constant"() <{value = 0 : i8}> : () -> i8
+  %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %y = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f64>
   emitc.if %arg0 {
     %1 = emitc.call_opaque "func_true_1"(%arg1) : (f32) -> i32
     %2 = emitc.call_opaque "func_true_2"(%arg1) : (f32) -> f64
-    emitc.assign %1 : i32 to %x : i32
-    emitc.assign %2 : f64 to %y : f64
+    emitc.assign %1 : i32 to %x : !emitc.lvalue<i32>
+    emitc.assign %2 : f64 to %y : !emitc.lvalue<f64>
   } else {
     %1 = emitc.call_opaque "func_false_1"(%arg1) : (f32) -> i32
     %2 = emitc.call_opaque "func_false_2"(%arg1) : (f32) -> f64
-    emitc.assign %1 : i32 to %x : i32
-    emitc.assign %2 : f64 to %y : f64
+    emitc.assign %1 : i32 to %x : !emitc.lvalue<i32>
+    emitc.assign %2 : f64 to %y : !emitc.lvalue<f64>
   }
   return
 }

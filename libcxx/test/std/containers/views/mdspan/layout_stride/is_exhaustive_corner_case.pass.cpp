@@ -19,17 +19,16 @@
 //     range [1, rank_), where pi is the ith element of P.
 //   - Otherwise, false.
 
-#include <mdspan>
-#include <type_traits>
-#include <concepts>
+#include <array>
 #include <cassert>
-
-#include "test_macros.h"
+#include <cstddef>
+#include <mdspan>
+#include <span> // dynamic_extent
 
 template <class E>
 constexpr void
 test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> strides, bool exhaustive) {
-  using M = std::layout_stride::template mapping<E>;
+  using M = std::layout_stride::mapping<E>;
   M m(ext, strides);
   assert(m.is_exhaustive() == exhaustive);
 }

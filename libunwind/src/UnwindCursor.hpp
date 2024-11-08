@@ -33,8 +33,9 @@
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
     (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
      defined(_LIBUNWIND_TARGET_S390X))
+#include <errno.h>
+#include <signal.h>
 #include <sys/syscall.h>
-#include <sys/uio.h>
 #include <unistd.h>
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
@@ -229,8 +230,8 @@ void DwarfFDECache<A>::iterateCacheEntries(void (*func)(
 }
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
-
-#define arrayoffsetof(type, index, field) ((size_t)(&((type *)0)[index].field))
+#define arrayoffsetof(type, index, field)                                      \
+  (sizeof(type) * (index) + offsetof(type, field))
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A> class UnwindSectionHeader {
@@ -470,7 +471,7 @@ public:
   }
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
   virtual void *get_registers() {
     _LIBUNWIND_ABORT("get_registers not implemented");
   }
@@ -953,7 +954,7 @@ public:
   virtual uintptr_t getDataRelBase();
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
   virtual void *get_registers() { return &_registers; }
 #endif
 
@@ -990,6 +991,7 @@ private:
     R dummy;
     return stepThroughSigReturn(dummy);
   }
+  bool isReadableAddr(const pint_t addr) const;
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
@@ -2031,7 +2033,6 @@ typedef _Unwind_Reason_Code __xlcxx_personality_v0_t(int, _Unwind_Action,
                                                      uint64_t,
                                                      _Unwind_Exception *,
                                                      struct _Unwind_Context *);
-__attribute__((__weak__)) __xlcxx_personality_v0_t __xlcxx_personality_v0;
 }
 
 static __xlcxx_personality_v0_t *xlcPersonalityV0;
@@ -2124,42 +2125,35 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
     // function __xlcxx_personality_v0(), which is the personality for the state
     // table and is exported from libc++abi, is directly assigned as the
     // handler here. When a legacy XLC++ frame is encountered, the symbol
-    // is resolved dynamically using dlopen() to avoid hard dependency from
-    // libunwind on libc++abi.
+    // is resolved dynamically using dlopen() to avoid a hard dependency of
+    // libunwind on libc++abi in cases such as non-C++ applications.
 
     // Resolve the function pointer to the state table personality if it has
-    // not already.
+    // not already been done.
     if (xlcPersonalityV0 == NULL) {
       xlcPersonalityV0InitLock.lock();
       if (xlcPersonalityV0 == NULL) {
-        // If libc++abi is statically linked in, symbol __xlcxx_personality_v0
-        // has been resolved at the link time.
-        xlcPersonalityV0 = &__xlcxx_personality_v0;
-        if (xlcPersonalityV0 == NULL) {
-          // libc++abi is dynamically linked. Resolve __xlcxx_personality_v0
-          // using dlopen().
-          const char libcxxabi[] = "libc++abi.a(libc++abi.so.1)";
-          void *libHandle;
-          // The AIX dlopen() sets errno to 0 when it is successful, which
-          // clobbers the value of errno from the user code. This is an AIX
-          // bug because according to POSIX it should not set errno to 0. To
-          // workaround before AIX fixes the bug, errno is saved and restored.
-          int saveErrno = errno;
-          libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
-          if (libHandle == NULL) {
-            _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n",
-                                       errno);
-            assert(0 && "dlopen() failed");
-          }
-          xlcPersonalityV0 = reinterpret_cast<__xlcxx_personality_v0_t *>(
-              dlsym(libHandle, "__xlcxx_personality_v0"));
-          if (xlcPersonalityV0 == NULL) {
-            _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
-            assert(0 && "dlsym() failed");
-          }
-          dlclose(libHandle);
-          errno = saveErrno;
+        // Resolve __xlcxx_personality_v0 using dlopen().
+        const char *libcxxabi = "libc++abi.a(libc++abi.so.1)";
+        void *libHandle;
+        // The AIX dlopen() sets errno to 0 when it is successful, which
+        // clobbers the value of errno from the user code. This is an AIX
+        // bug because according to POSIX it should not set errno to 0. To
+        // workaround before AIX fixes the bug, errno is saved and restored.
+        int saveErrno = errno;
+        libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
+        if (libHandle == NULL) {
+          _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n", errno);
+          assert(0 && "dlopen() failed");
         }
+        xlcPersonalityV0 = reinterpret_cast<__xlcxx_personality_v0_t *>(
+            dlsym(libHandle, "__xlcxx_personality_v0"));
+        if (xlcPersonalityV0 == NULL) {
+          _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
+          dlclose(libHandle);
+          assert(0 && "dlsym() failed");
+        }
+        errno = saveErrno;
       }
       xlcPersonalityV0InitLock.unlock();
     }
@@ -2413,7 +2407,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     }
 
     // Reset LR in the current context.
-    newRegisters.setLR(NULL);
+    newRegisters.setLR(static_cast<uintptr_t>(NULL));
 
     _LIBUNWIND_TRACE_UNWINDING(
         "Extract info from lastStack=%p, returnAddress=%p",
@@ -2587,6 +2581,15 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     --pc;
 #endif
 
+#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)) &&            \
+    !defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  // In case of this is frame of signal handler, the IP saved in the signal
+  // handler points to first non-executed instruction, while FDE/CIE expects IP
+  // to be after the first non-executed instruction.
+  if (_isSignalFrame)
+    ++pc;
+#endif
+
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
   if (_addressSpace.findUnwindSections(pc, sects)) {
@@ -2700,20 +2703,12 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // [1] https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/vdso/sigreturn.S
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use process_vm_readv to read
-  // the memory safely instead. process_vm_readv was added in Linux 3.2, and
-  // AArch64 supported was added in Linux 3.7, so the syscall is guaranteed to
-  // be present. Unfortunately, there are Linux AArch64 environments where the
-  // libc wrapper for the syscall might not be present (e.g. Android 5), so call
-  // the syscall directly instead.
-  uint32_t instructions[2];
-  struct iovec local_iov = {&instructions, sizeof instructions};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
-  long bytesRead =
-      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (bytesRead != sizeof instructions || instructions[0] != 0xd2801168 ||
-      instructions[1] != 0xd4000001)
+  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
     return false;
 
   _info = {};
@@ -2762,18 +2757,17 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
-  uint32_t instructions[2];
-  struct iovec local_iov = {&instructions, sizeof instructions};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
-  long bytesRead =
-      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for the two instructions used in the sigreturn trampoline
   // __vdso_rt_sigreturn:
   //
   // 0x08b00893 li a7,0x8b
   // 0x00000073 ecall
-  if (bytesRead != sizeof instructions || instructions[0] != 0x08b00893 ||
-      instructions[1] != 0x00000073)
+  if (instructions[0] != 0x08b00893 || instructions[1] != 0x00000073)
     return false;
 
   _info = {};
@@ -2822,13 +2816,11 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // onto the stack.
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use process_vm_readv to
-  // read the memory safely instead.
-  uint16_t inst;
-  struct iovec local_iov = {&inst, sizeof inst};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof inst};
-  long bytesRead = process_vm_readv(getpid(), &local_iov, 1, &remote_iov, 1, 0);
-  if (bytesRead == sizeof inst && (inst == 0x0a77 || inst == 0x0aad)) {
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto inst = *reinterpret_cast<const uint16_t *>(pc);
+  if (inst == 0x0a77 || inst == 0x0aad) {
     _info = {};
     _info.start_ip = pc;
     _info.end_ip = pc + 2;
@@ -2974,7 +2966,38 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
                                          buf, bufLen, offset);
 }
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
+  // We use SYS_rt_sigprocmask, inspired by Abseil's AddressIsReadable.
+
+  const auto sigsetAddr = reinterpret_cast<sigset_t *>(addr);
+  // We have to check that addr is nullptr because sigprocmask allows that
+  // as an argument without failure.
+  if (!sigsetAddr)
+    return false;
+  const auto saveErrno = errno;
+  // We MUST use a raw syscall here, as wrappers may try to access
+  // sigsetAddr which may cause a SIGSEGV. A raw syscall however is
+  // safe. Additionally, we need to pass the kernel_sigset_size, which is
+  // different from libc sizeof(sigset_t). For the majority of architectures,
+  // it's 64 bits (_NSIG), and libc NSIG is _NSIG + 1.
+  const auto kernelSigsetSize = NSIG / 8;
+  [[maybe_unused]] const int Result = syscall(
+      SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, nullptr, kernelSigsetSize);
+  // Because our "how" is invalid, this syscall should always fail, and our
+  // errno should always be EINVAL or an EFAULT. This relies on the Linux
+  // kernel to check copy_from_user before checking if the "how" argument is
+  // invalid.
+  assert(Result == -1);
+  assert(errno == EFAULT || errno == EINVAL);
+  const auto readable = errno != EFAULT;
+  errno = saveErrno;
+  return readable;
+}
+#endif
+
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->get_registers();

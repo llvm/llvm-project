@@ -1,0 +1,83 @@
+; RUN: %if spirv-tools %{ spirv-as %s -o - | spirv-val - %}
+; RUN: spirv-sim --function=simple --wave=4 --expects=0,1,2,0 -i %s
+
+; int simple() {
+;   int m[4] = { 0, 1, 2, 0 };
+;   int idx = WaveGetLaneIndex();
+;   for (int i = 0; i < 4; i++) {
+;     if (i == m[idx]) {
+;       return WaveReadLaneFirst(idx);
+;     }
+;   }
+;   return 0;
+; }
+                       OpCapability Shader
+                       OpCapability GroupNonUniform
+                       OpCapability GroupNonUniformBallot
+                       OpMemoryModel Logical GLSL450
+                       OpEntryPoint GLCompute %main "main" %WaveIndex
+                       OpExecutionMode %main LocalSize 1 1 1
+                       OpSource HLSL 670
+                       OpName %simple "simple"
+                       OpName %main "main"
+                       OpDecorate %WaveIndex BuiltIn SubgroupLocalInvocationId
+                %int = OpTypeInt 32 1
+               %uint = OpTypeInt 32 0
+               %bool = OpTypeBool
+              %int_0 = OpConstant %int 0
+              %int_1 = OpConstant %int 1
+              %int_2 = OpConstant %int 2
+              %int_4 = OpConstant %int 4
+             %uint_3 = OpConstant %uint 3
+             %uint_4 = OpConstant %uint 4
+               %void = OpTypeVoid
+          %main_type = OpTypeFunction %void
+        %simple_type = OpTypeFunction %int
+          %uint_iptr = OpTypePointer Input %uint
+           %int_fptr = OpTypePointer Function %int
+     %arr_int_uint_4 = OpTypeArray %int %uint_4
+%arr_int_uint_4_fptr = OpTypePointer Function %arr_int_uint_4
+          %WaveIndex = OpVariable %uint_iptr Input
+               %main = OpFunction %void None %main_type
+              %entry = OpLabel
+                       OpReturn
+                       OpFunctionEnd
+             %simple = OpFunction %int None %simple_type
+         %bb_entry_0 = OpLabel
+                  %m = OpVariable %arr_int_uint_4_fptr Function
+                %idx = OpVariable %int_fptr Function
+                  %i = OpVariable %int_fptr Function
+                 %27 = OpCompositeConstruct %arr_int_uint_4 %int_0 %int_1 %int_2 %int_0
+                       OpStore %m %27
+                 %28 = OpLoad %uint %WaveIndex
+                 %29 = OpBitcast %int %28
+                       OpStore %idx %29
+                       OpStore %i %int_0
+                       OpBranch %for_check
+          %for_check = OpLabel
+                 %31 = OpLoad %int %i
+                 %33 = OpSLessThan %bool %31 %int_4
+                       OpLoopMerge %for_merge %for_continue None
+                       OpBranchConditional %33 %for_body %for_merge
+           %for_body = OpLabel
+                 %37 = OpLoad %int %i
+                 %38 = OpLoad %int %idx
+                 %39 = OpAccessChain %int_fptr %m %38
+                 %40 = OpLoad %int %39
+                 %41 = OpIEqual %bool %37 %40
+                       OpSelectionMerge %if_merge None
+                       OpBranchConditional %41 %if_true %if_merge
+            %if_true = OpLabel
+                 %44 = OpLoad %int %idx
+                 %45 = OpGroupNonUniformBroadcastFirst %int %uint_3 %44
+                       OpReturnValue %45
+           %if_merge = OpLabel
+                       OpBranch %for_continue
+       %for_continue = OpLabel
+                 %47 = OpLoad %int %i
+                 %48 = OpIAdd %int %47 %int_1
+                       OpStore %i %48
+                       OpBranch %for_check
+          %for_merge = OpLabel
+                       OpReturnValue %int_0
+                       OpFunctionEnd

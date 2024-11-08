@@ -228,9 +228,9 @@ public:
   explicit SystemZInstrInfo(SystemZSubtarget &STI);
 
   // Override TargetInstrInfo.
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
@@ -254,8 +254,13 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
+                                  const MachineRegisterInfo *MRI,
+                                  Register &FoldAsLoadDefReg,
+                                  MachineInstr *&DefMI) const override;
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
+
   bool isPredicable(const MachineInstr &MI) const override;
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
                            unsigned ExtraPredCycles,
@@ -271,7 +276,8 @@ public:
                             ArrayRef<MachineOperand> Pred) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
                            bool isKill, int FrameIndex,
@@ -285,6 +291,12 @@ public:
                             Register VReg) const override;
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
+
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
+  std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
+
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops,
@@ -372,6 +384,9 @@ public:
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
+
+  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
+                               int64_t &ImmVal) const override;
 };
 
 } // end namespace llvm

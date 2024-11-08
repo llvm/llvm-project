@@ -420,6 +420,62 @@ TEST(DiagnosticTest, MakeUnique) {
                        "no matching constructor for initialization of 'S'")));
 }
 
+TEST(DiagnosticTest, CoroutineInHeader) {
+  StringRef CoroutineH = R"cpp(
+namespace std {
+template <class Ret, typename... T>
+struct coroutine_traits { using promise_type = typename Ret::promise_type; };
+
+template <class Promise = void>
+struct coroutine_handle {
+  static coroutine_handle from_address(void *) noexcept;
+  static coroutine_handle from_promise(Promise &promise);
+  constexpr void* address() const noexcept;
+};
+template <>
+struct coroutine_handle<void> {
+  template <class PromiseType>
+  coroutine_handle(coroutine_handle<PromiseType>) noexcept;
+  static coroutine_handle from_address(void *);
+  constexpr void* address() const noexcept;
+};
+
+struct awaitable {
+  bool await_ready() noexcept { return false; }
+  void await_suspend(coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
+};
+} // namespace std
+  )cpp";
+
+  StringRef Header = R"cpp(
+#include "coroutine.h"
+template <typename T> struct [[clang::coro_return_type]] Gen {
+  struct promise_type {
+    Gen<T> get_return_object() {
+      return {};
+    }
+    std::awaitable  initial_suspend();
+    std::awaitable  final_suspend() noexcept;
+    void unhandled_exception();
+    void return_value(T t);
+  };
+};
+
+Gen<int> foo_coro(int b) { co_return b; }
+  )cpp";
+  Annotations Main(R"cpp(
+// error-ok
+#include "header.hpp"
+Gen<int> $[[bar_coro]](int b) { return foo_coro(b); }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles["coroutine.h"] = std::string(CoroutineH);
+  TU.AdditionalFiles["header.hpp"] = std::string(Header);
+  TU.ExtraArgs.push_back("--std=c++20");
+  EXPECT_THAT(TU.build().getDiagnostics(), ElementsAre(hasRange(Main.range())));
+}
+
 TEST(DiagnosticTest, MakeShared) {
   // We usually miss diagnostics from header functions as we don't parse them.
   // std::make_shared is only parsed when --parse-forwarding-functions is set
@@ -488,7 +544,7 @@ TEST(DiagnosticTest, RespectsDiagnosticConfig) {
                   Diag(Main.range("ret"),
                        "void function 'x' should not return a value")));
   Config Cfg;
-  Cfg.Diagnostics.Suppress.insert("return-type");
+  Cfg.Diagnostics.Suppress.insert("return-mismatch");
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(Diag(Main.range(),
@@ -692,6 +748,10 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
   TU.ExtraArgs = {"-Wunused"};
   TU.ClangTidyProvider = addClangArgs({"-Wno-unused"}, {});
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+
+  TU.ExtraArgs = {"-Wno-unused"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, {"-*, clang-diagnostic-*"});
+  EXPECT_THAT(TU.build().getDiagnostics(), SizeIs(1));
 }
 
 TEST(DiagnosticTest, LongFixMessages) {
@@ -840,6 +900,65 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
                 withFix(equalToFix(ExpectedCFix))),
           AllOf(Diag(Main.range("D"), "variable 'D' is not initialized"),
                 withFix(equalToFix(ExpectedDFix))))));
+}
+
+TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
+  Annotations Main(R"cpp(
+    class Interface {
+    public:
+      virtual void Reset1() = 0;
+      virtual void Reset2() = 0;
+    };
+    class A : public Interface {
+      // This will be marked by clangd to use override instead of virtual
+      $virtual1[[virtual    ]]void $Reset1[[Reset1]]()$override1[[]];
+      $virtual2[[virtual      ]]/**/void $Reset2[[Reset2]]()$override2[[]];
+    };
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyProvider =
+      addTidyChecks("cppcoreguidelines-explicit-virtual-functions,");
+  clangd::Fix const ExpectedFix1{
+      "prefer using 'override' or (rarely) 'final' "
+      "instead of 'virtual'",
+      {TextEdit{Main.range("override1"), " override"},
+       TextEdit{Main.range("virtual1"), ""}},
+      {}};
+  clangd::Fix const ExpectedFix2{
+      "prefer using 'override' or (rarely) 'final' "
+      "instead of 'virtual'",
+      {TextEdit{Main.range("override2"), " override"},
+       TextEdit{Main.range("virtual2"), ""}},
+      {}};
+  // Note that in the Fix we expect the "virtual" keyword and the following
+  // whitespace to be deleted
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  AllOf(Diag(Main.range("Reset1"),
+                             "prefer using 'override' or (rarely) 'final' "
+                             "instead of 'virtual'"),
+                        withFix(equalToFix(ExpectedFix1))),
+                  AllOf(Diag(Main.range("Reset2"),
+                             "prefer using 'override' or (rarely) 'final' "
+                             "instead of 'virtual'"),
+                        withFix(equalToFix(ExpectedFix2))))));
+}
+
+TEST(DiagnosticsTest, ClangTidyCallingIntoPreprocessor) {
+  std::string Main = R"cpp(
+    extern "C" {
+    #include "b.h"
+    }
+  )cpp";
+  std::string Header = R"cpp(
+    #define EXTERN extern
+    EXTERN int waldo();
+  )cpp";
+  auto TU = TestTU::withCode(Main);
+  TU.AdditionalFiles["b.h"] = Header;
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
+  // Check that no assertion failures occur during the build
+  TU.build();
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -1865,6 +1984,30 @@ TEST(Diagnostics, Tags) {
                 withTag(DiagnosticTag::Deprecated)))));
 }
 
+TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Werror"};
+  Annotations Test(R"cpp($typedef[[typedef int INT]]; // error-ok)cpp");
+  TU.Code = Test.code().str();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Make sure severity for clang-tidy finding isn't bumped to
+                // error due to Werror in compile flags.
+                diagSeverity(DiagnosticsEngine::Warning)))));
+
+  TU.ClangTidyProvider =
+      addTidyChecks("modernize-use-using", /*WarningsAsErrors=*/"modernize-*");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Unless bumped explicitly with WarnAsError.
+                diagSeverity(DiagnosticsEngine::Error)))));
+}
+
 TEST(Diagnostics, DeprecatedDiagsAreHints) {
   ClangdDiagnosticOptions Opts;
   std::optional<clangd::Diagnostic> Diag;
@@ -1935,7 +2078,7 @@ $fix[[  $diag[[#include "unused.h"]]
   Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
   // Set filtering.
   Cfg.Diagnostics.Includes.IgnoreHeader.emplace_back(
-      [](llvm::StringRef Header) { return Header.endswith("ignore.h"); });
+      [](llvm::StringRef Header) { return Header.ends_with("ignore.h"); });
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   auto AST = TU.build();
   EXPECT_THAT(

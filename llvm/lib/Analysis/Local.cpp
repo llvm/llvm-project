@@ -25,13 +25,13 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
   Type *IntIdxTy = DL.getIndexType(GEP->getType());
   Value *Result = nullptr;
 
-  // If the GEP is inbounds, we know that none of the addressing operations will
-  // overflow in a signed sense.
-  bool isInBounds = GEPOp->isInBounds() && !NoAssumptions;
+  // nusw implies nsw for the offset arithmetic.
+  bool NSW = GEPOp->hasNoUnsignedSignedWrap() && !NoAssumptions;
+  bool NUW = GEPOp->hasNoUnsignedWrap() && !NoAssumptions;
   auto AddOffset = [&](Value *Offset) {
     if (Result)
       Result = Builder->CreateAdd(Result, Offset, GEP->getName() + ".offs",
-                                  false /*NUW*/, isInBounds /*NSW*/);
+                                  NUW, NSW);
     else
       Result = Offset;
   };
@@ -64,15 +64,14 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
     // Convert to correct type.
     if (Op->getType() != IntIdxTy)
       Op = Builder->CreateIntCast(Op, IntIdxTy, true, Op->getName() + ".c");
-    TypeSize TSize = DL.getTypeAllocSize(GTI.getIndexedType());
+    TypeSize TSize = GTI.getSequentialElementStride(DL);
     if (TSize != TypeSize::getFixed(1)) {
       Value *Scale = Builder->CreateTypeSize(IntIdxTy->getScalarType(), TSize);
       if (IntIdxTy->isVectorTy())
         Scale = Builder->CreateVectorSplat(
             cast<VectorType>(IntIdxTy)->getElementCount(), Scale);
       // We'll let instcombine(mul) convert this to a shl if possible.
-      Op = Builder->CreateMul(Op, Scale, GEP->getName() + ".idx", false /*NUW*/,
-                              isInBounds /*NSW*/);
+      Op = Builder->CreateMul(Op, Scale, GEP->getName() + ".idx", NUW, NSW);
     }
     AddOffset(Op);
   }

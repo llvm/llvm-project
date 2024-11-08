@@ -217,4 +217,4 @@ bb456:		; preds = %bb448, %bb425, %bb417, %bb395, %bb385, %bb371
 	ret void
 }
 
-declare i32 @printf(ptr, ...) nounwind 
+declare i32 @printf(ptr, ...) nounwind

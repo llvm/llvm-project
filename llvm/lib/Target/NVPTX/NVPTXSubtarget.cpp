@@ -12,6 +12,8 @@
 
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -36,6 +38,11 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
     ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
 
+    // Re-map SM version numbers, SmVersion carries the regular SMs which do
+    // have relative order, while FullSmVersion allows distinguishing sm_90 from
+    // sm_90a, which would *not* be a subset of sm_91.
+    SmVersion = getSmVersion();
+
     // Set default to PTX 6.0 (CUDA 9.0)
     if (PTXVersion == 0) {
       PTXVersion = 60;
@@ -48,7 +55,7 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      SmVersion(20), TM(TM),
+      FullSmVersion(200), SmVersion(getSmVersion()), TM(TM),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {}
 
 bool NVPTXSubtarget::hasImageHandles() const {
@@ -63,4 +70,15 @@ bool NVPTXSubtarget::hasImageHandles() const {
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+void NVPTXSubtarget::failIfClustersUnsupported(
+    std::string const &FailureMessage) const {
+  if (hasClusters())
+    return;
+
+  report_fatal_error(formatv(
+      "NVPTX SM architecture \"{}\" and PTX version \"{}\" do not support {}. "
+      "Requires SM >= 90 and PTX >= 78.",
+      getFullSmVersion(), PTXVersion, FailureMessage));
 }

@@ -14,9 +14,10 @@
 // A specialization of mdspan is a trivially copyable type if its accessor_type, mapping_type, and data_handle_type are trivially copyable types.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -57,12 +58,11 @@ constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
 template <class H, class A>
 constexpr void mixin_layout(const H& handle, const A& acc) {
   // make sure we test a trivially copyable mapping
-  static_assert(std::is_trivially_copyable_v<typename std::layout_left::template mapping<std::extents<int>>>);
+  static_assert(std::is_trivially_copyable_v<std::layout_left::mapping<std::extents<int>>>);
   mixin_extents(handle, std::layout_left(), acc);
   mixin_extents(handle, std::layout_right(), acc);
   // make sure we test a not trivially copyable mapping
-  static_assert(
-      !std::is_trivially_copyable_v<typename layout_wrapping_integral<4>::template mapping<std::extents<int>>>);
+  static_assert(!std::is_trivially_copyable_v<layout_wrapping_integral<4>::mapping<std::extents<int>>>);
   mixin_extents(handle, layout_wrapping_integral<4>(), acc);
 }
 

@@ -117,6 +117,10 @@
 # RUN: llvm-readobj --file-headers %t.elf64_loongarch.o | FileCheck %s --check-prefixes=CHECK,LE,LA64,64,SYSV
 # RUN: llvm-readobj --file-headers %t.elf64_loongarch.dwo | FileCheck %s --check-prefixes=CHECK,LE,LA64,64,SYSV
 
+# RUN: llvm-objcopy %t.o -O elf64-s390 %t.elf64_s390.o --split-dwo=%t.elf64_s390.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_s390.o | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_s390.dwo | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
+
 !ELF
 FileHeader:
   Class:           ELFCLASS32
@@ -160,6 +164,7 @@ Symbols:
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
 # SPARC-SAME:   sparc
+# S390X-SAME:   s390
 # X86-64-SAME:  x86-64
 # DEFAULT-SAME: unknown
 
@@ -182,6 +187,7 @@ Symbols:
 # RISCV64-NEXT:  Arch: riscv64
 # SPARC-NEXT:    Arch: sparc{{$}}
 # SPARCEL-NEXT:  Arch: sparcel
+# S390X-NEXT:    Arch: s390x
 # X86-64-NEXT:   Arch: x86_64
 # DEFAULT-NEXT:  Arch: unknown
 
@@ -210,6 +216,7 @@ Symbols:
 # RISCV32: Machine: EM_RISCV (0xF3)
 # RISCV64: Machine: EM_RISCV (0xF3)
 # SPARC:   Machine: EM_SPARC (0x2)
+# S390X:   Machine: EM_S390 (0x16)
 # X86-64:  Machine: EM_X86_64 (0x3E)
 
 # 32: HeaderSize: 52

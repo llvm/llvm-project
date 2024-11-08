@@ -11,7 +11,7 @@
 
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 // REQUIRES: -faligned-allocation
 // ADDITIONAL_COMPILE_FLAGS: -faligned-allocation
@@ -76,7 +76,7 @@ int main(int, char**) {
   test_allocations(64, 64);
   // Size being a multiple of alignment also needs to be supported.
   test_allocations(64, 32);
-  // When aligned allocation is implemented using posix_memalign,
+  // When aligned allocation is implemented using aligned_alloc,
   // that function requires a minimum alignment of sizeof(void*).
   // Check that we can also create overaligned allocations with
   // an alignment argument less than sizeof(void*).

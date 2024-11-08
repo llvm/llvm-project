@@ -44,8 +44,8 @@ public:
                                   int &FARsLeft) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   ABIArgInfo extendType(QualType Ty) const;
 
@@ -146,7 +146,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
@@ -324,13 +324,6 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     return ABIArgInfo::getDirect();
   }
 
-  // Pass 128-bit/256-bit vector values via vector registers directly.
-  if (Ty->isVectorType() && (((getContext().getTypeSize(Ty) == 128) &&
-                              (getTarget().hasFeature("lsx"))) ||
-                             ((getContext().getTypeSize(Ty) == 256) &&
-                              getTarget().hasFeature("lasx"))))
-    return ABIArgInfo::getDirect();
-
   // Complex types for the *f or *d ABI must be passed directly rather than
   // using CoerceAndExpand.
   if (IsFixed && Ty->isComplexType() && FRLen && FARsLeft >= 2) {
@@ -424,14 +417,13 @@ ABIArgInfo LoongArchABIInfo::classifyReturnType(QualType RetTy) const {
   return classifyArgumentType(RetTy, /*IsFixed=*/true, GARsLeft, FARsLeft);
 }
 
-Address LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty) const {
+RValue LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(GRLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true))
-    return Address(CGF.Builder.CreateLoad(VAListAddr),
-                   CGF.ConvertTypeForMem(Ty), SlotSize);
+    return Slot.asRValue();
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 
@@ -439,7 +431,7 @@ Address LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
                           /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
                           SlotSize,
-                          /*AllowHigherAlign=*/true);
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 ABIArgInfo LoongArchABIInfo::extendType(QualType Ty) const {

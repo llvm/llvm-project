@@ -4,18 +4,18 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-  define void @atomicrmw_xchg_i64(i64* %addr) { ret void }
-  define void @atomicrmw_add_i64(i64* %addr) { ret void }
-  define void @atomicrmw_add_i32(i64* %addr) { ret void }
-  define void @atomicrmw_sub_i32(i64* %addr) { ret void }
-  define void @atomicrmw_and_i32(i64* %addr) { ret void }
+  define void @atomicrmw_xchg_i64(ptr %addr) { ret void }
+  define void @atomicrmw_add_i64(ptr %addr) { ret void }
+  define void @atomicrmw_add_i32(ptr %addr) { ret void }
+  define void @atomicrmw_sub_i32(ptr %addr) { ret void }
+  define void @atomicrmw_and_i32(ptr %addr) { ret void }
   ; nand isn't legal
-  define void @atomicrmw_or_i32(i64* %addr) { ret void }
-  define void @atomicrmw_xor_i32(i64* %addr) { ret void }
-  define void @atomicrmw_min_i32(i64* %addr) { ret void }
-  define void @atomicrmw_max_i32(i64* %addr) { ret void }
-  define void @atomicrmw_umin_i32(i64* %addr) { ret void }
-  define void @atomicrmw_umax_i32(i64* %addr) { ret void }
+  define void @atomicrmw_or_i32(ptr %addr) { ret void }
+  define void @atomicrmw_xor_i32(ptr %addr) { ret void }
+  define void @atomicrmw_min_i32(ptr %addr) { ret void }
+  define void @atomicrmw_max_i32(ptr %addr) { ret void }
+  define void @atomicrmw_umin_i32(ptr %addr) { ret void }
+  define void @atomicrmw_umax_i32(ptr %addr) { ret void }
 ...
 
 ---

@@ -160,9 +160,8 @@ static bool isProcessableCondBI(const ScalarEvolution &SE,
                                 const BranchInst *BI) {
   BasicBlock *TrueSucc = nullptr;
   BasicBlock *FalseSucc = nullptr;
-  ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
-  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+  if (!match(BI, m_Br(m_ICmp(m_Value(LHS), m_Value(RHS)),
                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
     return false;
 
@@ -405,7 +404,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
                      : SE.getUMinExpr(NewBoundSCEV, SplitBoundSCEV);
 
   SCEVExpander Expander(
-      SE, L.getHeader()->getParent()->getParent()->getDataLayout(), "split");
+      SE, L.getHeader()->getDataLayout(), "split");
   Instruction *InsertPt = SplitLoopPH->getTerminator();
   Value *NewBoundValue =
       Expander.expandCodeFor(NewBoundSCEV, NewBoundSCEV->getType(), InsertPt);

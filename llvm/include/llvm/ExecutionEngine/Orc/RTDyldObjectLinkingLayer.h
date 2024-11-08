@@ -137,7 +137,7 @@ private:
                  object::OwningBinary<object::ObjectFile> O,
                  std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
                  std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
-                 Error Err);
+                 std::unique_ptr<SymbolDependenceMap> Deps, Error Err);
 
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstKey,

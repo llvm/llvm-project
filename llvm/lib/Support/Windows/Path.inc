@@ -76,7 +76,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
   // If the path is a long path, mangled into forward slashes, normalize
   // back to backslashes here.
-  if (Path8Str.startswith("//?/"))
+  if (Path8Str.starts_with("//?/"))
     llvm::sys::path::native(Path8Str, path::Style::windows_backslash);
 
   if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
@@ -96,7 +96,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   const char *const LongPathPrefix = "\\\\?\\";
 
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.startswith(LongPathPrefix))
+      Path8Str.starts_with(LongPathPrefix))
     return std::error_code();
 
   if (!IsAbsolute) {
@@ -154,6 +154,11 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
     return "";
 
   llvm::sys::path::make_preferred(PathNameUTF8);
+
+  SmallString<256> RealPath;
+  sys::fs::real_path(PathNameUTF8, RealPath);
+  if (RealPath.size())
+    return std::string(RealPath);
   return std::string(PathNameUTF8.data());
 }
 
@@ -620,6 +625,10 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
   DWORD Attributes = ::GetFileAttributesW(PathUtf16.begin());
 
   if (Attributes == INVALID_FILE_ATTRIBUTES) {
+    // Avoid returning unexpected error codes when querying for existence.
+    if (Mode == AccessMode::Exist)
+      return errc::no_such_file_or_directory;
+
     // See if the file didn't actually exist.
     DWORD LastError = ::GetLastError();
     if (LastError != ERROR_FILE_NOT_FOUND && LastError != ERROR_PATH_NOT_FOUND)
@@ -751,14 +760,14 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   return std::error_code();
 
 handle_status_error:
-  DWORD LastError = ::GetLastError();
-  if (LastError == ERROR_FILE_NOT_FOUND || LastError == ERROR_PATH_NOT_FOUND)
+  std::error_code Err = mapLastWindowsError();
+  if (Err == std::errc::no_such_file_or_directory)
     Result = file_status(file_type::file_not_found);
-  else if (LastError == ERROR_SHARING_VIOLATION)
+  else if (Err == std::errc::permission_denied)
     Result = file_status(file_type::type_unknown);
   else
     Result = file_status(file_type::status_error);
-  return mapWindowsError(LastError);
+  return Err;
 }
 
 std::error_code status(const Twine &path, file_status &result, bool Follow) {
@@ -774,14 +783,16 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
   if (std::error_code ec = widenPath(path8, path_utf16))
     return ec;
 
-  DWORD attr = ::GetFileAttributesW(path_utf16.begin());
-  if (attr == INVALID_FILE_ATTRIBUTES)
-    return getStatus(INVALID_HANDLE_VALUE, result);
-
   DWORD Flags = FILE_FLAG_BACKUP_SEMANTICS;
-  // Handle reparse points.
-  if (!Follow && (attr & FILE_ATTRIBUTE_REPARSE_POINT))
-    Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
+  if (!Follow) {
+    DWORD attr = ::GetFileAttributesW(path_utf16.begin());
+    if (attr == INVALID_FILE_ATTRIBUTES)
+      return getStatus(INVALID_HANDLE_VALUE, result);
+
+    // Handle reparse points.
+    if (attr & FILE_ATTRIBUTE_REPARSE_POINT)
+      Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
+  }
 
   ScopedFileHandle h(
       ::CreateFileW(path_utf16.begin(), 0, // Attributes only.
@@ -956,7 +967,8 @@ void mapped_file_region::unmapImpl() {
 
     ::UnmapViewOfFile(Mapping);
 
-    if (Mode == mapmode::readwrite && Exe && hasFlushBufferKernelBug()) {
+    if (Mode == mapmode::readwrite) {
+      bool DoFlush = Exe && hasFlushBufferKernelBug();
       // There is a Windows kernel bug, the exact trigger conditions of which
       // are not well understood.  When triggered, dirty pages are not properly
       // flushed and subsequent process's attempts to read a file can return
@@ -964,7 +976,27 @@ void mapped_file_region::unmapImpl() {
       // sufficient to ensure that this bug is not triggered.
       // The bug only occurs when writing an executable and executing it right
       // after, under high I/O pressure.
-      ::FlushFileBuffers(FileHandle);
+      if (!DoFlush) {
+        // Separately, on VirtualBox Shared Folder mounts, writes via memory
+        // maps always end up unflushed (regardless of version of Windows),
+        // unless flushed with this explicit call, if they are renamed with
+        // SetFileInformationByHandle(FileRenameInfo) before closing the output
+        // handle.
+        //
+        // As the flushing is quite expensive, use a heuristic to limit the
+        // cases where we do the flushing. Only do the flushing if we aren't
+        // sure we are on a local file system.
+        bool IsLocal = false;
+        SmallVector<wchar_t, 128> FinalPath;
+        if (!realPathFromHandle(FileHandle, FinalPath)) {
+          // Not checking the return value here - if the check fails, assume the
+          // file isn't local.
+          is_local_internal(FinalPath, IsLocal);
+        }
+        DoFlush = !IsLocal;
+      }
+      if (DoFlush)
+        ::FlushFileBuffers(FileHandle);
     }
 
     ::CloseHandle(FileHandle);

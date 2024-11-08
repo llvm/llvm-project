@@ -67,10 +67,10 @@ program p
       a = x(i)
       b = x(j)
 
-      ! CHECK:     %[[V_201:[0-9]+]] = fir.address_of(@_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10) : !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_202:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_203:[0-9]+]] = fir.field_index _QM__fortran_ieee_exceptionsTieee_flag_type.flag, !fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>
-      ! CHECK:     %[[V_204:[0-9]+]] = fir.coordinate_of %[[V_202]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_201:[0-9]+]] = fir.address_of(@_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_202:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_203:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_flag_type.flag, !fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>
+      ! CHECK:     %[[V_204:[0-9]+]] = fir.coordinate_of %[[V_202]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_205:[0-9]+]] = fir.load %[[V_204]] : !fir.ref<i8>
       ! CHECK:     %[[V_206:[0-9]+]] = fir.convert %[[V_205]] : (i8) -> i32
       ! CHECK:     %[[V_207:[0-9]+]] = fir.call @_FortranAMapException(%[[V_206]]) fastmath<contract> : (i32) -> i32
@@ -81,15 +81,15 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_208:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_209:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_210:[0-9]+]] = arith.cmpf olt, %[[V_208]], %[[V_209]] : f32
+      ! CHECK:     %[[V_210:[0-9]+]] = arith.cmpf olt, %[[V_208]], %[[V_209]] {{.*}} : f32
       ! CHECK:     %[[V_211:[0-9]+]] = fir.if %[[V_210]] -> (f32) {
       ! CHECK:       fir.result %[[V_209]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_208]], %[[V_209]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_208]], %[[V_209]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_208]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_208]], %[[V_209]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_208]], %[[V_209]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_208]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_208]], %[[V_209]] : f32
@@ -112,8 +112,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_211]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_212:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_213:[0-9]+]] = fir.coordinate_of %[[V_212]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_212:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_213:[0-9]+]] = fir.coordinate_of %[[V_212]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_214:[0-9]+]] = fir.load %[[V_213]] : !fir.ref<i8>
       ! CHECK:     %[[V_215:[0-9]+]] = fir.convert %[[V_214]] : (i8) -> i32
       ! CHECK:     %[[V_216:[0-9]+]] = fir.call @_FortranAMapException(%[[V_215]]) fastmath<contract> : (i32) -> i32
@@ -126,8 +126,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'max    ', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_268:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_269:[0-9]+]] = fir.coordinate_of %[[V_268]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_268:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_269:[0-9]+]] = fir.coordinate_of %[[V_268]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_270:[0-9]+]] = fir.load %[[V_269]] : !fir.ref<i8>
       ! CHECK:     %[[V_271:[0-9]+]] = fir.convert %[[V_270]] : (i8) -> i32
       ! CHECK:     %[[V_272:[0-9]+]] = fir.call @_FortranAMapException(%[[V_271]]) fastmath<contract> : (i32) -> i32
@@ -140,15 +140,15 @@ program p
       ! CHECK:     %[[V_274:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_275:[0-9]+]] = math.copysign %[[V_273]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_276:[0-9]+]] = math.copysign %[[V_274]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_277:[0-9]+]] = arith.cmpf olt, %[[V_275]], %[[V_276]] : f32
+      ! CHECK:     %[[V_277:[0-9]+]] = arith.cmpf olt, %[[V_275]], %[[V_276]] {{.*}} : f32
       ! CHECK:     %[[V_278:[0-9]+]] = fir.if %[[V_277]] -> (f32) {
       ! CHECK:       fir.result %[[V_274]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_275]], %[[V_276]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_275]], %[[V_276]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_273]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_275]], %[[V_276]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_275]], %[[V_276]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_273]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_273]], %[[V_274]] : f32
@@ -171,8 +171,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_278]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_279:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_280:[0-9]+]] = fir.coordinate_of %[[V_279]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_279:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_280:[0-9]+]] = fir.coordinate_of %[[V_279]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_281:[0-9]+]] = fir.load %[[V_280]] : !fir.ref<i8>
       ! CHECK:     %[[V_282:[0-9]+]] = fir.convert %[[V_281]] : (i8) -> i32
       ! CHECK:     %[[V_283:[0-9]+]] = fir.call @_FortranAMapException(%[[V_282]]) fastmath<contract> : (i32) -> i32
@@ -185,8 +185,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'mag    ', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_329:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_330:[0-9]+]] = fir.coordinate_of %[[V_329]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_329:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_330:[0-9]+]] = fir.coordinate_of %[[V_329]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_331:[0-9]+]] = fir.load %[[V_330]] : !fir.ref<i8>
       ! CHECK:     %[[V_332:[0-9]+]] = fir.convert %[[V_331]] : (i8) -> i32
       ! CHECK:     %[[V_333:[0-9]+]] = fir.call @_FortranAMapException(%[[V_332]]) fastmath<contract> : (i32) -> i32
@@ -197,22 +197,22 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_334:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_335:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_336:[0-9]+]] = arith.cmpf olt, %[[V_334]], %[[V_335]] : f32
+      ! CHECK:     %[[V_336:[0-9]+]] = arith.cmpf olt, %[[V_334]], %[[V_335]] {{.*}} : f32
       ! CHECK:     %[[V_337:[0-9]+]] = fir.if %[[V_336]] -> (f32) {
       ! CHECK:       fir.result %[[V_335]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_334]], %[[V_335]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_334]], %[[V_335]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_334]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_334]], %[[V_335]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_334]], %[[V_335]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_334]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_334]], %[[V_335]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_334]], %[[V_334]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_335]], %[[V_335]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_334]], %[[V_334]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_335]], %[[V_335]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -232,8 +232,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_337]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_338:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_339:[0-9]+]] = fir.coordinate_of %[[V_338]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_338:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_339:[0-9]+]] = fir.coordinate_of %[[V_338]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_340:[0-9]+]] = fir.load %[[V_339]] : !fir.ref<i8>
       ! CHECK:     %[[V_341:[0-9]+]] = fir.convert %[[V_340]] : (i8) -> i32
       ! CHECK:     %[[V_342:[0-9]+]] = fir.call @_FortranAMapException(%[[V_341]]) fastmath<contract> : (i32) -> i32
@@ -246,8 +246,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'max_num', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_388:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_389:[0-9]+]] = fir.coordinate_of %[[V_388]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_388:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_389:[0-9]+]] = fir.coordinate_of %[[V_388]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_390:[0-9]+]] = fir.load %[[V_389]] : !fir.ref<i8>
       ! CHECK:     %[[V_391:[0-9]+]] = fir.convert %[[V_390]] : (i8) -> i32
       ! CHECK:     %[[V_392:[0-9]+]] = fir.call @_FortranAMapException(%[[V_391]]) fastmath<contract> : (i32) -> i32
@@ -260,22 +260,22 @@ program p
       ! CHECK:     %[[V_394:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_395:[0-9]+]] = math.copysign %[[V_393]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_396:[0-9]+]] = math.copysign %[[V_394]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_397:[0-9]+]] = arith.cmpf olt, %[[V_395]], %[[V_396]] : f32
+      ! CHECK:     %[[V_397:[0-9]+]] = arith.cmpf olt, %[[V_395]], %[[V_396]] {{.*}} : f32
       ! CHECK:     %[[V_398:[0-9]+]] = fir.if %[[V_397]] -> (f32) {
       ! CHECK:       fir.result %[[V_394]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_395]], %[[V_396]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_395]], %[[V_396]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_393]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_395]], %[[V_396]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_395]], %[[V_396]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_393]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_393]], %[[V_394]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_393]], %[[V_393]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_394]], %[[V_394]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_393]], %[[V_393]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_394]], %[[V_394]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -295,8 +295,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_398]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_399:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_400:[0-9]+]] = fir.coordinate_of %[[V_399]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_399:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_400:[0-9]+]] = fir.coordinate_of %[[V_399]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_401:[0-9]+]] = fir.load %[[V_400]] : !fir.ref<i8>
       ! CHECK:     %[[V_402:[0-9]+]] = fir.convert %[[V_401]] : (i8) -> i32
       ! CHECK:     %[[V_403:[0-9]+]] = fir.call @_FortranAMapException(%[[V_402]]) fastmath<contract> : (i32) -> i32
@@ -309,8 +309,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'mag_num', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_449:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_450:[0-9]+]] = fir.coordinate_of %[[V_449]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_449:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_450:[0-9]+]] = fir.coordinate_of %[[V_449]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_451:[0-9]+]] = fir.load %[[V_450]] : !fir.ref<i8>
       ! CHECK:     %[[V_452:[0-9]+]] = fir.convert %[[V_451]] : (i8) -> i32
       ! CHECK:     %[[V_453:[0-9]+]] = fir.call @_FortranAMapException(%[[V_452]]) fastmath<contract> : (i32) -> i32
@@ -321,15 +321,15 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_454:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_455:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_456:[0-9]+]] = arith.cmpf olt, %[[V_454]], %[[V_455]] : f32
+      ! CHECK:     %[[V_456:[0-9]+]] = arith.cmpf olt, %[[V_454]], %[[V_455]] {{.*}} : f32
       ! CHECK:     %[[V_457:[0-9]+]] = fir.if %[[V_456]] -> (f32) {
       ! CHECK:       fir.result %[[V_454]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_454]], %[[V_455]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_454]], %[[V_455]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_455]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_454]], %[[V_455]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_454]], %[[V_455]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_454]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_454]], %[[V_455]] : f32
@@ -352,8 +352,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_457]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_458:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_459:[0-9]+]] = fir.coordinate_of %[[V_458]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_458:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_459:[0-9]+]] = fir.coordinate_of %[[V_458]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_460:[0-9]+]] = fir.load %[[V_459]] : !fir.ref<i8>
       ! CHECK:     %[[V_461:[0-9]+]] = fir.convert %[[V_460]] : (i8) -> i32
       ! CHECK:     %[[V_462:[0-9]+]] = fir.call @_FortranAMapException(%[[V_461]]) fastmath<contract> : (i32) -> i32
@@ -366,8 +366,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'min    ', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_508:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_509:[0-9]+]] = fir.coordinate_of %[[V_508]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_508:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_509:[0-9]+]] = fir.coordinate_of %[[V_508]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_510:[0-9]+]] = fir.load %[[V_509]] : !fir.ref<i8>
       ! CHECK:     %[[V_511:[0-9]+]] = fir.convert %[[V_510]] : (i8) -> i32
       ! CHECK:     %[[V_512:[0-9]+]] = fir.call @_FortranAMapException(%[[V_511]]) fastmath<contract> : (i32) -> i32
@@ -380,15 +380,15 @@ program p
       ! CHECK:     %[[V_514:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_515:[0-9]+]] = math.copysign %[[V_513]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_516:[0-9]+]] = math.copysign %[[V_514]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_517:[0-9]+]] = arith.cmpf olt, %[[V_515]], %[[V_516]] : f32
+      ! CHECK:     %[[V_517:[0-9]+]] = arith.cmpf olt, %[[V_515]], %[[V_516]] {{.*}} : f32
       ! CHECK:     %[[V_518:[0-9]+]] = fir.if %[[V_517]] -> (f32) {
       ! CHECK:       fir.result %[[V_513]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_515]], %[[V_516]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_515]], %[[V_516]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_514]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_515]], %[[V_516]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_515]], %[[V_516]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_513]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_513]], %[[V_514]] : f32
@@ -411,8 +411,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_518]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_519:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_520:[0-9]+]] = fir.coordinate_of %[[V_519]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_519:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_520:[0-9]+]] = fir.coordinate_of %[[V_519]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_521:[0-9]+]] = fir.load %[[V_520]] : !fir.ref<i8>
       ! CHECK:     %[[V_522:[0-9]+]] = fir.convert %[[V_521]] : (i8) -> i32
       ! CHECK:     %[[V_523:[0-9]+]] = fir.call @_FortranAMapException(%[[V_522]]) fastmath<contract> : (i32) -> i32
@@ -425,8 +425,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'mig    ', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_569:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_570:[0-9]+]] = fir.coordinate_of %[[V_569]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_569:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_570:[0-9]+]] = fir.coordinate_of %[[V_569]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_571:[0-9]+]] = fir.load %[[V_570]] : !fir.ref<i8>
       ! CHECK:     %[[V_572:[0-9]+]] = fir.convert %[[V_571]] : (i8) -> i32
       ! CHECK:     %[[V_573:[0-9]+]] = fir.call @_FortranAMapException(%[[V_572]]) fastmath<contract> : (i32) -> i32
@@ -437,22 +437,22 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_574:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_575:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_576:[0-9]+]] = arith.cmpf olt, %[[V_574]], %[[V_575]] : f32
+      ! CHECK:     %[[V_576:[0-9]+]] = arith.cmpf olt, %[[V_574]], %[[V_575]] {{.*}} : f32
       ! CHECK:     %[[V_577:[0-9]+]] = fir.if %[[V_576]] -> (f32) {
       ! CHECK:       fir.result %[[V_574]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_574]], %[[V_575]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_574]], %[[V_575]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_575]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_574]], %[[V_575]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_574]], %[[V_575]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_574]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_574]], %[[V_575]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_574]], %[[V_574]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_575]], %[[V_575]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_574]], %[[V_574]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_575]], %[[V_575]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -472,8 +472,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_577]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_578:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_579:[0-9]+]] = fir.coordinate_of %[[V_578]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_578:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_579:[0-9]+]] = fir.coordinate_of %[[V_578]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_580:[0-9]+]] = fir.load %[[V_579]] : !fir.ref<i8>
       ! CHECK:     %[[V_581:[0-9]+]] = fir.convert %[[V_580]] : (i8) -> i32
       ! CHECK:     %[[V_582:[0-9]+]] = fir.call @_FortranAMapException(%[[V_581]]) fastmath<contract> : (i32) -> i32
@@ -486,8 +486,8 @@ program p
       call ieee_get_flag(ieee_invalid, flag_value)
       write(*, 4) 'min_num', a, a, b, b, r, flag_value, trim(tag(r))
 
-      ! CHECK:     %[[V_628:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_629:[0-9]+]] = fir.coordinate_of %[[V_628]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_628:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_629:[0-9]+]] = fir.coordinate_of %[[V_628]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_630:[0-9]+]] = fir.load %[[V_629]] : !fir.ref<i8>
       ! CHECK:     %[[V_631:[0-9]+]] = fir.convert %[[V_630]] : (i8) -> i32
       ! CHECK:     %[[V_632:[0-9]+]] = fir.call @_FortranAMapException(%[[V_631]]) fastmath<contract> : (i32) -> i32
@@ -500,22 +500,22 @@ program p
       ! CHECK:     %[[V_634:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_635:[0-9]+]] = math.copysign %[[V_633]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_636:[0-9]+]] = math.copysign %[[V_634]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_637:[0-9]+]] = arith.cmpf olt, %[[V_635]], %[[V_636]] : f32
+      ! CHECK:     %[[V_637:[0-9]+]] = arith.cmpf olt, %[[V_635]], %[[V_636]] {{.*}} : f32
       ! CHECK:     %[[V_638:[0-9]+]] = fir.if %[[V_637]] -> (f32) {
       ! CHECK:       fir.result %[[V_633]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_635]], %[[V_636]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_635]], %[[V_636]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_634]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_635]], %[[V_636]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_635]], %[[V_636]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_633]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_633]], %[[V_634]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_633]], %[[V_633]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_634]], %[[V_634]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_633]], %[[V_633]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_634]], %[[V_634]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -535,8 +535,8 @@ program p
       ! CHECK:       fir.result %[[V_693]] : f32
       ! CHECK:     }
       ! CHECK:     fir.store %[[V_638]] to %[[V_83]] : !fir.ref<f32>
-      ! CHECK:     %[[V_639:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
-      ! CHECK:     %[[V_640:[0-9]+]] = fir.coordinate_of %[[V_639]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+      ! CHECK:     %[[V_639:[0-9]+]] = fir.declare %[[V_201]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.10"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
+      ! CHECK:     %[[V_640:[0-9]+]] = fir.coordinate_of %[[V_639]], %[[V_203]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
       ! CHECK:     %[[V_641:[0-9]+]] = fir.load %[[V_640]] : !fir.ref<i8>
       ! CHECK:     %[[V_642:[0-9]+]] = fir.convert %[[V_641]] : (i8) -> i32
       ! CHECK:     %[[V_643:[0-9]+]] = fir.call @_FortranAMapException(%[[V_642]]) fastmath<contract> : (i32) -> i32

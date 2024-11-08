@@ -64,9 +64,6 @@ namespace llvm {
     List,   // Get list of functions & BBs from a file. Selectively enables
             // basic block sections for a subset of basic blocks which can be
             // used to control object size bloats from creating sections.
-    Labels, // Do not use Basic Block Sections but label basic blocks.  This
-            // is useful when associating profile counts from virtual addresses
-            // to basic blocks.
     Preset, // Similar to list but the blocks are identified by passes which
             // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
             // This option cannot be set via the command line.
@@ -129,6 +126,7 @@ namespace llvm {
     COV_3 = 300, // Unsupported.
     COV_4 = 400,
     COV_5 = 500,
+    COV_6 = 600,
   };
 
   class TargetOptions {
@@ -140,25 +138,31 @@ namespace llvm {
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          DisableIntegratedAS(false), RelaxELFRelocations(true),
-          FunctionSections(false), DataSections(false),
-          IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+          DisableIntegratedAS(false), FunctionSections(false),
+          DataSections(false), IgnoreXCOFFVisibility(false),
+          XCOFFTracebackTable(true), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), EnableIPRA(false), EmitStackSizeSection(false),
-          EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
-          SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-          EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-          ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-          DebugStrictDwarf(false), Hotpatch(false),
+          EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+          EmitStackSizeSection(false), EnableMachineOutliner(false),
+          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
+          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+          XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+          VerifyArgABICompliance(true),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
     /// optimization should be disabled for the given machine function.
     bool DisableFramePointerElim(const MachineFunction &MF) const;
+
+    /// FramePointerIsReserved - This returns true if the frame pointer must
+    /// always either point to a new frame record or be un-modified in the given
+    /// function.
+    bool FramePointerIsReserved(const MachineFunction &MF) const;
 
     /// If greater than 0, override the default value of
     /// MCAsmInfo::BinutilsVersion.
@@ -259,11 +263,6 @@ namespace llvm {
     /// Disable the integrated assembler.
     unsigned DisableIntegratedAS : 1;
 
-    /// Compress DWARF debug sections.
-    DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
-    unsigned RelaxELFRelocations : 1;
-
     /// Emit functions into separate sections.
     unsigned FunctionSections : 1;
 
@@ -281,6 +280,9 @@ namespace llvm {
     /// Use unique names for basic block sections.
     unsigned UniqueBasicBlockSectionNames : 1;
 
+    /// Emit named sections with the same name into different sections.
+    unsigned SeparateNamedSections : 1;
+
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;
 
@@ -294,6 +296,9 @@ namespace llvm {
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
+
+    /// EnableTLSDESC - This flag enables TLS Descriptors.
+    unsigned EnableTLSDESC : 1;
 
     /// This flag enables InterProcedural Register Allocation (IPRA).
     unsigned EnableIPRA : 1;
@@ -312,6 +317,10 @@ namespace llvm {
 
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
+
+    // Emit the SHT_LLVM_BB_ADDR_MAP section containing basic block address
+    // which can be used to map virtual addresses to machine basic blocks.
+    unsigned BBAddrMap : 1;
 
     /// Emit basic blocks into separate sections.
     BasicBlockSection BBSections = BasicBlockSection::None;
@@ -369,6 +378,12 @@ namespace llvm {
     /// When set to true, const objects with relocatable address values are put
     /// into the RO data section.
     unsigned XCOFFReadOnlyPointers : 1;
+
+    /// When set to true, call/return argument extensions of narrow integers
+    /// are verified in the target backend if it cares about them. This is
+    /// not done with internal tools like llc that run many tests that ignore
+    /// (lack) these extensions.
+    unsigned VerifyArgABICompliance : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

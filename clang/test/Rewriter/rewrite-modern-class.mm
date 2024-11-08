@@ -44,7 +44,7 @@
 
 @implementation class_has_no_ivar @end
 
-//============================class needs to be synthesized here=====================
+//===================== class needs to be synthesized here =====================
 @interface SUPER  {
 @public
   double divar;

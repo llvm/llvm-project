@@ -42,47 +42,29 @@
 
 #elif TEST_STD_VER == 20
 
-# if __has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)
-#   ifndef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should be defined in c++20"
-#   endif
-#   if __cpp_lib_source_location != 201907L
-#     error "__cpp_lib_source_location should have the value 201907L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)' is not met!"
-#   endif
+# ifndef __cpp_lib_source_location
+#   error "__cpp_lib_source_location should be defined in c++20"
+# endif
+# if __cpp_lib_source_location != 201907L
+#   error "__cpp_lib_source_location should have the value 201907L in c++20"
 # endif
 
 #elif TEST_STD_VER == 23
 
-# if __has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)
-#   ifndef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should be defined in c++23"
-#   endif
-#   if __cpp_lib_source_location != 201907L
-#     error "__cpp_lib_source_location should have the value 201907L in c++23"
-#   endif
-# else
-#   ifdef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)' is not met!"
-#   endif
+# ifndef __cpp_lib_source_location
+#   error "__cpp_lib_source_location should be defined in c++23"
+# endif
+# if __cpp_lib_source_location != 201907L
+#   error "__cpp_lib_source_location should have the value 201907L in c++23"
 # endif
 
 #elif TEST_STD_VER > 23
 
-# if __has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)
-#   ifndef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should be defined in c++26"
-#   endif
-#   if __cpp_lib_source_location != 201907L
-#     error "__cpp_lib_source_location should have the value 201907L in c++26"
-#   endif
-# else
-#   ifdef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)' is not met!"
-#   endif
+# ifndef __cpp_lib_source_location
+#   error "__cpp_lib_source_location should be defined in c++26"
+# endif
+# if __cpp_lib_source_location != 201907L
+#   error "__cpp_lib_source_location should have the value 201907L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

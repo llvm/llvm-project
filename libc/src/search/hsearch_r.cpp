@@ -8,9 +8,10 @@
 
 #include "src/search/hsearch_r.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, hsearch_r,
                    (ENTRY item, ACTION action, ENTRY **retval,
                     struct hsearch_data *htab)) {
@@ -29,7 +30,8 @@ LLVM_LIBC_FUNCTION(int, hsearch_r,
     }
     break;
   case ENTER:
-    *retval = table->insert(item);
+    *retval = internal::HashTable::insert(table, item);
+    htab->__opaque = table;
     if (*retval == nullptr) {
       libc_errno = ENOMEM;
       return 0;
@@ -39,4 +41,4 @@ LLVM_LIBC_FUNCTION(int, hsearch_r,
   return 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

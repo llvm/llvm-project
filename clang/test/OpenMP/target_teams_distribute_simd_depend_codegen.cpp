@@ -65,10 +65,6 @@
 // TCHECK: @{{.+}} = {{.*}}constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
-// Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @.omp_offloading.requires_reg, ptr null }]
-
-
 template<typename tx, typename ty>
 struct TT{
   tx X;
@@ -91,7 +87,7 @@ int foo(int n) {
 
   // CHECK:       [[ADD:%.+]] = add nsw i32
   // CHECK:       store i32 [[ADD]], ptr [[DEVICE_CAP:%.+]],
-  // CHECK:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 0
+  // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 0
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
   // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[ID:@.+]], i32 [[GTID:%.+]], i32 1, i[[SZ]] {{20|40}}, i[[SZ]] 4, ptr [[TASK_ENTRY0:@.+]])
@@ -140,9 +136,9 @@ int foo(int n) {
   // OMP50-DAG:   getelementptr inbounds [3 x ptr], ptr [[BP]], i32 0, i32 0
   // OMP50-DAG:   getelementptr inbounds [3 x ptr], ptr [[P]], i32 0, i32 0
 
-  // OMP45:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
-  // OMP50-64:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 4
-  // OMP50-32:    [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 3
+  // OMP45:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+  // OMP50-64:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 4
+  // OMP50-32:    [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 3
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
   // CHECK:       [[DEV1:%.+]] = load i32, ptr [[DEVICE_CAP]],
@@ -159,9 +155,9 @@ int foo(int n) {
   // CHECK:       [[ELSE]]:
   // OMP45-NOT:   getelementptr inbounds [2 x ptr], ptr
   // OMP50-NOT:   getelementptr inbounds [3 x ptr], ptr
-  // OMP45:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
-  // OMP50-64:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 4
-  // OMP50-32:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 3
+  // OMP45:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+  // OMP50-64:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 4
+  // OMP50-32:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 3
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
   // CHECK:       [[DEV1:%.+]] = load i32, ptr [[DEVICE_CAP]],
@@ -220,9 +216,9 @@ int foo(int n) {
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1_]](i32{{.*}}, ptr noalias noundef %1)
 // CHECK:       call void {{%.*}}(
-// OMP45:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
-// OMP50-64:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 4
-// OMP50-32:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 3
+// OMP45:       [[DEVICE_CAP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+// OMP50-64:       [[DEVICE_CAP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 4
+// OMP50-32:       [[DEVICE_CAP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 3
 // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
 // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
 // OMP45:       [[RET:%.+]] = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE]], i32 0, i32 1, ptr @.{{.+}}.region_id, ptr %{{.+}})
@@ -246,7 +242,7 @@ int foo(int n) {
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1__]](i32{{.*}}, ptr noalias noundef %1)
 // CHECK:       call void {{%.*}}(
-// CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, ptr %{{.+}}, i32 0, i32 2
+// CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
 // CHECK:       [[BP0:%.+]] = load ptr, ptr %
 // CHECK:       [[BP1_I32:%.+]] = load i32, ptr @
 // CHECK-64:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],

@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_STDLIB_H
 #define LLVM_LIBC_STDLIB_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdlib-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-types/locale_t.h"
+#include "llvm-libc-macros/stdlib-macros.h"
 
 %%public_api()
 

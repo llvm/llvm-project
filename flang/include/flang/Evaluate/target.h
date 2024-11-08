@@ -13,6 +13,8 @@
 #define FORTRAN_EVALUATE_TARGET_H_
 
 #include "flang/Common/Fortran.h"
+#include "flang/Common/enum-class.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Evaluate/common.h"
 #include <cstdint>
 
@@ -31,6 +33,11 @@ struct Rounding {
   bool x86CompatibleBehavior{false};
 #endif
 };
+
+ENUM_CLASS(IeeeFeature, Denormal, Divide, Flags, Halting, Inf, Io, NaN,
+    Rounding, Sqrt, Standard, Subnormal, UnderflowControl)
+
+using IeeeFeatures = common::EnumSet<IeeeFeature, 16>;
 
 class TargetCharacteristics {
 public:
@@ -95,12 +102,21 @@ public:
   bool isPPC() const { return isPPC_; }
   void set_isPPC(bool isPPC = false);
 
+  bool isOSWindows() const { return isOSWindows_; }
+  void set_isOSWindows(bool isOSWindows = false) {
+    isOSWindows_ = isOSWindows;
+  };
+
+  IeeeFeatures &ieeeFeatures() { return ieeeFeatures_; }
+  const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
+
 private:
   static constexpr int maxKind{32};
   std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind]{};
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind]{};
   bool isBigEndian_{false};
   bool isPPC_{false};
+  bool isOSWindows_{false};
   bool areSubnormalsFlushedToZero_{false};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};
@@ -110,6 +126,11 @@ private:
   std::size_t maxAlignment_{8 /*at least*/};
   std::string compilerOptionsString_;
   std::string compilerVersionString_;
+  IeeeFeatures ieeeFeatures_{IeeeFeature::Denormal, IeeeFeature::Divide,
+      IeeeFeature::Flags, IeeeFeature::Halting, IeeeFeature::Inf,
+      IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
+      IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
+      IeeeFeature::UnderflowControl};
 };
 
 } // namespace Fortran::evaluate

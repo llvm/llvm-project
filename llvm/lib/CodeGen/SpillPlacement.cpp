@@ -56,7 +56,7 @@ INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
 
 void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequiredTransitive<EdgeBundles>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -200,7 +200,7 @@ bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   setThreshold(MBFI->getEntryFreq());
   for (auto &I : mf) {
     unsigned Num = I.getNumber();

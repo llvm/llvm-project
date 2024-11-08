@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass machine-scheduler -verify-machineinstrs %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass machine-scheduler -verify-machineinstrs %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK:     SU(0):   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec

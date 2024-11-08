@@ -123,6 +123,44 @@ severe that error recovery won't be able to recover sensibly from them (thus
 spewing a ton of bogus errors).  One example of this class of error are failure
 to ``#include`` a file.
 
+Diagnostic Wording
+^^^^^^^^^^^^^^^^^^
+The wording used for a diagnostic is critical because it is the only way for a
+user to know how to correct their code. Use the following suggestions when
+wording a diagnostic.
+
+* Diagnostics in Clang do not start with a capital letter and do not end with
+  punctuation.
+
+    * This does not apply to proper nouns like ``Clang`` or ``OpenMP``, to
+      acronyms like ``GCC`` or ``ARC``, or to language standards like ``C23``
+      or ``C++17``.
+    * A trailing question mark is allowed. e.g., ``unknown identifier %0; did
+      you mean %1?``.
+
+* Appropriately capitalize proper nouns like ``Clang``, ``OpenCL``, ``GCC``,
+  ``Objective-C``, etc and language standard versions like ``C11`` or ``C++11``.
+* The wording should be succinct. If necessary, use a semicolon to combine
+  sentence fragments instead of using complete sentences. e.g., prefer wording
+  like ``'%0' is deprecated; it will be removed in a future release of Clang``
+  over wording like ``'%0' is deprecated. It will be removed in a future release
+  of Clang``.
+* The wording should be actionable and avoid using standards terms or grammar
+  productions that a new user would not be familiar with. e.g., prefer wording
+  like ``missing semicolon`` over wording like ``syntax error`` (which is not
+  actionable) or ``expected unqualified-id`` (which uses standards terminology).
+* The wording should clearly explain what is wrong with the code rather than
+  restating what the code does. e.g., prefer wording like ``type %0 requires a
+  value in the range %1 to %2`` over wording like ``%0 is invalid``.
+* The wording should have enough contextual information to help the user
+  identify the issue in a complex expression. e.g., prefer wording like
+  ``both sides of the %0 binary operator are identical`` over wording like
+  ``identical operands to binary operator``.
+* Use single quotes to denote syntactic constructs or command line arguments
+  named in a diagnostic message. e.g., prefer wording like ``'this' pointer
+  cannot be null in well-defined C++ code`` over wording like ``this pointer
+  cannot be null in well-defined C++ code``.
+
 The Format String
 ^^^^^^^^^^^^^^^^^
 
@@ -477,9 +515,8 @@ mode.  Instead of formatting and printing out the diagnostics, this
 implementation just captures and remembers the diagnostics as they fly by.
 Then ``-verify`` compares the list of produced diagnostics to the list of
 expected ones.  If they disagree, it prints out its own output.  Full
-documentation for the ``-verify`` mode can be found in the Clang API
-documentation for `VerifyDiagnosticConsumer
-</doxygen/classclang_1_1VerifyDiagnosticConsumer.html#details>`_.
+documentation for the ``-verify`` mode can be found at
+:ref:`verifying-diagnostics`.
 
 There are many other possible implementations of this interface, and this is
 why we prefer diagnostics to pass down rich structured information in
@@ -932,7 +969,7 @@ the option appears on the command line, the argument value is simply copied.
 .. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">,
-    Visibility<[ClangOption, CC1Option]>,
+    Visibility<[ClangOption, CC1Option, FlangOption]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**
@@ -3163,7 +3200,7 @@ are similar.
    always involve two functions: an ``ActOnXXX`` function that will be called
    directly from the parser, and a ``BuildXXX`` function that performs the
    actual semantic analysis and will (eventually!) build the AST node.  It's
-   fairly common for the ``ActOnCXX`` function to do very little (often just
+   fairly common for the ``ActOnXXX`` function to do very little (often just
    some minor translation from the parser's representation to ``Sema``'s
    representation of the same thing), but the separation is still important:
    C++ template instantiation, for example, should always call the ``BuildXXX``
@@ -3314,6 +3351,8 @@ Testing
 All functional changes to Clang should come with test coverage demonstrating
 the change in behavior.
 
+.. _verifying-diagnostics:
+
 Verifying Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^
 Clang ``-cc1`` supports the ``-verify`` command line option as a way to
@@ -3363,7 +3402,7 @@ Multiple occurrences accumulate prefixes.  For example,
 
 Specifying Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^
-Indicating that a line expects an error or a warning is simple. Put a comment
+Indicating that a line expects an error or a warning is easy. Put a comment
 on the line that has the diagnostic, use
 ``expected-{error,warning,remark,note}`` to tag if it's an expected error,
 warning, remark, or note (respectively), and place the expected text between
@@ -3372,10 +3411,13 @@ enough to ensure that the correct diagnostic was emitted. (Note: full text
 should be included in test cases unless there is a compelling reason to use
 truncated text instead.)
 
+For a full description of the matching behavior, including more complex
+matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
+
 Here's an example of the most commonly used way to specify expected
 diagnostics:
 
-.. code-block: c++
+.. code-block:: c++
 
   int A = B; // expected-error {{use of undeclared identifier 'B'}}
 
@@ -3385,7 +3427,7 @@ more readable, you can use slash-newline to separate out the diagnostics.
 Alternatively, it is possible to specify the line on which the diagnostic
 should appear by appending ``@<line>`` to ``expected-<type>``, for example:
 
-.. code-block: c++
+.. code-block:: c++
 
   #warning some text
   // expected-warning@10 {{some text}}
@@ -3398,7 +3440,7 @@ header file, it may be beneficial to be able to declare the file in which the
 diagnostic will appear, rather than placing the ``expected-*`` directive in the
 actual file itself. This can be done using the following syntax:
 
-.. code-block: c++
+.. code-block:: c++
 
   // expected-error@path/include.h:15 {{error message}}
 
@@ -3413,7 +3455,7 @@ diagnostic can instead be indicated by a marker of the form ``#<marker>``.
 Markers are specified by including them in a comment, and then referenced by
 appending the marker to the diagnostic with ``@#<marker>``, as with:
 
-.. code-block: c++
+.. code-block:: c++
 
   #warning some text  // #1
   // ... other code ...
@@ -3428,14 +3470,14 @@ syntax is ``expected-<type> <n> {{diag text}}``, where ``<type>`` is one of
 integer. This allows the diagnostic to appear as many times as specified. For
 example:
 
-.. code-block: c++
+.. code-block:: c++
 
   void f(); // expected-note 2 {{previous declaration is here}}
 
 Where the diagnostic is expected to occur a minimum number of times, this can
 be specified by appending a ``+`` to the number. For example:
 
-.. code-block: c++
+.. code-block:: c++
 
   void f(); // expected-note 0+ {{previous declaration is here}}
   void g(); // expected-note 1+ {{previous declaration is here}}
@@ -3445,31 +3487,58 @@ swallowed if it occurs, but will not generate an error if it does not occur. In
 the second example, the diagnostic must occur at least once. As a short-hand,
 "one or more" can be specified simply by ``+``. For example:
 
-.. code-block: c++
+.. code-block:: c++
 
   void g(); // expected-note + {{previous declaration is here}}
 
 A range can also be specified by ``<n>-<m>``. For example:
 
-.. code-block: c++
+.. code-block:: c++
 
   void f(); // expected-note 0-1 {{previous declaration is here}}
 
 In this example, the diagnostic may appear only once, if at all.
 
-Regex matching mode may be selected by appending ``-re`` to the diagnostic type
-and including regexes wrapped in double curly braces in the directive, such as:
+.. _DiagnosticMatching:
 
-.. code-block: c++
+Matching Modes
+~~~~~~~~~~~~~~
+
+The default matching mode is simple string, which looks for the expected text
+that appears between the first `{{` and `}}` pair of the comment. The string is
+interpreted just as-is, with one exception: the sequence `\n` is converted to a
+single newline character. This mode matches the emitted diagnostic when the
+text appears as a substring at any position of the emitted message.
+
+To enable matching against desired strings that contain `}}` or `{{`, the
+string-mode parser accepts opening delimiters of more than two curly braces,
+like `{{{`. It then looks for a closing delimiter of equal "width" (i.e `}}}`).
+For example:
+
+.. code-block:: c++
+
+  // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
+
+The intent is to allow the delimeter to be wider than the longest `{` or `}`
+brace sequence in the content, so that if your expected text contains `{{{`
+(three braces) it may be delimited with `{{{{` (four braces), and so on.
+
+Regex matching mode may be selected by appending ``-re`` to the diagnostic type
+and including regexes wrapped in double curly braces (`{{` and `}}`) in the
+directive, such as:
+
+.. code-block:: text
 
   expected-error-re {{format specifies type 'wchar_t **' (aka '{{.+}}')}}
 
 Examples matching error: "variable has incomplete type 'struct s'"
 
-.. code-block: c++
+.. code-block:: c++
 
   // expected-error {{variable has incomplete type 'struct s'}}
   // expected-error {{variable has incomplete type}}
+  // expected-error {{{variable has incomplete type}}}
+  // expected-error {{{{variable has incomplete type}}}}
 
   // expected-error-re {{variable has type 'struct {{.}}'}}
   // expected-error-re {{variable has type 'struct {{.*}}'}}

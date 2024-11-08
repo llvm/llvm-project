@@ -1,8 +1,8 @@
 // This test is for the [class.compare.default]p3 added by P2002R0
-// Also covers modifications made by P2448R2 and extension warnings
+// Also covers modifications made by P2448R2
 
-// RUN: %clang_cc1 -std=c++2a -verify %s
-// RUN: %clang_cc1 -std=c++2a -Wc++23-default-comp-relaxed-constexpr -verify=expected,extension %s
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx2a %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected %s
 
 namespace std {
   struct strong_ordering {
@@ -82,10 +82,12 @@ struct TestB {
 };
 
 struct C {
-  friend bool operator==(const C&, const C&); // expected-note {{previous}} extension-note 2{{non-constexpr comparison function declared here}}
+  friend bool operator==(const C&, const C&); // expected-note {{previous}} \
+                                              // cxx2a-note 2{{declared here}}
   friend bool operator!=(const C&, const C&) = default; // expected-note {{previous}}
 
-  friend std::strong_ordering operator<=>(const C&, const C&); // expected-note {{previous}} extension-note 2{{non-constexpr comparison function declared here}}
+  friend std::strong_ordering operator<=>(const C&, const C&); // expected-note {{previous}} \
+                                                               // cxx2a-note 2{{declared here}}
   friend bool operator<(const C&, const C&) = default; // expected-note {{previous}}
   friend bool operator<=(const C&, const C&) = default; // expected-note {{previous}}
   friend bool operator>(const C&, const C&) = default; // expected-note {{previous}}
@@ -129,23 +131,23 @@ struct TestD {
 
 struct E {
   A a;
-  C c; // extension-note 2{{non-constexpr comparison function would be used to compare member 'c'}}
+  C c; // cxx2a-note 2{{non-constexpr comparison function would be used to compare member 'c'}}
   A b;
-  friend constexpr bool operator==(const E&, const E&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+  friend constexpr bool operator==(const E&, const E&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator!=(const E&, const E&) = default;
 
-  friend constexpr std::strong_ordering operator<=>(const E&, const E&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+  friend constexpr std::strong_ordering operator<=>(const E&, const E&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator<(const E&, const E&) = default;
   friend constexpr bool operator<=(const E&, const E&) = default;
   friend constexpr bool operator>(const E&, const E&) = default;
   friend constexpr bool operator>=(const E&, const E&) = default;
 };
 
-struct E2 : A, C { // extension-note 2{{non-constexpr comparison function would be used to compare base class 'C'}}
-  friend constexpr bool operator==(const E2&, const E2&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+struct E2 : A, C { // cxx2a-note 2{{non-constexpr comparison function would be used to compare base class 'C'}}
+  friend constexpr bool operator==(const E2&, const E2&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator!=(const E2&, const E2&) = default;
 
-  friend constexpr std::strong_ordering operator<=>(const E2&, const E2&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+  friend constexpr std::strong_ordering operator<=>(const E2&, const E2&) = default; // cxx2a-error {{cannot be declared constexpr}}
   friend constexpr bool operator<(const E2&, const E2&) = default;
   friend constexpr bool operator<=(const E2&, const E2&) = default;
   friend constexpr bool operator>(const E2&, const E2&) = default;
@@ -153,14 +155,14 @@ struct E2 : A, C { // extension-note 2{{non-constexpr comparison function would 
 };
 
 struct F {
-  friend bool operator==(const F&, const F&); // extension-note {{non-constexpr comparison function declared here}}
-  friend constexpr bool operator!=(const F&, const F&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+  friend bool operator==(const F&, const F&); // cxx2a-note {{declared here}}
+  friend constexpr bool operator!=(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
 
-  friend std::strong_ordering operator<=>(const F&, const F&); // extension-note 4{{non-constexpr comparison function declared here}}
-  friend constexpr bool operator<(const F&, const F&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
-  friend constexpr bool operator<=(const F&, const F&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
-  friend constexpr bool operator>(const F&, const F&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
-  friend constexpr bool operator>=(const F&, const F&) = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+  friend std::strong_ordering operator<=>(const F&, const F&); // cxx2a-note 4{{non-constexpr comparison function declared here}}
+  friend constexpr bool operator<(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
+  friend constexpr bool operator<=(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
+  friend constexpr bool operator>(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
+  friend constexpr bool operator>=(const F&, const F&) = default; // cxx2a-error {{cannot be declared constexpr}}
 };
 
 // No implicit 'constexpr' if it's not the first declaration.

@@ -185,19 +185,7 @@ are no syntax errors may indicate that a function was declared but never called.
                          LLDB_OPT_SET_2);
     m_all_options.Finalize();
 
-    CommandArgumentEntry arg;
-    CommandArgumentData bp_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    bp_id_arg.arg_type = eArgTypeBreakpointID;
-    bp_id_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(bp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);
   }
 
   ~CommandObjectBreakpointCommandAdd() override = default;
@@ -290,9 +278,8 @@ are no syntax errors may indicate that a function was declared but never called.
         m_stop_on_error =
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "invalid value for stop-on-error: \"%s\"",
-              option_arg.str().c_str());
+          return Status::FromErrorStringWithFormatv(
+              "invalid value for stop-on-error: \"{0}\"", option_arg);
       } break;
 
       case 'D':
@@ -335,7 +322,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
@@ -355,7 +342,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -402,7 +389,7 @@ protected:
               m_bp_options_vec, result);
         }
         if (!error.Success())
-          result.SetError(error);
+          result.SetError(std::move(error));
       } else {
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner)
@@ -449,19 +436,7 @@ public:
       : CommandObjectParsed(interpreter, "delete",
                             "Delete the set of commands from a breakpoint.",
                             nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData bp_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    bp_id_arg.arg_type = eArgTypeBreakpointID;
-    bp_id_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(bp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeBreakpointID);
   }
 
   ~CommandObjectBreakpointCommandDelete() override = default;
@@ -505,7 +480,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
@@ -523,7 +498,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -565,28 +540,16 @@ public:
                             "List the script or set of commands to be "
                             "executed when the breakpoint is hit.",
                             nullptr, eCommandRequiresTarget) {
-    CommandArgumentEntry arg;
-    CommandArgumentData bp_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    bp_id_arg.arg_type = eArgTypeBreakpointID;
-    bp_id_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(bp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeBreakpointID);
   }
 
   ~CommandObjectBreakpointCommandList() override = default;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target &target = GetTarget();
 
-    const BreakpointList &breakpoints = target->GetBreakpointList();
+    const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -611,7 +574,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
 
           if (bp) {
             BreakpointLocationSP bp_loc_sp;

@@ -26,6 +26,7 @@ class AssumptionCache;
 class CallBase;
 class CallInst;
 class DominatorTree;
+class EarliestEscapeInfo;
 class Function;
 class Instruction;
 class LoadInst;
@@ -37,6 +38,7 @@ class MemSetInst;
 class PostDominatorTree;
 class StoreInst;
 class TargetLibraryInfo;
+class TypeSize;
 class Value;
 
 class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
@@ -47,6 +49,7 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   PostDominatorTree *PDT = nullptr;
   MemorySSA *MSSA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
+  EarliestEscapeInfo *EEI = nullptr;
 
 public:
   MemCpyOptPass() = default;

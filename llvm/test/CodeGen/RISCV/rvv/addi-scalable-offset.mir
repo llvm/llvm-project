@@ -3,7 +3,7 @@
 
 --- |
   define void @add_scalable_offset(
-            <vscale x 1 x i64> *%pa,
+            ptr %pa,
             i64 %vl)
   {
     ret void
@@ -38,27 +38,26 @@ body: |
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; CHECK-NEXT: $x2 = frame-setup ADDI $x2, -240
     ; CHECK-NEXT: $x12 = frame-setup PseudoReadVLENB
-    ; CHECK-NEXT: $x12 = frame-setup SLLI killed $x12, 1
     ; CHECK-NEXT: $x2 = frame-setup SUB $x2, killed $x12
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: renamable $v8 = PseudoVLE64_V_M1 undef renamable $v8, killed renamable $x10, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
     ; CHECK-NEXT: $x10 = PseudoReadVLENB
-    ; CHECK-NEXT: $x10 = SLLI killed $x10, 1
     ; CHECK-NEXT: $x10 = SUB $x8, killed $x10
     ; CHECK-NEXT: $x10 = ADDI killed $x10, -2048
     ; CHECK-NEXT: $x10 = ADDI killed $x10, -224
     ; CHECK-NEXT: VS1R_V killed renamable $v8, killed renamable $x10
-    ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -2048
-    ; CHECK-NEXT: $x2 = frame-destroy ADDI killed $x2, -224
-    ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 240
+    ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -2032
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 2032
     ; CHECK-NEXT: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
     ; CHECK-NEXT: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 2032
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NEXT: PseudoRET
     %1:gprnox0 = COPY $x11
     %0:gpr = COPY $x10
-    %pt:vr = IMPLICIT_DEF
-    %2:vr = PseudoVLE64_V_M1 %pt, %0, %1, 6, 0 :: (load unknown-size from %ir.pa, align 8)
+    %2:vr = PseudoVLE64_V_M1 undef $noreg, %0, %1, 6, 0 :: (load unknown-size from %ir.pa, align 8)
     %3:gpr = ADDI %stack.2, 0
     VS1R_V killed %2:vr, %3:gpr
     PseudoRET

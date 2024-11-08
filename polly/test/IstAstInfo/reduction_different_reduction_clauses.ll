@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-ast>' -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK: #pragma simd reduction (+ : MemRef_sum{{[1,2]}}, MemRef_sum{{[1,2]}}) reduction (* : MemRef_prod) reduction (| : MemRef_or) reduction (& : MemRef_and)
 ; CHECK: #pragma known-parallel reduction (+ : MemRef_sum{{[1,2]}}, MemRef_sum{{[1,2]}}) reduction (* : MemRef_prod) reduction (| : MemRef_or) reduction (& : MemRef_and)

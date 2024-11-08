@@ -7,8 +7,6 @@ import lldbdap_testcase
 
 
 class TestDAP_redirection_to_console(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
-    @skipIfRemote
     def test(self):
         """
         Without proper stderr and stdout redirection, the following code would throw an

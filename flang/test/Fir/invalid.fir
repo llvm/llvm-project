@@ -965,6 +965,14 @@ func.func @fp_to_logical(%arg0: f32) -> !fir.logical<4> {
 
 // -----
 
+func.func @rec_to_rec(%arg0: !fir.type<t1{i:i32, f:f32}>) -> !fir.type<t2{f:f32, i:i32}> {
+  // expected-error@+1{{'fir.convert' op invalid type conversion}}
+  %0 = fir.convert %arg0 : (!fir.type<t1{i:i32, f:f32}>) -> !fir.type<t2{f:f32, i:i32}>
+  return %0 : !fir.type<t2{f:f32, i:i32}>
+}
+
+// -----
+
 func.func @bad_box_offset(%not_a_box : !fir.ref<i32>) {
   // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> type}}
   %addr1 = fir.box_offset %not_a_box base_addr : (!fir.ref<i32>) -> !fir.llvm_ptr<!fir.ref<i32>>
@@ -976,5 +984,37 @@ func.func @bad_box_offset(%not_a_box : !fir.ref<i32>) {
 func.func @bad_box_offset(%no_addendum : !fir.ref<!fir.box<i32>>) {
   // expected-error@+1{{'fir.box_offset' op can only address derived_type field of derived type or unlimited polymorphic fir.box}}
   %addr1 = fir.box_offset %no_addendum derived_type : (!fir.ref<!fir.box<i32>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<none>>>
+  return
+}
+
+// -----
+
+func.func @bad_rebox_assumed_rank_1(%arg0: !fir.ref<!fir.array<*:f32>> ) {
+  // expected-error@+1{{'fir.rebox_assumed_rank' op input must be a box or box address}}
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.ref<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  return
+}
+
+// -----
+
+func.func @bad_rebox_assumed_rank_2(%arg0: !fir.box<!fir.array<*:f32>> ) {
+  // expected-error@+1{{'fir.rebox_assumed_rank' op result #0 must be box or class, but got '!fir.ref<!fir.box<!fir.array<*:f32>>>'}}
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.box<!fir.array<*:f32>>>
+  return
+}
+
+// -----
+
+func.func @bad_rebox_assumed_rank_3(%arg0: !fir.box<!fir.array<*:f32>> ) {
+  // expected-error@+1{{'fir.rebox_assumed_rank' op input and output element types are incompatible}}
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:i32>>
+  return
+}
+
+// -----
+
+func.func @bad_is_assumed_size(%arg0: !fir.ref<!fir.array<*:none>>) {
+  // expected-error@+1{{op operand #0 must be box or class, but got '!fir.ref<!fir.array<*:none>>'}}
+  %1 = fir.is_assumed_size %arg0 : (!fir.ref<!fir.array<*:none>>) -> i1
   return
 }

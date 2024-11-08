@@ -38,6 +38,9 @@ protected:
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
 
+  /// Reset internal state.
+  void reset() override;
+
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
@@ -64,6 +67,7 @@ public:
 
   bool isTargetHardFloat() const {
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
            TargetTriple.getEnvironment() == Triple::EABIHF ||
            (TargetTriple.isOSBinFormatMachO() &&
@@ -83,6 +87,14 @@ public:
     // Addrspacecasts are always noops.
     return true;
   }
+
+  yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
+  yaml::MachineFunctionInfo *
+  convertFuncInfoToYAML(const MachineFunction &MF) const override;
+  bool parseMachineFunctionInfo(const yaml::MachineFunctionInfo &,
+                                PerFunctionMIParsingState &PFS,
+                                SMDiagnostic &Error,
+                                SMRange &SourceRange) const override;
 };
 
 /// ARM/Thumb little endian target machine.

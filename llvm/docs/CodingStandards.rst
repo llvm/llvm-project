@@ -73,7 +73,10 @@ Each toolchain provides a good reference for what it accepts:
 
   * libstdc++: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#status.iso.2017
 
-* MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
+* MSVC: https://learn.microsoft.com/cpp/overview/visual-cpp-language-conformance
+
+Additionally, there are compiler comparison tables of supported C++ features on
+`cppreference.com <https://en.cppreference.com/w/cpp/compiler_support/17>`_.
 
 
 C++ Standard Library
@@ -1707,6 +1710,17 @@ would help to avoid running into a "dangling else" situation.
     // In this `else` case, it is necessary that we explain the situation with
     // this surprisingly long comment, so it would be unclear without the braces
     // whether the following statement is in the scope of the `if`.
+    handleOtherDecl(D);
+  }
+
+  // Use braces for the `else if` and `else` block to keep it uniform with the
+  // `if` block.
+  if (isa<FunctionDecl>(D)) {
+    verifyFunctionDecl(D);
+    handleFunctionDecl(D);
+  } else if (isa<GlobalVarDecl>(D)) {
+    handleGlobalVarDecl(D);
+  } else {
     handleOtherDecl(D);
   }
 

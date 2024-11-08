@@ -21,6 +21,7 @@
 name:            kernel
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo:
   isEntryFunction: true
@@ -34,7 +35,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr34_sgpr35 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead renamable $vgpr0 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr41 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr38_sgpr39 = COPY undef $sgpr8_sgpr9
   ; CHECK-NEXT:   renamable $sgpr36_sgpr37 = IMPLICIT_DEF
@@ -78,9 +79,9 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11:0x00000000000000F0, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000FC00
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr38_sgpr39, 40, 0 :: (dereferenceable invariant load (s64), addrspace 4)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR undef renamable $vgpr0, undef renamable $vgpr0, killed renamable $sgpr6_sgpr7, 0, 0, implicit $exec :: (store (s32), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR undef renamable $vgpr0, undef renamable $vgpr0, renamable $sgpr50_sgpr51, 0, 0, implicit $exec :: (store (s32), addrspace 1)
-  ; CHECK-NEXT:   dead renamable $vgpr0 = COPY killed renamable $sgpr49
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR undef [[DEF]], undef [[DEF]], killed renamable $sgpr6_sgpr7, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR undef [[DEF]], undef [[DEF]], renamable $sgpr50_sgpr51, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+  ; CHECK-NEXT:   dead [[COPY:%[0-9]+]]:vgpr_32 = COPY killed renamable $sgpr49
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY killed renamable $sgpr36_sgpr37
   ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY killed renamable $sgpr34_sgpr35

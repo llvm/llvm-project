@@ -133,9 +133,9 @@
 // RUN:   /Zc:inline \
 // RUN:   /Zc:rvalueCast \
 // RUN:   /Zc:ternary \
-// RUN:   -### -- %s 2>&1 | FileCheck -check-prefix=IGNORED %s
+// RUN:   -### -- %s 2>&1 | FileCheck -DMSG=%errc_ENOENT -check-prefix=IGNORED %s
 // IGNORED-NOT: argument unused during compilation
-// IGNORED-NOT: no such file or directory
+// IGNORED-NOT: [[MSG]]
 
 // Negated form warns:
 // RUN: %clang_cl /c \

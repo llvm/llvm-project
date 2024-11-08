@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
 
 ; Test long branch reserved register pass when all
 ; SGPRs are used
@@ -38,10 +38,11 @@
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
 ; CHECK-NEXT:   occupancy:       5
-; CHECK-NEXT:   scavengeFI:      '%fixed-stack.0'
+; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
+; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -303,10 +304,11 @@
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
 ; CHECK-NEXT:   occupancy:       5
-; CHECK-NEXT:   scavengeFI:      '%fixed-stack.0'
+; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
+; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -525,6 +527,8 @@
   }
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 !0 = !{}

@@ -90,10 +90,8 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // AsmStream, the temporary function is eventually discarded.
 Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns,
-                       ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStreamm,
-                       const BenchmarkKey &Key,
+                       ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
+                       raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions);
 
 // Creates an ObjectFile in the format understood by the host.
@@ -117,7 +115,7 @@ public:
 
   // Executes the function.
   void operator()(char *Memory) const {
-    ((void (*)(char *))(intptr_t)FunctionBytes.data())(Memory);
+    ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 
   StringRef FunctionBytes;

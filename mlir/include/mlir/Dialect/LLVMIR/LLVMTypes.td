@@ -40,7 +40,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
     ```
   }];
 
-  let parameters = (ins "Type":$elementType, "unsigned":$numElements);
+  let parameters = (ins "Type":$elementType, "uint64_t":$numElements);
   let assemblyFormat = [{
     `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
   }];
@@ -49,7 +49,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
 
   let builders = [
     TypeBuilderWithInferredContext<(ins "Type":$elementType,
-                                        "unsigned":$numElements)>
+                                        "uint64_t":$numElements)>
   ];
 
   let extraClassDeclaration = [{
@@ -123,7 +123,7 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
 
 def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "verifyEntries"]>]> {
+      "getIndexBitwidth", "areCompatible", "verifyEntries"]>]> {
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents
@@ -247,6 +247,18 @@ def LLVMTargetExtType : LLVMType<"LLVMTargetExt", "target"> {
 
     bool hasProperty(Property Prop) const;
     bool supportsMemOps() const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LLVMX86AMXType
+//===----------------------------------------------------------------------===//
+
+def LLVMX86AMXType : LLVMType<"LLVMX86AMX", "x86_amx"> {
+  let summary = "LLVM x86_amx type.";
+  let description = [{
+    The x86_amx type represents a value held in an AMX tile register on an x86
+    machine. Can only be used in AMX intrinsics calls.
   }];
 }
 

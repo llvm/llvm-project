@@ -162,7 +162,8 @@ public:
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override {
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override {
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
@@ -188,14 +189,6 @@ public:
       }
       return false;
     }
-  }
-
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    // FIXME.
-    llvm_unreachable("relaxInstruction() unimplemented");
   }
 
   void relaxInstruction(MCInst &Inst,

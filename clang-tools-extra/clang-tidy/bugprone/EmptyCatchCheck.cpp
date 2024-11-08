@@ -46,7 +46,7 @@ AST_MATCHER_P(CompoundStmt, hasAnyTextFromList, std::vector<llvm::StringRef>,
   StringRef Text = Lexer::getSourceText(
       CharSourceRange::getTokenRange(Node.getSourceRange()), SM,
       Context.getLangOpts());
-  return std::any_of(List.begin(), List.end(), [&](const StringRef &Str) {
+  return llvm::any_of(List, [&](const StringRef &Str) {
     return Text.contains_insensitive(Str);
   });
 }

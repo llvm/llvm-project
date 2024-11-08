@@ -23,10 +23,12 @@
 //
 // Effects: Direct-non-list-initializes extents_ with other.extents().
 
-#include <mdspan>
-#include <type_traits>
+#include <array>
 #include <cassert>
-#include <limits>
+#include <cstddef>
+#include <mdspan>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -76,9 +78,9 @@ constexpr void test_conversion() {
 }
 
 template <class IdxT, size_t... Extents>
-using lr_mapping_t = typename std::layout_right::template mapping<std::extents<IdxT, Extents...>>;
+using lr_mapping_t = std::layout_right::mapping<std::extents<IdxT, Extents...>>;
 template <class IdxT, size_t... Extents>
-using ls_mapping_t = typename std::layout_stride::template mapping<std::extents<IdxT, Extents...>>;
+using ls_mapping_t = std::layout_stride::mapping<std::extents<IdxT, Extents...>>;
 
 constexpr void test_rank_mismatch() {
   constexpr size_t D = std::dynamic_extent;

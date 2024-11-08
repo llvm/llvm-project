@@ -58,7 +58,7 @@ template <typename value_type, std::size_t alignment = unaligned>
 [[nodiscard]] inline value_type read(const void *memory, endianness endian) {
   value_type ret;
 
-  memcpy(&ret,
+  memcpy(static_cast<void *>(&ret),
          LLVM_ASSUME_ALIGNED(
              memory, (detail::PickAlignment<value_type, alignment>::value)),
          sizeof(value_type));
@@ -72,7 +72,8 @@ template <typename value_type, endianness endian, std::size_t alignment>
 
 /// Read a value of a particular endianness from a buffer, and increment the
 /// buffer past that value.
-template <typename value_type, std::size_t alignment, typename CharT>
+template <typename value_type, std::size_t alignment = unaligned,
+          typename CharT>
 [[nodiscard]] inline value_type readNext(const CharT *&memory,
                                          endianness endian) {
   value_type ret = read<value_type, alignment>(memory, endian);
@@ -80,8 +81,8 @@ template <typename value_type, std::size_t alignment, typename CharT>
   return ret;
 }
 
-template <typename value_type, endianness endian, std::size_t alignment,
-          typename CharT>
+template <typename value_type, endianness endian,
+          std::size_t alignment = unaligned, typename CharT>
 [[nodiscard]] inline value_type readNext(const CharT *&memory) {
   return readNext<value_type, alignment, CharT>(memory, endian);
 }
@@ -100,6 +101,21 @@ template<typename value_type,
          std::size_t alignment>
 inline void write(void *memory, value_type value) {
   write<value_type, alignment>(memory, value, endian);
+}
+
+/// Write a value of a particular endianness, and increment the buffer past that
+/// value.
+template <typename value_type, std::size_t alignment = unaligned,
+          typename CharT>
+inline void writeNext(CharT *&memory, value_type value, endianness endian) {
+  write(memory, value, endian);
+  memory += sizeof(value_type);
+}
+
+template <typename value_type, endianness endian,
+          std::size_t alignment = unaligned, typename CharT>
+inline void writeNext(CharT *&memory, value_type value) {
+  writeNext<value_type, alignment, CharT>(memory, value, endian);
 }
 
 template <typename value_type>

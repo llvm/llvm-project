@@ -145,7 +145,7 @@ def ConstantOp : Complex_Op<"constant", [
   }];
 
   let arguments = (ins ArrayAttr:$value);
-  let results = (outs Complex<AnyFloat>:$complex);
+  let results = (outs AnyComplex:$complex);
 
   let assemblyFormat = "$value attr-dict `:` type($complex)";
   let hasFolder = 1;
@@ -225,6 +225,8 @@ def DivOp : ComplexArithmeticOp<"div"> {
     %a = complex.div %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

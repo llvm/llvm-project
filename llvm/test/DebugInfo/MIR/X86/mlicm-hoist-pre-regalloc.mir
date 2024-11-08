@@ -1,5 +1,6 @@
 --- | 
-  ; RUN: llc -run-pass=machinelicm -o - %s | FileCheck %s
+  ; RUN: llc -run-pass=early-machinelicm -o - %s | FileCheck %s
+  ; RUN: llc -passes=early-machinelicm -o - %s | FileCheck %s
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ; Doing so causes poor stepping bevavior.
   ;
@@ -28,18 +29,18 @@
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
   ; Function Attrs: noreturn nounwind uwtable
-  define void @Process(i32* nocapture readonly %p) local_unnamed_addr  !dbg !9 {
+  define void @Process(ptr nocapture readonly %p) local_unnamed_addr  !dbg !9 {
   entry:
-    tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !16, metadata !17), !dbg !18
+    tail call void @llvm.dbg.value(metadata ptr %p, i64 0, metadata !16, metadata !17), !dbg !18
     br label %while.body, !dbg !19
 
   while.body:                                       ; preds = %while.body, %entry
-    %p.addr.0 = phi i32* [ %p, %entry ], [ %incdec.ptr, %while.body ]
-    tail call void @llvm.dbg.value(metadata i32* %p.addr.0, i64 0, metadata !16, metadata !17), !dbg !18
-    %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.0, i64 1, !dbg !20
-    tail call void @llvm.dbg.value(metadata i32* %incdec.ptr, i64 0, metadata !16, metadata !17), !dbg !18
-    %0 = load i32, i32* %p.addr.0, align 4, !dbg !21, !tbaa !22
-    store i32 %0, i32* @x, align 4, !dbg !26, !tbaa !22
+    %p.addr.0 = phi ptr [ %p, %entry ], [ %incdec.ptr, %while.body ]
+    tail call void @llvm.dbg.value(metadata ptr %p.addr.0, i64 0, metadata !16, metadata !17), !dbg !18
+    %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.0, i64 1, !dbg !20
+    tail call void @llvm.dbg.value(metadata ptr %incdec.ptr, i64 0, metadata !16, metadata !17), !dbg !18
+    %0 = load i32, ptr %p.addr.0, align 4, !dbg !21, !tbaa !22
+    store i32 %0, ptr @x, align 4, !dbg !26, !tbaa !22
     br label %while.body, !dbg !27, !llvm.loop !29
   }
 

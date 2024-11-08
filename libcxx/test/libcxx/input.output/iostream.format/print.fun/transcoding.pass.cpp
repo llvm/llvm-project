@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -7,7 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-filesystem
+// UNSUPPORTED: libcpp-has-no-unicode
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // <print>
 
@@ -32,9 +35,9 @@ constexpr void test(std::basic_string_view<CharT> expected, std::string_view inp
   std::array<CharT, 1024> buffer;
   std::ranges::fill(buffer, CharT('*'));
 
-  CharT* out = std::__unicode::__transcode(input.begin(), input.end(), buffer.data());
+  auto out = std::__unicode::__transcode(input.begin(), input.end(), buffer.begin());
 
-  assert(std::basic_string_view<CharT>(buffer.data(), out) == expected);
+  assert(std::basic_string_view<CharT>(buffer.begin(), out) == expected);
 
   out = std::find_if(out, buffer.end(), [](CharT c) { return c != CharT('*'); });
   assert(out == buffer.end());

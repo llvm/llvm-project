@@ -111,6 +111,7 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges);
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs);
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
+void PrintThreads();
 
 //// --------------------------------------------------------------------------
 //// Allocator prototypes.
@@ -119,6 +120,10 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
 // Wrappers for allocator's ForceLock()/ForceUnlock().
 void LockAllocator();
 void UnlockAllocator();
+
+// Lock/unlock global mutext.
+void LockGlobal();
+void UnlockGlobal();
 
 // Returns the address range occupied by the global allocator object.
 void GetAllocatorGlobalRange(uptr *begin, uptr *end);

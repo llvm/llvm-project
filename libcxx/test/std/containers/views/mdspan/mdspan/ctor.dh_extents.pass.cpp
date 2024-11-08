@@ -24,9 +24,10 @@
 //   - value-initializes acc_.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -51,7 +52,7 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A&) {
         assert((H::move_counter() == 1));
       }
     }
-    static_assert(!noexcept(MDS(handle, map.extents())));
+    LIBCPP_STATIC_ASSERT(!noexcept(MDS(handle, map.extents())));
     assert(m.extents() == map.extents());
     if constexpr (std::equality_comparable<H>)
       assert(m.data_handle() == handle);
@@ -83,16 +84,14 @@ constexpr void mixin_layout(const H& handle, const A& acc) {
 
   // Use weird layout, make sure it has the properties we want to test
   // Sanity check that this layouts mapping is constructible from extents (via its move constructor)
-  static_assert(std::is_constructible_v<typename layout_wrapping_integral<8>::template mapping<std::extents<int>>,
-                                        std::extents<int>>);
-  static_assert(!std::is_constructible_v<typename layout_wrapping_integral<8>::template mapping<std::extents<int>>,
-                                         const std::extents<int>&>);
+  static_assert(std::is_constructible_v<layout_wrapping_integral<8>::mapping<std::extents<int>>, std::extents<int>>);
+  static_assert(
+      !std::is_constructible_v<layout_wrapping_integral<8>::mapping<std::extents<int>>, const std::extents<int>&>);
   mixin_extents<false, ac>(handle, layout_wrapping_integral<8>(), acc);
   // Sanity check that this layouts mapping is not constructible from extents
-  static_assert(!std::is_constructible_v<typename layout_wrapping_integral<4>::template mapping<std::extents<int>>,
-                                         std::extents<int>>);
-  static_assert(!std::is_constructible_v<typename layout_wrapping_integral<4>::template mapping<std::extents<int>>,
-                                         const std::extents<int>&>);
+  static_assert(!std::is_constructible_v<layout_wrapping_integral<4>::mapping<std::extents<int>>, std::extents<int>>);
+  static_assert(
+      !std::is_constructible_v<layout_wrapping_integral<4>::mapping<std::extents<int>>, const std::extents<int>&>);
   mixin_extents<false, ac>(handle, layout_wrapping_integral<4>(), acc);
 }
 

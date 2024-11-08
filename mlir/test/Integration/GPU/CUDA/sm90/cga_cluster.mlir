@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:  -test-lower-to-nvvm="cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3" \
+// RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -18,13 +18,13 @@ module attributes {gpu.container_module} {
     return
   }
   gpu.module @gpumodule {
-    gpu.func @kernel_cluster() kernel attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 2, 2, 1>} {
+    gpu.func @kernel_cluster() kernel attributes {gpu.known_block_size = array<i32: 1, 1, 1>, gpu.known_grid_size = array<i32: 4, 4, 1>} {
       %cidX = gpu.cluster_id  x
       %cidY = gpu.cluster_id  y
       %cidZ = gpu.cluster_id  z
-      %cdimX = gpu.cluster_dim  x
-      %cdimY = gpu.cluster_dim  y
-      %cdimZ = gpu.cluster_dim  z
+      %cdimX = gpu.cluster_dim_blocks  x
+      %cdimY = gpu.cluster_dim_blocks  y
+      %cdimZ = gpu.cluster_dim_blocks  z
       %bidX = gpu.block_id  x
       %bidY = gpu.block_id  y
       %bidZ = gpu.block_id  z

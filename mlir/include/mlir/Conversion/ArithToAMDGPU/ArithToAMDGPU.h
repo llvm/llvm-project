@@ -9,7 +9,9 @@
 #ifndef MLIR_CONVERSION_ARITHTOAMDGPU_ARITHTOAMDGPU_H
 #define MLIR_CONVERSION_ARITHTOAMDGPU_ARITHTOAMDGPU_H
 
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include <memory>
+#include <string>
 
 namespace mlir {
 
@@ -20,7 +22,16 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace arith {
-void populateArithToAMDGPUConversionPatterns(RewritePatternSet &patterns);
+/// Add patterns for rewriting `arith.extf` and `arith.truncf` on FP8 types
+/// to wrappers around AMDGPU--specific intrinsics. If `saturateFP8TruncF`
+/// is set, values outside the range of the destination type are clamped
+/// to the largest value of that type instead of being rewritten to Inf (aka
+/// NaN).
+void populateArithToAMDGPUConversionPatterns(RewritePatternSet &patterns,
+                                             bool convertFP8Arithmetic,
+                                             bool saturateFP8Truncf,
+                                             bool allowPackedF16Rtz,
+                                             amdgpu::Chipset chipset);
 } // namespace arith
 } // namespace mlir
 

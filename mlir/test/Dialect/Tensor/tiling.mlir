@@ -34,7 +34,7 @@ func.func @dynamic_pad_tensor_3_4(%input_tensor: tensor<?x?xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -73,7 +73,7 @@ func.func @dynamic_pad_tensor_0_3(%input_tensor: tensor<?x?xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loop = transform.structured.tile_using_for %0 [0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %1, %loop = transform.structured.tile_using_for %0 tile_sizes [0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -109,8 +109,49 @@ func.func @static_pad_tensor_3_4(%input_tensor: tensor<7x9xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @fuse_static_pad_tensor_3_4(
+//  CHECK-SAME:     %[[IN:.*]]: tensor<7x9xf32>
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG:   %[[C15:.*]] = arith.constant 15 : index
+//   CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : index
+//       CHECK:   %[[RESULT:.*]] = scf.for {{.*}} = %[[C0]] to %[[C15]] step %[[C2]]
+//       CHECK:     scf.for {{.*}} = %[[C0]] to %[[C16]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
+//       CHECK:       %[[SWAP_RESULT:.*]] = scf.if
+//       CHECK:         tensor.generate
+//       CHECK:       else
+//       CHECK:         %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:         %[[PAD:.*]] = tensor.pad %[[SLICE]]
+//       CHECK:       %[[COPY:.*]] = linalg.copy ins(%[[SWAP_RESULT:.*]]
+//       CHECK:       tensor.insert_slice %[[COPY]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:   return %[[RESULT]]
+
+func.func @fuse_static_pad_tensor_3_4(%input_tensor: tensor<7x9xf32>,
+                        %pad_value: f32) -> tensor<15x16xf32> {
+  %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<7x9xf32> to tensor<15x16xf32>
+  %empty = tensor.empty() : tensor<15x16xf32>
+  %1 = linalg.copy ins(%0 : tensor<15x16xf32>) outs(%empty : tensor<15x16xf32>) -> tensor<15x16xf32>
+  return %1 : tensor<15x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %copy = transform.structured.match ops{["linalg.copy"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %copy [2, 3]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
   }
 }
 
@@ -127,8 +168,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:     else
 //       CHECK:       %[[SLICE:.*]] = tensor.extract_slice %[[IN]][0, {{.*}}] [7, {{.*}}] [1, 1]
 //       CHECK:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[5, {{.*}}]
-//       CHECK:     %[[CAST_SWAP_RESULT:.*]] = tensor.cast %[[SWAP_RESULT]] : tensor<?x?xf32> to tensor<15x?xf32>
-//       CHECK:     tensor.insert_slice %[[CAST_SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [15, {{.*}}] [1, 1]
+//       CHECK:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [15, {{.*}}] [1, 1]
 //       CHECK:   return %[[RESULT]]
 
 func.func @static_pad_tensor_0_3(%input_tensor: tensor<7x9xf32>,
@@ -143,7 +183,7 @@ func.func @static_pad_tensor_0_3(%input_tensor: tensor<7x9xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loop = transform.structured.tile_using_for %0 [0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %1, %loop = transform.structured.tile_using_for %0 tile_sizes [0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -158,15 +198,12 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C15]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
 //       CHECK:     %[[R2:.*]] = scf.if
 //       CHECK:       %[[GEN:.*]] = tensor.generate
-//       CHECK:       %[[cast_0:.*]] = tensor.cast %[[GEN]] : tensor<14x3xf32> to tensor<?x3xf32>
-//       CHECK:       scf.yield %[[cast_0]] : tensor<?x3xf32>
+//       CHECK:       scf.yield %[[GEN]] : tensor<14x3xf32>
 //       CHECK:     else
 //       CHECK:       %[[SLICE:.*]] = tensor.extract_slice %arg0[0, %{{.*}}] [7, %{{.*}}] [1, 1] : tensor<7x9xf32> to tensor<7x?xf32>
 //       CHECK:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[0, 0] high[7, %{{.*}}]
-//       CHECK:       %[[cast_1:.*]] = tensor.cast %[[PAD]] : tensor<14x?xf32> to tensor<?x3xf32>
-//       CHECK:       scf.yield %[[cast_1]] : tensor<?x3xf32>
-//       CHECK:     %[[cast:.*]] = tensor.cast %[[R2]] : tensor<?x3xf32> to tensor<14x3xf32>
-//       CHECK:     %[[R3:.*]] = tensor.insert_slice %[[cast]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
+//       CHECK:       scf.yield %[[PAD]] : tensor<14x3xf32>
+//       CHECK:     %[[R3:.*]] = tensor.insert_slice %[[R2]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
 //       CHECK:     scf.yield %[[R3]] : tensor<14x15xf32>
 //       CHECK:   return %[[RESULT]] : tensor<14x15xf32>
 
@@ -183,7 +220,7 @@ func.func @static_pad_tile_evenly_0_3(%input_tensor: tensor<7x9xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loop = transform.structured.tile_using_for %0 [0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %1, %loop = transform.structured.tile_using_for %0 tile_sizes [0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -221,7 +258,7 @@ func.func @NC_to_NCnc(%arg0: tensor<128x256xf32>, %arg1: tensor<4x8x32x32xf32>) 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -251,7 +288,7 @@ func.func @KC_to_CKkc(%arg0: tensor<128x256xf32>, %arg1: tensor<32x4x32x8xf32>) 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -288,7 +325,7 @@ func.func @pad_and_pack_static(%input: tensor<13x15xf32>, %output: tensor<2x8x8x
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -312,8 +349,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG:       %[[OUT_D0:.*]] = tensor.dim %[[OUT]], %[[C0]] : tensor<?x?x8x2xf32>
 // CHECK-DAG:       %[[OUT_D1:.*]] = tensor.dim %[[OUT]], %[[C1]] : tensor<?x?x8x2xf32>
 // CHECK:           %[[RES0:.*]] = scf.for %[[I:.*]] = %[[C0]] to %[[OUT_D0]] step %[[C2]] iter_args(%[[ITER0:.*]] = %[[OUT]]) -> (tensor<?x?x8x2xf32>) {
-// CHECK-DAG:         %[[OUT_I_SZ:.*]] = affine.min #[[MAP0]](%[[I]])[%[[OUT_D0]]]
 // CHECK:             %[[RES1:.*]] = scf.for %[[J:.*]] = %[[C0]] to %[[OUT_D1]] step %[[C4]] iter_args(%[[ITER1:.*]] = %[[ITER0]]) -> (tensor<?x?x8x2xf32>) {
+// CHECK-DAG:           %[[OUT_I_SZ:.*]] = affine.min #[[MAP0]](%[[I]])[%[[OUT_D0]]]
 // CHECK-DAG:           %[[OUT_J_SZ:.*]] = affine.min #[[MAP1]](%[[J]])[%[[OUT_D1]]]
 // CHECK-DAG:           %[[IN_I:.*]] = affine.apply #[[MAP2]](%[[I]])
 // CHECK-DAG:           %[[IN_I_SZ:.*]] = affine.min #[[MAP3]]
@@ -339,7 +376,7 @@ func.func @pad_and_pack_partially_dynamic(%input: tensor<?x?xf32>, %output: tens
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -364,11 +401,11 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG:       %[[OUT_D0:.*]] = tensor.dim %[[OUT]], %[[C0]] : tensor<?x?x?x?xf32>
 // CHECK-DAG:       %[[OUT_D1:.*]] = tensor.dim %[[OUT]], %[[C1]] : tensor<?x?x?x?xf32>
 // CHECK:           %[[RES0:.*]] = scf.for %[[I:.*]] = %[[C0]] to %[[OUT_D0]] step %[[C2]] iter_args(%[[ITER0:.*]] = %[[OUT]]) -> (tensor<?x?x?x?xf32>) {
-// CHECK:             %[[OUT_I_SZ:.*]] = affine.min #[[MAP0]](%[[I]])[%[[OUT_D0]]]
 // CHECK:             %[[RES1:.*]] = scf.for %[[J:.*]] = %[[C0]] to %[[OUT_D1]] step %[[C4]] iter_args(%[[ITER1:.*]] = %[[ITER0]]) -> (tensor<?x?x?x?xf32>) {
-// CHECK:               %[[OUT_J_SZ:.*]] = affine.min #[[MAP1]](%[[J]])[%[[OUT_D1]]]
-// CHECK:               %[[IN_D0:.*]] = tensor.dim %[[IN]], %[[C0]]
-// CHECK:               %[[IN_D1:.*]] = tensor.dim %[[IN]], %[[C1]]
+// CHECK-DAG:           %[[OUT_I_SZ:.*]] = affine.min #[[MAP0]](%[[I]])[%[[OUT_D0]]]
+// CHECK-DAG:           %[[OUT_J_SZ:.*]] = affine.min #[[MAP1]](%[[J]])[%[[OUT_D1]]]
+// CHECK-DAG:           %[[IN_D0:.*]] = tensor.dim %[[IN]], %[[C0]]
+// CHECK-DAG:           %[[IN_D1:.*]] = tensor.dim %[[IN]], %[[C1]]
 // CHECK:               %[[IN_I:.*]] = affine.apply #[[MAP2]](%[[I]])[%[[TILE_0]]]
 // CHECK:               %[[IN_I_SZ:.*]] = affine.min #[[MAP3]](%[[OUT_I_SZ]], %[[I]])[%[[TILE_0]], %[[IN_D0]]]
 // CHECK:               %[[IN_J:.*]] = affine.apply #[[MAP2]](%[[J]])[%[[TILE_1]]]
@@ -395,7 +432,7 @@ func.func @pad_and_pack_fully_dynamic(%source: tensor<?x?xf32>, %dest: tensor<?x
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -444,7 +481,7 @@ func.func @NCnc_to_NC(%source: tensor<8x8x32x16xf32>, %dest: tensor<256x128xf32>
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -492,7 +529,7 @@ func.func @CKkc_to_KC(%source: tensor<32x4x32x8xf32>, %dest: tensor<128x256xf32>
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -530,7 +567,7 @@ func.func @perfect_CKkc_to_KC(%source: tensor<32x4x2x4xf32>, %dest: tensor<8x128
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -550,8 +587,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG:     %[[DIM_0:.+]] = tensor.dim %[[OUT]], %[[C0]]
 // CHECK-DAG:     %[[DIM_1:.+]] = tensor.dim %[[OUT]], %[[C1]]
 // CHECK:         %{{.+}} = scf.for %[[K:.+]] = %[[C0]] to %[[DIM_0]] step %[[C2]]
-// CHECK-DAG:       %[[OUT_K_SZ:.+]] = affine.min #[[MAP0]](%[[K]])[%[[DIM_0]]]
 // CHECK:           %{{.+}} = scf.for %[[C:.+]] = %[[C0]] to %[[DIM_1]] step %[[C4]]
+// CHECK-DAG:         %[[OUT_K_SZ:.+]] = affine.min #[[MAP0]](%[[K]])[%[[DIM_0]]]
 // CHECK-DAG:         %[[OUT_C_SZ:.+]] = affine.min #[[MAP1]](%[[C]])[%[[DIM_1]]]
 // CHECK-DAG:         %[[IN_K:.+]] = affine.apply #[[MAP2]](%[[K]])
 // CHECK-DAG:         %[[IN_C:.+]] = affine.apply #[[MAP2]](%[[C]])
@@ -574,7 +611,7 @@ func.func @dynamic_perfect_CKkc_to_KC(%source: tensor<?x?x2x2xf32>, %dest: tenso
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -611,7 +648,7 @@ func.func @perfect_NKPQk_to_NPQK(%source: tensor<1x4x6x6x2xf32>, %dest: tensor<1
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:4 = transform.structured.tile_using_for %0 [1, 1, 1, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:4 = transform.structured.tile_using_for %0 tile_sizes [1, 1, 1, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -639,7 +676,7 @@ func.func @fully_dynamic_unpack(%source: tensor<?x?x?x?xf32>, %dest: tensor<?x?x
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [4, 8] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [4, 8] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -675,7 +712,7 @@ func.func @perfect_NPQK_to_NKPQk(%source: tensor<1x6x6x8xf32>, %dest: tensor<1x4
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:4 = transform.structured.tile_using_for %0 [1, 1, 1, 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:4 = transform.structured.tile_using_for %0 tile_sizes [1, 1, 1, 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }

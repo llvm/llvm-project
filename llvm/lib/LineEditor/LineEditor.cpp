@@ -25,7 +25,7 @@ std::string LineEditor::getDefaultHistoryPath(StringRef ProgName) {
   SmallString<32> Path;
   if (sys::path::home_directory(Path)) {
     sys::path::append(Path, "." + ProgName + "-history");
-    return std::string(Path.str());
+    return std::string(Path);
   }
   return std::string();
 }

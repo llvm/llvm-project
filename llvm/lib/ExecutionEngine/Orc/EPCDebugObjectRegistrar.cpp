@@ -22,7 +22,7 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   auto &EPC = ES.getExecutorProcessControl();
 
   if (!RegistrationFunctionDylib) {
-    if (auto D = EPC.loadDylib(nullptr))
+    if (auto D = EPC.getDylibMgr().loadDylib(nullptr))
       RegistrationFunctionDylib = *D;
     else
       return D.takeError();
@@ -36,8 +36,8 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   SymbolLookupSet RegistrationSymbols;
   RegistrationSymbols.add(RegisterFn);
 
-  auto Result =
-      EPC.lookupSymbols({{*RegistrationFunctionDylib, RegistrationSymbols}});
+  auto Result = EPC.getDylibMgr().lookupSymbols(
+      {{*RegistrationFunctionDylib, RegistrationSymbols}});
   if (!Result)
     return Result.takeError();
 
@@ -45,7 +45,8 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   assert((*Result)[0].size() == 1 &&
          "Unexpected number of addresses in result");
 
-  return std::make_unique<EPCDebugObjectRegistrar>(ES, (*Result)[0][0]);
+  ExecutorAddr RegisterAddr = (*Result)[0][0].getAddress();
+  return std::make_unique<EPCDebugObjectRegistrar>(ES, RegisterAddr);
 }
 
 Error EPCDebugObjectRegistrar::registerDebugObject(ExecutorAddrRange TargetMem,

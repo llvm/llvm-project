@@ -41,6 +41,15 @@ define double @cos_d(double %a) {
   ret double %1
 }
 
+declare double     @llvm.tan.f64(double %Val)
+define double @tan_d(double %a) {
+; CHECK-LABEL: tan_d:
+; SOFT: {{(bl|b)}} tan
+; HARD: b tan
+  %1 = call double @llvm.tan.f64(double %a)
+  ret double %1
+}
+
 declare double     @llvm.pow.f64(double %Val, double %power)
 define double @pow_d(double %a, double %b) {
 ; CHECK-LABEL: pow_d:

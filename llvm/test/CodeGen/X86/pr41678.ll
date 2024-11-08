@@ -20,3 +20,22 @@ entry:
   store i16 %0, ptr %b, align 2
   ret void
 }
+
+define void @b() {
+; CHECK-LABEL: b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subl $2, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 6
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    # kill: def $k0 killed $k6
+; CHECK-NEXT:    kmovw %k6, (%esp)
+; CHECK-NEXT:    addl $2, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-NEXT:    retl
+entry:
+  %b = alloca <16 x i1>, align 2
+  %0 = call <16 x i1> asm "", "={k6},~{dirflag},~{fpsr},~{flags}"() #1
+  store <16 x i1> %0, ptr %b, align 2
+  ret void
+}

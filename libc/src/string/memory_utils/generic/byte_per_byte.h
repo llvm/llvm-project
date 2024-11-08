@@ -12,13 +12,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 
-#include "src/__support/macros/config.h"       // LIBC_INLINE
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/utils.h"     // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_byte_per_byte(Ptr dst, CPtr src, size_t count,
@@ -56,8 +56,8 @@ inline_bcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
   LIBC_LOOP_NOUNROLL
   for (; offset < count; ++offset)
     if (p1[offset] != p2[offset])
-      return BcmpReturnType::NONZERO();
-  return BcmpReturnType::ZERO();
+      return BcmpReturnType::nonzero();
+  return BcmpReturnType::zero();
 }
 
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
@@ -70,9 +70,9 @@ inline_memcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
     if (diff)
       return diff;
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H

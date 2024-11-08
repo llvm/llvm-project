@@ -36,9 +36,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
-; CHECK: @[[_ZTI1X:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant { ptr, ptr }, align 8
-; CHECK: @[[_ZTI1Y:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant { ptr, ptr, ptr }, align 8
+; CHECK: @G = external global i8
+; CHECK: @_ZTI1X = external dso_local constant { ptr, ptr }, align 8
+; CHECK: @_ZTI1Y = external dso_local constant { ptr, ptr, ptr }, align 8
 ;.
 define i32 @sink_r0(i32 %r) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
@@ -483,7 +483,7 @@ define ptr @rt0(ptr %a) #0 {
 ; TUNIT-LABEL: define {{[^@]+}}@rt0
 ; TUNIT-SAME: (ptr nofree noundef nonnull readonly returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @rt0(ptr nofree noundef nonnull readonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[A]]) #[[ATTR9:[0-9]+]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @rt0(ptr nofree noundef nonnull readonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[A]]) #[[ATTR10:[0-9]+]]
 ; TUNIT-NEXT:    ret ptr [[A]]
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(argmem: read) uwtable
@@ -667,7 +667,7 @@ define ptr @calls_unknown_fn(ptr %r) #0 {
 ; TUNIT: Function Attrs: noinline nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@calls_unknown_fn
 ; TUNIT-SAME: (ptr nofree readnone returned "no-capture-maybe-returned" [[R:%.*]]) #[[ATTR5:[0-9]+]] {
-; TUNIT-NEXT:    tail call void @unknown_fn(ptr noundef nonnull @calls_unknown_fn) #[[ATTR10:[0-9]+]]
+; TUNIT-NEXT:    tail call void @unknown_fn(ptr noundef nonnull @calls_unknown_fn) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    ret ptr [[R]]
 ;
 ; CGSCC: Function Attrs: noinline nounwind uwtable
@@ -716,7 +716,7 @@ define ptr @calls_maybe_redefined_fn(ptr %r) #0 {
 ; TUNIT-LABEL: define {{[^@]+}}@calls_maybe_redefined_fn
 ; TUNIT-SAME: (ptr returned [[R:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @maybe_redefined_fn(ptr [[R]]) #[[ATTR10]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @maybe_redefined_fn(ptr [[R]]) #[[ATTR11]]
 ; TUNIT-NEXT:    ret ptr [[R]]
 ;
 ; CGSCC: Function Attrs: noinline nounwind uwtable
@@ -765,7 +765,7 @@ define ptr @calls_maybe_redefined_fn2(ptr %r) #0 {
 ; TUNIT-LABEL: define {{[^@]+}}@calls_maybe_redefined_fn2
 ; TUNIT-SAME: (ptr [[R:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @maybe_redefined_fn2(ptr [[R]]) #[[ATTR10]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @maybe_redefined_fn2(ptr [[R]]) #[[ATTR11]]
 ; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC: Function Attrs: noinline nounwind uwtable
@@ -1451,6 +1451,103 @@ declare dso_local ptr @__dynamic_cast(ptr, ptr, ptr, i64)
 
 ; UTC_ARGS: --enable
 
+; This does not return %arg, @recGood does.
+
+define internal i32 @recBad(i1 %c, i32 %arg) {
+; TUNIT: Function Attrs: nofree nosync nounwind memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@recBad
+; TUNIT-SAME: (i1 noundef [[C:%.*]], i32 [[ARG:%.*]]) #[[ATTR8]] {
+; TUNIT-NEXT:    [[ADD:%.*]] = add i32 [[ARG]], 1
+; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; TUNIT:       t:
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @recBad(i1 noundef false, i32 [[ADD]]) #[[ATTR8]]
+; TUNIT-NEXT:    ret i32 [[ADD]]
+; TUNIT:       f:
+; TUNIT-NEXT:    ret i32 [[ARG]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@recBad
+; CGSCC-SAME: (i1 noundef [[C:%.*]], i32 [[ARG:%.*]]) #[[ATTR7]] {
+; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[ARG]], 1
+; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CGSCC:       t:
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @recBad(i1 noundef false, i32 [[ADD]]) #[[ATTR7]]
+; CGSCC-NEXT:    ret i32 [[ADD]]
+; CGSCC:       f:
+; CGSCC-NEXT:    ret i32 [[ARG]]
+;
+  %add = add i32 %arg, 1
+  br i1 %c, label %t, label %f
+t:
+  %r = call i32 @recBad(i1 false, i32 %add)
+  ret i32 %r
+f:
+  ret i32 %arg
+}
+
+define i32 @recBadCaller(i1 %cQ, i32 %argQ) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@recBadCaller
+; TUNIT-SAME: (i1 [[CQ:%.*]], i32 [[ARGQ:%.*]]) #[[ATTR9:[0-9]+]] {
+; TUNIT-NEXT:    [[RQ:%.*]] = call i32 @recBad(i1 noundef [[CQ]], i32 [[ARGQ]]) #[[ATTR8]]
+; TUNIT-NEXT:    ret i32 [[RQ]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@recBadCaller
+; CGSCC-SAME: (i1 noundef [[CQ:%.*]], i32 [[ARGQ:%.*]]) #[[ATTR7]] {
+; CGSCC-NEXT:    [[RQ:%.*]] = call i32 @recBad(i1 noundef [[CQ]], i32 [[ARGQ]]) #[[ATTR7]]
+; CGSCC-NEXT:    ret i32 [[RQ]]
+;
+  %rQ = call i32 @recBad(i1 %cQ, i32 %argQ)
+  ret i32 %rQ
+}
+
+define internal i32 @recGood(i1 %c, i32 %arg) {
+; TUNIT: Function Attrs: nofree nosync nounwind memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@recGood
+; TUNIT-SAME: (i1 noundef [[C:%.*]], i32 returned [[ARG:%.*]]) #[[ATTR8]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; TUNIT:       t:
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @recGood(i1 noundef false, i32 [[ARG]]) #[[ATTR8]]
+; TUNIT-NEXT:    ret i32 [[ARG]]
+; TUNIT:       f:
+; TUNIT-NEXT:    ret i32 [[ARG]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@recGood
+; CGSCC-SAME: (i1 noundef [[C:%.*]], i32 returned [[ARG:%.*]]) #[[ATTR7]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CGSCC:       t:
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @recGood(i1 noundef false, i32 [[ARG]]) #[[ATTR7]]
+; CGSCC-NEXT:    ret i32 [[ARG]]
+; CGSCC:       f:
+; CGSCC-NEXT:    ret i32 [[ARG]]
+;
+  br i1 %c, label %t, label %f
+t:
+  %r = call i32 @recGood(i1 false, i32 %arg)
+  ret i32 %r
+f:
+  ret i32 %arg
+}
+
+define i32 @recGoodCaller(i1 %cQ, i32 %argQ) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@recGoodCaller
+; TUNIT-SAME: (i1 [[CQ:%.*]], i32 returned [[ARGQ:%.*]]) #[[ATTR9]] {
+; TUNIT-NEXT:    [[RQ:%.*]] = call i32 @recGood(i1 noundef [[CQ]], i32 [[ARGQ]]) #[[ATTR8]]
+; TUNIT-NEXT:    ret i32 [[ARGQ]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@recGoodCaller
+; CGSCC-SAME: (i1 noundef [[CQ:%.*]], i32 [[ARGQ:%.*]]) #[[ATTR7]] {
+; CGSCC-NEXT:    [[RQ:%.*]] = call i32 @recGood(i1 noundef [[CQ]], i32 [[ARGQ]]) #[[ATTR7]]
+; CGSCC-NEXT:    ret i32 [[RQ]]
+;
+  %rQ = call i32 @recGood(i1 %cQ, i32 %argQ)
+  ret i32 %rQ
+}
+
 attributes #0 = { noinline nounwind uwtable }
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
@@ -1462,9 +1559,10 @@ attributes #0 = { noinline nounwind uwtable }
 ; TUNIT: attributes #[[ATTR6]] = { noreturn }
 ; TUNIT: attributes #[[ATTR7:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind memory(none) }
-; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind memory(read) }
-; TUNIT: attributes #[[ATTR10]] = { nounwind }
-; TUNIT: attributes #[[ATTR11:[0-9]+]] = { nounwind memory(none) }
+; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind memory(none) }
+; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind memory(read) }
+; TUNIT: attributes #[[ATTR11]] = { nounwind }
+; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nounwind memory(none) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { nofree noinline nosync nounwind memory(none) uwtable }

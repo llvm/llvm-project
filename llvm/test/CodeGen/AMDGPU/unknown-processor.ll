@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
+; RUN: llc -mtriple=r600-- -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
 target datalayout = "A5"
 
 ; Should not crash when the processor is not recognized and the

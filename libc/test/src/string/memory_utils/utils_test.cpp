@@ -7,70 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
-
-TEST(LlvmLibcUtilsTest, IsPowerOfTwoOrZero) {
-  static const cpp::array<bool, 65> kExpectedValues{
-      1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
-      1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
-      1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 48-63
-      1                                               // 64
-  };
-  for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(is_power2_or_zero(i), kExpectedValues[i]);
-}
-
-TEST(LlvmLibcUtilsTest, IsPowerOfTwo) {
-  static const cpp::array<bool, 65> kExpectedValues{
-      0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
-      1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
-      1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 48-63
-      1                                               // 64
-  };
-  for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(is_power2(i), kExpectedValues[i]);
-}
-
-TEST(LlvmLibcUtilsTest, Log2) {
-  static const cpp::array<size_t, 65> kExpectedValues{
-      0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // 0-15
-      4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 16-31
-      5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 32-47
-      5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 48-63
-      6                                               // 64
-  };
-  for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(log2s(i), kExpectedValues[i]);
-}
-
-TEST(LlvmLibcUtilsTest, LEPowerOf2) {
-  static const cpp::array<size_t, 65> kExpectedValues{
-      0,  1,  2,  2,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,  8,  // 0-15
-      16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, // 16-31
-      32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 32-47
-      32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 48-63
-      64                                                              // 64
-  };
-  for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(le_power2(i), kExpectedValues[i]);
-}
-
-TEST(LlvmLibcUtilsTest, GEPowerOf2) {
-  static const cpp::array<size_t, 66> kExpectedValues{
-      0,  1,  2,  4,  4,  8,  8,  8,  8,  16, 16, 16, 16, 16, 16, 16, // 0-15
-      16, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 16-31
-      32, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, // 32-47
-      64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, // 48-63
-      64, 128                                                         // 64-65
-  };
-  for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(ge_power2(i), kExpectedValues[i]);
-}
+namespace LIBC_NAMESPACE_DECL {
 
 using UINT = uintptr_t;
 
@@ -197,4 +138,4 @@ TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

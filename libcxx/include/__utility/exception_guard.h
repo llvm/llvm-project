@@ -11,7 +11,7 @@
 
 #include <__assert>
 #include <__config>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 
@@ -44,7 +44,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // less common, especially one that tries to catch an exception through -fno-exceptions code.
 //
 // __exception_guard can help greatly simplify code that would normally be cluttered by
-// `#if _LIBCPP_HAS_NO_EXCEPTIONS`. For example:
+// `#if _LIBCPP_HAS_EXCEPTIONS`. For example:
 //
 //    template <class Iterator, class Size, class OutputIterator>
 //    Iterator uninitialized_copy_n(Iterator iter, Size n, OutputIterator out) {
@@ -96,8 +96,8 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_exceptions);
 template <class _Rollback>
 struct __exception_guard_noexceptions {
   __exception_guard_noexceptions() = delete;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-      _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG
   __exception_guard_noexceptions(__exception_guard_noexceptions&& __other)
@@ -115,7 +115,7 @@ struct __exception_guard_noexceptions {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG ~__exception_guard_noexceptions() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__completed_, "__exception_guard not completed with exceptions disabled");
+    _LIBCPP_ASSERT_INTERNAL(__completed_, "__exception_guard not completed with exceptions disabled");
   }
 
 private:
@@ -124,7 +124,7 @@ private:
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_noexceptions);
 
-#ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+#if !_LIBCPP_HAS_EXCEPTIONS
 template <class _Rollback>
 using __exception_guard = __exception_guard_noexceptions<_Rollback>;
 #else
@@ -135,6 +135,12 @@ using __exception_guard = __exception_guard_exceptions<_Rollback>;
 template <class _Rollback>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exception_guard(_Rollback __rollback) {
   return __exception_guard<_Rollback>(std::move(__rollback));
+}
+
+template <class _Rollback>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __exception_guard_exceptions<_Rollback>
+__make_scope_guard(_Rollback __rollback) {
+  return __exception_guard_exceptions<_Rollback>(std::move(__rollback));
 }
 
 _LIBCPP_END_NAMESPACE_STD

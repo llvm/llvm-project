@@ -1,10 +1,10 @@
-# RUN: llc -march=amdgcn -mcpu=tonga %s -start-before detect-dead-lanes -stop-before machine-scheduler -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=tonga %s -start-before detect-dead-lanes -stop-before machine-scheduler -verify-machineinstrs -early-live-intervals -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=tonga %s -start-before detect-dead-lanes -stop-before machine-scheduler -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=tonga %s -start-before detect-dead-lanes -stop-before machine-scheduler -verify-machineinstrs -early-live-intervals -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: dead_lane
 # GCN:      bb.0:
-# GCN-NEXT: undef %3.sub0:vreg_64 = nofpexcept V_MAC_F32_e32 undef %1:vgpr_32, undef %1:vgpr_32, undef %3.sub0, implicit $mode, implicit $exec
-# GCN-NEXT: FLAT_STORE_DWORD undef %4:vreg_64, %3.sub0,
+# GCN-NEXT: %5:vgpr_32 = nofpexcept V_MAC_F32_e32 undef %1:vgpr_32, undef %1:vgpr_32, undef %5, implicit $mode, implicit $exec
+# GCN-NEXT: FLAT_STORE_DWORD undef %4:vreg_64, %5,
 ---
 name:            dead_lane
 tracksRegLiveness: true

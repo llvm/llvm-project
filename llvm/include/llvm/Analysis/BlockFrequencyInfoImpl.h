@@ -539,9 +539,6 @@ public:
   }
 };
 
-void printBlockFreqImpl(raw_ostream &OS, BlockFrequency EntryFreq,
-                        BlockFrequency Freq);
-
 namespace bfi_detail {
 
 template <class BlockT> struct TypeMap {};
@@ -1532,8 +1529,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   SmallPtrSet<const BlockT *, 8> InverseReachable;
   for (const BlockT &BB : *F) {
     // An exit block is a block without any successors
-    bool HasSucc = GraphTraits<const BlockT *>::child_begin(&BB) !=
-                   GraphTraits<const BlockT *>::child_end(&BB);
+    bool HasSucc = !llvm::children<const BlockT *>(&BB).empty();
     if (!HasSucc && Reachable.count(&BB)) {
       Queue.push(&BB);
       InverseReachable.insert(&BB);
@@ -1542,7 +1538,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
-    for (const BlockT *DstBB : children<Inverse<const BlockT *>>(SrcBB)) {
+    for (const BlockT *DstBB : inverse_children<const BlockT *>(SrcBB)) {
       auto EP = BPI->getEdgeProbability(DstBB, SrcBB);
       if (EP.isZero())
         continue;

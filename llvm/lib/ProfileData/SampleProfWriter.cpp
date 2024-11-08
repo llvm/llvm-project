@@ -624,6 +624,9 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     LineCount++;
   }
 
+  if (Indent == 0 && MarkFlatProfiles && S.getCallsiteSamples().size() == 0)
+    OS << " !Flat\n";
+
   return sampleprof_error::success;
 }
 
@@ -811,8 +814,7 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
   encodeULEB128(Summary->getMaxFunctionCount(), OS);
   encodeULEB128(Summary->getNumCounts(), OS);
   encodeULEB128(Summary->getNumFunctions(), OS);
-  const std::vector<ProfileSummaryEntry> &Entries =
-      Summary->getDetailedSummary();
+  ArrayRef<ProfileSummaryEntry> Entries = Summary->getDetailedSummary();
   encodeULEB128(Entries.size(), OS);
   for (auto Entry : Entries) {
     encodeULEB128(Entry.Cutoff, OS);

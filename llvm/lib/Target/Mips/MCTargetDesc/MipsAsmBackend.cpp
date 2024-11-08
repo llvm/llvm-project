@@ -17,6 +17,7 @@
 #include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -544,7 +545,8 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
-                                           const MCValue &Target) {
+                                           const MCValue &Target,
+                                           const MCSubtargetInfo *STI) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
   const unsigned FixupKind = Fixup.getKind();

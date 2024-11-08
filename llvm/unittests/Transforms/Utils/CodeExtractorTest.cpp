@@ -556,11 +556,58 @@ TEST(CodeExtractor, PartialAggregateArgs) {
   EXPECT_FALSE(verifyFunction(*Func));
 }
 
+/// Regression test to ensure we don't crash trying to set the name of the ptr
+/// argument
+TEST(CodeExtractor, PartialAggregateArgs2) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    declare void @usei(i32)
+    declare void @usep(ptr)
+
+    define void @foo(i32 %a, i32 %b, ptr %p) {
+    entry:
+      br label %extract
+
+    extract:
+      call void @usei(i32 %a)
+      call void @usei(i32 %b)
+      call void @usep(ptr %p)
+      br label %exit
+
+    exit:
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  // Create the CodeExtractor with arguments aggregation enabled.
+  CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
+                   /* AggregateArgs */ true);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
+  CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+  CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+  // Exclude the last input from the argument aggregate.
+  CE.excludeArgFromAggregate(Inputs[2]);
+
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
 TEST(CodeExtractor, OpenMPAggregateArgs) {
   LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"ir(
-    target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
+    target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
     target triple = "amdgcn-amd-amdhsa"
 
     define void @foo(ptr %0) {

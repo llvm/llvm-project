@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc-ibm-aix-xcoff %s -filetype=obj -o %t
+; RUN: llc -mcpu=ppc -mtriple=powerpc-ibm-aix-xcoff %s -filetype=obj -o %t
 ; RUN: llvm-objdump %t -d --symbolize-operands --no-show-raw-insn \
 ; RUN:   | FileCheck %s
 
@@ -21,7 +21,7 @@
 ; CHECK-NEXT:        68:      	cmplwi	3, 11
 ; CHECK-NEXT:        6c:      	bt	0, 0x60 <L2>
 ; CHECK-NEXT:        70:        mr      31, 3
-; CHECK-NEXT:        74:      	bl 0x0 <.internal>
+; CHECK-NEXT:        74:      	bl 0x0 <.extern>
 ; CHECK-NEXT:        78:      	nop
 ; CHECK-NEXT:        7c:        mr      3, 31
 ; CHECK-NEXT:        80:      	b 0x60 <L2>

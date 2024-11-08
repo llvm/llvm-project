@@ -27,29 +27,47 @@ define void @vectorized(ptr noalias nocapture %A, ptr noalias nocapture readonly
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4, !llvm.access.group [[ACC_GRP0:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP4]], align 4, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 4
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 12
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !llvm.access.group [[ACC_GRP0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP11]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 4
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 8
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 12
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP16]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP17]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP18]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP19]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP20:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
+; CHECK-NEXT:    [[TMP23:%.*]] = fadd fast <4 x float> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    store <4 x float> [[TMP20]], ptr [[TMP16]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    store <4 x float> [[TMP21]], ptr [[TMP17]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    store <4 x float> [[TMP22]], ptr [[TMP18]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    store <4 x float> [[TMP23]], ptr [[TMP19]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP25]], [[TMP26]]
 ; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX2]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 20
@@ -96,7 +114,7 @@ define void @vectorized1(ptr noalias nocapture %A, ptr noalias nocapture readonl
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], <i64 19, i64 19, i64 19, i64 19, i64 19, i64 19, i64 19, i64 19>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], splat (i64 19)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[TMP3]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison), !llvm.access.group [[ACC_GRP6:![0-9]+]]

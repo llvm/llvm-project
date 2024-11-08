@@ -141,15 +141,15 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   StringRef MappedPathStr = Path.toStringRef(MappedPathStorage);
 
   // If use system headers while cross-compiling, emit the warning.
-  if (HasSysroot && (MappedPathStr.startswith("/usr/include") ||
-                     MappedPathStr.startswith("/usr/local/include"))) {
+  if (HasSysroot && (MappedPathStr.starts_with("/usr/include") ||
+                     MappedPathStr.starts_with("/usr/local/include"))) {
     Headers.getDiags().Report(diag::warn_poison_system_directories)
         << MappedPathStr;
   }
 
   // Compute the DirectoryLookup type.
   SrcMgr::CharacteristicKind Type;
-  if (Group == Quoted || Group == Angled || Group == IndexHeaderMap) {
+  if (Group == Quoted || Group == Angled) {
     Type = SrcMgr::C_User;
   } else if (Group == ExternCSystem) {
     Type = SrcMgr::C_ExternCSystem;
@@ -170,9 +170,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
     if (auto FE = FM.getOptionalFileRef(MappedPathStr)) {
       if (const HeaderMap *HM = Headers.CreateHeaderMap(*FE)) {
         // It is a headermap, add it to the search path.
-        IncludePath.emplace_back(
-            Group, DirectoryLookup(HM, Type, Group == IndexHeaderMap),
-            UserEntryIdx);
+        IncludePath.emplace_back(Group, DirectoryLookup(HM, Type),
+                                 UserEntryIdx);
         return true;
       }
     }
@@ -488,7 +487,7 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   unsigned NumQuoted = SearchList.size();
 
   for (auto &Include : IncludePath)
-    if (Include.Group == Angled || Include.Group == IndexHeaderMap)
+    if (Include.Group == Angled)
       SearchList.push_back(Include);
 
   RemoveDuplicates(SearchList, NumQuoted, Verbose);
@@ -513,9 +512,8 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   unsigned NonSystemRemoved = RemoveDuplicates(SearchList, NumQuoted, Verbose);
   NumAngled -= NonSystemRemoved;
 
-  bool DontSearchCurDir = false;  // TODO: set to true if -I- is set?
   Headers.SetSearchPaths(extractLookups(SearchList), NumQuoted, NumAngled,
-                         DontSearchCurDir, mapToUserEntries(SearchList));
+                         mapToUserEntries(SearchList));
 
   Headers.SetSystemHeaderPrefixes(SystemHeaderPrefixes);
 

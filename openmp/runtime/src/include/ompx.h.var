@@ -9,6 +9,14 @@
 #ifndef __OMPX_H
 #define __OMPX_H
 
+#ifdef __AMDGCN_WAVEFRONT_SIZE
+#define __WARP_SIZE __AMDGCN_WAVEFRONT_SIZE
+#else
+#define __WARP_SIZE 32
+#endif
+
+typedef unsigned long uint64_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,9 +58,12 @@ enum {
   ompx_dim_z = 2,
 };
 
+// TODO: The following implementation is for host fallback. We need to disable
+// generation of host fallback in kernel language mode.
+#pragma omp begin declare variant match(device = {kind(cpu)})
+
 /// ompx_{thread,block}_{id,dim}
 ///{
-#pragma omp begin declare variant match(device = {kind(cpu)})
 #define _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(NAME, VALUE)                     \
   static inline int ompx_##NAME(int Dim) { return VALUE; }
 
@@ -70,12 +81,32 @@ _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(grid_dim, 1)
   static inline RETTY ompx_##NAME(ARGS) { BODY; }
 
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block, int Ordering,
-                                      _Pragma("omp barrier"));
+                                      _Pragma("omp barrier"))
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block_acq_rel, void,
-                                      ompx_sync_block(ompx_acq_rel));
+                                      ompx_sync_block(ompx_acq_rel))
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block_divergent, int Ordering,
-                                      ompx_sync_block(Ordering));
+                                      ompx_sync_block(Ordering))
 #undef _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C
+///}
+
+static inline uint64_t ompx_ballot_sync(uint64_t mask, int pred) {
+  __builtin_trap();
+}
+
+/// ompx_shfl_down_sync_{i,f,l,d}
+///{
+#define _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL(TYPE, TY)                \
+  static inline TYPE ompx_shfl_down_sync_##TY(uint64_t mask, TYPE var,         \
+                                              unsigned delta, int width) {     \
+    __builtin_trap();                                                          \
+  }
+
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL(int, i)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL(float, f)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL(long, l)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL(double, d)
+
+#undef _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC_HOST_IMPL
 ///}
 
 #pragma omp end declare variant
@@ -85,9 +116,9 @@ _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_C(void, sync_block_divergent, int Ordering,
 #define _TGT_KERNEL_LANGUAGE_DECL_SYNC_C(RETTY, NAME, ARGS)         \
   RETTY ompx_##NAME(ARGS);
 
-_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block, int Ordering);
-_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_acq_rel, void);
-_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_divergent, int Ordering);
+_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block, int Ordering)
+_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_acq_rel, void)
+_TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_divergent, int Ordering)
 #undef _TGT_KERNEL_LANGUAGE_DECL_SYNC_C
 ///}
 
@@ -104,6 +135,22 @@ _TGT_KERNEL_LANGUAGE_DECL_GRID_C(block_dim)
 _TGT_KERNEL_LANGUAGE_DECL_GRID_C(block_id)
 _TGT_KERNEL_LANGUAGE_DECL_GRID_C(grid_dim)
 #undef _TGT_KERNEL_LANGUAGE_DECL_GRID_C
+///}
+
+uint64_t ompx_ballot_sync(uint64_t mask, int pred);
+
+/// ompx_shfl_down_sync_{i,f,l,d}
+///{
+#define _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(TYPE, TY)                          \
+  TYPE ompx_shfl_down_sync_##TY(uint64_t mask, TYPE var, unsigned delta,       \
+                                int width);
+
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(int, i)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(float, f)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(long, l)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(double, d)
+
+#undef _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC
 ///}
 
 #ifdef __cplusplus
@@ -151,10 +198,30 @@ _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(grid_dim)
   }
 
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX(void, sync_block, int Ordering = acc_rel,
-                                        Ordering);
+                                        Ordering)
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX(void, sync_block_divergent,
-                                        int Ordering = acc_rel, Ordering);
+                                        int Ordering = acc_rel, Ordering)
 #undef _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX
+///}
+
+static inline uint64_t ballot_sync(uint64_t mask, int pred) {
+  return ompx_ballot_sync(mask, pred);
+}
+
+/// shfl_down_sync
+///{
+#define _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(TYPE, TY)                          \
+  static inline TYPE shfl_down_sync(uint64_t mask, TYPE var, unsigned delta,   \
+                                    int width = __WARP_SIZE) {                 \
+    return ompx_shfl_down_sync_##TY(mask, var, delta, width);                  \
+  }
+
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(int, i)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(float, f)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(long, l)
+_TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(double, d)
+
+#undef _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC
 ///}
 
 } // namespace ompx

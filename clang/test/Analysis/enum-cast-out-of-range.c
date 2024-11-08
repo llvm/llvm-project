@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=core,alpha.cplusplus.EnumCastOutOfRange \
+// RUN:   -analyzer-checker=core,optin.core.EnumCastOutOfRange \
 // RUN:   -analyzer-output text \
 // RUN:   -verify %s
 

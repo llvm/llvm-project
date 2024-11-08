@@ -91,16 +91,16 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGC_ADDR]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[ARGC1]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP1]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP1]], i64 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 0
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP4]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds ptr, ptr [[TMP5]], i64 9
+// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP5]], i64 9
 // CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[ARRAYIDX3]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[LB_ADD_LEN]]
+// CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP6]], i64 [[LB_ADD_LEN]]
 // CHECK1-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[ARRAYIDX4]] to i64
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[ARRAYIDX2]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
@@ -130,36 +130,36 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[VLA]], i64 [[TMP20]]
 // CHECK1-NEXT:    store ptr [[_TMP5]], ptr [[TMP]], align 8
 // CHECK1-NEXT:    store ptr [[TMP21]], ptr [[_TMP5]], align 8
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_:%.*]] = getelementptr inbounds [2 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T:%.*]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 0
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_:%.*]] = getelementptr inbounds nuw [2 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T:%.*]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[ARGC1]], ptr [[TMP22]], align 8
-// CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 1
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP23]], align 8
-// CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 2
 // CHECK1-NEXT:    store i64 4, ptr [[TMP24]], align 8
-// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 3
+// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 3
 // CHECK1-NEXT:    store ptr @.red_init., ptr [[TMP25]], align 8
-// CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 4
+// CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 4
 // CHECK1-NEXT:    store ptr null, ptr [[TMP26]], align 8
-// CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 5
+// CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 5
 // CHECK1-NEXT:    store ptr @.red_comb., ptr [[TMP27]], align 8
-// CHECK1-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 6
+// CHECK1-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 6
 // CHECK1-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP28]], i8 0, i64 4, i1 false)
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_6:%.*]] = getelementptr inbounds [2 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 1
-// CHECK1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 0
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_6:%.*]] = getelementptr inbounds nuw [2 x %struct.kmp_taskred_input_t], ptr [[DOTRD_INPUT_]], i64 0, i64 1
+// CHECK1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds ptr, ptr [[TMP30]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP30]], i64 0
 // CHECK1-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[ARRAYIDX7]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[TMP31]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP31]], i64 0
 // CHECK1-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP32]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN9:%.*]] = add nsw i64 -1, [[TMP33]]
 // CHECK1-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds ptr, ptr [[TMP34]], i64 9
+// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP34]], i64 9
 // CHECK1-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[ARRAYIDX10]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[TMP35]], i64 [[LB_ADD_LEN9]]
+// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP35]], i64 [[LB_ADD_LEN9]]
 // CHECK1-NEXT:    store ptr [[VLA]], ptr [[TMP29]], align 8
-// CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 1
 // CHECK1-NEXT:    store ptr [[ARRAYIDX8]], ptr [[TMP36]], align 8
 // CHECK1-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[ARRAYIDX11]] to i64
 // CHECK1-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[ARRAYIDX8]] to i64
@@ -167,15 +167,15 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP40:%.*]] = sdiv exact i64 [[TMP39]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP41:%.*]] = add nuw i64 [[TMP40]], 1
 // CHECK1-NEXT:    [[TMP42:%.*]] = mul nuw i64 [[TMP41]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 2
 // CHECK1-NEXT:    store i64 [[TMP42]], ptr [[TMP43]], align 8
-// CHECK1-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 3
+// CHECK1-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 3
 // CHECK1-NEXT:    store ptr @.red_init..1, ptr [[TMP44]], align 8
-// CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 4
+// CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 4
 // CHECK1-NEXT:    store ptr null, ptr [[TMP45]], align 8
-// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 5
+// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 5
 // CHECK1-NEXT:    store ptr @.red_comb..2, ptr [[TMP46]], align 8
-// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 6
+// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T]], ptr [[DOTRD_INPUT_GEP_6]], i32 0, i32 6
 // CHECK1-NEXT:    store i32 1, ptr [[TMP47]], align 8
 // CHECK1-NEXT:    [[TMP48:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP49:%.*]] = load i32, ptr [[TMP48]], align 4
@@ -239,8 +239,8 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP71]], align 4
 // CHECK1-NEXT:    [[TMP73:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB4:[0-9]+]], i32 [[TMP72]], i32 2, i64 24, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l14.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP73]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -435,16 +435,16 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[ARGC1]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP3]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP3]], i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 0
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP6]]
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds ptr, ptr [[TMP7]], i64 9
+// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP7]], i64 9
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYIDX3]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 [[LB_ADD_LEN]]
+// CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 [[LB_ADD_LEN]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[ARRAYIDX4]] to i64
 // CHECK1-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[ARRAYIDX2]] to i64
 // CHECK1-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP9]], [[TMP10]]
@@ -474,36 +474,36 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[VLA]], i64 [[TMP22]]
 // CHECK1-NEXT:    store ptr [[_TMP6]], ptr [[_TMP5]], align 8
 // CHECK1-NEXT:    store ptr [[TMP23]], ptr [[_TMP6]], align 8
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_:%.*]] = getelementptr inbounds [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0:%.*]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 0
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_:%.*]] = getelementptr inbounds nuw [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0:%.*]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[ARGC1]], ptr [[TMP24]], align 8
-// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 1
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP25]], align 8
-// CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 2
 // CHECK1-NEXT:    store i64 4, ptr [[TMP26]], align 8
-// CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 3
+// CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 3
 // CHECK1-NEXT:    store ptr @.red_init..3, ptr [[TMP27]], align 8
-// CHECK1-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 4
+// CHECK1-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 4
 // CHECK1-NEXT:    store ptr null, ptr [[TMP28]], align 8
-// CHECK1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 5
+// CHECK1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 5
 // CHECK1-NEXT:    store ptr @.red_comb..4, ptr [[TMP29]], align 8
-// CHECK1-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 6
+// CHECK1-NEXT:    [[TMP30:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_]], i32 0, i32 6
 // CHECK1-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP30]], i8 0, i64 4, i1 false)
-// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_7:%.*]] = getelementptr inbounds [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_]], i64 0, i64 1
-// CHECK1-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 0
+// CHECK1-NEXT:    [[DOTRD_INPUT_GEP_7:%.*]] = getelementptr inbounds nuw [2 x %struct.kmp_taskred_input_t.0], ptr [[DOTRD_INPUT_]], i64 0, i64 1
+// CHECK1-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP32:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds ptr, ptr [[TMP32]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP32]], i64 0
 // CHECK1-NEXT:    [[TMP33:%.*]] = load ptr, ptr [[ARRAYIDX8]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i8, ptr [[TMP33]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP33]], i64 0
 // CHECK1-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[TMP35:%.*]] = sext i32 [[TMP34]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN10:%.*]] = add nsw i64 -1, [[TMP35]]
 // CHECK1-NEXT:    [[TMP36:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds ptr, ptr [[TMP36]], i64 9
+// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP36]], i64 9
 // CHECK1-NEXT:    [[TMP37:%.*]] = load ptr, ptr [[ARRAYIDX11]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i8, ptr [[TMP37]], i64 [[LB_ADD_LEN10]]
+// CHECK1-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP37]], i64 [[LB_ADD_LEN10]]
 // CHECK1-NEXT:    store ptr [[VLA]], ptr [[TMP31]], align 8
-// CHECK1-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP38:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 1
 // CHECK1-NEXT:    store ptr [[ARRAYIDX9]], ptr [[TMP38]], align 8
 // CHECK1-NEXT:    [[TMP39:%.*]] = ptrtoint ptr [[ARRAYIDX12]] to i64
 // CHECK1-NEXT:    [[TMP40:%.*]] = ptrtoint ptr [[ARRAYIDX9]] to i64
@@ -511,15 +511,15 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP42:%.*]] = sdiv exact i64 [[TMP41]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP43:%.*]] = add nuw i64 [[TMP42]], 1
 // CHECK1-NEXT:    [[TMP44:%.*]] = mul nuw i64 [[TMP43]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 2
 // CHECK1-NEXT:    store i64 [[TMP44]], ptr [[TMP45]], align 8
-// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 3
+// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 3
 // CHECK1-NEXT:    store ptr @.red_init..5, ptr [[TMP46]], align 8
-// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 4
+// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 4
 // CHECK1-NEXT:    store ptr null, ptr [[TMP47]], align 8
-// CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 5
+// CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 5
 // CHECK1-NEXT:    store ptr @.red_comb..6, ptr [[TMP48]], align 8
-// CHECK1-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 6
+// CHECK1-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_7]], i32 0, i32 6
 // CHECK1-NEXT:    store i32 1, ptr [[TMP49]], align 8
 // CHECK1-NEXT:    [[TMP50:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP51:%.*]] = load i32, ptr [[TMP50]], align 4
@@ -554,22 +554,22 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i64 [[TMP60]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i64 0, [[MUL]]
 // CHECK1-NEXT:    store i64 [[ADD]], ptr [[I]], align 8
-// CHECK1-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP61:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[DOTTASK_RED_]], ptr [[TMP61]], align 8
-// CHECK1-NEXT:    [[TMP62:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP62:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK1-NEXT:    store ptr [[ARGC1]], ptr [[TMP62]], align 8
-// CHECK1-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP63:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP64:%.*]] = load ptr, ptr [[_TMP5]], align 8
 // CHECK1-NEXT:    store ptr [[TMP64]], ptr [[TMP63]], align 8
 // CHECK1-NEXT:    [[TMP65:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP66:%.*]] = load i32, ptr [[TMP65]], align 4
 // CHECK1-NEXT:    [[TMP67:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP66]], i32 1, i64 48, i64 24, ptr @.omp_task_entry.)
-// CHECK1-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP67]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP68]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP67]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP69:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP68]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP70:%.*]] = load ptr, ptr [[TMP69]], align 8
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP70]], ptr align 8 [[AGG_CAPTURED]], i64 24, i1 false)
-// CHECK1-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP67]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP71]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP71:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP67]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP72:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP71]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP73:%.*]] = load ptr, ptr [[DOTTASK_RED_]], align 8
 // CHECK1-NEXT:    store ptr [[TMP73]], ptr [[TMP72]], align 8
 // CHECK1-NEXT:    [[TMP74:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
@@ -588,7 +588,7 @@ int main(int argc, char **argv) {
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    [[TMP78:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP78]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP79]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP79]])
 // CHECK1-NEXT:    [[TMP80:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP81:%.*]] = load i32, ptr [[TMP80]], align 4
 // CHECK1-NEXT:    call void @__kmpc_task_reduction_modifier_fini(ptr @[[GLOB1]], i32 [[TMP81]], i32 1)
@@ -603,8 +603,8 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP87:%.*]] = load i32, ptr [[TMP86]], align 4
 // CHECK1-NEXT:    [[TMP88:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB4]], i32 [[TMP87]], i32 2, i64 24, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l14.omp_outlined.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP88]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// CHECK1-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// CHECK1-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // CHECK1-NEXT:    ]
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP89:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -763,7 +763,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP2]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[TMP4]], align 8
 // CHECK1-NEXT:    ret void
@@ -787,61 +787,61 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTADDR]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
-// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META10:![0-9]+]])
-// CHECK1-NEXT:    store i32 [[TMP2]], ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !12
-// CHECK1-NEXT:    store ptr [[TMP5]], ptr [[DOTPART_ID__ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    store ptr [[TMP8]], ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    store ptr @.omp_task_privates_map., ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias !12
+// CHECK1-NEXT:    store i32 [[TMP2]], ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias [[META12:![0-9]+]]
+// CHECK1-NEXT:    store ptr [[TMP5]], ptr [[DOTPART_ID__ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    store ptr [[TMP8]], ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    store ptr @.omp_task_privates_map., ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias [[META12]]
 // CHECK1-NEXT:    call void [[TMP10]](ptr [[TMP11]], ptr [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR6]]
-// CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP9]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP9]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
 // CHECK1-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP12]], align 8
-// CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !12
+// CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias [[META12]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = call ptr @__kmpc_task_reduction_get_th_data(i32 [[TMP16]], ptr [[TMP15]], ptr [[TMP14]])
-// CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP18]], align 8
 // CHECK1-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
-// CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 // CHECK1-NEXT:    [[TMP24:%.*]] = sext i32 [[TMP23]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN_I:%.*]] = add nsw i64 -1, [[TMP24]]
-// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[TMP25]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds ptr, ptr [[TMP26]], i64 9
+// CHECK1-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP26]], i64 9
 // CHECK1-NEXT:    [[TMP27:%.*]] = load ptr, ptr [[ARRAYIDX2_I]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX3_I:%.*]] = getelementptr inbounds i8, ptr [[TMP27]], i64 [[LB_ADD_LEN_I]]
+// CHECK1-NEXT:    [[ARRAYIDX3_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP27]], i64 [[LB_ADD_LEN_I]]
 // CHECK1-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[ARRAYIDX3_I]] to i64
 // CHECK1-NEXT:    [[TMP29:%.*]] = ptrtoint ptr [[TMP20]] to i64
 // CHECK1-NEXT:    [[TMP30:%.*]] = sub i64 [[TMP28]], [[TMP29]]
 // CHECK1-NEXT:    [[TMP31:%.*]] = add nuw i64 [[TMP30]], 1
 // CHECK1-NEXT:    [[TMP32:%.*]] = mul nuw i64 [[TMP31]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    store i64 [[TMP31]], ptr @{{reduction_size[.].+[.]}}, align 8, !noalias !12
+// CHECK1-NEXT:    store i64 [[TMP31]], ptr @{{reduction_size[.].+[.]}}, align 8, !noalias [[META12]]
 // CHECK1-NEXT:    [[TMP33:%.*]] = load ptr, ptr [[TMP12]], align 8
 // CHECK1-NEXT:    [[TMP34:%.*]] = call ptr @__kmpc_task_reduction_get_th_data(i32 [[TMP16]], ptr [[TMP33]], ptr [[TMP20]])
-// CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP9]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP36:%.*]] = load ptr, ptr [[TMP35]], align 8
 // CHECK1-NEXT:    [[TMP37:%.*]] = load ptr, ptr [[TMP36]], align 8
 // CHECK1-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP37]] to i64
 // CHECK1-NEXT:    [[TMP39:%.*]] = ptrtoint ptr [[TMP20]] to i64
 // CHECK1-NEXT:    [[TMP40:%.*]] = sub i64 [[TMP38]], [[TMP39]]
 // CHECK1-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP34]], i64 [[TMP40]]
-// CHECK1-NEXT:    store ptr [[TMP4_I]], ptr [[TMP_I]], align 8, !noalias !12
-// CHECK1-NEXT:    store ptr [[TMP41]], ptr [[TMP4_I]], align 8, !noalias !12
+// CHECK1-NEXT:    store ptr [[TMP4_I]], ptr [[TMP_I]], align 8, !noalias [[META12]]
+// CHECK1-NEXT:    store ptr [[TMP41]], ptr [[TMP4_I]], align 8, !noalias [[META12]]
 // CHECK1-NEXT:    ret i32 0
 //
 //

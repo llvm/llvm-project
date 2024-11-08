@@ -1,10 +1,12 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK  %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK  %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX9  %s
-
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700  < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803  < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900  < %s | FileCheck --check-prefixes=CHECK,GFX9 %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -passes=amdgpu-attributor -o %t.gfx7.bc %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -passes=amdgpu-attributor -o %t.gfx8.bc %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor -o %t.gfx9.bc %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj < %t.gfx7.bc | llvm-readelf --notes - | FileCheck --check-prefix=CHECK  %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj < %t.gfx8.bc | llvm-readelf --notes - | FileCheck --check-prefix=CHECK  %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %t.gfx9.bc | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX9  %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %t.gfx7.bc | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %t.gfx8.bc | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.gfx9.bc | FileCheck --check-prefixes=CHECK,GFX9 %s
 
 
 ; On gfx8, the queue ptr is required for this addrspacecast.
@@ -78,4 +80,4 @@ declare void @llvm.trap()
 declare void @llvm.debugtrap()
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

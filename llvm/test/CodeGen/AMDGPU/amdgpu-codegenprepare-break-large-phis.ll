@@ -987,8 +987,8 @@ define amdgpu_kernel void @phi_v7i16_switch(<7 x i16> %in, ptr %out, i8 %cond) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[X:%.*]] = insertelement <7 x i16> [[IN:%.*]], i16 3, i32 3
 ; OPT-NEXT:    switch i8 [[COND:%.*]], label [[ELSE:%.*]] [
-; OPT-NEXT:    i8 0, label [[THEN_1:%.*]]
-; OPT-NEXT:    i8 3, label [[THEN_2:%.*]]
+; OPT-NEXT:      i8 0, label [[THEN_1:%.*]]
+; OPT-NEXT:      i8 3, label [[THEN_2:%.*]]
 ; OPT-NEXT:    ]
 ; OPT:       then.1:
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = shufflevector <7 x i16> [[X]], <7 x i16> poison, <2 x i32> <i32 0, i32 1>
@@ -1025,8 +1025,8 @@ define amdgpu_kernel void @phi_v7i16_switch(<7 x i16> %in, ptr %out, i8 %cond) {
 ; NOOPT-NEXT:  entry:
 ; NOOPT-NEXT:    [[X:%.*]] = insertelement <7 x i16> [[IN:%.*]], i16 3, i32 3
 ; NOOPT-NEXT:    switch i8 [[COND:%.*]], label [[ELSE:%.*]] [
-; NOOPT-NEXT:    i8 0, label [[THEN_1:%.*]]
-; NOOPT-NEXT:    i8 3, label [[THEN_2:%.*]]
+; NOOPT-NEXT:      i8 0, label [[THEN_1:%.*]]
+; NOOPT-NEXT:      i8 3, label [[THEN_2:%.*]]
 ; NOOPT-NEXT:    ]
 ; NOOPT:       then.1:
 ; NOOPT-NEXT:    br label [[FINALLY:%.*]]
@@ -1196,4 +1196,55 @@ finally:
 reallyfinally:
   store <5 x double> %val, ptr %out, align 1
   ret void
+}
+
+define amdgpu_kernel void @pr85718(i1 %Bool, ptr %Ptr, <4 x float> %Vec1, <4 x float> %Vec2) {
+; OPT-LABEL: @pr85718(
+; OPT-NEXT:  BB0:
+; OPT-NEXT:    [[I:%.*]] = insertelement <4 x float> [[VEC1:%.*]], float 4.200000e+01, i1 true
+; OPT-NEXT:    br label [[BB1:%.*]]
+; OPT:       BB1:
+; OPT-NEXT:    [[TMP0:%.*]] = phi float [ [[LARGEPHI_EXTRACTSLICE0:%.*]], [[BB2:%.*]] ], [ [[LARGEPHI_EXTRACTSLICE1:%.*]], [[BB1]] ], [ 0.000000e+00, [[BB0:%.*]] ]
+; OPT-NEXT:    [[TMP1:%.*]] = phi float [ [[LARGEPHI_EXTRACTSLICE3:%.*]], [[BB2]] ], [ [[LARGEPHI_EXTRACTSLICE4:%.*]], [[BB1]] ], [ 0.000000e+00, [[BB0]] ]
+; OPT-NEXT:    [[TMP2:%.*]] = phi float [ [[LARGEPHI_EXTRACTSLICE6:%.*]], [[BB2]] ], [ [[LARGEPHI_EXTRACTSLICE7:%.*]], [[BB1]] ], [ 0.000000e+00, [[BB0]] ]
+; OPT-NEXT:    [[TMP3:%.*]] = phi float [ [[LARGEPHI_EXTRACTSLICE9:%.*]], [[BB2]] ], [ [[LARGEPHI_EXTRACTSLICE10:%.*]], [[BB1]] ], [ 0.000000e+00, [[BB0]] ]
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <4 x float> [[LARGEPHI_INSERTSLICE0]], float [[TMP1]], i64 1
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <4 x float> [[LARGEPHI_INSERTSLICE1]], float [[TMP2]], i64 2
+; OPT-NEXT:    [[LARGEPHI_INSERTSLICE3:%.*]] = insertelement <4 x float> [[LARGEPHI_INSERTSLICE2]], float [[TMP3]], i64 3
+; OPT-NEXT:    store <4 x float> [[LARGEPHI_INSERTSLICE3]], ptr [[PTR:%.*]], align 128
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE1]] = extractelement <4 x float> [[VEC2:%.*]], i64 0
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE4]] = extractelement <4 x float> [[VEC2]], i64 1
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE7]] = extractelement <4 x float> [[VEC2]], i64 2
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE10]] = extractelement <4 x float> [[VEC2]], i64 3
+; OPT-NEXT:    br i1 [[BOOL:%.*]], label [[BB1]], label [[BB2]]
+; OPT:       BB2:
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE0]] = extractelement <4 x float> [[I]], i64 0
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE3]] = extractelement <4 x float> [[I]], i64 1
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE6]] = extractelement <4 x float> [[I]], i64 2
+; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE9]] = extractelement <4 x float> [[I]], i64 3
+; OPT-NEXT:    br label [[BB1]]
+;
+; NOOPT-LABEL: @pr85718(
+; NOOPT-NEXT:  BB0:
+; NOOPT-NEXT:    [[I:%.*]] = insertelement <4 x float> [[VEC1:%.*]], float 4.200000e+01, i1 true
+; NOOPT-NEXT:    br label [[BB1:%.*]]
+; NOOPT:       BB1:
+; NOOPT-NEXT:    [[PHI:%.*]] = phi <4 x float> [ [[I]], [[BB2:%.*]] ], [ [[VEC2:%.*]], [[BB1]] ], [ zeroinitializer, [[BB0:%.*]] ]
+; NOOPT-NEXT:    store <4 x float> [[PHI]], ptr [[PTR:%.*]], align 128
+; NOOPT-NEXT:    br i1 [[BOOL:%.*]], label [[BB1]], label [[BB2]]
+; NOOPT:       BB2:
+; NOOPT-NEXT:    br label [[BB1]]
+;
+BB0:
+  %I = insertelement <4 x float> %Vec1, float 4.200000e+01, i1 true
+  br label %BB1
+
+BB1:                                              ; preds = %BB0, %BB1, %BB2
+  %PHI = phi <4 x float> [ %I, %BB2 ], [ %Vec2, %BB1 ], [ zeroinitializer, %BB0 ]
+  store <4 x float> %PHI, ptr %Ptr, align 128
+  br i1 %Bool, label %BB1, label %BB2
+
+BB2:                                               ; preds = %BB1
+  br label %BB1
 }

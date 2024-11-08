@@ -16,13 +16,19 @@ Section,Description,Dependencies,Assignee,Complete
 | `[parallel.simd.whereexpr] <https://wg21.link/N4808>`_, "Where expression class templates", None, Yin Zhang, |In Progress|
 | `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references operator value_type() <https://github.com/llvm/llvm-project/pull/68960>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references operator= <https://github.com/llvm/llvm-project/pull/70020>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references swap functions <https://github.com/llvm/llvm-project/pull/86478>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references compound assignment operators <https://github.com/llvm/llvm-project/pull/86761>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references unary operators ++/-- <https://github.com/llvm/llvm-project/pull/88091>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`Class template simd declaration and alias <https://reviews.llvm.org/D144362>`_", [parallel.simd.abi], Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd<>::size() <https://reviews.llvm.org/D144363>`_", [parallel.simd.traits] simd_size[_v], Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd default constructor <https://github.com/llvm/llvm-project/pull/70424>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd broadcast constructor <https://reviews.llvm.org/D156225>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd implicit type conversion constructor <https://github.com/llvm/llvm-project/pull/71132>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd generate constructor <https://reviews.llvm.org/D159442>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd load constructor <https://github.com/llvm/llvm-project/pull/76610>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd subscript operators <https://github.com/llvm/llvm-project/pull/68960>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd copy functions <https://github.com/llvm/llvm-project/pull/78935>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd unary operators <https://github.com/llvm/llvm-project/pull/104764>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "Class template simd implementation", None, Yin Zhang, |In Progress|
 | `[parallel.simd.nonmembers] <https://wg21.link/N4808>`_, "simd non-member operations", None, Yin Zhang, |In Progress|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`Class template simd_mask declaration and alias <https://reviews.llvm.org/D144362>`_", [parallel.simd.abi], Yin Zhang, |Complete|
@@ -30,6 +36,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask default constructor <https://github.com/llvm/llvm-project/pull/70424>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask broadcast constructor <https://reviews.llvm.org/D156225>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask implicit type conversion constructor <https://github.com/llvm/llvm-project/pull/71132>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask load constructor <https://github.com/llvm/llvm-project/pull/76610>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask subscript operators <https://github.com/llvm/llvm-project/pull/68960>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask copy functions <https://github.com/llvm/llvm-project/pull/78935>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "Class template simd_mask implementation", None, Yin Zhang, |In Progress|
 | `[parallel.simd.mask.nonmembers] <https://wg21.link/N4808>`_, "simd_mask non-member operations", None, Yin Zhang, |In Progress|

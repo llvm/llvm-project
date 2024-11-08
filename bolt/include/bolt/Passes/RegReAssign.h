@@ -9,7 +9,7 @@
 #ifndef BOLT_PASSES_REGREASSIGN_H
 #define BOLT_PASSES_REGREASSIGN_H
 
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/RegAnalysis.h"
 
@@ -55,7 +55,7 @@ public:
     return BinaryFunctionPass::shouldPrint(BF) && FuncsChanged.count(&BF) > 0;
   }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 } // namespace bolt
 } // namespace llvm

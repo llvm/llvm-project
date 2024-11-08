@@ -180,6 +180,14 @@ public:
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
 
+  /// Print the alias for the given attribute, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printAlias(Attribute attr);
+
+  /// Print the alias for the given type, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printAlias(Type type);
+
   /// Print the given string as a keyword, or a quoted and escaped string if it
   /// has any special or non-printable characters in it.
   virtual void printKeywordOrString(StringRef keyword);
@@ -225,6 +233,8 @@ public:
     os << ')';
     printArrowTypeList(results);
   }
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
   /// Class used to automatically end a cyclic region on destruction.
   class CyclicPrintReset {
@@ -292,14 +302,6 @@ protected:
 private:
   AsmPrinter(const AsmPrinter &) = delete;
   void operator=(const AsmPrinter &) = delete;
-
-  /// Print the alias for the given attribute, return failure if no alias could
-  /// be printed.
-  virtual LogicalResult printAlias(Attribute attr);
-
-  /// Print the alias for the given type, return failure if no alias could
-  /// be printed.
-  virtual LogicalResult printAlias(Type type);
 
   /// The internal implementation of the printer.
   Impl *impl{nullptr};
@@ -639,6 +641,12 @@ public:
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
 
+  /// Parse a '-' token.
+  virtual ParseResult parseMinus() = 0;
+
+  /// Parse a '-' token if present.
+  virtual ParseResult parseOptionalMinus() = 0;
+
   /// Parse a '*' token.
   virtual ParseResult parseStar() = 0;
 
@@ -698,6 +706,10 @@ public:
   /// Parse a floating point value from the stream.
   virtual ParseResult parseFloat(double &result) = 0;
 
+  /// Parse a floating point value into APFloat from the stream.
+  virtual ParseResult parseFloat(const llvm::fltSemantics &semantics,
+                                 APFloat &result) = 0;
+
   /// Parse an integer value from the stream.
   template <typename IntT>
   ParseResult parseInteger(IntT &result) {
@@ -708,16 +720,27 @@ public:
     return *parseResult;
   }
 
+  /// Parse a decimal integer value from the stream.
+  template <typename IntT>
+  ParseResult parseDecimalInteger(IntT &result) {
+    auto loc = getCurrentLocation();
+    OptionalParseResult parseResult = parseOptionalDecimalInteger(result);
+    if (!parseResult.has_value())
+      return emitError(loc, "expected decimal integer value");
+    return *parseResult;
+  }
+
   /// Parse an optional integer value from the stream.
   virtual OptionalParseResult parseOptionalInteger(APInt &result) = 0;
+  virtual OptionalParseResult parseOptionalDecimalInteger(APInt &result) = 0;
 
-  template <typename IntT>
-  OptionalParseResult parseOptionalInteger(IntT &result) {
+ private:
+  template <typename IntT, typename ParseFn>
+  OptionalParseResult parseOptionalIntegerAndCheck(IntT &result,
+                                                   ParseFn &&parseFn) {
     auto loc = getCurrentLocation();
-
-    // Parse the unsigned variant.
     APInt uintResult;
-    OptionalParseResult parseResult = parseOptionalInteger(uintResult);
+    OptionalParseResult parseResult = parseFn(uintResult);
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
 
@@ -726,9 +749,25 @@ public:
     // zero for non-negated integers.
     result =
         (IntT)uintResult.sextOrTrunc(sizeof(IntT) * CHAR_BIT).getLimitedValue();
-    if (APInt(uintResult.getBitWidth(), result) != uintResult)
+    if (APInt(uintResult.getBitWidth(), result,
+              /*isSigned=*/std::is_signed_v<IntT>,
+              /*implicitTrunc=*/true) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
+  }
+
+ public:
+  template <typename IntT>
+  OptionalParseResult parseOptionalInteger(IntT &result) {
+    return parseOptionalIntegerAndCheck(
+        result, [&](APInt &result) { return parseOptionalInteger(result); });
+  }
+
+  template <typename IntT>
+  OptionalParseResult parseOptionalDecimalInteger(IntT &result) {
+    return parseOptionalIntegerAndCheck(result, [&](APInt &result) {
+      return parseOptionalDecimalInteger(result);
+    });
   }
 
   /// These are the supported delimiters around operand lists and region
@@ -1595,9 +1634,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   struct Argument {
-    UnresolvedOperand ssaName;    // SourceLoc, SSA name, result #.
-    Type type;                    // Type.
-    DictionaryAttr attrs;         // Attributes if present.
+    UnresolvedOperand ssaName;         // SourceLoc, SSA name, result #.
+    Type type;                         // Type.
+    DictionaryAttr attrs;              // Attributes if present.
     std::optional<Location> sourceLoc; // Source location specifier if present.
   };
 
@@ -1762,6 +1801,17 @@ public:
                  const SetVector<AsmDialectResourceHandle> &referencedResources,
                  AsmResourceBuilder &builder) const {}
 };
+
+//===--------------------------------------------------------------------===//
+// Custom printers and parsers.
+//===--------------------------------------------------------------------===//
+
+// Handles custom<DimensionList>(...) in TableGen.
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions);
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions);
+
 } // namespace mlir
 
 //===--------------------------------------------------------------------===//

@@ -18,7 +18,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -33,6 +37,7 @@ namespace {
 class RISCVCodeGenPrepare : public FunctionPass,
                             public InstVisitor<RISCVCodeGenPrepare, bool> {
   const DataLayout *DL;
+  const DominatorTree *DT;
   const RISCVSubtarget *ST;
 
 public:
@@ -46,11 +51,14 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAnd(BinaryOperator &BO);
+  bool visitIntrinsicInst(IntrinsicInst &I);
+  bool expandVPStrideLoad(IntrinsicInst &I);
 };
 
 } // end anonymous namespace
@@ -65,20 +73,13 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!BO.getType()->isIntegerTy(64))
     return false;
 
-  auto canBeSignExtend = [](Instruction *I) {
-    if (isa<SExtInst>(I))
-      return true;
-    if (isa<ZExtInst>(I))
-      return I->hasNonNeg();
-    return false;
-  };
+  using namespace PatternMatch;
 
-  // Left hand side should be a sext or zext nneg.
-  Instruction *LHS = dyn_cast<Instruction>(BO.getOperand(0));
-  if (!LHS || !canBeSignExtend(LHS))
+  // Left hand side should be a zext nneg.
+  Value *LHSSrc;
+  if (!match(BO.getOperand(0), m_NNegZExt(m_Value(LHSSrc))))
     return false;
 
-  Value *LHSSrc = LHS->getOperand(0);
   if (!LHSSrc->getType()->isIntegerTy(32))
     return false;
 
@@ -98,8 +99,101 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 
   // Sign extend the constant and replace the And operand.
   C = SignExtend64<32>(C);
-  BO.setOperand(1, ConstantInt::get(LHS->getType(), C));
+  BO.setOperand(1, ConstantInt::get(RHS->getType(), C));
 
+  return true;
+}
+
+// LLVM vector reduction intrinsics return a scalar result, but on RISC-V vector
+// reduction instructions write the result in the first element of a vector
+// register. So when a reduction in a loop uses a scalar phi, we end up with
+// unnecessary scalar moves:
+//
+// loop:
+// vfmv.s.f v10, fa0
+// vfredosum.vs v8, v8, v10
+// vfmv.f.s fa0, v8
+//
+// This mainly affects ordered fadd reductions, since other types of reduction
+// typically use element-wise vectorisation in the loop body. This tries to
+// vectorize any scalar phis that feed into a fadd reduction:
+//
+// loop:
+// %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %phi,
+//                                                    <vscale x 2 x float> %vec)
+//
+// ->
+//
+// loop:
+// %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
+// %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %x,
+//                                                    <vscale x 2 x float> %vec)
+// %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
+//
+// Which eliminates the scalar -> vector -> scalar crossing during instruction
+// selection.
+bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+  if (expandVPStrideLoad(I))
+    return true;
+
+  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+    return false;
+
+  auto *PHI = dyn_cast<PHINode>(I.getOperand(0));
+  if (!PHI || !PHI->hasOneUse() ||
+      !llvm::is_contained(PHI->incoming_values(), &I))
+    return false;
+
+  Type *VecTy = I.getOperand(1)->getType();
+  IRBuilder<> Builder(PHI);
+  auto *VecPHI = Builder.CreatePHI(VecTy, PHI->getNumIncomingValues());
+
+  for (auto *BB : PHI->blocks()) {
+    Builder.SetInsertPoint(BB->getTerminator());
+    Value *InsertElt = Builder.CreateInsertElement(
+        VecTy, PHI->getIncomingValueForBlock(BB), (uint64_t)0);
+    VecPHI->addIncoming(InsertElt, BB);
+  }
+
+  Builder.SetInsertPoint(&I);
+  I.setOperand(0, Builder.CreateExtractElement(VecPHI, (uint64_t)0));
+
+  PHI->eraseFromParent();
+
+  return true;
+}
+
+// Always expand zero strided loads so we match more .vx splat patterns, even if
+// we have +optimized-zero-stride-loads. RISCVDAGToDAGISel::Select will convert
+// it back to a strided load if it's optimized.
+bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
+  Value *BasePtr, *VL;
+
+  using namespace PatternMatch;
+  if (!match(&II, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                      m_Value(BasePtr), m_Zero(), m_AllOnes(), m_Value(VL))))
+    return false;
+
+  // If SEW>XLEN then a splat will get lowered as a zero strided load anyway, so
+  // avoid expanding here.
+  if (II.getType()->getScalarSizeInBits() > ST->getXLen())
+    return false;
+
+  if (!isKnownNonZero(VL, {*DL, DT, nullptr, &II}))
+    return false;
+
+  auto *VTy = cast<VectorType>(II.getType());
+
+  IRBuilder<> Builder(&II);
+  Type *STy = VTy->getElementType();
+  Value *Val = Builder.CreateLoad(STy, BasePtr);
+  Value *Res = Builder.CreateIntrinsic(Intrinsic::experimental_vp_splat, {VTy},
+                                       {Val, II.getOperand(2), VL});
+
+  II.replaceAllUsesWith(Res);
+  II.eraseFromParent();
   return true;
 }
 
@@ -111,7 +205,8 @@ bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
   auto &TM = TPC.getTM<RISCVTargetMachine>();
   ST = &TM.getSubtarget<RISCVSubtarget>(F);
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   bool MadeChange = false;
   for (auto &BB : F)

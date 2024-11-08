@@ -57,7 +57,7 @@ class ObjCDynamicValueTestCase(TestBase):
             "Foo * has a valid base class",
         )
 
-        self.assertEquals(
+        self.assertEqual(
             var_ptr_type.GetDirectBaseClassAtIndex(0).GetName(),
             var_pte_type.GetDirectBaseClassAtIndex(0).GetName(),
             "Foo and its pointer type don't agree on their base class",

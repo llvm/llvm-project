@@ -32,6 +32,14 @@ TEST(BenchmarkNameTest, MinTime) {
   EXPECT_EQ(name.str(), "function_name/some_args:3/4/min_time:3.4s");
 }
 
+TEST(BenchmarkNameTest, MinWarmUpTime) {
+  auto name = BenchmarkName();
+  name.function_name = "function_name";
+  name.args = "some_args:3/4";
+  name.min_warmup_time = "min_warmup_time:3.5s";
+  EXPECT_EQ(name.str(), "function_name/some_args:3/4/min_warmup_time:3.5s");
+}
+
 TEST(BenchmarkNameTest, Iterations) {
   auto name = BenchmarkName();
   name.function_name = "function_name";

@@ -154,8 +154,7 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBeforePreserving(TargetBB, TargetBB.end());
+  TargetBB.splice(TargetBB.end(), &SourceBB);
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -679,11 +678,9 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), MangledNameStream.str(),
-        Unit /* File */,
+        Unit /* Context */, F->getName(), Dummy, Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
-        DB.createSubroutineType(
-            DB.getOrCreateTypeArray(std::nullopt)), /* void type */
+        DB.createSubroutineType(DB.getOrCreateTypeArray({})), /* void type */
         0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */
@@ -722,6 +719,12 @@ static void moveFunctionData(Function &Old, Function &New,
     std::vector<Instruction *> DebugInsts;
 
     for (Instruction &Val : CurrBB) {
+      // Since debug-info originates from many different locations in the
+      // program, it will cause incorrect reporting from a debugger if we keep
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
+      Val.dropDbgRecords();
+
       // We must handle the scoping of called functions differently than
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
@@ -745,10 +748,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // From this point we are only handling call instructions.
       CallInst *CI = cast<CallInst>(&Val);
 
-      // We add any debug statements here, to be removed after.  Since the
-      // instructions originate from many different locations in the program,
-      // it will cause incorrect reporting from a debugger if we keep the
-      // same debug instructions.
+      // Collect debug intrinsics for later removal.
       if (isa<DbgInfoIntrinsic>(CI)) {
         DebugInsts.push_back(&Val);
         continue;
@@ -787,10 +787,8 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = *C.getGVN(V);
       if (isa<Constant>(V))
-        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
+        if (NotSame.contains(GVN) && Seen.insert(GVN).second)
           Inputs.push_back(GVN);
-          Seen.insert(GVN);
-        }
     }
   }
 }
@@ -814,8 +812,9 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
   // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
     EndInputNumbers.push_back(*C.getGVN(Input));
   }
@@ -836,8 +835,9 @@ remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
   // Get the global value number for each input that will be extracted as an
   // argument by the code extractor, remapping if needed for reloaded values.
   for (Value *Input : ArgInputs) {
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     RemappedArgInputs.insert(Input);
   }
 }
@@ -1331,11 +1331,10 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
       if (!isa<PointerType>(Group.ArgumentTypes[Jdx]))
         continue;
 
-      if (AggArgsUsed.contains(Jdx))
+      if (!AggArgsUsed.insert(Jdx).second)
         continue;
 
       TypeFound = true;
-      AggArgsUsed.insert(Jdx);
       Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, Jdx));
       Region.AggArgToExtracted.insert(std::make_pair(Jdx, OriginalIndex));
       AggArgIdx = Jdx;
@@ -1499,7 +1498,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                     << *AggFunc << " with new set of arguments\n");
   // Create the new call instruction and erase the old one.
   Call = CallInst::Create(AggFunc->getFunctionType(), AggFunc, NewCallArgs, "",
-                          Call);
+                          Call->getIterator());
 
   // It is possible that the call to the outlined function is either the first
   // instruction is in the new block, the last instruction, or both.  If either
@@ -1514,7 +1513,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Transfer any debug information.
   Call->setDebugLoc(Region.Call->getDebugLoc());
   // Since our output may determine which branch we go to, we make sure to
-  // propogate this new call value through the module.
+  // propagate this new call value through the module.
   OldCall->replaceAllUsesWith(Call);
 
   // Remove the old instruction.

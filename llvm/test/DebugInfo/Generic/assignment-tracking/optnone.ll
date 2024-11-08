@@ -1,14 +1,16 @@
 ; RUN: opt -S %s -o - --passes=declare-to-assign \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -o - --passes=declare-to-assign \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Assignment tracking doesn't add any value when optimisations are disabled.
 ;; Check it doesn't get applied to functions marked optnone.
 
 ; CHECK: @_Z3funv
-; CHECK: dbg.assign
+; CHECK: #dbg_assign
 
 ; CHECK: @_Z3funv2
-; CHECK: dbg.declare
+; CHECK: #dbg_declare
 
 define dso_local void @_Z3funv() local_unnamed_addr !dbg !16 {
 entry:

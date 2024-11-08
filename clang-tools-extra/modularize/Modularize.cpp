@@ -51,20 +51,20 @@
 //          to the header list file directory.  Use -prefix to specify a
 //          different directory.
 //    -module-map-path=(module map)
-//          Skip the checks, and instead act as a module.map generation
+//          Skip the checks, and instead act as a module.modulemap generation
 //          assistant, generating a module map file based on the header list.
 //          An optional "-root-module=(rootName)" argument can specify a root
-//          module to be created in the generated module.map file.  Note that
-//          you will likely need to edit this file to suit the needs of your
-//          headers.
+//          module to be created in the generated module.modulemap file.  Note
+//          that you will likely need to edit this file to suit the needs of
+//          your headers.
 //    -problem-files-list=(problem files list file name)
 //          For use only with module map assistant.  Input list of files that
 //          have problems with respect to modules.  These will still be
 //          included in the generated module map, but will be marked as
 //          "excluded" headers.
 //    -root-module=(root module name)
-//          Specifies a root module to be created in the generated module.map
-//          file.
+//          Specifies a root module to be created in the generated
+//          module.modulemap file.
 //    -block-check-header-list-only
 //          Only warn if #include directives are inside extern or namespace
 //          blocks if the included header is in the header list.
@@ -508,13 +508,10 @@ public:
       // Sort contents.
       llvm::sort(H->second);
 
-      // Check whether we've seen this header before.
-      auto KnownH = AllHeaderContents.find(H->first);
-      if (KnownH == AllHeaderContents.end()) {
-        // We haven't seen this header before; record its contents.
-        AllHeaderContents.insert(*H);
+      // Record this header and its contents if we haven't seen it before.
+      auto [KnownH, Inserted] = AllHeaderContents.insert(*H);
+      if (Inserted)
         continue;
-      }
 
       // If the header contents are the same, we're done.
       if (H->second == KnownH->second)
@@ -624,7 +621,6 @@ public:
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     ND->printQualifiedName(OS);
-    OS.flush();
     if (Name.empty())
       return true;
 
