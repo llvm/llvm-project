@@ -1495,6 +1495,11 @@ public:
     return 0;
   }
 
+  virtual bool isMoldPLTHeader(std::vector<MCInst *> &Insns) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,
