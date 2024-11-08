@@ -1260,14 +1260,13 @@ static std::string PPCMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
 // Check that the register+immediate memory operand is in the right position and
-// is expected by the instruction
+// is expected by the instruction. Returns true if the memory operand syntax is
+// valid; otherwise, returns false.
 static bool validateMemOp(const OperandVector &Operands, bool isMemriOp) {
   for (size_t idx = 0; idx < Operands.size(); ++idx) {
     const PPCOperand &Op = static_cast<const PPCOperand &>(*Operands[idx]);
-    if ((idx == 3 && Op.isMemOpBase() != isMemriOp) ||
-        (idx != 3 && Op.isMemOpBase())) {
-        return false;
-    }
+    if (Op.isMemOpBase() != (idx == 3 && isMemriOp))
+      return false;
   }
   return true;
 }
