@@ -5974,3 +5974,20 @@ Clang guarantees the following behaviors:
   padding bits are initialized to zero.
 
 Currently, the above extension only applies to C source code, not C++.
+
+Qualified function types in C
+=============================
+Declaring a function with a qualified type in C is undefined behavior (C23 and
+earlier) or implementation-defined behavior (C2y). Clang allows a function type
+to be specified with the ``const`` and ``volatile`` qualifiers, but ignores the
+qualifications.
+
+.. code-block:: c
+
+   typedef int f(void);
+   const volatile f func; // Qualifier on function type has no effect.
+
+
+Note, Clang does not allow an ``_Atomic`` function type because
+of explicit constraints against atomically qualified (arrays and) function
+types.

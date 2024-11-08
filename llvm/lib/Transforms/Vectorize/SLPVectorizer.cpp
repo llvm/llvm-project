@@ -2241,10 +2241,9 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          auto *It = HashMap.find(NumFreeOpsHash.Hash);
-          if (It == HashMap.end())
-            HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
-          else
+          auto [It, Inserted] =
+              HashMap.try_emplace(NumFreeOpsHash.Hash, 1, Lane);
+          if (!Inserted)
             ++It->second.first;
         }
       }
@@ -13398,7 +13397,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // scheduled, and the last instruction is VL.back(). So we start with
   // VL.back() and iterate over schedule data until we reach the end of the
   // bundle. The end of the bundle is marked by null ScheduleData.
-  if (BlocksSchedules.count(BB)) {
+  if (BlocksSchedules.count(BB) && !E->isGather()) {
     Value *V = E->isOneOf(E->Scalars.back());
     if (doesNotNeedToBeScheduled(V))
       V = *find_if_not(E->Scalars, doesNotNeedToBeScheduled);
