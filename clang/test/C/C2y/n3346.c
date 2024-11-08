@@ -49,8 +49,8 @@ void test2(void) {
   char str3[] = u8"string literal";
   char str4[] = { u8"string literal" };
 
-  int str5[] = "this doesn't work";          // expected-error {{array initializer must be an initializer list}}
-  int str6[] = { "this also doesn't work" }; // expected-error {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[23]'}}
+  float str5[] = "this doesn't work";          // expected-error {{array initializer must be an initializer list}}
+  float str6[] = { "this also doesn't work" }; // expected-error {{initializing 'float' with an expression of incompatible type 'char[23]'}}
 
   wchar_t str7[] = L"string literal";
   wchar_t str8[] = { L"string literal" };
