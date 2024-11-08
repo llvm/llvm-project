@@ -153,6 +153,8 @@
 // ARCH-GCN-DAG: #define __[[FAMILY]]__ 1
 // ARCH-GCN-DAG: #define __amdgcn_processor__ "[[CPU]]"
 // ARCH-GCN-DAG: #define __AMDGCN_WAVEFRONT_SIZE [[WAVEFRONT_SIZE]]
+// ARCH-GCN-DAG: #define __GCC_DESTRUCTIVE_SIZE 128
+// ARCH-GCN-DAG: #define __GCC_CONSTRUCTIVE_SIZE 128
 // UNSAFEFPATOMIC-DAG: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
