@@ -4185,14 +4185,14 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   // source operand width, then extract the original destination
   // type.
   if (!TLI.shouldScalarizeLengthDescreasingShuffle()) {
-    EVT PaddedVT = EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(),
-                                    SrcNumElts);
+    EVT PaddedVT =
+        EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), SrcNumElts);
     SmallVector<int, 8> ExtendedMask(Mask);
     ExtendedMask.resize(SrcNumElts, -1);
     SDValue Result =
-      DAG.getVectorShuffle(PaddedVT, DL, Src1, Src2, ExtendedMask);
+        DAG.getVectorShuffle(PaddedVT, DL, Src1, Src2, ExtendedMask);
     Result = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Result,
-                          DAG.getVectorIdxConstant(0, DL));
+                         DAG.getVectorIdxConstant(0, DL));
     setValue(&I, Result);
     return;
   }
@@ -4200,7 +4200,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   // We can't use either padding or extract subvectors so fall back to
   // replacing the shuffle with extract and build vector.
   EVT EltVT = VT.getVectorElementType();
-  SmallVector<SDValue,8> Ops;
+  SmallVector<SDValue, 8> Ops;
   for (int Idx : Mask) {
     SDValue Res;
 

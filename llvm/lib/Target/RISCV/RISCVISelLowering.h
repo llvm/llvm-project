@@ -586,8 +586,7 @@ public:
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
 
-  bool
-  shouldScalarizeLengthDescreasingShuffle() const override {
+  bool shouldScalarizeLengthDescreasingShuffle() const override {
     // We always prefer to pad as a canonical form.
     return false;
   }
