@@ -51,9 +51,10 @@ llvm::cl::opt<bool>
                        cl::desc("Match functions with call graph"), cl::Hidden,
                        cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool> MatchWithPseudoProbes(
-    "match-with-pseudo-probes", cl::desc("Match functions with pseudo probes"),
-    cl::Hidden, cl::cat(BoltOptCategory));
+llvm::cl::opt<bool>
+    MatchWithPseudoProbes("match-with-pseudo-probes",
+                          cl::desc("Match functions with pseudo probes"),
+                          cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
@@ -809,12 +810,11 @@ size_t YAMLProfileReader::matchWithPseudoProbes(BinaryContext &BC) {
       const auto ProbeIt = Node->getProbes().begin();
       const auto *Probe =
           (ProbeIt != Node->getProbes().end()) ? &*ProbeIt : nullptr;
-      LLVM_DEBUG(dbgs()
-                 << MatchedNodes << "/" << YamlBF.InlineTree.size()
-                 << " match with " << *BF << " at "
-                 << (Probe ? Probe->getInlineContextStr(GUID2FuncDescMap)
-                           : "(none)")
-                 << '\n');
+      LLVM_DEBUG(dbgs() << MatchedNodes << "/" << YamlBF.InlineTree.size()
+                        << " match with " << *BF << " at "
+                        << (Probe ? Probe->getInlineContextStr(GUID2FuncDescMap)
+                                  : "(none)")
+                        << '\n');
     }
     MatchedWithPseudoProbes += !!Matched;
     YamlBF.Used |= !!Matched;
