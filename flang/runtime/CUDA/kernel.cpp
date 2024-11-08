@@ -25,6 +25,29 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
   blockDim.x = blockX;
   blockDim.y = blockY;
   blockDim.z = blockZ;
+  bool gridIsStar = (gridX < 0); // <<<*, block>>> syntax was used.
+  if (gridIsStar) {
+    int maxBlocks, nbBlocks, dev, multiProcCount;
+    cudaError_t err1, err2;
+    nbBlocks = blockDim.x * blockDim.y * blockDim.z;
+    cudaGetDevice(&dev);
+    err1 = cudaDeviceGetAttribute(
+        &multiProcCount, cudaDevAttrMultiProcessorCount, dev);
+    err2 = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &maxBlocks, kernel, nbBlocks, smem);
+    if (err1 == cudaSuccess && err2 == cudaSuccess)
+      maxBlocks = multiProcCount * maxBlocks;
+    if (maxBlocks > 0) {
+      if (gridDim.y > 0)
+        maxBlocks = maxBlocks / gridDim.y;
+      if (gridDim.z > 0)
+        maxBlocks = maxBlocks / gridDim.z;
+      if (maxBlocks < 1)
+        maxBlocks = 1;
+      if (gridIsStar)
+        gridDim.x = maxBlocks;
+    }
+  }
   cudaStream_t stream = 0; // TODO stream managment
   CUDA_REPORT_IF_ERROR(
       cudaLaunchKernel(kernel, gridDim, blockDim, params, smem, stream));
@@ -41,6 +64,29 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   config.blockDim.x = blockX;
   config.blockDim.y = blockY;
   config.blockDim.z = blockZ;
+  bool gridIsStar = (gridX < 0); // <<<*, block>>> syntax was used.
+  if (gridIsStar) {
+    int maxBlocks, nbBlocks, dev, multiProcCount;
+    cudaError_t err1, err2;
+    nbBlocks = config.blockDim.x * config.blockDim.y * config.blockDim.z;
+    cudaGetDevice(&dev);
+    err1 = cudaDeviceGetAttribute(
+        &multiProcCount, cudaDevAttrMultiProcessorCount, dev);
+    err2 = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &maxBlocks, kernel, nbBlocks, smem);
+    if (err1 == cudaSuccess && err2 == cudaSuccess)
+      maxBlocks = multiProcCount * maxBlocks;
+    if (maxBlocks > 0) {
+      if (config.gridDim.y > 0)
+        maxBlocks = maxBlocks / config.gridDim.y;
+      if (config.gridDim.z > 0)
+        maxBlocks = maxBlocks / config.gridDim.z;
+      if (maxBlocks < 1)
+        maxBlocks = 1;
+      if (gridIsStar)
+        config.gridDim.x = maxBlocks;
+    }
+  }
   config.dynamicSmemBytes = smem;
   config.stream = 0; // TODO stream managment
   cudaLaunchAttribute launchAttr[1];
