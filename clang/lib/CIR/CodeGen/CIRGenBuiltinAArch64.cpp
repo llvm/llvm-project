@@ -2485,6 +2485,11 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
                                                     : "aarch64.neon.sqadd";
     break;
   }
+  case NEON::BI__builtin_neon_vqdmulh_v:
+  case NEON::BI__builtin_neon_vqdmulhq_v: {
+    intrincsName = "aarch64.neon.sqdmulh";
+    break;
+  }
   case NEON::BI__builtin_neon_vqrdmulh_v:
   case NEON::BI__builtin_neon_vqrdmulhq_v: {
     intrincsName = "aarch64.neon.sqrdmulh";
