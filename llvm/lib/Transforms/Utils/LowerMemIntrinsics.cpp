@@ -970,6 +970,15 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
                    Memset->isVolatile());
 }
 
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
+  createMemSetLoop(/* InsertBefore=*/Memset,
+                   /* DstAddr=*/Memset->getRawDest(),
+                   /* CopyLen=*/Memset->getLength(),
+                   /* SetValue=*/Memset->getValue(),
+                   /* Alignment=*/Memset->getDestAlign().valueOrOne(),
+                   Memset->isVolatile());
+}
+
 void llvm::expandAtomicMemCpyAsLoop(AtomicMemCpyInst *AtomicMemcpy,
                                     const TargetTransformInfo &TTI,
                                     ScalarEvolution *SE) {

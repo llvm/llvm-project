@@ -1222,7 +1222,6 @@ public:
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
-    case Intrinsic::experimental_memset_pattern:
     case Intrinsic::memcpy_inline:
       return true;
     default:
@@ -1234,8 +1233,7 @@ public:
   }
 };
 
-/// This class wraps the llvm.memset, llvm.memset.inline, and
-/// llvm.experimental.memset.pattern intrinsics.
+/// This class wraps the llvm.memset and llvm.memset.inline intrinsics.
 class MemSetInst : public MemSetBase<MemIntrinsic> {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1243,7 +1241,6 @@ public:
     switch (I->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
-    case Intrinsic::experimental_memset_pattern:
       return true;
     default:
       return false;
@@ -1266,8 +1263,36 @@ public:
   }
 };
 
+/// This is the base class for memset.pattern
+class MemSetPatternIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
+private:
+  enum { ARG_VOLATILE = 3 };
+
+public:
+  ConstantInt *getVolatileCst() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(ARG_VOLATILE)));
+  }
+
+  bool isVolatile() const { return !getVolatileCst()->isZero(); }
+
+  void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
+
+  // Methods for support of type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::experimental_memset_pattern:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This class wraps the llvm.experimental.memset.pattern intrinsic.
-class MemSetPatternInst : public MemSetInst {
+class MemSetPatternInst : public MemSetBase<MemSetPatternIntrinsic> {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
@@ -1354,7 +1379,6 @@ public:
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
-    case Intrinsic::experimental_memset_pattern:
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
@@ -1377,7 +1401,6 @@ public:
     switch (I->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
-    case Intrinsic::experimental_memset_pattern:
     case Intrinsic::memset_element_unordered_atomic:
       return true;
     default:

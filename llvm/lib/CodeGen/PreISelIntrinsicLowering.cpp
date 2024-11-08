@@ -322,7 +322,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      expandMemSetAsLoop(Memset);
+      expandMemSetPatternAsLoop(Memset);
       Changed = true;
       Memset->eraseFromParent();
       break;
