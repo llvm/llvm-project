@@ -1671,6 +1671,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
   case llvm::omp::Directive::OMPD_teams_distribute_simd:
+  case llvm::omp::Directive::OMPD_teams_loop:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
     PushContext(beginDir.source, beginDir.v);
