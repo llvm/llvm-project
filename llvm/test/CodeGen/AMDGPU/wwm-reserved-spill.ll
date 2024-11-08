@@ -213,12 +213,12 @@ define amdgpu_gfx void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) 
 ; GFX9-O0-NEXT:    v_readlane_b32 s36, v5, 4
 ; GFX9-O0-NEXT:    v_readlane_b32 s37, v5, 5
 ; GFX9-O0-NEXT:    s_or_b64 exec, exec, s[36:37]
+; GFX9-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GFX9-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    v_readlane_b32 s38, v5, 0
 ; GFX9-O0-NEXT:    v_readlane_b32 s39, v5, 1
 ; GFX9-O0-NEXT:    v_readlane_b32 s34, v5, 2
 ; GFX9-O0-NEXT:    v_readlane_b32 s35, v5, 3
-; GFX9-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GFX9-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O0-NEXT:    v_cmp_eq_u32_e64 s[36:37], v0, v3
 ; GFX9-O0-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[36:37]

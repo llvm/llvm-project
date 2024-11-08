@@ -14,8 +14,6 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr3, $sgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $vgpr1 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $sgpr4 = COPY $sgpr2
-  ; CHECK-NEXT:   renamable $sgpr2 = COPY $sgpr3
   ; CHECK-NEXT:   $vgpr1 = SI_SPILL_S32_TO_VGPR $sgpr0, 0, $vgpr1
   ; CHECK-NEXT:   $sgpr1 = S_AND_SAVEEXEC_B32 $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
@@ -26,8 +24,10 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr2, $sgpr4, $vgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr2, $sgpr3, $vgpr1
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr4 = COPY $sgpr2
+  ; CHECK-NEXT:   renamable $sgpr2 = COPY $sgpr3
   ; CHECK-NEXT:   $sgpr3 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 0
   ; CHECK-NEXT:   renamable $sgpr0_sgpr1 = S_GETPC_B64_pseudo
   ; CHECK-NEXT:   renamable $sgpr5 = COPY $sgpr1
