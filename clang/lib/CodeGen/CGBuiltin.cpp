@@ -5225,9 +5225,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::BasicBlock *ContBB = createBasicBlock("atomic.scope.continue", CurFn);
 
     llvm::DenseMap<llvm::BasicBlock *, llvm::AtomicOrdering> OrderBBs;
-    if (isa<llvm::ConstantInt>(Order)) {
-      int Ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
-      switch (Ord) {
+    if (auto Ord = dyn_cast<llvm::ConstantInt>(Order)) {
+      switch (Ord->getZExtValue()) {
       case 0:  // memory_order_relaxed
       default: // invalid order
         ContBB->eraseFromParent();
@@ -5249,11 +5248,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         break;
       }
     } else {
-      llvm::BasicBlock *AcquireBB, *ReleaseBB, *AcqRelBB, *SeqCstBB;
-      AcquireBB = createBasicBlock("acquire", CurFn);
-      ReleaseBB = createBasicBlock("release", CurFn);
-      AcqRelBB = createBasicBlock("acqrel", CurFn);
-      SeqCstBB = createBasicBlock("seqcst", CurFn);
+      llvm::BasicBlock *AcquireBB = createBasicBlock("acquire", CurFn);
+      llvm::BasicBlock *ReleaseBB = createBasicBlock("release", CurFn);
+      llvm::BasicBlock *AcqRelBB = createBasicBlock("acqrel", CurFn);
+      llvm::BasicBlock *SeqCstBB = createBasicBlock("seqcst", CurFn);
 
       Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
       llvm::SwitchInst *SI = Builder.CreateSwitch(Order, ContBB);
@@ -5271,10 +5269,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     for (auto &[OrderBB, Ordering] : OrderBBs) {
       Builder.SetInsertPoint(OrderBB);
-      if (isa<llvm::ConstantInt>(Scope)) {
-        int Scp = cast<llvm::ConstantInt>(Scope)->getZExtValue();
-        SyncScope SS = ScopeModel->isValid(Scp)
-                           ? ScopeModel->map(Scp)
+      if (auto Scp = dyn_cast<llvm::ConstantInt>(Scope)) {
+        SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
+                           ? ScopeModel->map(Scp->getZExtValue())
                            : ScopeModel->map(ScopeModel->getFallBackValue());
         Builder.CreateFence(Ordering,
                             getTargetHooks().getLLVMSyncScopeID(
