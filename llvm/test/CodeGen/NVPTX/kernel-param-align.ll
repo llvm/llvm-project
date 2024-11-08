@@ -21,12 +21,12 @@ entry:
 }
 
 ; CHECK-LABEL: .entry func_noalign(
-; CHECK: .param .u64 .ptr         func_noalign_param_0
-; CHECK: .param .u64 .ptr         func_noalign_param_1
-; CHECK: .param .u64 .ptr .global func_noalign_param_2
-; CHECK: .param .u64 .ptr .shared func_noalign_param_3
-; CHECK: .param .u64 .ptr .const  func_noalign_param_4
-; CHECK: .param .u64 .ptr .local  func_noalign_param_5
+; CHECK: .param .u64 .ptr         .align 1 func_noalign_param_0
+; CHECK: .param .u64 .ptr         .align 1 func_noalign_param_1
+; CHECK: .param .u64 .ptr .global .align 1 func_noalign_param_2
+; CHECK: .param .u64 .ptr .shared .align 1 func_noalign_param_3
+; CHECK: .param .u64 .ptr .const  .align 1 func_noalign_param_4
+; CHECK: .param .u64 .ptr .local  .align 1 func_noalign_param_5
 define void @func_noalign(ptr nocapture readonly %input,
                           ptr nocapture %out,
                           ptr addrspace(1) %global,

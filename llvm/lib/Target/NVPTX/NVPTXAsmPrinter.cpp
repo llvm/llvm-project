@@ -1600,24 +1600,27 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       if (isKernelFunc) {
         if (PTy) {
-          O << "\t.param .u" << PTySizeInBits << " .ptr ";
+          O << "\t.param .u" << PTySizeInBits << " .ptr";
 
-          const unsigned AddrSpace = PTy->getAddressSpace();
-          if (AddrSpace != ADDRESS_SPACE_GENERIC) {
-            O << ".";
-            emitPTXAddressSpace(AddrSpace, O);
-            O << " ";
+          switch (PTy->getAddressSpace()) {
+          default:
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << " .global";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << " .shared";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << " .const";
+            break;
+          case ADDRESS_SPACE_LOCAL:
+            O << " .local";
+            break;
           }
 
-          const bool IsCUDA =
-              static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
-              NVPTX::CUDA;
-
-          MaybeAlign ParamAlign = I->getParamAlign();
-          if (ParamAlign.has_value() || !IsCUDA)
-            O << ".align " << ParamAlign.valueOrOne().value() << " ";
-
-          O << TLI->getParamName(F, paramIndex);
+          O << " .align " << I->getParamAlign().valueOrOne().value();
+          O << " " << TLI->getParamName(F, paramIndex);
           continue;
         }
 
