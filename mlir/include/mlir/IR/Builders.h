@@ -225,7 +225,7 @@ public:
   explicit OpBuilder(Region *region, Listener *listener = nullptr)
       : OpBuilder(region->getContext(), listener) {
     if (!region->empty())
-      setInsertionPoint(&region->front(), region->front().begin());
+      setInsertionPointToStart(&region->front());
   }
   explicit OpBuilder(Region &region, Listener *listener = nullptr)
       : OpBuilder(&region, listener) {}

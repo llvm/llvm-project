@@ -706,7 +706,7 @@ public:
     Block *block = rewriter.createBlock(&region);
 
     // Initialize the struct and set the execution mode value.
-    rewriter.setInsertionPoint(block, block->begin());
+    rewriter.setInsertionPointToStart(block);
     Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
     Value executionMode = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type,
