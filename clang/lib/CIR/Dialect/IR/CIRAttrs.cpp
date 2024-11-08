@@ -42,7 +42,8 @@ static void printFloatLiteral(mlir::AsmPrinter &p, llvm::APFloat value,
                               mlir::Type ty);
 static mlir::ParseResult
 parseFloatLiteral(mlir::AsmParser &parser,
-                  mlir::FailureOr<llvm::APFloat> &value, mlir::Type ty);
+                  mlir::FailureOr<llvm::APFloat> &value,
+                  mlir::cir::CIRFPTypeInterface fpType);
 
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
@@ -313,50 +314,31 @@ LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // FPAttr definitions
 //===----------------------------------------------------------------------===//
 
-static void printFloatLiteral(mlir::AsmPrinter &p, llvm::APFloat value,
-                              mlir::Type ty) {
+static void printFloatLiteral(AsmPrinter &p, APFloat value, Type ty) {
   p << value;
 }
 
-static mlir::ParseResult
-parseFloatLiteral(mlir::AsmParser &parser,
-                  mlir::FailureOr<llvm::APFloat> &value, mlir::Type ty) {
-  double rawValue;
-  if (parser.parseFloat(rawValue)) {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected floating-point value");
-  }
+static ParseResult parseFloatLiteral(AsmParser &parser,
+                                     FailureOr<APFloat> &value,
+                                     CIRFPTypeInterface fpType) {
 
-  auto losesInfo = false;
-  value.emplace(rawValue);
+  APFloat parsedValue(0.0);
+  if (parser.parseFloat(fpType.getFloatSemantics(), parsedValue))
+    return failure();
 
-  auto tyFpInterface = dyn_cast<cir::CIRFPTypeInterface>(ty);
-  if (!tyFpInterface) {
-    // Parsing of the current floating-point literal has succeeded, but the
-    // given attribute type is invalid. This error will be reported later when
-    // the attribute is being verified.
-    return success();
-  }
-
-  value->convert(tyFpInterface.getFloatSemantics(),
-                 llvm::RoundingMode::TowardZero, &losesInfo);
+  value.emplace(parsedValue);
   return success();
 }
 
-cir::FPAttr cir::FPAttr::getZero(mlir::Type type) {
-  return get(
-      type, APFloat::getZero(
-                mlir::cast<cir::CIRFPTypeInterface>(type).getFloatSemantics()));
+FPAttr FPAttr::getZero(Type type) {
+  return get(type,
+             APFloat::getZero(
+                 mlir::cast<CIRFPTypeInterface>(type).getFloatSemantics()));
 }
 
-LogicalResult cir::FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                  Type type, APFloat value) {
-  auto fltTypeInterface = mlir::dyn_cast<cir::CIRFPTypeInterface>(type);
-  if (!fltTypeInterface) {
-    emitError() << "expected floating-point type";
-    return failure();
-  }
-  if (APFloat::SemanticsToEnum(fltTypeInterface.getFloatSemantics()) !=
+LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             CIRFPTypeInterface fpType, APFloat value) {
+  if (APFloat::SemanticsToEnum(fpType.getFloatSemantics()) !=
       APFloat::SemanticsToEnum(value.getSemantics())) {
     emitError() << "floating-point semantics mismatch";
     return failure();

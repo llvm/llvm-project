@@ -1378,3 +1378,62 @@ module {
     cir.return
   }
 }
+// -----
+
+// Type of the attribute must be a CIR floating point type
+
+// expected-error @below {{invalid kind of type specified}}
+cir.global external @f = #cir.fp<0.5> : !cir.int<s, 32>
+
+// -----
+
+// Value must be a floating point literal or integer literal
+
+// expected-error @below {{expected floating point literal}}
+cir.global external @f = #cir.fp<"blabla"> : !cir.float
+
+// -----
+
+// Integer value must be in the width of the floating point type
+
+// expected-error @below {{hexadecimal float constant out of range for type}}
+cir.global external @f = #cir.fp<0x7FC000000> : !cir.float
+
+// -----
+
+// Integer value must be in the width of the floating point type
+
+// expected-error @below {{hexadecimal float constant out of range for type}}
+cir.global external @f = #cir.fp<0x7FC000007FC0000000> : !cir.double
+
+// -----
+
+// Integer value must be in the width of the floating point type
+
+// expected-error @below {{hexadecimal float constant out of range for type}}
+cir.global external @f = #cir.fp<0x7FC0000007FC0000007FC000000> : !cir.long_double<!cir.f80>
+
+// -----
+
+// Long double with `double` semnatics should have a value that fits in a double.
+
+// CHECK: cir.global external @f = #cir.fp<0x7FC000007FC000000000> : !cir.long_double<!cir.f80>
+cir.global external @f = #cir.fp<0x7FC000007FC000000000> : !cir.long_double<!cir.f80>
+
+// expected-error @below {{hexadecimal float constant out of range for type}}
+cir.global external @f = #cir.fp<0x7FC000007FC000000000> : !cir.long_double<!cir.double>
+
+// -----
+
+// Verify no need for type inside the attribute
+
+// expected-error @below {{expected '>'}}
+cir.global external @f = #cir.fp<0x7FC00000 : !cir.float> : !cir.float
+
+// -----
+
+// Verify literal must be hex or float
+
+// expected-error @below {{unexpected decimal integer literal for a floating point value}}
+// expected-note @below {{add a trailing dot to make the literal a float}}
+cir.global external @f = #cir.fp<42> : !cir.float

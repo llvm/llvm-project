@@ -1,0 +1,25 @@
+// RUN: cir-opt %s -split-input-file -allow-unregistered-dialect -verify-diagnostics | FileCheck %s
+
+cir.func @float_attrs_pass() {
+  "test.float_attrs"() {
+    // CHECK: float_attr = #cir.fp<2.000000e+00> : !cir.float
+    float_attr = #cir.fp<2.> : !cir.float
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = #cir.fp<-2.000000e+00> : !cir.float
+    float_attr = #cir.fp<-2.> : !cir.float
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = #cir.fp<2.000000e+00> : !cir.double
+    float_attr = #cir.fp<2.> : !cir.double
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = #cir.fp<2.000000e+00> : !cir.long_double<!cir.f80>
+    float_attr = #cir.fp<2.> : !cir.long_double<!cir.f80>
+  } : () -> ()
+  "test.float_attrs"() {
+    // CHECK: float_attr = #cir.fp<2.000000e+00> : !cir.long_double<!cir.double>
+    float_attr = #cir.fp<2.> : !cir.long_double<!cir.double>
+  } : () -> ()
+  cir.return
+}

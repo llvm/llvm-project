@@ -44,7 +44,7 @@ module {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK:   %2 = llvm.insertvalue %1, %0[0] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
-  // CHECK:   %3 = llvm.mlir.constant(0.099999994 : f32) : f32
+  // CHECK:   %3 = llvm.mlir.constant(1.000000e-01 : f32) : f32
   // CHECK:   %4 = llvm.insertvalue %3, %2[1] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %5 = llvm.mlir.zero : !llvm.ptr
   // CHECK:   %6 = llvm.insertvalue %5, %4[2] : !llvm.struct<"struct.S1", (i32, f32, ptr)>

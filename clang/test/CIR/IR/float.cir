@@ -1,0 +1,90 @@
+// RUN: cir-opt %s | FileCheck %s
+
+// Adapted from mlir/test/IR/parser.mlir
+
+// CHECK-LABEL: @f32_special_values
+cir.func @f32_special_values() {
+  // F32 signaling NaNs.
+  // CHECK: cir.const #cir.fp<0x7F800001> : !cir.float
+  %0 = cir.const #cir.fp<0x7F800001> : !cir.float
+  // CHECK: cir.const #cir.fp<0x7FBFFFFF> : !cir.float
+  %1 = cir.const #cir.fp<0x7FBFFFFF> : !cir.float
+
+  // F32 quiet NaNs.
+  // CHECK: cir.const #cir.fp<0x7FC00000> : !cir.float
+  %2 = cir.const #cir.fp<0x7FC00000> : !cir.float
+  // CHECK: cir.const #cir.fp<0xFFFFFFFF> : !cir.float
+  %3 = cir.const #cir.fp<0xFFFFFFFF> : !cir.float
+
+  // F32 positive infinity.
+  // CHECK: cir.const #cir.fp<0x7F800000> : !cir.float
+  %4 = cir.const #cir.fp<0x7F800000> : !cir.float
+  // F32 negative infinity.
+  // CHECK: cir.const #cir.fp<0xFF800000> : !cir.float
+  %5 = cir.const #cir.fp<0xFF800000> : !cir.float
+
+  cir.return
+}
+
+// CHECK-LABEL: @f64_special_values
+cir.func @f64_special_values() {
+  // F64 signaling NaNs.
+  // CHECK: cir.const #cir.fp<0x7FF0000000000001> : !cir.double
+  %0 = cir.const #cir.fp<0x7FF0000000000001> : !cir.double
+  // CHECK: cir.const #cir.fp<0x7FF8000000000000> : !cir.double
+  %1 = cir.const #cir.fp<0x7FF8000000000000> : !cir.double
+
+  // F64 quiet NaNs.
+  // CHECK: cir.const #cir.fp<0x7FF0000001000000> : !cir.double
+  %2 = cir.const #cir.fp<0x7FF0000001000000> : !cir.double
+  // CHECK: cir.const #cir.fp<0xFFF0000001000000> : !cir.double
+  %3 = cir.const #cir.fp<0xFFF0000001000000> : !cir.double
+
+  // F64 positive infinity.
+  // CHECK: cir.const #cir.fp<0x7FF0000000000000> : !cir.double
+  %4 = cir.const #cir.fp<0x7FF0000000000000> : !cir.double
+  // F64 negative infinity.
+  // CHECK: cir.const #cir.fp<0xFFF0000000000000> : !cir.double
+  %5 = cir.const #cir.fp<0xFFF0000000000000> : !cir.double
+
+  // Check that values that can't be represented with the default format, use
+  // hex instead.
+  // CHECK: cir.const #cir.fp<0xC1CDC00000000000> : !cir.double
+  %6 = cir.const #cir.fp<0xC1CDC00000000000> : !cir.double
+
+  cir.return
+}
+
+// CHECK-LABEL: @f80_special_values
+cir.func @f80_special_values() {
+  // F80 signaling NaNs.
+  // CHECK: cir.const #cir.fp<0x7FFFE000000000000001> : !cir.long_double<!cir.f80>
+  %0 = cir.const #cir.fp<0x7FFFE000000000000001> : !cir.long_double<!cir.f80>
+  // CHECK: cir.const #cir.fp<0x7FFFB000000000000011> : !cir.long_double<!cir.f80>
+  %1 = cir.const #cir.fp<0x7FFFB000000000000011> : !cir.long_double<!cir.f80>
+
+  // F80 quiet NaNs.
+  // CHECK: cir.const #cir.fp<0x7FFFC000000000100000> : !cir.long_double<!cir.f80>
+  %2 = cir.const #cir.fp<0x7FFFC000000000100000> : !cir.long_double<!cir.f80>
+  // CHECK: cir.const #cir.fp<0x7FFFE000000001000000> : !cir.long_double<!cir.f80>
+  %3 = cir.const #cir.fp<0x7FFFE000000001000000> : !cir.long_double<!cir.f80>
+
+  // F80 positive infinity.
+  // CHECK: cir.const #cir.fp<0x7FFF8000000000000000> : !cir.long_double<!cir.f80>
+  %4 = cir.const #cir.fp<0x7FFF8000000000000000> : !cir.long_double<!cir.f80>
+  // F80 negative infinity.
+  // CHECK: cir.const #cir.fp<0xFFFF8000000000000000> : !cir.long_double<!cir.f80>
+  %5 = cir.const #cir.fp<0xFFFF8000000000000000> : !cir.long_double<!cir.f80>
+
+  cir.return
+}
+
+// We want to print floats in exponential notation with 6 significant digits,
+// but it may lead to precision loss when parsing back, in which case we print
+// the decimal form instead.
+// CHECK-LABEL: @f32_potential_precision_loss()
+cir.func @f32_potential_precision_loss() {
+  // CHECK: cir.const #cir.fp<1.23697901> : !cir.float
+  %0 = cir.const #cir.fp<1.23697901> : !cir.float
+  cir.return
+}
