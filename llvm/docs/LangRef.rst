@@ -15437,7 +15437,7 @@ external functions.
 .. _int_experimental_memset_pattern:
 
 '``llvm.experimental.memset.pattern``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
