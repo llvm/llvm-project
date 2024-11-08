@@ -415,7 +415,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         fatal("missing entry point symbol name");
-      ctx.config.entry = addUndefined(mangle(arg->getValue()));
+      ctx.config.entry = addUndefined(mangle(arg->getValue()), true);
       break;
     case OPT_failifmismatch:
       checkFailIfMismatch(arg->getValue(), file);
@@ -696,11 +696,32 @@ void LinkerDriver::addLibSearchPaths() {
   }
 }
 
-Symbol *LinkerDriver::addUndefined(StringRef name) {
+Symbol *LinkerDriver::addUndefined(StringRef name, bool aliasEC) {
   Symbol *b = ctx.symtab.addUndefined(name);
   if (!b->isGCRoot) {
     b->isGCRoot = true;
     ctx.config.gcroot.push_back(b);
+  }
+
+  // On ARM64EC, a symbol may be defined in either its mangled or demangled form
+  // (or both). Define an anti-dependency symbol that binds both forms, similar
+  // to how compiler-generated code references external functions.
+  if (aliasEC && isArm64EC(ctx.config.machine)) {
+    if (std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(name)) {
+      auto u = dyn_cast<Undefined>(b);
+      if (u && !u->weakAlias) {
+        Symbol *t = ctx.symtab.addUndefined(saver().save(*mangledName));
+        u->setWeakAlias(t, true);
+      }
+    } else {
+      std::optional<std::string> demangledName =
+          getArm64ECDemangledFunctionName(name);
+      Symbol *us = ctx.symtab.addUndefined(saver().save(*demangledName));
+      auto u = dyn_cast<Undefined>(us);
+      if (u && !u->weakAlias)
+        u->setWeakAlias(b, true);
+    }
   }
   return b;
 }
@@ -2342,22 +2363,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
         fatal("missing entry point symbol name");
-      config->entry = addUndefined(mangle(arg->getValue()));
+      config->entry = addUndefined(mangle(arg->getValue()), true);
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
         StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                                 : "_DllMainCRTStartup";
-        config->entry = addUndefined(s);
+        config->entry = addUndefined(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup
-        config->entry = addUndefined(mangle("_NtProcessStartup"));
+        config->entry = addUndefined(mangle("_NtProcessStartup"), true);
       } else {
         // Windows specific -- If entry point name is not given, we need to
         // infer that from user-defined entry name.
         StringRef s = findDefaultEntry();
         if (s.empty())
           fatal("entry point must be defined");
-        config->entry = addUndefined(s);
+        config->entry = addUndefined(s, true);
         log("Entry name inferred: " + s);
       }
     }
@@ -2371,7 +2392,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       if (config->machine == I386) {
         config->delayLoadHelper = addUndefined("___delayLoadHelper2@8");
       } else {
-        config->delayLoadHelper = addUndefined("__delayLoadHelper2");
+        config->delayLoadHelper = addUndefined("__delayLoadHelper2", true);
       }
     }
   }
@@ -2505,7 +2526,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       for (Export &e : config->exports) {
         if (!e.forwardTo.empty())
           continue;
-        e.sym = addUndefined(e.name);
+        e.sym = addUndefined(e.name, !e.data);
         if (e.source != ExportSource::Directives)
           e.symbolName = mangleMaybe(e.sym);
       }

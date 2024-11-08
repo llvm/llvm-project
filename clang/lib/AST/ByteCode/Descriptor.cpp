@@ -411,8 +411,16 @@ QualType Descriptor::getElemQualType() const {
   QualType T = getType();
   if (T->isPointerOrReferenceType())
     return T->getPointeeType();
-  if (const auto *AT = T->getAsArrayTypeUnsafe())
+  if (const auto *AT = T->getAsArrayTypeUnsafe()) {
+    // For primitive arrays, we don't save a QualType at all,
+    // just a PrimType. Try to figure out the QualType here.
+    if (isPrimitiveArray()) {
+      while (T->isArrayType())
+        T = T->getAsArrayTypeUnsafe()->getElementType();
+      return T;
+    }
     return AT->getElementType();
+  }
   if (const auto *CT = T->getAs<ComplexType>())
     return CT->getElementType();
   if (const auto *CT = T->getAs<VectorType>())

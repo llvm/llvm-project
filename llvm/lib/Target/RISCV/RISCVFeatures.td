@@ -936,6 +936,13 @@ def FeatureStdExtSscsrind
     : RISCVExtension<"sscsrind", 1, 0,
                      "'Sscsrind' (Indirect CSR Access Supervisor Level)">;
 
+def FeatureStdExtSmdbltrp
+    : RISCVExtension<"smdbltrp", 1, 0,
+                     "'Smdbltrp' (Double Trap Machine Level)">;
+def FeatureStdExtSsdbltrp
+    : RISCVExtension<"ssdbltrp", 1, 0,
+                     "'Ssdbltrp' (Double Trap Supervisor Level)">;
+
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
@@ -1385,6 +1392,13 @@ def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
+
+foreach nf = {2-8} in
+  def TuneOptimizedNF#nf#SegmentLoadStore :
+      SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
+                       "HasOptimizedNF"#nf#"SegmentLoadStore",
+                       "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are"
+                       "implemented as a wide memory op and shuffle">;
 
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",

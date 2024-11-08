@@ -10,36 +10,36 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
 #define _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
 
-#include <__algorithm/copy_n.h>
-#include <__algorithm/find.h>
-#include <__algorithm/max.h>
-#include <__algorithm/min.h>
-#include <__algorithm/rotate.h>
-#include <__algorithm/transform.h>
-#include <__assert>
-#include <__charconv/chars_format.h>
-#include <__charconv/to_chars_floating_point.h>
-#include <__charconv/to_chars_result.h>
-#include <__concepts/arithmetic.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/concepts.h>
-#include <__format/format_parse_context.h>
-#include <__format/formatter.h>
-#include <__format/formatter_integral.h>
-#include <__format/formatter_output.h>
-#include <__format/parser_std_format_spec.h>
-#include <__iterator/concepts.h>
-#include <__memory/allocator.h>
-#include <__system_error/errc.h>
-#include <__type_traits/conditional.h>
-#include <__utility/move.h>
-#include <__utility/unreachable.h>
-#include <cmath>
-#include <cstddef>
+#include <__cxx03/__algorithm/copy_n.h>
+#include <__cxx03/__algorithm/find.h>
+#include <__cxx03/__algorithm/max.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__algorithm/rotate.h>
+#include <__cxx03/__algorithm/transform.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__charconv/chars_format.h>
+#include <__cxx03/__charconv/to_chars_floating_point.h>
+#include <__cxx03/__charconv/to_chars_result.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/format_parse_context.h>
+#include <__cxx03/__format/formatter.h>
+#include <__cxx03/__format/formatter_integral.h>
+#include <__cxx03/__format/formatter_output.h>
+#include <__cxx03/__format/parser_std_format_spec.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__memory/allocator.h>
+#include <__cxx03/__system_error/errc.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/unreachable.h>
+#include <__cxx03/cmath>
+#include <__cxx03/cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <__locale>
+#  include <__cxx03/__locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -47,7 +47,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

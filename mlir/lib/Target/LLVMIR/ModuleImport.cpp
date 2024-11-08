@@ -2041,7 +2041,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   // Insert the function at the end of the module.
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+  builder.setInsertionPointToEnd(mlirModule.getBody());
 
   Location loc = debugImporter->translateFuncLocation(func);
   LLVMFuncOp funcOp = builder.create<LLVMFuncOp>(

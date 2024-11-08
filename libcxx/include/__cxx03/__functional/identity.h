@@ -10,10 +10,10 @@
 #ifndef _LIBCPP___FUNCTIONAL_IDENTITY_H
 #define _LIBCPP___FUNCTIONAL_IDENTITY_H
 
-#include <__config>
-#include <__fwd/functional.h>
-#include <__type_traits/integral_constant.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/functional.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

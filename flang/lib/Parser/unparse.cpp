@@ -2138,6 +2138,27 @@ public:
     Put(",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
+  void Unparse(const OmpFromClause &x) {
+    auto &expect{
+        std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    bool needComma{false};
+    if (expect) {
+      Walk(*expect);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (needComma) {
+      Put(": ");
+    }
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpIfClause &x) {
     Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
     Walk(std::get<ScalarLogicalExpr>(x.t));
@@ -2157,6 +2178,7 @@ public:
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpInReductionClause &x) {
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
@@ -2215,11 +2237,9 @@ public:
     Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
   }
   void Unparse(const OmpDependClause::InOut &x) {
-    Put("(");
     Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   bool Pre(const OmpDependClause &x) {
     return common::visit(
@@ -2242,6 +2262,27 @@ public:
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":",
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
+  }
+  void Unparse(const OmpToClause &x) {
+    auto &expect{
+        std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    bool needComma{false};
+    if (expect) {
+      Walk(*expect);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (needComma) {
+      Put(": ");
+    }
+    Walk(std::get<OmpObjectList>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2721,6 +2762,16 @@ public:
                   },
         x.u);
   }
+  void Unparse(const OpenMPDepobjConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP DEPOBJ");
+    Put("(");
+    Walk(std::get<OmpObject>(x.t));
+    Put(") ");
+    Walk(std::get<OmpClause>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH ");
@@ -2850,6 +2901,7 @@ public:
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
   WALK_NESTED_ENUM(
       OmpReductionClause, ReductionModifier) // OMP reduction-modifier
+  WALK_NESTED_ENUM(OmpFromClause, Expectation) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type

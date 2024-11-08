@@ -9,21 +9,21 @@
 #ifndef _LIBCPP___STRING_CONSTEXPR_C_FUNCTIONS_H
 #define _LIBCPP___STRING_CONSTEXPR_C_FUNCTIONS_H
 
-#include <__config>
-#include <__memory/addressof.h>
-#include <__memory/construct_at.h>
-#include <__type_traits/datasizeof.h>
-#include <__type_traits/is_always_bitcastable.h>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_equality_comparable.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/is_trivially_lexicographically_comparable.h>
-#include <__type_traits/remove_cv.h>
-#include <__utility/is_pointer_in_range.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__type_traits/datasizeof.h>
+#include <__cxx03/__type_traits/is_always_bitcastable.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_equality_comparable.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__type_traits/is_trivially_lexicographically_comparable.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/__utility/is_pointer_in_range.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
