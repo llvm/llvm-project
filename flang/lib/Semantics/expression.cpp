@@ -3065,7 +3065,10 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
         which);
     return false;
   }};
+
   if (const auto &chevrons{call.chevrons}) {
+    bool gridIsStar{false};
+    bool blockIsStar{false};
     auto &starOrExpr0{std::get<0>(chevrons->t)};
     if (starOrExpr0.v) {
       if (auto expr{Analyze(*starOrExpr0.v)};
@@ -3075,6 +3078,7 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
         return std::nullopt;
       }
     } else {
+      gridIsStar = true;
       result.emplace_back(
           AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
     }
@@ -3087,8 +3091,12 @@ std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
         return std::nullopt;
       }
     } else {
+      blockIsStar = true;
       result.emplace_back(
           AsGenericExpr(evaluate::Constant<evaluate::SubscriptInteger>{-1}));
+    }
+    if (gridIsStar && blockIsStar) {
+      Say("Grid and block can not be * in kernel launch parameter"_err_en_US);
     }
     if (const auto &maybeExpr{std::get<2>(chevrons->t)}) {
       if (auto expr{Analyze(*maybeExpr)}) {

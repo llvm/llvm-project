@@ -40,7 +40,6 @@ module m
     call globalsub<<<1, 2>>>
     call globalsub<<<1, 2, 3>>>
     call globalsub<<<1, 2, 3, 4>>>
-    call globalsub<<<*,*>>>
     call globalsub<<<*,5>>>
     call globalsub<<<1,*>>>
     allocate(pa(32), pinned = isPinned)

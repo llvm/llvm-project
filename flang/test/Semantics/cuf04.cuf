@@ -20,5 +20,7 @@ module m
     call globsubr
     !ERROR: Kernel launch parameters in chevrons may not be used unless calling a kernel subroutine
     call boring<<<1,2>>>
+    !ERROR: Grid and block can not be * in kernel launch parameter
+    call globsubr<<<*, *>>>
   end subroutine
 end module
