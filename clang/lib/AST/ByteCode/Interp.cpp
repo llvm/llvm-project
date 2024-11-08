@@ -1374,9 +1374,15 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame.get();
 
   if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
-    NewFrame.release();
+    // Release ownership of NewFrame to prevent it from being deleted.
+    NewFrame.release(); // Frame was deleted already.
+    // Ensure that S.Current is correctly reset to the previous frame.
+    assert(S.Current == FrameBefore);
     return true;
   }
+
+  // Interpreting the function failed somehow. Reset to
+  // previous state.
   S.Current = FrameBefore;
   return false;
 }
