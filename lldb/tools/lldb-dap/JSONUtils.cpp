@@ -6,27 +6,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iomanip>
-#include <optional>
-#include <sstream>
-#include <string.h>
+#include "JSONUtils.h"
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
-
+#include "BreakpointBase.h"
+#include "DAP.h"
+#include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFunction.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBModule.h"
+#include "lldb/API/SBQueue.h"
+#include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/Host/PosixApi.h"
-
-#include "DAP.h"
-#include "ExceptionBreakpoint.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
+#include "lldb/Host/PosixApi.h" // IWYU pragma: keep
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <chrono>
+#include <climits>
+#include <cstddef>
+#include <iomanip>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 
@@ -831,70 +857,6 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread) {
                                               {"presentationHint", "label"}});
 }
 
-// Response to `setInstructionBreakpoints` request.
-// "Breakpoint": {
-//   "type": "object",
-//   "description": "Response to `setInstructionBreakpoints` request.",
-//   "properties": {
-//     "id": {
-//       "type": "number",
-//       "description": "The identifier for the breakpoint. It is needed if
-//       breakpoint events are used to update or remove breakpoints."
-//     },
-//     "verified": {
-//       "type": "boolean",
-//       "description": "If true, the breakpoint could be set (but not
-//       necessarily at the desired location."
-//     },
-//     "message": {
-//       "type": "string",
-//       "description": "A message about the state of the breakpoint.
-//       This is shown to the user and can be used to explain why a breakpoint
-//       could not be verified."
-//     },
-//     "source": {
-//       "type": "Source",
-//       "description": "The source where the breakpoint is located."
-//     },
-//     "line": {
-//       "type": "number",
-//       "description": "The start line of the actual range covered by the
-//       breakpoint."
-//     },
-//     "column": {
-//       "type": "number",
-//       "description": "The start column of the actual range covered by the
-//       breakpoint."
-//     },
-//     "endLine": {
-//       "type": "number",
-//       "description": "The end line of the actual range covered by the
-//       breakpoint."
-//     },
-//     "endColumn": {
-//       "type": "number",
-//       "description": "The end column of the actual range covered by the
-//       breakpoint. If no end line is given, then the end column is assumed to
-//       be in the start line."
-//     },
-//     "instructionReference": {
-//       "type": "string",
-//       "description": "A memory reference to where the breakpoint is set."
-//     },
-//     "offset": {
-//       "type": "number",
-//       "description": "The offset from the instruction reference.
-//       This can be negative."
-//     },
-//   },
-//   "required": [ "id", "verified", "line"]
-// }
-llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp) {
-  llvm::json::Object object;
-  ibp->CreateJsonObject(object);
-  return llvm::json::Value(std::move(object));
-}
-
 // "Thread": {
 //   "type": "object",
 //   "description": "A Thread",
@@ -1523,7 +1485,7 @@ void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
                              llvm::json::Object &out) {
   lldb::SBStructuredData value = data.GetValueForKey(key);
   std::string key_utf8 = llvm::json::fixUTF8(key);
-  if (strcmp(key, "modules") == 0)
+  if (llvm::StringRef(key) == "modules")
     return;
   switch (value.GetType()) {
   case lldb::eStructuredDataTypeFloat:

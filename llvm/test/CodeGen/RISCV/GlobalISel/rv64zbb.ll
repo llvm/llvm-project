@@ -6,6 +6,7 @@
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 
+; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctlz_i32:
 ; RV64I:       # %bb.0:
@@ -126,6 +127,7 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
   ret i32 %2
 }
 
+; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: log2_ceil_i32:
 ; RV64I:       # %bb.0:
@@ -263,6 +265,7 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
   ret i32 %4
 }
 
+; FIXME: We don't need the shift pair before the beqz for RV64I.
 define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-LABEL: ctlz_lshr_i32:
 ; RV64I:       # %bb.0:
@@ -990,6 +993,8 @@ define i64 @max_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
+; FIXME: We don't need the shift pairs. The inputs are sign extended, we can
+; compare them directly.
 define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: minu_i32:
 ; RV64I:       # %bb.0:
@@ -1036,6 +1041,8 @@ define i64 @minu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
+; FIXME: We don't need the shift pairs. The inputs are sign extended, we can
+; compare them directly.
 define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: maxu_i32:
 ; RV64I:       # %bb.0:

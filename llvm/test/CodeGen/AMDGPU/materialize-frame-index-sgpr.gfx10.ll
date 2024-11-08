@@ -1639,7 +1639,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v3, 5, s32
-; GFX10_1-NEXT:    s_lshl_b32 s4, s16, 2
+; GFX10_1-NEXT:    s_lshl_b32 s4, s6, 2
 ; GFX10_1-NEXT:    v_writelane_b32 v2, s59, 0
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
 ; GFX10_1-NEXT:    v_add_nc_u32_e32 v1, s4, v3
@@ -1670,7 +1670,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX10_3-NEXT:    buffer_store_dword v2, off, s[0:3], s5 ; 4-byte Folded Spill
 ; GFX10_3-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_3-NEXT:    v_lshrrev_b32_e64 v3, 5, s32
-; GFX10_3-NEXT:    s_lshl_b32 s4, s16, 2
+; GFX10_3-NEXT:    s_lshl_b32 s4, s6, 2
 ; GFX10_3-NEXT:    v_writelane_b32 v2, s59, 0
 ; GFX10_3-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
 ; GFX10_3-NEXT:    v_add_nc_u32_e32 v1, s4, v3
@@ -1761,12 +1761,12 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GFX8-NEXT:    s_add_i32 s6, s32, 0x201000
-; GFX8-NEXT:    buffer_store_dword v2, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX8-NEXT:    s_add_i32 s7, s32, 0x201000
+; GFX8-NEXT:    buffer_store_dword v2, off, s[0:3], s7 ; 4-byte Folded Spill
 ; GFX8-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX8-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
 ; GFX8-NEXT:    s_movk_i32 vcc_lo, 0x4040
-; GFX8-NEXT:    s_lshl_b32 s4, s16, 2
+; GFX8-NEXT:    s_lshl_b32 s4, s6, 2
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, vcc_lo, v0
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s4, v0
 ; GFX8-NEXT:    v_writelane_b32 v2, s59, 0
@@ -1792,11 +1792,11 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GFX900-NEXT:    s_add_i32 s6, s32, 0x201000
-; GFX900-NEXT:    buffer_store_dword v2, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX900-NEXT:    s_add_i32 s7, s32, 0x201000
+; GFX900-NEXT:    buffer_store_dword v2, off, s[0:3], s7 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
-; GFX900-NEXT:    s_lshl_b32 s4, s16, 2
+; GFX900-NEXT:    s_lshl_b32 s4, s6, 2
 ; GFX900-NEXT:    v_add_u32_e32 v0, 0x4040, v0
 ; GFX900-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX900-NEXT:    v_writelane_b32 v2, s59, 0
