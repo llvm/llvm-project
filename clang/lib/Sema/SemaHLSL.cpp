@@ -2199,6 +2199,50 @@ static void BuildFlattenedTypeList(QualType BaseTy,
   }
 }
 
+bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  // check if the outer type was an array type
+  if (QT->isArrayType())
+    return false;
+
+  llvm::SmallVector<QualType, 4> QTTypes;
+  BuildFlattenedTypeList(QT, QTTypes);
+
+  assert(QTTypes.size() > 0 &&
+         "expected at least one constituent type from non-null type");
+  QualType FirstQT = SemaRef.Context.getCanonicalType(QTTypes[0]);
+
+  // element count cannot exceed 4
+  if (QTTypes.size() > 4)
+    return false;
+
+  for (QualType TempQT : QTTypes) {
+    // ensure homogeneity
+    if (!getASTContext().hasSameUnqualifiedType(FirstQT, TempQT))
+      return false;
+  }
+
+  if (const BuiltinType *BT = FirstQT->getAs<BuiltinType>()) {
+    if (BT->isBooleanType() || BT->isEnumeralType())
+      return false;
+
+    // Check if it is an array type.
+    if (FirstQT->isArrayType())
+      return false;
+  }
+
+  // if the loop above completes without returning, then
+  // we've guaranteed homogeneity
+  int TotalSizeInBytes =
+      (SemaRef.Context.getTypeSize(FirstQT) / 8) * QTTypes.size();
+  if (TotalSizeInBytes > 16)
+    return false;
+
+  return true;
+}
+
 bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
   if (T1.isNull() || T2.isNull())
     return false;
