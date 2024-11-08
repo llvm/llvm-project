@@ -22,6 +22,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -32,7 +33,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
-#include <llvm-14/llvm/ADT/StringExtras.h>
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -2887,9 +2887,8 @@ void SPIRVInstructionSelector::extractSubvector(
                                 .addDef(ResVReg)
                                 .addUse(GR.getSPIRVTypeID(ResType));
 
-  for (Register ComponentReg : ComponentRegisters) {
+  for (Register ComponentReg : ComponentRegisters)
     MIB.addUse(ComponentReg);
-  }
 }
 
 Register SPIRVInstructionSelector::buildPointerToResource(
@@ -3397,14 +3396,12 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
 SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
                                                      MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
-  if (Type->getOpcode() != SPIRV::OpTypeVector) {
+  if (Type->getOpcode() != SPIRV::OpTypeVector)
     return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder);
-  }
 
   uint64_t VectorSize = Type->getOperand(2).getImm();
-  if (VectorSize == 4) {
+  if (VectorSize == 4)
     return Type;
-  }
 
   Register ScalarTypeReg = Type->getOperand(1).getReg();
   const SPIRVType *ScalarType = GR.getSPIRVTypeForVReg(ScalarTypeReg);
