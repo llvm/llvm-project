@@ -293,6 +293,11 @@ C2y Feature Support
   language modes but is now rejected (all of the other qualifiers and storage
   class specifiers were previously rejected).
 
+- Updated conformance for `N3364 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3364.pdf>`_
+  on floating-point translation-time initialization with signaling NaN. This
+  paper adopts Clang's existing practice, so there were no changes to compiler
+  behavior.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -307,6 +312,29 @@ Non-comprehensive list of changes in this release
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
 - ``__builtin_abs`` function can now be used in constant expressions.
+
+- The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
+  programmer needs access to the ``counted_by`` attribute's field, but it's not
+  available --- e.g. in macros. For instace, it can be used to automatically
+  set the counter during allocation in the Linux kernel:
+
+  .. code-block:: c
+
+     /* A simplified version of Linux allocation macros */
+     #define alloc(PTR, FAM, COUNT) ({ \
+         sizeof_t __ignored_assignment;                             \
+         typeof(P) __p;                                             \
+         size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT;      \
+         __p = malloc(__size);                                      \
+         *_Generic(                                                 \
+           __builtin_counted_by_ref(__p->FAM),                      \
+             void *: &__ignored_assignment,                         \
+             default: __builtin_counted_by_ref(__p->FAM)) = COUNT;  \
+         __p;                                                       \
+     })
+
+  The flexible array member (FAM) can now be accessed immediately without causing
+  issues with the sanitizer because the counter is automatically set.
 
 New Compiler Flags
 ------------------
@@ -608,6 +636,8 @@ Bug Fixes to C++ Support
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Fixed an assertion failure caused by invalid default argument substitutions in non-defining
+  friend declarations. (#GH113324).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

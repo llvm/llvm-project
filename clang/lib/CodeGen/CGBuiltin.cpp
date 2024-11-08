@@ -3691,6 +3691,35 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
+  case Builtin::BI__builtin_counted_by_ref: {
+    // Default to returning '(void *) 0'.
+    llvm::Value *Result = llvm::ConstantPointerNull::get(
+        llvm::PointerType::getUnqual(getLLVMContext()));
+
+    const Expr *Arg = E->getArg(0)->IgnoreParenImpCasts();
+
+    if (auto *UO = dyn_cast<UnaryOperator>(Arg);
+        UO && UO->getOpcode() == UO_AddrOf) {
+      Arg = UO->getSubExpr()->IgnoreParenImpCasts();
+
+      if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Arg))
+        Arg = ASE->getBase()->IgnoreParenImpCasts();
+    }
+
+    if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
+      if (auto *CATy =
+              ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+          CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+        const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
+          Result = GetCountedByFieldExprGEP(Arg, FAMDecl, CountFD);
+        else
+          llvm::report_fatal_error("Cannot find the counted_by 'count' field");
+      }
+    }
+
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     // FIXME: Technically these constants should of type 'int', yes?
@@ -18880,6 +18909,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
         "hlsl.dot4add.i8packed");
+  }
+  case Builtin::BI__builtin_hlsl_dot4add_u8packed: {
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getDot4AddU8PackedIntrinsic();
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
+        "hlsl.dot4add.u8packed");
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
 
