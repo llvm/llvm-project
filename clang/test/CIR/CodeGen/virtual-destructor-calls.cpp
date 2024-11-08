@@ -42,7 +42,6 @@ struct B : A {
 // LLVM: call void @_ZdlPv
 
 // (aliases from C)
-// FIXME: this should be an alias declaration even in -O0
 // CIR: cir.func @_ZN1CD2Ev(%arg0: !cir.ptr<!ty_C>{{.*}})) {{.*}} {
 // CIR: cir.func private @_ZN1CD1Ev(!cir.ptr<!ty_C>) alias(@_ZN1CD2Ev)
 
