@@ -1749,31 +1749,21 @@ namespace {
       return inherited::TransformLambdaBody(E, Body);
     }
 
-    ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc,
-                                     NamedDecl *Pack, SourceLocation PackLoc,
-                                     SourceLocation RParenLoc,
-                                     std::optional<unsigned> Length,
-                                     ArrayRef<TemplateArgument> PartialArgs) {
-      if (SemaRef.CodeSynthesisContexts.back().Kind !=
-          Sema::CodeSynthesisContext::ConstraintNormalization)
-        return inherited::RebuildSizeOfPackExpr(OperatorLoc, Pack, PackLoc,
-                                                RParenLoc, Length, PartialArgs);
-
-#ifndef NDEBUG
-      for (auto *Iter = TemplateArgs.begin(); Iter != TemplateArgs.end();
-           ++Iter)
-        for (const TemplateArgument &TA : Iter->Args)
-          assert(TA.getKind() != TemplateArgument::Pack || TA.pack_size() == 1);
-#endif
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(
-          SemaRef, /*NewSubstitutionIndex=*/0);
-      Decl *NewPack = TransformDecl(PackLoc, Pack);
-      if (!NewPack)
-        return ExprError();
-
-      return inherited::RebuildSizeOfPackExpr(OperatorLoc,
-                                              cast<NamedDecl>(NewPack), PackLoc,
-                                              RParenLoc, Length, PartialArgs);
+    ExprResult TransformSizeOfPackExpr(SizeOfPackExpr *E) {
+      ExprResult Transformed = inherited::TransformSizeOfPackExpr(E);
+      if (!Transformed.isUsable())
+        return Transformed;
+      auto *TransformedExpr = cast<SizeOfPackExpr>(Transformed.get());
+      if (SemaRef.CodeSynthesisContexts.back().Kind ==
+              Sema::CodeSynthesisContext::ConstraintNormalization &&
+          TransformedExpr->getPack() == E->getPack()) {
+        Decl *NewPack =
+            TransformDecl(E->getPackLoc(), TransformedExpr->getPack());
+        if (!NewPack)
+          return ExprError();
+        TransformedExpr->setPack(cast<NamedDecl>(NewPack));
+      }
+      return TransformedExpr;
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
@@ -1899,6 +1889,15 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
 
       if (TTP->isParameterPack()) {
+        // We might not have an index for pack expansion when normalizing
+        // constraint expressions. In that case, resort to instantiation scopes
+        // for the transformed declarations.
+        if (SemaRef.ArgumentPackSubstitutionIndex == -1 &&
+            SemaRef.CodeSynthesisContexts.back().Kind ==
+                Sema::CodeSynthesisContext::ConstraintNormalization) {
+          return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D),
+                                              TemplateArgs);
+        }
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
