@@ -1438,7 +1438,7 @@ define float @v_test_sitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
 ; SI-NEXT:    v_ffbh_i32_e32 v3, 0
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, 32, v2
-; SI-NEXT:    v_subrev_i32_e32 v3, vcc, 1, v3
+; SI-NEXT:    v_add_i32_e32 v3, vcc, -1, v3
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    v_min_u32_e32 v2, v3, v2
 ; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], v2
@@ -1456,7 +1456,7 @@ define float @v_test_sitofp_i64_byte_to_f32(i64 %arg0) {
 ; VI-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
 ; VI-NEXT:    v_ffbh_i32_e32 v3, 0
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 32, v2
-; VI-NEXT:    v_subrev_u32_e32 v3, vcc, 1, v3
+; VI-NEXT:    v_add_u32_e32 v3, vcc, -1, v3
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    v_min_u32_e32 v2, v3, v2
 ; VI-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
