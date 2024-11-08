@@ -44,7 +44,7 @@ define void @test() {
 ; CHECK-NEXT:    br i1 false, label [[BB11]], label [[BB12:%.*]]
 ; CHECK:       bb42:
 ; CHECK-NEXT:    [[TMP24_LCSSA:%.*]] = phi i32 [ undef, [[BB22]] ]
-; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ 0, [[BB22]] ]
+; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ undef, [[BB22]] ]
 ; CHECK-NEXT:    store atomic i64 [[TMP18_LCSSA4]], ptr addrspace(1) undef unordered, align 8
 ; CHECK-NEXT:    call void @use(i32 [[TMP24_LCSSA]])
 ; CHECK-NEXT:    ret void

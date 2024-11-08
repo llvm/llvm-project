@@ -9362,6 +9362,12 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   DenseMap<std::pair<size_t, Value *>, SmallVector<LoadInst *>> LoadsMap;
   SmallSet<size_t, 2> LoadKeyUsed;
 
+  // Do not reorder nodes if it small (just 2 elements), all-constant or all
+  // instructions have same opcode already.
+  if (TE.Scalars.size() == 2 || (TE.getOpcode() && !TE.isAltShuffle()) ||
+      all_of(TE.Scalars, isConstant))
+    return;
+
   if (any_of(seq<unsigned>(TE.Idx), [&](unsigned Idx) {
         return VectorizableTree[Idx]->isSame(TE.Scalars);
       }))
@@ -15645,9 +15651,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::ShuffleVector: {
       Value *V;
       if (SLPReVec && !E->isAltShuffle()) {
-        assert(E->ReuseShuffleIndices.empty() &&
-               "Not support ReuseShuffleIndices yet.");
-        assert(E->ReorderIndices.empty() && "Not support ReorderIndices yet.");
         setInsertPointAfterBundle(E);
         Value *Src = vectorizeOperand(E, 0, PostponedPHIs);
         if (E->VectorizedValue) {
@@ -15665,6 +15668,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                   [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
         V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
         propagateIRFlags(V, E->Scalars, VL0);
+        if (auto *I = dyn_cast<Instruction>(V))
+          V = propagateMetadata(I, E->Scalars);
+        V = FinalShuffle(V, E);
       } else {
         assert(E->isAltShuffle() &&
                ((Instruction::isBinaryOp(E->getOpcode()) &&
@@ -15795,11 +15801,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           transformScalarShuffleIndiciesToVector(VecTy->getNumElements(), Mask);
         }
         V = Builder.CreateShuffleVector(V0, V1, Mask);
-      }
-      if (auto *I = dyn_cast<Instruction>(V)) {
-        V = propagateMetadata(I, E->Scalars);
-        GatherShuffleExtractSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          V = propagateMetadata(I, E->Scalars);
+          GatherShuffleExtractSeq.insert(I);
+          CSEBlocks.insert(I->getParent());
+        }
       }
 
       E->VectorizedValue = V;
@@ -18509,25 +18515,30 @@ bool SLPVectorizerPass::vectorizeStores(
       }
       // Try to vectorize the first found set to avoid duplicate analysis.
       TryToVectorize(Set.second);
+      unsigned ItIdx = It->first;
+      int ItDist = It->second;
       StoreIndexToDistSet PrevSet;
-      PrevSet.swap(Set.second);
+      copy_if(Set.second, std::inserter(PrevSet, PrevSet.end()),
+              [&](const std::pair<unsigned, int> &Pair) {
+                return Pair.first > ItIdx;
+              });
+      Set.second.clear();
       Set.first = Idx;
       Set.second.emplace(Idx, 0);
       // Insert stores that followed previous match to try to vectorize them
       // with this store.
-      unsigned StartIdx = It->first + 1;
+      unsigned StartIdx = ItIdx + 1;
       SmallBitVector UsedStores(Idx - StartIdx);
       // Distances to previously found dup store (or this store, since they
       // store to the same addresses).
       SmallVector<int> Dists(Idx - StartIdx, 0);
       for (const std::pair<unsigned, int> &Pair : reverse(PrevSet)) {
         // Do not try to vectorize sequences, we already tried.
-        if (Pair.first <= It->first ||
-            VectorizedStores.contains(Stores[Pair.first]))
+        if (VectorizedStores.contains(Stores[Pair.first]))
           break;
         unsigned BI = Pair.first - StartIdx;
         UsedStores.set(BI);
-        Dists[BI] = Pair.second - It->second;
+        Dists[BI] = Pair.second - ItDist;
       }
       for (unsigned I = StartIdx; I < Idx; ++I) {
         unsigned BI = I - StartIdx;

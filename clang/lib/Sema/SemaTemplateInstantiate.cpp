@@ -1661,14 +1661,17 @@ namespace {
     QualType
     TransformSubstTemplateTypeParmType(TypeLocBuilder &TLB,
                                        SubstTemplateTypeParmTypeLoc TL) {
-      if (SemaRef.CodeSynthesisContexts.back().Kind !=
-          Sema::CodeSynthesisContext::ConstraintSubstitution)
+      const SubstTemplateTypeParmType *Type = TL.getTypePtr();
+      if (Type->getSubstitutionFlag() !=
+          SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace)
         return inherited::TransformSubstTemplateTypeParmType(TLB, TL);
 
-      auto PackIndex = TL.getTypePtr()->getPackIndex();
-      std::optional<Sema::ArgumentPackSubstitutionIndexRAII> SubstIndex;
-      if (SemaRef.ArgumentPackSubstitutionIndex == -1 && PackIndex)
-        SubstIndex.emplace(SemaRef, *PackIndex);
+      assert(Type->getPackIndex());
+      TemplateArgument TA = TemplateArgs(
+          Type->getReplacedParameter()->getDepth(), Type->getIndex());
+      assert(*Type->getPackIndex() + 1 <= TA.pack_size());
+      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(
+          SemaRef, TA.pack_size() - 1 - *Type->getPackIndex());
 
       return inherited::TransformSubstTemplateTypeParmType(TLB, TL);
     }
@@ -1746,31 +1749,21 @@ namespace {
       return inherited::TransformLambdaBody(E, Body);
     }
 
-    ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc,
-                                     NamedDecl *Pack, SourceLocation PackLoc,
-                                     SourceLocation RParenLoc,
-                                     std::optional<unsigned> Length,
-                                     ArrayRef<TemplateArgument> PartialArgs) {
-      if (SemaRef.CodeSynthesisContexts.back().Kind !=
-          Sema::CodeSynthesisContext::ConstraintNormalization)
-        return inherited::RebuildSizeOfPackExpr(OperatorLoc, Pack, PackLoc,
-                                                RParenLoc, Length, PartialArgs);
-
-#ifndef NDEBUG
-      for (auto *Iter = TemplateArgs.begin(); Iter != TemplateArgs.end();
-           ++Iter)
-        for (const TemplateArgument &TA : Iter->Args)
-          assert(TA.getKind() != TemplateArgument::Pack || TA.pack_size() == 1);
-#endif
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(
-          SemaRef, /*NewSubstitutionIndex=*/0);
-      Decl *NewPack = TransformDecl(PackLoc, Pack);
-      if (!NewPack)
-        return ExprError();
-
-      return inherited::RebuildSizeOfPackExpr(OperatorLoc,
-                                              cast<NamedDecl>(NewPack), PackLoc,
-                                              RParenLoc, Length, PartialArgs);
+    ExprResult TransformSizeOfPackExpr(SizeOfPackExpr *E) {
+      ExprResult Transformed = inherited::TransformSizeOfPackExpr(E);
+      if (!Transformed.isUsable())
+        return Transformed;
+      auto *TransformedExpr = cast<SizeOfPackExpr>(Transformed.get());
+      if (SemaRef.CodeSynthesisContexts.back().Kind ==
+              Sema::CodeSynthesisContext::ConstraintNormalization &&
+          TransformedExpr->getPack() == E->getPack()) {
+        Decl *NewPack =
+            TransformDecl(E->getPackLoc(), TransformedExpr->getPack());
+        if (!NewPack)
+          return ExprError();
+        TransformedExpr->setPack(cast<NamedDecl>(NewPack));
+      }
+      return TransformedExpr;
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
@@ -1896,6 +1889,15 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
 
       if (TTP->isParameterPack()) {
+        // We might not have an index for pack expansion when normalizing
+        // constraint expressions. In that case, resort to instantiation scopes
+        // for the transformed declarations.
+        if (SemaRef.ArgumentPackSubstitutionIndex == -1 &&
+            SemaRef.CodeSynthesisContexts.back().Kind ==
+                Sema::CodeSynthesisContext::ConstraintNormalization) {
+          return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D),
+                                              TemplateArgs);
+        }
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
@@ -3147,7 +3149,11 @@ struct ExpandPackedTypeConstraints
 
   using inherited = TreeTransform<ExpandPackedTypeConstraints>;
 
-  ExpandPackedTypeConstraints(Sema &SemaRef) : inherited(SemaRef) {}
+  const MultiLevelTemplateArgumentList &TemplateArgs;
+
+  ExpandPackedTypeConstraints(
+      Sema &SemaRef, const MultiLevelTemplateArgumentList &TemplateArgs)
+      : inherited(SemaRef), TemplateArgs(TemplateArgs) {}
 
   using inherited::TransformTemplateTypeParmType;
 
@@ -3163,9 +3169,15 @@ struct ExpandPackedTypeConstraints
 
     assert(SemaRef.ArgumentPackSubstitutionIndex != -1);
 
+    TemplateArgument Arg = TemplateArgs(T->getDepth(), T->getIndex());
+
+    std::optional<unsigned> PackIndex;
+    if (Arg.getKind() == TemplateArgument::Pack)
+      PackIndex = Arg.pack_size() - 1 - SemaRef.ArgumentPackSubstitutionIndex;
+
     QualType Result = SemaRef.Context.getSubstTemplateTypeParmType(
-        TL.getType(), T->getDecl(), T->getIndex(),
-        SemaRef.ArgumentPackSubstitutionIndex);
+        TL.getType(), T->getDecl(), T->getIndex(), PackIndex,
+        SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace);
     SubstTemplateTypeParmTypeLoc NewTL =
         TLB.push<SubstTemplateTypeParmTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
@@ -3224,8 +3236,8 @@ bool Sema::SubstTypeConstraint(
       TemplateArgumentListInfo InstArgs;
       InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
       InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
-      if (ExpandPackedTypeConstraints(*this).SubstTemplateArguments(
-              TemplArgInfo->arguments(), InstArgs))
+      if (ExpandPackedTypeConstraints(*this, TemplateArgs)
+              .SubstTemplateArguments(TemplArgInfo->arguments(), InstArgs))
         return true;
 
       // The type of the original parameter.

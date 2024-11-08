@@ -46835,9 +46835,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
   }
 
-  // AVX512 - Extend select with zero to merge with target shuffle.
-  // select(mask, extract_subvector(shuffle(x)), zero) -->
-  // extract_subvector(select(insert_subvector(mask), shuffle(x), zero))
+  // AVX512 - Extend select to merge with target shuffle.
+  // select(mask, extract_subvector(shuffle(x)), y) -->
+  // extract_subvector(select(widen(mask), shuffle(x), widen(y)))
   // TODO - support non target shuffles as well with canCombineAsMaskOperation.
   if (Subtarget.hasAVX512() && CondVT.isVector() &&
       CondVT.getVectorElementType() == MVT::i1) {
@@ -46847,7 +46847,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
              isNullConstant(Op.getOperand(1)) &&
              TLI.isTypeLegal(Op.getOperand(0).getValueType()) &&
              Op.hasOneUse() && Op.getOperand(0).hasOneUse() &&
-             ISD::isBuildVectorAllZeros(Alt.getNode());
+             (Op.getOperand(0).getOpcode() != X86ISD::VPERMV3 ||
+              ISD::isBuildVectorAllZeros(Alt.getNode()));
     };
 
     bool SelectableLHS = SelectableOp(LHS, RHS);
