@@ -44,8 +44,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Value.h"
 
-using namespace clang;
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenFunction;
 class CIRGenCXXABI;
@@ -160,7 +159,7 @@ public:
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
   CIRGenFunction *getCurrCIRGenFun() const { return CurCGF; }
-  const CIRDataLayout getDataLayout() const {
+  const cir::CIRDataLayout getDataLayout() const {
     // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
     // attribute for the CIRModule class.
     return {theModule};
@@ -853,6 +852,6 @@ private:
   /// Those annotations are emitted during lowering to the LLVM code.
   void addGlobalAnnotations(const ValueDecl *d, mlir::Operation *gv);
 };
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H

@@ -24,7 +24,7 @@ namespace clang {
 class FunctionDecl;
 }
 
-namespace cir {
+namespace clang::CIRGen {
 class CIRGenModule;
 class CIRGenFunction;
 
@@ -665,6 +665,6 @@ struct EHPersonality {
 
   bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
 };
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

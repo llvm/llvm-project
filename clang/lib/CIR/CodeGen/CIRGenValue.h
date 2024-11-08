@@ -27,7 +27,7 @@
 
 #include "mlir/IR/Value.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 /// This trivial value class is used to represent the result of an
 /// expression that is evaluated. It can be one of three things: either a
@@ -551,6 +551,6 @@ public:
   }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

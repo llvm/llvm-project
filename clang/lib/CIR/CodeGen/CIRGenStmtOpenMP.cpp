@@ -28,8 +28,8 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::omp;
 
 static void buildDependences(const OMPExecutableDirective &S,

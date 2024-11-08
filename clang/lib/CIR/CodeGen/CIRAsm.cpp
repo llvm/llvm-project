@@ -5,8 +5,8 @@
 #include "TargetInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 
 static bool isAggregateType(mlir::Type typ) {
@@ -285,7 +285,7 @@ static void buildAsmStores(CIRGenFunction &CGF, const AsmStmt &S,
     mlir::Type TruncTy = ResultTruncRegTypes[i];
 
     if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
-      assert(!MissingFeatures::asmLLVMAssume());
+      assert(!cir::MissingFeatures::asmLLVMAssume());
     }
 
     // If the result type of the LLVM IR asm doesn't match the result type of
@@ -311,7 +311,7 @@ static void buildAsmStores(CIRGenFunction &CGF, const AsmStmt &S,
       } else if (isa<mlir::cir::IntType>(TruncTy)) {
         Tmp = Builder.createIntCast(Tmp, TruncTy);
       } else if (false /*TruncTy->isVectorTy()*/) {
-        assert(!MissingFeatures::asmVectorType());
+        assert(!cir::MissingFeatures::asmVectorType());
       }
     }
 
@@ -468,7 +468,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
       }
 
       // Update largest vector width for any vector types.
-      assert(!MissingFeatures::asmVectorType());
+      assert(!cir::MissingFeatures::asmVectorType());
     } else {
       Address DestAddr = Dest.getAddress();
 
@@ -504,7 +504,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
         Arg = builder.createBitcast(Arg, AdjTy);
 
       // Update largest vector width for any vector types.
-      assert(!MissingFeatures::asmVectorType());
+      assert(!cir::MissingFeatures::asmVectorType());
 
       // Only tie earlyclobber physregs.
       if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
@@ -521,7 +521,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
   // If this is a Microsoft-style asm blob, store the return registers (EAX:EDX)
   // to the return value slot. Only do this when returning in registers.
   if (isa<MSAsmStmt>(&S)) {
-    const ABIArgInfo &RetAI = CurFnInfo->getReturnInfo();
+    const cir::ABIArgInfo &RetAI = CurFnInfo->getReturnInfo();
     if (RetAI.isDirect() || RetAI.isExtend()) {
       // Make a fake lvalue for the return value slot.
       LValue ReturnSlot = makeAddrLValue(ReturnValue, FnRetTy);
@@ -593,7 +593,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
           << InputExpr->getType() << InputConstraint;
 
     // Update largest vector width for any vector types.
-    assert(!MissingFeatures::asmVectorType());
+    assert(!cir::MissingFeatures::asmVectorType());
 
     ArgTypes.push_back(Arg.getType());
     ArgElemTypes.push_back(ArgElemType);
@@ -636,11 +636,11 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
       HasSideEffect, inferFlavor(CGM, S), mlir::ArrayAttr());
 
   if (false /*IsGCCAsmGoto*/) {
-    assert(!MissingFeatures::asmGoto());
+    assert(!cir::MissingFeatures::asmGoto());
   } else if (HasUnwindClobber) {
-    assert(!MissingFeatures::asmUnwindClobber());
+    assert(!cir::MissingFeatures::asmUnwindClobber());
   } else {
-    assert(!MissingFeatures::asmMemoryEffects());
+    assert(!cir::MissingFeatures::asmMemoryEffects());
 
     mlir::Value result;
     if (IA.getNumResults())

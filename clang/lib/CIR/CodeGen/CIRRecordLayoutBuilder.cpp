@@ -18,7 +18,7 @@
 
 using namespace llvm;
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 namespace {
 /// The CIRRecordLowering is responsible for lowering an ASTRecordLayout to a
@@ -215,7 +215,7 @@ struct CIRRecordLowering final {
   llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> virtualBases;
-  CIRDataLayout dataLayout;
+  cir::CIRDataLayout dataLayout;
   bool IsZeroInitializable : 1;
   bool IsZeroInitializableAsBase : 1;
   bool isPacked : 1;
@@ -402,7 +402,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
     return;
 
   for ([[maybe_unused]] auto &I : bitFields) {
-    assert(!MissingFeatures::armComputeVolatileBitfields());
+    assert(!cir::MissingFeatures::armComputeVolatileBitfields());
   }
 }
 

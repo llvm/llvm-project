@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "CIRGenBuilder.h"
 
-namespace cir {
+using namespace clang::CIRGen;
 
 mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
                                                   mlir::Value arrayPtr,
@@ -67,4 +67,3 @@ mlir::cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
   return create<mlir::cir::ConstantOp>(loc, intTy,
                                        mlir::cir::IntAttr::get(t, C));
 }
-} // namespace cir

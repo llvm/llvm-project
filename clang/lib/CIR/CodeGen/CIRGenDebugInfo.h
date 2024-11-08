@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENDEBUGINFO_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENDEBUGINFO_H
 
-namespace cir {
+namespace clang::CIRGen {
 class CIRGenDebugInfo {};
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENDEBUGINFO_H

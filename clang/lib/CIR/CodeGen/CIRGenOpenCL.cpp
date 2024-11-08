@@ -13,8 +13,8 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 // Returns the address space id that should be produced to the
 // kernel_arg_addr_space metadata. This is always fixed to the ids
@@ -71,7 +71,7 @@ void CIRGenModule::genKernelArgMetadata(mlir::cir::FuncOp Fn,
   SmallVector<mlir::Attribute, 8> argNames;
 
   // OpenCL image and pipe types require special treatments for some metadata
-  assert(!MissingFeatures::openCLBuiltinTypes());
+  assert(!cir::MissingFeatures::openCLBuiltinTypes());
 
   if (FD && CGF)
     for (unsigned i = 0, e = FD->getNumParams(); i != e; ++i) {

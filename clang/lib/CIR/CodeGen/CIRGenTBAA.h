@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENTBAA_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENTBAA_H
 
-namespace cir {
+namespace clang::CIRGen {
 
 // TBAAAccessInfo - Describes a memory access in terms of TBAA.
 struct TBAAAccessInfo {};
@@ -23,6 +23,6 @@ struct TBAAAccessInfo {};
 /// lowering AST types to LLVM types.
 class CIRGenTBAA {};
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

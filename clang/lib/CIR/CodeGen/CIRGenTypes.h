@@ -67,7 +67,7 @@ class StructType;
 } // namespace cir
 } // namespace mlir
 
-namespace cir {
+namespace clang::CIRGen {
 class CallArgList;
 class CIRGenCXXABI;
 class CIRGenModule;
@@ -78,7 +78,7 @@ class CIRGenBuilderTy;
 /// AST types to CIR types.
 class CIRGenTypes {
   clang::ASTContext &Context;
-  cir::CIRGenBuilderTy &Builder;
+  CIRGenBuilderTy &Builder;
   CIRGenModule &CGM;
   const clang::TargetInfo &Target;
   CIRGenCXXABI &TheCXXABI;
@@ -118,7 +118,7 @@ public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
 
-  cir::CIRGenBuilderTy &getBuilder() const { return Builder; }
+  CIRGenBuilderTy &getBuilder() const { return Builder; }
   CIRGenModule &getModule() const { return CGM; }
 
   /// Utility to check whether a function type can be converted to a CIR type
@@ -270,12 +270,12 @@ public:
   ///
   /// \param argTypes - must all actually be canonical as params
   const CIRGenFunctionInfo &arrangeCIRFunctionInfo(
-      clang::CanQualType returnType, FnInfoOpts opts,
+      clang::CanQualType returnType, cir::FnInfoOpts opts,
       llvm::ArrayRef<clang::CanQualType> argTypes,
       clang::FunctionType::ExtInfo info,
       llvm::ArrayRef<clang::FunctionProtoType::ExtParameterInfo> paramInfos,
       RequiredArgs args);
 };
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

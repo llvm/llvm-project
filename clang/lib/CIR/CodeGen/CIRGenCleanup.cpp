@@ -21,8 +21,8 @@
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 
 //===----------------------------------------------------------------------===//
@@ -38,7 +38,7 @@ mlir::cir::BrOp CIRGenFunction::buildBranchThroughCleanup(mlir::Location Loc,
   // Remove this once we go for making sure unreachable code is
   // well modeled (or not).
   assert(builder.getInsertionBlock() && "not yet implemented");
-  assert(!MissingFeatures::ehStack());
+  assert(!cir::MissingFeatures::ehStack());
 
   // Insert a branch: to the cleanup block (unsolved) or to the already
   // materialized label. Keep track of unsolved goto's.
@@ -260,7 +260,7 @@ static void buildCleanup(CIRGenFunction &CGF, EHScopeStack::Cleanup *Fn,
 
   // If there's an active flag, load it and skip the cleanup if it's
   // false.
-  cir::CIRGenBuilderTy &builder = CGF.getBuilder();
+  CIRGenBuilderTy &builder = CGF.getBuilder();
   mlir::Location loc =
       CGF.currSrcLoc ? *CGF.currSrcLoc : builder.getUnknownLoc();
 
@@ -502,7 +502,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // FIXME(cir): LLVM traditional codegen tries to simplify some of the
     // codegen here. Once we are further down with EH support revisit whether we
     // need to this during lowering.
-    assert(!MissingFeatures::simplifyCleanupEntry());
+    assert(!cir::MissingFeatures::simplifyCleanupEntry());
   }
 }
 

@@ -43,14 +43,14 @@
 #include <string>
 #include <utility>
 
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenFunction;
 
-class CIRGenBuilderTy : public CIRBaseBuilderTy {
+class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   bool IsFPConstrained = false;
-  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
+  cir::fp::ExceptionBehavior DefaultConstrainedExcept = cir::fp::ebStrict;
   llvm::RoundingMode DefaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
   llvm::StringMap<unsigned> GlobalsVersioning;
@@ -96,10 +96,10 @@ public:
   }
 
   /// Set the exception handling to be used with constrained floating point
-  void setDefaultConstrainedExcept(fp::ExceptionBehavior NewExcept) {
+  void setDefaultConstrainedExcept(cir::fp::ExceptionBehavior NewExcept) {
 #ifndef NDEBUG
     std::optional<llvm::StringRef> ExceptStr =
-        convertExceptionBehaviorToStr(NewExcept);
+        cir::convertExceptionBehaviorToStr(NewExcept);
     assert(ExceptStr && "Garbage strict exception behavior!");
 #endif
     DefaultConstrainedExcept = NewExcept;
@@ -109,14 +109,14 @@ public:
   void setDefaultConstrainedRounding(llvm::RoundingMode NewRounding) {
 #ifndef NDEBUG
     std::optional<llvm::StringRef> RoundingStr =
-        convertRoundingModeToStr(NewRounding);
+        cir::convertRoundingModeToStr(NewRounding);
     assert(RoundingStr && "Garbage strict rounding mode!");
 #endif
     DefaultConstrainedRounding = NewRounding;
   }
 
   /// Get the exception handling used with constrained floating point
-  fp::ExceptionBehavior getDefaultConstrainedExcept() {
+  cir::fp::ExceptionBehavior getDefaultConstrainedExcept() {
     return DefaultConstrainedExcept;
   }
 
@@ -422,7 +422,7 @@ public:
     // FIXME: replay LLVM codegen for now, perhaps add a vtable ptr special
     // type so it's a bit more clear and C++ idiomatic.
     auto fnTy = mlir::cir::FuncType::get({}, getUInt32Ty(), isVarArg);
-    assert(!MissingFeatures::isVarArg());
+    assert(!cir::MissingFeatures::isVarArg());
     return getPointerTo(getPointerTo(fnTy));
   }
 
@@ -657,30 +657,30 @@ public:
   }
 
   mlir::Value createFSub(mlir::Value lhs, mlir::Value rhs) {
-    assert(!MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::metaDataNode());
     if (IsFPConstrained)
       llvm_unreachable("Constrained FP NYI");
 
-    assert(!MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::foldBinOpFMF());
     return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Sub,
                                     lhs, rhs);
   }
 
   mlir::Value createFAdd(mlir::Value lhs, mlir::Value rhs) {
-    assert(!MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::metaDataNode());
     if (IsFPConstrained)
       llvm_unreachable("Constrained FP NYI");
 
-    assert(!MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::foldBinOpFMF());
     return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Add,
                                     lhs, rhs);
   }
   mlir::Value createFMul(mlir::Value lhs, mlir::Value rhs) {
-    assert(!MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::metaDataNode());
     if (IsFPConstrained)
       llvm_unreachable("Constrained FP NYI");
 
-    assert(!MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::foldBinOpFMF());
     return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Mul,
                                     lhs, rhs);
   }
@@ -697,16 +697,16 @@ public:
   mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
                                   bool vtableUseRelativeLayout) {
     // TODO(cir): consider address space here.
-    assert(!MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::addressSpace());
     auto destTy = getVoidPtrTy();
     return create<mlir::cir::DynamicCastOp>(
         loc, destTy, mlir::cir::DynamicCastKind::ptr, src,
         mlir::cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
-  cir::Address createBaseClassAddr(mlir::Location loc, cir::Address addr,
-                                   mlir::Type destType, unsigned offset,
-                                   bool assumeNotNull) {
+  Address createBaseClassAddr(mlir::Location loc, Address addr,
+                              mlir::Type destType, unsigned offset,
+                              bool assumeNotNull) {
     if (destType == addr.getElementType())
       return addr;
 
@@ -716,9 +716,9 @@ public:
     return Address(baseAddr, ptrTy, addr.getAlignment());
   }
 
-  cir::Address createDerivedClassAddr(mlir::Location loc, cir::Address addr,
-                                      mlir::Type destType, unsigned offset,
-                                      bool assumeNotNull) {
+  Address createDerivedClassAddr(mlir::Location loc, Address addr,
+                                 mlir::Type destType, unsigned offset,
+                                 bool assumeNotNull) {
     if (destType == addr.getElementType())
       return addr;
 
@@ -833,8 +833,8 @@ public:
 
   /// Cast the element type of the given address to a different type,
   /// preserving information like the alignment.
-  cir::Address createElementBitCast(mlir::Location loc, cir::Address addr,
-                                    mlir::Type destType) {
+  Address createElementBitCast(mlir::Location loc, Address addr,
+                               mlir::Type destType) {
     if (destType == addr.getElementType())
       return addr;
 
@@ -869,7 +869,7 @@ public:
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
                                 mlir::Value ptr, llvm::MaybeAlign align) {
     // TODO: make sure callsites shouldn't be really passing volatile.
-    assert(!MissingFeatures::volatileLoadOrStore());
+    assert(!cir::MissingFeatures::volatileLoadOrStore());
     return createAlignedLoad(loc, ty, ptr, align, /*isVolatile=*/false);
   }
 
@@ -942,7 +942,7 @@ public:
   // but currently some parts of Clang AST, which we don't want to touch just
   // yet, return them.
   void computeGlobalViewIndicesFromFlatOffset(
-      int64_t Offset, mlir::Type Ty, CIRDataLayout Layout,
+      int64_t Offset, mlir::Type Ty, cir::CIRDataLayout Layout,
       llvm::SmallVectorImpl<int64_t> &Indices) {
     if (!Offset)
       return;
@@ -1046,7 +1046,7 @@ public:
         mlir::cast<mlir::cir::DataMemberType>(memberPtr.getType());
 
     // TODO(cir): consider address space.
-    assert(!MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::addressSpace());
     auto resultTy = getPointerTo(memberPtrTy.getMemberTy());
 
     return create<mlir::cir::GetRuntimeMemberOp>(loc, resultTy, objectPtr,
@@ -1067,5 +1067,5 @@ public:
                                    mlir::Type eltTy);
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 #endif

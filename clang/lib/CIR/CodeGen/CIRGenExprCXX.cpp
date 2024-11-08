@@ -19,8 +19,8 @@
 
 #include <clang/AST/DeclCXX.h>
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 namespace {
 struct MemberCallInfo {
@@ -183,7 +183,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       // one or the one of the full expression, we would have to build
       // a derived-to-base cast to compute the correct this pointer, but
       // we don't have support for that yet, so do a virtual call.
-      assert(!MissingFeatures::buildDerivedToBaseCastForDevirt());
+      assert(!cir::MissingFeatures::buildDerivedToBaseCastForDevirt());
       DevirtualizedMethod = nullptr;
     }
   }
@@ -218,7 +218,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   LValue This;
   if (IsArrow) {
     LValueBaseInfo BaseInfo;
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     Address ThisValue = buildPointerWithAlignment(Base, &BaseInfo);
     This = makeAddrLValue(ThisValue, Base->getType(), BaseInfo);
   } else {
@@ -284,7 +284,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       SkippedChecks.set(SanitizerKind::Null, true);
   }
 
-  if (MissingFeatures::buildTypeCheck())
+  if (cir::MissingFeatures::buildTypeCheck())
     llvm_unreachable("NYI");
 
   // C++ [class.virtual]p12:
@@ -726,14 +726,14 @@ static void StoreAnyExprIntoOneUnit(CIRGenFunction &CGF, const Expr *Init,
                                     AggValueSlot::Overlap_t MayOverlap) {
   // FIXME: Refactor with buildExprAsInit.
   switch (CGF.getEvaluationKind(AllocType)) {
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     CGF.buildScalarInit(Init, CGF.getLoc(Init->getSourceRange()),
                         CGF.makeAddrLValue(NewPtr, AllocType), false);
     return;
-  case TEK_Complex:
+  case cir::TEK_Complex:
     llvm_unreachable("NYI");
     return;
-  case TEK_Aggregate: {
+  case cir::TEK_Aggregate: {
     AggValueSlot Slot = AggValueSlot::forAddr(
         NewPtr, AllocType.getQualifiers(), AggValueSlot::IsDestructed,
         AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
@@ -750,7 +750,7 @@ static void buildNewInitializer(CIRGenFunction &CGF, const CXXNewExpr *E,
                                 QualType ElementType, mlir::Type ElementTy,
                                 Address NewPtr, mlir::Value NumElements,
                                 mlir::Value AllocSizeWithoutCookie) {
-  assert(!MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::generateDebugInfo());
   if (E->isArray()) {
     llvm_unreachable("NYI");
   } else if (const Expr *Init = E->getInitializer()) {
@@ -872,7 +872,7 @@ static bool EmitObjectDelete(CIRGenFunction &CGF, const CXXDeleteExpr *DE,
   // In traditional LLVM codegen null checks are emitted to save a delete call.
   // In CIR we optimize for size by default, the null check should be added into
   // this function callers.
-  assert(!MissingFeatures::emitNullCheckForDeleteCalls());
+  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
 
   CGF.PopCleanupBlock();
   return false;
@@ -892,7 +892,7 @@ void CIRGenFunction::buildCXXDeleteExpr(const CXXDeleteExpr *E) {
   //
   // CIR note: emit the code size friendly by default for now, such as mentioned
   // in `EmitObjectDelete`.
-  assert(!MissingFeatures::emitNullCheckForDeleteCalls());
+  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
   QualType DeleteTy = E->getDestroyedType();
 
   // A destroying operator delete overrides the entire operation of the
@@ -998,7 +998,7 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
         buildNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
     // Set !heapallocsite metadata on the call to operator new.
-    assert(!MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::generateDebugInfo());
 
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce storage
@@ -1198,7 +1198,7 @@ static RValue buildNewDeleteCall(CIRGenFunction &CGF,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  assert(!MissingFeatures::attributeBuiltin());
+  assert(!cir::MissingFeatures::attributeBuiltin());
   return RV;
 }
 

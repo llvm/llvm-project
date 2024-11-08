@@ -21,7 +21,7 @@
 
 #include <memory>
 
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenFunction;
 class CIRGenModule;
@@ -118,6 +118,6 @@ public:
 
 void computeSPIRKernelABIInfo(CIRGenModule &CGM, CIRGenFunctionInfo &FI);
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

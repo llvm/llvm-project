@@ -26,9 +26,7 @@
 #include <cstdint>
 #include <vector>
 
-using namespace clang;
-
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenModule;
 
@@ -563,7 +561,7 @@ class ConstantArrayBuilder
 
   // The use of explicit qualification is a GCC workaround.
   template <class Impl, class Traits>
-  friend class cir::ConstantAggregateBuilderTemplateBase;
+  friend class ConstantAggregateBuilderTemplateBase;
 
   ConstantArrayBuilder(ConstantInitBuilder &builder,
                        ConstantAggregateBuilderBase *parent, mlir::Type eltTy)
@@ -578,7 +576,7 @@ class ConstantStructBuilder
 
   // The use of explicit qualification is a GCC workaround.
   template <class Impl, class Traits>
-  friend class cir::ConstantAggregateBuilderTemplateBase;
+  friend class ConstantAggregateBuilderTemplateBase;
 
   ConstantStructBuilder(ConstantInitBuilder &builder,
                         ConstantAggregateBuilderBase *parent,
@@ -586,6 +584,6 @@ class ConstantStructBuilder
       : ConstantStructBuilderTemplateBase(builder, parent, structTy) {}
 };
 
-} // end namespace cir
+} // namespace clang::CIRGen
 
 #endif

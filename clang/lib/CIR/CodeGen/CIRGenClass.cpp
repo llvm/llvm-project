@@ -20,7 +20,7 @@
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 /// Checks whether the given constructor is a valid subject for the
 /// complete-to-base constructor delgation optimization, i.e. emitting the
@@ -277,7 +277,7 @@ private:
     if (!MemcpyableCtor)
       return false;
 
-    assert(!MissingFeatures::fieldMemcpyizerBuildMemcpy());
+    assert(!cir::MissingFeatures::fieldMemcpyizerBuildMemcpy());
     return false;
   }
 
@@ -740,11 +740,11 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   //
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space.
-  assert(!MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::addressSpace());
   VTableField = builder.createElementBitCast(loc, VTableField,
                                              VTableAddressPoint.getType());
   builder.createStore(loc, VTableAddressPoint, VTableField);
-  assert(!MissingFeatures::tbaa());
+  assert(!cir::MissingFeatures::tbaa());
 }
 
 void CIRGenFunction::initializeVTablePointers(mlir::Location loc,
@@ -851,17 +851,17 @@ void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
                                               Expr *Init) {
   QualType FieldType = Field->getType();
   switch (getEvaluationKind(FieldType)) {
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     if (LHS.isSimple()) {
       buildExprAsInit(Init, Field, LHS, false);
     } else {
       llvm_unreachable("NYI");
     }
     break;
-  case TEK_Complex:
+  case cir::TEK_Complex:
     llvm_unreachable("NYI");
     break;
-  case TEK_Aggregate: {
+  case cir::TEK_Aggregate: {
     AggValueSlot Slot = AggValueSlot::forLValue(
         LHS, AggValueSlot::IsDestructed, AggValueSlot::DoesNotNeedGCBarriers,
         AggValueSlot::IsNotAliased, getOverlapForFieldInit(Field),
@@ -877,7 +877,7 @@ void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
   // constructor.
   QualType::DestructionKind dtorKind = FieldType.isDestructedType();
   (void)dtorKind;
-  if (MissingFeatures::cleanups())
+  if (cir::MissingFeatures::cleanups())
     llvm_unreachable("NYI");
 }
 
@@ -924,7 +924,7 @@ void CIRGenFunction::buildImplicitAssignmentOperatorBody(
   // LexicalScope Scope(*this, RootCS->getSourceRange());
   // FIXME(cir): add all of the below under a new scope.
 
-  assert(!MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::incrementProfileCounter());
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);
@@ -945,7 +945,7 @@ void CIRGenFunction::buildForwardingCallToLambda(
   QualType resultType = FPT->getReturnType();
   ReturnValueSlot returnSlot;
   if (!resultType->isVoidType() &&
-      calleeFnInfo.getReturnInfo().getKind() == ABIArgInfo::Indirect &&
+      calleeFnInfo.getReturnInfo().getKind() == cir::ABIArgInfo::Indirect &&
       !hasScalarEvaluationKind(calleeFnInfo.getReturnType())) {
     llvm_unreachable("NYI");
   }
@@ -1137,7 +1137,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
 
   Stmt *Body = Dtor->getBody();
   if (Body)
-    assert(!MissingFeatures::incrementProfileCounter());
+    assert(!cir::MissingFeatures::incrementProfileCounter());
 
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
@@ -1162,7 +1162,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
     llvm_unreachable("NYI");
     // EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
   }
-  if (MissingFeatures::emitAsanPrologueOrEpilogue())
+  if (cir::MissingFeatures::emitAsanPrologueOrEpilogue())
     llvm_unreachable("NYI");
 
   // Enter the epilogue cleanups.
@@ -1325,7 +1325,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
     if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
         SanOpts.has(SanitizerKind::Memory) && ClassDecl->getNumVBases() &&
         ClassDecl->isPolymorphic())
-      assert(!MissingFeatures::sanitizeDtor());
+      assert(!cir::MissingFeatures::sanitizeDtor());
 
     // We push them in the forward order so that they'll be popped in
     // the reverse order.
@@ -1337,7 +1337,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
         // Under SanitizeMemoryUseAfterDtor, poison the trivial base class
         // memory. For non-trival base classes the same is done in the class
         // destructor.
-        assert(!MissingFeatures::sanitizeDtor());
+        assert(!cir::MissingFeatures::sanitizeDtor());
       } else {
         EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
                                           /*BaseIsVirtual*/ true);
@@ -1353,7 +1353,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
       SanOpts.has(SanitizerKind::Memory) && !ClassDecl->getNumVBases() &&
       ClassDecl->isPolymorphic())
-    assert(!MissingFeatures::sanitizeDtor());
+    assert(!cir::MissingFeatures::sanitizeDtor());
 
   // Destroy non-virtual bases.
   for (const auto &Base : ClassDecl->bases()) {
@@ -1366,7 +1366,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
     if (BaseClassDecl->hasTrivialDestructor()) {
       if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
           SanOpts.has(SanitizerKind::Memory) && !BaseClassDecl->isEmpty())
-        assert(!MissingFeatures::sanitizeDtor());
+        assert(!cir::MissingFeatures::sanitizeDtor());
     } else {
       EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
                                         /*BaseIsVirtual*/ false);
@@ -1377,12 +1377,12 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   // invoked, and before the base class destructor runs, is invalid.
   bool SanitizeFields = CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
                         SanOpts.has(SanitizerKind::Memory);
-  assert(!MissingFeatures::sanitizeDtor());
+  assert(!cir::MissingFeatures::sanitizeDtor());
 
   // Destroy direct fields.
   for (const auto *Field : ClassDecl->fields()) {
     if (SanitizeFields)
-      assert(!MissingFeatures::sanitizeDtor());
+      assert(!cir::MissingFeatures::sanitizeDtor());
 
     QualType type = Field->getType();
     QualType::DestructionKind dtorKind = type.isDestructedType();
@@ -1400,7 +1400,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   }
 
   if (SanitizeFields)
-    assert(!MissingFeatures::sanitizeDtor());
+    assert(!cir::MissingFeatures::sanitizeDtor());
 }
 
 namespace {
@@ -1571,7 +1571,7 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
 
   // Get the base pointer type.
   auto BaseValueTy = convertType((PathEnd[-1])->getType());
-  assert(!MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::addressSpace());
 
   // If there is no virtual base, use cir.base_class_addr.  It takes care of
   // the adjustment and the null pointer check.
@@ -1585,7 +1585,7 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   }
 
   if (sanitizePerformTypeCheck()) {
-    assert(!MissingFeatures::sanitizeOther());
+    assert(!cir::MissingFeatures::sanitizeOther());
   }
 
   // Conversion to a virtual base. cir.base_class_addr can't handle this.
@@ -1651,11 +1651,11 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
                                          const CXXRecordDecl *RD) {
   Address VTablePtrSrc = builder.createElementBitCast(Loc, This, VTableTy);
   auto VTable = builder.createLoad(Loc, VTablePtrSrc);
-  assert(!MissingFeatures::tbaa());
+  assert(!cir::MissingFeatures::tbaa());
 
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGM.getCodeGenOpts().StrictVTablePointers) {
-    assert(!MissingFeatures::createInvariantGroup());
+    assert(!cir::MissingFeatures::createInvariantGroup());
   }
 
   return VTable;
@@ -1664,7 +1664,7 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
 Address CIRGenFunction::buildCXXMemberDataPointerAddress(
     const Expr *E, Address base, mlir::Value memberPtr,
     const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
-  assert(!MissingFeatures::cxxABI());
+  assert(!cir::MissingFeatures::cxxABI());
 
   auto op = builder.createGetIndirectMember(getLoc(E->getSourceRange()),
                                             base.getPointer(), memberPtr);
@@ -1896,7 +1896,7 @@ void CIRGenFunction::buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
   // If this is a union copy constructor, we must emit a memcpy, because the AST
   // does not model that copy.
   if (isMemcpyEquivalentSpecialMember(D)) {
-    assert(!MissingFeatures::isMemcpyEquivalentSpecialMember());
+    assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
   }
 
   const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
@@ -1928,10 +1928,10 @@ void CIRGenFunction::buildCXXConstructorCall(
   // In LLVM: do nothing.
   // In CIR: emit as a regular call, other later passes should lower the
   // ctor call into trivial initialization.
-  assert(!MissingFeatures::isTrivialCtorOrDtor());
+  assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
 
   if (isMemcpyEquivalentSpecialMember(D)) {
-    assert(!MissingFeatures::isMemcpyEquivalentSpecialMember());
+    assert(!cir::MissingFeatures::isMemcpyEquivalentSpecialMember());
   }
 
   bool PassPrototypeArgs = true;
@@ -2013,7 +2013,7 @@ void CIRGenFunction::buildInlinedInheritingCXXConstructorCall(
   llvm_unreachable("NYI");
   InlinedInheritingConstructorScope Scope(*this, GD);
   // TODO(cir): ApplyInlineDebugLocation
-  assert(!MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::generateDebugInfo());
   RunCleanupsScope RunCleanups(*this);
 
   // Save the arguments to be passed to the inherited constructor.

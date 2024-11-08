@@ -10,8 +10,8 @@
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 namespace {
 
@@ -54,7 +54,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   mlir::Value Visit(Expr *E) {
-    assert(!MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::generateDebugInfo());
     return StmtVisitor<ComplexExprEmitter, mlir::Value>::Visit(E);
   }
 
@@ -489,7 +489,7 @@ mlir::Value ComplexExprEmitter::buildCast(CastKind CK, Expr *Op,
 
   case CK_FloatingRealToComplex:
   case CK_IntegralRealToComplex: {
-    assert(!MissingFeatures::CGFPOptionsRAII());
+    assert(!cir::MissingFeatures::CGFPOptionsRAII());
     return buildScalarToComplexCast(CGF.buildScalarExpr(Op), Op->getType(),
                                     DestTy, Op->getExprLoc());
   }
@@ -498,7 +498,7 @@ mlir::Value ComplexExprEmitter::buildCast(CastKind CK, Expr *Op,
   case CK_FloatingComplexToIntegralComplex:
   case CK_IntegralComplexCast:
   case CK_IntegralComplexToFloatingComplex: {
-    assert(!MissingFeatures::CGFPOptionsRAII());
+    assert(!cir::MissingFeatures::CGFPOptionsRAII());
     return buildComplexToComplexCast(Visit(Op), Op->getType(), DestTy,
                                      Op->getExprLoc());
   }
@@ -657,7 +657,7 @@ LValue ComplexExprEmitter::buildCompoundAssignLValue(
   BinOpInfo OpInfo{CGF.getLoc(E->getExprLoc())};
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
 
-  assert(!MissingFeatures::CGFPOptionsRAII());
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
 
   // Load the RHS and LHS operands.
   // __block variables need to have the rhs evaluated first, plus this should
@@ -771,12 +771,12 @@ mlir::Value ComplexExprEmitter::buildCompoundAssign(
 }
 
 mlir::Value ComplexExprEmitter::buildBinAdd(const BinOpInfo &Op) {
-  assert(!MissingFeatures::CGFPOptionsRAII());
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
   return CGF.getBuilder().createComplexAdd(Op.Loc, Op.LHS, Op.RHS);
 }
 
 mlir::Value ComplexExprEmitter::buildBinSub(const BinOpInfo &Op) {
-  assert(!MissingFeatures::CGFPOptionsRAII());
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
   return CGF.getBuilder().createComplexSub(Op.Loc, Op.LHS, Op.RHS);
 }
 
@@ -797,14 +797,14 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
 }
 
 mlir::Value ComplexExprEmitter::buildBinMul(const BinOpInfo &Op) {
-  assert(!MissingFeatures::CGFPOptionsRAII());
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
   return CGF.getBuilder().createComplexMul(
       Op.Loc, Op.LHS, Op.RHS,
       getComplexRangeAttr(Op.FPFeatures.getComplexRange()), FPHasBeenPromoted);
 }
 
 mlir::Value ComplexExprEmitter::buildBinDiv(const BinOpInfo &Op) {
-  assert(!MissingFeatures::CGFPOptionsRAII());
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
   return CGF.getBuilder().createComplexDiv(
       Op.Loc, Op.LHS, Op.RHS,
       getComplexRangeAttr(Op.FPFeatures.getComplexRange()), FPHasBeenPromoted);

@@ -26,7 +26,7 @@ namespace clang {
 class CXXRecordDecl;
 }
 
-namespace cir {
+namespace clang::CIRGen {
 class CIRGenModule;
 
 class CIRGenVTables {
@@ -123,5 +123,5 @@ public:
   mlir::Type getVTableType(const clang::VTableLayout &layout);
 };
 
-} // end namespace cir
+} // namespace clang::CIRGen
 #endif

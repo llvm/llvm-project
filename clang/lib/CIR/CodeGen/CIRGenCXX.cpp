@@ -22,7 +22,7 @@
 #include <cassert>
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 /// Try to emit a base destructor as an alias to its primary
 /// base-class destructor.
@@ -39,7 +39,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   //  an alias, unless this class owns no members.
   if (getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
       !D->getParent()->field_empty())
-    assert(!MissingFeatures::sanitizeDtor());
+    assert(!cir::MissingFeatures::sanitizeDtor());
 
   // If the destructor doesn't have a trivial body, we have to emit it
   // separately.
@@ -192,17 +192,17 @@ static void buildDeclInit(CIRGenFunction &CGF, const VarDecl *D,
 
   const Expr *Init = D->getInit();
   switch (CIRGenFunction::getEvaluationKind(type)) {
-  case TEK_Aggregate:
+  case cir::TEK_Aggregate:
     CGF.buildAggExpr(
         Init, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
                                       AggValueSlot::DoesNotNeedGCBarriers,
                                       AggValueSlot::IsNotAliased,
                                       AggValueSlot::DoesNotOverlap));
     return;
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     CGF.buildScalarInit(Init, CGF.getLoc(D->getLocation()), lv, false);
     return;
-  case TEK_Complex:
+  case cir::TEK_Complex:
     llvm_unreachable("complext evaluation NYI");
   }
 }
@@ -254,7 +254,7 @@ static void buildDeclDestroy(CIRGenFunction &CGF, const VarDecl *D) {
   if (Record && (CanRegisterDestructor || UsingExternalHelper)) {
     assert(!D->getTLSKind() && "TLS NYI");
     assert(!Record->hasTrivialDestructor());
-    assert(!MissingFeatures::openCLCXX());
+    assert(!cir::MissingFeatures::openCLCXX());
     CXXDestructorDecl *Dtor = Record->getDestructor();
     // In LLVM OG codegen this is done in registerGlobalDtor, but CIRGen
     // relies on LoweringPrepare for further decoupling, so build the
@@ -304,7 +304,7 @@ void CIRGenFunction::buildInvariantStart([[maybe_unused]] CharUnits Size) {
   if (!CGM.getCodeGenOpts().OptimizationLevel)
     return;
 
-  assert(!MissingFeatures::createInvariantIntrinsic());
+  assert(!cir::MissingFeatures::createInvariantIntrinsic());
 }
 
 void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
@@ -329,7 +329,7 @@ void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
   // For example, in the above CUDA code, the static local variable s has a
   // "shared" address space qualifier, but the constructor of StructWithCtor
   // expects "this" in the "generic" address space.
-  assert(!MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::addressSpace());
 
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&
       varDecl->hasAttr<OMPThreadPrivateDeclAttr>()) {

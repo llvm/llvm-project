@@ -35,7 +35,7 @@ class GlobalDecl;
 class VarDecl;
 } // namespace clang
 
-namespace cir {
+namespace clang::CIRGen {
 class CIRGenModule;
 class CIRGenFunction;
 
@@ -108,6 +108,6 @@ public:
 protected:
   CIRGenModule &CGM;
 };
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENOPENMPRUNTIME_H

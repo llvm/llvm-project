@@ -23,7 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenFunction;
 
@@ -416,6 +416,6 @@ public:
   void clearFixups() { BranchFixups.clear(); }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

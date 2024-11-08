@@ -51,7 +51,7 @@ class ScalarExprEmitter;
 class AggExprEmitter;
 } // namespace
 
-namespace cir {
+namespace clang::CIRGen {
 
 struct CGCoroData;
 
@@ -158,7 +158,7 @@ public:
       // Work around an extremely aggressive peephole optimization in
       // EmitScalarConversion which assumes that all other uses of a
       // value are extant.
-      assert(!MissingFeatures::peepholeProtection() && "NYI");
+      assert(!cir::MissingFeatures::peepholeProtection() && "NYI");
       return data;
     }
 
@@ -172,7 +172,7 @@ public:
         CGF.OpaqueLValues.erase(OpaqueValue);
       } else {
         CGF.OpaqueRValues.erase(OpaqueValue);
-        assert(!MissingFeatures::peepholeProtection() && "NYI");
+        assert(!cir::MissingFeatures::peepholeProtection() && "NYI");
       }
     }
   };
@@ -508,7 +508,7 @@ public:
     void ConstructorHelper(clang::FPOptions FPFeatures);
     CIRGenFunction &CGF;
     clang::FPOptions OldFPFeatures;
-    fp::ExceptionBehavior OldExcept;
+    cir::fp::ExceptionBehavior OldExcept;
     llvm::RoundingMode OldRounding;
   };
   clang::FPOptions CurFPFeatures;
@@ -560,15 +560,15 @@ public:
     return ConvertType(getContext().getTypeDeclType(T));
   }
 
-  ///  Return the TypeEvaluationKind of QualType \c T.
-  static TypeEvaluationKind getEvaluationKind(clang::QualType T);
+  ///  Return the cir::TypeEvaluationKind of QualType \c T.
+  static cir::TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
   static bool hasScalarEvaluationKind(clang::QualType T) {
-    return getEvaluationKind(T) == TEK_Scalar;
+    return getEvaluationKind(T) == cir::TEK_Scalar;
   }
 
   static bool hasAggregateEvaluationKind(clang::QualType T) {
-    return getEvaluationKind(T) == TEK_Aggregate;
+    return getEvaluationKind(T) == cir::TEK_Aggregate;
   }
 
   CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
@@ -1008,8 +1008,8 @@ public:
   mlir::Value buildCommonNeonBuiltinExpr(
       unsigned builtinID, unsigned llvmIntrinsic, unsigned altLLVMIntrinsic,
       const char *nameHint, unsigned modifier, const CallExpr *e,
-      llvm::SmallVectorImpl<mlir::Value> &ops, cir::Address ptrOp0,
-      cir::Address ptrOp1, llvm::Triple::ArchType arch);
+      llvm::SmallVectorImpl<mlir::Value> &ops, Address ptrOp0, Address ptrOp1,
+      llvm::Triple::ArchType arch);
 
   mlir::Value buildAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                        SourceLocation loc,
@@ -1058,7 +1058,7 @@ public:
   bool currentFunctionUsesSEHTry() const { return !!CurSEHParent; }
 
   /// Returns true inside SEH __try blocks.
-  bool isSEHTryScope() const { return MissingFeatures::isSEHTryScope(); }
+  bool isSEHTryScope() const { return cir::MissingFeatures::isSEHTryScope(); }
 
   mlir::Operation *CurrentFuncletPad = nullptr;
 
@@ -2145,7 +2145,7 @@ public:
 
     ~LexicalScope() {
       // EmitLexicalBlockEnd
-      assert(!MissingFeatures::generateDebugInfo());
+      assert(!cir::MissingFeatures::generateDebugInfo());
       // If we should perform a cleanup, force them now.  Note that
       // this ends the cleanup scope before rescoping any labels.
       cleanup();
@@ -2548,6 +2548,6 @@ template <> struct DominatingValue<RValue> {
   }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H

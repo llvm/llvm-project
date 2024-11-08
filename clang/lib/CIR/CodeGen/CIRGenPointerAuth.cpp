@@ -14,10 +14,10 @@
 #include "CIRGenFunction.h"
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 Address CIRGenFunction::getAsNaturalAddressOf(Address Addr,
                                               QualType PointeeTy) {
-  assert(!MissingFeatures::ptrAuth() && "NYI");
+  assert(!cir::MissingFeatures::ptrAuth() && "NYI");
   return Addr;
 }

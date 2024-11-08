@@ -22,7 +22,7 @@
 #include "mlir/IR/Attributes.h"
 #include "clang/AST/Mangle.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenFunction;
 class CIRGenFunctionInfo;
@@ -30,7 +30,7 @@ class CIRGenFunctionInfo;
 /// Implements C++ ABI-specific code generation functions.
 class CIRGenCXXABI {
 protected:
-  cir::CIRGenModule &CGM;
+  CIRGenModule &CGM;
   std::unique_ptr<clang::MangleContext> MangleCtx;
 
   CIRGenCXXABI(CIRGenModule &CGM)
@@ -354,6 +354,6 @@ public:
 /// Creates and Itanium-family ABI
 CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &CGM);
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

@@ -27,8 +27,8 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 
 mlir::Value CIRGenFunction::buildX86BuiltinExpr(unsigned BuiltinID,

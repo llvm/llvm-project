@@ -30,7 +30,7 @@
 #include <cstdio>
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 CIRGenVTables::CIRGenVTables(CIRGenModule &CGM)
     : CGM(CGM), VTContext(CGM.getASTContext().getVTableContext()) {}
@@ -161,7 +161,7 @@ void CIRGenModule::buildVTable(CXXRecordDecl *rd) {
 }
 
 void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
-  assert(!MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::generateDebugInfo());
 
   if (RD->getNumVBases())
     CGM.getCXXABI().emitVirtualInheritanceTables(RD);
@@ -248,7 +248,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
           CGM.getBuilder().getFuncType({}, CGM.getBuilder().getVoidTy());
       mlir::cir::FuncOp fnPtr = CGM.createRuntimeFunction(fnTy, name);
       // LLVM codegen handles unnamedAddr
-      assert(!MissingFeatures::unnamedAddr());
+      assert(!cir::MissingFeatures::unnamedAddr());
       return fnPtr;
     };
 
@@ -371,7 +371,7 @@ mlir::cir::GlobalOp CIRGenVTables::generateConstructionVTable(
       Loc, Name, VTType, Linkage, CharUnits::fromQuantity(Align));
 
   // V-tables are always unnamed_addr.
-  assert(!MissingFeatures::unnamedAddr() && "NYI");
+  assert(!cir::MissingFeatures::unnamedAddr() && "NYI");
 
   auto RTTI = CGM.getAddrOfRTTIDescriptor(
       Loc, CGM.getASTContext().getTagDeclType(Base.getBase()));
@@ -652,7 +652,7 @@ void CIRGenVTables::buildVTTDefinition(mlir::cir::GlobalOp VTT,
                                          CIRGenModule::getMLIRVisibility(VTT));
 
   if (CGM.supportsCOMDAT() && VTT.isWeakForLinker()) {
-    assert(!MissingFeatures::setComdat());
+    assert(!cir::MissingFeatures::setComdat());
   }
 }
 

@@ -35,8 +35,8 @@
 #include "mlir/IR/Types.h"
 #include "clang/CIR/MissingFeatures.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 CIRGenFunctionInfo *CIRGenFunctionInfo::create(
     mlir::cir::CallingConv cirCC, bool instanceMethod, bool chainCall,
@@ -139,16 +139,16 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
                                      bool OnlyRequiredArgs) {
   unsigned CIRArgNo = 0;
   bool SwapThisWithSRet = false;
-  const ABIArgInfo &RetAI = FI.getReturnInfo();
+  const cir::ABIArgInfo &RetAI = FI.getReturnInfo();
 
-  assert(RetAI.getKind() != ABIArgInfo::Indirect && "NYI");
+  assert(RetAI.getKind() != cir::ABIArgInfo::Indirect && "NYI");
 
   unsigned ArgNo = 0;
   unsigned NumArgs = OnlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size();
   for (CIRGenFunctionInfo::const_arg_iterator I = FI.arg_begin();
        ArgNo < NumArgs; ++I, ++ArgNo) {
     assert(I != FI.arg_end());
-    const ABIArgInfo &AI = I->info;
+    const cir::ABIArgInfo &AI = I->info;
     // Collect data about CIR arguments corresponding to Clang argument ArgNo.
     auto &CIRArgs = ArgInfo[ArgNo];
 
@@ -157,15 +157,15 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
     switch (AI.getKind()) {
     default:
       llvm_unreachable("NYI");
-    case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct: {
+    case cir::ABIArgInfo::Extend:
+    case cir::ABIArgInfo::Direct: {
       // Postpone splitting structs into elements since this makes it way
       // more complicated for analysis to obtain information on the original
       // arguments.
       //
       // TODO(cir): a LLVM lowering prepare pass should break this down into
       // the appropriated pieces.
-      assert(!MissingFeatures::constructABIArgDirectExtend());
+      assert(!cir::MissingFeatures::constructABIArgDirectExtend());
       CIRArgs.NumberOfArgs = 1;
       break;
     }
@@ -206,16 +206,16 @@ mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   assert(Inserted && "Recursively being processed?");
 
   mlir::Type resultType = nullptr;
-  const ABIArgInfo &retAI = FI.getReturnInfo();
+  const cir::ABIArgInfo &retAI = FI.getReturnInfo();
   switch (retAI.getKind()) {
-  case ABIArgInfo::Ignore:
+  case cir::ABIArgInfo::Ignore:
     // TODO(CIR): This should probably be the None type from the builtin
     // dialect.
     resultType = nullptr;
     break;
 
-  case ABIArgInfo::Extend:
-  case ABIArgInfo::Direct:
+  case cir::ABIArgInfo::Extend:
+  case cir::ABIArgInfo::Direct:
     resultType = retAI.getCoerceToType();
     break;
 
@@ -245,8 +245,8 @@ mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
     switch (ArgInfo.getKind()) {
     default:
       llvm_unreachable("NYI");
-    case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct: {
+    case cir::ABIArgInfo::Extend:
+    case cir::ABIArgInfo::Direct: {
       mlir::Type argType = ArgInfo.getCoerceToType();
       // TODO: handle the test against llvm::StructType from codegen
       assert(NumCIRArgs == 1);
@@ -306,7 +306,7 @@ void CIRGenFunction::buildAggregateStore(mlir::Value Val, Address Dest,
 }
 
 static Address emitAddressAtOffset(CIRGenFunction &CGF, Address addr,
-                                   const ABIArgInfo &info) {
+                                   const cir::ABIArgInfo &info) {
   if (unsigned offset = info.getDirectOffset()) {
     llvm_unreachable("NYI");
   }
@@ -456,7 +456,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
         getLangOpts().OffloadUniformBlock)
-      assert(!MissingFeatures::CUDA());
+      assert(!cir::MissingFeatures::CUDA());
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       ;
@@ -592,7 +592,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     // Some architectures (such as x86-64) have the ABI changed based on
     // attribute-target/features. Give them a chance to diagnose.
-    assert(!MissingFeatures::checkFunctionCallABI());
+    assert(!cir::MissingFeatures::checkFunctionCallABI());
   }
 
   // TODO: add DNEBUG code
@@ -615,7 +615,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
+  assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
 
   // Translate all of the arguments as necessary to match the CIR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -624,7 +624,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   CIRGenFunctionInfo::const_arg_iterator info_it = CallInfo.arg_begin();
   for (CallArgList::const_iterator I = CallArgs.begin(), E = CallArgs.end();
        I != E; ++I, ++info_it, ++ArgNo) {
-    const ABIArgInfo &ArgInfo = info_it->info;
+    const cir::ABIArgInfo &ArgInfo = info_it->info;
 
     // Insert a padding argument to ensure proper alignment.
     assert(!CIRFunctionArgs.hasPaddingArg(ArgNo) && "Padding args NYI");
@@ -633,7 +633,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     std::tie(FirstCIRArg, NumCIRArgs) = CIRFunctionArgs.getCIRArgs(ArgNo);
 
     switch (ArgInfo.getKind()) {
-    case ABIArgInfo::Direct: {
+    case cir::ABIArgInfo::Direct: {
       if (!mlir::isa<mlir::cir::StructType>(ArgInfo.getCoerceToType()) &&
           ArgInfo.getCoerceToType() == convertType(info_it->type) &&
           ArgInfo.getDirectOffset() == 0) {
@@ -866,11 +866,11 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // Extract the return value.
   RValue ret = [&] {
     switch (RetAI.getKind()) {
-    case ABIArgInfo::Direct: {
+    case cir::ABIArgInfo::Direct: {
       mlir::Type RetCIRTy = convertType(RetTy);
       if (RetAI.getCoerceToType() == RetCIRTy && RetAI.getDirectOffset() == 0) {
         switch (getEvaluationKind(RetTy)) {
-        case TEK_Aggregate: {
+        case cir::TEK_Aggregate: {
           Address DestPtr = ReturnValue.getValue();
           bool DestIsVolatile = ReturnValue.isVolatile();
 
@@ -886,7 +886,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
           buildAggregateStore(Results[0], DestPtr, DestIsVolatile);
           return RValue::getAggregate(DestPtr);
         }
-        case TEK_Scalar: {
+        case cir::TEK_Scalar: {
           // If the argument doesn't match, perform a bitcast to coerce it. This
           // can happen due to trivial type mismatches.
           auto Results = theCall->getOpResults();
@@ -902,7 +902,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       }
     }
 
-    case ABIArgInfo::Ignore:
+    case cir::ABIArgInfo::Ignore:
       // If we are ignoring an argument that had a result, make sure to
       // construct the appropriate return value for our caller.
       return GetUndefRValue(RetTy);
@@ -928,7 +928,7 @@ mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
                                              mlir::cir::FuncOp callee,
                                              ArrayRef<mlir::Value> args) {
   // TODO(cir): set the calling convention to this runtime call.
-  assert(!MissingFeatures::setCallingConv());
+  assert(!cir::MissingFeatures::setCallingConv());
 
   auto call = builder.createCallOp(loc, callee, args);
   assert(call->getNumResults() <= 1 &&
@@ -1210,7 +1210,7 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   CanQualType resultType = Context.VoidTy;
   (void)resultType;
 
-  return arrangeCIRFunctionInfo(resultType, FnInfoOpts::IsInstanceMethod,
+  return arrangeCIRFunctionInfo(resultType, cir::FnInfoOpts::IsInstanceMethod,
                                 argTypes, extInfo, paramInfos, required);
 }
 
@@ -1235,7 +1235,7 @@ CanQualType CIRGenTypes::DeriveThisType(const CXXRecordDecl *RD,
 /// Arrange the CIR function layout for a value of the given function type, on
 /// top of any implicit parameters already stored.
 static const CIRGenFunctionInfo &
-arrangeCIRFunctionInfo(CIRGenTypes &CGT, FnInfoOpts instanceMethod,
+arrangeCIRFunctionInfo(CIRGenTypes &CGT, cir::FnInfoOpts instanceMethod,
                        SmallVectorImpl<CanQualType> &prefix,
                        CanQual<FunctionProtoType> FTP) {
   SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
@@ -1253,7 +1253,7 @@ arrangeCIRFunctionInfo(CIRGenTypes &CGT, FnInfoOpts instanceMethod,
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
   SmallVector<CanQualType, 16> argTypes;
-  return ::arrangeCIRFunctionInfo(*this, FnInfoOpts::None, argTypes, FTP);
+  return ::arrangeCIRFunctionInfo(*this, cir::FnInfoOpts::None, argTypes, FTP);
 }
 
 /// Arrange the argument and result information for a value of the given
@@ -1263,7 +1263,7 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
   // When translating an unprototyped function type, always use a
   // variadic type.
   return arrangeCIRFunctionInfo(FTNP->getReturnType().getUnqualifiedType(),
-                                FnInfoOpts::None, std::nullopt,
+                                cir::FnInfoOpts::None, std::nullopt,
                                 FTNP->getExtInfo(), {}, RequiredArgs(0));
 }
 
@@ -1314,7 +1314,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   // which never have param info.
   assert(!FPT->hasExtParameterInfos() && "NYI");
 
-  return arrangeCIRFunctionInfo(ResultType, FnInfoOpts::IsInstanceMethod,
+  return arrangeCIRFunctionInfo(ResultType, cir::FnInfoOpts::IsInstanceMethod,
                                 ArgTypes, Info, ParamInfos, Required);
 }
 
@@ -1396,9 +1396,9 @@ static const CIRGenFunctionInfo &
 arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
                             const CallArgList &args, const FunctionType *fnType,
                             unsigned numExtraRequiredArgs,
-                            FnInfoOpts chainCall) {
+                            cir::FnInfoOpts chainCall) {
   assert(args.size() >= numExtraRequiredArgs);
-  assert((chainCall != FnInfoOpts::IsChainCall) && "Chain call NYI");
+  assert((chainCall != cir::FnInfoOpts::IsChainCall) && "Chain call NYI");
 
   llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
 
@@ -1415,7 +1415,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
       addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
                                   args.size());
   } else if (llvm::isa<FunctionNoProtoType>(fnType)) {
-    assert(!MissingFeatures::targetCodeGenInfoIsProtoCallVariadic());
+    assert(!cir::MissingFeatures::targetCodeGenInfoIsProtoCallVariadic());
     required = RequiredArgs(args.size());
   }
 
@@ -1465,8 +1465,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
 
   auto info = proto->getExtInfo();
   return arrangeCIRFunctionInfo(GetReturnType(proto->getReturnType()),
-                                FnInfoOpts::IsInstanceMethod, argTypes, info,
-                                paramInfos, required);
+                                cir::FnInfoOpts::IsInstanceMethod, argTypes,
+                                info, paramInfos, required);
 }
 
 /// Figure out the rules for calling a function with the given formal type using
@@ -1477,7 +1477,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
   assert(!ChainCall && "ChainCall NYI");
   return arrangeFreeFunctionLikeCall(
       *this, CGM, args, fnType, ChainCall ? 1 : 0,
-      ChainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None);
+      ChainCall ? cir::FnInfoOpts::IsChainCall : cir::FnInfoOpts::None);
 }
 
 /// Set calling convention for CUDA/HIP kernel.
@@ -1524,7 +1524,7 @@ CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
   argTypes.push_back(DeriveThisType(RD, MD));
 
   return ::arrangeCIRFunctionInfo(
-      *this, FnInfoOpts::IsChainCall, argTypes,
+      *this, cir::FnInfoOpts::IsChainCall, argTypes,
       FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
 }
 
@@ -1544,9 +1544,9 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   // When declaring a function without a prototype, always use a non-variadic
   // type.
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
-    return arrangeCIRFunctionInfo(noProto->getReturnType(), FnInfoOpts::None,
-                                  std::nullopt, noProto->getExtInfo(), {},
-                                  RequiredArgs::All);
+    return arrangeCIRFunctionInfo(noProto->getReturnType(),
+                                  cir::FnInfoOpts::None, std::nullopt,
+                                  noProto->getExtInfo(), {}, RequiredArgs::All);
   }
 
   return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());

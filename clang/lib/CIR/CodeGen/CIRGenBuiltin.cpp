@@ -34,8 +34,8 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 using namespace llvm;
 
@@ -49,7 +49,7 @@ static RValue buildLibraryCall(CIRGenFunction &CGF, const FunctionDecl *FD,
 static mlir::Value tryUseTestFPKind(CIRGenFunction &CGF, unsigned BuiltinID,
                                     mlir::Value V) {
   if (CGF.getBuilder().getIsFPConstrained() &&
-      CGF.getBuilder().getDefaultConstrainedExcept() != fp::ebIgnore) {
+      CGF.getBuilder().getDefaultConstrainedExcept() != cir::fp::ebIgnore) {
     if (mlir::Value Result = CGF.getTargetHooks().testFPKind(
             V, BuiltinID, CGF.getBuilder(), CGF.CGM))
       return Result;
@@ -509,7 +509,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_cosf16:
     case Builtin::BI__builtin_cosl:
     case Builtin::BI__builtin_cosf128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::CosOp>(*this, *E);
 
     case Builtin::BIcosh:
@@ -530,7 +530,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_expf16:
     case Builtin::BI__builtin_expl:
     case Builtin::BI__builtin_expf128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::ExpOp>(*this, *E);
 
     case Builtin::BIexp2:
@@ -541,7 +541,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp2f16:
     case Builtin::BI__builtin_exp2l:
     case Builtin::BI__builtin_exp2f128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::Exp2Op>(*this, *E);
 
     case Builtin::BI__builtin_exp10:
@@ -615,7 +615,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmod:
     case Builtin::BI__builtin_fmodf:
     case Builtin::BI__builtin_fmodl:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildBinaryFPBuiltin<mlir::cir::FModOp>(*this, *E);
 
     case Builtin::BI__builtin_fmodf16:
@@ -631,7 +631,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_logf16:
     case Builtin::BI__builtin_logl:
     case Builtin::BI__builtin_logf128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::LogOp>(*this, *E);
 
     case Builtin::BIlog10:
@@ -642,7 +642,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log10f16:
     case Builtin::BI__builtin_log10l:
     case Builtin::BI__builtin_log10f128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::Log10Op>(*this, *E);
 
     case Builtin::BIlog2:
@@ -653,7 +653,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log2f16:
     case Builtin::BI__builtin_log2l:
     case Builtin::BI__builtin_log2f128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::Log2Op>(*this, *E);
 
     case Builtin::BInearbyint:
@@ -671,7 +671,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_pow:
     case Builtin::BI__builtin_powf:
     case Builtin::BI__builtin_powl:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return RValue::get(
           buildBinaryMaybeConstrainedFPBuiltin<mlir::cir::PowOp>(*this, *E));
 
@@ -717,7 +717,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sinf16:
     case Builtin::BI__builtin_sinl:
     case Builtin::BI__builtin_sinf128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::SinOp>(*this, *E);
 
     case Builtin::BIsqrt:
@@ -728,7 +728,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sqrtf16:
     case Builtin::BI__builtin_sqrtl:
     case Builtin::BI__builtin_sqrtf128:
-      assert(!MissingFeatures::fastMathFlags());
+      assert(!cir::MissingFeatures::fastMathFlags());
       return buildUnaryFPBuiltin<mlir::cir::SqrtOp>(*this, *E);
 
     case Builtin::BI__builtin_elementwise_sqrt:
@@ -974,7 +974,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_unpredictable: {
     if (CGM.getCodeGenOpts().OptimizationLevel != 0)
-      assert(!MissingFeatures::insertBuiltinUnpredictable());
+      assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
     return RValue::get(buildScalarExpr(E->getArg(0)));
   }
 
@@ -1373,7 +1373,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    assert(!MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::addressSpace());
     auto AAS = getCIRAllocaAddressSpace();
     auto EAS = builder.getAddrSpaceAttr(
         E->getType()->getPointeeType().getAddressSpace());
@@ -2301,21 +2301,21 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
   // ReturnValue to be non-null, so that the target-specific emission code can
   // always just emit into it.
-  TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
-  if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
+  cir::TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
+  if (EvalKind == cir::TEK_Aggregate && ReturnValue.isNull()) {
     llvm_unreachable("NYI");
   }
 
   // Now see if we can emit a target-specific builtin.
   if (auto V = buildTargetBuiltinExpr(BuiltinID, E, ReturnValue)) {
     switch (EvalKind) {
-    case TEK_Scalar:
+    case cir::TEK_Scalar:
       if (mlir::isa<mlir::cir::VoidType>(V.getType()))
         return RValue::get(nullptr);
       return RValue::get(V);
-    case TEK_Aggregate:
+    case cir::TEK_Aggregate:
       llvm_unreachable("NYI");
-    case TEK_Complex:
+    case cir::TEK_Complex:
       llvm_unreachable("No current target builtin returns complex");
     }
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
@@ -2336,7 +2336,7 @@ mlir::Value CIRGenFunction::buildCheckedArgForBuiltin(const Expr *E,
   if (!SanOpts.has(SanitizerKind::Builtin))
     return value;
 
-  assert(!MissingFeatures::sanitizerBuiltin());
+  assert(!cir::MissingFeatures::sanitizerBuiltin());
   llvm_unreachable("NYI");
 }
 

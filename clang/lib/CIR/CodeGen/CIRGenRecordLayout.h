@@ -14,7 +14,7 @@
 
 #include "llvm/Support/raw_ostream.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 /// Structure with information about how a bitfield should be accessed. This is
 /// very similar to what LLVM codegen does, once CIR evolves it's possible we
@@ -205,6 +205,6 @@ public:
   }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

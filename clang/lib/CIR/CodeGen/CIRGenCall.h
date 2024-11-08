@@ -25,7 +25,7 @@
 
 #include "mlir/IR/BuiltinOps.h"
 
-namespace cir {
+namespace clang::CIRGen {
 class CIRGenFunction;
 
 /// Abstract information about a function or function prototype.
@@ -290,6 +290,6 @@ public:
   Address getAddress() const { return Addr; }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

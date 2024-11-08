@@ -39,8 +39,8 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 
 static mlir::cir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM,
@@ -137,7 +137,7 @@ static Address buildPointerWithAlignment(const Expr *expr,
               CE->getSubExpr()->getType()->getAs<clang::PointerType>()) {
         if (PtrTy->getPointeeType()->isVoidType())
           break;
-        assert(!MissingFeatures::tbaa());
+        assert(!cir::MissingFeatures::tbaa());
 
         LValueBaseInfo innerBaseInfo;
         Address addr = cgf.buildPointerWithAlignment(
@@ -146,7 +146,7 @@ static Address buildPointerWithAlignment(const Expr *expr,
           *baseInfo = innerBaseInfo;
 
         if (isa<ExplicitCastExpr>(CE)) {
-          assert(!MissingFeatures::tbaa());
+          assert(!cir::MissingFeatures::tbaa());
           LValueBaseInfo TargetTypeBaseInfo;
 
           CharUnits Align = cgf.CGM.getNaturalPointeeTypeAlignment(
@@ -173,7 +173,7 @@ static Address buildPointerWithAlignment(const Expr *expr,
         addr = cgf.getBuilder().createElementBitCast(
             cgf.getLoc(expr->getSourceRange()), addr, ElemTy);
         if (CE->getCastKind() == CK_AddressSpaceConversion) {
-          assert(!MissingFeatures::addressSpace());
+          assert(!cir::MissingFeatures::addressSpace());
           llvm_unreachable("NYI");
         }
         return addr;
@@ -189,7 +189,7 @@ static Address buildPointerWithAlignment(const Expr *expr,
       // TODO: Support accesses to members of base classes in TBAA. For now, we
       // conservatively pretend that the complete object is of the base class
       // type.
-      assert(!MissingFeatures::tbaa());
+      assert(!cir::MissingFeatures::tbaa());
       Address Addr = cgf.buildPointerWithAlignment(CE->getSubExpr(), baseInfo);
       auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
       return cgf.getAddressOfBaseClass(
@@ -211,7 +211,7 @@ static Address buildPointerWithAlignment(const Expr *expr,
       LValue LV = cgf.buildLValue(UO->getSubExpr());
       if (baseInfo)
         *baseInfo = LV.getBaseInfo();
-      assert(!MissingFeatures::tbaa());
+      assert(!cir::MissingFeatures::tbaa());
       return LV.getAddress();
     }
   }
@@ -290,7 +290,7 @@ LValue CIRGenFunction::buildLValueForBitField(LValue base,
 
   QualType fieldType =
       field->getType().withCVRQualifiers(base.getVRQualifiers());
-  assert(!MissingFeatures::tbaa() && "NYI TBAA for bit fields");
+  assert(!cir::MissingFeatures::tbaa() && "NYI TBAA for bit fields");
   LValueBaseInfo fieldBaseInfo(BaseInfo.getAlignmentSource());
   return LValue::MakeBitfield(Addr, info, fieldType, fieldBaseInfo,
                               TBAAAccessInfo());
@@ -309,15 +309,15 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
   const RecordDecl *rec = field->getParent();
   AlignmentSource BaseAlignSource = BaseInfo.getAlignmentSource();
   LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource));
-  if (MissingFeatures::tbaa() || rec->hasAttr<MayAliasAttr>() ||
+  if (cir::MissingFeatures::tbaa() || rec->hasAttr<MayAliasAttr>() ||
       FieldType->isVectorType()) {
-    assert(!MissingFeatures::tbaa() && "NYI");
+    assert(!cir::MissingFeatures::tbaa() && "NYI");
   } else if (rec->isUnion()) {
-    assert(!MissingFeatures::tbaa() && "NYI");
+    assert(!cir::MissingFeatures::tbaa() && "NYI");
   } else {
     // If no base type been assigned for the base access, then try to generate
     // one for this base lvalue.
-    assert(!MissingFeatures::tbaa() && "NYI");
+    assert(!cir::MissingFeatures::tbaa() && "NYI");
   }
 
   Address addr = base.getAddress();
@@ -342,11 +342,11 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
       // a barrier every time CXXRecord field with vptr is referenced.
-      assert(!MissingFeatures::createInvariantGroup());
+      assert(!cir::MissingFeatures::createInvariantGroup());
 
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
-      assert(!MissingFeatures::generateDebugInfo());
+      assert(!cir::MissingFeatures::generateDebugInfo());
     }
 
     if (FieldType->isReferenceType())
@@ -368,7 +368,7 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
 
   // If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     LValue RefLVal = makeAddrLValue(addr, FieldType, FieldBaseInfo);
     if (RecordCVR & Qualifiers::Volatile)
       RefLVal.getQuals().addVolatile();
@@ -390,7 +390,7 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
   if (field->hasAttr<AnnotateAttr>())
     llvm_unreachable("NYI");
 
-  if (MissingFeatures::tbaa())
+  if (cir::MissingFeatures::tbaa())
     // Next line should take a TBAA object
     llvm_unreachable("NYI");
   LValue LV = makeAddrLValue(addr, FieldType, FieldBaseInfo);
@@ -426,7 +426,7 @@ LValue CIRGenFunction::buildLValueForFieldInitialization(
   LValueBaseInfo BaseInfo = Base.getBaseInfo();
   AlignmentSource FieldAlignSource = BaseInfo.getAlignmentSource();
   LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(FieldAlignSource));
-  assert(!MissingFeatures::tbaa() && "NYI");
+  assert(!cir::MissingFeatures::tbaa() && "NYI");
   return makeAddrLValue(V, FieldType, FieldBaseInfo);
 }
 
@@ -482,7 +482,7 @@ static CIRGenCallee buildDirectCallee(CIRGenModule &CGM, GlobalDecl GD) {
     bool IsPredefinedLibFunction =
         CGM.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
     bool HasAttributeNoBuiltin = false;
-    assert(!MissingFeatures::attributeNoBuiltin() && "NYI");
+    assert(!cir::MissingFeatures::attributeNoBuiltin() && "NYI");
     // bool HasAttributeNoBuiltin =
     //     CGF.CurFn->getAttributes().hasFnAttr(NoBuiltinFD) ||
     //     CGF.CurFn->getAttributes().hasFnAttr(NoBuiltins);
@@ -641,7 +641,7 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value value, Address addr,
     llvm_unreachable("NYI");
   }
 
-  if (MissingFeatures::tbaa())
+  if (cir::MissingFeatures::tbaa())
     llvm_unreachable("NYI");
 }
 
@@ -738,7 +738,7 @@ RValue CIRGenFunction::buildLoadOfBitfieldLValue(LValue LV,
   auto field = builder.createGetBitfield(getLoc(Loc), resLTy, ptr.getPointer(),
                                          ptr.getElementType(), info,
                                          LV.isVolatile(), useVolatile);
-  assert(!MissingFeatures::emitScalarRangeCheck() && "NYI");
+  assert(!cir::MissingFeatures::emitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
 
@@ -919,7 +919,7 @@ static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
     assert(0 && "NYI");
   else
     LV = CGF.makeAddrLValue(Addr, T, AlignmentSource::Decl);
-  assert(!MissingFeatures::setObjCGCLValueClass() && "NYI");
+  assert(!cir::MissingFeatures::setObjCGCLValueClass() && "NYI");
   return LV;
 }
 
@@ -975,12 +975,12 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
       VD = VD->getCanonicalDecl();
       if (auto *FD = LambdaCaptureFields.lookup(VD))
         return buildCapturedFieldLValue(*this, FD, CXXABIThisValue);
-      assert(!MissingFeatures::CGCapturedStmtInfo() && "NYI");
+      assert(!cir::MissingFeatures::CGCapturedStmtInfo() && "NYI");
       // TODO[OpenMP]: Find the appropiate captured variable value and return
       // it.
       // TODO[OpenMP]: Set non-temporal information in the captured LVal.
       // LLVM codegen:
-      assert(!MissingFeatures::openMP());
+      assert(!cir::MissingFeatures::openMP());
       // Address addr = GetAddrOfBlockDecl(VD);
       // return MakeAddrLValue(addr, T, AlignmentSource::Decl);
     }
@@ -1053,15 +1053,15 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
     bool NonGCable =
         isLocalStorage && !VD->getType()->isReferenceType() && !isBlockByref;
 
-    if (NonGCable && MissingFeatures::setNonGC()) {
+    if (NonGCable && cir::MissingFeatures::setNonGC()) {
       llvm_unreachable("garbage collection is NYI");
     }
 
     bool isImpreciseLifetime =
         (isLocalStorage && !VD->hasAttr<ObjCPreciseLifetimeAttr>());
-    if (isImpreciseLifetime && MissingFeatures::ARC())
+    if (isImpreciseLifetime && cir::MissingFeatures::ARC())
       llvm_unreachable("imprecise lifetime is NYI");
-    assert(!MissingFeatures::setObjCGCLValueClass());
+    assert(!cir::MissingFeatures::setObjCGCLValueClass());
 
     // Statics are defined as globals, so they are not include in the function's
     // symbol table.
@@ -1076,7 +1076,7 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
 
     // Emit debuginfo for the function declaration if the target wants to.
     if (getContext().getTargetInfo().allowDebugInfoForExternalRef())
-      assert(!MissingFeatures::generateDebugInfo());
+      assert(!cir::MissingFeatures::generateDebugInfo());
 
     return LV;
   }
@@ -1120,7 +1120,7 @@ CIRGenFunction::buildPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
 
   LValueBaseInfo baseInfo;
   // TODO(cir): add TBAA
-  assert(!MissingFeatures::tbaa());
+  assert(!cir::MissingFeatures::tbaa());
   auto memberAddr = buildCXXMemberDataPointerAddress(E, baseAddr, memberPtr,
                                                      memberPtrTy, &baseInfo);
 
@@ -1138,7 +1138,7 @@ CIRGenFunction::buildExtVectorElementExpr(const ExtVectorElementExpr *E) {
     // it.
     LValueBaseInfo BaseInfo;
     // TODO(cir): Support TBAA
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     Address Ptr = buildPointerWithAlignment(E->getBase(), &BaseInfo);
     const auto *PT = E->getBase()->getType()->castAs<clang::PointerType>();
     base = makeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo);
@@ -1208,7 +1208,7 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
   // evaluated first just in case the variable gets moved by the RHS.
 
   switch (CIRGenFunction::getEvaluationKind(E->getType())) {
-  case TEK_Scalar: {
+  case cir::TEK_Scalar: {
     assert(E->getLHS()->getType().getObjCLifetime() ==
                clang::Qualifiers::ObjCLifetime::OCL_None &&
            "not implemented");
@@ -1229,9 +1229,9 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
     return LV;
   }
 
-  case TEK_Complex:
+  case cir::TEK_Complex:
     return buildComplexAssignmentLValue(E);
-  case TEK_Aggregate:
+  case cir::TEK_Aggregate:
     assert(0 && "not implemented");
   }
   llvm_unreachable("bad evaluation kind");
@@ -1315,7 +1315,7 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
              ? buildAddrOfRealComponent(Loc, LV.getAddress(), LV.getType())
              : buildAddrOfImagComponent(Loc, LV.getAddress(), LV.getType()));
     // TODO(cir): TBAA info.
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     LValue ElemLV = makeAddrLValue(Component, T, LV.getBaseInfo());
     ElemLV.getQuals().addQualifiers(LV.getQuals());
     return ElemLV;
@@ -1342,11 +1342,11 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
 RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
                                     bool ignoreResult) {
   switch (CIRGenFunction::getEvaluationKind(E->getType())) {
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     return RValue::get(buildScalarExpr(E));
-  case TEK_Complex:
+  case cir::TEK_Complex:
     return RValue::getComplex(buildComplexExpr(E));
-  case TEK_Aggregate: {
+  case cir::TEK_Aggregate: {
     if (!ignoreResult && aggSlot.isIgnored())
       aggSlot = CreateAggTemp(E->getType(), getLoc(E->getSourceRange()),
                               getCounterAggTmpAsString());
@@ -1386,18 +1386,18 @@ RValue CIRGenFunction::GetUndefRValue(QualType ty) {
     return RValue::get(nullptr);
 
   switch (getEvaluationKind(ty)) {
-  case TEK_Complex: {
+  case cir::TEK_Complex: {
     llvm_unreachable("NYI");
   }
 
   // If this is a use of an undefined aggregate type, the aggregate must have
   // an identifiable address. Just because the contents of the value are
   // undefined doesn't mean that the address can't be taken and compared.
-  case TEK_Aggregate: {
+  case cir::TEK_Aggregate: {
     llvm_unreachable("NYI");
   }
 
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     llvm_unreachable("NYI");
   }
   llvm_unreachable("bad evaluation kind");
@@ -1491,8 +1491,8 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   // Chain calls use the same code path to add the inviisble chain parameter to
   // the function type.
   if (isa<FunctionNoProtoType>(FnType) || Chain) {
-    assert(!MissingFeatures::chainCall());
-    assert(!MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::chainCall());
+    assert(!cir::MissingFeatures::addressSpace());
     auto CalleeTy = getTypes().GetFunctionType(FnInfo);
     // get non-variadic function type
     CalleeTy = mlir::cir::FuncType::get(CalleeTy.getInputs(),
@@ -1570,7 +1570,7 @@ Address CIRGenFunction::buildArrayToPointerDecay(const Expr *E,
   QualType EltType = E->getType()->castAsArrayTypeUnsafe()->getElementType();
   if (BaseInfo)
     *BaseInfo = LV.getBaseInfo();
-  assert(!MissingFeatures::tbaa() && "NYI");
+  assert(!cir::MissingFeatures::tbaa() && "NYI");
 
   mlir::Value ptr = CGM.getBuilder().maybeBuildArrayDecay(
       CGM.getLoc(E->getSourceRange()), Addr.getPointer(),
@@ -1666,7 +1666,7 @@ buildArraySubscriptPtr(CIRGenFunction &CGF, mlir::Location beginLoc,
   // TODO(cir): LLVM codegen emits in bound gep check here, is there anything
   // that would enhance tracking this later in CIR?
   if (inbounds)
-    assert(!MissingFeatures::emitCheckedInBoundsGEP() && "NYI");
+    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP() && "NYI");
   return CGM.getBuilder().getArrayElement(beginLoc, endLoc, ptr, eltTy, idx,
                                           shouldDecay);
 }
@@ -1766,7 +1766,7 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
     llvm_unreachable("extvector subscript is NYI");
   }
 
-  assert(!MissingFeatures::tbaa() && "TBAA is NYI");
+  assert(!cir::MissingFeatures::tbaa() && "TBAA is NYI");
   LValueBaseInfo EltBaseInfo;
   Address Addr = Address::invalid();
   if (const VariableArrayType *vla =
@@ -1818,11 +1818,11 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
     // TODO(cir): EltTBAAInfo
-    assert(!MissingFeatures::tbaa() && "TBAA is NYI");
+    assert(!cir::MissingFeatures::tbaa() && "TBAA is NYI");
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     // TODO(cir): EltTBAAInfo
-    assert(!MissingFeatures::tbaa() && "TBAA is NYI");
+    assert(!cir::MissingFeatures::tbaa() && "TBAA is NYI");
     Addr = buildPointerWithAlignment(E->getBase(), &EltBaseInfo);
     auto Idx = EmitIdxAfterBase(/*Promote*/ true);
     QualType ptrType = E->getBase()->getType();
@@ -1981,7 +1981,7 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
     // TODO: Support accesses to members of base classes in TBAA. For now, we
     // conservatively pretend that the complete object is of the base class
     // type.
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     return makeAddrLValue(Base, E->getType(), LV.getBaseInfo());
   }
   case CK_ToUnion:
@@ -2000,7 +2000,7 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
     auto DestAS = builder.getAddrSpaceAttr(E->getType().getAddressSpace());
     mlir::Value V = getTargetHooks().performAddrSpaceCast(
         *this, LV.getPointer(), SrcAS, DestAS, ConvertType(DestTy));
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     return makeAddrLValue(Address(V, getTypes().convertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo());
@@ -2101,7 +2101,7 @@ LValue CIRGenFunction::buildMemberExpr(const MemberExpr *E) {
   NamedDecl *ND = E->getMemberDecl();
   if (auto *Field = dyn_cast<FieldDecl>(ND)) {
     LValue LV = buildLValueForField(BaseLV, Field);
-    assert(!MissingFeatures::setObjCGCLValueClass() && "NYI");
+    assert(!cir::MissingFeatures::setObjCGCLValueClass() && "NYI");
     if (getLangOpts().OpenMP) {
       // If the member was explicitly marked as nontemporal, mark it as
       // nontemporal. If the base lvalue is marked as nontemporal, mark access
@@ -2136,11 +2136,11 @@ void CIRGenFunction::buildAnyExprToMem(const Expr *E, Address Location,
                                        Qualifiers Quals, bool IsInit) {
   // FIXME: This function should take an LValue as an argument.
   switch (getEvaluationKind(E->getType())) {
-  case TEK_Complex:
+  case cir::TEK_Complex:
     assert(0 && "NYI");
     return;
 
-  case TEK_Aggregate: {
+  case cir::TEK_Aggregate: {
     buildAggExpr(E, AggValueSlot::forAddr(Location, Quals,
                                           AggValueSlot::IsDestructed_t(IsInit),
                                           AggValueSlot::DoesNotNeedGCBarriers,
@@ -2149,7 +2149,7 @@ void CIRGenFunction::buildAnyExprToMem(const Expr *E, Address Location,
     return;
   }
 
-  case TEK_Scalar: {
+  case cir::TEK_Scalar: {
     RValue RV = RValue::get(buildScalarExpr(E));
     LValue LV = makeAddrLValue(Location, E->getType());
     buildStoreThroughLValue(RV, LV);
@@ -2306,7 +2306,7 @@ LValue CIRGenFunction::buildMaterializeTemporaryExpr(
   } else {
     switch (M->getStorageDuration()) {
     case SD_Automatic:
-      assert(!MissingFeatures::shouldEmitLifetimeMarkers());
+      assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers());
       break;
 
     case SD_FullExpression: {
@@ -2383,7 +2383,7 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
     if (!CGF.ContainsLabel(Dead)) {
       // If the true case is live, we need to track its region.
       if (CondExprBool) {
-        assert(!MissingFeatures::incrementProfileCounter());
+        assert(!cir::MissingFeatures::incrementProfileCounter());
       }
       // If a throw expression we emit it and return an undefined lvalue
       // because it can't be used.
@@ -2457,7 +2457,8 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
                               *this, loc, b.getInsertionBlock()};
                           CGF.currLexScope->setAsTernary();
 
-                          assert(!MissingFeatures::incrementProfileCounter());
+                          assert(
+                              !cir::MissingFeatures::incrementProfileCounter());
                           eval.begin(CGF);
                           Info.LHS = BranchGenFunc(CGF, trueExpr);
                           auto lhs = Info.LHS->getPointer();
@@ -2478,7 +2479,8 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
                               *this, loc, b.getInsertionBlock()};
                           CGF.currLexScope->setAsTernary();
 
-                          assert(!MissingFeatures::incrementProfileCounter());
+                          assert(
+                              !cir::MissingFeatures::incrementProfileCounter());
                           eval.begin(CGF);
                           Info.RHS = BranchGenFunc(CGF, falseExpr);
                           auto rhs = Info.RHS->getPointer();
@@ -2531,7 +2533,7 @@ LValue CIRGenFunction::buildConditionalOperatorLValue(
     AlignmentSource alignSource =
         std::max(Info.LHS->getBaseInfo().getAlignmentSource(),
                  Info.RHS->getBaseInfo().getAlignmentSource());
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     return makeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource));
   } else {
     llvm_unreachable("NYI");
@@ -2645,11 +2647,11 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
                                            clang::SourceLocation loc) {
   LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
   switch (getEvaluationKind(type)) {
-  case TEK_Complex:
+  case cir::TEK_Complex:
     llvm_unreachable("NYI");
-  case TEK_Aggregate:
+  case cir::TEK_Aggregate:
     return lvalue.asAggregateRValue();
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     return RValue::get(buildLoadOfScalar(lvalue, loc));
   }
   llvm_unreachable("NYI");
@@ -2741,7 +2743,7 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(mlir::Location loc,
     // This should be done in CIR prior to LLVM lowering, if we do now
     // we can make CIR based diagnostics misleading.
     //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
-    assert(!MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
+    assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
   }
 
   if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
@@ -2777,7 +2779,7 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(mlir::Location loc,
   // Don't bother if not optimizing because that metadata would not be used.
   auto *Call = dyn_cast<CallExpr>(cond->IgnoreImpCasts());
   if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    assert(!MissingFeatures::insertBuiltinUnpredictable());
+    assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
   }
 
   // Emit the code with the fully general case.
@@ -2920,8 +2922,8 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address addr, bool isVolatile,
     llvm_unreachable("NYI");
   }
 
-  assert(!MissingFeatures::tbaa() && "NYI");
-  assert(!MissingFeatures::emitScalarRangeCheck() && "NYI");
+  assert(!cir::MissingFeatures::tbaa() && "NYI");
+  assert(!cir::MissingFeatures::emitScalarRangeCheck() && "NYI");
 
   return buildFromMemory(Load, ty);
 }
@@ -2974,7 +2976,7 @@ Address CIRGenFunction::buildLoadOfReference(LValue refLVal, mlir::Location loc,
       refLVal.getAddress().getPointer());
 
   // TODO(cir): DecorateInstructionWithTBAA relevant for us?
-  assert(!MissingFeatures::tbaa());
+  assert(!cir::MissingFeatures::tbaa());
 
   QualType pointeeType = refLVal.getType()->getPointeeType();
   CharUnits align =

@@ -36,8 +36,8 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 using namespace llvm;
 
@@ -2257,13 +2257,13 @@ mlir::Value buildNeonCall(CIRGenBuilderTy &builder,
                           unsigned shift = 0, bool rightshift = false) {
   // TODO: Consider removing the following unreachable when we have
   // buildConstrainedFPCall feature implemented
-  assert(!MissingFeatures::buildConstrainedFPCall());
+  assert(!cir::MissingFeatures::buildConstrainedFPCall());
   if (isConstrainedFPIntrinsic)
     llvm_unreachable("isConstrainedFPIntrinsic NYI");
 
   for (unsigned j = 0; j < argTypes.size(); ++j) {
     if (isConstrainedFPIntrinsic) {
-      assert(!MissingFeatures::buildConstrainedFPCall());
+      assert(!cir::MissingFeatures::buildConstrainedFPCall());
     }
     if (shift > 0 && shift == j) {
       args[j] = buildNeonShiftVector(
@@ -2274,7 +2274,7 @@ mlir::Value buildNeonCall(CIRGenBuilderTy &builder,
     }
   }
   if (isConstrainedFPIntrinsic) {
-    assert(!MissingFeatures::buildConstrainedFPCall());
+    assert(!cir::MissingFeatures::buildConstrainedFPCall());
     return nullptr;
   }
   return builder
@@ -2311,8 +2311,8 @@ buildCommonNeonCallPattern0(CIRGenFunction &cgf, llvm::StringRef intrincsName,
 mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     unsigned builtinID, unsigned llvmIntrinsic, unsigned altLLVMIntrinsic,
     const char *nameHint, unsigned modifier, const CallExpr *e,
-    llvm::SmallVectorImpl<mlir::Value> &ops, cir::Address ptrOp0,
-    cir::Address ptrOp1, llvm::Triple::ArchType arch) {
+    llvm::SmallVectorImpl<mlir::Value> &ops, Address ptrOp0, Address ptrOp1,
+    llvm::Triple::ArchType arch) {
   // Get the last argument, which specifies the vector type.
   const clang::Expr *arg = e->getArg(e->getNumArgs() - 1);
   std::optional<llvm::APSInt> neonTypeConst =
@@ -3391,7 +3391,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v: {
-    assert(!MissingFeatures::buildConstrainedFPCall());
+    assert(!cir::MissingFeatures::buildConstrainedFPCall());
     return buildNeonCall(builder, {ty}, Ops, "round", ty,
                          getLoc(E->getExprLoc()));
   }
@@ -3742,7 +3742,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vld1_dup_v:
   case NEON::BI__builtin_neon_vld1q_dup_v: {
-    cir::Address ptrAddr = PtrOp0.withElementType(vTy.getEltType());
+    Address ptrAddr = PtrOp0.withElementType(vTy.getEltType());
     mlir::Value val = builder.createLoad(getLoc(E->getExprLoc()), ptrAddr);
     mlir::cir::VecSplatOp vecSplat = builder.create<mlir::cir::VecSplatOp>(
         getLoc(E->getExprLoc()), vTy, val);

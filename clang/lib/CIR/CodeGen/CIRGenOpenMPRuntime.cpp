@@ -14,42 +14,42 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 CIRGenOpenMPRuntime::CIRGenOpenMPRuntime(CIRGenModule &CGM) : CGM(CGM) {}
 
 Address CIRGenOpenMPRuntime::getAddressOfLocalVariable(CIRGenFunction &CGF,
                                                        const VarDecl *VD) {
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
   return Address::invalid();
 }
 
 void CIRGenOpenMPRuntime::checkAndEmitLastprivateConditional(
     CIRGenFunction &CGF, const Expr *LHS) {
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
   return;
 }
 
 void CIRGenOpenMPRuntime::registerTargetGlobalVariable(
     const clang::VarDecl *VD, mlir::cir::GlobalOp globalOp) {
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
   return;
 }
 
 void CIRGenOpenMPRuntime::emitDeferredTargetDecls() const {
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
   return;
 }
 
 void CIRGenOpenMPRuntime::emitFunctionProlog(CIRGenFunction &CGF,
                                              const clang::Decl *D) {
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
   return;
 }
 
 bool CIRGenOpenMPRuntime::emitTargetGlobal(clang::GlobalDecl &GD) {
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
   return false;
 }
 
@@ -70,14 +70,14 @@ void CIRGenOpenMPRuntime::emitTaskWaitCall(CIRGenBuilderTy &builder,
   } else {
     llvm_unreachable("NYI");
   }
-  assert(!MissingFeatures::openMPRegionInfo());
+  assert(!cir::MissingFeatures::openMPRegionInfo());
 }
 
 void CIRGenOpenMPRuntime::emitBarrierCall(CIRGenBuilderTy &builder,
                                           CIRGenFunction &CGF,
                                           mlir::Location Loc) {
 
-  assert(!MissingFeatures::openMPRegionInfo());
+  assert(!cir::MissingFeatures::openMPRegionInfo());
 
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
     builder.create<mlir::omp::BarrierOp>(Loc);
@@ -103,5 +103,5 @@ void CIRGenOpenMPRuntime::emitTaskyieldCall(CIRGenBuilderTy &builder,
     llvm_unreachable("NYI");
   }
 
-  assert(!MissingFeatures::openMPRegionInfo());
+  assert(!cir::MissingFeatures::openMPRegionInfo());
 }

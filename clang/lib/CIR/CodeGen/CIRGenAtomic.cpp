@@ -30,8 +30,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 namespace {
 class AtomicInfo {
@@ -42,7 +42,7 @@ class AtomicInfo {
   uint64_t ValueSizeInBits;
   CharUnits AtomicAlign;
   CharUnits ValueAlign;
-  TypeEvaluationKind EvaluationKind;
+  cir::TypeEvaluationKind EvaluationKind;
   bool UseLibcall;
   LValue LVal;
   CIRGenBitFieldInfo BFI;
@@ -51,7 +51,7 @@ class AtomicInfo {
 public:
   AtomicInfo(CIRGenFunction &CGF, LValue &lvalue, mlir::Location l)
       : CGF(CGF), AtomicSizeInBits(0), ValueSizeInBits(0),
-        EvaluationKind(TEK_Scalar), UseLibcall(true), loc(l) {
+        EvaluationKind(cir::TEK_Scalar), UseLibcall(true), loc(l) {
     assert(!lvalue.isGlobalReg());
     ASTContext &C = CGF.getContext();
     if (lvalue.isSimple()) {
@@ -102,7 +102,7 @@ public:
   CharUnits getAtomicAlignment() const { return AtomicAlign; }
   uint64_t getAtomicSizeInBits() const { return AtomicSizeInBits; }
   uint64_t getValueSizeInBits() const { return ValueSizeInBits; }
-  TypeEvaluationKind getEvaluationKind() const { return EvaluationKind; }
+  cir::TypeEvaluationKind getEvaluationKind() const { return EvaluationKind; }
   bool shouldUseLibcall() const { return UseLibcall; }
   const LValue &getAtomicLValue() const { return LVal; }
   mlir::Value getAtomicPointer() const {
@@ -287,13 +287,13 @@ bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
   switch (getEvaluationKind()) {
   // For scalars and complexes, check whether the store size of the
   // type uses the full size.
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     return !isFullSizeType(CGF.CGM, ty, AtomicSizeInBits);
-  case TEK_Complex:
+  case cir::TEK_Complex:
     llvm_unreachable("NYI");
 
   // Padding in structs has an undefined bit pattern.  User beware.
-  case TEK_Aggregate:
+  case cir::TEK_Aggregate:
     return false;
   }
   llvm_unreachable("bad evaluation kind");
@@ -545,7 +545,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
                           uint64_t Size, mlir::cir::MemOrder Order,
                           uint8_t Scope) {
-  assert(!MissingFeatures::syncScopeID());
+  assert(!cir::MissingFeatures::syncScopeID());
   StringRef Op;
 
   auto &builder = CGF.getBuilder();
@@ -592,7 +592,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_load: {
     auto *load = builder.createLoad(loc, Ptr).getDefiningOp();
     // FIXME(cir): add scope information.
-    assert(!MissingFeatures::syncScopeID());
+    assert(!cir::MissingFeatures::syncScopeID());
     load->setAttr("mem_order", orderAttr);
     if (E->isVolatile())
       load->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
@@ -618,7 +618,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_store_n: {
     auto loadVal1 = builder.createLoad(loc, Val1);
     // FIXME(cir): add scope information.
-    assert(!MissingFeatures::syncScopeID());
+    assert(!cir::MissingFeatures::syncScopeID());
     builder.createStore(loc, loadVal1, Ptr, E->isVolatile(),
                         /*alignment=*/mlir::IntegerAttr{}, orderAttr);
     return;
@@ -791,7 +791,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   // LLVM atomic instructions always have synch scope. If clang atomic
   // expression has no scope operand, use default LLVM synch scope.
   if (!ScopeModel) {
-    assert(!MissingFeatures::syncScopeID());
+    assert(!cir::MissingFeatures::syncScopeID());
     buildAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
                   Order, /*FIXME(cir): LLVM default scope*/ 1);
     return;
@@ -799,7 +799,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
 
   // Handle constant scope.
   if (getConstOpIntAttr(Scope)) {
-    assert(!MissingFeatures::syncScopeID());
+    assert(!cir::MissingFeatures::syncScopeID());
     llvm_unreachable("NYI");
     return;
   }
@@ -1469,7 +1469,7 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
       store.setIsVolatile(true);
 
     // DecorateInstructionWithTBAA
-    assert(!MissingFeatures::tbaa());
+    assert(!cir::MissingFeatures::tbaa());
     return;
   }
 
@@ -1480,18 +1480,18 @@ void CIRGenFunction::buildAtomicInit(Expr *init, LValue dest) {
   AtomicInfo atomics(*this, dest, getLoc(init->getSourceRange()));
 
   switch (atomics.getEvaluationKind()) {
-  case TEK_Scalar: {
+  case cir::TEK_Scalar: {
     mlir::Value value = buildScalarExpr(init);
     atomics.emitCopyIntoMemory(RValue::get(value));
     return;
   }
 
-  case TEK_Complex: {
+  case cir::TEK_Complex: {
     llvm_unreachable("NYI");
     return;
   }
 
-  case TEK_Aggregate: {
+  case cir::TEK_Aggregate: {
     // Fix up the destination if the initializer isn't an expression
     // of atomic type.
     llvm_unreachable("NYI");

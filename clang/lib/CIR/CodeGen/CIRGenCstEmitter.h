@@ -21,7 +21,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 class ConstantEmitter {
 public:
@@ -162,6 +162,6 @@ private:
   mlir::Attribute validateAndPopAbstract(mlir::Attribute C, AbstractState save);
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

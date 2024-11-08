@@ -21,7 +21,7 @@ class VarDecl;
 
 } // namespace clang
 
-namespace cir {
+namespace clang::CIRGen {
 
 class CIRGenFunction;
 class CIRGenModule;
@@ -41,6 +41,6 @@ public:
                                           const clang::VarDecl &D);
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_CIRGENOPENCLRUNTIME_H

@@ -22,11 +22,11 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 struct CIRGenFunctionInfoArgInfo {
   clang::CanQualType type;
-  ABIArgInfo info;
+  cir::ABIArgInfo info;
 };
 
 /// A class for recording the number of arguments that a function signature
@@ -264,8 +264,10 @@ public:
 
   clang::CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
 
-  ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
-  const ABIArgInfo &getReturnInfo() const { return getArgsBuffer()[0].info; }
+  cir::ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
+  const cir::ABIArgInfo &getReturnInfo() const {
+    return getArgsBuffer()[0].info;
+  }
 
   bool isChainCall() const { return ChainCall; }
 
@@ -281,6 +283,6 @@ public:
   bool usesInAlloca() const { return ArgStruct; }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

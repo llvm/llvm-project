@@ -21,7 +21,7 @@
 
 #include "mlir/IR/Value.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 // Indicates whether a pointer is known not to be null.
 enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
@@ -143,6 +143,6 @@ public:
   }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_ADDRESS_H

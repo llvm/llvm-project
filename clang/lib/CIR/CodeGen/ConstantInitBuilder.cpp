@@ -16,7 +16,7 @@
 #include "CIRGenModule.h"
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 ConstantInitBuilderBase::ConstantInitBuilderBase(CIRGenModule &CGM)
     : CGM(CGM), builder(CGM.getBuilder()) {}

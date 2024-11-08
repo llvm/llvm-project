@@ -34,7 +34,7 @@
 #include <algorithm>
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 //===----------------------------------------------------------------------===//
 //                            ConstantAggregateBuilder
@@ -51,7 +51,7 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
 
 struct ConstantAggregateBuilderUtils {
   CIRGenModule &CGM;
-  CIRDataLayout dataLayout;
+  cir::CIRDataLayout dataLayout;
 
   ConstantAggregateBuilderUtils(CIRGenModule &CGM)
       : CGM(CGM), dataLayout{CGM.getModule()} {}
@@ -1295,7 +1295,7 @@ private:
   /// Return GEP-like value offset
   mlir::ArrayAttr getOffset(mlir::Type Ty) {
     auto Offset = Value.getLValueOffset().getQuantity();
-    CIRDataLayout Layout(CGM.getModule());
+    cir::CIRDataLayout Layout(CGM.getModule());
     SmallVector<int64_t, 3> Idx;
     CGM.getBuilder().computeGlobalViewIndicesFromFlatOffset(Offset, Ty, Layout,
                                                             Idx);
@@ -1872,7 +1872,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
         Desired, mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Elts));
   }
   case APValue::MemberPointer: {
-    assert(!MissingFeatures::cxxABI());
+    assert(!cir::MissingFeatures::cxxABI());
 
     const ValueDecl *memberDecl = Value.getMemberPointerDecl();
     assert(!Value.isMemberPointerToDerivedMember() && "NYI");
@@ -1924,7 +1924,7 @@ mlir::Value CIRGenModule::buildNullConstant(QualType T, mlir::Location loc) {
 }
 
 mlir::Value CIRGenModule::buildMemberPointerConstant(const UnaryOperator *E) {
-  assert(!MissingFeatures::cxxABI());
+  assert(!cir::MissingFeatures::cxxABI());
 
   auto loc = getLoc(E->getSourceRange());
 

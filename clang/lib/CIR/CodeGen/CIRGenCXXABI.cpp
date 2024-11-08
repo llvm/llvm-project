@@ -18,8 +18,8 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 CIRGenCXXABI::~CIRGenCXXABI() {}
 

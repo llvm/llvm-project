@@ -17,8 +17,8 @@
 #include "clang/Basic/LangOptions.h"
 
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
-using namespace cir;
 
 void CIRGenModule::buildCXXGlobalInitFunc() {
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())

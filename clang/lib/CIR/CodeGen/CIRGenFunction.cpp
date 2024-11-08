@@ -32,8 +32,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Support/LogicalResult.h"
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 using namespace mlir::cir;
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
@@ -54,14 +54,14 @@ CIRGenFunction::~CIRGenFunction() {
          "missed to deactivate a cleanup");
 
   // TODO(cir): set function is finished.
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
 
   // If we have an OpenMPIRBuilder we want to finalize functions (incl.
   // outlining etc) at some point. Doing it once the function codegen is done
   // seems to be a reasonable spot. We do it here, as opposed to the deletion
   // time of the CodeGenModule, because we have to ensure the IR has not yet
   // been "emitted" to the outside, thus, modifications are still sensible.
-  assert(!MissingFeatures::openMPRuntime());
+  assert(!cir::MissingFeatures::openMPRuntime());
 }
 
 clang::ASTContext &CIRGenFunction::getContext() const {
@@ -72,7 +72,7 @@ mlir::Type CIRGenFunction::ConvertType(QualType T) {
   return CGM.getTypes().ConvertType(T);
 }
 
-TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
+cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
   while (true) {
     switch (type->getTypeClass()) {
@@ -108,11 +108,11 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
-      return TEK_Scalar;
+      return cir::TEK_Scalar;
 
     // Complexes.
     case Type::Complex:
-      return TEK_Complex;
+      return cir::TEK_Complex;
 
     // Arrays, records, and Objective-C objects.
     case Type::ConstantArray:
@@ -121,7 +121,7 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::Record:
     case Type::ObjCObject:
     case Type::ObjCInterface:
-      return TEK_Aggregate;
+      return cir::TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
     case Type::Atomic:
@@ -281,11 +281,13 @@ void CIRGenFunction::buildAndUpdateRetAlloca(QualType ty, mlir::Location loc,
     // Count the implicit return.
     if (!endsWithReturn(CurFuncDecl))
       ++NumReturnExprs;
-  } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
+  } else if (CurFnInfo->getReturnInfo().getKind() ==
+             cir::ABIArgInfo::Indirect) {
     // TODO(CIR): Consider this implementation in CIRtoLLVM
     llvm_unreachable("NYI");
     // TODO(CIR): Consider this implementation in CIRtoLLVM
-  } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::InAlloca) {
+  } else if (CurFnInfo->getReturnInfo().getKind() ==
+             cir::ABIArgInfo::InAlloca) {
     llvm_unreachable("NYI");
   } else {
     auto addr = buildAlloca("__retval", ty, loc, alignment);
@@ -349,7 +351,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
   auto applyCleanup = [&]() {
     if (PerformCleanup) {
       // ApplyDebugLocation
-      assert(!MissingFeatures::generateDebugInfo());
+      assert(!cir::MissingFeatures::generateDebugInfo());
       ForceCleanup();
     }
   };
@@ -479,7 +481,7 @@ void CIRGenFunction::LexicalScope::buildImplicitReturn() {
                                      FD->getASTContext(), FD->getReturnType());
 
     if (CGF.SanOpts.has(SanitizerKind::Return)) {
-      assert(!MissingFeatures::sanitizerReturn());
+      assert(!cir::MissingFeatures::sanitizerReturn());
       llvm_unreachable("NYI");
     } else if (shouldEmitUnreachable) {
       if (CGF.CGM.getCodeGenOpts().OptimizationLevel == 0) {
@@ -525,7 +527,7 @@ void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
   // instructions will get the location of the return statements and
   // all will be fine.
   if (auto *DI = getDebugInfo())
-    assert(!MissingFeatures::generateDebugInfo() && "NYI");
+    assert(!cir::MissingFeatures::generateDebugInfo() && "NYI");
 
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
@@ -536,7 +538,7 @@ void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
     // Make sure the line table doesn't jump back into the body for
     // the ret after it's been at EndLoc.
     if (auto *DI = getDebugInfo())
-      assert(!MissingFeatures::generateDebugInfo() && "NYI");
+      assert(!cir::MissingFeatures::generateDebugInfo() && "NYI");
     // FIXME(cir): vla.c test currently crashes here.
     // PopCleanupBlocks(PrologueCleanupDepth);
   }
@@ -547,41 +549,41 @@ void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
   // this as part of LexicalScope instead, given CIR might have multiple
   // blocks with `cir.return`.
   if (ShouldInstrumentFunction()) {
-    assert(!MissingFeatures::shouldInstrumentFunction() && "NYI");
+    assert(!cir::MissingFeatures::shouldInstrumentFunction() && "NYI");
   }
 
   // Emit debug descriptor for function end.
   if (auto *DI = getDebugInfo())
-    assert(!MissingFeatures::generateDebugInfo() && "NYI");
+    assert(!cir::MissingFeatures::generateDebugInfo() && "NYI");
 
   // Reset the debug location to that of the simple 'return' expression, if any
   // rather than that of the end of the function's scope '}'.
-  assert(!MissingFeatures::generateDebugInfo() && "NYI");
+  assert(!cir::MissingFeatures::generateDebugInfo() && "NYI");
 
-  assert(!MissingFeatures::emitFunctionEpilog() && "NYI");
-  assert(!MissingFeatures::emitEndEHSpec() && "NYI");
+  assert(!cir::MissingFeatures::emitFunctionEpilog() && "NYI");
+  assert(!cir::MissingFeatures::emitEndEHSpec() && "NYI");
 
   // FIXME(cir): vla.c test currently crashes here.
   // assert(EHStack.empty() && "did not remove all scopes from cleanup stack!");
 
   // If someone did an indirect goto, emit the indirect goto block at the end of
   // the function.
-  assert(!MissingFeatures::indirectBranch() && "NYI");
+  assert(!cir::MissingFeatures::indirectBranch() && "NYI");
 
   // If some of our locals escaped, insert a call to llvm.localescape in the
   // entry block.
-  assert(!MissingFeatures::escapedLocals() && "NYI");
+  assert(!cir::MissingFeatures::escapedLocals() && "NYI");
 
   // If someone took the address of a label but never did an indirect goto, we
   // made a zero entry PHI node, which is illegal, zap it now.
-  assert(!MissingFeatures::indirectBranch() && "NYI");
+  assert(!cir::MissingFeatures::indirectBranch() && "NYI");
 
   // CIRGen doesn't need to emit EHResumeBlock, TerminateLandingPad,
   // TerminateHandler, UnreachableBlock, TerminateFunclets, NormalCleanupDest
   // here because the basic blocks aren't shared.
 
-  assert(!MissingFeatures::emitDeclMetadata() && "NYI");
-  assert(!MissingFeatures::deferredReplacements() && "NYI");
+  assert(!cir::MissingFeatures::emitDeclMetadata() && "NYI");
+  assert(!cir::MissingFeatures::deferredReplacements() && "NYI");
 
   // Add the min-legal-vector-width attribute. This contains the max width from:
   // 1. min-vector-width attribute used in the source program.
@@ -590,10 +592,10 @@ void CIRGenFunction::finishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector arguments and return types for functions called by
   // this function.
-  assert(!MissingFeatures::minLegalVectorWidthAttr() && "NYI");
+  assert(!cir::MissingFeatures::minLegalVectorWidthAttr() && "NYI");
 
   // Add vscale_range attribute if appropriate.
-  assert(!MissingFeatures::vscaleRangeAttr() && "NYI");
+  assert(!cir::MissingFeatures::vscaleRangeAttr() && "NYI");
 
   // In traditional LLVM codegen, if clang generated an unreachable return
   // block, it'd be deleted now. Same for unused ret allocas from ReturnValue
@@ -631,7 +633,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>()) {
-    assert(!MissingFeatures::noDebugInfo());
+    assert(!cir::MissingFeatures::noDebugInfo());
   }
 
   // The function might not have a body if we're generating thunks for a
@@ -664,12 +666,12 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     // tests when the time comes, but CIR should be intrinsically scope
     // accurate, so no need to tie coroutines to such markers.
     if (isa<CoroutineBodyStmt>(Body))
-      assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
+      assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
 
     // Initialize helper which will detect jumps which can cause invalid
     // lifetime markers.
     if (ShouldEmitLifetimeMarkers)
-      assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
+      assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
   }
 
   // Create a scope in the symbol table to hold variable declarations.
@@ -704,12 +706,12 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     // is required by certain optimizations.
     // In C++11 and up, the attribute will be removed if the body contains a
     // trivial empty loop.
-    if (MissingFeatures::mustProgress())
+    if (cir::MissingFeatures::mustProgress())
       llvm_unreachable("NYI");
 
     // Generate the body of the function.
     // TODO: PGO.assignRegionCounters
-    assert(!MissingFeatures::shouldInstrumentFunction());
+    assert(!cir::MissingFeatures::shouldInstrumentFunction());
     if (isa<CXXDestructorDecl>(FD))
       buildDestructorBody(Args);
     else if (isa<CXXConstructorDecl>(FD))
@@ -748,7 +750,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
 
   // If we haven't marked the function nothrow through other means, do a quick
   // pass now to see if we can.
-  assert(!MissingFeatures::tryMarkNoThrow());
+  assert(!cir::MissingFeatures::tryMarkNoThrow());
 
   return Fn;
 }
@@ -760,7 +762,7 @@ mlir::Value CIRGenFunction::createLoad(const VarDecl *VD, const char *Name) {
 }
 
 void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
-  assert(!MissingFeatures::emitAsanPrologueOrEpilogue());
+  assert(!cir::MissingFeatures::emitAsanPrologueOrEpilogue());
   const auto *Ctor = cast<CXXConstructorDecl>(CurGD.getDecl());
   auto CtorType = CurGD.getCtorType();
 
@@ -832,7 +834,7 @@ LValue CIRGenFunction::MakeNaturalAlignAddrLValue(mlir::Value val,
                                                   QualType ty) {
   LValueBaseInfo baseInfo;
   TBAAAccessInfo tbaaInfo;
-  assert(!MissingFeatures::tbaa());
+  assert(!cir::MissingFeatures::tbaa());
   CharUnits alignment = CGM.getNaturalTypeAlignment(ty, &baseInfo, &tbaaInfo);
   Address addr(val, getTypes().convertTypeForMem(ty), alignment);
   return LValue::makeAddr(addr, ty, getContext(), baseInfo, tbaaInfo);
@@ -969,49 +971,49 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
     // TODO(cir): set llvm::Attribute::NoSanitizeBounds
     if (SanitizeBounds && !SanOpts.hasOneOf(SanitizerKind::Bounds))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
 
     // TODO(cir): set llvm::Attribute::NoSanitizeCoverage
     if (NoSanitizeCoverage && CGM.getCodeGenOpts().hasSanitizeCoverage())
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
 
     // Some passes need the non-negated no_sanitize attribute. Pass them on.
     if (CGM.getCodeGenOpts().hasSanitizeBinaryMetadata()) {
       // TODO(cir): set no_sanitize_thread
       if (no_sanitize_mask & SanitizerKind::Thread)
-        assert(!MissingFeatures::sanitizeOther());
+        assert(!cir::MissingFeatures::sanitizeOther());
     }
   }
 
   if (ShouldSkipSanitizerInstrumentation()) {
-    assert(!MissingFeatures::sanitizeOther());
+    assert(!cir::MissingFeatures::sanitizeOther());
   } else {
     // Apply sanitizer attributes to the function.
     if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
     if (SanOpts.hasOneOf(SanitizerKind::HWAddress |
                          SanitizerKind::KernelHWAddress))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
     if (SanOpts.has(SanitizerKind::MemtagStack))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
     if (SanOpts.has(SanitizerKind::Thread))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
     if (SanOpts.has(SanitizerKind::NumericalStability))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
-      assert(!MissingFeatures::sanitizeOther());
+      assert(!cir::MissingFeatures::sanitizeOther());
   }
   if (SanOpts.has(SanitizerKind::SafeStack))
-    assert(!MissingFeatures::sanitizeOther());
+    assert(!cir::MissingFeatures::sanitizeOther());
   if (SanOpts.has(SanitizerKind::ShadowCallStack))
-    assert(!MissingFeatures::sanitizeOther());
+    assert(!cir::MissingFeatures::sanitizeOther());
 
   if (SanOpts.has(SanitizerKind::Realtime))
     llvm_unreachable("NYI");
 
   // Apply fuzzing attribute to the function.
   if (SanOpts.hasOneOf(SanitizerKind::Fuzzer | SanitizerKind::FuzzerNoLink))
-    assert(!MissingFeatures::sanitizeOther());
+    assert(!cir::MissingFeatures::sanitizeOther());
 
   // Ignore TSan memory acesses from within ObjC/ObjC++ dealloc, initialize,
   // .cxx_destruct, __destroy_helper_block_ and all of their calees at run time.
@@ -1050,17 +1052,17 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   // Apply xray attributes to the function (as a string, for now)
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
-    assert(!MissingFeatures::xray());
+    assert(!cir::MissingFeatures::xray());
   } else {
-    assert(!MissingFeatures::xray());
+    assert(!cir::MissingFeatures::xray());
   }
 
   if (ShouldXRayInstrumentFunction()) {
-    assert(!MissingFeatures::xray());
+    assert(!cir::MissingFeatures::xray());
   }
 
   if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone) {
-    assert(!MissingFeatures::getProfileCount());
+    assert(!cir::MissingFeatures::getProfileCount());
   }
 
   unsigned Count, Offset;
@@ -1168,17 +1170,17 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm_unreachable("NYI");
   }
 
-  if (MissingFeatures::stackrealign())
+  if (cir::MissingFeatures::stackrealign())
     llvm_unreachable("NYI");
 
-  if (FD && FD->isMain() && MissingFeatures::zerocallusedregs())
+  if (FD && FD->isMain() && cir::MissingFeatures::zerocallusedregs())
     llvm_unreachable("NYI");
 
   mlir::Block *EntryBB = &Fn.getBlocks().front();
 
   // TODO: allocapt insertion? probably don't need for CIR
 
-  if (MissingFeatures::requiresReturnValueCheck())
+  if (cir::MissingFeatures::requiresReturnValueCheck())
     llvm_unreachable("NYI");
 
   if (getDebugInfo()) {
@@ -1205,7 +1207,7 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm_unreachable("NYI");
   }
 
-  assert(!MissingFeatures::emitStartEHSpec() && "NYI");
+  assert(!cir::MissingFeatures::emitStartEHSpec() && "NYI");
   // FIXME(cir): vla.c test currently crashes here.
   // PrologueCleanupDepth = EHStack.stable_begin();
 
@@ -1249,7 +1251,7 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       // TODO: this should live in `buildFunctionProlog`
       bool isPromoted = isa<ParmVarDecl>(paramVar) &&
                         cast<ParmVarDecl>(paramVar)->isKNRPromoted();
-      assert(!MissingFeatures::constructABIArgDirectExtend());
+      assert(!cir::MissingFeatures::constructABIArgDirectExtend());
       if (isPromoted)
         paramVal = emitArgumentDemotion(*this, paramVar, paramVal);
 
@@ -1312,7 +1314,7 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           MD->getParent()->getLambdaCaptureDefault() == LCD_None)
         SkippedChecks.set(SanitizerKind::Null, true);
 
-      assert(!MissingFeatures::buildTypeCheck() && "NYI");
+      assert(!cir::MissingFeatures::buildTypeCheck() && "NYI");
     }
   }
 
@@ -1509,7 +1511,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
     return;
 
   // TODO(cir): create guard to restore fast math configurations.
-  assert(!MissingFeatures::fastMathGuard());
+  assert(!cir::MissingFeatures::fastMathGuard());
 
   llvm::RoundingMode NewRoundingBehavior = FPFeatures.getRoundingMode();
   // TODO(cir): override rounding behaviour once FM configs are guarded.
@@ -1519,17 +1521,17 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): override exception behaviour once FM configs are guarded.
 
   // TODO(cir): override FP flags once FM configs are guarded.
-  assert(!MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::fastMathFlags());
 
   assert((CGF.CurFuncDecl == nullptr || CGF.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(CGF.CurFuncDecl) ||
           isa<CXXDestructorDecl>(CGF.CurFuncDecl) ||
-          (NewExceptionBehavior == fp::ebIgnore &&
+          (NewExceptionBehavior == cir::fp::ebIgnore &&
            NewRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
          "FPConstrained should be enabled on entire function");
 
   // TODO(cir): mark CIR function with fast math attributes.
-  assert(!MissingFeatures::fastMathFuncAttributes());
+  assert(!cir::MissingFeatures::fastMathFuncAttributes());
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
@@ -1561,7 +1563,7 @@ bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *CE) {
 
 void CIRGenFunction::buildDeclRefExprDbgValue(const DeclRefExpr *E,
                                               const APValue &Init) {
-  assert(!MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
 Address CIRGenFunction::buildVAListRef(const Expr *E) {
@@ -1773,7 +1775,7 @@ void CIRGenFunction::buildVariablyModifiedType(QualType type) {
         mlir::Value &entry = VLASizeMap[sizeExpr];
         if (!entry) {
           mlir::Value size = buildScalarExpr(sizeExpr);
-          assert(!MissingFeatures::sanitizeVLABound());
+          assert(!cir::MissingFeatures::sanitizeVLABound());
 
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.

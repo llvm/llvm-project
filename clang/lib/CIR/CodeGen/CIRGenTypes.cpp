@@ -23,7 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
-using namespace cir;
+using namespace clang::CIRGen;
 
 mlir::cir::CallingConv
 CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
@@ -773,14 +773,14 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType resultType, FnInfoOpts opts,
+    CanQualType resultType, cir::FnInfoOpts opts,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
     llvm::ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
     RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
-  bool instanceMethod = opts == FnInfoOpts::IsInstanceMethod;
-  bool chainCall = opts == FnInfoOpts::IsChainCall;
+  bool instanceMethod = opts == cir::FnInfoOpts::IsInstanceMethod;
+  bool chainCall = opts == cir::FnInfoOpts::IsChainCall;
 
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID ID;
@@ -817,7 +817,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   // Loop over all of the computed argument and return value info. If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
-  ABIArgInfo &retInfo = FI->getReturnInfo();
+  cir::ABIArgInfo &retInfo = FI->getReturnInfo();
   if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
     retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
 
@@ -861,7 +861,7 @@ void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
     }
     // If necessary, provide the full definition of a type only used with a
     // declaration so far.
-    assert(!MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::generateDebugInfo());
     return;
   }
 

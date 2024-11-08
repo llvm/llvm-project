@@ -21,7 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
-namespace cir {
+namespace clang::CIRGen {
 
 /// This structure provides a set of types that are commonly used
 /// during IR emission. It's initialized once in CodeGenModule's
@@ -130,6 +130,6 @@ struct CIRGenTypeCache {
   }
 };
 
-} // namespace cir
+} // namespace clang::CIRGen
 
 #endif

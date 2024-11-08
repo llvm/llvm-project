@@ -29,8 +29,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
-using namespace cir;
 using namespace clang;
+using namespace clang::CIRGen;
 
 CIRGenFunction::AutoVarEmission
 CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
@@ -53,8 +53,8 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   if (Ty->isVariablyModifiedType())
     buildVariablyModifiedType(Ty);
 
-  assert(!MissingFeatures::generateDebugInfo());
-  assert(!MissingFeatures::cxxABI());
+  assert(!cir::MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::cxxABI());
 
   Address address = Address::invalid();
   Address allocaAddr = Address::invalid();
@@ -152,7 +152,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
       }
       // TODO: what about emitting lifetime markers for MSVC catch parameters?
       // TODO: something like @llvm.lifetime.start/end here? revisit this later.
-      assert(!MissingFeatures::shouldEmitLifetimeMarkers());
+      assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers());
     }
   } else { // not openmp nor constant sized type
     bool VarAllocated = false;
@@ -189,20 +189,20 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
     // If we have debug info enabled, properly describe the VLA dimensions for
     // this type by registering the vla size expression for each of the
     // dimensions.
-    assert(!MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::generateDebugInfo());
   }
 
   emission.Addr = address;
   setAddrOfLocalVar(&D, emission.Addr);
 
   // Emit debug info for local var declaration.
-  assert(!MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::generateDebugInfo());
 
   if (D.hasAttr<AnnotateAttr>())
     buildVarAnnotations(&D, address.emitRawPointer());
 
   // TODO(cir): in LLVM this calls @llvm.lifetime.end.
-  assert(!MissingFeatures::shouldEmitLifetimeMarkers());
+  assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers());
 
   return emission;
 }
@@ -231,12 +231,12 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
   uint64_t ConstantSize = layout.getTypeAllocSize(Ty);
   if (!ConstantSize)
     return;
-  assert(!MissingFeatures::addAutoInitAnnotation());
-  assert(!MissingFeatures::vectorConstants());
-  assert(!MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
-  assert(!MissingFeatures::shouldUseMemSetToInitialize());
-  assert(!MissingFeatures::shouldSplitConstantStore());
-  assert(!MissingFeatures::shouldCreateMemCpyFromGlobal());
+  assert(!cir::MissingFeatures::addAutoInitAnnotation());
+  assert(!cir::MissingFeatures::vectorConstants());
+  assert(!cir::MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
+  assert(!cir::MissingFeatures::shouldUseMemSetToInitialize());
+  assert(!cir::MissingFeatures::shouldSplitConstantStore());
+  assert(!cir::MissingFeatures::shouldCreateMemCpyFromGlobal());
   // In CIR we want to emit a store for the whole thing, later lowering
   // prepare to LLVM should unwrap this into the best policy (see asserts
   // above).
@@ -284,7 +284,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   // Check whether this is a byref variable that's potentially
   // captured and moved by its own initializer.  If so, we'll need to
   // emit the initializer first, then copy into the variable.
-  assert(!MissingFeatures::capturedByInit() && "NYI");
+  assert(!cir::MissingFeatures::capturedByInit() && "NYI");
 
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
@@ -528,7 +528,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
     // never defer them.
     assert(isa<ObjCMethodDecl>(DC) && "unexpected parent code decl");
   }
-  if (GD.getDecl() && MissingFeatures::openMP()) {
+  if (GD.getDecl() && cir::MissingFeatures::openMP()) {
     // Disable emission of the parent function for the OpenMP device codegen.
     llvm_unreachable("OpenMP is NYI");
   }
@@ -585,9 +585,9 @@ mlir::cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     GV.setGlobalVisibilityAttr(OldGV.getGlobalVisibilityAttr());
     GV.setInitialValueAttr(Init);
     GV.setTlsModelAttr(OldGV.getTlsModelAttr());
-    assert(!MissingFeatures::setDSOLocal());
-    assert(!MissingFeatures::setComdat());
-    assert(!MissingFeatures::addressSpaceInGlobalVar());
+    assert(!cir::MissingFeatures::setDSOLocal());
+    assert(!cir::MissingFeatures::setComdat());
+    assert(!cir::MissingFeatures::addressSpaceInGlobalVar());
 
     // Normally this should be done with a call to CGM.replaceGlobal(OldGV, GV),
     // but since at this point the current block hasn't been really attached,
@@ -692,7 +692,7 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
   LocalDeclMap.find(&D)->second = Address(castedAddr, elemTy, alignment);
   CGM.setStaticLocalDeclAddress(&D, var);
 
-  assert(!MissingFeatures::reportGlobalToASan());
+  assert(!cir::MissingFeatures::reportGlobalToASan());
 
   // Emit global variable debug descriptor for static vars.
   auto *DI = getDebugInfo();
@@ -712,14 +712,14 @@ void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
 void CIRGenFunction::buildScalarInit(const Expr *init, mlir::Location loc,
                                      LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = Qualifiers::ObjCLifetime::OCL_None;
-  assert(!MissingFeatures::objCLifetime());
+  assert(!cir::MissingFeatures::objCLifetime());
 
   if (!lifetime) {
     SourceLocRAIIObject Loc{*this, loc};
     mlir::Value value = buildScalarExpr(init);
     if (capturedByInit)
       llvm_unreachable("NYI");
-    assert(!MissingFeatures::emitNullabilityCheck());
+    assert(!cir::MissingFeatures::emitNullabilityCheck());
     buildStoreThroughLValue(RValue::get(value), lvalue, true);
     return;
   }
@@ -743,10 +743,10 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
-  case TEK_Scalar:
+  case cir::TEK_Scalar:
     buildScalarInit(init, getLoc(D->getSourceRange()), lvalue);
     return;
-  case TEK_Complex: {
+  case cir::TEK_Complex: {
     mlir::Value complex = buildComplexExpr(init);
     if (capturedByInit)
       llvm_unreachable("NYI");
@@ -754,7 +754,7 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
                         /*init*/ true);
     return;
   }
-  case TEK_Aggregate:
+  case cir::TEK_Aggregate:
     assert(!type->isAtomicType() && "NYI");
     AggValueSlot::Overlap_t Overlap = AggValueSlot::MayOverlap;
     if (isa<VarDecl>(D))
@@ -865,7 +865,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
   case Decl::Using:          // using X; [C++]
   case Decl::UsingEnum:      // using enum X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
-    assert(!MissingFeatures::generateDebugInfo());
+    assert(!cir::MissingFeatures::generateDebugInfo());
     return;
   case Decl::UsingPack:
     assert(0 && "Not implemented");
@@ -891,7 +891,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
   case Decl::TypeAlias: { // using X = int; [C++0x]
     QualType Ty = cast<TypedefNameDecl>(D).getUnderlyingType();
     if (auto *DI = getDebugInfo())
-      assert(!MissingFeatures::generateDebugInfo());
+      assert(!cir::MissingFeatures::generateDebugInfo());
     if (Ty->isVariablyModifiedType())
       buildVariablyModifiedType(Ty);
     return;
