@@ -570,13 +570,21 @@ struct CUFDataTransferOpConversion
       mlir::Type i64Ty = builder.getI64Type();
       mlir::Value nbElement;
       if (op.getShape()) {
-        auto shapeOp =
-            mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp());
-        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty,
-                                                    shapeOp.getExtents()[0]);
-        for (unsigned i = 1; i < shapeOp.getExtents().size(); ++i) {
-          auto operand = rewriter.create<fir::ConvertOp>(
-              loc, i64Ty, shapeOp.getExtents()[i]);
+        llvm::SmallVector<mlir::Value> extents;
+        if (auto shapeOp =
+                mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp())) {
+          extents = shapeOp.getExtents();
+        } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
+                       op.getShape().getDefiningOp())) {
+          for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
+            if (i.index() & 1)
+              extents.push_back(i.value());
+        }
+
+        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty, extents[0]);
+        for (unsigned i = 1; i < extents.size(); ++i) {
+          auto operand =
+              rewriter.create<fir::ConvertOp>(loc, i64Ty, extents[i]);
           nbElement =
               rewriter.create<mlir::arith::MulIOp>(loc, nbElement, operand);
         }
