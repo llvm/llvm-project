@@ -87,8 +87,7 @@ if (LLDB_ENABLE_PYTHON)
 endif ()
 
 if (LLDB_ENABLE_LUA)
-  find_program(Lua_EXECUTABLE lua5.3)
-  set(LLDB_LUA_DEFAULT_RELATIVE_PATH "lib/lua/5.3")
+  set(LLDB_LUA_DEFAULT_RELATIVE_PATH "lib/lua/${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
   set(LLDB_LUA_RELATIVE_PATH ${LLDB_LUA_DEFAULT_RELATIVE_PATH}
     CACHE STRING "Path where Lua modules are installed, relative to install prefix")
 endif ()
