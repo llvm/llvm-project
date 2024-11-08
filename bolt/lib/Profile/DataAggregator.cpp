@@ -833,8 +833,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   uint64_t ToOrig = To;
-  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/true);
-  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/false);
+  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
+  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
 
@@ -1824,7 +1824,7 @@ void DataAggregator::processPreAggregated() {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds, /*IsPreagg*/true);
+               AggrEntry.Mispreds, /*IsPreagg*/ true);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
