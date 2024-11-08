@@ -74,24 +74,25 @@ EnableLDV("live-debug-variables", cl::init(true),
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
 
-char LiveDebugVariables::ID = 0;
+char LiveDebugVariablesWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(LiveDebugVariables, DEBUG_TYPE,
-                "Debug Variable Analysis", false, false)
+INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperPass, DEBUG_TYPE,
+                      "Debug Variable Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(LiveDebugVariables, DEBUG_TYPE,
-                "Debug Variable Analysis", false, false)
+INITIALIZE_PASS_END(LiveDebugVariablesWrapperPass, DEBUG_TYPE,
+                    "Debug Variable Analysis", false, false)
 
-void LiveDebugVariables::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveDebugVariablesWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveDebugVariables::LiveDebugVariables() : MachineFunctionPass(ID) {
-  initializeLiveDebugVariablesPass(*PassRegistry::getPassRegistry());
+LiveDebugVariablesWrapperPass::LiveDebugVariablesWrapperPass()
+    : MachineFunctionPass(ID) {
+  initializeLiveDebugVariablesWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 enum : unsigned { UndefLocNo = ~0U };
@@ -530,7 +531,6 @@ public:
 
 /// Implementation of the LiveDebugVariables pass.
 class LDVImpl {
-  LiveDebugVariables &pass;
   LocMap::Allocator allocator;
   MachineFunction *MF = nullptr;
   LiveIntervals *LIS;
@@ -634,7 +634,7 @@ class LDVImpl {
   void computeIntervals();
 
 public:
-  LDVImpl(LiveDebugVariables *ps) : pass(*ps) {}
+  LDVImpl(LiveIntervals *LIS) : LIS(LIS) {}
 
   bool runOnMachineFunction(MachineFunction &mf, bool InstrRef);
 
@@ -1263,7 +1263,6 @@ void LDVImpl::computeIntervals() {
 bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
   clear();
   MF = &mf;
-  LIS = &pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TRI = mf.getSubtarget().getRegisterInfo();
   LLVM_DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
                     << mf.getName() << " **********\n");
@@ -1298,31 +1297,50 @@ static void removeDebugInstrs(MachineFunction &mf) {
   }
 }
 
-bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
-  if (!EnableLDV)
-    return false;
-  if (!mf.getFunction().getSubprogram()) {
-    removeDebugInstrs(mf);
-    return false;
-  }
+bool LiveDebugVariablesWrapperPass::runOnMachineFunction(MachineFunction &mf) {
+  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
-  // Have we been asked to track variable locations using instruction
-  // referencing?
-  bool InstrRef = mf.useDebugInstrRef();
-
-  if (!pImpl)
-    pImpl = new LDVImpl(this);
-  return static_cast<LDVImpl *>(pImpl)->runOnMachineFunction(mf, InstrRef);
+  Impl = std::make_unique<LiveDebugVariables>();
+  Impl->analyze(mf, LIS);
+  return false;
 }
 
-void LiveDebugVariables::releaseMemory() {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->clear();
+AnalysisKey LiveDebugVariablesAnalysis::Key;
+
+LiveDebugVariables
+LiveDebugVariablesAnalysis::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveDebugVariables LDV;
+  LDV.analyze(MF, LIS);
+  return LDV;
 }
 
 LiveDebugVariables::~LiveDebugVariables() {
-  if (pImpl)
-    delete static_cast<LDVImpl*>(pImpl);
+  if (PImpl)
+    delete static_cast<LDVImpl *>(PImpl);
+}
+
+void LiveDebugVariables::releaseMemory() {
+  if (PImpl)
+    static_cast<LDVImpl *>(PImpl)->clear();
+}
+
+void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
+  if (!EnableLDV)
+    return;
+  if (!MF.getFunction().getSubprogram()) {
+    removeDebugInstrs(MF);
+    return;
+  }
+
+  if (!PImpl)
+    PImpl = new LDVImpl(LIS); // reuse same object across analysis runs
+
+  // Have we been asked to track variable locations using instruction
+  // referencing?
+  bool InstrRef = MF.useDebugInstrRef();
+  static_cast<LDVImpl *>(PImpl)->runOnMachineFunction(MF, InstrRef);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1504,8 +1522,8 @@ void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
 
 void LiveDebugVariables::
 splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->splitRegister(OldReg, NewRegs);
+  if (PImpl)
+    static_cast<LDVImpl *>(PImpl)->splitRegister(OldReg, NewRegs);
 }
 
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
@@ -1956,13 +1974,13 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 }
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->emitDebugValues(VRM);
+  if (PImpl)
+    static_cast<LDVImpl *>(PImpl)->emitDebugValues(VRM);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveDebugVariables::dump() const {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->print(dbgs());
+  if (PImpl)
+    static_cast<LDVImpl *>(PImpl)->print(dbgs());
 }
 #endif

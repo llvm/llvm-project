@@ -251,7 +251,7 @@ INITIALIZE_PASS_BEGIN(VirtRegRewriter, "virtregrewriter",
                       "Virtual Register Rewriter", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
@@ -264,14 +264,14 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
-  AU.addRequired<LiveDebugVariables>();
+  AU.addRequired<LiveDebugVariablesWrapperPass>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
   AU.addRequired<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();
 
   if (!ClearVirtRegs)
-    AU.addPreserved<LiveDebugVariables>();
+    AU.addPreserved<LiveDebugVariablesWrapperPass>();
 
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -285,7 +285,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-  DebugVars = &getAnalysis<LiveDebugVariables>();
+  DebugVars = &getAnalysis<LiveDebugVariablesWrapperPass>().getLDV();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
                     << "********** Function: " << MF->getName() << '\n');
   LLVM_DEBUG(VRM->dump());

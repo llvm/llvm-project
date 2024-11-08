@@ -889,7 +889,7 @@ public:
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveDebugVariables>();
+    AU.addPreserved<LiveDebugVariablesWrapperPass>();
     AU.addPreserved<LiveStacks>();
 
     MachineFunctionPass::getAnalysisUsage(AU);

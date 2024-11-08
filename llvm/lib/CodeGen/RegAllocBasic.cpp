@@ -130,7 +130,7 @@ char &llvm::RABasicID = RABasic::ID;
 
 INITIALIZE_PASS_BEGIN(RABasic, "regallocbasic", "Basic Register Allocator",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
@@ -180,8 +180,8 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
-  AU.addRequired<LiveDebugVariables>();
-  AU.addPreserved<LiveDebugVariables>();
+  AU.addRequired<LiveDebugVariablesWrapperPass>();
+  AU.addPreserved<LiveDebugVariablesWrapperPass>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
