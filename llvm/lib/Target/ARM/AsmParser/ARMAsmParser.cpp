@@ -10724,8 +10724,9 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       if ((unsigned)Inst.getOperand(2).getImm() > 255)
         break; // large immediate that tADDi8 can't contain
     } else {
-      int i = (Operands[MnemonicOpsEndInd + 1]->isImm()) ? MnemonicOpsEndInd + 1
-        : MnemonicOpsEndInd + 2;
+      int i = (Operands[MnemonicOpsEndInd + 1]->isImm())
+                  ? MnemonicOpsEndInd + 1
+                  : MnemonicOpsEndInd + 2;
       MCParsedAsmOperand &Op = *Operands[i];
       if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
         break; // a type of non-immediate that tADDi8 can't represent
