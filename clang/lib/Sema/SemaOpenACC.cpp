@@ -1520,13 +1520,14 @@ void CollectActiveReductionClauses(
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
 
 SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
-    SemaOpenACC &S, OpenACCDirectiveKind DK,
+    SemaOpenACC &S, OpenACCDirectiveKind DK, SourceLocation DirLoc,
     ArrayRef<const OpenACCClause *> UnInstClauses,
     ArrayRef<OpenACCClause *> Clauses)
     : SemaRef(S), OldActiveComputeConstructInfo(S.ActiveComputeConstructInfo),
       DirKind(DK), OldLoopGangClauseOnKernelLoc(S.LoopGangClauseOnKernelLoc),
       OldLoopWorkerClauseLoc(S.LoopWorkerClauseLoc),
       OldLoopVectorClauseLoc(S.LoopVectorClauseLoc),
+      OldLoopWithoutSeqLoc(S.LoopWithoutSeqLoc),
       ActiveReductionClauses(S.ActiveReductionClauses),
       LoopRAII(SemaRef, /*PreserveDepth=*/false) {
 
@@ -1548,10 +1549,18 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     SemaRef.LoopGangClauseOnKernelLoc = {};
     SemaRef.LoopWorkerClauseLoc = {};
     SemaRef.LoopVectorClauseLoc = {};
+    SemaRef.LoopWithoutSeqLoc = {};
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
     CollectActiveReductionClauses(S.ActiveReductionClauses, Clauses);
     SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
     SetTileInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+
+    // Set the active 'loop' location if there isn't a 'seq' on it, so we can
+    // diagnose the for loops.
+    SemaRef.LoopWithoutSeqLoc = {};
+    if (Clauses.end() ==
+        llvm::find_if(Clauses, llvm::IsaPred<OpenACCSeqClause>))
+      SemaRef.LoopWithoutSeqLoc = DirLoc;
 
     // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
     // construct, the gang clause behaves as follows. ... The region of a loop
@@ -1653,6 +1662,7 @@ SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
   SemaRef.LoopGangClauseOnKernelLoc = OldLoopGangClauseOnKernelLoc;
   SemaRef.LoopWorkerClauseLoc = OldLoopWorkerClauseLoc;
   SemaRef.LoopVectorClauseLoc = OldLoopVectorClauseLoc;
+  SemaRef.LoopWithoutSeqLoc = OldLoopWithoutSeqLoc;
   SemaRef.ActiveReductionClauses.swap(ActiveReductionClauses);
 
   if (DirKind == OpenACCDirectiveKind::Parallel ||
@@ -2573,14 +2583,15 @@ void SemaOpenACC::ActOnDoStmt(SourceLocation DoLoc) {
   }
 }
 
-void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
-  if (!getLangOpts().OpenACC)
-    return;
+void SemaOpenACC::ForStmtBeginHelper(SourceLocation ForLoc,
+                                     ForStmtBeginChecker &C) {
+  assert(getLangOpts().OpenACC && "Check enabled when not OpenACC?");
 
   // Enable the while/do-while checking.
   LoopInfo.TopLevelLoopSeen = true;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
+    C.check();
 
     // OpenACC 3.3 2.9.1:
     // Each associated loop, except the innermost, must contain exactly one loop
@@ -2604,6 +2615,8 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
   }
 
   if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    C.check();
+
     if (LoopInfo.CurLevelHasLoopAlready) {
       Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Tile*/ 1;
       assert(TileInfo.ActiveTile && "No tile object?");
@@ -2622,6 +2635,431 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
   // Set this to 'false' for the body of this loop, so that the next level
   // checks independently.
   LoopInfo.CurLevelHasLoopAlready = false;
+}
+
+namespace {
+bool isValidLoopVariableType(QualType LoopVarTy) {
+  // Just skip if it is dependent, it could be any of the below.
+  if (LoopVarTy->isDependentType())
+    return true;
+
+  // The loop variable must be of integer,
+  if (LoopVarTy->isIntegerType())
+    return true;
+
+  // C/C++ pointer,
+  if (LoopVarTy->isPointerType())
+    return true;
+
+  // or C++ random-access iterator type.
+  if (const auto *RD = LoopVarTy->getAsCXXRecordDecl()) {
+    // Note: Only do CXXRecordDecl because RecordDecl can't be a random access
+    // iterator type!
+
+    // We could either do a lot of work to see if this matches
+    // random-access-iterator, but it seems that just checking that the
+    // 'iterator_category' typedef is more than sufficient. If programmers are
+    // willing to lie about this, we can let them.
+
+    for (const auto *TD :
+         llvm::make_filter_range(RD->decls(), llvm::IsaPred<TypedefNameDecl>)) {
+      const auto *TDND = cast<TypedefNameDecl>(TD)->getCanonicalDecl();
+
+      if (TDND->getName() != "iterator_category")
+        continue;
+
+      // If there is no type for this decl, return false.
+      if (TDND->getUnderlyingType().isNull())
+        return false;
+
+      const CXXRecordDecl *ItrCategoryDecl =
+          TDND->getUnderlyingType()->getAsCXXRecordDecl();
+
+      // If the category isn't a record decl, it isn't the tag type.
+      if (!ItrCategoryDecl)
+        return false;
+
+      auto IsRandomAccessIteratorTag = [](const CXXRecordDecl *RD) {
+        if (RD->getName() != "random_access_iterator_tag")
+          return false;
+        // Checks just for std::random_access_iterator_tag.
+        return RD->getEnclosingNamespaceContext()->isStdNamespace();
+      };
+
+      if (IsRandomAccessIteratorTag(ItrCategoryDecl))
+        return true;
+
+      // We can also support types inherited from the
+      // random_access_iterator_tag.
+      for (CXXBaseSpecifier BS : ItrCategoryDecl->bases()) {
+
+        if (IsRandomAccessIteratorTag(BS.getType()->getAsCXXRecordDecl()))
+          return true;
+      }
+
+      return false;
+    }
+  }
+
+  return false;
+}
+
+} // namespace
+
+void SemaOpenACC::ForStmtBeginChecker::check() {
+  if (!SemaRef.LoopWithoutSeqLoc.isValid())
+    return;
+
+  if (AlreadyChecked)
+    return;
+  AlreadyChecked = true;
+
+  // OpenACC3.3 2.1:
+  // A loop associated with a loop construct that does not have a seq clause
+  // must be written to meet all the following conditions:
+  // - The loop variable must be of integer, C/C++ pointer, or C++ random-access
+  // iterator type.
+  // - The loop variable must monotonically increase or decrease in the
+  // direction of its termination condition.
+  // - The loop trip count must be computable in constant time when entering the
+  // loop construct.
+  //
+  // For a C++ range-based for loop, the loop variable
+  // identified by the above conditions is the internal iterator, such as a
+  // pointer, that the compiler generates to iterate the range.  it is not the
+  // variable declared by the for loop.
+
+  if (IsRangeFor) {
+    // If the range-for is being instantiated and didn't change, don't
+    // re-diagnose.
+    if (!RangeFor.has_value())
+      return;
+    // For a range-for, we can assume everything is 'corect' other than the type
+    // of the iterator, so check that.
+    const DeclStmt *RangeStmt = (*RangeFor)->getBeginStmt();
+
+    // In some dependent contexts, the autogenerated range statement doesn't get
+    // included until instantiation, so skip for now.
+    if (!RangeStmt)
+      return;
+
+    const ValueDecl *InitVar = cast<ValueDecl>(RangeStmt->getSingleDecl());
+    QualType VarType = InitVar->getType().getNonReferenceType();
+    if (!isValidLoopVariableType(VarType)) {
+      SemaRef.Diag(InitVar->getBeginLoc(), diag::err_acc_loop_variable_type)
+          << VarType;
+      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+          << "loop";
+    }
+    return;
+  }
+
+  // Else we are in normal 'ForStmt', so we can diagnose everything.
+  // We only have to check cond/inc if they have changed, but 'init' needs to
+  // just suppress its diagnostics if it hasn't changed.
+  const ValueDecl *InitVar = checkInit();
+  if (Cond.has_value())
+    checkCond();
+  if (Inc.has_value())
+    checkInc(InitVar);
+}
+const ValueDecl *SemaOpenACC::ForStmtBeginChecker::checkInit() {
+  if (!Init) {
+    if (InitChanged) {
+      SemaRef.Diag(ForLoc, diag::err_acc_loop_variable);
+      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+          << "loop";
+    }
+    return nullptr;
+  }
+
+  auto DiagLoopVar = [&]() {
+    if (InitChanged) {
+      SemaRef.Diag(Init->getBeginLoc(), diag::err_acc_loop_variable);
+      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+          << "loop";
+    }
+    return nullptr;
+  };
+
+  if (const auto *ExprTemp = dyn_cast<ExprWithCleanups>(Init))
+    Init = ExprTemp->getSubExpr();
+  if (const auto *E = dyn_cast<Expr>(Init))
+    Init = E->IgnoreParenImpCasts();
+
+  const ValueDecl *InitVar = nullptr;
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(Init)) {
+    // Allow assignment operator here.
+
+    if (!BO->isAssignmentOp())
+      return DiagLoopVar();
+
+    const Expr *LHS = BO->getLHS()->IgnoreParenImpCasts();
+
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(LHS))
+      InitVar = DRE->getDecl();
+  } else if (const auto *DS = dyn_cast<DeclStmt>(Init)) {
+    // Allow T t = <whatever>
+    if (!DS->isSingleDecl())
+      return DiagLoopVar();
+
+    InitVar = dyn_cast<ValueDecl>(DS->getSingleDecl());
+
+    // Ensure we have an initializer, unless this is a record/dependent type.
+
+    if (InitVar) {
+      if (!isa<VarDecl>(InitVar))
+        return DiagLoopVar();
+
+      if (!InitVar->getType()->isRecordType() &&
+          !InitVar->getType()->isDependentType() &&
+          !cast<VarDecl>(InitVar)->hasInit())
+        return DiagLoopVar();
+    }
+  } else if (auto *CE = dyn_cast<CXXOperatorCallExpr>(Init)) {
+    // Allow assignment operator call.
+    if (CE->getOperator() != OO_Equal)
+      return DiagLoopVar();
+
+    const Expr *LHS = CE->getArg(0)->IgnoreParenImpCasts();
+
+    if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
+      InitVar = DRE->getDecl();
+    } else if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
+      if (isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+        InitVar = ME->getMemberDecl();
+    }
+  }
+
+  if (!InitVar)
+    return DiagLoopVar();
+
+  InitVar = cast<ValueDecl>(InitVar->getCanonicalDecl());
+  QualType VarType = InitVar->getType().getNonReferenceType();
+
+  // Since we have one, all we need to do is ensure it is the right type.
+  if (!isValidLoopVariableType(VarType)) {
+    if (InitChanged) {
+      SemaRef.Diag(InitVar->getBeginLoc(), diag::err_acc_loop_variable_type)
+          << VarType;
+      SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+          << "loop";
+    }
+    return nullptr;
+  }
+
+  return InitVar;
+}
+void SemaOpenACC::ForStmtBeginChecker::checkCond() {
+  if (!*Cond) {
+    SemaRef.Diag(ForLoc, diag::err_acc_loop_terminating_condition);
+    SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+        << "loop";
+  }
+  // Nothing else to do here.  we could probably do some additional work to look
+  // into the termination condition, but that error-prone.  For now, we don't
+  // implement anything other than 'there is a termination condition', and if
+  // codegen/MLIR comes up with some necessary restrictions, we can implement
+  // them here.
+}
+
+void SemaOpenACC::ForStmtBeginChecker::checkInc(const ValueDecl *Init) {
+
+  if (!*Inc) {
+    SemaRef.Diag(ForLoc, diag::err_acc_loop_not_monotonic);
+    SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+        << "loop";
+    return;
+  }
+  auto DiagIncVar = [this] {
+    SemaRef.Diag((*Inc)->getBeginLoc(), diag::err_acc_loop_not_monotonic);
+    SemaRef.Diag(SemaRef.LoopWithoutSeqLoc, diag::note_acc_construct_here)
+        << "loop";
+    return;
+  };
+
+  if (const auto *ExprTemp = dyn_cast<ExprWithCleanups>(*Inc))
+    Inc = ExprTemp->getSubExpr();
+  if (const auto *E = dyn_cast<Expr>(*Inc))
+    Inc = E->IgnoreParenImpCasts();
+
+  auto getDeclFromExpr = [](const Expr *E) -> const ValueDecl * {
+    E = E->IgnoreParenImpCasts();
+    if (const auto *FE = dyn_cast<FullExpr>(E))
+      E = FE->getSubExpr();
+
+    E = E->IgnoreParenImpCasts();
+
+    if (!E)
+      return nullptr;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+      return dyn_cast<ValueDecl>(DRE->getDecl());
+
+    if (const auto *ME = dyn_cast<MemberExpr>(E))
+      if (isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+        return ME->getMemberDecl();
+
+    return nullptr;
+  };
+
+  const ValueDecl *IncVar = nullptr;
+
+  // Here we enforce the monotonically increase/decrease:
+  if (const auto *UO = dyn_cast<UnaryOperator>(*Inc)) {
+    // Allow increment/decrement ops.
+    if (!UO->isIncrementDecrementOp())
+      return DiagIncVar();
+    IncVar = getDeclFromExpr(UO->getSubExpr());
+  } else if (const auto *BO = dyn_cast<BinaryOperator>(*Inc)) {
+    switch (BO->getOpcode()) {
+    default:
+      return DiagIncVar();
+    case BO_AddAssign:
+    case BO_SubAssign:
+    case BO_MulAssign:
+    case BO_DivAssign:
+    case BO_Assign:
+      // += -= *= /= should all be fine here, this should be all of the
+      // 'monotonical' compound-assign ops.
+      // Assignment we just give up on, we could do better, and ensure that it
+      // is a binary/operator expr doing more work, but that seems like a lot
+      // of work for an error prone check.
+      break;
+    }
+    IncVar = getDeclFromExpr(BO->getLHS());
+  } else if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(*Inc)) {
+    switch (CE->getOperator()) {
+    default:
+      return DiagIncVar();
+    case OO_PlusPlus:
+    case OO_MinusMinus:
+    case OO_PlusEqual:
+    case OO_MinusEqual:
+    case OO_StarEqual:
+    case OO_SlashEqual:
+    case OO_Equal:
+      // += -= *= /= should all be fine here, this should be all of the
+      // 'monotonical' compound-assign ops.
+      // Assignment we just give up on, we could do better, and ensure that it
+      // is a binary/operator expr doing more work, but that seems like a lot
+      // of work for an error prone check.
+      break;
+    }
+
+    IncVar = getDeclFromExpr(CE->getArg(0));
+
+  } else if (const auto *ME = dyn_cast<CXXMemberCallExpr>(*Inc)) {
+    IncVar = getDeclFromExpr(ME->getImplicitObjectArgument());
+    // We can't really do much for member expressions, other than hope they are
+    // doing the right thing, so give up here.
+  }
+
+  if (!IncVar)
+    return DiagIncVar();
+
+  // InitVar shouldn't be null unless there was an error, so don't diagnose if
+  // that is the case. Else we should ensure that it refers to the  loop
+  // value.
+  if (Init && IncVar->getCanonicalDecl() != Init->getCanonicalDecl())
+    return DiagIncVar();
+
+  return;
+}
+
+void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *OldFirst,
+                                    const Stmt *First, const Stmt *OldSecond,
+                                    const Stmt *Second, const Stmt *OldThird,
+                                    const Stmt *Third) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  std::optional<const Stmt *> S;
+  if (OldSecond == Second)
+    S = std::nullopt;
+  else
+    S = Second;
+  std::optional<const Stmt *> T;
+  if (OldThird == Third)
+    S = std::nullopt;
+  else
+    S = Third;
+
+  bool InitChanged = false;
+  if (OldFirst != First) {
+    InitChanged = true;
+
+    // VarDecls are always rebuild because they are dependent, so we can do a
+    // little work to suppress some of the double checking based on whether the
+    // type is instantiation dependent.
+    QualType OldVDTy;
+    QualType NewVDTy;
+    if (const auto *DS = dyn_cast<DeclStmt>(OldFirst))
+      if (const VarDecl *VD = dyn_cast_if_present<VarDecl>(
+              DS->isSingleDecl() ? DS->getSingleDecl() : nullptr))
+        OldVDTy = VD->getType();
+    if (const auto *DS = dyn_cast<DeclStmt>(First))
+      if (const VarDecl *VD = dyn_cast_if_present<VarDecl>(
+              DS->isSingleDecl() ? DS->getSingleDecl() : nullptr))
+        NewVDTy = VD->getType();
+
+    if (!OldVDTy.isNull() && !NewVDTy.isNull())
+      InitChanged = OldVDTy->isInstantiationDependentType() !=
+                    NewVDTy->isInstantiationDependentType();
+  }
+
+  ForStmtBeginChecker FSBC{*this, ForLoc, First, InitChanged, S, T};
+  if (!LoopInfo.TopLevelLoopSeen) {
+    FSBC.check();
+  }
+
+  ForStmtBeginHelper(ForLoc, FSBC);
+}
+
+void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *First,
+                                    const Stmt *Second, const Stmt *Third) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  ForStmtBeginChecker FSBC{*this,  ForLoc, First, /*InitChanged=*/true,
+                           Second, Third};
+  if (!LoopInfo.TopLevelLoopSeen) {
+    FSBC.check();
+  }
+
+  ForStmtBeginHelper(ForLoc, FSBC);
+}
+
+void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
+                                         const Stmt *OldRangeFor,
+                                         const Stmt *RangeFor) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  std::optional<const CXXForRangeStmt *> RF;
+
+  if (OldRangeFor == RangeFor)
+    RF = std::nullopt;
+  else
+    RF = cast<CXXForRangeStmt>(RangeFor);
+
+  ForStmtBeginChecker FSBC{*this, ForLoc, RF};
+  if (!LoopInfo.TopLevelLoopSeen) {
+    FSBC.check();
+  }
+  ForStmtBeginHelper(ForLoc, FSBC);
+}
+
+void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
+                                         const Stmt *RangeFor) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  ForStmtBeginChecker FSBC{*this, ForLoc, cast<CXXForRangeStmt>(RangeFor)};
+  if (!LoopInfo.TopLevelLoopSeen) {
+    FSBC.check();
+  }
+  ForStmtBeginHelper(ForLoc, FSBC);
 }
 
 namespace {
@@ -2657,6 +3095,7 @@ SourceLocation FindInterveningCodeInLoop(const Stmt *CurStmt) {
 void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
   if (!getLangOpts().OpenACC)
     return;
+
   // Set this to 'true' so if we find another one at this level we can diagnose.
   LoopInfo.CurLevelHasLoopAlready = true;
 
@@ -2758,9 +3197,9 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
-StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
-                                            OpenACCDirectiveKind K,
-                                            StmtResult AssocStmt) {
+StmtResult SemaOpenACC::ActOnAssociatedStmt(
+    SourceLocation DirectiveLoc, OpenACCDirectiveKind K,
+    ArrayRef<const OpenACCClause *> Clauses, StmtResult AssocStmt) {
   switch (K) {
   default:
     llvm_unreachable("Unimplemented associated statement application");
@@ -2808,10 +3247,7 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
       return StmtError();
     }
 
-    // TODO OpenACC: 2.9 ~ line 2010 specifies that the associated loop has some
-    // restrictions when there is a 'seq' clause in place. We probably need to
-    // implement that, including piping in the clauses here.
-    return AssocStmt;
+    return AssocStmt.get();
   }
   llvm_unreachable("Invalid associated statement application");
 }

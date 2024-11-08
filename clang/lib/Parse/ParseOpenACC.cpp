@@ -1498,14 +1498,15 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     return StmtError();
 
   StmtResult AssocStmt;
-  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
-      getActions().OpenACC(), DirInfo.DirKind, {}, DirInfo.Clauses);
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getActions().OpenACC(),
+                                                DirInfo.DirKind, DirInfo.DirLoc,
+                                                {}, DirInfo.Clauses);
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
-        DirInfo.StartLoc, DirInfo.DirKind, ParseStatement());
+        DirInfo.StartLoc, DirInfo.DirKind, DirInfo.Clauses, ParseStatement());
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(

@@ -118,6 +118,43 @@ private:
   /// 'loop' clause enforcement, where this is 'blocked' by a compute construct.
   llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
 
+  // Type to check the info about the 'for stmt'.
+  struct ForStmtBeginChecker {
+    SemaOpenACC &SemaRef;
+    SourceLocation ForLoc;
+    bool IsRangeFor = false;
+    std::optional<const CXXForRangeStmt *> RangeFor = nullptr;
+    const Stmt *Init = nullptr;
+    bool InitChanged = false;
+    std::optional<const Stmt *> Cond = nullptr;
+    std::optional<const Stmt *> Inc = nullptr;
+    // Prevent us from checking 2x, which can happen with collapse & tile.
+    bool AlreadyChecked = false;
+
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        std::optional<const CXXForRangeStmt *> S)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(true), RangeFor(S) {}
+
+    ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
+                        const Stmt *I, bool InitChanged,
+                        std::optional<const Stmt *> C,
+                        std::optional<const Stmt *> Inc)
+        : SemaRef(SemaRef), ForLoc(ForLoc), IsRangeFor(false), Init(I),
+          InitChanged(InitChanged), Cond(C), Inc(Inc) {}
+    // Do the checking for the For/Range-For. Currently this implements the 'not
+    // seq' restrictions only, and should be called either if we know we are a
+    // top-level 'for' (the one associated via associated-stmt), or extended via
+    // 'collapse'.
+    void check();
+
+    const ValueDecl *checkInit();
+    void checkCond();
+    void checkInc(const ValueDecl *Init);
+  };
+
+  /// Helper function for checking the 'for' and 'range for' stmts.
+  void ForStmtBeginHelper(SourceLocation ForLoc, ForStmtBeginChecker &C);
+
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
     return ActiveComputeConstructInfo;
@@ -137,6 +174,11 @@ public:
   /// permits us to implement the restriction of no further 'gang', 'vector', or
   /// 'worker' clauses.
   SourceLocation LoopVectorClauseLoc;
+  /// If there is a current 'active' loop construct that does NOT have a 'seq'
+  /// clause on it, this has that source location. This permits us to implement
+  /// the 'loop' restrictions on the loop variable. This can be extended via
+  /// 'collapse', so we need to keep this around for a while.
+  SourceLocation LoopWithoutSeqLoc;
 
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
@@ -568,8 +610,19 @@ public:
   void ActOnWhileStmt(SourceLocation WhileLoc);
   // Called when we encounter a 'do' statement, before looking at its 'body'.
   void ActOnDoStmt(SourceLocation DoLoc);
+  // Called when we encounter a 'for' statement, before looking at its 'body',
+  // for the 'range-for'. 'ActOnForStmtEnd' is used after the body.
+  void ActOnRangeForStmtBegin(SourceLocation ForLoc, const Stmt *OldRangeFor,
+                              const Stmt *RangeFor);
+  void ActOnRangeForStmtBegin(SourceLocation ForLoc, const Stmt *RangeFor);
   // Called when we encounter a 'for' statement, before looking at its 'body'.
-  void ActOnForStmtBegin(SourceLocation ForLoc);
+  // 'ActOnForStmtEnd' is used after the body.
+  void ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *First,
+                         const Stmt *Second, const Stmt *Third);
+  void ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *OldFirst,
+                         const Stmt *First, const Stmt *OldSecond,
+                         const Stmt *Second, const Stmt *OldThird,
+                         const Stmt *Third);
   // Called when we encounter a 'for' statement, after we've consumed/checked
   // the body. This is necessary for a number of checks on the contents of the
   // 'for' statement.
@@ -598,7 +651,9 @@ public:
   /// Called when we encounter an associated statement for our construct, this
   /// should check legality of the statement as it appertains to this Construct.
   StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,
-                                 OpenACCDirectiveKind K, StmtResult AssocStmt);
+                                 OpenACCDirectiveKind K,
+                                 ArrayRef<const OpenACCClause *> Clauses,
+                                 StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
@@ -712,12 +767,13 @@ public:
     SourceLocation OldLoopGangClauseOnKernelLoc;
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
+    SourceLocation OldLoopWithoutSeqLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
     llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
     LoopInConstructRAII LoopRAII;
 
   public:
-    AssociatedStmtRAII(SemaOpenACC &, OpenACCDirectiveKind,
+    AssociatedStmtRAII(SemaOpenACC &, OpenACCDirectiveKind, SourceLocation,
                        ArrayRef<const OpenACCClause *>,
                        ArrayRef<OpenACCClause *>);
     void SetCollapseInfoBeforeAssociatedStmt(

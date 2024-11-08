@@ -43,7 +43,7 @@ void SingleOnly() {
 
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
   #pragma acc loop default(none)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 
   // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
@@ -52,5 +52,5 @@ void SingleOnly() {
 
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
 #pragma acc loop default(present)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }
