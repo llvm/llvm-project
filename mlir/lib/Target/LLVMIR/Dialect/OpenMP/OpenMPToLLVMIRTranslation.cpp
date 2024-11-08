@@ -174,6 +174,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
   };
+  auto checkHostEval = [&todo](auto op, LogicalResult &result) {
+    if (!op.getHostEvalVars().empty())
+      result = todo("host_eval");
+  };
   auto checkIf = [&todo](auto op, LogicalResult &result) {
     if (op.getIfExpr())
       result = todo("if");
@@ -284,6 +288,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkBare(op, result);
         checkDevice(op, result);
         checkHasDeviceAddr(op, result);
+        checkHostEval(op, result);
         checkIf(op, result);
         checkInReduction(op, result);
         checkIsDevicePtr(op, result);
