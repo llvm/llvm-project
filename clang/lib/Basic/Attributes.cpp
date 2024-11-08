@@ -158,21 +158,15 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
 
 AttributeCommonInfo::Scope
 getScopeFromNormalizedScopeName(StringRef ScopeName) {
-  AttributeCommonInfo::Scope ParsedScope =
-      llvm::StringSwitch<AttributeCommonInfo::Scope>(ScopeName)
-          .Case("", AttributeCommonInfo::Scope::NONE)
-          .Case("clang", AttributeCommonInfo::Scope::CLANG)
-          .Case("gnu", AttributeCommonInfo::Scope::GNU)
-          .Case("gsl", AttributeCommonInfo::Scope::GSL)
-          .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
-          .Case("msvc", AttributeCommonInfo::Scope::MSVC)
-          .Case("omp", AttributeCommonInfo::Scope::OMP)
-          .Case("riscv", AttributeCommonInfo::Scope::RISCV)
-          .Default(AttributeCommonInfo::Scope::INVALID);
-
-  assert(ParsedScope != AttributeCommonInfo::Scope::INVALID);
-
-  return ParsedScope;
+  return llvm::StringSwitch<AttributeCommonInfo::Scope>(ScopeName)
+      .Case("", AttributeCommonInfo::Scope::NONE)
+      .Case("clang", AttributeCommonInfo::Scope::CLANG)
+      .Case("gnu", AttributeCommonInfo::Scope::GNU)
+      .Case("gsl", AttributeCommonInfo::Scope::GSL)
+      .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
+      .Case("msvc", AttributeCommonInfo::Scope::MSVC)
+      .Case("omp", AttributeCommonInfo::Scope::OMP)
+      .Case("riscv", AttributeCommonInfo::Scope::RISCV);
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
