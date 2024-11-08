@@ -1089,12 +1089,30 @@ private:
 
     py::module numpy = py::module::import("numpy");
     py::object unpackbitsFunc = numpy.attr("unpackbits");
-    py::object unpackedBooleans =
+    py::object equalFunc = numpy.attr("equal");
+    py::object reshapeFunc = numpy.attr("reshape");
+    py::array unpackedBooleans =
         unpackbitsFunc(packedArray, "bitorder"_a = "little");
-    py::buffer pythonBuffer = unpackedBooleans.cast<py::buffer>();
+
+    // Unpackbits operates on bytes and gives back a flat 0 / 1 integer array.
+    // We need to:
+    //   1. Slice away the padded bits
+    //   2. Make the boolean array have the correct shape
+    //   3. Convert the array to a boolean array
+    unpackedBooleans = unpackedBooleans[py::slice(0, numBooleans, 1)];
+    unpackedBooleans = equalFunc(unpackedBooleans, 1);
+
+    std::vector<intptr_t> shape;
+    MlirType shapedType = mlirAttributeGetType(*this);
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    for (intptr_t i = 0; i < rank; ++i) {
+      shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
+    }
+    unpackedBooleans = reshapeFunc(unpackedBooleans, shape);
 
     // Make sure the returned py::buffer_view claims ownership of the data in
     // `pythonBuffer` so it remains valid when Python reads it
+    py::buffer pythonBuffer = unpackedBooleans.cast<py::buffer>();
     return pythonBuffer.request();
   }
 
