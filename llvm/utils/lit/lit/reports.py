@@ -22,6 +22,8 @@ class Report(object):
         self.output_file = output_file
         # Set by the option parser later.
         self.use_unique_output_file_name = False
+        self.skipped_codes = {lit.Test.EXCLUDED,
+                              lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
 
     def write_results(self, tests, elapsed):
         if self.use_unique_output_file_name:
@@ -114,8 +116,6 @@ def remove_invalid_xml_chars(s):
 
 
 class XunitReport(Report):
-    skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
-
     def _write_results_to_file(self, tests, elapsed, file):
         tests.sort(key=by_suite_and_test_path)
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
@@ -273,8 +273,6 @@ class ResultDBReport(Report):
 
 
 class TimeTraceReport(Report):
-    skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
-
     def _write_results_to_file(self, tests, elapsed, file):
         # Find when first test started so we can make start times relative.
         first_start_time = min([t.result.start for t in tests])

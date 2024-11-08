@@ -166,6 +166,12 @@ def parse_args():
         help="Write XUnit-compatible XML test reports to the specified file",
     )
     execution_group.add_argument(
+        "--report-failures-only",
+        help="When writing a test report, do not include results for "
+                 "tests that completed successfully or were not run",
+        action="store_true"
+    )
+    execution_group.add_argument(
         "--resultdb-output",
         type=lit.reports.ResultDBReport,
         help="Write LuCI ResultDB compatible JSON to the specified file",
