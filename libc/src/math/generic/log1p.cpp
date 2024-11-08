@@ -974,7 +974,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
   double err_hi = ERR_HI[hi == 0.0];
 
-  // Scaling factor = 2^(-xh_bits.get_exponent())
+  // Scale x_dd by 2^(-xh_bits.get_exponent()).
   int64_t s_u = static_cast<int64_t>(x_u & FPBits_t::EXP_MASK) -
                 (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
   // Normalize arguments:
