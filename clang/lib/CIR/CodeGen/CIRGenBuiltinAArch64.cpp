@@ -2474,7 +2474,11 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
   default:
     llvm::errs() << getAArch64SIMDIntrinsicString(builtinID) << " ";
     llvm_unreachable("NYI");
-
+  case NEON::BI__builtin_neon_vaesmcq_u8: {
+    intrincsName = "aarch64.crypto.aesmc";
+    argTypes.push_back(vTy);
+    break;
+  }
   case NEON::BI__builtin_neon_vpadd_v:
   case NEON::BI__builtin_neon_vpaddq_v: {
     intrincsName = mlir::isa<mlir::FloatType>(vTy.getEltType())
