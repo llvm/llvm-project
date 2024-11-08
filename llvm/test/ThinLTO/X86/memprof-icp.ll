@@ -91,6 +91,7 @@
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
 ; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
@@ -121,6 +122,7 @@
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
 ; RUN:  -r=%t/foo.o,_Z3xyzR2B0j, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
@@ -155,6 +157,7 @@
 ; RUN:	-enable-memprof-indirect-call-support=false \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.noicp.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.noicp.o,_ZN2B03barEj.abc,plx \
 ; RUN:  -r=%t/foo.noicp.o,_Z3xyzR2B0j, \
 ; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
 ; RUN:  -r=%t/main.o,_Znwm, \
@@ -260,6 +263,14 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @_Z3xyzR2B0j(ptr %b)
+
+;; Add a function that has the same name as one of the indirect callees, but
+;; with a suffix, to make sure we don't incorrectly pick the wrong one as the
+;; promoted target (which happens if we attempt to canonicalize the names
+;; when building the ICP symtab).
+define i32 @_ZN2B03barEj.abc(ptr %this, i32 %s) {
+  ret i32 0
+}
 
 define i32 @_Z3fooR2B0j(ptr %b) {
 entry:
