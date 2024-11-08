@@ -1849,7 +1849,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
   if (AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
       AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
       AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
-    if (Subtarget->requiresNaturallyAlignedBufferAccess() &&
+    if (Subtarget->hasRequireNaturallyAlignedBufferAccess() &&
         Alignment < Align(PowerOf2Ceil(divideCeil(Size, 8))))
       return false;
   }

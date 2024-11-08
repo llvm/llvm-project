@@ -601,7 +601,7 @@ public:
     return UnalignedAccessMode;
   }
 
-  bool requiresNaturallyAlignedBufferAccess() const {
+  bool hasRequireNaturallyAlignedBufferAccess() const {
     return RequireNaturallyAlignedBufferAccess;
   }
 
