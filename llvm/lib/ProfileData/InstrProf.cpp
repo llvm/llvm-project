@@ -641,11 +641,12 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
 
-  if (AddCanonical) {
-    StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-    if (CanonicalFuncName != PGOFuncName)
-      return NameToGUIDMap(CanonicalFuncName);
-  }
+  if (!AddCanonical)
+    return Error::success();
+
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName != PGOFuncName)
+    return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();
 }

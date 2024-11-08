@@ -4152,7 +4152,7 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // In practice this should not be a limitation, since local functions should
   // have PGOFuncName metadata and global function names shouldn't need any
   // special handling (they should not get the ".llvm.*" suffix that the
-  // canonicalization handling is attempting to strip.
+  // canonicalization handling is attempting to strip).
   if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
