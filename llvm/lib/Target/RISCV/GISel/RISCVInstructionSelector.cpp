@@ -288,6 +288,10 @@ RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
     return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
   }
 
+  if (mi_match(RootReg, *MRI, m_GZExt(m_Reg(RegX))) &&
+      MRI->getType(RegX).getScalarSizeInBits() == Bits)
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
+
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
   if (KB->maskedValueIsZero(RootReg, APInt::getBitsSetFrom(Size, Bits)))
     return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
