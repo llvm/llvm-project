@@ -322,7 +322,6 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
   if (!Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) &&
       !isUInt<5>(Imm))
     return MCDisassembler::Fail;
-  ;
 
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
