@@ -1538,7 +1538,6 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     CollectActiveReductionClauses(S.ActiveReductionClauses, Clauses);
     SemaRef.ActiveComputeConstructInfo.Kind = DirKind;
     SemaRef.ActiveComputeConstructInfo.Clauses = Clauses;
-    SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
 
     // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
     // construct, the gang clause behaves as follows. ... The region of a loop
@@ -1668,9 +1667,8 @@ SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
-    assert(SemaRef.ParentlessLoopConstructs.empty() &&
-           "Didn't consume loop construct list?");
-    SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+    // Nothing really to do here, the restorations above should be enough for
+    // now.
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
     // Nothing really to do here, the LoopInConstruct should handle restorations
     // correctly.
@@ -3171,27 +3169,14 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels: {
-    auto *ComputeConstruct = OpenACCComputeConstruct::Create(
+    return OpenACCComputeConstruct::Create(
         getASTContext(), K, StartLoc, DirLoc, EndLoc, Clauses,
-        AssocStmt.isUsable() ? AssocStmt.get() : nullptr,
-        ParentlessLoopConstructs);
-
-    ParentlessLoopConstructs.clear();
-
-    return ComputeConstruct;
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   case OpenACCDirectiveKind::Loop: {
-    auto *LoopConstruct = OpenACCLoopConstruct::Create(
-        getASTContext(), StartLoc, DirLoc, EndLoc, Clauses,
-        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
-
-    // If we are in the scope of a compute construct, add this to the list of
-    // loop constructs that need assigning to the next closing compute
-    // construct.
-    if (isInComputeConstruct())
-      ParentlessLoopConstructs.push_back(LoopConstruct);
-
-    return LoopConstruct;
+    return OpenACCLoopConstruct::Create(
+        getASTContext(), ActiveComputeConstructInfo.Kind, StartLoc, DirLoc,
+        EndLoc, Clauses, AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   }
   llvm_unreachable("Unhandled case in directive handling?");

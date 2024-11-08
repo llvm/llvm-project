@@ -42,12 +42,12 @@ void NormalFunc() {
   // CHECK-NEXT: CompoundStmt
   {
 #pragma acc parallel
-    // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR:[0-9a-fx]+]] {{.*}}parallel
+    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
     // CHECK-NEXT: CompoundStmt
     {
 #pragma acc loop
       for(int i = 0; i < 5;++i);
-    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR]]
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
     // CHECK-NEXT: ForStmt
     // CHECK-NEXT: DeclStmt
     // CHECK-NEXT: VarDecl {{.*}} used i 'int'
@@ -91,16 +91,16 @@ void TemplFunc() {
 
   }
 
-#pragma acc parallel
+#pragma acc serial
   {
-    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
     // CHECK-NEXT: CompoundStmt
 #pragma acc parallel
     {
-    // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR_UNINST:[0-9a-fx]+]] {{.*}}parallel
+    // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
     // CHECK-NEXT: CompoundStmt
 #pragma acc loop
-    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_UNINST]]
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
     // CHECK-NEXT: ForStmt
     // CHECK-NEXT: DeclStmt
     // CHECK-NEXT: VarDecl {{.*}} i 'int'
@@ -116,7 +116,7 @@ void TemplFunc() {
       for(int i = 0; i < 5;++i);
 
 #pragma acc loop
-    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_UNINST]]
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
     // CHECK-NEXT: ForStmt
     // CHECK-NEXT: DeclStmt
     // CHECK-NEXT: VarDecl {{.*}} i 'int'
@@ -166,13 +166,13 @@ void TemplFunc() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} I 'typename S::type':'int'
 
-  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
   // CHECK-NEXT: CompoundStmt
   //
-  // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR_INST:[0-9a-fx]+]] {{.*}}parallel
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
   // CHECK-NEXT: CompoundStmt
 
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_INST]]
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl {{.*}} i 'int'
@@ -186,7 +186,7 @@ void TemplFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'i' 'int'
   // CHECK-NEXT: NullStmt
 
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_INST]]
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: parallel
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl {{.*}} i 'int'
