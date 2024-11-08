@@ -1058,7 +1058,6 @@ public:
   const parser::Name *ResolveDesignator(const parser::Designator &);
   int GetVectorElementKind(
       TypeCategory category, const std::optional<parser::KindSelector> &kind);
-  std::optional<DerivedTypeSpec> ResolveDerivedType(const parser::Name &);
 
 protected:
   bool BeginDecl();
@@ -1206,6 +1205,7 @@ private:
   Symbol &DeclareProcEntity(
       const parser::Name &, Attrs, const Symbol *interface);
   void SetType(const parser::Name &, const DeclTypeSpec &);
+  std::optional<DerivedTypeSpec> ResolveDerivedType(const parser::Name &);
   std::optional<DerivedTypeSpec> ResolveExtendsType(
       const parser::Name &, const parser::Name *);
   Symbol *MakeTypeSymbol(const SourceName &, Details &&);
@@ -1609,21 +1609,26 @@ void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   }
 }
 
+// This "manually" walks the tree of the cosntruct, because the order
+// elements are resolved by the normal visitor will try to resolve
+// the map clauses attached to the directive without having resolved
+// the type, so the type is figured out using the implicit rules.
 bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   AddOmpSourceRange(x.source);
   BeginDeclTypeSpec();
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
-  if (const auto &mapperName{
-          std::get<std::optional<Fortran::parser::Name>>(spec.t)}) {
+  if (const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
     Symbol *mapperSym{&MakeSymbol(*mapperName, Attrs{})};
     mapperName->symbol = mapperSym;
+  } else if (0) {
+    Symbol *mapperSym{&MakeSymbol("default", Attrs{})};
   }
-  Walk(std::get<Fortran::parser::TypeSpec>(spec.t));
-  const auto &varName{std::get<Fortran::parser::ObjectName>(spec.t)};
+  Walk(std::get<parser::TypeSpec>(spec.t));
+  const auto &varName{std::get<parser::ObjectName>(spec.t)};
   DeclareObjectEntity(varName);
 
-  Walk(std::get<std::list<std::list<Fortran::parser::OmpMapClause>>>(x.t));
+  Walk(std::get<parser::OmpClauseList>(x.t));
 
   EndDeclTypeSpec();
   return false;

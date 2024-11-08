@@ -1,8 +1,8 @@
 ! This test checks lowering of OpenMP declare mapper Directive.
 
 ! RUN: split-file %s %t
-! RUN: not %flang_fc1 -emit-fir -fopenmp %t/omp-declare-mapper-1.f90 2>&1 | FileCheck %t/omp-declare-mapper-1.f90
-! RUN  not %flang_fc1 -emit-fir -fopenmp %t/omp-declare-mapper-2.f90 2>&1 | FileCheck %t/omp-declare-mapper-2.f90
+! RUN: not %flang_fc1 -emit-fir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-1.f90 2>&1 | FileCheck %t/omp-declare-mapper-1.f90
+! RUN  not %flang_fc1 -emit-fir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-2.f90 2>&1 | FileCheck %t/omp-declare-mapper-2.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1

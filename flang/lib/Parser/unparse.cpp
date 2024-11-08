@@ -2677,14 +2677,7 @@ public:
               Walk(std::get<Name>(spec.t));
               Put(")");
 
-              const auto &list{
-                  std::get<std::list<std::list<Fortran::parser::OmpMapClause>>>(
-                      z.t)};
-              for (const auto &m : list) {
-                Put(" MAP(");
-                Walk(m);
-                Put(")");
-              }
+              Walk(std::get<OmpClauseList>(z.t));
               Put("\n");
               return false;
             },

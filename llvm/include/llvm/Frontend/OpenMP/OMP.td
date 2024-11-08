@@ -612,8 +612,8 @@ def OMP_Critical : Directive<"critical"> {
   let category = CA_Executable;
 }
 def OMP_DeclareMapper : Directive<"declare mapper"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Map>,
+  let requiredClauses = [
+    VersionedClause<OMPC_Map, 50>,
   ];
   let association = AS_None;
   let category = CA_Declarative;

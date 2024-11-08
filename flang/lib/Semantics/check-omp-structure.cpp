@@ -1434,6 +1434,26 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(
+      dir.source, llvm::omp::Directive::OMPD_declare_mapper);
+  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  const auto &type = std::get<parser::TypeSpec>(spec.t);
+  if (const auto derivedTypeSpec{
+          std::get_if<parser::DerivedTypeSpec>(&type.u)}) {
+    if (derivedTypeSpec->derivedTypeSpec->typeSymbol().attrs().test(
+            Attr::ABSTRACT))
+      context_.Say(dir.source, "Type must not be abstract"_err_en_US);
+  } else {
+    context_.Say(dir.source, "Type is not a derived type"_err_en_US);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclareMapperConstruct &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);

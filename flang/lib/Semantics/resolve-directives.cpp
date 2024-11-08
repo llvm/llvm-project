@@ -1949,7 +1949,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
-
   return true;
 }
 

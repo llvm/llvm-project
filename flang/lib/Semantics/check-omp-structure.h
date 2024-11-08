@@ -90,6 +90,8 @@ public:
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
   void Enter(const parser::OpenMPDeclarativeAllocate &);
   void Leave(const parser::OpenMPDeclarativeAllocate &);
+  void Enter(const parser::OpenMPDeclareMapperConstruct &);
+  void Leave(const parser::OpenMPDeclareMapperConstruct &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPDepobjConstruct &);

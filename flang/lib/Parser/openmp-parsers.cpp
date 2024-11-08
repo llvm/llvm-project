@@ -840,11 +840,10 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
 TYPE_PARSER(construct<OmpDeclareMapperSpecifier>(
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
-// ?.? (not 4.5) Declare Mapper Construct
-TYPE_PARSER(sourced(
-    construct<OpenMPDeclareMapperConstruct>(verbatim("DECLARE MAPPER"_tok),
-        "(" >> Parser<OmpDeclareMapperSpecifier>{} / ")",
-        many("MAP" >> parenthesized(many(Parser<OmpMapClause>{}))))))
+// OpenMP 5.2: 5.8.8 Declare Mapper Construct
+TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
+    verbatim("DECLARE MAPPER"_tok),
+    "(" >> Parser<OmpDeclareMapperSpecifier>{} / ")", Parser<OmpClauseList>{})))
 
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(
