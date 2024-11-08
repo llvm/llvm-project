@@ -10,7 +10,9 @@
 // expected-no-diagnostics
 
 struct R {};               // gnu-warning {{empty struct is a GNU extension}}
+#if __STDC_VERSION__ >= 201112L
 struct S { struct { }; };  // gnu-warning {{empty struct is a GNU extension}}
+#endif
 struct T { int : 0; };     // gnu-warning {{struct without named members is a GNU extension}}
 union U {};                // gnu-warning {{empty union is a GNU extension}}
 
