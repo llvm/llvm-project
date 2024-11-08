@@ -48,7 +48,6 @@ struct B : A {
 
 // CIR_O1-NOT: cir.func @_ZN1CD2Ev(%arg0: !cir.ptr<!ty_C>{{.*}})) {{.*}} {
 // CIR_O1: cir.func private @_ZN1CD2Ev(!cir.ptr<!ty_C>) alias(@_ZN1BD2Ev)
-// FIXME: LLVM alias directly to @_ZN1BD2Ev instead of through @_ZN1CD2Ev
 // CIR_O1: cir.func private @_ZN1CD1Ev(!cir.ptr<!ty_C>) alias(@_ZN1CD2Ev)
 
 // FIXME: LLVM output should be: @_ZN1CD2Ev ={{.*}} unnamed_addr alias {{.*}} @_ZN1BD2Ev
