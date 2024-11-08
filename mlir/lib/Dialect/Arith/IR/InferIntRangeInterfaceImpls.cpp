@@ -40,21 +40,20 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     setResultRange(getResult(), ConstantIntRanges::constant(value));
     return;
   }
+  if (auto splatAttr = llvm::dyn_cast_or_null<SplatElementsAttr>(getValue())) {
+    setResultRange(getResult(), ConstantIntRanges::constant(
+                                    splatAttr.getSplatValue<APInt>()));
+    return;
+  }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
-    assert(arrayCstAttr.size() && "Zero-sized vectors are not allowed");
-    if (arrayCstAttr.isSplat()) {
-      setResultRange(getResult(), ConstantIntRanges::constant(
-                                      arrayCstAttr.getSplatValue<APInt>()));
-      return;
-    }
-
     std::optional<ConstantIntRanges> result;
     for (const APInt &val : arrayCstAttr) {
       auto range = ConstantIntRanges::constant(val);
       result = (result ? result->rangeUnion(range) : range);
     }
 
+    assert(result && "Zero-sized vectors are not allowed");
     setResultRange(getResult(), *result);
     return;
   }
