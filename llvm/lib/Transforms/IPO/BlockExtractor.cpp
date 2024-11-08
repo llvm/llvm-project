@@ -41,7 +41,8 @@ static cl::opt<bool>
 namespace {
 class BlockExtractor {
 public:
-  BlockExtractor(bool EraseFunctions) : EraseFunctions(EraseFunctions) {}
+  BlockExtractor(bool EraseFunctions, bool KeepOldBlocks)
+      : EraseFunctions(EraseFunctions), KeepOldBlocks(KeepOldBlocks) {}
   bool runOnModule(Module &M);
   void
   init(const std::vector<std::vector<BasicBlock *>> &GroupsOfBlocksToExtract) {
@@ -53,6 +54,7 @@ public:
 private:
   std::vector<std::vector<BasicBlock *>> GroupsOfBlocks;
   bool EraseFunctions;
+  bool KeepOldBlocks;
   /// Map a function name to groups of blocks.
   SmallVector<std::pair<std::string, SmallVector<std::string, 4>>, 4>
       BlocksByName;
@@ -169,7 +171,19 @@ bool BlockExtractor::runOnModule(Module &M) {
       Changed = true;
     }
     CodeExtractorAnalysisCache CEAC(*BBs[0]->getParent());
-    Function *F = CodeExtractor(BlocksToExtractVec).extractCodeRegion(CEAC);
+    Function *F = CodeExtractor(BlocksToExtractVec,
+                                /* DT */ nullptr,
+                                /* AggregateArgs*/ false,
+                                /* BFI */ nullptr,
+                                /* BPI */ nullptr,
+                                /* AC */ nullptr,
+                                /* AllowVarArgs */ false,
+                                /* AllowAlloca */ false,
+                                /* AllocationBlock */ nullptr,
+                                /* Suffix */ "",
+                                /* ArgsInZeroAddressSpace */ false,
+                                /* KeepOldBlocks */ KeepOldBlocks)
+                      .extractCodeRegion(CEAC);
     if (F)
       LLVM_DEBUG(dbgs() << "Extracted group '" << (*BBs.begin())->getName()
                         << "' in: " << F->getName() << '\n');
@@ -196,12 +210,13 @@ bool BlockExtractor::runOnModule(Module &M) {
 
 BlockExtractorPass::BlockExtractorPass(
     std::vector<std::vector<BasicBlock *>> &&GroupsOfBlocks,
-    bool EraseFunctions)
-    : GroupsOfBlocks(GroupsOfBlocks), EraseFunctions(EraseFunctions) {}
+    bool EraseFunctions, bool KeepOldBlocks)
+    : GroupsOfBlocks(GroupsOfBlocks), EraseFunctions(EraseFunctions),
+      KeepOldBlocks(KeepOldBlocks) {}
 
 PreservedAnalyses BlockExtractorPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  BlockExtractor BE(EraseFunctions);
+  BlockExtractor BE(EraseFunctions, KeepOldBlocks);
   BE.init(GroupsOfBlocks);
   return BE.runOnModule(M) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();

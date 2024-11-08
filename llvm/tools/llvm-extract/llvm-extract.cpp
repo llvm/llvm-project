@@ -89,12 +89,20 @@ static cl::list<std::string> ExtractBlocks(
         "Specify <function, basic block1[;basic block2...]> pairs to extract.\n"
         "Each pair will create a function.\n"
         "If multiple basic blocks are specified in one pair,\n"
-        "the first block in the sequence should dominate the rest.\n"
+        "the first block in the sequence should dominate the rest (Unless "
+        "using --bb-keep-blocks).\n"
         "eg:\n"
         "  --bb=f:bb1;bb2 will extract one function with both bb1 and bb2;\n"
         "  --bb=f:bb1 --bb=f:bb2 will extract two functions, one with bb1, one "
         "with bb2."),
     cl::value_desc("function:bb1[;bb2...]"), cl::cat(ExtractCat));
+
+static cl::opt<bool> ReplaceWithCall(
+    "replace-with-call",
+    cl::desc(
+        "When extracting blocks from functions, keep the original functions; "
+        "extracted code is replaced by function call to new function"),
+    cl::cat(ExtractCat));
 
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>
@@ -383,7 +391,9 @@ int main(int argc, char **argv) {
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
     ModulePassManager PM;
-    PM.addPass(BlockExtractorPass(std::move(GroupOfBBs), true));
+    PM.addPass(BlockExtractorPass(std::move(GroupOfBBs),
+                                  /*EraseFunction=*/!ReplaceWithCall,
+                                  /*KeepOldBlocks=*/ReplaceWithCall));
     PM.run(*M, MAM);
   }
 

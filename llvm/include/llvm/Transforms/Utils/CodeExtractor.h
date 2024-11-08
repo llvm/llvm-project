@@ -100,6 +100,10 @@ public:
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
+    /// If true, copies the code into the extracted function instead of moving
+    /// it.
+    bool KeepOldBlocks;
+
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
 
@@ -148,13 +152,19 @@ public:
     /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
     /// param pointer of the outlined function is declared in zero address
     /// space.
+    ///
+    /// If KeepOldBlocks is true, the original instances of the extracted region
+    /// remains in the original function so they can still be branched to from
+    /// non-extracted blocks. However, only branches to the first block will
+    /// call the extracted function.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
+                  bool KeepOldBlocks = false);
 
     /// Perform the extraction, returning the new function.
     ///
