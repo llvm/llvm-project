@@ -645,15 +645,22 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
 
   // add temporary record for this type to be added later
 
-  bool IsImplementation = false;
+  unsigned Flags = 0;
   if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
     // A runtime language of 0 actually means C/C++ and that any
     // non-negative value is some version of Objective-C/C++.
-    IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
+    if (CT->getRuntimeLang() == 0 || CT->isObjcClassComplete())
+      Flags = dwarf::DW_FLAG_type_implementation;
   }
-  unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
+
   DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
                    Flags);
+
+  if (auto *CT = dyn_cast<DICompositeType>(Ty))
+    if (Ty->getName() != CT->getIdentifier() &&
+        CT->getRuntimeLang() == dwarf::DW_LANG_Swift)
+      DD->addAccelType(*this, CUNode->getNameTableKind(), CT->getIdentifier(),
+                       TyDIE, Flags);
 
   addGlobalType(Ty, TyDIE, Context);
 }
@@ -727,6 +734,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);
   else if (BTy->isLittleEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_little);
+
+  if (uint32_t NumExtraInhabitants = BTy->getNumExtraInhabitants())
+    addUInt(Buffer, dwarf::DW_AT_LLVM_num_extra_inhabitants, std::nullopt,
+            NumExtraInhabitants);
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
@@ -1042,6 +1053,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   if (!Name.empty())
     addString(Buffer, dwarf::DW_AT_name, Name);
 
+  // For Swift, mangled names are put into DW_AT_linkage_name.
+  if (CTy->getRuntimeLang() == dwarf::DW_LANG_Swift && CTy->getRawIdentifier())
+    addString(Buffer, dwarf::DW_AT_linkage_name, CTy->getIdentifier());
+
   addAnnotation(Buffer, CTy->getAnnotations());
 
   if (Tag == dwarf::DW_TAG_enumeration_type ||
@@ -1078,6 +1093,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (uint32_t AlignInBytes = CTy->getAlignInBytes())
       addUInt(Buffer, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
+
+    if (uint32_t NumExtraInhabitants = CTy->getNumExtraInhabitants())
+      addUInt(Buffer, dwarf::DW_AT_LLVM_num_extra_inhabitants, std::nullopt,
+              NumExtraInhabitants);
   }
 }
 

@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1370,8 +1371,7 @@ SelectionDAG::~SelectionDAG() {
 }
 
 bool SelectionDAG::shouldOptForSize() const {
-  return MF->getFunction().hasOptSize() ||
-      llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
+  return llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
 }
 
 void SelectionDAG::allnodes_clear() {
@@ -1773,10 +1773,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 SDValue SelectionDAG::getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
                                         bool isT, bool isO) {
   unsigned Size = VT.getScalarSizeInBits();
-  assert(
-      isIntN(Size, Val) &&
-      "getSignedConstant with a int64_t value that doesn't fit in the type!");
-  return getConstant(APInt(Size, Val, true), DL, VT, isT, isO);
+  return getConstant(APInt(Size, Val, /*isSigned=*/true), DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget,
@@ -2482,6 +2479,140 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
          "There should only be one subvector after tree flattening");
 
   return Subvectors[0];
+}
+
+bool SelectionDAG::expandMultipleResultFPLibCall(
+    RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
+    std::optional<unsigned> CallRetResNo) {
+  LLVMContext &Ctx = *getContext();
+  EVT VT = Node->getValueType(0);
+  unsigned NumResults = Node->getNumValues();
+
+  const char *LCName = TLI->getLibcallName(LC);
+  if (!LC || !LCName)
+    return false;
+
+  auto getVecDesc = [&]() -> VecDesc const * {
+    for (bool Masked : {false, true}) {
+      if (VecDesc const *VD = getLibInfo().getVectorMappingInfo(
+              LCName, VT.getVectorElementCount(), Masked)) {
+        return VD;
+      }
+    }
+    return nullptr;
+  };
+
+  // For vector types, we must find a vector mapping for the libcall.
+  VecDesc const *VD = nullptr;
+  if (VT.isVector() && !(VD = getVecDesc()))
+    return false;
+
+  // Find users of the node that store the results (and share input chains). The
+  // destination pointers can be used instead of creating stack allocations.
+  SDValue StoresInChain{};
+  SmallVector<StoreSDNode *, 2> ResultStores(NumResults);
+  for (SDNode *User : Node->uses()) {
+    if (!ISD::isNormalStore(User))
+      continue;
+    auto *ST = cast<StoreSDNode>(User);
+    SDValue StoreValue = ST->getValue();
+    unsigned ResNo = StoreValue.getResNo();
+    Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
+    if (CallRetResNo == ResNo || !ST->isSimple() ||
+        ST->getAddressSpace() != 0 ||
+        ST->getAlign() <
+            getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
+        (StoresInChain && ST->getChain() != StoresInChain) ||
+        Node->isPredecessorOf(ST->getChain().getNode()))
+      continue;
+    ResultStores[ResNo] = ST;
+    StoresInChain = ST->getChain();
+  }
+
+  TargetLowering::ArgListTy Args;
+  auto AddArgListEntry = [&](SDValue Node, Type *Ty) {
+    TargetLowering::ArgListEntry Entry{};
+    Entry.Ty = Ty;
+    Entry.Node = Node;
+    Args.push_back(Entry);
+  };
+
+  // Pass the arguments.
+  for (const SDValue &Op : Node->op_values()) {
+    EVT ArgVT = Op.getValueType();
+    Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
+    AddArgListEntry(Op, ArgTy);
+  }
+
+  // Pass the output pointers.
+  SmallVector<SDValue, 2> ResultPtrs(NumResults);
+  Type *PointerTy = PointerType::getUnqual(Ctx);
+  for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
+    if (ResNo == CallRetResNo)
+      continue;
+    EVT ResVT = Node->getValueType(ResNo);
+    SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(ResVT);
+    ResultPtrs[ResNo] = ResultPtr;
+    AddArgListEntry(ResultPtr, PointerTy);
+  }
+
+  SDLoc DL(Node);
+
+  // Pass the vector mask (if required).
+  if (VD && VD->isMasked()) {
+    EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
+    SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
+    AddArgListEntry(Mask, MaskVT.getTypeForEVT(Ctx));
+  }
+
+  Type *RetType = CallRetResNo.has_value()
+                      ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
+                      : Type::getVoidTy(Ctx);
+  SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
+  SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
+                                     TLI->getPointerTy(getDataLayout()));
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
+      TLI->getLibcallCallingConv(LC), RetType, Callee, std::move(Args));
+
+  auto [Call, CallChain] = TLI->LowerCallTo(CLI);
+
+  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
+    if (ResNo == CallRetResNo) {
+      Results.push_back(Call);
+      continue;
+    }
+    MachinePointerInfo PtrInfo;
+    if (StoreSDNode *ST = ResultStores[ResNo]) {
+      // Replace store with the library call.
+      ReplaceAllUsesOfValueWith(SDValue(ST, 0), CallChain);
+      PtrInfo = ST->getPointerInfo();
+    } else {
+      PtrInfo = MachinePointerInfo::getFixedStack(
+          getMachineFunction(), cast<FrameIndexSDNode>(ResultPtr)->getIndex());
+    }
+    SDValue LoadResult =
+        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
+    Results.push_back(LoadResult);
+  }
+
+  if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
+    // FIXME: Find a way to avoid updating the root. This is needed for x86,
+    // which uses a floating-point stack. If (for example) the node to be
+    // expanded has two results one floating-point which is returned by the
+    // call, and one integer result, returned via an output pointer. If only the
+    // integer result is used then the `CopyFromReg` for the FP result may be
+    // optimized out. This prevents an FP stack pop from being emitted for it.
+    // Setting the root like this ensures there will be a use of the
+    // `CopyFromReg` chain, and ensures the FP pop will be emitted.
+    SDValue NewRoot =
+        getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
+    setRoot(NewRoot);
+    // Ensure the new root is reachable from the results.
+    Results[0] = getMergeValues({Results[0], NewRoot}, DL);
+  }
+
+  return true;
 }
 
 SDValue SelectionDAG::expandVAArg(SDNode *Node) {
@@ -10221,8 +10352,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
 
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
@@ -10427,8 +10560,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
     void *IP = nullptr;
-    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+      E->intersectFlagsWith(Flags);
       return SDValue(E, 0);
+    }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList);
     createOperands(N, Ops);
@@ -11744,7 +11879,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
 }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 void SelectionDAG::VerifyDAGDivergence() {
   std::vector<SDNode *> TopoOrder;
   CreateTopologicalOrder(TopoOrder);
@@ -12378,7 +12513,7 @@ bool SDNode::hasPredecessor(const SDNode *N) const {
 }
 
 void SDNode::intersectFlagsWith(const SDNodeFlags Flags) {
-  this->Flags.intersectWith(Flags);
+  this->Flags &= Flags;
 }
 
 SDValue
@@ -12534,8 +12669,15 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       Scalars1.push_back(EltOp.getValue(1));
     }
 
-    SDValue Vec0 = getBuildVector(VT, dl, Scalars0);
-    SDValue Vec1 = getBuildVector(VT1, dl, Scalars1);
+    for (; i < ResNE; ++i) {
+      Scalars0.push_back(getUNDEF(EltVT));
+      Scalars1.push_back(getUNDEF(EltVT1));
+    }
+
+    EVT VecVT = EVT::getVectorVT(*getContext(), EltVT, ResNE);
+    EVT VecVT1 = EVT::getVectorVT(*getContext(), EltVT1, ResNE);
+    SDValue Vec0 = getBuildVector(VecVT, dl, Scalars0);
+    SDValue Vec1 = getBuildVector(VecVT1, dl, Scalars1);
     return getMergeValues({Vec0, Vec1}, dl);
   }
 
@@ -12584,6 +12726,14 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       Scalars.push_back(getNode(N->getOpcode(), dl, EltVT,
                                 Operands[0],
                                 getValueType(ExtVT)));
+      break;
+    }
+    case ISD::ADDRSPACECAST: {
+      const auto *ASC = cast<AddrSpaceCastSDNode>(N);
+      Scalars.push_back(getAddrSpaceCast(dl, EltVT, Operands[0],
+                                         ASC->getSrcAddressSpace(),
+                                         ASC->getDestAddressSpace()));
+      break;
     }
     }
   }

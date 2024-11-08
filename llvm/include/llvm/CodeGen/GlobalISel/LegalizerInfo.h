@@ -273,6 +273,11 @@ inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
 LegalityPredicate
 typePairInSet(unsigned TypeIdx0, unsigned TypeIdx1,
               std::initializer_list<std::pair<LLT, LLT>> TypesInit);
+/// True iff the given types for the given tuple of type indexes is one of the
+/// specified type tuple.
+LegalityPredicate
+typeTupleInSet(unsigned TypeIdx0, unsigned TypeIdx1, unsigned Type2,
+               std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit);
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
 LegalityPredicate typePairAndMemDescInSet(
@@ -504,6 +509,15 @@ class LegalizeRuleSet {
     using namespace LegalityPredicates;
     return actionIf(Action, typePairInSet(typeIdx(0), typeIdx(1), Types));
   }
+
+  LegalizeRuleSet &
+  actionFor(LegalizeAction Action,
+            std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
+    using namespace LegalityPredicates;
+    return actionIf(Action,
+                    typeTupleInSet(typeIdx(0), typeIdx(1), typeIdx(2), Types));
+  }
+
   /// Use the given action when type indexes 0 and 1 is any type pair in the
   /// given list.
   /// Action should be an action that requires mutation.
@@ -611,6 +625,12 @@ public:
   }
   LegalizeRuleSet &legalFor(bool Pred,
                             std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Legal, Types);
+  }
+  LegalizeRuleSet &
+  legalFor(bool Pred, std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
     if (!Pred)
       return *this;
     return actionFor(LegalizeAction::Legal, Types);
@@ -998,8 +1018,7 @@ public:
         LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           const LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && !VecTy.isScalable() &&
-                 VecTy.getSizeInBits() < VectorSize;
+          return VecTy.isFixedVector() && VecTy.getSizeInBits() < VectorSize;
         },
         [=](const LegalityQuery &Query) {
           const LLT VecTy = Query.Types[TypeIdx];
@@ -1172,7 +1191,7 @@ public:
         LegalizeAction::MoreElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  VecTy.getNumElements() < MinElements;
         },
         [=](const LegalityQuery &Query) {
@@ -1190,7 +1209,7 @@ public:
         LegalizeAction::MoreElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  (VecTy.getNumElements() % NumElts != 0);
         },
         [=](const LegalityQuery &Query) {
@@ -1210,7 +1229,7 @@ public:
         LegalizeAction::FewerElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  VecTy.getNumElements() > MaxElements;
         },
         [=](const LegalityQuery &Query) {
@@ -1230,6 +1249,9 @@ public:
                                     const LLT MaxTy) {
     assert(MinTy.getElementType() == MaxTy.getElementType() &&
            "Expected element types to agree");
+
+    assert((!MinTy.isScalableVector() && !MaxTy.isScalableVector()) &&
+           "Unexpected scalable vectors");
 
     const LLT EltTy = MinTy.getElementType();
     return clampMinNumElements(TypeIdx, EltTy, MinTy.getNumElements())

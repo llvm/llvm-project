@@ -14,6 +14,7 @@
 
 #include "XtensaTargetMachine.h"
 #include "TargetInfo/XtensaTargetInfo.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -83,6 +84,13 @@ XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *XtensaTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return XtensaMachineFunctionInfo::create<XtensaMachineFunctionInfo>(Allocator,
+                                                                      F, STI);
+}
+
 namespace {
 /// Xtensa Code Generator Pass Configuration Options.
 class XtensaPassConfig : public TargetPassConfig {
@@ -95,6 +103,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 } // end anonymous namespace
 
@@ -102,6 +111,8 @@ bool XtensaPassConfig::addInstSelector() {
   addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
   return false;
 }
+
+void XtensaPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
 
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new XtensaPassConfig(*this, PM);

@@ -136,9 +136,7 @@ func.func @vectorize_nd_tensor_extract_transfer_read_basic(
 // CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[IDX1]], %[[IDX2]], %[[C0:.*]]], %[[CST_0]] {in_bounds = [true, true, true]} : tensor<3x3x3xf32>, vector<1x1x3xf32>
 // CHECK:   vector.transfer_write %[[READ]], %[[ARG1]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x1x3xf32>, tensor<1x1x3xf32>
 
-// Same as example above, but reading into a column tensor. Note that after the
-// vectorizatoin, the `TransferOpReduceRank` will replace
-// `vector.transfer_read` with `tensor.extract -> scalar`.
+// Same as example above, but reading into a column tensor.
 
 // TODO: Currently this fails to vectorise when the indices are non-constant.
 
@@ -162,9 +160,10 @@ func.func @vectorize_nd_tensor_extract_transfer_read_basic_column(
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_transfer_read_basic_column(
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<3x3x3xf32>,
 // CHECK-SAME:      %[[OUTPUT:.*]]: tensor<3x1x1xf32>)
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[EXTRACT:.*]] = tensor.extract %[[INPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] : tensor<3x3x3xf32>
-// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[EXTRACT]] : f32 to vector<3x1x1xf32>
+// CHECK-DAG:        %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:        %[[CST_0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[INPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]], %[[CST_0]] : tensor<3x3x3xf32>, vector<f32>
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[READ]] : vector<f32> to vector<3x1x1xf32>
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[BCAST]], %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<3x1x1xf32>, tensor<3x1x1xf32>
 // CHECK:           return %[[RES]] : tensor<3x1x1xf32>
 
@@ -541,8 +540,9 @@ func.func @vectorize_nd_tensor_extract_with_tensor_extract(%input_1: tensor<1x20
 // CHECK-SAME:      %[[INPUT_2:.*]]: tensor<257x24xf32>,
 // CHECK:           %[[EXTRACTED_0_IDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[EXTRACTED_0_IDX_1:.*]] = vector.extractelement %{{.*}}[%{{.*}} : i32] : vector<4xindex>
-// First `tensor.extract` from the generic Op - loop invariant scalar load.
-// CHECK:           tensor.extract %[[INPUT_1]][%[[EXTRACTED_0_IDX_0]], %[[EXTRACTED_0_IDX_1]]] : tensor<1x20xi32>
+// First `vector.transfer_read` from the generic Op - loop invariant scalar load.
+// CHECK:           vector.transfer_read %[[INPUT_1]][%[[EXTRACTED_0_IDX_0]], %[[EXTRACTED_0_IDX_1]]] 
+// CHECK-SAME:      tensor<1x20xi32>, vector<i32>
 // The following `tensor.extract` from the generic Op s a contiguous load (all Ops used
 // for address calculation also satisfy the required conditions).
 // CHECK:           vector.transfer_read %[[INPUT_2]][%{{.*}}, %{{.*}}, %{{.*}} {in_bounds = [true, true]} : tensor<257x24xf32>, vector<1x4xf32>
@@ -745,8 +745,8 @@ func.func @vectorize_0d_tensor_extract(%arg0: tensor<f32>, %arg2: tensor<1x1x3xf
 
 // CHECK-LABEL:   func.func @vectorize_0d_tensor_extract(
 // CHECK-SAME:     %[[ARG_0:.*]]: tensor<f32>
-// CHECK:           %[[EXTRACT:.*]] = tensor.extract %[[ARG_0]][] : tensor<f32>
-// CHECK:           vector.broadcast %[[EXTRACT]] : f32 to vector<1x1x3xf32>
+// CHECK:           %[[EXTRACT:.*]] = vector.transfer_read %[[ARG_0]][], %{{.+}} : tensor<f32>
+// CHECK:           vector.broadcast %[[EXTRACT]] : vector<f32> to vector<1x1x3xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

@@ -95,6 +95,7 @@ add_math_entrypoint_object(coshf)
 add_math_entrypoint_object(coshf16)
 
 add_math_entrypoint_object(cospif)
+add_math_entrypoint_object(cospif16)
 
 add_math_entrypoint_object(daddl)
 add_math_entrypoint_object(daddf128)
@@ -130,6 +131,7 @@ add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(exp10f16)
 
+add_math_entrypoint_object(exp10m1f)
 add_math_entrypoint_object(exp10m1f16)
 
 add_math_entrypoint_object(expm1)
