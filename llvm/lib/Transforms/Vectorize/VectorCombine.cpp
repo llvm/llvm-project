@@ -2804,10 +2804,8 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   std::iota(Mask.begin(), Mask.end(), 0);
   Mask[InsIdx] = ExtIdx + NumElts;
   // Cost
-  ExtractElementInst *Ext;
-  Ext = isa<ExtractElementInst>(I.getOperand(0))
-            ? cast<ExtractElementInst>(I.getOperand(0))
-            : cast<ExtractElementInst>(I.getOperand(1));
+  auto *Ins = cast<InsertElementInst>(&I);
+  auto *Ext = cast<ExtractElementInst>(I.getOperand(1));
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost =
