@@ -457,8 +457,6 @@ private:
       return "BuildingDeductionGuides";
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       return "TypeAliasTemplateInstantiation";
-    case CodeSynthesisContext::PartialOrderingTTP:
-      return "PartialOrderingTTP";
     }
     return "";
   }
@@ -1110,7 +1108,6 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
-  case Language::RenderScript:
     // We can't do anything with these.
     return;
   }

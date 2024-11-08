@@ -1050,8 +1050,6 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
 
   auto *Ptr = AddressValue;
   auto Name = Ptr->getName();
-  auto AS = Ptr->getType()->getPointerAddressSpace();
-  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(AS), Name + ".cast");
   PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());

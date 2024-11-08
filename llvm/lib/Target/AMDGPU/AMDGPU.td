@@ -1110,6 +1110,13 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "Target Requires Code Object V6"
 >;
 
+def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
+   "HasXF32Insts",
+   "true",
+   "Has instructions that support xf32 format, such as "
+   "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
+ >;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1178,9 +1185,9 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureNegativeScratchOffsetBug, FeatureGWS, FeatureDefaultComponentZero,
-   FeatureVmemWriteVgprInOrder
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1199,9 +1206,9 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength63,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
+   FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureVmemWriteVgprInOrder
@@ -1223,9 +1230,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength32,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureGDS, FeatureGWS,
+   FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureVmemWriteVgprInOrder
   ]
@@ -1246,9 +1253,9 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
+   FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   ]
@@ -1448,6 +1455,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureFP8ConversionInsts,
    FeatureCvtFP8VOP1Bug,
    FeaturePkFmacF16Inst,
+   FeatureXF32Insts,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicBufferGlobalPkAddF16Insts,
@@ -1627,6 +1635,12 @@ def FeatureISAVersion11_5_1 : FeatureSet<
      FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureRequiredExportPriority])>;
+
+def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
@@ -2282,6 +2296,9 @@ def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 
 def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
+
+def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
+   AssemblerPredicate<(all_of FeatureXF32Insts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

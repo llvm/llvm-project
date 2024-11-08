@@ -338,6 +338,11 @@ def FPR16 : RISCVRegisterClass<[f16, bf16], 16, (add
     (sequence "F%u_H", 18, 27)  // fs2-fs11
 )>;
 
+def FPR16C : RISCVRegisterClass<[f16, bf16], 16, (add
+    (sequence "F%u_H", 15, 10),
+    (sequence "F%u_H", 8, 9)
+)>;
+
 def FPR32 : RISCVRegisterClass<[f32], 32, (add
     (sequence "F%u_F", 15, 10),
     (sequence "F%u_F", 0, 7),
@@ -656,6 +661,7 @@ def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
                                                 (sequence "X%u_H", 0, 4))>;
 def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
                                                  (sequence "X%u_H", 8, 9))>;
+def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
 
 def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
                                                 (sequence "X%u_W", 5, 7),
@@ -666,6 +672,10 @@ def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
 def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))>;
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
+
+def XLenPairRI : RegInfoByHwMode<
+      [RV32,                RV64],
+      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
 
 // Dummy zero register for use in the register pair containing X0 (as X1 is
 // not read to or written when the X0 register pair is used).
@@ -698,9 +708,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
-    DecoderMethod = "DecodeGPRPairRegisterClass" in
+let RegInfos = XLenPairRI,
+    DecoderMethod = "DecodeGPRPairRegisterClass" in {
 def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
@@ -709,6 +718,13 @@ def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
     X0_Pair, X2_X3, X4_X5
 )>;
+
+def GPRPairC : RISCVRegisterClass<[XLenPairFVT], 64, (add
+  X10_X11, X12_X13, X14_X15, X8_X9
+)>;
+
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
+} // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs, (add VR), 1>;

@@ -20,7 +20,7 @@
 
 
 ; CHECK-LABEL: load_array_vec_test
-define <4 x i32> @load_array_vec_test() {
+define <4 x i32> @load_array_vec_test() #0 {
   ; CHECK-COUNT-8: load i32, ptr addrspace(3) {{(.*@arrayofVecData.scalarized.*|%.*)}}, align 4
   ; CHECK-NOT: load i32, ptr addrspace(3) {{.*}}, align 4
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([2 x <4 x i32>], [2 x <4 x i32>] addrspace(3)* @"arrayofVecData", i32 0, i32 0), align 4
@@ -30,7 +30,7 @@ define <4 x i32> @load_array_vec_test() {
 }
 
 ; CHECK-LABEL: load_vec_test
-define <4 x i32> @load_vec_test() {
+define <4 x i32> @load_vec_test() #0 {
   ; CHECK-COUNT-4: load i32, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i32, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align {{.*}}
   ; CHECK-NOT: load i32, ptr addrspace(3) {{.*}}, align 4 
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* @"vecData", align 4
@@ -38,7 +38,7 @@ define <4 x i32> @load_vec_test() {
 }
 
 ; CHECK-LABEL: load_static_array_of_vec_test
-define <4 x i32> @load_static_array_of_vec_test(i32 %index) {
+define <4 x i32> @load_static_array_of_vec_test(i32 %index) #0 {
   ; CHECK: getelementptr [3 x [4 x i32]], ptr @staticArrayOfVecData.scalarized, i32 0, i32 %index
   ; CHECK-COUNT-4: load i32, ptr {{.*}}, align 4
   ; CHECK-NOT: load i32, ptr {{.*}}, align 4
@@ -48,7 +48,7 @@ define <4 x i32> @load_static_array_of_vec_test(i32 %index) {
 }
 
 ; CHECK-LABEL: multid_load_test
-define <4 x i32> @multid_load_test()  {
+define <4 x i32> @multid_load_test() #0 {
   ; CHECK-COUNT-8: load i32, ptr addrspace(3) {{(.*@groushared2dArrayofVectors.scalarized.*|%.*)}}, align 4
   ; CHECK-NOT: load i32, ptr addrspace(3) {{.*}}, align 4
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* getelementptr inbounds ([3 x [3 x <4 x i32>]], [3 x [3 x <4 x i32>]] addrspace(3)* @"groushared2dArrayofVectors", i32 0, i32 0, i32 0), align 4
@@ -56,3 +56,5 @@ define <4 x i32> @multid_load_test()  {
   %3 = add <4 x i32> %1, %2
   ret <4 x i32> %3
 }
+
+attributes #0 = { convergent norecurse nounwind "hlsl.export"}

@@ -52,7 +52,8 @@ coro::LowererBase::LowererBase(Module &M)
 CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
                                            Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
-  auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
+  auto *Fn =
+      Intrinsic::getOrInsertDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
@@ -183,7 +184,7 @@ void coro::suppressCoroAllocs(LLVMContext &Context,
 static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
                                     CoroSuspendInst *SuspendInst) {
   Module *M = SuspendInst->getModule();
-  auto *Fn = Intrinsic::getDeclaration(M, Intrinsic::coro_save);
+  auto *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::coro_save);
   auto *SaveInst = cast<CoroSaveInst>(
       CallInst::Create(Fn, CoroBegin, "", SuspendInst->getIterator()));
   assert(!SuspendInst->getCoroSave());
@@ -352,18 +353,18 @@ void coro::Shape::invalidateCoroutine(
   assert(!CoroBegin);
   {
     // Replace coro.frame which are supposed to be lowered to the result of
-    // coro.begin with undef.
-    auto *Undef = UndefValue::get(PointerType::get(F.getContext(), 0));
+    // coro.begin with poison.
+    auto *Poison = PoisonValue::get(PointerType::get(F.getContext(), 0));
     for (CoroFrameInst *CF : CoroFrames) {
-      CF->replaceAllUsesWith(Undef);
+      CF->replaceAllUsesWith(Poison);
       CF->eraseFromParent();
     }
     CoroFrames.clear();
 
-    // Replace all coro.suspend with undef and remove related coro.saves if
+    // Replace all coro.suspend with poison and remove related coro.saves if
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
-      CS->replaceAllUsesWith(UndefValue::get(CS->getType()));
+      CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
       CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();

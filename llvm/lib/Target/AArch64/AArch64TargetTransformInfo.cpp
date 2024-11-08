@@ -10,6 +10,7 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64PerfectShuffle.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -65,6 +66,10 @@ static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
 static cl::opt<unsigned>
     BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
                     cl::desc("The cost of a histcnt instruction"));
+
+static cl::opt<unsigned> DMBLookaheadThreshold(
+    "dmb-lookahead-threshold", cl::init(10), cl::Hidden,
+    cl::desc("The number of instructions to search for a redundant dmb"));
 
 namespace {
 class TailFoldingOption {
@@ -1637,7 +1642,7 @@ static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
     return std::nullopt;
 
   auto *Mod = II.getModule();
-  auto *NewDecl = Intrinsic::getDeclaration(Mod, IID, {II.getType()});
+  auto *NewDecl = Intrinsic::getOrInsertDeclaration(Mod, IID, {II.getType()});
   II.setCalledFunction(NewDecl);
 
   return &II;
@@ -2150,6 +2155,31 @@ static std::optional<Instruction *> instCombineSVEInsr(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
+                                                   IntrinsicInst &II) {
+  // If this barrier is post-dominated by identical one we can remove it
+  auto *NI = II.getNextNonDebugInstruction();
+  unsigned LookaheadThreshold = DMBLookaheadThreshold;
+  auto CanSkipOver = [](Instruction *I) {
+    return !I->mayReadOrWriteMemory() && !I->mayHaveSideEffects();
+  };
+  while (LookaheadThreshold-- && CanSkipOver(NI)) {
+    auto *NIBB = NI->getParent();
+    NI = NI->getNextNonDebugInstruction();
+    if (!NI) {
+      if (auto *SuccBB = NIBB->getUniqueSuccessor())
+        NI = SuccBB->getFirstNonPHIOrDbgOrLifetime();
+      else
+        break;
+    }
+  }
+  auto *NextII = dyn_cast_or_null<IntrinsicInst>(NI);
+  if (NextII && II.isIdenticalTo(NextII))
+    return IC.eraseInstFromFunction(II);
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2157,6 +2187,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_dmb:
+    return instCombineDMB(IC, II);
   case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
   case Intrinsic::aarch64_sve_fcvt_f16f32:
   case Intrinsic::aarch64_sve_fcvt_f16f64:
@@ -3743,7 +3775,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   assert(Factor >= 2 && "Invalid interleave factor");
   auto *VecVTy = cast<VectorType>(VecTy);
 
-  if (VecTy->isScalableTy() && (!ST->hasSVE() || Factor != 2))
+  if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
   // Vectorization for masked interleaved accesses is only enabled for scalable

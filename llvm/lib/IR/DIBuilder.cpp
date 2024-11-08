@@ -19,7 +19,6 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include <optional>
 
 using namespace llvm;
@@ -266,10 +265,11 @@ DIBasicType *DIBuilder::createNullPtrType() {
 
 DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                                         unsigned Encoding,
-                                        DINode::DIFlags Flags) {
+                                        DINode::DIFlags Flags,
+                                        uint32_t NumExtraInhabitants) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
-                          0, Encoding, Flags);
+                          0, Encoding, NumExtraInhabitants, Flags);
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
@@ -521,11 +521,14 @@ DICompositeType *DIBuilder::createStructType(
     DIScope *Context, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
-    DIType *VTableHolder, StringRef UniqueIdentifier) {
+    DIType *VTableHolder, StringRef UniqueIdentifier,
+    uint32_t NumExtraInhabitants) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
-      Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier);
+      Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+      NumExtraInhabitants);
   trackIfUnresolved(R);
   return R;
 }
@@ -551,7 +554,7 @@ DIBuilder::createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_variant_part, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
-      Elements, 0, nullptr, nullptr, UniqueIdentifier, Discriminator);
+      Elements, 0, nullptr, nullptr, UniqueIdentifier, 0, Discriminator);
   trackIfUnresolved(R);
   return R;
 }
@@ -991,7 +994,7 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
   LLVMContext &Ctx = LinkedInstr->getContext();
   Module *M = LinkedInstr->getModule();
   if (!AssignFn)
-    AssignFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
+    AssignFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_assign);
 
   std::array<Value *, 6> Args = {
       MetadataAsValue::get(Ctx, ValueAsMetadata::get(Val)),
@@ -1060,7 +1063,7 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
 }
 
 static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getDeclaration(&M, Intrinsic::dbg_declare);
+  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_declare);
 }
 
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
@@ -1074,7 +1077,7 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
   }
 
   if (!ValueFn)
-    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
+    ValueFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
   return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
                             InsertBefore);
 }
@@ -1175,7 +1178,7 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
   }
 
   if (!LabelFn)
-    LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
+    LabelFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_label);
 
   Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
 

@@ -64,7 +64,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -1525,8 +1524,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
-                                     {NewTy});
+    return Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {NewTy});
   };
 
   // Lazily populated map from input types to the canonicalized form mentioned

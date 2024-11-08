@@ -179,6 +179,22 @@ llvm.func @rocdl.schedbarrier() {
   llvm.return
 }
 
+llvm.func @rocdl.sched.group.barrier() {
+  // CHECK-LABEL: rocdl.sched.group.barrier
+  // CHECK-NEXT: call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
+  rocdl.sched.group.barrier 8, 1, 0
+  llvm.return
+}
+
+llvm.func @rocdl.iglp.opt() {
+  // CHECK-LABEL: rocdl.iglp.opt
+  // CHECK-NEXT: call void @llvm.amdgcn.iglp.opt(i32 0)
+  rocdl.iglp.opt 0
+  // CHECK-NEXT: call void @llvm.amdgcn.iglp.opt(i32 1)
+  rocdl.iglp.opt 1
+  llvm.return
+}
+
 llvm.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32 x f32>, %arg3: i32,
                    %arg4 : vector<16 x f32>, %arg5 : vector<4xf32>,

@@ -19,7 +19,7 @@ define <2 x i16> @sext_setcc_v2i1_to_v2i16(ptr %p) {
 ; CHECK-NEXT:    selp.s16 %rs3, -1, 0, %p2;
 ; CHECK-NEXT:    selp.s16 %rs4, -1, 0, %p1;
 ; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %v = load <2 x i16>, ptr %p, align 4
@@ -57,12 +57,12 @@ define <4 x i8> @sext_setcc_v4i1_to_v4i8(ptr %p) {
 ; CHECK-NEXT:    setp.eq.s16 %p4, %rs8, 0;
 ; CHECK-NEXT:    selp.s32 %r6, -1, 0, %p4;
 ; CHECK-NEXT:    selp.s32 %r7, -1, 0, %p3;
-; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 16435;
+; CHECK-NEXT:    prmt.b32 %r8, %r7, %r6, 13120;
 ; CHECK-NEXT:    selp.s32 %r9, -1, 0, %p2;
 ; CHECK-NEXT:    selp.s32 %r10, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r11, %r10, %r9, 13120;
 ; CHECK-NEXT:    prmt.b32 %r12, %r11, %r8, 21520;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r12;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r12;
 ; CHECK-NEXT:    ret;
 entry:
   %v = load <4 x i8>, ptr %p, align 4

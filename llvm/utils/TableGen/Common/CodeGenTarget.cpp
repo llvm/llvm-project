@@ -47,19 +47,6 @@ MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
   return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
 }
 
-StringRef llvm::getName(MVT::SimpleValueType T) {
-  switch (T) {
-  case MVT::Other:
-    return "UNKNOWN";
-  case MVT::iPTR:
-    return "TLI.getPointerTy()";
-  case MVT::iPTRAny:
-    return "TLI.getPointerTy()";
-  default:
-    return getEnumName(T);
-  }
-}
-
 StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   // clang-format off
   switch (T) {
@@ -361,16 +348,16 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
         R->getValueAsBit("isPseudo"))
       continue;
 
-    BitsInit *BI = R->getValueAsBitsInit("Inst");
+    const BitsInit *BI = R->getValueAsBitsInit("Inst");
 
     unsigned numBits = BI->getNumBits();
 
-    SmallVector<Init *, 16> NewBits(numBits);
+    SmallVector<const Init *, 16> NewBits(numBits);
 
     for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
       unsigned bitSwapIdx = numBits - bit - 1;
-      Init *OrigBit = BI->getBit(bit);
-      Init *BitSwap = BI->getBit(bitSwapIdx);
+      const Init *OrigBit = BI->getBit(bit);
+      const Init *BitSwap = BI->getBit(bitSwapIdx);
       NewBits[bit] = BitSwap;
       NewBits[bitSwapIdx] = OrigBit;
     }
@@ -380,7 +367,7 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
     }
 
     RecordKeeper &MutableRC = const_cast<RecordKeeper &>(Records);
-    BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
+    const BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
 
     // Update the bits in reversed order so that emitters will get the correct
     // endianness.

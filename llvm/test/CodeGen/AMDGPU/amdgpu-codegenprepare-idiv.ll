@@ -5594,7 +5594,7 @@ define amdgpu_kernel void @udiv_v2i32_mixed_pow2k_denom(ptr addrspace(1) %out, <
 
 define amdgpu_kernel void @udiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @udiv_v2i32_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> <i32 4096, i32 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> splat (i32 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP2]] to float
@@ -5938,7 +5938,7 @@ define amdgpu_kernel void @urem_v2i32_pow2k_denom(ptr addrspace(1) %out, <2 x i3
 
 define amdgpu_kernel void @urem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @urem_v2i32_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> <i32 4096, i32 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> splat (i32 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP2]] to float
@@ -6393,7 +6393,7 @@ define amdgpu_kernel void @ssdiv_v2i32_mixed_pow2k_denom(ptr addrspace(1) %out, 
 
 define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @sdiv_v2i32_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> <i32 4096, i32 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> splat (i32 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i32 [[TMP1]], 31
@@ -6852,7 +6852,7 @@ define amdgpu_kernel void @srem_v2i32_pow2k_denom(ptr addrspace(1) %out, <2 x i3
 
 define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @srem_v2i32_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> <i32 4096, i32 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> splat (i32 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i32 [[TMP1]], 31
@@ -7334,7 +7334,7 @@ define amdgpu_kernel void @udiv_v2i64_mixed_pow2k_denom(ptr addrspace(1) %out, <
 
 define amdgpu_kernel void @udiv_v2i64_pow2_shl_denom(ptr addrspace(1) %out, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @udiv_v2i64_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> <i64 4096, i64 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> splat (i64 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP1]], [[TMP2]]
@@ -7592,7 +7592,7 @@ define amdgpu_kernel void @urem_v2i64_pow2k_denom(ptr addrspace(1) %out, <2 x i6
 
 define amdgpu_kernel void @urem_v2i64_pow2_shl_denom(ptr addrspace(1) %out, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @urem_v2i64_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> <i64 4096, i64 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> splat (i64 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem i64 [[TMP1]], [[TMP2]]
@@ -8261,7 +8261,7 @@ define amdgpu_kernel void @ssdiv_v2i64_mixed_pow2k_denom(ptr addrspace(1) %out, 
 
 define amdgpu_kernel void @sdiv_v2i64_pow2_shl_denom(ptr addrspace(1) %out, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @sdiv_v2i64_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> <i64 4096, i64 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> splat (i64 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i64 [[TMP1]], [[TMP2]]
@@ -9341,7 +9341,7 @@ define amdgpu_kernel void @srem_v2i64_pow2k_denom(ptr addrspace(1) %out, <2 x i6
 
 define amdgpu_kernel void @srem_v2i64_pow2_shl_denom(ptr addrspace(1) %out, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @srem_v2i64_pow2_shl_denom(
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> <i64 4096, i64 4096>, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i64> splat (i64 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = srem i64 [[TMP1]], [[TMP2]]
