@@ -138,7 +138,7 @@ def main(builtin_params={}):
 
     tests_for_report = selected_tests if opts.shard else discovered_tests
     if opts.report_failures_only:
-        # Only report tests that failed
+        # Only report tests that failed.
         tests_for_report = [t for t in tests_for_report if t.isFailure()]
 
     for report in opts.reports:
