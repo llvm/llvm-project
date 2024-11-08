@@ -247,9 +247,8 @@ LogicalResult processDecorationList(Location loc, Decoration decoration,
     }
     // This named attribute encodes several decorations. Emit one per
     // element in the array.
-    LogicalResult res = emitter(cacheControlAttr);
-    if (failed(res))
-      return res;
+    if (failed(emitter(cacheControlAttr)))
+      return failure();
   }
   return success();
 }

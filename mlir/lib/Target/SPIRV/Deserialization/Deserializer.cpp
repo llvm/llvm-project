@@ -242,7 +242,7 @@ LogicalResult deserializeCacheControlDecoration(
   SmallVector<Attribute> attrs;
   if (auto attrList =
           llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
-    attrs.append(attrList.begin(), attrList.end());
+    llvm::append_range(attrs, attrList);
   attrs.push_back(value);
   decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
   return success();
