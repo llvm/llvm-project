@@ -28,7 +28,7 @@ public:
   // Accessors
 
   // Accessing information about a DIE
-  const char *GetMangledName() const;
+  const char *GetMangledName(bool substitute_name_allowed = true) const;
 
   const char *GetPubname() const;
 

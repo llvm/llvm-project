@@ -12,7 +12,7 @@
 #ifndef OMPTARGET_DEVICERTL_SYNCHRONIZATION_H
 #define OMPTARGET_DEVICERTL_SYNCHRONIZATION_H
 
-#include "Types.h"
+#include "DeviceTypes.h"
 
 namespace ompx {
 

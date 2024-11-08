@@ -52,7 +52,7 @@ protected:
     std::string errMsg;
     raw_string_ostream os(errMsg);
     Error.print("", os);
-    EXPECT_TRUE(M) << os.str();
+    EXPECT_TRUE(M) << errMsg;
 
     return M;
   }
@@ -2481,8 +2481,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   Module M("", Context);
   IRBuilder<> Builder(Context);
-  Function *TheFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::vscale, {Builder.getInt32Ty()});
+  Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
+                                                      {Builder.getInt32Ty()});
   CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
@@ -3003,7 +3003,7 @@ TEST_P(IsBytewiseValueTest, IsBytewiseValue) {
   raw_string_ostream S(Buff);
   if (Actual)
     S << *Actual;
-  EXPECT_EQ(GetParam().first, S.str());
+  EXPECT_EQ(GetParam().first, Buff);
 }
 
 TEST_F(ValueTrackingTest, ComputeConstantRange) {

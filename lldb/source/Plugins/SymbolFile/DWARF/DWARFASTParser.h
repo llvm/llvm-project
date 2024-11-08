@@ -58,7 +58,7 @@ public:
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       CompilerDeclContext decl_context) = 0;
 
-  virtual std::string GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
+  virtual std::string GetDIEClassTemplateParams(DWARFDIE die) = 0;
 
   static std::optional<SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,

@@ -835,9 +835,9 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vsll.vx v9, v8, a1, v0.t
@@ -900,6 +900,7 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV32-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v2i64:
@@ -970,9 +971,9 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vsll.vx v9, v8, a1
@@ -1035,6 +1036,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vv v8, v9, v8
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v2i64_unmasked:
@@ -1107,9 +1109,9 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vsll.vx v10, v8, a1, v0.t
@@ -1172,6 +1174,7 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV32-NEXT:    vor.vv v8, v10, v8, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v4i64:
@@ -1242,9 +1245,9 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vsll.vx v10, v8, a1
@@ -1307,6 +1310,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vv v8, v10, v8
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v4i64_unmasked:
@@ -1379,9 +1383,9 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vsll.vx v12, v8, a1, v0.t
@@ -1444,6 +1448,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV32-NEXT:    vor.vv v8, v12, v8, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v8i64:
@@ -1514,9 +1519,9 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vsll.vx v12, v8, a1
@@ -1579,6 +1584,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vor.vv v8, v12, v8
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v8i64_unmasked:
@@ -1656,21 +1662,21 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV32-NEXT:    mul a1, a1, a2
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 24 * vlenb
-; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 16(sp)
+; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    sw a1, 40(sp)
+; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    sw a1, 32(sp)
+; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    sw a1, 24(sp)
+; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vsll.vx v16, v8, a1, v0.t
@@ -1770,7 +1776,9 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v15i64:
@@ -1847,7 +1855,9 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v = call <15 x i64> @llvm.vp.bitreverse.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl)
   ret <15 x i64> %v
@@ -1862,21 +1872,21 @@ define <15 x i64> @vp_bitreverse_v15i64_unmasked(<15 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    slli a1, a1, 3
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 8 * vlenb
-; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 16(sp)
+; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    sw a1, 40(sp)
+; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    sw a1, 32(sp)
+; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    sw a1, 24(sp)
+; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vsll.vx v16, v8, a1
@@ -1945,7 +1955,9 @@ define <15 x i64> @vp_bitreverse_v15i64_unmasked(<15 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v15i64_unmasked:
@@ -2023,21 +2035,21 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV32-NEXT:    mul a1, a1, a2
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 24 * vlenb
-; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 16(sp)
+; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    sw a1, 40(sp)
+; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    sw a1, 32(sp)
+; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    sw a1, 24(sp)
+; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vsll.vx v16, v8, a1, v0.t
@@ -2137,7 +2149,9 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v16i64:
@@ -2214,7 +2228,9 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v = call <16 x i64> @llvm.vp.bitreverse.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl)
   ret <16 x i64> %v
@@ -2229,21 +2245,21 @@ define <16 x i64> @vp_bitreverse_v16i64_unmasked(<16 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    slli a1, a1, 3
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 8 * vlenb
-; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 16(sp)
+; RV32-NEXT:    sw zero, 20(sp)
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    sw a1, 40(sp)
+; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    sw a1, 32(sp)
+; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    sw a1, 24(sp)
+; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vsll.vx v16, v8, a1
@@ -2312,7 +2328,9 @@ define <16 x i64> @vp_bitreverse_v16i64_unmasked(<16 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vp_bitreverse_v16i64_unmasked:
@@ -2463,7 +2481,9 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = call <128 x i16> @llvm.vp.bitreverse.v128i16(<128 x i16> %va, <128 x i1> %m, i32 %evl)
   ret <128 x i16> %v

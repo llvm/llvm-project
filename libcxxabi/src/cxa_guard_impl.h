@@ -91,7 +91,7 @@
 // the former.
 #ifdef BUILDING_CXA_GUARD
 #  include "abort_message.h"
-#  define ABORT_WITH_MESSAGE(...) ::abort_message(__VA_ARGS__)
+#  define ABORT_WITH_MESSAGE(...) ::__abort_message(__VA_ARGS__)
 #elif defined(TESTING_CXA_GUARD)
 #  define ABORT_WITH_MESSAGE(...) ::abort()
 #else
@@ -676,8 +676,8 @@ static_assert(CurrentImplementation != Implementation::Futex || PlatformSupports
 
 using SelectedImplementation = SelectImplementation<CurrentImplementation>::type;
 
-} // end namespace
-} // end namespace __cxxabiv1
+} // namespace
+} // namespace __cxxabiv1
 
 #if defined(__clang__)
 #  pragma clang diagnostic pop

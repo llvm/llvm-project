@@ -14,10 +14,10 @@
 
 #include "Configuration.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
-#include "Types.h"
 
 using namespace ompx;
 

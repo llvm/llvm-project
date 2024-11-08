@@ -89,6 +89,8 @@ public:
 
   SValKind getKind() const { return Kind; }
 
+  StringRef getKindStr() const;
+
   // This method is required for using SVal in a FoldingSetNode.  It
   // extracts a unique signature for this SVal object.
   void Profile(llvm::FoldingSetNodeID &ID) const {

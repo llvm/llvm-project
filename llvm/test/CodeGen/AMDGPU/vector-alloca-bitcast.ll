@@ -85,8 +85,7 @@ entry:
 ; GCN-LABEL: {{^}}vector_write_read_bitcast_to_float:
 ; GCN-ALLOCA: buffer_store_dword
 
-; GCN-PROMOTE: v_cmp_eq_u16
-; GCN-PROMOTE: v_cndmask
+; GCN-PROMOTE: s_cmp_eq_u32
 
 ; GCN: s_cbranch
 

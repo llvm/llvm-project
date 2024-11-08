@@ -18,7 +18,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <queue>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
@@ -61,32 +60,31 @@ const BinaryFunction *YAMLProfileWriter::setCSIDestination(
 }
 
 std::vector<YAMLProfileWriter::InlineTreeNode>
-YAMLProfileWriter::getInlineTree(const MCPseudoProbeDecoder &Decoder,
-                                 const MCDecodedPseudoProbeInlineTree *Root) {
+YAMLProfileWriter::collectInlineTree(
+    const MCPseudoProbeDecoder &Decoder,
+    const MCDecodedPseudoProbeInlineTree &Root) {
   auto getHash = [&](const MCDecodedPseudoProbeInlineTree &Node) {
     return Decoder.getFuncDescForGUID(Node.Guid)->FuncHash;
   };
-  assert(Root);
-  std::vector<InlineTreeNode> InlineTree;
-  InlineTreeNode Node{Root, Root->Guid, getHash(*Root), 0, 0};
-  InlineTree.emplace_back(Node);
+  std::vector<InlineTreeNode> InlineTree(
+      {InlineTreeNode{&Root, Root.Guid, getHash(Root), 0, 0}});
   uint32_t ParentId = 0;
   while (ParentId != InlineTree.size()) {
     const MCDecodedPseudoProbeInlineTree *Cur = InlineTree[ParentId].InlineTree;
-    for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren()) {
-      InlineTreeNode Node{&Child, Child.Guid, getHash(Child), ParentId,
-                          std::get<1>(Child.getInlineSite())};
-      InlineTree.emplace_back(Node);
-    }
+    for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren())
+      InlineTree.emplace_back(
+          InlineTreeNode{&Child, Child.Guid, getHash(Child), ParentId,
+                         std::get<1>(Child.getInlineSite())});
     ++ParentId;
   }
 
   return InlineTree;
 }
 
-std::tuple<yaml::bolt::PseudoProbeDesc, YAMLProfileWriter::InlineTreeDesc>
+std::tuple<yaml::bolt::ProfilePseudoProbeDesc,
+           YAMLProfileWriter::InlineTreeDesc>
 YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
-  yaml::bolt::PseudoProbeDesc Desc;
+  yaml::bolt::ProfilePseudoProbeDesc Desc;
   InlineTreeDesc InlineTree;
 
   for (const MCDecodedPseudoProbeInlineTree &TopLev :
@@ -125,7 +123,7 @@ YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
     Desc.GUID.emplace_back(GUID);
     InlineTree.GUIDIdxMap[GUID] = Index++;
     uint64_t Hash = Decoder.getFuncDescForGUID(GUID)->FuncHash;
-    Desc.GUIDHash.emplace_back(InlineTree.HashIdxMap[Hash]);
+    Desc.GUIDHashIdx.emplace_back(InlineTree.HashIdxMap[Hash]);
   }
 
   return {Desc, InlineTree};
@@ -176,39 +174,35 @@ YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
     else
       YamlBPI.InlineTreeNodes = Nodes;
     handleMask(BPI.BlockProbes, YamlBPI.BlockProbes, YamlBPI.BlockMask);
-    // Assume BlockMask == 1 if no other probes are set
-    if (YamlBPI.BlockMask == 1 && YamlBPI.CallProbes.empty() &&
-        YamlBPI.IndCallProbes.empty())
-      YamlBPI.BlockMask = 0;
   }
   return YamlProbes;
 }
 
-std::tuple<std::vector<yaml::bolt::InlineTreeInfo>,
+std::tuple<std::vector<yaml::bolt::InlineTreeNode>,
            YAMLProfileWriter::InlineTreeMapTy>
 YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
                                        const InlineTreeDesc &InlineTree,
                                        uint64_t GUID) {
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
-  std::vector<yaml::bolt::InlineTreeInfo> YamlInlineTree;
+  std::vector<yaml::bolt::InlineTreeNode> YamlInlineTree;
   auto It = InlineTree.TopLevelGUIDToInlineTree.find(GUID);
   if (It == InlineTree.TopLevelGUIDToInlineTree.end())
     return {YamlInlineTree, InlineTreeNodeId};
   const MCDecodedPseudoProbeInlineTree *Root = It->second;
-  assert(Root);
+  assert(Root && "Malformed TopLevelGUIDToInlineTree");
   uint32_t Index = 0;
   uint32_t PrevParent = 0;
   uint32_t PrevGUIDIdx = 0;
-  for (const auto &Node : getInlineTree(Decoder, Root)) {
+  for (const auto &Node : collectInlineTree(Decoder, *Root)) {
     InlineTreeNodeId[Node.InlineTree] = Index++;
     auto GUIDIdxIt = InlineTree.GUIDIdxMap.find(Node.GUID);
-    assert(GUIDIdxIt != InlineTree.GUIDIdxMap.end());
-    uint32_t GUIDIdx = GUIDIdxIt->second + 1;
+    assert(GUIDIdxIt != InlineTree.GUIDIdxMap.end() && "Malformed GUIDIdxMap");
+    uint32_t GUIDIdx = GUIDIdxIt->second;
     if (GUIDIdx == PrevGUIDIdx)
-      GUIDIdx = 0;
+      GUIDIdx = UINT32_MAX;
     else
       PrevGUIDIdx = GUIDIdx;
-    YamlInlineTree.emplace_back(yaml::bolt::InlineTreeInfo{
+    YamlInlineTree.emplace_back(yaml::bolt::InlineTreeNode{
         Node.ParentId - PrevParent, Node.InlineSite, GUIDIdx});
     PrevParent = Node.ParentId;
   }

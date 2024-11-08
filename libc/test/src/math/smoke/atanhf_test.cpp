@@ -13,8 +13,9 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
+
+using LIBC_NAMESPACE::Sign;
 
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -75,3 +76,27 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::atanhf(neg_inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcAtanhfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atanhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAtanhfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atanhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAtanhfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atanhf(min_denormal));
+}
+
+#endif

@@ -546,19 +546,6 @@ public:
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
-
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    if (RegClassID == ARM::MQPRRegClass.getID())
-      return ARM::PseudoARMInitUndefMQPR;
-    if (RegClassID == ARM::SPRRegClass.getID())
-      return ARM::PseudoARMInitUndefSPR;
-    if (RegClassID == ARM::DPR_VFP2RegClass.getID())
-      return ARM::PseudoARMInitUndefDPR_VFP2;
-    if (RegClassID == ARM::GPRRegClass.getID())
-      return ARM::PseudoARMInitUndefGPR;
-
-    llvm_unreachable("Unexpected register class.");
-  }
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the

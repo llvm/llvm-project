@@ -35,15 +35,15 @@ def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmRV32Zdinx">;
 
 def GPRPairAsFPR : AsmOperandClass {
   let Name = "GPRPairAsFPR";
-  let ParserMethod = "parseGPRAsFPR";
-  let PredicateMethod = "isGPRAsFPR";
+  let ParserMethod = "parseGPRPairAsFPR64";
+  let PredicateMethod = "isGPRPairAsFPR";
   let RenderMethod = "addRegOperands";
 }
 
 def GPRF64AsFPR : AsmOperandClass {
   let Name = "GPRF64AsFPR";
   let PredicateMethod = "isGPRAsFPR";
-  let ParserMethod = "parseGPRAsFPR";
+  let ParserMethod = "parseGPRAsFPR64";
   let RenderMethod = "addRegOperands";
 }
 
@@ -205,6 +205,7 @@ def PseudoQuietFLT_D : PseudoQuietFCMP<FPR64>;
 } // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtZdinx, IsRV64] in {
+def : InstAlias<"fmv.d $rd, $rs",  (FSGNJ_D_INX  FPR64INX:$rd, FPR64INX:$rs, FPR64INX:$rs)>;
 def : InstAlias<"fabs.d $rd, $rs", (FSGNJX_D_INX FPR64INX:$rd, FPR64INX:$rs, FPR64INX:$rs)>;
 def : InstAlias<"fneg.d $rd, $rs", (FSGNJN_D_INX FPR64INX:$rd, FPR64INX:$rs, FPR64INX:$rs)>;
 
@@ -219,6 +220,7 @@ def PseudoQuietFLT_D_INX : PseudoQuietFCMP<FPR64INX>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
+def : InstAlias<"fmv.d $rd, $rs",  (FSGNJ_D_IN32X  FPR64IN32X:$rd, FPR64IN32X:$rs, FPR64IN32X:$rs)>;
 def : InstAlias<"fabs.d $rd, $rs", (FSGNJX_D_IN32X FPR64IN32X:$rd, FPR64IN32X:$rs, FPR64IN32X:$rs)>;
 def : InstAlias<"fneg.d $rd, $rs", (FSGNJN_D_IN32X FPR64IN32X:$rd, FPR64IN32X:$rs, FPR64IN32X:$rs)>;
 
@@ -361,7 +363,7 @@ def : PatFprFpr<riscv_fsgnjx, FSGNJX_D_IN32X, FPR64IN32X, f64>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, (fneg FPR64IN32X:$rs2)),
           (FSGNJN_D_IN32X $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_IN32X $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
+          (FSGNJ_D_IN32X $rs1, (FCVT_D_S_IN32X $rs2, FRM_RNE))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64IN32X:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_IN32X $rs2, FRM_DYN))>;
 
@@ -396,6 +398,7 @@ foreach Ext = DExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_D, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_D, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_D, Ext>;
+  def : Pat<(f64 (fcanonicalize FPR64:$rs1)), (FMIN_D $rs1, $rs1)>;
 }
 
 /// Setcc
@@ -531,7 +534,7 @@ def : Pat<(store (f64 GPRPair:$rs2), (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$i
           (PseudoRV32ZdinxSD GPRPair:$rs2, GPR:$rs1, simm12:$imm12)>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
-let Predicates = [HasStdExtD] in {
+let Predicates = [HasStdExtD, IsRV32] in {
 
 // double->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, FRM_RTZ)>;
@@ -550,7 +553,7 @@ def : Pat<(i32 (any_lround FPR64:$rs1)), (FCVT_W_D $rs1, FRM_RMM)>;
 // [u]int->double.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1, FRM_RNE)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1, FRM_RNE)>;
-} // Predicates = [HasStdExtD]
+} // Predicates = [HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 

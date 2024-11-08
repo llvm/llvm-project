@@ -971,6 +971,25 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPSizesClause(NumSizes);
 }
 
+OMPPermutationClause *OMPPermutationClause::Create(const ASTContext &C,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc,
+                                                   ArrayRef<Expr *> Args) {
+  OMPPermutationClause *Clause = CreateEmpty(C, Args.size());
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setArgRefs(Args);
+  return Clause;
+}
+
+OMPPermutationClause *OMPPermutationClause::CreateEmpty(const ASTContext &C,
+                                                        unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumLoops));
+  return new (Mem) OMPPermutationClause(NumLoops);
+}
+
 OMPFullClause *OMPFullClause::Create(const ASTContext &C,
                                      SourceLocation StartLoc,
                                      SourceLocation EndLoc) {
@@ -1004,12 +1023,17 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
 OMPAllocateClause *
 OMPAllocateClause::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation LParenLoc, Expr *Allocator,
-                          SourceLocation ColonLoc, SourceLocation EndLoc,
-                          ArrayRef<Expr *> VL) {
+                          SourceLocation ColonLoc,
+                          OpenMPAllocateClauseModifier AllocatorModifier,
+                          SourceLocation AllocatorModifierLoc,
+                          SourceLocation EndLoc, ArrayRef<Expr *> VL) {
+
   // Allocate space for private variables and initializer expressions.
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
-  auto *Clause = new (Mem) OMPAllocateClause(StartLoc, LParenLoc, Allocator,
-                                             ColonLoc, EndLoc, VL.size());
+  auto *Clause = new (Mem) OMPAllocateClause(
+      StartLoc, LParenLoc, Allocator, ColonLoc, AllocatorModifier,
+      AllocatorModifierLoc, EndLoc, VL.size());
+
   Clause->setVarRefs(VL);
   return Clause;
 }
@@ -1125,16 +1149,12 @@ unsigned OMPClauseMappableExprCommon::getComponentsTotalNumber(
 
 unsigned OMPClauseMappableExprCommon::getUniqueDeclarationsTotalNumber(
     ArrayRef<const ValueDecl *> Declarations) {
-  unsigned TotalNum = 0u;
-  llvm::SmallPtrSet<const ValueDecl *, 8> Cache;
+  llvm::SmallPtrSet<const ValueDecl *, 8> UniqueDecls;
   for (const ValueDecl *D : Declarations) {
     const ValueDecl *VD = D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
-    if (Cache.count(VD))
-      continue;
-    ++TotalNum;
-    Cache.insert(VD);
+    UniqueDecls.insert(VD);
   }
-  return TotalNum;
+  return UniqueDecls.size();
 }
 
 OMPMapClause *OMPMapClause::Create(
@@ -1845,6 +1865,14 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
+  OS << "permutation(";
+  llvm::interleaveComma(Node->getArgsRefs(), OS, [&](const Expr *E) {
+    E->printPretty(OS, nullptr, Policy, 0);
+  });
+  OS << ")";
+}
+
 void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
 
 void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
@@ -2219,9 +2247,17 @@ void OMPClausePrinter::VisitOMPAllocateClause(OMPAllocateClause *Node) {
   if (Node->varlist_empty())
     return;
   OS << "allocate";
+  OpenMPAllocateClauseModifier Modifier = Node->getAllocatorModifier();
   if (Expr *Allocator = Node->getAllocator()) {
     OS << "(";
-    Allocator->printPretty(OS, nullptr, Policy, 0);
+    if (Modifier == OMPC_ALLOCATE_allocator) {
+      OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier);
+      OS << "(";
+      Allocator->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
+    } else {
+      Allocator->printPretty(OS, nullptr, Policy, 0);
+    }
     OS << ":";
     VisitOMPClauseList(Node, ' ');
   } else {

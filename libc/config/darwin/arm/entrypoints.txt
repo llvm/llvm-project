@@ -81,6 +81,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -94,16 +96,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.free
-
-    # stdio.h external entrypoints
-    libc.src.stdio.snprintf
-    libc.src.stdio.sprintf
-    libc.src.stdio.asprintf
-    libc.src.stdio.asprintf
-    libc.src.stdio.vprintf
-    libc.src.stdio.vsnprintf
-    libc.src.stdio.vsprintf
-    libc.src.stdio.vasprintf
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -148,9 +140,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cospif
     libc.src.math.dfmal
     libc.src.math.dsqrtl
-    libc.src.math.daddl
     libc.src.math.ddivl
-    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf
@@ -183,6 +173,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmul
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl

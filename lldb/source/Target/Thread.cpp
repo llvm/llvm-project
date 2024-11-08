@@ -12,8 +12,6 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
@@ -50,6 +48,8 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
@@ -619,6 +619,14 @@ void Thread::WillStop() {
 
 void Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
+    // First check whether this thread is going to "actually" resume at all.
+    // For instance, if we're stepping from one level to the next of an
+    // virtual inlined call stack, we just change the inlined call stack index
+    // without actually running this thread.  In that case, for this thread we
+    // shouldn't push a step over breakpoint plan or do that work.
+    if (GetCurrentPlan()->IsVirtualStep())
+      return;
+
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
     // what the current plan is.
@@ -2078,7 +2086,8 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
       GetSiginfo(*type_size);
   if (!data)
-    return ValueObjectConstResult::Create(&target, Status(data.takeError()));
+    return ValueObjectConstResult::Create(&target,
+                                          Status::FromError(data.takeError()));
 
   DataExtractor data_extractor{data.get()->getBufferStart(), data.get()->getBufferSize(),
     process_sp->GetByteOrder(), arch.GetAddressByteSize()};

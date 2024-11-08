@@ -549,7 +549,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         RecurseCopyBaton baton = {recurse_dst, this, Status()};
         FileSystem::Instance().EnumerateDirectory(
             src_dir_path, true, true, true, RecurseCopy_Callback, &baton);
-        return baton.error;
+        return std::move(baton.error);
       }
     } break;
 
@@ -1131,7 +1131,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   auto source_file = FileSystem::Instance().Open(source, source_open_options,
                                                  lldb::eFilePermissionsUserRW);
   if (!source_file)
-    return Status(source_file.takeError());
+    return Status::FromError(source_file.takeError());
   Status error;
 
   bool requires_upload = true;
@@ -1566,7 +1566,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
   //      resolved_module_spec.
 
   // Trying to find a module by UUID on local file system.
-  const Status error = module_resolver(resolved_module_spec);
+  Status error = module_resolver(resolved_module_spec);
   if (error.Success()) {
     if (module_sp && symbol_file_spec) {
       // Set the symbol file to the module if the locate modudle callback was

@@ -102,12 +102,28 @@ public:
   };
 
   // A class for matching inline tree nodes between profile and binary.
+  // Provides the mapping from profile inline tree node id to a
+  // corresponding binary MCDecodedPseudoProbeInlineTree node.
+  //
+  // The whole mapping process is the following:
+  //
+  //     (profile)                             (binary)
+  //      | blocks                                ^
+  //      v                                       |
+  // yaml::bolt::BinaryBasicBlockProfile ~= FlowBlock
+  //     ||| probes                               ^  (majority vote)
+  //      v                                      ||| BBPseudoProbeToBlock
+  // yaml::bolt::PseudoProbeInfo            MCDecodedPseudoProbe
+  //      | InlineTreeIndex                       ^
+  //      v                                       | probe id
+  // [ profile node id (uint32_t)    ->     MCDecodedPseudoProbeInlineTree *]
+  //                     InlineTreeNodeMapTy
   class InlineTreeNodeMapTy {
     DenseMap<uint32_t, const MCDecodedPseudoProbeInlineTree *> Map;
 
-    void mapInlineTreeNode(uint32_t ProfileNode,
+    void mapInlineTreeNode(uint32_t ProfileNodeIdx,
                            const MCDecodedPseudoProbeInlineTree *BinaryNode) {
-      auto Res = Map.try_emplace(ProfileNode, BinaryNode);
+      auto Res = Map.try_emplace(ProfileNodeIdx, BinaryNode);
       assert(Res.second &&
              "Duplicate mapping from profile node index to binary inline tree");
       (void)Res;
@@ -123,19 +139,22 @@ public:
       return It->second;
     }
 
-    // Match up YAML inline tree with binary inline tree.
-    // \p GetRootCallback is invoked for matching up the first YAML inline tree
-    // node and has the following signature:
-    // const MCDecodedPseudoProbeInlineTree *GetRootCallback(uint64_t RootGUID)
-    void matchInlineTrees(
+    // Match up \p YamlInlineTree with binary inline tree rooted at \p Root.
+    // Return the number of matched nodes.
+    //
+    // This function populates the mapping from profile inline tree node id to a
+    // corresponding binary MCDecodedPseudoProbeInlineTree node.
+    size_t matchInlineTrees(
         const MCPseudoProbeDecoder &Decoder,
-        const yaml::bolt::PseudoProbeDesc &YamlPD,
-        const std::vector<yaml::bolt::InlineTreeInfo> &YamlInlineTree,
-        llvm::function_ref<const MCDecodedPseudoProbeInlineTree *(uint64_t)>
-            GetRootCallback);
-
-    size_t size() const { return Map.size(); }
+        const std::vector<yaml::bolt::InlineTreeNode> &YamlInlineTree,
+        const MCDecodedPseudoProbeInlineTree *Root);
   };
+
+  // Partial probe matching specification: matched inline tree and corresponding
+  // BinaryFunctionProfile
+  using ProbeMatchSpec =
+      std::pair<InlineTreeNodeMapTy,
+                std::reference_wrapper<yaml::bolt::BinaryFunctionProfile>>;
 
 private:
   /// Adjustments for basic samples profiles (without LBR).
@@ -146,7 +165,7 @@ private:
   yaml::bolt::BinaryProfile YamlBP;
 
   /// Map a function ID from a YAML profile to a BinaryFunction object.
-  std::vector<BinaryFunction *> YamlProfileToFunction;
+  DenseMap<uint32_t, BinaryFunction *> YamlProfileToFunction;
 
   using FunctionSet = std::unordered_set<const BinaryFunction *>;
   /// To keep track of functions that have a matched profile before the profile
@@ -164,6 +183,10 @@ private:
   /// Map a common LTO prefix to a set of binary functions.
   StringMap<std::unordered_set<BinaryFunction *>> LTOCommonNameFunctionMap;
 
+  /// For pseudo probe function matching.
+  /// Map profile GUID to YAML profile.
+  std::unordered_map<uint64_t, yaml::bolt::BinaryFunctionProfile *> GUIDMap;
+
   /// Function names in profile.
   StringSet<> ProfileFunctionNames;
 
@@ -172,6 +195,10 @@ private:
 
   // Pseudo probe function GUID to inline tree node
   GUIDInlineTreeMap TopLevelGUIDToInlineTree;
+
+  // Mapping from a binary function to its partial match specification
+  // (YAML profile and its inline tree mapping to binary).
+  DenseMap<BinaryFunction *, std::vector<ProbeMatchSpec>> BFToProbeMatchSpecs;
 
   /// Populate \p Function profile with the one supplied in YAML format.
   bool parseFunctionProfile(BinaryFunction &Function,
@@ -183,7 +210,8 @@ private:
 
   /// Infer function profile from stale data (collected on older binaries).
   bool inferStaleProfile(BinaryFunction &Function,
-                         const yaml::bolt::BinaryFunctionProfile &YamlBF);
+                         const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                         const ArrayRef<ProbeMatchSpec> ProbeMatchSpecs);
 
   /// Initialize maps for profile matching.
   void buildNameMaps(BinaryContext &BC);
@@ -201,13 +229,8 @@ private:
   size_t matchWithCallGraph(BinaryContext &BC);
 
   /// Matches functions using the call graph.
+  /// Populates BF->partial probe match spec map.
   size_t matchWithPseudoProbes(BinaryContext &BC);
-
-  // Tries to match inline trees exactly, returns the number of matching nodes.
-  size_t matchInlineTrees(
-      const BinaryContext &BC, const yaml::bolt::PseudoProbeDesc &YamlPD,
-      const std::vector<yaml::bolt::InlineTreeInfo> &YamlInlineTree,
-      const MCDecodedPseudoProbeInlineTree *Node) const;
 
   /// Matches functions with similarly named profiled functions.
   size_t matchWithNameSimilarity(BinaryContext &BC);
@@ -215,8 +238,6 @@ private:
   /// Update matched YAML -> BinaryFunction pair.
   void matchProfileToFunction(yaml::bolt::BinaryFunctionProfile &YamlBF,
                               BinaryFunction &BF) {
-    if (YamlBF.Id >= YamlProfileToFunction.size())
-      YamlProfileToFunction.resize(YamlBF.Id + 1);
     YamlProfileToFunction[YamlBF.Id] = &BF;
     YamlBF.Used = true;
 

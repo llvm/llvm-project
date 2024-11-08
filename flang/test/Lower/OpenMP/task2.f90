@@ -18,12 +18,9 @@ subroutine omp_task_nested_allocatable_firstprivate
 !CHECK-SAME:        uniq_name = "_QFomp_task_nested_allocatable_firstprivateEa"} :
 !CHECK-SAME:        (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME:        (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!CHECK:           %[[PRIV_A_BOX:.*]] = fir.load %[[PRIV_A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK:           fir.if %{{.*}} {
-!CHECK:             %[[TEMP:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK:             hlfir.assign %[[TEMP]] to %[[PRIV_A_BOX]] temporary_lhs :
-!CHECK-SAME:          !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>
-!CHECK:           }
+!CHECK:           %[[TEMP:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK:           hlfir.assign %[[TEMP]] to %[[PRIV_A]]#0 realloc :
+!CHECK-SAME:        !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     !$omp task default(firstprivate)
       a = 2
 !CHECK:         }

@@ -665,8 +665,9 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   SchedClassID = *VariantSchedClassIDOrErr;
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
-  if (VariantDescriptors.contains(VDKey))
-    return *VariantDescriptors[VDKey];
+  auto It = VariantDescriptors.find(VDKey);
+  if (It != VariantDescriptors.end())
+    return *It->second;
 
   return createInstrDescImpl(MCI, IVec);
 }

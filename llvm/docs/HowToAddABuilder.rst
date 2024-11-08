@@ -276,4 +276,33 @@ Leave it on the staging buildmaster
   impacting the broader community.  The sponsoring organization simply
   has to take on the responsibility of all bisection and triage.
 
-  
+Managing a Worker From The Web Interface
+========================================
+
+Tasks such as clearing pending building requests can be done using
+the Buildbot web interface. To do this you must be recognised as an admin
+of the worker:
+
+* Set your public GitHub profile email to one that was included in the
+  ``admin`` information you set up on the worker. It does not matter if this
+  is your primary account email or a "verified email". To confirm this has been
+  done correctly, go to ``github.com/<your GitHub username>`` and you should
+  see the email address listed there.
+
+  A worker can have many admins, if they are listed in the form
+  ``First Last <first.last@example.com>, First2 Last2 <first2.last2@example.com>``.
+  You only need to have one of those addresses in your profile to be recognised
+  as an admin.
+
+  If you need to add an email address, you can edit the ``admin`` file and
+  restart the worker. You should see the new admin details in the web interface
+  shortly afterwards.
+
+* Connect GitHub to Buildbot by clicking on the "Anonymous" button on the
+  top right of the page, then "Login with GitHub" and authorise the app.
+
+Some tasks don't give immediate feedback, so if nothing happens within a short
+time, try again with the browser's web console open. Sometimes you will see
+403 errors and other messages that might indicate you don't have the correct
+details set up.
+

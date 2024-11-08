@@ -62,8 +62,7 @@ SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
     error = Status::FromErrorString("invalid SBFile");
     *bytes_read = 0;
   } else {
-    Status status = m_opaque_sp->Read(buf, num_bytes);
-    error.SetError(status);
+    error.SetError(m_opaque_sp->Read(buf, num_bytes));
     *bytes_read = num_bytes;
   }
   return error;
@@ -78,8 +77,7 @@ SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
     error = Status::FromErrorString("invalid SBFile");
     *bytes_written = 0;
   } else {
-    Status status = m_opaque_sp->Write(buf, num_bytes);
-    error.SetError(status);
+    error.SetError(m_opaque_sp->Write(buf, num_bytes));
     *bytes_written = num_bytes;
   }
   return error;
@@ -92,8 +90,7 @@ SBError SBFile::Flush() {
   if (!m_opaque_sp) {
     error = Status::FromErrorString("invalid SBFile");
   } else {
-    Status status = m_opaque_sp->Flush();
-    error.SetError(status);
+    error.SetError(m_opaque_sp->Flush());
   }
   return error;
 }
@@ -106,10 +103,8 @@ bool SBFile::IsValid() const {
 SBError SBFile::Close() {
   LLDB_INSTRUMENT_VA(this);
   SBError error;
-  if (m_opaque_sp) {
-    Status status = m_opaque_sp->Close();
-    error.SetError(status);
-  }
+  if (m_opaque_sp)
+    error.SetError(m_opaque_sp->Close());
   return error;
 }
 

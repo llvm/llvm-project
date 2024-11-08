@@ -121,10 +121,9 @@ define i32 @reduce_sum_16xi32_prefix2(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix3(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -160,10 +159,9 @@ define i32 @reduce_sum_16xi32_prefix4(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -183,10 +181,9 @@ define i32 @reduce_sum_16xi32_prefix5(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix6(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -208,10 +205,9 @@ define i32 @reduce_sum_16xi32_prefix6(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix7(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -263,10 +259,9 @@ define i32 @reduce_sum_16xi32_prefix8(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix9(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 9, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v12, zero
-; CHECK-NEXT:    vsetivli zero, 9, e32, m4, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -294,10 +289,9 @@ define i32 @reduce_sum_16xi32_prefix9(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix13(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 13, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v12, zero
-; CHECK-NEXT:    vsetivli zero, 13, e32, m4, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -334,10 +328,9 @@ define i32 @reduce_sum_16xi32_prefix13(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix14(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 14, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v12, zero
-; CHECK-NEXT:    vsetivli zero, 14, e32, m4, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -375,10 +368,9 @@ define i32 @reduce_sum_16xi32_prefix14(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix15(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 15, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v12, zero
-; CHECK-NEXT:    vsetivli zero, 15, e32, m4, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -499,10 +491,9 @@ define i32 @reduce_xor_16xi32_prefix2(ptr %p) {
 define i32 @reduce_xor_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_xor_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -537,7 +528,7 @@ define i32 @reduce_and_16xi32_prefix2(ptr %p) {
 define i32 @reduce_and_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_and_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, -1
@@ -576,10 +567,9 @@ define i32 @reduce_or_16xi32_prefix2(ptr %p) {
 define i32 @reduce_or_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_or_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredor.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -619,11 +609,10 @@ define i32 @reduce_smax_16xi32_prefix2(ptr %p) {
 define i32 @reduce_smax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_smax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredmax.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -658,12 +647,11 @@ define i32 @reduce_smin_16xi32_prefix2(ptr %p) {
 define i32 @reduce_smin_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_smin_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredmin.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -698,10 +686,9 @@ define i32 @reduce_umax_16xi32_prefix2(ptr %p) {
 define i32 @reduce_umax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_umax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredmaxu.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -736,7 +723,7 @@ define i32 @reduce_umin_16xi32_prefix2(ptr %p) {
 define i32 @reduce_umin_16xi32_prefix5(ptr %p) {
 ; RV32-LABEL: reduce_umin_16xi32_prefix5:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    vsetivli zero, 5, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, -1
@@ -747,11 +734,10 @@ define i32 @reduce_umin_16xi32_prefix5(ptr %p) {
 ;
 ; RV64-LABEL: reduce_umin_16xi32_prefix5:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    li a0, -1
 ; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV64-NEXT:    vredminu.vs v8, v8, v10
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -787,11 +773,10 @@ define float @reduce_fadd_16xf32_prefix2(ptr %p) {
 define float @reduce_fadd_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret

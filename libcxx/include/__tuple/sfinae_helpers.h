@@ -10,6 +10,7 @@
 #define _LIBCPP___TUPLE_SFINAE_HELPERS_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/tuple.h>
 #include <__tuple/make_tuple_types.h>
 #include <__tuple/tuple_element.h>
@@ -23,7 +24,6 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

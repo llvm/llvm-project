@@ -645,6 +645,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
      // It is sufficient to check value of getAsTemplateDecl.
      break;
 
+   case TemplateName::DeducedTemplate:
+     // FIXME: We can't reach here.
+     llvm_unreachable("unimplemented");
   }
 
   return true;
@@ -797,16 +800,6 @@ static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
   }
 
   return true;
-}
-
-// Determine structural equivalence of two instances of
-// HLSLAttributedResourceType::Attributes
-static bool
-IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                         const HLSLAttributedResourceType::Attributes &Attrs1,
-                         const HLSLAttributedResourceType::Attributes &Attrs2) {
-  return std::tie(Attrs1.ResourceClass, Attrs1.IsROV) ==
-         std::tie(Attrs2.ResourceClass, Attrs2.IsROV);
 }
 
 /// Determine structural equivalence of two types.
@@ -1112,9 +1105,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
             cast<HLSLAttributedResourceType>(T2)->getContainedType()))
       return false;
-    if (!IsStructurallyEquivalent(
-            Context, cast<HLSLAttributedResourceType>(T1)->getAttrs(),
-            cast<HLSLAttributedResourceType>(T2)->getAttrs()))
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs())
       return false;
     break;
 

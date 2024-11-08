@@ -627,7 +627,7 @@ int i = N::f();
 
 namespace cwg1479 { // cwg1479: 3.1
 #if __cplusplus >= 201103L
-  int operator"" _a(const char*, std::size_t = 0);
+  int operator""_a(const char*, std::size_t = 0);
   // since-cxx11-error@-1 {{literal operator cannot have a default argument}}
 #endif
 }

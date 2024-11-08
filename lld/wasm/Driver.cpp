@@ -47,6 +47,13 @@ namespace lld::wasm {
 Configuration *config;
 Ctx ctx;
 
+void errorOrWarn(const llvm::Twine &msg) {
+  if (config->noinhibitExec)
+    warn(msg);
+  else
+    error(msg);
+}
+
 void Ctx::reset() {
   objectFiles.clear();
   stubFiles.clear();
@@ -99,6 +106,16 @@ private:
 
   std::vector<InputFile *> files;
 };
+
+static bool hasZOption(opt::InputArgList &args, StringRef key) {
+  bool ret = false;
+  for (const auto *arg : args.filtered(OPT_z))
+    if (key == arg->getValue()) {
+      ret = true;
+      arg->claim();
+    }
+  return ret;
+}
 } // anonymous namespace
 
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -316,9 +333,15 @@ void LinkerDriver::addFile(StringRef path) {
     return;
   }
   case file_magic::bitcode:
-  case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref, "", 0, inLib));
+  case file_magic::wasm_object: {
+    auto obj = createObjectFile(mbref, "", 0, inLib);
+    if (config->isStatic && isa<SharedFile>(obj)) {
+      error("attempted static link of dynamic object " + path);
+      break;
+    }
+    files.push_back(obj);
     break;
+  }
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
       files.push_back(make<StubFile>(mbref));
@@ -467,6 +490,10 @@ getBuildId(opt::InputArgList &args) {
 
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
+  config->allowMultipleDefinition =
+      hasZOption(args, "muldefs") ||
+      args.hasFlag(OPT_allow_multiple_definition,
+                   OPT_no_allow_multiple_definition, false);
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->checkFeatures =
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
@@ -479,6 +506,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
   config->growableTable = args.hasArg(OPT_growable_table);
+  config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   if (args.hasArg(OPT_import_memory_with_name)) {
     config->memoryImport =
@@ -514,6 +542,7 @@ static void readConfigs(opt::InputArgList &args) {
   else
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 1);
@@ -541,6 +570,13 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOEmitIndexFiles = args.hasArg(OPT_thinlto_emit_index_files) ||
+                                  args.hasArg(OPT_thinlto_index_only) ||
+                                  args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   errorHandler().verbose = args.hasArg(OPT_verbose);
@@ -889,17 +925,6 @@ static void createSyntheticSymbols() {
             is64 ? i64ArgSignature : i32ArgSignature,
             "__wasm_init_tls"));
   }
-
-  if (ctx.isPic ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-    // For PIC code, or when dynamically importing addresses, we create
-    // synthetic functions that apply relocations.  These get called from
-    // __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_data_relocs",
-        WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
-  }
 }
 
 static void createOptionalSymbols() {
@@ -1173,7 +1198,7 @@ static void splitSections() {
 
 static bool isKnownZFlag(StringRef s) {
   // For now, we only support a very limited set of -z flags
-  return s.starts_with("stack-size=");
+  return s.starts_with("stack-size=") || s.starts_with("muldefs");
 }
 
 // Report a warning for an unknown -z option.
@@ -1201,11 +1226,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return;
   }
 
-  // Handle --version
-  if (args.hasArg(OPT_version) || args.hasArg(OPT_v)) {
+  // Handle -v or -version.
+  if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     lld::outs() << getLLDVersion() << "\n";
-    return;
-  }
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {
@@ -1230,6 +1253,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   readConfigs(args);
   setConfigs();
+
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (args.hasArg(OPT_v) && !args.hasArg(OPT_INPUT))
+    return;
+  if (args.hasArg(OPT_version))
+    return;
 
   createFiles(args);
   if (errorCount())
@@ -1356,6 +1386,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   processStubLibraries();
 
   writeWhyExtract();
+
+  // Bail out if normal linked output is skipped due to LTO.
+  if (config->thinLTOIndexOnly)
+    return;
 
   createOptionalSymbols();
 
