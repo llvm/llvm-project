@@ -13398,7 +13398,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // scheduled, and the last instruction is VL.back(). So we start with
   // VL.back() and iterate over schedule data until we reach the end of the
   // bundle. The end of the bundle is marked by null ScheduleData.
-  if (BlocksSchedules.count(BB)) {
+  if (BlocksSchedules.count(BB) && !E->isGather()) {
     Value *V = E->isOneOf(E->Scalars.back());
     if (doesNotNeedToBeScheduled(V))
       V = *find_if_not(E->Scalars, doesNotNeedToBeScheduled);
