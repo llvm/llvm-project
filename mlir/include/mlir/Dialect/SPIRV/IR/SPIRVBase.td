@@ -400,6 +400,7 @@ def SPV_INTEL_fp_fast_math_mode                  : I32EnumAttrCase<"SPV_INTEL_fp
 def SPV_INTEL_memory_access_aliasing             : I32EnumAttrCase<"SPV_INTEL_memory_access_aliasing", 4028>;
 def SPV_INTEL_split_barrier                      : I32EnumAttrCase<"SPV_INTEL_split_barrier", 4029>;
 def SPV_INTEL_bfloat16_conversion                : I32EnumAttrCase<"SPV_INTEL_bfloat16_conversion", 4031>;
+def SPV_INTEL_cache_controls                     : I32EnumAttrCase<"SPV_INTEL_cache_controls", 4032>;
 
 def SPV_NV_compute_shader_derivatives    : I32EnumAttrCase<"SPV_NV_compute_shader_derivatives", 5000>;
 def SPV_NV_cooperative_matrix            : I32EnumAttrCase<"SPV_NV_cooperative_matrix", 5001>;
@@ -459,7 +460,8 @@ def SPIRV_ExtensionAttr :
       SPV_INTEL_fpga_reg, SPV_INTEL_long_constant_composite, SPV_INTEL_optnone,
       SPV_INTEL_debug_module, SPV_INTEL_fp_fast_math_mode,
       SPV_INTEL_memory_access_aliasing, SPV_INTEL_split_barrier,
-      SPV_INTEL_bfloat16_conversion, SPV_NV_compute_shader_derivatives, SPV_NV_cooperative_matrix,
+      SPV_INTEL_bfloat16_conversion, SPV_INTEL_cache_controls,
+      SPV_NV_compute_shader_derivatives, SPV_NV_cooperative_matrix,
       SPV_NV_fragment_shader_barycentric, SPV_NV_geometry_shader_passthrough,
       SPV_NV_mesh_shader, SPV_NV_ray_tracing, SPV_NV_sample_mask_override_coverage,
       SPV_NV_shader_image_footprint, SPV_NV_shader_sm_builtins,
@@ -1415,6 +1417,12 @@ def SPIRV_C_Bfloat16ConversionINTEL                         : I32EnumAttrCase<"B
   ];
 }
 
+def SPIRV_C_CacheControlsINTEL : I32EnumAttrCase<"CacheControlsINTEL", 6441> {
+  list<Availability> availability = [
+    Extension<[SPV_INTEL_cache_controls]>
+  ];
+}
+
 def SPIRV_CapabilityAttr :
     SPIRV_I32EnumAttr<"Capability", "valid SPIR-V Capability", "capability", [
       SPIRV_C_Matrix, SPIRV_C_Addresses, SPIRV_C_Linkage, SPIRV_C_Kernel, SPIRV_C_Float16,
@@ -1507,7 +1515,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_UniformTexelBufferArrayNonUniformIndexing,
       SPIRV_C_StorageTexelBufferArrayNonUniformIndexing,
       SPIRV_C_ShaderViewportIndexLayerEXT, SPIRV_C_ShaderViewportMaskNV,
-      SPIRV_C_ShaderStereoViewNV, SPIRV_C_Bfloat16ConversionINTEL
+      SPIRV_C_ShaderStereoViewNV, SPIRV_C_Bfloat16ConversionINTEL,
+      SPIRV_C_CacheControlsINTEL
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
@@ -2623,6 +2632,16 @@ def SPIRV_D_MediaBlockIOINTEL                  : I32EnumAttrCase<"MediaBlockIOIN
     Capability<[SPIRV_C_VectorComputeINTEL]>
   ];
 }
+def SPIRV_D_CacheControlLoadINTEL              : I32EnumAttrCase<"CacheControlLoadINTEL", 6442> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_CacheControlsINTEL]>
+  ];
+}
+def SPIRV_D_CacheControlStoreINTEL             : I32EnumAttrCase<"CacheControlStoreINTEL", 6443> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_CacheControlsINTEL]>
+  ];
+}
 
 def SPIRV_DecorationAttr :
     SPIRV_I32EnumAttr<"Decoration", "valid SPIR-V Decoration", "decoration", [
@@ -2658,7 +2677,8 @@ def SPIRV_DecorationAttr :
       SPIRV_D_FuseLoopsInFunctionINTEL, SPIRV_D_AliasScopeINTEL, SPIRV_D_NoAliasINTEL,
       SPIRV_D_BufferLocationINTEL, SPIRV_D_IOPipeStorageINTEL,
       SPIRV_D_FunctionFloatingPointModeINTEL, SPIRV_D_SingleElementVectorINTEL,
-      SPIRV_D_VectorComputeCallableFunctionINTEL, SPIRV_D_MediaBlockIOINTEL
+      SPIRV_D_VectorComputeCallableFunctionINTEL, SPIRV_D_MediaBlockIOINTEL,
+      SPIRV_D_CacheControlLoadINTEL, SPIRV_D_CacheControlStoreINTEL
     ]>;
 
 def SPIRV_D_1D          : I32EnumAttrCase<"Dim1D", 0> {
@@ -4090,6 +4110,32 @@ def SPIRV_KHR_CooperativeMatrixOperandsAttr :
       SPIRV_KHR_CMO_None, SPIRV_KHR_CMO_MatrixA_Signed,
       SPIRV_KHR_CMO_MatrixB_Signed, SPIRV_KHR_CMO_MatrixC_Signed,
       SPIRV_KHR_CMO_Result_Signed, SPIRV_KHR_CMO_AccSat
+    ]>;
+
+def SPIRV_INTEL_LCC_Uncached            : I32EnumAttrCase<"Uncached", 0>;
+def SPIRV_INTEL_LCC_Cached              : I32EnumAttrCase<"Cached", 1>;
+def SPIRV_INTEL_LCC_Streaming           : I32EnumAttrCase<"Streaming", 2>;
+def SPIRV_INTEL_LCC_InvalidateAfterRead : I32EnumAttrCase<"InvalidateAfterR", 3>;
+def SPIRV_INTEL_LCC_ConstCached         : I32EnumAttrCase<"ConstCached", 4>;
+
+def SPIRV_INTEL_LoadCacheControlAttr :
+    SPIRV_I32EnumAttr<"LoadCacheControl", "valid SPIR-V LoadCacheControl",
+                      "load_cache_control", [
+      SPIRV_INTEL_LCC_Uncached, SPIRV_INTEL_LCC_Cached,
+      SPIRV_INTEL_LCC_Streaming, SPIRV_INTEL_LCC_InvalidateAfterRead,
+      SPIRV_INTEL_LCC_ConstCached
+    ]>;
+
+def SPIRV_INTEL_SCC_Uncached     : I32EnumAttrCase<"Uncached", 0>;
+def SPIRV_INTEL_SCC_WriteThrough : I32EnumAttrCase<"WriteThrough", 1>;
+def SPIRV_INTEL_SCC_WriteBack    : I32EnumAttrCase<"WriteBack", 2>;
+def SPIRV_INTEL_SCC_Streaming    : I32EnumAttrCase<"Streaming", 3>;
+
+def SPIRV_INTEL_StoreCacheControlAttr :
+    SPIRV_I32EnumAttr<"StoreCacheControl", "valid SPIR-V StoreCacheControl",
+                      "store_cache_control", [
+      SPIRV_INTEL_SCC_Uncached, SPIRV_INTEL_SCC_WriteThrough,
+      SPIRV_INTEL_SCC_WriteBack, SPIRV_INTEL_SCC_Streaming
     ]>;
 
 //===----------------------------------------------------------------------===//
