@@ -6966,6 +6966,10 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
     auto *ArgStructType =
         dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
 
+    assert(ArgStructType &&
+           "Unable to find the struct type corresponding to the alloca "
+           "instruction");
+
     AllocaInst *NewArgStructAlloca =
         Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
     Value *TaskT = ProxyFn->getArg(1);
