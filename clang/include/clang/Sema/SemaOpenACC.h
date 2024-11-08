@@ -34,11 +34,6 @@ class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 private:
-  /// A collection of loop constructs in the compute construct scope that
-  /// haven't had their 'parent' compute construct set yet. Entires will only be
-  /// made to this list in the case where we know the loop isn't an orphan.
-  llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
-
   struct ComputeConstructInfo {
     /// Which type of compute construct we are inside of, which we can use to
     /// determine whether we should add loops to the above collection.  We can
@@ -768,7 +763,6 @@ public:
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
     SourceLocation OldLoopWithoutSeqLoc;
-    llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
     llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
     LoopInConstructRAII LoopRAII;
 

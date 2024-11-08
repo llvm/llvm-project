@@ -6,10 +6,10 @@ tbx z0.b, z1.b, z2.b
 // CHECK: error: instruction requires: sve2 or sme
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
 
-.arch_extension sve-aes
-.arch_extension nosve-aes
+.arch_extension sve2-aes
+.arch_extension nosve2-aes
 aesd z23.b, z23.b, z13.b
-// CHECK: error: instruction requires: sve2 sve-aes
+// CHECK: error: instruction requires: sve2-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
 .arch_extension sve2-sm4
