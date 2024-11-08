@@ -82,10 +82,7 @@ def add_runtime(name):
 # available. This is darwin specific since it's currently only needed on darwin.
 # Stolen from llvm/test/lit.cfg.py with a few modifications
 def get_asan_rtlib():
-    if (
-        not "asan" in config.available_features
-        or not "Darwin" in config.host_os
-    ):
+    if not "asan" in config.available_features or not "Darwin" in config.host_os:
         return ""
     try:
         import glob
@@ -264,7 +261,9 @@ if "asan" in config.available_features:
             python_executable = real_python_executable
             # Ensure Python is not wrapped, for DYLD_INSERT_LIBRARIES to take effect
             lit_config.note(
-                "Using {} instead of {}".format(python_executable, config.python_executable)
+                "Using {} instead of {}".format(
+                    python_executable, config.python_executable
+                )
             )
 
         asan_rtlib = get_asan_rtlib()
