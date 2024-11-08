@@ -19,7 +19,7 @@
 define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x3000
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    v_add_u32_e32 v0, 64, v1
@@ -47,7 +47,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
+; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; MUBUF-NEXT:    v_mov_b32_e32 v6, 0
 ; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v4
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v5, vcc
@@ -58,8 +58,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ;
 ; FLATSCR-LABEL: local_stack_offset_uses_sp:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0
@@ -81,7 +81,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x3000
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s0 offset:64 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
+; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, 0
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; FLATSCR-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
@@ -201,7 +201,7 @@ entry:
 define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp_flat:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 s0, s0, s15
+; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0x4000
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
@@ -251,7 +251,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; MUBUF-NEXT:    v_mov_b32_e32 v12, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v3, v10, s[0:3], 0 offen offset:12 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
+; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; MUBUF-NEXT:    buffer_load_dword v10, v11, s[0:3], 0 offen offset:16 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
@@ -272,8 +272,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ;
 ; FLATSCR-LABEL: local_stack_offset_uses_sp_flat:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s6, s11
-; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
+; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 offset:1024
@@ -298,7 +298,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[4:7], off, s0 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
+; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v12, 0
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v6
 ; FLATSCR-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v7, vcc

@@ -420,13 +420,47 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
         "region."_err_en_US);
   }
 }
+void OmpStructureChecker::HasInvalidLoopBinding(
+    const parser::OpenMPLoopConstruct &x) {
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+
+  auto teamsBindingChecker = [&](parser::MessageFixedText msg) {
+    const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+    for (const auto &clause : clauseList.v) {
+      if (const auto *bindClause{
+              std::get_if<parser::OmpClause::Bind>(&clause.u)}) {
+        if (bindClause->v.v != parser::OmpBindClause::Type::Teams) {
+          context_.Say(beginDir.source, msg);
+        }
+      }
+    }
+  };
+
+  if (llvm::omp::Directive::OMPD_loop == beginDir.v &&
+      CurrentDirectiveIsNested() &&
+      OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}.test(
+          GetContextParent().directive)) {
+    teamsBindingChecker(
+        "`BIND(TEAMS)` must be specified since the `LOOP` region is "
+        "strictly nested inside a `TEAMS` region."_err_en_US);
+  }
+
+  if (OmpDirectiveSet{
+          llvm::omp::OMPD_teams_loop, llvm::omp::OMPD_target_teams_loop}
+          .test(beginDir.v)) {
+    teamsBindingChecker(
+        "`BIND(TEAMS)` must be specified since the `LOOP` directive is "
+        "combined with a `TEAMS` construct."_err_en_US);
+  }
+}
 
 void OmpStructureChecker::HasInvalidTeamsNesting(
     const llvm::omp::Directive &dir, const parser::CharBlock &source) {
   if (!llvm::omp::nestedTeamsAllowedSet.test(dir)) {
     context_.Say(source,
-        "Only `DISTRIBUTE` or `PARALLEL` regions are allowed to be strictly "
-        "nested inside `TEAMS` region."_err_en_US);
+        "Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be "
+        "strictly nested inside `TEAMS` region."_err_en_US);
   }
 }
 
@@ -589,6 +623,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   CheckLoopItrVariableIsInt(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
+  HasInvalidLoopBinding(x);
   if (CurrentDirectiveIsNested() &&
       llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
     HasInvalidTeamsNesting(beginDir.v, beginDir.source);
@@ -2687,11 +2722,19 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
   if (dir == llvm::omp::Directive::OMPD_depobj) {
-    if (version < 52) {
-      context_.Say(GetContext().clauseSource,
-          "The object parameter in DESTROY clause in DEPOPJ construct "
-          "was introduced in %s"_port_en_US,
-          ThisVersion(52));
+    unsigned argSince{52}, noargDeprecatedIn{52};
+    if (x.v) {
+      if (version < argSince) {
+        context_.Say(GetContext().clauseSource,
+            "The object parameter in DESTROY clause on DEPOPJ construct is not allowed in %s, %s"_warn_en_US,
+            ThisVersion(version), TryVersion(argSince));
+      }
+    } else {
+      if (version >= noargDeprecatedIn) {
+        context_.Say(GetContext().clauseSource,
+            "The DESTROY clause without argument on DEPOBJ construct is deprecated in %s"_warn_en_US,
+            ThisVersion(noargDeprecatedIn));
+      }
     }
   }
 }

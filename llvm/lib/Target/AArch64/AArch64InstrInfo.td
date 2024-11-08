@@ -149,8 +149,8 @@ def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p1), "sve2p1">;
-def HasSVE2AES       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2AES()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
+def HasSVEAES        : Predicate<"Subtarget->hasSVEAES()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVEAES), "sve-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SHA3()">,
@@ -2155,6 +2155,12 @@ let Defs = [FPSR] in
 def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpsr i64:$val)]>,
                PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
+               Sched<[WriteSys]>;
+
+let Defs = [FPMR] in
+def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpmr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda22, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -5372,7 +5378,7 @@ let isPseudo = 1 in {
 //===----------------------------------------------------------------------===//
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1, isEHScopeReturn = 1, isPseudo = 1 in {
-   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret)]>, Sched<[]>;
+   def CLEANUPRET : Pseudo<(outs), (ins), [(cleanupret bb)]>, Sched<[]>;
    let usesCustomInserter = 1 in
      def CATCHRET : Pseudo<(outs), (ins am_brcond:$dst, am_brcond:$src), [(catchret bb:$dst, bb:$src)]>,
                     Sched<[]>;
