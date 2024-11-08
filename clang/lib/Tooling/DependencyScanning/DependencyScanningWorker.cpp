@@ -480,6 +480,8 @@ public:
     // This will prevent us compiling individual modules asynchronously since
     // FileManager is not thread-safe, but it does improve performance for now.
     ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
+    if (DepCASFS)
+      ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(OptimizeArgs & ScanningOptimizations::VFS);
