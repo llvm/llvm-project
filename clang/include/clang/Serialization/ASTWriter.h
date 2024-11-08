@@ -428,6 +428,7 @@ private:
   using SpecializationUpdateMap =
       llvm::MapVector<const NamedDecl *, SmallVector<const Decl *>>;
   SpecializationUpdateMap SpecializationsUpdates;
+  SpecializationUpdateMap PartialSpecializationsUpdates;
 
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
@@ -580,9 +581,10 @@ private:
 
   void GenerateSpecializationInfoLookupTable(
       const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
-      llvm::SmallVectorImpl<char> &LookupTable);
+      llvm::SmallVectorImpl<char> &LookupTable, bool IsPartial);
   uint64_t WriteSpecializationInfoLookupTable(
-      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations);
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      bool IsPartial);
   void GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
@@ -598,7 +600,7 @@ private:
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
   void WriteSpecialDeclRecords(Sema &SemaRef);
-  void WriteSpecializationsUpdates();
+  void WriteSpecializationsUpdates(bool IsPartial);
   void WriteDeclUpdatesBlocks(ASTContext &Context,
                               RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(ASTContext &Context,
@@ -629,6 +631,7 @@ private:
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
   unsigned DeclSpecializationsAbbrev = 0;
+  unsigned DeclPartialSpecializationsAbbrev = 0;
 
   unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
   unsigned DeclTemplateCXXMethodAbbrev = 0;

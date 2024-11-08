@@ -119,20 +119,7 @@ struct DeclContextLookupTable {
   MultiOnDiskHashTable<ASTDeclContextNameLookupTrait> Table;
 };
 
-struct LazySpecializationInfo {
-  // The Decl ID for the specialization.
-  GlobalDeclID ID;
-  // Whether or not this specialization is partial.
-  bool IsPartial;
-
-  bool operator==(const LazySpecializationInfo &Other) const {
-    assert(ID != Other.ID || IsPartial == Other.IsPartial);
-    return ID == Other.ID;
-  }
-  // Records the size record in OnDiskHashTable.
-  // sizeof() may return 8 due to align requirements.
-  static constexpr unsigned Length = sizeof(DeclID) + sizeof(IsPartial);
-};
+using LazySpecializationInfo = GlobalDeclID;
 
 /// Class that performs lookup to specialized decls.
 class LazySpecializationInfoLookupTrait {
@@ -382,33 +369,5 @@ using HeaderFileInfoLookupTable =
 } // namespace serialization
 
 } // namespace clang
-
-namespace llvm {
-// ID is unique in LazySpecializationInfo, it is redundant to calculate
-// IsPartial.
-template <>
-struct DenseMapInfo<clang::serialization::reader::LazySpecializationInfo> {
-  using LazySpecializationInfo =
-      clang::serialization::reader::LazySpecializationInfo;
-  using Wrapped = DenseMapInfo<clang::serialization::DeclID>;
-
-  static inline LazySpecializationInfo getEmptyKey() {
-    return {(clang::GlobalDeclID)Wrapped::getEmptyKey(), false};
-  }
-
-  static inline LazySpecializationInfo getTombstoneKey() {
-    return {(clang::GlobalDeclID)Wrapped::getTombstoneKey(), false};
-  }
-
-  static unsigned getHashValue(const LazySpecializationInfo &Key) {
-    return Wrapped::getHashValue(Key.ID.getRawValue());
-  }
-
-  static bool isEqual(const LazySpecializationInfo &LHS,
-                      const LazySpecializationInfo &RHS) {
-    return LHS.ID == RHS.ID;
-  }
-};
-} // end namespace llvm
 
 #endif // LLVM_CLANG_LIB_SERIALIZATION_ASTREADERINTERNALS_H

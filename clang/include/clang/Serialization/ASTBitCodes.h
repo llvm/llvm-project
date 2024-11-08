@@ -737,8 +737,10 @@ enum ASTRecordTypes {
 
   /// Record code for updated specialization
   UPDATE_SPECIALIZATION = 73,
-  
+
   CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
+
+  CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
 };
 
 /// Record types used within a source manager block.
@@ -1505,11 +1507,14 @@ enum DeclCode {
   /// A HLSLBufferDecl record.
   DECL_HLSL_BUFFER,
 
+  /// An ImplicitConceptSpecializationDecl record.
+  DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
+
   // A decls specilization record.
   DECL_SPECIALIZATIONS,
 
-  /// An ImplicitConceptSpecializationDecl record.
-  DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
+  // A decls specilization record.
+  DECL_PARTIAL_SPECIALIZATIONS,
 
   DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
 };

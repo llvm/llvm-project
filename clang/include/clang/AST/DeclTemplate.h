@@ -806,13 +806,6 @@ protected:
     /// was explicitly specialized.
     llvm::PointerIntPair<RedeclarableTemplateDecl *, 1, bool>
         InstantiatedFromMember;
-
-    /// If non-null, points to an array of specializations (including
-    /// partial specializations) known only by their external declaration IDs.
-    ///
-    /// The first value in the array is the number of specializations/partial
-    /// specializations that follow.
-    LazySpecializationInfo *LazySpecializations = nullptr;
   };
 
   /// Pointer to the common data shared by all declarations of this

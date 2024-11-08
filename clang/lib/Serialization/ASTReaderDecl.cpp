@@ -304,7 +304,7 @@ public:
   static void markIncompleteDeclChainImpl(...);
 
   void ReadSpecializations(ModuleFile &M, Decl *D,
-                           llvm::BitstreamCursor &DeclsCursor);
+                           llvm::BitstreamCursor &DeclsCursor, bool IsPartial);
 
   void ReadFunctionDefinition(FunctionDecl *FD);
   void Visit(Decl *D);
@@ -2393,9 +2393,11 @@ void ASTDeclReader::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 }
 
 void ASTDeclReader::ReadSpecializations(ModuleFile &M, Decl *D,
-                                        llvm::BitstreamCursor &DeclsCursor) {
+                                        llvm::BitstreamCursor &DeclsCursor,
+                                        bool IsPartial) {
   uint64_t Offset = ReadLocalOffset();
-  bool Failed = Reader.ReadSpecializations(M, DeclsCursor, Offset, D);
+  bool Failed =
+      Reader.ReadSpecializations(M, DeclsCursor, Offset, D, IsPartial);
   (void)Failed;
   assert(!Failed);
 }
@@ -2438,7 +2440,8 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (ThisDeclID == Redecl.getFirstID()) {
     // This ClassTemplateDecl owns a CommonPtr; read it to keep track of all of
     // the specializations.
-    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/false);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/true);
   }
 
   if (D->getTemplatedDecl()->TemplateOrInstantiation) {
@@ -2464,7 +2467,8 @@ void ASTDeclReader::VisitVarTemplateDecl(VarTemplateDecl *D) {
   if (ThisDeclID == Redecl.getFirstID()) {
     // This VarTemplateDecl owns a CommonPtr; read it to keep track of all of
     // the specializations.
-    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/false);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/true);
   }
 }
 
@@ -2563,7 +2567,7 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
 
   if (ThisDeclID == Redecl.getFirstID()) {
     // This FunctionTemplateDecl owns a CommonPtr; read it.
-    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
+    ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/false);
   }
 }
 
@@ -3854,6 +3858,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
   case DECL_SPECIALIZATIONS:
+  case DECL_PARTIAL_SPECIALIZATIONS:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
   case DECL_TYPEDEF:
     D = TypedefDecl::CreateDeserialized(Context, ID);
@@ -4341,7 +4346,17 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     PendingSpecializationsUpdates.erase(I);
 
     for (const auto &Update : SpecializationUpdates)
-      AddSpecializations(D, Update.Data, *Update.Mod);
+      AddSpecializations(D, Update.Data, *Update.Mod, /*IsPartial=*/false);
+  }
+
+  // Load the pending specializations update for this decl, if it has any.
+  if (auto I = PendingPartialSpecializationsUpdates.find(ID);
+      I != PendingPartialSpecializationsUpdates.end()) {
+    auto SpecializationUpdates = std::move(I->second);
+    PendingPartialSpecializationsUpdates.erase(I);
+
+    for (const auto &Update : SpecializationUpdates)
+      AddSpecializations(D, Update.Data, *Update.Mod, /*IsPartial=*/true);
   }
 }
 
