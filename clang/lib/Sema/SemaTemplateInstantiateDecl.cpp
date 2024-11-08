@@ -4694,6 +4694,10 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                       ParmVarDecl *Param) {
   assert(Param->hasUninstantiatedDefaultArg());
 
+  if (FD->getFriendObjectKind() != Decl::FOK_None &&
+      !FD->getTemplateInstantiationPattern())
+    return true;
+
   // Instantiate the expression.
   //
   // FIXME: Pass in a correct Pattern argument, otherwise
