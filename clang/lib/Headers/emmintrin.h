@@ -4626,7 +4626,8 @@ _mm_movepi64_pi64(__m128i __a) {
 ///    A 64-bit value.
 /// \returns A 128-bit integer vector. The lower 64 bits contain the value from
 ///    the operand. The upper 64 bits are assigned zeros.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_movpi64_epi64(__m64 __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movpi64_epi64(__m64 __a) {
   return __builtin_shufflevector((__v1di)__a, _mm_setzero_si64(), 0, 1);
 }
 
