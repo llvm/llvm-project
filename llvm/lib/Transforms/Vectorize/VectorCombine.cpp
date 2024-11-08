@@ -2809,9 +2809,11 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost =
-      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
+      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx) +
+      TTI.getVectorInstrCost(*Ins, VecTy, CostKind, InsIdx);
+
   InstructionCost NewCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask);
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, VecTy, Mask);
 
   if (OldCost < NewCost)
     return false;
