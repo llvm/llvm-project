@@ -10,7 +10,6 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
-
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLineEntry.h"

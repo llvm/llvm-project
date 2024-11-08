@@ -11,11 +11,8 @@
 
 #include "Breakpoint.h"
 #include "DAPForward.h"
-
 #include "lldb/API/SBError.h"
-
 #include "llvm/ADT/StringRef.h"
-
 #include <cstdint>
 #include <string>
 #include <vector>

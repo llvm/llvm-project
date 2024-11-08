@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SourceBreakpoint.h"
-
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "JSONUtils.h"
-
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
@@ -19,10 +17,9 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-enumerations.h"
-
-#include <assert.h>
+#include <cassert>
 #include <cctype>
-#include <stdlib.h>
+#include <cstdlib>
 #include <utility>
 
 namespace lldb_dap {

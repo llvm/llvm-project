@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Watchpoint.h"
-
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBTarget.h"
