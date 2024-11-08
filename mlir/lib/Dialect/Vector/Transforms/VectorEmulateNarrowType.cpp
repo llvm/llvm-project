@@ -323,11 +323,14 @@ struct ConvertVectorMaskedStore final
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndicesOfr);
 
     // Load the whole data and use arith.select to handle the corner cases.
-    // E.g., given these input i4 values:
     //
-    //   %res = vector.maskedload %0[%c0, %c0], %mask, %val_to_store :
+    // As an example, for this masked store:
     //
-    //   %mask = [1, 1, 1, 1, 1, 1, 1, 0]                     (8 * i1)
+    //   vector.maskedstore %0[%c0, %c0], %mask, %val_to_store
+    //
+    // and given these input i4 values:
+    //
+    //   %mask = [1, 1, 1, 1, 1, 0, 0, 0]                     (8 * i1)
     //   %0[%c0, %c0] =
     //      [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]          (8 * i4)
     //   %val_to_store =
@@ -335,18 +338,19 @@ struct ConvertVectorMaskedStore final
     //
     // we'll have the following i4 output:
     //
-    //    expected output: [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x8]
+    //    expected output: [0x9, 0xA, 0xB, 0xC, 0xD, 0x6, 0x7, 0x8]
     //
     // Emulating the above using i8 will give:
     //
-    //    %compressed_mask = [1, 1, 1, 1]                     (4 * i1)
-    //    %maskedload = [0x12, 0x34, 0x56, 0x78]              (4 * i8)
-    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8] (8 * i4)
+    //    %compressed_mask = [1, 1, 1, 0]                     (4 * i1)
+    //    %maskedload = [0x12, 0x34, 0x56, 0x00]              (4 * i8)
+    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, 0x0] (8 * i4)
     //    %select_using_shifted_mask =
-    //      [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x8]          (8 * i4)
-    //    %packed_data = [0x9A, 0xBC, 0xDE, 0xF8]             (4 * i8)
+    //      [0x9, 0xA, 0xB, 0xC, 0xD, 0x6, 0x0, 0x0]          (8 * i4)
+    //    %packed_data = [0x9A, 0xBC, 0xD6, 0x00]             (4 * i8)
     //
-    // Using the new mask to store %packed_data results in expected output.
+    // Using the compressed mask to store %packed_data results in expected
+    // output.
     FailureOr<Operation *> newMask =
         getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale);
     if (failed(newMask))
