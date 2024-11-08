@@ -631,11 +631,9 @@ struct ConvertVectorMaskedLoad final
                                        *foldedIntraVectorOffset, origElements);
       }
     } else {
-      auto resultVector = rewriter.create<arith::ConstantOp>(
-          loc, op.getType(), rewriter.getZeroAttr(op.getType()));
       result = dynamicallyExtractSubVector(
-          rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
-          linearizedInfo.intraDataOffset, origElements);
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(result),
+          op.getPassThru(), linearizedInfo.intraDataOffset, origElements);
     }
     rewriter.replaceOp(op, result);
 
