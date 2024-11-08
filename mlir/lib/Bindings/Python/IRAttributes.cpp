@@ -1101,10 +1101,11 @@ private:
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
                              const char *explicitFormat = nullptr) {
-    // Buffer is configured for read-only access below
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    // Prepare the data for the buffer_info.
+    // Buffer is configured for read-only access below.
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
-    intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the shape for the buffer_info.
     SmallVector<intptr_t, 4> shape;
     for (intptr_t i = 0; i < rank; ++i)
