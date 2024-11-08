@@ -8,6 +8,20 @@ macro(pythonize_bool var)
   endif()
 endmacro()
 
+set(LIBUNWIND_TESTING_INSTALL_PREFIX "${LIBUNWIND_BINARY_DIR}/test-suite-install")
+add_custom_target(libunwind-install-unwind-for-testing
+  DEPENDS unwind-headers
+          unwind
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=unwind-headers
+          -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=unwind
+          -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+
 pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBUNWIND_ENABLE_GCS)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
@@ -48,4 +62,4 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-unwind "Running libunwind tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS unwind)
+  DEPENDS libunwind-install-unwind-for-testing)

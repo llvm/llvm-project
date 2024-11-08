@@ -119,6 +119,7 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
+    SameSign = 1 << 21       // Both operands have the same sign.
   };
 
 private:
@@ -728,7 +729,7 @@ public:
     return make_range(operands_begin(),
                       operands_begin() + getNumExplicitDefs());
   }
-  /// Returns a range that includes all operands that are register uses.
+  /// Returns a range that includes all operands which may be register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
     return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
@@ -1764,8 +1765,8 @@ public:
   bool isDereferenceableInvariantLoad() const;
 
   /// If the specified instruction is a PHI that always merges together the
-  /// same virtual register, return the register, otherwise return 0.
-  unsigned isConstantValuePHI() const;
+  /// same virtual register, return the register, otherwise return Register().
+  Register isConstantValuePHI() const;
 
   /// Return true if this instruction has side effects that are not modeled
   /// by mayLoad / mayStore, etc.

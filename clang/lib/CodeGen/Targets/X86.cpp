@@ -284,7 +284,7 @@ static void rewriteInputConstraintReferences(unsigned FirstIn,
       Pos = DigitEnd;
     }
   }
-  AsmString = std::move(OS.str());
+  AsmString = std::move(Buf);
 }
 
 /// Add output constraints for EAX:EDX because they are return registers.

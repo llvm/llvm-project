@@ -60,7 +60,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // example, we should probably enable PrintCanonicalTypes and
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
-  Policy.SuppressInlineNamespace = false;
+  Policy.SuppressInlineNamespace =
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -504,14 +505,27 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                             Info.EC.getKnownMinValue() *
-                                                 Info.NumVectors);
+        auto VTy =
+            llvm::VectorType::get(ConvertType(Info.ElementType), Info.EC);
+        switch (Info.NumVectors) {
+        default:
+          llvm_unreachable("Expected 1, 2, 3 or 4 vectors!");
+        case 1:
+          return VTy;
+        case 2:
+          return llvm::StructType::get(VTy, VTy);
+        case 3:
+          return llvm::StructType::get(VTy, VTy, VTy);
+        case 4:
+          return llvm::StructType::get(VTy, VTy, VTy, VTy);
+        }
       }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
@@ -547,10 +561,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id:                                                        \
     return llvm::PointerType::get(getLLVMContext(), AS);
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id:                                                        \
+    return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
+                                    {}, {Scope});
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -732,6 +749,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
     break;
   }
+  case Type::HLSLAttributedResource:
+    ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
   }
 
   assert(ResultType && "Didn't convert a type?");

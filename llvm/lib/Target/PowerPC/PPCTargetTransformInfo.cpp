@@ -655,18 +655,17 @@ InstructionCost PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   return Cost;
 }
 
-InstructionCost PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                               Type *CondTy,
-                                               CmpInst::Predicate VecPred,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+InstructionCost PPCTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Opcode, ValTy, nullptr);
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
 
-  InstructionCost Cost =
-      BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  InstructionCost Cost = BaseT::getCmpSelInstrCost(
+      Opcode, ValTy, CondTy, VecPred, CostKind, Op1Info, Op2Info, I);
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
@@ -801,13 +800,19 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // PPCTargetLowering can't compute the cost appropriately. So here we
   // explicitly check this case. There are also corresponding store
   // instructions.
-  unsigned MemBytes = Src->getPrimitiveSizeInBits();
-  if (ST->hasVSX() && IsAltivecType &&
-      (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
-    return 1;
+  unsigned MemBits = Src->getPrimitiveSizeInBits();
+  unsigned SrcBytes = LT.second.getStoreSize();
+  if (ST->hasVSX() && IsAltivecType) {
+    if (MemBits == 64 || (ST->hasP8Vector() && MemBits == 32))
+      return 1;
+
+    // Use lfiwax/xxspltw
+    Align AlignBytes = Alignment ? *Alignment : Align(1);
+    if (Opcode == Instruction::Load && MemBits == 32 && AlignBytes < SrcBytes)
+      return 2;
+  }
 
   // Aligned loads and stores are easy.
-  unsigned SrcBytes = LT.second.getStoreSize();
   if (!SrcBytes || !Alignment || *Alignment >= SrcBytes)
     return Cost;
 

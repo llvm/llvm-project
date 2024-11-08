@@ -15,12 +15,18 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.sh.cpp
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 // RUN: %{{cxx}} -c %s -o %t.first.o %{{flags}} %{{compile_flags}}
 // RUN: %{{cxx}} -c %s -o %t.second.o -DWITH_MAIN %{{flags}} %{{compile_flags}}
@@ -32,4 +38,5 @@ for header in public_headers:
 #if defined(WITH_MAIN)
 int main(int, char**) {{ return 0; }}
 #endif
-""")
+"""
+    )

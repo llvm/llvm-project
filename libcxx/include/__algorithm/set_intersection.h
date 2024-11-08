@@ -19,6 +19,7 @@
 #include <__iterator/next.h>
 #include <__type_traits/is_same.h>
 #include <__utility/exchange.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 

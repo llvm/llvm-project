@@ -43,7 +43,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %32 = omp.map.info var_ptr(%5 : !llvm.ptr, f32) var_ptr_ptr(%31 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "scalar"}
     %33 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%32 : [0] : !llvm.ptr) -> !llvm.ptr {name = "scalar"}
     omp.target map_entries(%17 -> %arg0, %18 -> %arg1, %29 -> %arg2, %30 -> %arg3, %32 -> %arg4, %33 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr, %arg4: !llvm.ptr, %arg5: !llvm.ptr):
       omp.terminator
     }
     llvm.return

@@ -631,7 +631,8 @@ public:
 
   /// Parse a location alias, that is a sequence looking like: #loc42
   /// The alias may have already be defined or may be defined later, in which
-  /// case an OpaqueLoc is used a placeholder.
+  /// case an OpaqueLoc is used a placeholder. The caller must ensure that the
+  /// token is actually an alias, which means it must not contain a dot.
   ParseResult parseLocationAlias(LocationAttr &loc);
 
   /// This is the structure of a result specifier in the assembly syntax,
@@ -1917,9 +1918,11 @@ public:
 
     Token tok = parser.getToken();
 
-    // Check to see if we are parsing a location alias.
-    // Otherwise, we parse the location directly.
-    if (tok.is(Token::hash_identifier)) {
+    // Check to see if we are parsing a location alias. We are parsing a
+    // location alias if the token is a hash identifier *without* a dot in it -
+    // the dot signifies a dialect attribute. Otherwise, we parse the location
+    // directly.
+    if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
       if (parser.parseLocationAlias(directLoc))
         return failure();
     } else if (parser.parseLocationInstance(directLoc)) {
@@ -2086,11 +2089,9 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
   Token tok = getToken();
   consumeToken(Token::hash_identifier);
   StringRef identifier = tok.getSpelling().drop_front();
-  if (identifier.contains('.')) {
-    return emitError(tok.getLoc())
-           << "expected location, but found dialect attribute: '#" << identifier
-           << "'";
-  }
+  assert(!identifier.contains('.') &&
+         "unexpected dialect attribute token, expected alias");
+
   if (state.asmState)
     state.asmState->addAttrAliasUses(identifier, tok.getLocRange());
 
@@ -2120,10 +2121,11 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
     return failure();
   Token tok = getToken();
 
-  // Check to see if we are parsing a location alias.
-  // Otherwise, we parse the location directly.
+  // Check to see if we are parsing a location alias. We are parsing a location
+  // alias if the token is a hash identifier *without* a dot in it - the dot
+  // signifies a dialect attribute. Otherwise, we parse the location directly.
   LocationAttr directLoc;
-  if (tok.is(Token::hash_identifier)) {
+  if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
     if (parseLocationAlias(directLoc))
       return failure();
   } else if (parseLocationInstance(directLoc)) {
@@ -2412,13 +2414,14 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 //===----------------------------------------------------------------------===//
 
 ParseResult OperationParser::codeCompleteSSAUse() {
-  std::string detailData;
-  llvm::raw_string_ostream detailOS(detailData);
   for (IsolatedSSANameScope &scope : isolatedNameScopes) {
     for (auto &it : scope.values) {
       if (it.second.empty())
         continue;
       Value frontValue = it.second.front().value;
+
+      std::string detailData;
+      llvm::raw_string_ostream detailOS(detailData);
 
       // If the value isn't a forward reference, we also add the name of the op
       // to the detail.
@@ -2440,7 +2443,7 @@ ParseResult OperationParser::codeCompleteSSAUse() {
         detailOS << ", ...";
 
       state.codeCompleteContext->appendSSAValueCompletion(
-          it.getKey(), std::move(detailOS.str()));
+          it.getKey(), std::move(detailData));
     }
   }
 

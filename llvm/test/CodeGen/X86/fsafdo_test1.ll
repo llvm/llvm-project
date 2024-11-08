@@ -4,9 +4,9 @@
 ; Check that fs-afdo discriminators are generated.
 ; V01: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
 ; V01: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; V0: .loc    1 9 5 is_stmt 1 discriminator 11266 # foo.c:9:5
+; V0: .loc    1 9 5 discriminator 11266 # foo.c:9:5
 ; V0: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
-; V1: .loc    1 9 5 is_stmt 1 discriminator 514 # foo.c:9:5
+; V1: .loc    1 9 5 discriminator 514 # foo.c:9:5
 ; V1: .loc    1 7 3 is_stmt 1 discriminator 258 # foo.c:7:3
 ; Check that variable __llvm_fs_discriminator__ is generated.
 ; V01: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__

@@ -110,15 +110,6 @@ entry:
   ret void
 }
 
-define amdgpu_ps void @prefetch_data_sgpr_base_imm_len_local(ptr addrspace(3) inreg %ptr) {
-; GCN-LABEL: prefetch_data_sgpr_base_imm_len_local:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_endpgm
-entry:
-  tail call void @llvm.amdgcn.s.prefetch.data.p3(ptr addrspace(3) %ptr, i32 31)
-  ret void
-}
-
 define amdgpu_ps void @prefetch_data_vgpr_base_imm_len(ptr addrspace(4) %ptr) {
 ; GCN-LABEL: prefetch_data_vgpr_base_imm_len:
 ; GCN:       ; %bb.0: ; %entry

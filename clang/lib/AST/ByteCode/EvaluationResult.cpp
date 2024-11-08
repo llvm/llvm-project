@@ -130,8 +130,9 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
       const Descriptor *Desc = BasePtr.getDeclDesc();
       if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
         const auto &BS = *std::next(CD->bases_begin(), I);
-        S.FFDiag(BS.getBaseTypeLoc(), diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType() << BS.getSourceRange();
+        SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+        S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
       } else {
         S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
             << B.Desc->getType();

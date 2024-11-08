@@ -210,8 +210,7 @@ llvm.func @_QPopenmp_target_use_dev_ptr() {
   %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
   %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map1 : !llvm.ptr) use_device_ptr(%map2 : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  omp.target_data  map_entries(%map1 : !llvm.ptr) use_device_ptr(%map2 -> %arg0 : !llvm.ptr)  {
     %1 = llvm.mlir.constant(10 : i32) : i32
     %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %1, %2 : i32, !llvm.ptr
@@ -255,8 +254,7 @@ llvm.func @_QPopenmp_target_use_dev_addr() {
   %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
   %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
     %1 = llvm.mlir.constant(10 : i32) : i32
     %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %1, %2 : i32, !llvm.ptr
@@ -298,8 +296,7 @@ llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
   %a = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %map2 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
     %1 = llvm.mlir.constant(10 : i32) : i32
     llvm.store %1, %arg0 : i32, !llvm.ptr
     omp.terminator
@@ -341,8 +338,7 @@ llvm.func @_QPopenmp_target_use_dev_addr_nomap() {
   %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
   %map = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
   %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr):
+  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
     %2 = llvm.mlir.constant(10 : i32) : i32
     %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %2, %3 : i32, !llvm.ptr
@@ -400,13 +396,12 @@ llvm.func @_QPopenmp_target_use_dev_both() {
   %map1 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %map3 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map, %map1 : !llvm.ptr, !llvm.ptr) use_device_ptr(%map2 : !llvm.ptr) use_device_addr(%map3 : !llvm.ptr)  {
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.target_data  map_entries(%map, %map1 : !llvm.ptr, !llvm.ptr) use_device_addr(%map3 -> %arg0 : !llvm.ptr) use_device_ptr(%map2 -> %arg1 : !llvm.ptr)  {
     %2 = llvm.mlir.constant(10 : i32) : i32
-    %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+    %3 = llvm.load %arg1 : !llvm.ptr -> !llvm.ptr
     llvm.store %2, %3 : i32, !llvm.ptr
     %4 = llvm.mlir.constant(20 : i32) : i32
-    %5 = llvm.load %arg1 : !llvm.ptr -> !llvm.ptr
+    %5 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
     llvm.store %4, %5 : i32, !llvm.ptr
     omp.terminator
   }

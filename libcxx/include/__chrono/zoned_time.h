@@ -22,12 +22,14 @@
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_zone.h>
 #  include <__chrono/tzdb_list.h>
+#  include <__concepts/constructible.h>
 #  include <__config>
-#  include <__fwd/string_view.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/remove_cvref.h>
+#  include <__utility/declval.h>
 #  include <__utility/move.h>
+#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -38,8 +40,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&   \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 namespace chrono {
 
@@ -215,8 +216,8 @@ operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_
 
 } // namespace chrono
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
-         // && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
+         // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_END_NAMESPACE_STD
 

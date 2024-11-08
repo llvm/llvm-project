@@ -313,6 +313,9 @@ namespace ranges {
   template<class I, class F>
     using for_each_result = in_fun_result<I, F>;                                            // since C++20
 
+  template<class I, class F>
+    using for_each_n_result = in_fun_result<I, F>;                                          // since C++20
+
   template<input_iterator I, sentinel_for<I> S, class Proj = identity,
            indirectly_unary_invocable<projected<I, Proj>> Fun>
     constexpr ranges::for_each_result<I, Fun>
@@ -699,6 +702,12 @@ namespace ranges {
     constexpr bool
       ranges::lexicographical_compare(R1&& r1, R2&& r2, Comp comp = {},
                                       Proj1 proj1 = {}, Proj2 proj2 = {});                          // since C++20
+
+  template<class I, class O>
+    using move_result = in_out_result<I, O>;                                                        // since C++20
+
+  template<class I, class O>
+    using move_backward_result = in_out_result<I, O>;                                               // since C++20
 
   template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
     requires indirectly_movable<I1, I2>
@@ -1228,9 +1237,9 @@ template <class InputIterator1, class InputIterator2>
     mismatch(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2);
 
 template <class InputIterator1, class InputIterator2>
-    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
+    constexpr pair<InputIterator1, InputIterator2>
     mismatch(InputIterator1 first1, InputIterator1 last1,
-             InputIterator2 first2, InputIterator2 last2); // **C++14**
+             InputIterator2 first2, InputIterator2 last2);              // since C++14, constexpr in C++20
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
     constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
@@ -1238,19 +1247,19 @@ template <class InputIterator1, class InputIterator2, class BinaryPredicate>
              InputIterator2 first2, BinaryPredicate pred);
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
+    constexpr pair<InputIterator1, InputIterator2>
     mismatch(InputIterator1 first1, InputIterator1 last1,
              InputIterator2 first2, InputIterator2 last2,
-             BinaryPredicate pred); // **C++14**
+             BinaryPredicate pred);                                     // since C++14, constexpr in C++20
 
 template <class InputIterator1, class InputIterator2>
     constexpr bool      // constexpr in C++20
     equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2);
 
 template <class InputIterator1, class InputIterator2>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     equal(InputIterator1 first1, InputIterator1 last1,
-          InputIterator2 first2, InputIterator2 last2); // **C++14**
+          InputIterator2 first2, InputIterator2 last2);                 // since C++14, constexpr in C++20
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
     constexpr bool      // constexpr in C++20
@@ -1258,10 +1267,10 @@ template <class InputIterator1, class InputIterator2, class BinaryPredicate>
           InputIterator2 first2, BinaryPredicate pred);
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     equal(InputIterator1 first1, InputIterator1 last1,
           InputIterator2 first2, InputIterator2 last2,
-          BinaryPredicate pred); // **C++14**
+          BinaryPredicate pred);                                        // since C++14, constexpr in C++20
 
 template<class ForwardIterator1, class ForwardIterator2>
     constexpr bool      // constexpr in C++20
@@ -1269,9 +1278,9 @@ template<class ForwardIterator1, class ForwardIterator2>
                    ForwardIterator2 first2);
 
 template<class ForwardIterator1, class ForwardIterator2>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     is_permutation(ForwardIterator1 first1, ForwardIterator1 last1,
-                   ForwardIterator2 first2, ForwardIterator2 last2); // **C++14**
+                   ForwardIterator2 first2, ForwardIterator2 last2);    // since C++14, constexpr in C++20
 
 template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
     constexpr bool      // constexpr in C++20
@@ -1279,10 +1288,10 @@ template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
                    ForwardIterator2 first2, BinaryPredicate pred);
 
 template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
-    constexpr bool      // constexpr in C++20
+    constexpr bool
     is_permutation(ForwardIterator1 first1, ForwardIterator1 last1,
                    ForwardIterator2 first2, ForwardIterator2 last2,
-                   BinaryPredicate pred);  // **C++14**
+                   BinaryPredicate pred);                               // since C++14, constexpr in C++20
 
 template <class ForwardIterator1, class ForwardIterator2>
     constexpr ForwardIterator1      // constexpr in C++20
@@ -2011,10 +2020,10 @@ template <class BidirectionalIterator, class Compare>
 #endif
 
 #if _LIBCPP_STD_VER >= 23
-#  include <__algorithm/fold.h>
 #  include <__algorithm/ranges_contains_subrange.h>
 #  include <__algorithm/ranges_ends_with.h>
 #  include <__algorithm/ranges_find_last.h>
+#  include <__algorithm/ranges_fold.h>
 #  include <__algorithm/ranges_starts_with.h>
 #endif // _LIBCPP_STD_VER >= 23
 

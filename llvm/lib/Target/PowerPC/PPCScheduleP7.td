@@ -216,7 +216,7 @@ let SchedModel = P7Model in {
     RLWNM, RLWNM8, RLWNM_rec, RLDIMI, RLDIMI_rec,
     RLDICL_32, RLDICL_32_64, RLDICL_32_rec, RLDICR_32, RLWINM8_rec, RLWNM8_rec,
     SLD, SLD_rec, SLW, SLW8, SLW_rec, SLW8_rec, SRD, SRD_rec, SRW, SRW8, SRW_rec,
-    SRW8_rec, SRADI, SRADI_rec, SRAWI, SRAWI_rec, SRAD, SRAD_rec, SRAW, SRAW_rec,
+    SRW8_rec, SRADI, SRADI_rec, SRAWI, SRAWI_rec, SRAWI8, SRAWI8_rec, SRAD, SRAD_rec, SRAW, SRAW_rec, SRAW8, SRAW8_rec,
     SRADI_32, SUBFE, SUBFE8, SUBFE8O_rec, SUBFEO_rec
   )>;
 

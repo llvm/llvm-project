@@ -332,16 +332,17 @@ private:
           InlineTreeNodeMap.getInlineTreeNode(NodeId);
       if (!BinaryNode)
         return nullptr;
-      const MCDecodedPseudoProbe *BinaryProbe = nullptr;
-      for (const MCDecodedPseudoProbe &Probe : BinaryNode->getProbes()) {
-        if (Probe.getIndex() != ProbeId)
-          continue;
-        BinaryProbe = &Probe;
-        break;
-      }
-      if (!BinaryProbe)
+      const MCDecodedPseudoProbe Dummy(0, ProbeId, PseudoProbeType::Block, 0, 0,
+                                       nullptr);
+      ArrayRef<MCDecodedPseudoProbe> BinaryProbes = BinaryNode->getProbes();
+      auto BinaryProbeIt = llvm::lower_bound(
+          BinaryProbes, Dummy, [](const auto &LHS, const auto &RHS) {
+            return LHS.getIndex() < RHS.getIndex();
+          });
+      if (BinaryProbeIt == BinaryNode->getProbes().end() ||
+          BinaryProbeIt->getIndex() != ProbeId)
         return nullptr;
-      auto It = BBPseudoProbeToBlock.find(BinaryProbe);
+      auto It = BBPseudoProbeToBlock.find(&*BinaryProbeIt);
       if (It == BBPseudoProbeToBlock.end())
         return nullptr;
       return It->second;
@@ -370,15 +371,14 @@ private:
     uint32_t BestMatchCount = 0;
     uint32_t TotalMatchCount = 0;
     const FlowBlock *BestMatchBlock = nullptr;
-    for (auto &[FlowBlock, Count] : FlowBlockMatchCount) {
+    for (const auto &[FlowBlock, Count] : FlowBlockMatchCount) {
       TotalMatchCount += Count;
-      if (Count > BestMatchCount ||
-          (Count == BestMatchCount && !BestMatchBlock)) {
-        BestMatchBlock = FlowBlock;
-        BestMatchCount = Count;
-      }
+      if (Count < BestMatchCount || (Count == BestMatchCount && BestMatchBlock))
+        continue;
+      BestMatchBlock = FlowBlock;
+      BestMatchCount = Count;
     }
-    return {BestMatchBlock, BestMatchCount / TotalMatchCount};
+    return {BestMatchBlock, BestMatchCount == TotalMatchCount};
   }
 };
 
@@ -556,12 +556,13 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// is to extract as much information from the stale profile as possible. Here
 /// we assume that each basic block is specified via a hash value computed from
 /// its content and the hashes of the unchanged basic blocks stay the same
-/// across different revisions of the binary.
+/// across different revisions of the binary. Blocks may also have pseudo probe
+/// information in the profile and the binary which is used for matching.
 /// Whenever there is a count in the profile with the hash corresponding to one
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-size_t matchWeightsByHashes(
+size_t matchWeights(
     BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
     const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
     HashFunction HashFunction, YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
@@ -621,6 +622,20 @@ size_t matchWeightsByHashes(
   // Map of FlowBlock and matching method.
   DenseMap<const FlowBlock *, StaleMatcher::MatchMethod> MatchedFlowBlocks;
 
+  auto addMatchedBlock =
+      [&](std::pair<const FlowBlock *, StaleMatcher::MatchMethod> BlockMethod,
+          const yaml::bolt::BinaryFunctionProfile &YamlBP,
+          const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+        const auto &[MatchedBlock, Method] = BlockMethod;
+        if (!MatchedBlock)
+          return;
+        // Don't override earlier matches
+        if (MatchedFlowBlocks.contains(MatchedBlock))
+          return;
+        MatchedFlowBlocks.try_emplace(MatchedBlock, Method);
+        MatchedBlocks[&YamlBP][YamlBB.Index] = {MatchedBlock, &YamlBB};
+      };
+
   // Match blocks from the profile to the blocks in CFG by strict hash.
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
     // Update matching stats.
@@ -629,40 +644,20 @@ size_t matchWeightsByHashes(
 
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
-    const FlowBlock *MatchedBlock = nullptr;
-    StaleMatcher::MatchMethod Method;
-    std::tie(MatchedBlock, Method) = Matcher.matchBlockStrict(YamlHash);
-    if (!MatchedBlock)
-      continue;
-    MatchedFlowBlocks.try_emplace(MatchedBlock, Method);
-    MatchedBlocks[&YamlBF][YamlBB.Index] = {MatchedBlock, &YamlBB};
+    addMatchedBlock(Matcher.matchBlockStrict(YamlHash), YamlBF, YamlBB);
   }
   // Match blocks from the profile to the blocks in CFG by pseudo probes.
-  for (const YAMLProfileReader::ProbeMatchSpec &PS : ProbeMatchSpecs) {
-    const YAMLProfileReader::InlineTreeNodeMapTy &InlineTreeNodeMap = PS.first;
-    const yaml::bolt::BinaryFunctionProfile &YamlBP = PS.second;
-    for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBP.Blocks) {
-      if (YamlBB.PseudoProbes.empty())
-        continue;
-      const FlowBlock *MatchedBlock = nullptr;
-      StaleMatcher::MatchMethod Method;
-      std::tie(MatchedBlock, Method) =
-          Matcher.matchBlockProbe(YamlBB.PseudoProbes, InlineTreeNodeMap);
-      if (!MatchedBlock)
-        continue;
-      // Don't override earlier matches
-      if (MatchedFlowBlocks.contains(MatchedBlock))
-        continue;
-      MatchedFlowBlocks.try_emplace(MatchedBlock, Method);
-      MatchedBlocks[&YamlBP][YamlBB.Index] = {MatchedBlock, &YamlBB};
-    }
+  for (const auto &[InlineNodeMap, YamlBP] : ProbeMatchSpecs) {
+    for (const yaml::bolt::BinaryBasicBlockProfile &BB : YamlBP.get().Blocks)
+      if (!BB.PseudoProbes.empty())
+        addMatchedBlock(Matcher.matchBlockProbe(BB.PseudoProbes, InlineNodeMap),
+                        YamlBP, BB);
   }
   // Match blocks from the profile to the blocks in CFG with loose methods.
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
 
-    const FlowBlock *MatchedBlock = nullptr;
     std::string CallHashStr = hashBlockCalls(IdToYamlBF, YamlBB);
     uint64_t CallHash = 0;
     if (!CallHashStr.empty()) {
@@ -673,9 +668,7 @@ size_t matchWeightsByHashes(
       else
         llvm_unreachable("Unhandled HashFunction");
     }
-    StaleMatcher::MatchMethod Method;
-    std::tie(MatchedBlock, Method) =
-        Matcher.matchBlockLoose(YamlHash, CallHash);
+    auto [MatchedBlock, Method] = Matcher.matchBlockLoose(YamlHash, CallHash);
     if (MatchedBlock == nullptr && YamlBB.Index == 0) {
       MatchedBlock = Blocks[0];
       // Report as loose match
@@ -687,11 +680,7 @@ size_t matchWeightsByHashes(
                         << "\n");
       continue;
     }
-    // Don't override earlier matches
-    if (MatchedFlowBlocks.contains(MatchedBlock))
-      continue;
-    MatchedFlowBlocks.try_emplace(MatchedBlock, Method);
-    MatchedBlocks[&YamlBF][YamlBB.Index] = {MatchedBlock, &YamlBB};
+    addMatchedBlock({MatchedBlock, Method}, YamlBF, YamlBB);
   }
 
   // Match jumps from the profile to the jumps from CFG
@@ -1031,9 +1020,9 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  size_t MatchedBlocks = matchWeightsByHashes(
-      BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-      YamlBP.Header.HashFunction, IdToYamLBF, BF, ProbeMatchSpecs);
+  size_t MatchedBlocks =
+      matchWeights(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
+                   YamlBP.Header.HashFunction, IdToYamLBF, BF, ProbeMatchSpecs);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.

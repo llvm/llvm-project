@@ -209,7 +209,7 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   !con(
     !con(
       !if(EnableSaddr,
-        (ins SReg_64:$saddr, VGPR_32:$vaddr),
+        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
         (ins VReg_64:$vaddr)),
         (ins flat_offset:$offset)),
         // FIXME: Operands with default values do not work with following non-optional operands.
@@ -231,7 +231,7 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   (outs),
   !con(
     !if(EnableSaddr,
-      (ins VGPR_32:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata, SReg_64:$saddr),
+      (ins VGPR_32:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata, SReg_64_XEXEC_XNULL:$saddr),
       (ins VReg_64:$vaddr, getLdStRegisterOperand<vdataClass>.ret:$vdata)),
       (ins flat_offset:$offset, CPol_0:$cpol)),
   " $vaddr, $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
@@ -589,7 +589,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
 
     def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
       (outs),
-      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
+      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_0:$cpol),
       " $vaddr, $vdata, $saddr$offset$cpol">,
       GlobalSaddrTable<1, opName> {
       let has_saddr = 1;
@@ -620,7 +620,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
 
     def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
       (outs vdst_op:$vdst),
-        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
       " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
       GlobalSaddrTable<1, opName#"_rtn"> {
        let has_saddr = 1;
@@ -1355,11 +1355,17 @@ let OtherPredicates = [HasFlatAddressSpace] in {
 
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
@@ -1367,6 +1373,7 @@ def : FlatLoadPat <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 
 def : FlatLoadPat <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
@@ -1456,6 +1463,7 @@ def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 }
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Handle atomic loads
 def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
@@ -1477,8 +1485,14 @@ let OtherPredicates = [HasFlatGlobalInsts] in {
 
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
@@ -1488,6 +1502,8 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, extloadi16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, zextloadi16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, sextloadi16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, load_global, i16>;
 
 foreach vt = Reg32Types.types in {
@@ -1525,6 +1541,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE_D16_HI, truncstorei8_hi16_global, 
 }
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Handle atomic loads
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_global, v2i16>;
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_global, v2f16>;
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_global, v2i16>;
@@ -1604,15 +1621,11 @@ let OtherPredicates = [isGFX12Plus] in {
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX", "atomic_load_fmax_global", f32>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMIN", "int_amdgcn_global_atomic_fmin", f32>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMAX", "int_amdgcn_global_atomic_fmax", f32>;
 }
 
 let SubtargetPredicate = HasAtomicFMinFMaxF32FlatInsts in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_flat", f32>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_flat", f32>;
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_FMIN", "int_amdgcn_flat_atomic_fmin", f32>;
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_FMAX", "int_amdgcn_flat_atomic_fmax", f32>;
 }
 
 let OtherPredicates = [isGFX12Only] in {
@@ -1642,13 +1655,6 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_F16", "atomic_load_fadd_globa
 let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MIN_F64", "atomic_load_fmin_global", f64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MAX_F64", "atomic_load_fmax_global", f64>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MIN_F64", "int_amdgcn_global_atomic_fmin", f64>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MAX_F64", "int_amdgcn_global_atomic_fmax", f64>;
-}
-
-let SubtargetPredicate = HasAtomicFMinFMaxF64FlatInsts in {
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_MIN_F64", "int_amdgcn_flat_atomic_fmin", f64>;
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_MAX_F64", "int_amdgcn_flat_atomic_fmax", f64>;
 }
 
 let OtherPredicates = [HasFlatBufferGlobalAtomicFaddF64Inst] in {

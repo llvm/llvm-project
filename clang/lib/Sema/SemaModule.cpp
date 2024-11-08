@@ -650,6 +650,14 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   else
     VisibleModules.setVisible(Mod, ImportLoc);
 
+  assert((!Mod->isModulePartitionImplementation() || getCurrentModule()) &&
+         "We can only import a partition unit in a named module.");
+  if (Mod->isModulePartitionImplementation() &&
+      getCurrentModule()->isModuleInterfaceUnit())
+    Diag(ImportLoc,
+         diag::warn_import_implementation_partition_unit_in_interface_unit)
+        << Mod->Name;
+
   checkModuleImportContext(*this, Mod, ImportLoc, CurContext);
 
   // FIXME: we should support importing a submodule within a different submodule

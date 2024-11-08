@@ -150,11 +150,11 @@ std::unique_ptr<Pass> createLowerForeachToSCFPass();
 //===----------------------------------------------------------------------===//
 
 /// Type converter for iter_space and iterator.
-struct SparseIterationTypeConverter : public OneToNTypeConverter {
+struct SparseIterationTypeConverter : public TypeConverter {
   SparseIterationTypeConverter();
 };
 
-void populateLowerSparseIterationToSCFPatterns(TypeConverter &converter,
+void populateLowerSparseIterationToSCFPatterns(const TypeConverter &converter,
                                                RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createLowerSparseIterationToSCFPass();
@@ -170,7 +170,7 @@ public:
 };
 
 /// Sets up sparse tensor conversion rules.
-void populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
+void populateSparseTensorConversionPatterns(const TypeConverter &typeConverter,
                                             RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createSparseTensorConversionPass();
@@ -186,7 +186,7 @@ public:
 };
 
 /// Sets up sparse tensor codegen rules.
-void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
+void populateSparseTensorCodegenPatterns(const TypeConverter &typeConverter,
                                          RewritePatternSet &patterns,
                                          bool createSparseDeallocs,
                                          bool enableBufferInitialization);
@@ -244,7 +244,7 @@ public:
   StorageSpecifierToLLVMTypeConverter();
 };
 
-void populateStorageSpecifierToLLVMPatterns(TypeConverter &converter,
+void populateStorageSpecifierToLLVMPatterns(const TypeConverter &converter,
                                             RewritePatternSet &patterns);
 std::unique_ptr<Pass> createStorageSpecifierToLLVMPass();
 

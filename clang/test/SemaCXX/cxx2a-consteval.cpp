@@ -158,17 +158,17 @@ int i3 = f1(f1(f1(&f1, &f1), f1(&f1, &f1), f1(f1(&f1, &f1), &f1)));
 
 namespace user_defined_literal {
 
-consteval int operator"" _test(unsigned long long i) {
+consteval int operator""_test(unsigned long long i) {
 // expected-note@-1+ {{declared here}}
   return 0;
 }
 
 int i = 0_test;
 
-auto ptr = &operator"" _test;
+auto ptr = &operator""_test;
 // expected-error@-1 {{take address}}
 
-consteval auto operator"" _test1(unsigned long long i) {
+consteval auto operator""_test1(unsigned long long i) {
   return &f_eval;
 }
 
@@ -1248,3 +1248,27 @@ void test() {
 }
 
 }
+
+// Test that we don't redundantly instantiate the friend declaration in
+// RemoveNestedImmediateInvocation(). Otherwise, we would end up with spurious
+// redefinition errors.
+namespace GH107175 {
+
+consteval void consteval_func() {}
+
+template <auto> struct define_f {
+  friend void foo() {}
+};
+
+template <auto = [] {}> struct A {};
+
+struct B {
+  template <auto T> consteval void func() { (void)define_f<T>{}; }
+};
+
+int main() {
+  B{}.func<A{}>();
+  consteval_func();
+}
+
+} // namespace GH107175

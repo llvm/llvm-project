@@ -76,3 +76,6 @@ template<typename T> struct SimpleTemplate {
 };
 _Static_assert(__builtin_hlsl_is_intangible(SimpleTemplate<__hlsl_resource_t>), "");
 _Static_assert(!__builtin_hlsl_is_intangible(SimpleTemplate<float>), "");
+
+_Static_assert(__builtin_hlsl_is_intangible(RWBuffer<float>), "");
+_Static_assert(__builtin_hlsl_is_intangible(StructuredBuffer<Simple>), "");

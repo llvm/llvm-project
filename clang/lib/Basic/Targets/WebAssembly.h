@@ -65,6 +65,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasReferenceTypes = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
+  bool HasWideArithmetic = false;
 
   std::string ABI;
 
@@ -123,10 +124,10 @@ private:
     return VoidPtrBuiltinVaList;
   }
 
-  ArrayRef<const char *> getGCCRegNames() const final { return std::nullopt; }
+  ArrayRef<const char *> getGCCRegNames() const final { return {}; }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const final {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

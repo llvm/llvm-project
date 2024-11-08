@@ -1366,8 +1366,6 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
                                 *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
 
-  comments_stream.flush();
-
   static std::string g_newlines("\r\n");
 
   for (size_t newline_pos = 0;

@@ -230,7 +230,10 @@ static void instantiateDependentAnnotationAttr(
     ActualArgs.insert(ActualArgs.begin(), Args.begin() + 1, Args.end());
     std::swap(Args, ActualArgs);
   }
-  S.AddAnnotationAttr(New, *Attr, Str, Args);
+  auto *AA = S.CreateAnnotationAttr(*Attr, Str, Args);
+  if (AA) {
+    New->addAttr(AA);
+  }
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(
@@ -872,6 +875,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CUDAGridConstantAttr>(TmplAttr)) {
+      if (!New->hasAttr<CUDAGridConstantAttr>())
+        New->addAttr(A->clone(Context));
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -1342,7 +1351,7 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   if (Invalid)
     Field->setInvalidDecl();
 
-  if (!Field->getDeclName()) {
+  if (!Field->getDeclName() || Field->isPlaceholderVar(SemaRef.getLangOpts())) {
     // Keep track of where this decl came from.
     SemaRef.Context.setInstantiatedFromUnnamedFieldDecl(Field, D);
   }
@@ -2233,7 +2242,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
         D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
-        DGuide->getDeductionCandidateKind());
+        DGuide->getDeductionCandidateKind(), TrailingRequiresClause);
     Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(
@@ -4986,6 +4995,16 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       Function->setInstantiationIsPending(true);
       PendingInstantiations.push_back(
         std::make_pair(Function, PointOfInstantiation));
+
+      if (llvm::isTimeTraceVerbose()) {
+        llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
+          std::string Name;
+          llvm::raw_string_ostream OS(Name);
+          Function->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                         /*Qualified=*/true);
+          return Name;
+        });
+      }
     } else if (TSK == TSK_ImplicitInstantiation) {
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&
           !getSourceManager().isInSystemHeader(PatternDecl->getBeginLoc())) {
@@ -6293,9 +6312,13 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
           if (!SubstRecord) {
             // T can be a dependent TemplateSpecializationType when performing a
-            // substitution for building a deduction guide.
-            assert(CodeSynthesisContexts.back().Kind ==
-                   CodeSynthesisContext::BuildingDeductionGuides);
+            // substitution for building a deduction guide or for template
+            // argument deduction in the process of rebuilding immediate
+            // expressions. (Because the default argument that involves a lambda
+            // is untransformed and thus could be dependent at this point.)
+            assert(SemaRef.RebuildingImmediateInvocation ||
+                   CodeSynthesisContexts.back().Kind ==
+                       CodeSynthesisContext::BuildingDeductionGuides);
             // Return a nullptr as a sentinel value, we handle it properly in
             // the TemplateInstantiator::TransformInjectedClassNameType
             // override, which we transform it to a TemplateSpecializationType.

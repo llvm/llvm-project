@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fsyntax-only -Wno-unused-value -verify %s
 
 typedef __fp16 half4 __attribute__ ((vector_size (8)));
 typedef float float4 __attribute__ ((vector_size (16)));

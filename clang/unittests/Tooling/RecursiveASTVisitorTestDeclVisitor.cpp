@@ -67,7 +67,7 @@ public:
     Decl->getNameForDiagnostic(OS,
                                Decl->getASTContext().getPrintingPolicy(),
                                true);
-    Match(OS.str(), Decl->getLocation());
+    Match(NameWithTemplateArgs, Decl->getLocation());
     return true;
   }
 };

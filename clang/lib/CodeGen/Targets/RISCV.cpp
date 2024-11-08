@@ -63,8 +63,52 @@ public:
                                                CharUnits Field2Off) const;
 
   ABIArgInfo coerceVLSVector(QualType Ty) const;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 } // end anonymous namespace
+
+void RISCVABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                           unsigned Index,
+                                           raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                           raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+
+  SmallVector<StringRef, 8> Attrs;
+  AttrStr.split(Attrs, ';');
+
+  // Only consider the arch string.
+  StringRef ArchStr;
+  for (auto &Attr : Attrs) {
+    if (Attr.starts_with("arch="))
+      ArchStr = Attr;
+  }
+
+  // Extract features string.
+  SmallVector<StringRef, 8> Features;
+  ArchStr.consume_front("arch=");
+  ArchStr.split(Features, ',');
+
+  llvm::stable_sort(Features);
+
+  for (auto Feat : Features) {
+    Feat.consume_front("+");
+    Out << "_" << Feat;
+  }
+}
 
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   QualType RetTy = FI.getReturnType();
@@ -550,6 +594,11 @@ public:
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
 
+    auto *Fn = cast<llvm::Function>(GV);
+
+    if (CGM.getCodeGenOpts().CFProtectionReturn)
+      Fn->addFnAttr("hw-shadow-stack");
+
     const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
     if (!Attr)
       return;
@@ -559,8 +608,6 @@ public:
     case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
     case RISCVInterruptAttr::machine: Kind = "machine"; break;
     }
-
-    auto *Fn = cast<llvm::Function>(GV);
 
     Fn->addFnAttr("interrupt", Kind);
   }

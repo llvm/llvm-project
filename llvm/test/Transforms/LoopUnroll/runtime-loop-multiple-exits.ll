@@ -4514,7 +4514,7 @@ define void @test8() {
 ; EPILOG-NEXT:    %i4.7 = add nuw nsw i64 %i3, 8
 ; EPILOG-NEXT:    br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
 ; EPILOG:       latch.7:
-; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
+; EPILOG-NEXT:    %niter.next.7 = add nuw nsw i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
 ; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %innerH, label %exit.unr-lcssa.loopexit
 ; EPILOG:       exit.unr-lcssa.loopexit:

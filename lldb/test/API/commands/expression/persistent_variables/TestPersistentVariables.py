@@ -56,7 +56,7 @@ class PersistentVariablesTestCase(TestBase):
         self.expect(
             "expr int $i = 123",
             error=True,
-            substrs=["error: redefinition of persistent variable '$i'"],
+            substrs=["redefinition of persistent variable '$i'"],
         )
         self.expect_expr("$i", result_type="int", result_value="5")
 
@@ -65,7 +65,7 @@ class PersistentVariablesTestCase(TestBase):
         self.expect(
             "expr long $i = 123",
             error=True,
-            substrs=["error: redefinition of persistent variable '$i'"],
+            substrs=["redefinition of persistent variable '$i'"],
         )
         self.expect_expr("$i", result_type="int", result_value="5")
 

@@ -241,7 +241,7 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
                                               ModuleMapInputKind);
 
   auto CurrentModuleMapEntry =
-      ScanInstance.getFileManager().getFile(Deps.ClangModuleMapFile);
+      ScanInstance.getFileManager().getOptionalFileRef(Deps.ClangModuleMapFile);
   assert(CurrentModuleMapEntry && "module map file entry not found");
 
   // Remove directly passed modulemap files. They will get added back if they
@@ -251,7 +251,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
   for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
     // TODO: Track these as `FileEntryRef` to simplify the equality check below.
-    auto ModuleMapEntry = ScanInstance.getFileManager().getFile(ModuleMapFile);
+    auto ModuleMapEntry =
+        ScanInstance.getFileManager().getOptionalFileRef(ModuleMapFile);
     assert(ModuleMapEntry && "module map file entry not found");
 
     // Don't report module maps describing eagerly-loaded dependency. This
@@ -299,7 +300,8 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
     ModuleDeps *MD = ModuleDepsByID.lookup(MID);
     assert(MD && "Inconsistent dependency info");
     // TODO: Track ClangModuleMapFile as `FileEntryRef`.
-    auto FE = ScanInstance.getFileManager().getFile(MD->ClangModuleMapFile);
+    auto FE = ScanInstance.getFileManager().getOptionalFileRef(
+        MD->ClangModuleMapFile);
     assert(FE && "Missing module map file that was previously found");
     ModuleMapFiles.insert(*FE);
   }
@@ -547,7 +549,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     auto It = MDC.ModularDeps.find(M);
     // Only report direct dependencies that were successfully handled.
     if (It != MDC.ModularDeps.end())
-      MDC.Consumer.handleDirectModuleDependency(MDC.ModularDeps[M]->ID);
+      MDC.Consumer.handleDirectModuleDependency(It->second->ID);
   }
 
   for (auto &&I : MDC.FileDeps)
@@ -585,9 +587,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-  OptionalFileEntryRef ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
-
-  if (ModuleMap) {
+  if (auto ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M)) {
     SmallString<128> Path = ModuleMap->getNameAsRequested();
     ModMapInfo.canonicalizeModuleMapPath(Path);
     MD.ClangModuleMapFile = std::string(Path);
@@ -599,15 +599,13 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        // __inferred_module.map is the result of the way in which an implicit
-        // module build handles inferred modules. It adds an overlay VFS with
-        // this file in the proper directory and relies on the rest of Clang to
-        // handle it like normal. With explicitly built modules we don't need
-        // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
-          MDC.addFileDep(MD, ModuleMap->getName());
+        // The __inferred_module.map file is an insignificant implementation
+        // detail of implicitly-built modules. The PCM will also report the
+        // actual on-disk module map file that allowed inferring the module,
+        // which is what we need for building the module explicitly
+        // Let's ignore this file.
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map"))
           return;
-        }
         MDC.addFileDep(MD, IFI.Filename);
       });
 

@@ -16,8 +16,6 @@ define amdgpu_kernel void @test_s(ptr addrspace(1) %out, i32 %src0) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_permlane64_b32 v0, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane64(i32 %src0)
   store i32 %v, ptr addrspace(1) %out
@@ -33,8 +31,6 @@ define amdgpu_kernel void @test_i(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    v_permlane64_b32 v0, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane64(i32 99)
   store i32 %v, ptr addrspace(1) %out
@@ -50,8 +46,6 @@ define amdgpu_kernel void @test_v(ptr addrspace(1) %out, i32 %src0) #1 {
 ; GFX11-NEXT:    v_permlane64_b32 v0, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tidx)

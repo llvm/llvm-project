@@ -193,6 +193,10 @@ def SysSocketAPI : PublicAPI<"sys/socket.h"> {
     "socklen_t",
     "struct sockaddr",
     "struct sockaddr_un",
+    "struct msghdr",
+    "struct iovec",
+    "size_t",
+    "ssize_t",
   ];
 }
 
