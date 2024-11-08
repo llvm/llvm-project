@@ -527,6 +527,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Clang now omits warnings for constructors marked with the ``[[noreturn]]`` attribute (#GH63009).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

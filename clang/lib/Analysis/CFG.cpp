@@ -4889,16 +4889,21 @@ CFGBlock *CFGBuilder::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *E,
   return Visit(E->getSubExpr(), asc);
 }
 
-CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *C,
+CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E,
                                                   AddStmtChoice asc) {
   // If the constructor takes objects as arguments by value, we need to properly
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
-  findConstructionContextsForArguments(C);
+  findConstructionContextsForArguments(E);
 
-  autoCreateBlock();
-  appendConstructor(Block, C);
-  return VisitChildren(C);
+  CXXConstructorDecl *C = E->getConstructor();
+  if (C && C->isNoReturn())
+    Block = createNoReturnBlock();
+  else
+    autoCreateBlock();
+
+  appendConstructor(Block, E);
+  return VisitChildren(E);
 }
 
 CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,

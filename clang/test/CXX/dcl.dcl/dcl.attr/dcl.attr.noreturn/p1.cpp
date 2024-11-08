@@ -49,3 +49,15 @@ void check() {
   test_type(g);
   test_type(h); // expected-note {{instantiation}}
 }
+
+namespace GH63009 {
+struct S {
+  [[noreturn]] S() { throw int {}; }
+};
+
+int test_no_return_constructor() { S(); } // ok
+
+int main() {
+  test_no_return_constructor();
+}
+}
