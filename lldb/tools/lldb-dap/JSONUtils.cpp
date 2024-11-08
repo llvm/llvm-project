@@ -1480,7 +1480,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 // Keep all the top level items from the statistics dump, except for the
 // "modules" array. It can be huge and cause delay
 // Array and dictionary value will return as <key, JSON string> pairs
-void FilterAndGetValueForKey(const lldb::SBStructuredData data, char *key,
+void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
                              llvm::json::Object &out) {
   lldb::SBStructuredData value = data.GetValueForKey(key);
   std::string key_utf8 = llvm::json::fixUTF8(key);
