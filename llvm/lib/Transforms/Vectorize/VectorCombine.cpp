@@ -2786,10 +2786,10 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
 bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   Value *DstVec, *SrcVec;
   uint64_t ExtIdx, InsIdx;
-  if (!match(&I, m_InsertElt(m_Value(DstVec),
-                             m_OneUse(m_ExtractElt(m_Value(SrcVec),
-                                                   m_ConstantInt(ExtIdx))),
-                             m_ConstantInt(InsIdx))))
+  if (!match(&I,
+             m_InsertElt(m_Value(DstVec),
+                         m_ExtractElt(m_Value(SrcVec), m_ConstantInt(ExtIdx)),
+                         m_ConstantInt(InsIdx))))
     return false;
 
   auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
@@ -2814,6 +2814,8 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
 
   InstructionCost NewCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, VecTy, Mask);
+  if (!Ext->hasOneUse())
+    NewCost += TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
 
   if (OldCost < NewCost)
     return false;
