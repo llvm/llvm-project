@@ -545,6 +545,14 @@ public:
     return DefinedValues < 3;
   }
 
+  // In SDAG construction, should length decreasing shuffles be expanded
+  // to a sequence of extracts and inserts if they can't be recognized
+  // via the two extracted operand form?
+  virtual bool
+  shouldScalarizeLengthDescreasingShuffle() const {
+    return true;
+  }
+
   /// Return true if integer divide is usually cheaper than a sequence of
   /// several shifts, adds, and multiplies for this target.
   /// The definition of "cheaper" may depend on whether we're optimizing

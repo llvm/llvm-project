@@ -586,6 +586,12 @@ public:
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
 
+  bool
+  shouldScalarizeLengthDescreasingShuffle() const override {
+    // We always prefer to pad as a canonical form.
+    return false;
+  }
+
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// Return the cost of LMUL for linear operations.
