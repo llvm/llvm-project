@@ -71,8 +71,11 @@ Afterwards in each section, users can have multiple entities that match source
 files based on the globs. These entities look like ``src:*/my/dir/*``.
 Users can also use the ``emit`` category to exclude a subdirectory from
 suppression.
-Source files are matched against these globs either as paths relative to the
-current working directory, or as absolute paths.
+Source files are matched against these globs either:
+
+- as paths relative to the current working directory
+- as absolute paths.
+
 When a source file matches multiple globs in a section, the longest one takes
 precedence.
 

@@ -532,10 +532,10 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
       LineAndSectionEntry;
   LineAndSectionEntry.reserve(Sections.size());
   for (const auto &Entry : Sections) {
-    llvm::StringRef DiagName = Entry.first();
+    llvm::StringRef DiagName = Entry.getKey();
     // Each section has a matcher with that section's name, attached to that
     // line.
-    const auto &DiagSectionMatcher = Entry.second.SectionMatcher;
+    const auto &DiagSectionMatcher = Entry.getValue().SectionMatcher;
     unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
     LineAndSectionEntry.emplace_back(DiagLine, &Entry);
   }
@@ -586,7 +586,7 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
   if (SrcEntriesIt == EntityTypeToCategories.end())
     return false;
   const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
-      SrcEntriesIt->second;
+      SrcEntriesIt->getValue();
   return globsMatches(CategoriesToMatchers, FilePath);
 }
 
@@ -596,8 +596,8 @@ bool WarningsSpecialCaseList::globsMatches(
   llvm::StringRef LongestMatch;
   bool LongestIsPositive = false;
   for (const auto &Entry : CategoriesToMatchers) {
-    llvm::StringRef Category = Entry.first();
-    const llvm::SpecialCaseList::Matcher &Matcher = Entry.second;
+    llvm::StringRef Category = Entry.getKey();
+    const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
     bool IsPositive = Category != "emit";
     for (const auto &[Pattern, Glob] : Matcher.Globs) {
       if (Pattern.size() < LongestMatch.size())

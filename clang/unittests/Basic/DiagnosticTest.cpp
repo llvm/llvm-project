@@ -38,6 +38,7 @@ void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
 }
 
 namespace {
+using testing::AllOf;
 using testing::ElementsAre;
 using testing::IsEmpty;
 
@@ -191,7 +192,7 @@ protected:
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   DiagnosticsEngine Diags{new DiagnosticIDs(), new DiagnosticOptions};
 
-  llvm::ArrayRef<StoredDiagnostic> takeDiags() {
+  llvm::ArrayRef<StoredDiagnostic> diags() {
     return CaptureConsumer.StoredDiags;
   }
 
@@ -211,12 +212,16 @@ private:
 MATCHER_P(WithMessage, Msg, "has diagnostic message") {
   return arg.getMessage() == Msg;
 }
+MATCHER(IsError, "has error severity") {
+  return arg.getLevel() == DiagnosticsEngine::Level::Error;
+}
 
 TEST_F(SuppressionMappingTest, MissingMappingFile) {
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(takeDiags(),
-              ElementsAre(WithMessage("no such file or directory: 'foo.txt'")));
+  EXPECT_THAT(diags(), ElementsAre(AllOf(
+                           WithMessage("no such file or directory: 'foo.txt'"),
+                           IsError())));
 }
 
 TEST_F(SuppressionMappingTest, MalformedFile) {
@@ -224,9 +229,11 @@ TEST_F(SuppressionMappingTest, MalformedFile) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer("asdf", "foo.txt"));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(takeDiags(), ElementsAre(WithMessage(
-                               "failed to process suppression mapping file "
-                               "'foo.txt': malformed line 1: 'asdf'")));
+  EXPECT_THAT(diags(),
+              ElementsAre(AllOf(
+                  WithMessage("failed to process suppression mapping file "
+                              "'foo.txt': malformed line 1: 'asdf'"),
+                  IsError())));
 }
 
 TEST_F(SuppressionMappingTest, UnknownDiagName) {
@@ -234,9 +241,8 @@ TEST_F(SuppressionMappingTest, UnknownDiagName) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(takeDiags(),
-              ElementsAre(WithMessage(
-                  "unknown warning option 'non-existing-warning'")));
+  EXPECT_THAT(diags(), ElementsAre(WithMessage(
+                           "unknown warning option 'non-existing-warning'")));
 }
 
 TEST_F(SuppressionMappingTest, SuppressesGroup) {
@@ -247,7 +253,7 @@ TEST_F(SuppressionMappingTest, SuppressesGroup) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(takeDiags(), IsEmpty());
+  EXPECT_THAT(diags(), IsEmpty());
 
   EXPECT_TRUE(
       Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
@@ -263,7 +269,7 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(takeDiags(), IsEmpty());
+  EXPECT_THAT(diags(), IsEmpty());
 
   EXPECT_TRUE(
       Diags.isSuppressedViaMapping(diag::warn_unused_function, "bar.cpp"));
@@ -281,7 +287,7 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(takeDiags(), IsEmpty());
+  EXPECT_THAT(diags(), IsEmpty());
 
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
                                            "clang/lib/Basic/foo.h"));
@@ -300,7 +306,7 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  ASSERT_THAT(takeDiags(), IsEmpty());
+  ASSERT_THAT(diags(), IsEmpty());
 
   FileManager FM({}, FS);
   SourceManager SM(Diags, FM);
