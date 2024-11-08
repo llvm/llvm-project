@@ -132,11 +132,11 @@ class CIRGenRecordLayout {
 private:
   /// The CIR type corresponding to this record layout; used when laying it out
   /// as a complete object.
-  mlir::cir::StructType CompleteObjectType;
+  cir::StructType CompleteObjectType;
 
   /// The CIR type for the non-virtual part of this record layout; used when
   /// laying it out as a base subobject.
-  mlir::cir::StructType BaseSubobjectType;
+  cir::StructType BaseSubobjectType;
 
   /// Map from (non-bit-field) struct field to the corresponding cir struct type
   /// field no. This info is populated by the record builder.
@@ -165,8 +165,8 @@ private:
   bool IsZeroInitializableAsBase : 1;
 
 public:
-  CIRGenRecordLayout(mlir::cir::StructType CompleteObjectType,
-                     mlir::cir::StructType BaseSubobjectType,
+  CIRGenRecordLayout(cir::StructType CompleteObjectType,
+                     cir::StructType BaseSubobjectType,
                      bool IsZeroInitializable, bool IsZeroInitializableAsBase)
       : CompleteObjectType(CompleteObjectType),
         BaseSubobjectType(BaseSubobjectType),
@@ -175,13 +175,11 @@ public:
 
   /// Return the "complete object" LLVM type associated with
   /// this record.
-  mlir::cir::StructType getCIRType() const { return CompleteObjectType; }
+  cir::StructType getCIRType() const { return CompleteObjectType; }
 
   /// Return the "base subobject" LLVM type associated with
   /// this record.
-  mlir::cir::StructType getBaseSubobjectCIRType() const {
-    return BaseSubobjectType;
-  }
+  cir::StructType getBaseSubobjectCIRType() const { return BaseSubobjectType; }
 
   /// Return cir::StructType element number that corresponds to the field FD.
   unsigned getCIRFieldNo(const clang::FieldDecl *FD) const {

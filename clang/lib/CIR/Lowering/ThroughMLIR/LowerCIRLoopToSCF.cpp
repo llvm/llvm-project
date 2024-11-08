@@ -36,7 +36,7 @@ namespace cir {
 
 class SCFLoop {
 public:
-  SCFLoop(mlir::cir::ForOp op, mlir::ConversionPatternRewriter *rewriter)
+  SCFLoop(cir::ForOp op, mlir::ConversionPatternRewriter *rewriter)
       : forOp(op), rewriter(rewriter) {}
 
   int64_t getStep() { return step; }
@@ -44,7 +44,7 @@ public:
   mlir::Value getUpperBound() { return upperBound; }
 
   int64_t findStepAndIV(mlir::Value &addr);
-  mlir::cir::CmpOp findCmpOp();
+  cir::CmpOp findCmpOp();
   mlir::Value findIVInitValue();
   void analysis();
 
@@ -52,8 +52,8 @@ public:
   void transferToSCFForOp();
 
 private:
-  mlir::cir::ForOp forOp;
-  mlir::cir::CmpOp cmpOp;
+  cir::ForOp forOp;
+  cir::CmpOp cmpOp;
   mlir::Value IVAddr, lowerBound = nullptr, upperBound = nullptr;
   mlir::ConversionPatternRewriter *rewriter;
   int64_t step = 0;
@@ -61,33 +61,33 @@ private:
 
 class SCFWhileLoop {
 public:
-  SCFWhileLoop(mlir::cir::WhileOp op, mlir::cir::WhileOp::Adaptor adaptor,
+  SCFWhileLoop(cir::WhileOp op, cir::WhileOp::Adaptor adaptor,
                mlir::ConversionPatternRewriter *rewriter)
       : whileOp(op), adaptor(adaptor), rewriter(rewriter) {}
   void transferToSCFWhileOp();
 
 private:
-  mlir::cir::WhileOp whileOp;
-  mlir::cir::WhileOp::Adaptor adaptor;
+  cir::WhileOp whileOp;
+  cir::WhileOp::Adaptor adaptor;
   mlir::ConversionPatternRewriter *rewriter;
 };
 
 class SCFDoLoop {
 public:
-  SCFDoLoop(mlir::cir::DoWhileOp op, mlir::cir::DoWhileOp::Adaptor adaptor,
+  SCFDoLoop(cir::DoWhileOp op, cir::DoWhileOp::Adaptor adaptor,
             mlir::ConversionPatternRewriter *rewriter)
       : DoOp(op), adaptor(adaptor), rewriter(rewriter) {}
   void transferToSCFWhileOp();
 
 private:
-  mlir::cir::DoWhileOp DoOp;
-  mlir::cir::DoWhileOp::Adaptor adaptor;
+  cir::DoWhileOp DoOp;
+  cir::DoWhileOp::Adaptor adaptor;
   mlir::ConversionPatternRewriter *rewriter;
 };
 
-static int64_t getConstant(mlir::cir::ConstantOp op) {
+static int64_t getConstant(cir::ConstantOp op) {
   auto attr = op->getAttrs().front().getValue();
-  const auto IntAttr = mlir::dyn_cast<mlir::cir::IntAttr>(attr);
+  const auto IntAttr = mlir::dyn_cast<cir::IntAttr>(attr);
   return IntAttr.getValue().getSExtValue();
 }
 
@@ -100,28 +100,28 @@ int64_t SCFLoop::findStepAndIV(mlir::Value &addr) {
   mlir::Value IV = nullptr;
   // Try to match "IV load addr; ++IV; store IV, addr" to find step.
   for (mlir::Operation &op : *stepBlock)
-    if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(op)) {
+    if (auto loadOp = dyn_cast<cir::LoadOp>(op)) {
       addr = loadOp.getAddr();
       IV = loadOp.getResult();
-    } else if (auto cop = dyn_cast<mlir::cir::ConstantOp>(op)) {
+    } else if (auto cop = dyn_cast<cir::ConstantOp>(op)) {
       if (step)
         llvm_unreachable(
             "Not support multiple constant in step calculation yet");
       step = getConstant(cop);
-    } else if (auto bop = dyn_cast<mlir::cir::BinOp>(op)) {
+    } else if (auto bop = dyn_cast<cir::BinOp>(op)) {
       if (bop.getLhs() != IV)
         llvm_unreachable("Find BinOp not operate on IV");
-      if (bop.getKind() != mlir::cir::BinOpKind::Add)
+      if (bop.getKind() != cir::BinOpKind::Add)
         llvm_unreachable(
             "Not support BinOp other than Add in step calculation yet");
-    } else if (auto uop = dyn_cast<mlir::cir::UnaryOp>(op)) {
+    } else if (auto uop = dyn_cast<cir::UnaryOp>(op)) {
       if (uop.getInput() != IV)
         llvm_unreachable("Find UnaryOp not operate on IV");
-      if (uop.getKind() == mlir::cir::UnaryOpKind::Inc)
+      if (uop.getKind() == cir::UnaryOpKind::Inc)
         step = 1;
-      else if (uop.getKind() == mlir::cir::UnaryOpKind::Dec)
+      else if (uop.getKind() == cir::UnaryOpKind::Dec)
         llvm_unreachable("Not support decrement step yet");
-    } else if (auto storeOp = dyn_cast<mlir::cir::StoreOp>(op)) {
+    } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
       assert(storeOp.getAddr() == addr && "Can't find IV when lowering ForOp");
     }
   assert(step && "Can't find step when lowering ForOp");
@@ -132,7 +132,7 @@ int64_t SCFLoop::findStepAndIV(mlir::Value &addr) {
 static bool isIVLoad(mlir::Operation *op, mlir::Value IVAddr) {
   if (!op)
     return false;
-  if (isa<mlir::cir::LoadOp>(op)) {
+  if (isa<cir::LoadOp>(op)) {
     if (!op->getOperand(0))
       return false;
     if (op->getOperand(0) == IVAddr)
@@ -141,15 +141,15 @@ static bool isIVLoad(mlir::Operation *op, mlir::Value IVAddr) {
   return false;
 }
 
-mlir::cir::CmpOp SCFLoop::findCmpOp() {
+cir::CmpOp SCFLoop::findCmpOp() {
   cmpOp = nullptr;
   for (auto *user : IVAddr.getUsers()) {
     if (user->getParentRegion() != &forOp.getCond())
       continue;
-    if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(*user)) {
+    if (auto loadOp = dyn_cast<cir::LoadOp>(*user)) {
       if (!loadOp->hasOneUse())
         continue;
-      if (auto op = dyn_cast<mlir::cir::CmpOp>(*loadOp->user_begin())) {
+      if (auto op = dyn_cast<cir::CmpOp>(*loadOp->user_begin())) {
         cmpOp = op;
         break;
       }
@@ -159,7 +159,7 @@ mlir::cir::CmpOp SCFLoop::findCmpOp() {
     llvm_unreachable("Can't find loop CmpOp");
 
   auto type = cmpOp.getLhs().getType();
-  if (!mlir::isa<mlir::cir::IntType>(type))
+  if (!mlir::isa<cir::IntType>(type))
     llvm_unreachable("Non-integer type IV is not supported");
 
   auto lhsDefOp = cmpOp.getLhs().getDefiningOp();
@@ -168,8 +168,8 @@ mlir::cir::CmpOp SCFLoop::findCmpOp() {
   if (!isIVLoad(lhsDefOp, IVAddr))
     llvm_unreachable("cmpOp LHS is not IV");
 
-  if (cmpOp.getKind() != mlir::cir::CmpOpKind::le &&
-      cmpOp.getKind() != mlir::cir::CmpOpKind::lt)
+  if (cmpOp.getKind() != cir::CmpOpKind::le &&
+      cmpOp.getKind() != cir::CmpOpKind::lt)
     llvm_unreachable("Not support lowering other than le or lt comparison");
 
   return cmpOp;
@@ -211,9 +211,9 @@ void SCFLoop::analysis() {
 
   if (step > 0) {
     lowerBound = IVInit;
-    if (cmpOp.getKind() == mlir::cir::CmpOpKind::lt)
+    if (cmpOp.getKind() == cir::CmpOpKind::lt)
       upperBound = IVEndBound;
-    else if (cmpOp.getKind() == mlir::cir::CmpOpKind::le)
+    else if (cmpOp.getKind() == cir::CmpOpKind::le)
       upperBound = plusConstant(IVEndBound, cmpOp.getLoc(), 1);
   }
   assert(lowerBound && "can't find loop lower bound");
@@ -233,8 +233,7 @@ void SCFLoop::transferToSCFForOp() {
   rewriter->inlineBlockBefore(&forOp.getBody().front(), scfForOp.getBody(),
                               scfForOp.getBody()->end(), bbArg);
   scfForOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
-    if (isa<mlir::cir::BreakOp>(op) || isa<mlir::cir::ContinueOp>(op) ||
-        isa<mlir::cir::IfOp>(op))
+    if (isa<cir::BreakOp>(op) || isa<cir::ContinueOp>(op) || isa<cir::IfOp>(op))
       llvm_unreachable(
           "Not support lowering loop with break, continue or if yet");
     // Replace the IV usage to scf loop induction variable.
@@ -285,12 +284,12 @@ void SCFDoLoop::transferToSCFWhileOp() {
                                        afterBuilder);
 }
 
-class CIRForOpLowering : public mlir::OpConversionPattern<mlir::cir::ForOp> {
+class CIRForOpLowering : public mlir::OpConversionPattern<cir::ForOp> {
 public:
-  using OpConversionPattern<mlir::cir::ForOp>::OpConversionPattern;
+  using OpConversionPattern<cir::ForOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::ForOp op, OpAdaptor adaptor,
+  matchAndRewrite(cir::ForOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     SCFLoop loop(op, &rewriter);
     loop.analysis();
@@ -300,13 +299,12 @@ public:
   }
 };
 
-class CIRWhileOpLowering
-    : public mlir::OpConversionPattern<mlir::cir::WhileOp> {
+class CIRWhileOpLowering : public mlir::OpConversionPattern<cir::WhileOp> {
 public:
-  using OpConversionPattern<mlir::cir::WhileOp>::OpConversionPattern;
+  using OpConversionPattern<cir::WhileOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::WhileOp op, OpAdaptor adaptor,
+  matchAndRewrite(cir::WhileOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     SCFWhileLoop loop(op, adaptor, &rewriter);
     loop.transferToSCFWhileOp();
@@ -315,12 +313,12 @@ public:
   }
 };
 
-class CIRDoOpLowering : public mlir::OpConversionPattern<mlir::cir::DoWhileOp> {
+class CIRDoOpLowering : public mlir::OpConversionPattern<cir::DoWhileOp> {
 public:
-  using OpConversionPattern<mlir::cir::DoWhileOp>::OpConversionPattern;
+  using OpConversionPattern<cir::DoWhileOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::DoWhileOp op, OpAdaptor adaptor,
+  matchAndRewrite(cir::DoWhileOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     SCFDoLoop loop(op, adaptor, &rewriter);
     loop.transferToSCFWhileOp();
@@ -330,11 +328,11 @@ public:
 };
 
 class CIRConditionOpLowering
-    : public mlir::OpConversionPattern<mlir::cir::ConditionOp> {
+    : public mlir::OpConversionPattern<cir::ConditionOp> {
 public:
-  using OpConversionPattern<mlir::cir::ConditionOp>::OpConversionPattern;
+  using OpConversionPattern<cir::ConditionOp>::OpConversionPattern;
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::ConditionOp op, OpAdaptor adaptor,
+  matchAndRewrite(cir::ConditionOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto *parentOp = op->getParentOp();
     return llvm::TypeSwitch<mlir::Operation *, mlir::LogicalResult>(parentOp)

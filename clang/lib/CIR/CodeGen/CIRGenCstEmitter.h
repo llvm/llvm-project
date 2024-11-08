@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A helper class for emitting expressions and values as mlir::cir::ConstantOp
+// A helper class for emitting expressions and values as cir::ConstantOp
 // and as initializers for global variables.
 //
 // Note: this is based on LLVM's codegen in ConstantEmitter.h, reusing this
@@ -79,7 +79,7 @@ public:
   mlir::Attribute emitForInitializer(const APValue &value, LangAS destAddrSpace,
                                      QualType destType);
 
-  void finalize(mlir::cir::GlobalOp global);
+  void finalize(cir::GlobalOp global);
 
   // All of the "abstract" emission methods below permit the emission to
   // be immediately discarded without finalizing anything.  Therefore, they

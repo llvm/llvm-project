@@ -37,12 +37,12 @@ static void buildBadCastCall(CIRBaseBuilderTy &builder, mlir::Location loc,
   cir_cconv_assert(!MissingFeatures::setCallingConv());
 
   builder.createCallOp(loc, badCastFuncRef, mlir::ValueRange{});
-  builder.create<mlir::cir::UnreachableOp>(loc);
+  builder.create<cir::UnreachableOp>(loc);
   builder.clearInsertionPoint();
 }
 
 static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
-                                                  mlir::cir::DynamicCastOp op) {
+                                                  cir::DynamicCastOp op) {
   auto loc = op->getLoc();
   auto srcValue = op.getSrc();
   auto castInfo = op.getInfo().value();
@@ -66,7 +66,7 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
                         dynCastFuncArgs)
           .getResult();
 
-  cir_cconv_assert(mlir::isa<mlir::cir::PointerType>(castedPtr.getType()) &&
+  cir_cconv_assert(mlir::isa<cir::PointerType>(castedPtr.getType()) &&
                    "the return value of __dynamic_cast should be a ptr");
 
   /// C++ [expr.dynamic.cast]p9:
@@ -74,7 +74,7 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
   if (op.isRefcast()) {
     // Emit a cir.if that checks the casted value.
     mlir::Value castedValueIsNull = builder.createPtrIsNull(castedPtr);
-    builder.create<mlir::cir::IfOp>(
+    builder.create<cir::IfOp>(
         loc, castedValueIsNull, false, [&](mlir::OpBuilder &, mlir::Location) {
           buildBadCastCall(builder, loc, castInfo.getBadCastFunc());
         });
@@ -88,7 +88,7 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
 static mlir::Value
 buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
                                      clang::ASTContext &astCtx,
-                                     mlir::cir::DynamicCastOp op) {
+                                     cir::DynamicCastOp op) {
   auto loc = op.getLoc();
   bool vtableUsesRelativeLayout = op.getRelativeLayout();
 
@@ -106,8 +106,8 @@ buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
     auto ptrdiffTyIsSigned = clang::TargetInfo::isTypeSigned(ptrdiffTy);
     auto ptrdiffTyWidth = targetInfo.getTypeWidth(ptrdiffTy);
 
-    vtableElemTy = mlir::cir::IntType::get(builder.getContext(), ptrdiffTyWidth,
-                                           ptrdiffTyIsSigned);
+    vtableElemTy = cir::IntType::get(builder.getContext(), ptrdiffTyWidth,
+                                     ptrdiffTyIsSigned);
     vtableElemAlign =
         llvm::divideCeil(targetInfo.getPointerAlign(clang::LangAS::Default), 8);
   }
@@ -118,7 +118,7 @@ buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
   auto vtablePtrPtr =
       builder.createBitcast(op.getSrc(), builder.getPointerTo(vtablePtrTy));
   auto vtablePtr = builder.createLoad(loc, vtablePtrPtr);
-  auto offsetToTopSlotPtr = builder.create<mlir::cir::VTableAddrPointOp>(
+  auto offsetToTopSlotPtr = builder.create<cir::VTableAddrPointOp>(
       loc, vtablePtrTy, mlir::FlatSymbolRefAttr{}, vtablePtr,
       /*vtable_index=*/0, -2ULL);
   auto offsetToTop =
@@ -128,8 +128,8 @@ buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
   // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
   auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
   auto srcBytePtr = builder.createBitcast(op.getSrc(), u8PtrTy);
-  auto dstBytePtr = builder.create<mlir::cir::PtrStrideOp>(
-      loc, u8PtrTy, srcBytePtr, offsetToTop);
+  auto dstBytePtr =
+      builder.create<cir::PtrStrideOp>(loc, u8PtrTy, srcBytePtr, offsetToTop);
   // Cast the result to a void*.
   return builder.createBitcast(dstBytePtr, builder.getVoidPtrTy());
 }
@@ -137,7 +137,7 @@ buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
 mlir::Value
 LoweringPrepareItaniumCXXABI::lowerDynamicCast(CIRBaseBuilderTy &builder,
                                                clang::ASTContext &astCtx,
-                                               mlir::cir::DynamicCastOp op) {
+                                               cir::DynamicCastOp op) {
   auto loc = op->getLoc();
   auto srcValue = op.getSrc();
 
@@ -148,7 +148,7 @@ LoweringPrepareItaniumCXXABI::lowerDynamicCast(CIRBaseBuilderTy &builder,
 
   auto srcValueIsNotNull = builder.createPtrToBoolCast(srcValue);
   return builder
-      .create<mlir::cir::TernaryOp>(
+      .create<cir::TernaryOp>(
           loc, srcValueIsNotNull,
           [&](mlir::OpBuilder &, mlir::Location) {
             mlir::Value castedValue =
@@ -164,9 +164,10 @@ LoweringPrepareItaniumCXXABI::lowerDynamicCast(CIRBaseBuilderTy &builder,
       .getResult();
 }
 
-mlir::Value LoweringPrepareItaniumCXXABI::lowerVAArg(
-    CIRBaseBuilderTy &builder, mlir::cir::VAArgOp op,
-    const ::cir::CIRDataLayout &datalayout) {
+mlir::Value
+LoweringPrepareItaniumCXXABI::lowerVAArg(CIRBaseBuilderTy &builder,
+                                         cir::VAArgOp op,
+                                         const cir::CIRDataLayout &datalayout) {
   // There is no generic cir lowering for var_arg, here we fail
   // so to prevent attempt of calling lowerVAArg for ItaniumCXXABI
   cir_cconv_unreachable("NYI");

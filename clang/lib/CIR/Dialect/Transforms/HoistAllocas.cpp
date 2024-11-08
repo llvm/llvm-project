@@ -18,7 +18,7 @@
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 namespace {
 
@@ -28,14 +28,14 @@ struct HoistAllocasPass : public HoistAllocasBase<HoistAllocasPass> {
   void runOnOperation() override;
 };
 
-static void process(mlir::cir::FuncOp func) {
+static void process(cir::FuncOp func) {
   if (func.getRegion().empty())
     return;
 
   // Hoist all static allocas to the entry block.
   mlir::Block &entryBlock = func.getRegion().front();
-  llvm::SmallVector<mlir::cir::AllocaOp> allocas;
-  func.getBody().walk([&](mlir::cir::AllocaOp alloca) {
+  llvm::SmallVector<cir::AllocaOp> allocas;
+  func.getBody().walk([&](cir::AllocaOp alloca) {
     if (alloca->getBlock() == &entryBlock)
       return;
     // Don't hoist allocas with dynamic alloca size.
@@ -54,8 +54,8 @@ static void process(mlir::cir::FuncOp func) {
 
 void HoistAllocasPass::runOnOperation() {
   llvm::TimeTraceScope scope("Hoist Allocas");
-  SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](mlir::cir::FuncOp op) { process(op); });
+  llvm::SmallVector<Operation *, 16> ops;
+  getOperation()->walk([&](cir::FuncOp op) { process(op); });
 }
 
 } // namespace

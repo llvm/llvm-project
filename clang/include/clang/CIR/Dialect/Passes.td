@@ -188,7 +188,7 @@ def CallConvLowering : Pass<"cir-call-conv-lowering"> {
     to properly lower CIR functions to LLVM IR.
   }];
   let constructor = "mlir::createCallConvLoweringPass()";
-  let dependentDialects = ["mlir::cir::CIRDialect"];
+  let dependentDialects = ["cir::CIRDialect"];
 }
 
 #endif // MLIR_DIALECT_CIR_PASSES

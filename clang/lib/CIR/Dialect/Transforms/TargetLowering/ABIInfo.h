@@ -20,7 +20,6 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "llvm/IR/CallingConv.h"
 
-namespace mlir {
 namespace cir {
 
 // Forward declarations.
@@ -43,20 +42,19 @@ public:
 
   const clang::TargetInfo &getTarget() const;
 
-  const ::cir::CIRDataLayout &getDataLayout() const;
+  const cir::CIRDataLayout &getDataLayout() const;
 
   virtual void computeInfo(LowerFunctionInfo &FI) const = 0;
 
   // Implement the Type::IsPromotableIntegerType for ABI specific needs. The
   // only difference is that this considers bit-precise integer types as well.
-  bool isPromotableIntegerTypeForABI(Type Ty) const;
+  bool isPromotableIntegerTypeForABI(mlir::Type Ty) const;
 
-  ::cir::ABIArgInfo getNaturalAlignIndirect(mlir::Type Ty, bool ByVal = true,
-                                            bool Realign = false,
-                                            mlir::Type Padding = {}) const;
+  cir::ABIArgInfo getNaturalAlignIndirect(mlir::Type Ty, bool ByVal = true,
+                                          bool Realign = false,
+                                          mlir::Type Padding = {}) const;
 };
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFO_H

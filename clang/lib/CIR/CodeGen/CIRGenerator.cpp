@@ -56,7 +56,7 @@ void CIRGenerator::Initialize(ASTContext &astCtx) {
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   mlirCtx->getOrLoadDialect<mlir::DLTIDialect>();
   mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
-  mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
+  mlirCtx->getOrLoadDialect<cir::CIRDialect>();
   mlirCtx->getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
   mlirCtx->getOrLoadDialect<mlir::omp::OpenMPDialect>();

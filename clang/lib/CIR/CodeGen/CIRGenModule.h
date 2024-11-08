@@ -144,7 +144,7 @@ private:
 
   /// Store deferred function annotations so they can be emitted at the end with
   /// most up to date ValueDecl that will have all the inherited annotations.
-  llvm::DenseMap<StringRef, const ValueDecl *> deferredAnnotations;
+  llvm::DenseMap<llvm::StringRef, const ValueDecl *> deferredAnnotations;
 
   llvm::DenseMap<const Expr *, mlir::Operation *>
       materializedGlobalTemporaryMap;
@@ -186,7 +186,7 @@ public:
 
   /// Track whether the CIRGenModule is currently building an initializer
   /// for a global (e.g. as opposed to a regular cir.func).
-  mlir::cir::GlobalOp globalOpContext = nullptr;
+  cir::GlobalOp globalOpContext = nullptr;
 
   /// When a C++ decl with an initializer is deferred, null is
   /// appended to CXXGlobalInits, and the index of that null is placed
@@ -205,37 +205,36 @@ public:
   /// extern "C" linkage specification, prepare to emit an alias for it
   /// to the expected name.
   template <typename SomeDecl>
-  void maybeHandleStaticInExternC(const SomeDecl *D, mlir::cir::GlobalOp GV);
+  void maybeHandleStaticInExternC(const SomeDecl *D, cir::GlobalOp GV);
 
   /// Tell the consumer that this variable has been instantiated.
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD);
 
-  llvm::DenseMap<const Decl *, mlir::cir::GlobalOp> StaticLocalDeclMap;
-  llvm::DenseMap<StringRef, mlir::Value> Globals;
-  mlir::Operation *getGlobalValue(StringRef Ref);
+  llvm::DenseMap<const Decl *, cir::GlobalOp> StaticLocalDeclMap;
+  llvm::DenseMap<llvm::StringRef, mlir::Value> Globals;
+  mlir::Operation *getGlobalValue(llvm::StringRef Ref);
   mlir::Value getGlobalValue(const clang::Decl *D);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
-  mlir::cir::GlobalOp
-  getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty, LangAS AddrSpace,
-                       const VarDecl *D,
+  cir::GlobalOp
+  getOrCreateCIRGlobal(llvm::StringRef MangledName, mlir::Type Ty,
+                       LangAS AddrSpace, const VarDecl *D,
                        ForDefinition_t IsForDefinition = NotForDefinition);
 
-  mlir::cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *D) {
+  cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *D) {
     return StaticLocalDeclMap[D];
   }
 
-  void setStaticLocalDeclAddress(const VarDecl *D, mlir::cir::GlobalOp C) {
+  void setStaticLocalDeclAddress(const VarDecl *D, cir::GlobalOp C) {
     StaticLocalDeclMap[D] = C;
   }
 
-  mlir::cir::GlobalOp
-  getOrCreateStaticVarDecl(const VarDecl &D,
-                           mlir::cir::GlobalLinkageKind Linkage);
+  cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &D,
+                                         cir::GlobalLinkageKind Linkage);
 
-  mlir::cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *D, mlir::Type Ty,
-                                  ForDefinition_t IsForDefinition);
+  cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *D, mlir::Type Ty,
+                                     ForDefinition_t IsForDefinition);
 
   /// TODO(cir): once we have cir.module, add this as a convenience method
   /// there instead of here.
@@ -246,25 +245,23 @@ public:
   ///      with a constantexpr cast to the right type.
   ///   3. Finally, if the existing global is the correct declaration, return
   ///      the existing global.
-  mlir::cir::GlobalOp getOrInsertGlobal(
-      mlir::Location loc, StringRef Name, mlir::Type Ty,
-      llvm::function_ref<mlir::cir::GlobalOp()> CreateGlobalCallback);
+  cir::GlobalOp
+  getOrInsertGlobal(mlir::Location loc, llvm::StringRef Name, mlir::Type Ty,
+                    llvm::function_ref<cir::GlobalOp()> CreateGlobalCallback);
 
   // Overload to construct a global variable using its constructor's defaults.
-  mlir::cir::GlobalOp getOrInsertGlobal(mlir::Location loc, StringRef Name,
-                                        mlir::Type Ty);
+  cir::GlobalOp getOrInsertGlobal(mlir::Location loc, llvm::StringRef Name,
+                                  mlir::Type Ty);
 
-  static mlir::cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, StringRef name,
-                 mlir::Type t, bool isConstant = false,
-                 mlir::cir::AddressSpaceAttr addrSpace = {},
-                 mlir::Operation *insertPoint = nullptr,
-                 mlir::cir::GlobalLinkageKind linkage =
-                     mlir::cir::GlobalLinkageKind::ExternalLinkage);
+  static cir::GlobalOp createGlobalOp(
+      CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name, mlir::Type t,
+      bool isConstant = false, cir::AddressSpaceAttr addrSpace = {},
+      mlir::Operation *insertPoint = nullptr,
+      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
   // FIXME: Hardcoding priority here is gross.
-  void AddGlobalCtor(mlir::cir::FuncOp Ctor, int Priority = 65535);
-  void AddGlobalDtor(mlir::cir::FuncOp Dtor, int Priority = 65535,
+  void AddGlobalCtor(cir::FuncOp Ctor, int Priority = 65535);
+  void AddGlobalDtor(cir::FuncOp Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
 
   // Return whether structured convergence intrinsics should be generated for
@@ -286,7 +283,7 @@ public:
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
   /// Return the mlir::GlobalViewAttr for the address of the given global.
-  mlir::cir::GlobalViewAttr
+  cir::GlobalViewAttr
   getAddrOfGlobalVarAttr(const VarDecl *D, mlir::Type Ty = {},
                          ForDefinition_t IsForDefinition = NotForDefinition);
 
@@ -314,22 +311,23 @@ public:
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
   /// \param Attrs [out] - On return, the attribute list to use.
-  void constructAttributeList(StringRef Name, const CIRGenFunctionInfo &Info,
+  void constructAttributeList(llvm::StringRef Name,
+                              const CIRGenFunctionInfo &Info,
                               CIRGenCalleeInfo CalleeInfo,
                               mlir::NamedAttrList &Attrs,
-                              mlir::cir::CallingConv &callingConv,
+                              cir::CallingConv &callingConv,
                               bool AttrOnCallSite, bool IsThunk);
 
   /// Helper function for getDefaultFunctionAttributes. Builds a set of function
   /// attributes which can be simply added to a function.
-  void getTrivialDefaultFunctionAttributes(StringRef name, bool hasOptnone,
-                                           bool attrOnCallSite,
+  void getTrivialDefaultFunctionAttributes(llvm::StringRef name,
+                                           bool hasOptnone, bool attrOnCallSite,
                                            mlir::NamedAttrList &funcAttrs);
 
   /// Helper function for constructAttributeList and
   /// addDefaultFunctionDefinitionAttributes.  Builds a set of function
   /// attributes to add to a function with the given properties.
-  void getDefaultFunctionAttributes(StringRef name, bool hasOptnone,
+  void getDefaultFunctionAttributes(llvm::StringRef name, bool hasOptnone,
                                     bool attrOnCallSite,
                                     mlir::NamedAttrList &funcAttrs);
 
@@ -337,9 +335,9 @@ public:
   /// different type already exists then a new variable with the right type
   /// will be created and all uses of the old variable will be replaced with a
   /// bitcast to the new variable.
-  mlir::cir::GlobalOp createOrReplaceCXXRuntimeVariable(
-      mlir::Location loc, StringRef Name, mlir::Type Ty,
-      mlir::cir::GlobalLinkageKind Linkage, clang::CharUnits Alignment);
+  cir::GlobalOp createOrReplaceCXXRuntimeVariable(
+      mlir::Location loc, llvm::StringRef Name, mlir::Type Ty,
+      cir::GlobalLinkageKind Linkage, clang::CharUnits Alignment);
 
   /// Emit any vtables which we deferred and still have a use for.
   void buildDeferredVTables();
@@ -347,15 +345,14 @@ public:
 
   void buildVTable(CXXRecordDecl *rd);
 
-  void setDSOLocal(mlir::cir::CIRGlobalValueInterface GV) const;
+  void setDSOLocal(cir::CIRGlobalValueInterface GV) const;
 
   /// Return the appropriate linkage for the vtable, VTT, and type information
   /// of the given class.
-  mlir::cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
+  cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
 
   /// Emit type metadata for the given vtable using the given layout.
-  void buildVTableTypeMetadata(const CXXRecordDecl *RD,
-                               mlir::cir::GlobalOp VTable,
+  void buildVTableTypeMetadata(const CXXRecordDecl *RD, cir::GlobalOp VTable,
                                const VTableLayout &VTLayout);
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -375,16 +372,16 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
-  llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> ConstantStringMap;
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *E);
 
   /// Return a global symbol reference to a constant array for the given string
   /// literal.
-  mlir::cir::GlobalViewAttr
+  cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *S,
-                                     StringRef Name = ".str");
+                                     llvm::StringRef Name = ".str");
   unsigned StringLiteralCnt = 0;
 
   unsigned CompoundLitaralCnt = 0;
@@ -485,10 +482,11 @@ public:
                                      const CXXRecordDecl *Derived,
                                      const CXXRecordDecl *VBase);
 
-  mlir::cir::FuncOp getAddrOfCXXStructor(
-      clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
-      mlir::cir::FuncType FnType = nullptr, bool DontDefer = false,
-      ForDefinition_t IsForDefinition = NotForDefinition) {
+  cir::FuncOp
+  getAddrOfCXXStructor(clang::GlobalDecl GD,
+                       const CIRGenFunctionInfo *FnInfo = nullptr,
+                       cir::FuncType FnType = nullptr, bool DontDefer = false,
+                       ForDefinition_t IsForDefinition = NotForDefinition) {
 
     return getAddrAndTypeOfCXXStructor(GD, FnInfo, FnType, DontDefer,
                                        IsForDefinition)
@@ -533,9 +531,9 @@ public:
     DefaultMethodsToEmit.emplace_back(GD);
   }
 
-  std::pair<mlir::cir::FuncType, mlir::cir::FuncOp> getAddrAndTypeOfCXXStructor(
+  std::pair<cir::FuncType, cir::FuncOp> getAddrAndTypeOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
-      mlir::cir::FuncType FnType = nullptr, bool Dontdefer = false,
+      cir::FuncType FnType = nullptr, bool Dontdefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition);
 
   void buildTopLevelDecl(clang::Decl *decl);
@@ -547,9 +545,9 @@ public:
 
   bool tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
 
-  void buildAliasForGlobal(StringRef mangledName, mlir::Operation *op,
-                           GlobalDecl aliasGD, mlir::cir::FuncOp aliasee,
-                           mlir::cir::GlobalLinkageKind linkage);
+  void buildAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
+                           GlobalDecl aliasGD, cir::FuncOp aliasee,
+                           cir::GlobalLinkageKind linkage);
 
   mlir::Type getCIRType(const clang::QualType &type);
 
@@ -566,7 +564,7 @@ public:
   void setTLSMode(mlir::Operation *Op, const VarDecl &D) const;
 
   /// Get TLS mode from CodeGenOptions.
-  mlir::cir::TLS_Model GetDefaultCIRTLSModel() const;
+  cir::TLS_Model GetDefaultCIRTLSModel() const;
 
   /// Replace the present global `Old` with the given global `New`. Their symbol
   /// names must match; their types can be different. Usages of the old global
@@ -574,7 +572,7 @@ public:
   ///
   /// This function will erase the old global. This function will NOT insert the
   /// new global into the module.
-  void replaceGlobal(mlir::cir::GlobalOp Old, mlir::cir::GlobalOp New);
+  void replaceGlobal(cir::GlobalOp Old, cir::GlobalOp New);
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
@@ -585,7 +583,7 @@ public:
   bool MayDropFunctionReturn(const clang::ASTContext &Context,
                              clang::QualType ReturnType);
 
-  bool isInNoSanitizeList(clang::SanitizerMask Kind, mlir::cir::FuncOp Fn,
+  bool isInNoSanitizeList(clang::SanitizerMask Kind, cir::FuncOp Fn,
                           clang::SourceLocation) const;
 
   /// Determine whether the definition can be emitted eagerly, or should be
@@ -599,7 +597,7 @@ public:
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.
   // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?
-  mlir::cir::FuncOp
+  cir::FuncOp
   GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty = nullptr,
                     bool ForVTable = false, bool Dontdefer = false,
                     ForDefinition_t IsForDefinition = NotForDefinition);
@@ -637,17 +635,17 @@ public:
   void UpdateCompletedType(const clang::TagDecl *TD);
 
   /// Set function attributes for a function declaration.
-  void setFunctionAttributes(GlobalDecl GD, mlir::cir::FuncOp F,
+  void setFunctionAttributes(GlobalDecl GD, cir::FuncOp F,
                              bool IsIncompleteFunction, bool IsThunk);
 
   /// Set the CIR function attributes (sext, zext, etc).
   void setCIRFunctionAttributes(GlobalDecl GD, const CIRGenFunctionInfo &info,
-                                mlir::cir::FuncOp func, bool isThunk);
+                                cir::FuncOp func, bool isThunk);
 
   /// Set the CIR function attributes which only apply to a function
   /// definition.
   void setCIRFunctionAttributesForDefinition(const Decl *decl,
-                                             mlir::cir::FuncOp func);
+                                             cir::FuncOp func);
 
   void buildGlobalDefinition(clang::GlobalDecl D,
                              mlir::Operation *Op = nullptr);
@@ -656,10 +654,10 @@ public:
                                 bool IsTentative = false);
 
   /// Emit the function that initializes the specified global
-  void buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
-                                 mlir::cir::GlobalOp addr, bool performInit);
+  void buildCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                 bool performInit);
 
-  void buildCXXGlobalVarDeclInitFunc(const VarDecl *D, mlir::cir::GlobalOp Addr,
+  void buildCXXGlobalVarDeclInitFunc(const VarDecl *D, cir::GlobalOp Addr,
                                      bool PerformInit);
 
   void addDeferredVTable(const CXXRecordDecl *RD) {
@@ -699,7 +697,7 @@ public:
   // Produce code for this constructor/destructor. This method doesn't try to
   // apply any ABI rules about which other constructors/destructors are needed
   // or if they are alias to each other.
-  mlir::cir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
+  cir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
 
   bool lookupRepresentativeDecl(llvm::StringRef MangledName,
                                 clang::GlobalDecl &Result) const;
@@ -713,39 +711,37 @@ public:
   /// Visibility and Linkage
   /// -------
 
-  static void setInitializer(mlir::cir::GlobalOp &op, mlir::Attribute value);
+  static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
   static mlir::SymbolTable::Visibility
-  getMLIRVisibilityFromCIRLinkage(mlir::cir::GlobalLinkageKind GLK);
-  static mlir::cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
+  getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind GLK);
+  static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
       clang::VisibilityAttr::VisibilityType visibility);
-  mlir::cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
-  static mlir::SymbolTable::Visibility
-  getMLIRVisibility(mlir::cir::GlobalOp op);
-  mlir::cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl GD);
-  mlir::cir::GlobalLinkageKind
-  getCIRLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
-                             bool IsConstantVariable);
-  void setFunctionLinkage(GlobalDecl GD, mlir::cir::FuncOp f) {
+  cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
+  static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
+  cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl GD);
+  cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *D,
+                                                    GVALinkage Linkage,
+                                                    bool IsConstantVariable);
+  void setFunctionLinkage(GlobalDecl GD, cir::FuncOp f) {
     auto L = getFunctionLinkage(GD);
-    f.setLinkageAttr(
-        mlir::cir::GlobalLinkageKindAttr::get(&getMLIRContext(), L));
+    f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), L));
     mlir::SymbolTable::setSymbolVisibility(f,
                                            getMLIRVisibilityFromCIRLinkage(L));
   }
 
-  mlir::cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *VD,
-                                                          bool IsConstant);
+  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *VD,
+                                                    bool IsConstant);
 
-  void addReplacement(StringRef Name, mlir::Operation *Op);
+  void addReplacement(llvm::StringRef Name, mlir::Operation *Op);
 
   mlir::Location getLocForFunction(const clang::FunctionDecl *FD);
 
   void ReplaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *Old,
-                                                 mlir::cir::FuncOp NewFn);
+                                                 cir::FuncOp NewFn);
 
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
-  mlir::cir::FuncOp
+  cir::FuncOp
   GetOrCreateCIRFunction(llvm::StringRef MangledName, mlir::Type Ty,
                          clang::GlobalDecl D, bool ForVTable,
                          bool DontDefer = false, bool IsThunk = false,
@@ -753,14 +749,13 @@ public:
                          mlir::ArrayAttr ExtraAttrs = {});
   // Effectively create the CIR instruction, properly handling insertion
   // points.
-  mlir::cir::FuncOp createCIRFunction(mlir::Location loc, StringRef name,
-                                      mlir::cir::FuncType Ty,
-                                      const clang::FunctionDecl *FD);
+  cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
+                                cir::FuncType Ty,
+                                const clang::FunctionDecl *FD);
 
-  mlir::cir::FuncOp createRuntimeFunction(mlir::cir::FuncType Ty,
-                                          StringRef Name, mlir::ArrayAttr = {},
-                                          bool Local = false,
-                                          bool AssumeConvergent = false);
+  cir::FuncOp createRuntimeFunction(cir::FuncType Ty, llvm::StringRef Name,
+                                    mlir::ArrayAttr = {}, bool Local = false,
+                                    bool AssumeConvergent = false);
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.
@@ -774,11 +769,10 @@ public:
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
-  mlir::cir::FuncOp getBuiltinLibFunction(const FunctionDecl *FD,
-                                          unsigned BuiltinID);
+  cir::FuncOp getBuiltinLibFunction(const FunctionDecl *FD, unsigned BuiltinID);
 
   /// Emit a general error that something can't be done.
-  void Error(SourceLocation loc, StringRef error);
+  void Error(SourceLocation loc, llvm::StringRef error);
 
   /// Print out an error that codegen doesn't support the specified stmt yet.
   void ErrorUnsupported(const Stmt *S, const char *Type);
@@ -812,8 +806,7 @@ public:
   /// \param FN is a pointer to IR function being generated.
   /// \param FD is a pointer to function declaration if any.
   /// \param CGF is a pointer to CIRGenFunction that generates this function.
-  void genKernelArgMetadata(mlir::cir::FuncOp FN,
-                            const FunctionDecl *FD = nullptr,
+  void genKernelArgMetadata(cir::FuncOp FN, const FunctionDecl *FD = nullptr,
                             CIRGenFunction *CGF = nullptr);
 
   /// Emits OpenCL specific Metadata e.g. OpenCL version.
@@ -823,7 +816,7 @@ public:
   /// information for a given GlobalValue. Notice that a GlobalValue could
   /// have multiple annotations, and this function creates attribute for
   /// one of them.
-  mlir::cir::AnnotationAttr buildAnnotateAttr(const clang::AnnotateAttr *aa);
+  cir::AnnotationAttr buildAnnotateAttr(const clang::AnnotateAttr *aa);
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
@@ -838,7 +831,7 @@ private:
 
   void setNonAliasAttributes(GlobalDecl GD, mlir::Operation *GV);
   /// Map source language used to a CIR attribute.
-  mlir::cir::SourceLanguage getCIRSourceLanguage();
+  cir::SourceLanguage getCIRSourceLanguage();
 
   /// Emit all the global annotations.
   /// This actually only emits annotations for deffered declarations of

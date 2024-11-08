@@ -115,7 +115,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   auto Linkage = getFunctionLinkage(AliasDecl);
 
   // We can't use an alias if the linkage is not valid for one.
-  if (!mlir::cir::isValidLinkage(Linkage))
+  if (!cir::isValidLinkage(Linkage))
     return true;
 
   auto TargetLinkage = getFunctionLinkage(TargetDecl);
@@ -123,8 +123,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // Check if we have it already.
   StringRef MangledName = getMangledName(AliasDecl);
   auto Entry = getGlobalValue(MangledName);
-  auto globalValue =
-      dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(Entry);
+  auto globalValue = dyn_cast_or_null<cir::CIRGlobalValueInterface>(Entry);
   if (Entry && globalValue && !globalValue.isDeclaration())
     return false;
   if (Replacements.count(MangledName))
@@ -133,14 +132,13 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   [[maybe_unused]] auto AliasValueType = getTypes().GetFunctionType(AliasDecl);
 
   // Find the referent.
-  auto Aliasee = cast<mlir::cir::FuncOp>(GetAddrOfGlobal(TargetDecl));
-  auto AliaseeGV = dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(
+  auto Aliasee = cast<cir::FuncOp>(GetAddrOfGlobal(TargetDecl));
+  auto AliaseeGV = dyn_cast_or_null<cir::CIRGlobalValueInterface>(
       GetAddrOfGlobal(TargetDecl));
   // Instead of creating as alias to a linkonce_odr, replace all of the uses
   // of the aliasee.
-  if (mlir::cir::isDiscardableIfUnused(Linkage) &&
-      !(TargetLinkage ==
-            mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage &&
+  if (cir::isDiscardableIfUnused(Linkage) &&
+      !(TargetLinkage == cir::GlobalLinkageKind::AvailableExternallyLinkage &&
         TargetDecl.getDecl()->hasAttr<AlwaysInlineAttr>())) {
     // FIXME: An extern template instantiation will create functions with
     // linkage "AvailableExternally". In libc++, some classes also define
@@ -155,7 +153,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // COFF. A COFF weak external alias cannot satisfy a normal undefined
   // symbol reference from another TU. The other TU must also mark the
   // referenced symbol as weak, which we cannot rely on.
-  if (mlir::cir::isWeakForLinker(Linkage) && getTriple().isOSBinFormatCOFF()) {
+  if (cir::isWeakForLinker(Linkage) && getTriple().isOSBinFormatCOFF()) {
     llvm_unreachable("NYI");
   }
 
@@ -170,7 +168,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // different COMDATs in different TUs. Another option would be to
   // output the alias both for weak_odr and linkonce_odr, but that
   // requires explicit comdat support in the IL.
-  if (mlir::cir::isWeakForLinker(TargetLinkage))
+  if (cir::isWeakForLinker(TargetLinkage))
     llvm_unreachable("NYI");
 
   // Create the alias with no name.
@@ -250,7 +248,7 @@ static void buildDeclDestroy(CIRGenFunction &CGF, const VarDecl *D) {
   // generated elsewhere which uses atexit instead, and it takes the destructor
   // directly.
   auto UsingExternalHelper = CGM.getCodeGenOpts().CXAAtExit;
-  mlir::cir::FuncOp fnOp;
+  cir::FuncOp fnOp;
   if (Record && (CanRegisterDestructor || UsingExternalHelper)) {
     assert(!D->getTLSKind() && "TLS NYI");
     assert(!Record->hasTrivialDestructor());
@@ -273,7 +271,7 @@ static void buildDeclDestroy(CIRGenFunction &CGF, const VarDecl *D) {
   CGM.getCXXABI().registerGlobalDtor(CGF, D, fnOp, nullptr);
 }
 
-mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
+cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   const auto &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto Fn = getAddrOfCXXStructor(GD, &FnInfo, /*FnType=*/nullptr,
                                  /*DontDefer=*/true, ForDefinition);
@@ -308,7 +306,7 @@ void CIRGenFunction::buildInvariantStart([[maybe_unused]] CharUnits Size) {
 }
 
 void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
-                                             mlir::cir::GlobalOp addr,
+                                             cir::GlobalOp addr,
                                              bool performInit) {
   const Expr *init = varDecl->getInit();
   QualType ty = varDecl->getType();
@@ -344,7 +342,7 @@ void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
 
-  addr.setAstAttr(mlir::cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
+  addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
 
   if (ty->isReferenceType()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
@@ -365,18 +363,17 @@ void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
       mlir::Operation *rvalueDefOp = rv.getScalarVal().getDefiningOp();
       if (rvalueDefOp && rvalueDefOp->getBlock()) {
         mlir::Block *rvalSrcBlock = rvalueDefOp->getBlock();
-        if (!rvalSrcBlock->empty() &&
-            isa<mlir::cir::YieldOp>(rvalSrcBlock->back())) {
+        if (!rvalSrcBlock->empty() && isa<cir::YieldOp>(rvalSrcBlock->back())) {
           auto &front = rvalSrcBlock->front();
           getGlobal.getDefiningOp()->moveBefore(&front);
-          auto yield = cast<mlir::cir::YieldOp>(rvalSrcBlock->back());
+          auto yield = cast<cir::YieldOp>(rvalSrcBlock->back());
           builder.setInsertionPoint(yield);
         }
       }
       cgf.buildStoreOfScalar(rv.getScalarVal(), declAddr, false, ty);
     }
     builder.setInsertionPointToEnd(block);
-    builder.create<mlir::cir::YieldOp>(addr->getLoc());
+    builder.create<cir::YieldOp>(addr->getLoc());
   } else {
     bool needsDtor = varDecl->needsDestruction(getASTContext()) ==
                      QualType::DK_cxx_destructor;
@@ -395,7 +392,7 @@ void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
                        getASTContext().getDeclAlign(varDecl));
       buildDeclInit(cgf, varDecl, declAddr);
       builder.setInsertionPointToEnd(block);
-      builder.create<mlir::cir::YieldOp>(addr->getLoc());
+      builder.create<cir::YieldOp>(addr->getLoc());
     }
 
     if (isConstantStorage) {
@@ -418,7 +415,7 @@ void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
         // Don't confuse lexical cleanup.
         builder.clearInsertionPoint();
       } else
-        builder.create<mlir::cir::YieldOp>(addr->getLoc());
+        builder.create<cir::YieldOp>(addr->getLoc());
     }
   }
 }

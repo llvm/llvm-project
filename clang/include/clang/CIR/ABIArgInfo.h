@@ -167,8 +167,7 @@ public:
   }
   static ABIArgInfo getZeroExtend(mlir::Type Ty, mlir::Type T = nullptr) {
     // NOTE(cir): Enumerations are IntTypes in CIR.
-    assert(mlir::isa<mlir::cir::IntType>(Ty) ||
-           mlir::isa<mlir::cir::BoolType>(Ty));
+    assert(mlir::isa<cir::IntType>(Ty) || mlir::isa<cir::BoolType>(Ty));
     auto AI = ABIArgInfo(Extend);
     AI.setCoerceToType(T);
     AI.setPaddingType(nullptr);
@@ -190,9 +189,8 @@ public:
     // NOTE(cir): The original can apply this method on both integers and
     // enumerations, but in CIR, these two types are one and the same. Booleans
     // will also fall into this category, but they have their own type.
-    if (mlir::isa<mlir::cir::IntType>(Ty) &&
-        mlir::cast<mlir::cir::IntType>(Ty).isSigned())
-      return getSignExtend(mlir::cast<mlir::cir::IntType>(Ty), T);
+    if (mlir::isa<cir::IntType>(Ty) && mlir::cast<cir::IntType>(Ty).isSigned())
+      return getSignExtend(mlir::cast<cir::IntType>(Ty), T);
     return getZeroExtend(Ty, T);
   }
 

@@ -7,10 +7,10 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
-using namespace mlir::cir;
+using namespace cir;
 
 static bool isAggregateType(mlir::Type typ) {
-  return isa<mlir::cir::StructType, mlir::cir::ArrayType>(typ);
+  return isa<cir::StructType, cir::ArrayType>(typ);
 }
 
 static AsmFlavor inferFlavor(const CIRGenModule &cgm, const AsmStmt &S) {
@@ -212,7 +212,7 @@ std::pair<mlir::Value, mlir::Type> CIRGenFunction::buildAsmInputLValue(
     uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
     if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
-      Ty = mlir::cir::IntType::get(&getMLIRContext(), Size, false);
+      Ty = cir::IntType::get(&getMLIRContext(), Size, false);
 
       return {builder.createLoad(getLoc(Loc),
                                  InputValue.getAddress().withElementType(Ty)),
@@ -296,19 +296,19 @@ static void buildAsmStores(CIRGenFunction &CGF, const AsmStmt &S,
       // a pointer.
       if (mlir::isa<mlir::FloatType>(TruncTy))
         Tmp = Builder.createFloatingCast(Tmp, TruncTy);
-      else if (isa<mlir::cir::PointerType>(TruncTy) &&
-               isa<mlir::cir::IntType>(Tmp.getType())) {
+      else if (isa<cir::PointerType>(TruncTy) &&
+               isa<cir::IntType>(Tmp.getType())) {
         uint64_t ResSize = CGM.getDataLayout().getTypeSizeInBits(TruncTy);
         Tmp = Builder.createIntCast(
-            Tmp, mlir::cir::IntType::get(CTX, (unsigned)ResSize, false));
+            Tmp, cir::IntType::get(CTX, (unsigned)ResSize, false));
         Tmp = Builder.createIntToPtr(Tmp, TruncTy);
-      } else if (isa<mlir::cir::PointerType>(Tmp.getType()) &&
-                 isa<mlir::cir::IntType>(TruncTy)) {
+      } else if (isa<cir::PointerType>(Tmp.getType()) &&
+                 isa<cir::IntType>(TruncTy)) {
         uint64_t TmpSize = CGM.getDataLayout().getTypeSizeInBits(Tmp.getType());
         Tmp = Builder.createPtrToInt(
-            Tmp, mlir::cir::IntType::get(CTX, (unsigned)TmpSize, false));
+            Tmp, cir::IntType::get(CTX, (unsigned)TmpSize, false));
         Tmp = Builder.createIntCast(Tmp, TruncTy);
-      } else if (isa<mlir::cir::IntType>(TruncTy)) {
+      } else if (isa<cir::IntType>(TruncTy)) {
         Tmp = Builder.createIntCast(Tmp, TruncTy);
       } else if (false /*TruncTy->isVectorTy()*/) {
         assert(!cir::MissingFeatures::asmVectorType());
@@ -434,7 +434,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
 
       if (RequiresCast) {
         unsigned Size = getContext().getTypeSize(QTy);
-        Ty = mlir::cir::IntType::get(&getMLIRContext(), Size, false);
+        Ty = cir::IntType::get(&getMLIRContext(), Size, false);
       }
       ResultRegTypes.push_back(Ty);
       // If this output is tied to an input, and if the input is larger, then
@@ -570,12 +570,12 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
       if (getContext().getTypeSize(OutputType) >
           getContext().getTypeSize(InputTy)) {
         // Use ptrtoint as appropriate so that we can do our extension.
-        if (isa<mlir::cir::PointerType>(Arg.getType()))
+        if (isa<cir::PointerType>(Arg.getType()))
           Arg = builder.createPtrToInt(Arg, UIntPtrTy);
         mlir::Type OutputTy = convertType(OutputType);
-        if (isa<mlir::cir::IntType>(OutputTy))
+        if (isa<cir::IntType>(OutputTy))
           Arg = builder.createIntCast(Arg, OutputTy);
-        else if (isa<mlir::cir::PointerType>(OutputTy))
+        else if (isa<cir::PointerType>(OutputTy))
           Arg = builder.createIntCast(Arg, UIntPtrTy);
         else if (isa<mlir::FloatType>(OutputTy))
           Arg = builder.createFloatingCast(Arg, OutputTy);
@@ -631,7 +631,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
   operands.push_back(InArgs);
   operands.push_back(InOutArgs);
 
-  auto IA = builder.create<mlir::cir::InlineAsmOp>(
+  auto IA = builder.create<cir::InlineAsmOp>(
       getLoc(S.getAsmLoc()), ResultType, operands, AsmString, Constraints,
       HasSideEffect, inferFlavor(CGM, S), mlir::ArrayAttr());
 
@@ -652,9 +652,9 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
     for (auto typ : ArgElemTypes) {
       if (typ) {
         auto op = Args[i++];
-        assert(mlir::isa<mlir::cir::PointerType>(op.getType()) &&
+        assert(mlir::isa<cir::PointerType>(op.getType()) &&
                "pointer type expected");
-        assert(cast<mlir::cir::PointerType>(op.getType()).getPointee() == typ &&
+        assert(cast<cir::PointerType>(op.getType()).getPointee() == typ &&
                "element type differs from pointee type!");
 
         operandAttrs.push_back(mlir::UnitAttr::get(&getMLIRContext()));
@@ -675,7 +675,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
       RegResults.push_back(result);
     } else if (ResultRegTypes.size() > 1) {
       auto alignment = CharUnits::One();
-      auto sname = cast<mlir::cir::StructType>(ResultType).getName();
+      auto sname = cast<cir::StructType>(ResultType).getName();
       auto dest = buildAlloca(sname, ResultType, getLoc(S.getAsmLoc()),
                               alignment, false);
       auto addr = Address(dest, alignment);

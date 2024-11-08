@@ -13,7 +13,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 
-let cppNamespace = "::mlir::cir" in {
+let cppNamespace = "::cir" in {
   // The CIRCallOpInterface must be used instead of CallOpInterface when looking
   // at arguments and other bits of CallOp. This creates a level of abstraction
   // that's useful for handling indirect calls and other details.
@@ -36,7 +36,7 @@ let cppNamespace = "::mlir::cir" in {
           "unsigned", "getNumArgOperands", (ins)>,
       InterfaceMethod<
           "Return the calling convention of the call operation",
-          "mlir::cir::CallingConv", "getCallingConv", (ins)>,
+          "cir::CallingConv", "getCallingConv", (ins)>,
     ];
   }
 
@@ -51,19 +51,19 @@ let cppNamespace = "::mlir::cir" in {
       InterfaceMethod<"",
       "bool", "hasLocalLinkage", (ins), [{}],
       /*defaultImplementation=*/[{ 
-        return mlir::cir::isLocalLinkage($_op.getLinkage()); 
+        return cir::isLocalLinkage($_op.getLinkage()); 
       }]
       >,
       InterfaceMethod<"",
       "bool", "hasExternalWeakLinkage", (ins), [{}],
       /*defaultImplementation=*/[{ 
-        return mlir::cir::isExternalWeakLinkage($_op.getLinkage()); 
+        return cir::isExternalWeakLinkage($_op.getLinkage()); 
       }]
       >,
       InterfaceMethod<"",
       "bool", "isExternalLinkage", (ins), [{}],
       /*defaultImplementation=*/[{ 
-        return mlir::cir::isExternalLinkage($_op.getLinkage()); 
+        return cir::isExternalLinkage($_op.getLinkage()); 
       }]
       >,
       InterfaceMethod<"",
@@ -93,6 +93,6 @@ let cppNamespace = "::mlir::cir" in {
   }];
   }
 
-} // namespace mlir::cir
+} // namespace cir
 
 #endif // MLIR_CIR_OP_INTERFACES

@@ -377,15 +377,15 @@ mlir::Value ComplexExprEmitter::buildComplexToComplexCast(mlir::Value Val,
   QualType SrcElemTy = SrcType->castAs<ComplexType>()->getElementType();
   QualType DestElemTy = DestType->castAs<ComplexType>()->getElementType();
 
-  mlir::cir::CastKind CastOpKind;
+  cir::CastKind CastOpKind;
   if (SrcElemTy->isFloatingType() && DestElemTy->isFloatingType())
-    CastOpKind = mlir::cir::CastKind::float_complex;
+    CastOpKind = cir::CastKind::float_complex;
   else if (SrcElemTy->isFloatingType() && DestElemTy->isIntegerType())
-    CastOpKind = mlir::cir::CastKind::float_complex_to_int_complex;
+    CastOpKind = cir::CastKind::float_complex_to_int_complex;
   else if (SrcElemTy->isIntegerType() && DestElemTy->isFloatingType())
-    CastOpKind = mlir::cir::CastKind::int_complex_to_float_complex;
+    CastOpKind = cir::CastKind::int_complex_to_float_complex;
   else if (SrcElemTy->isIntegerType() && DestElemTy->isIntegerType())
-    CastOpKind = mlir::cir::CastKind::int_complex;
+    CastOpKind = cir::CastKind::int_complex;
   else
     llvm_unreachable("unexpected src type or dest type");
 
@@ -397,11 +397,11 @@ mlir::Value ComplexExprEmitter::buildScalarToComplexCast(mlir::Value Val,
                                                          QualType SrcType,
                                                          QualType DestType,
                                                          SourceLocation Loc) {
-  mlir::cir::CastKind CastOpKind;
+  cir::CastKind CastOpKind;
   if (SrcType->isFloatingType())
-    CastOpKind = mlir::cir::CastKind::float_to_complex;
+    CastOpKind = cir::CastKind::float_to_complex;
   else if (SrcType->isIntegerType())
-    CastOpKind = mlir::cir::CastKind::int_to_complex;
+    CastOpKind = cir::CastKind::int_to_complex;
   else
     llvm_unreachable("unexpected src type");
 
@@ -548,7 +548,7 @@ mlir::Value ComplexExprEmitter::VisitPlus(const UnaryOperator *E,
     Op = Visit(E->getSubExpr());
 
   return Builder.createUnaryOp(CGF.getLoc(E->getExprLoc()),
-                               mlir::cir::UnaryOpKind::Plus, Op);
+                               cir::UnaryOpKind::Plus, Op);
 }
 
 mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
@@ -571,13 +571,13 @@ mlir::Value ComplexExprEmitter::VisitMinus(const UnaryOperator *E,
     Op = Visit(E->getSubExpr());
 
   return Builder.createUnaryOp(CGF.getLoc(E->getExprLoc()),
-                               mlir::cir::UnaryOpKind::Minus, Op);
+                               cir::UnaryOpKind::Minus, Op);
 }
 
 mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *E) {
   mlir::Value Op = Visit(E->getSubExpr());
   return Builder.createUnaryOp(CGF.getLoc(E->getExprLoc()),
-                               mlir::cir::UnaryOpKind::Not, Op);
+                               cir::UnaryOpKind::Not, Op);
 }
 
 ComplexExprEmitter::BinOpInfo
@@ -780,19 +780,19 @@ mlir::Value ComplexExprEmitter::buildBinSub(const BinOpInfo &Op) {
   return CGF.getBuilder().createComplexSub(Op.Loc, Op.LHS, Op.RHS);
 }
 
-static mlir::cir::ComplexRangeKind
+static cir::ComplexRangeKind
 getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
   switch (range) {
   case LangOptions::CX_Full:
-    return mlir::cir::ComplexRangeKind::Full;
+    return cir::ComplexRangeKind::Full;
   case LangOptions::CX_Improved:
-    return mlir::cir::ComplexRangeKind::Improved;
+    return cir::ComplexRangeKind::Improved;
   case LangOptions::CX_Promoted:
-    return mlir::cir::ComplexRangeKind::Promoted;
+    return cir::ComplexRangeKind::Promoted;
   case LangOptions::CX_Basic:
-    return mlir::cir::ComplexRangeKind::Basic;
+    return cir::ComplexRangeKind::Basic;
   case LangOptions::CX_None:
-    return mlir::cir::ComplexRangeKind::None;
+    return cir::ComplexRangeKind::None;
   }
 }
 
@@ -831,20 +831,20 @@ LValue ComplexExprEmitter::buildBinAssignLValue(const BinaryOperator *E,
 mlir::Value
 ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *IL) {
   auto Loc = CGF.getLoc(IL->getExprLoc());
-  auto Ty = mlir::cast<mlir::cir::ComplexType>(CGF.getCIRType(IL->getType()));
+  auto Ty = mlir::cast<cir::ComplexType>(CGF.getCIRType(IL->getType()));
   auto ElementTy = Ty.getElementTy();
 
   mlir::TypedAttr RealValueAttr;
   mlir::TypedAttr ImagValueAttr;
-  if (mlir::isa<mlir::cir::IntType>(ElementTy)) {
+  if (mlir::isa<cir::IntType>(ElementTy)) {
     auto ImagValue = cast<IntegerLiteral>(IL->getSubExpr())->getValue();
-    RealValueAttr = mlir::cir::IntAttr::get(ElementTy, 0);
-    ImagValueAttr = mlir::cir::IntAttr::get(ElementTy, ImagValue);
-  } else if (mlir::isa<mlir::cir::CIRFPTypeInterface>(ElementTy)) {
+    RealValueAttr = cir::IntAttr::get(ElementTy, 0);
+    ImagValueAttr = cir::IntAttr::get(ElementTy, ImagValue);
+  } else if (mlir::isa<cir::CIRFPTypeInterface>(ElementTy)) {
     auto ImagValue = cast<FloatingLiteral>(IL->getSubExpr())->getValue();
-    RealValueAttr = mlir::cir::FPAttr::get(
+    RealValueAttr = cir::FPAttr::get(
         ElementTy, llvm::APFloat::getZero(ImagValue.getSemantics()));
-    ImagValueAttr = mlir::cir::FPAttr::get(ElementTy, ImagValue);
+    ImagValueAttr = cir::FPAttr::get(ElementTy, ImagValue);
   } else
     llvm_unreachable("unexpected complex element type");
 
@@ -876,21 +876,19 @@ mlir::Value CIRGenFunction::buildPromotedComplexExpr(const Expr *E,
 
 mlir::Value CIRGenFunction::buildPromotedValue(mlir::Value result,
                                                QualType PromotionType) {
-  assert(mlir::isa<mlir::cir::CIRFPTypeInterface>(
-             mlir::cast<mlir::cir::ComplexType>(result.getType())
-                 .getElementTy()) &&
+  assert(mlir::isa<cir::CIRFPTypeInterface>(
+             mlir::cast<cir::ComplexType>(result.getType()).getElementTy()) &&
          "integral complex will never be promoted");
-  return builder.createCast(mlir::cir::CastKind::float_complex, result,
+  return builder.createCast(cir::CastKind::float_complex, result,
                             ConvertType(PromotionType));
 }
 
 mlir::Value CIRGenFunction::buildUnPromotedValue(mlir::Value result,
                                                  QualType UnPromotionType) {
-  assert(mlir::isa<mlir::cir::CIRFPTypeInterface>(
-             mlir::cast<mlir::cir::ComplexType>(result.getType())
-                 .getElementTy()) &&
+  assert(mlir::isa<cir::CIRFPTypeInterface>(
+             mlir::cast<cir::ComplexType>(result.getType()).getElementTy()) &&
          "integral complex will never be promoted");
-  return builder.createCast(mlir::cir::CastKind::float_complex, result,
+  return builder.createCast(cir::CastKind::float_complex, result,
                             ConvertType(UnPromotionType));
 }
 
@@ -967,8 +965,7 @@ mlir::Value CIRGenFunction::buildComplexPrePostIncDec(const UnaryOperator *E,
   mlir::Value InVal = buildLoadOfComplex(LV, E->getExprLoc());
 
   auto Loc = getLoc(E->getExprLoc());
-  auto OpKind =
-      isInc ? mlir::cir::UnaryOpKind::Inc : mlir::cir::UnaryOpKind::Dec;
+  auto OpKind = isInc ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
   mlir::Value IncVal = builder.createUnaryOp(Loc, OpKind, InVal);
 
   // Store the updated result through the lvalue.

@@ -53,7 +53,7 @@ public:
   /// struct, its size, and the offsets of its fields.
   ///
   /// Note that this information is lazily cached.
-  const StructLayout *getStructLayout(mlir::cir::StructType Ty) const;
+  const StructLayout *getStructLayout(cir::StructType Ty) const;
 
   /// Internal helper method that returns requested alignment for type.
   llvm::Align getAlignment(mlir::Type Ty, bool abiOrPref) const;
@@ -93,7 +93,7 @@ public:
   }
 
   llvm::TypeSize getPointerTypeSizeInBits(mlir::Type Ty) const {
-    assert(mlir::isa<mlir::cir::PointerType>(Ty) &&
+    assert(mlir::isa<cir::PointerType>(Ty) &&
            "This should only be called with a pointer type");
     return layout.getTypeSizeInBits(Ty);
   }
@@ -101,9 +101,9 @@ public:
   llvm::TypeSize getTypeSizeInBits(mlir::Type Ty) const;
 
   mlir::Type getIntPtrType(mlir::Type Ty) const {
-    assert(mlir::isa<mlir::cir::PointerType>(Ty) && "Expected pointer type");
-    auto IntTy = mlir::cir::IntType::get(Ty.getContext(),
-                                         getPointerTypeSizeInBits(Ty), false);
+    assert(mlir::isa<cir::PointerType>(Ty) && "Expected pointer type");
+    auto IntTy =
+        cir::IntType::get(Ty.getContext(), getPointerTypeSizeInBits(Ty), false);
     return IntTy;
   }
 };
@@ -153,7 +153,7 @@ public:
 private:
   friend class CIRDataLayout; // Only DataLayout can create this class
 
-  StructLayout(mlir::cir::StructType ST, const CIRDataLayout &DL);
+  StructLayout(cir::StructType ST, const CIRDataLayout &DL);
 
   size_t numTrailingObjects(OverloadToken<llvm::TypeSize>) const {
     return NumElements;

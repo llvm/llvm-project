@@ -21,7 +21,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
 
-namespace mlir {
 namespace cir {
 
 /// A class for recording the number of arguments that a function
@@ -64,7 +63,7 @@ public:
 // named in the TrailingObjects base class of CGFunctionInfo.
 struct LowerFunctionInfoArgInfo {
   mlir::Type type;        // Original ABI-agnostic type.
-  ::cir::ABIArgInfo info; // ABI-specific information.
+  cir::ABIArgInfo info;   // ABI-specific information.
 };
 
 // FIXME(cir): We could likely encode this information within CIR/MLIR, allowing
@@ -108,11 +107,11 @@ class LowerFunctionInfo final
 public:
   static LowerFunctionInfo *create(unsigned llvmCC, bool instanceMethod,
                                    bool chainCall, bool delegateCall,
-                                   Type resultType,
-                                   ArrayRef<mlir::Type> argTypes,
+                                   mlir::Type resultType,
+                                   llvm::ArrayRef<mlir::Type> argTypes,
                                    RequiredArgs required) {
     // TODO(cir): Add assertions?
-    cir_cconv_assert(!::cir::MissingFeatures::extParamInfo());
+    cir_cconv_assert(!cir::MissingFeatures::extParamInfo());
     void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
 
     LowerFunctionInfo *FI = new (buffer) LowerFunctionInfo();
@@ -141,8 +140,8 @@ public:
   typedef const ArgInfo *const_arg_iterator;
   typedef ArgInfo *arg_iterator;
 
-  MutableArrayRef<ArgInfo> arguments() {
-    return MutableArrayRef<ArgInfo>(arg_begin(), NumArgs);
+  llvm::MutableArrayRef<ArgInfo> arguments() {
+    return llvm::MutableArrayRef<ArgInfo>(arg_begin(), NumArgs);
   }
 
   const_arg_iterator arg_begin() const { return getArgsBuffer() + 1; }
@@ -157,10 +156,10 @@ public:
     return isVariadic() ? Required.getNumRequiredArgs() : arg_size();
   }
 
-  Type getReturnType() const { return getArgsBuffer()[0].type; }
+  mlir::Type getReturnType() const { return getArgsBuffer()[0].type; }
 
-  ::cir::ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
-  const ::cir::ABIArgInfo &getReturnInfo() const {
+  cir::ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
+  const cir::ABIArgInfo &getReturnInfo() const {
     return getArgsBuffer()[0].info;
   }
 
@@ -173,6 +172,5 @@ public:
 };
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERFUNCTIONINFO_H

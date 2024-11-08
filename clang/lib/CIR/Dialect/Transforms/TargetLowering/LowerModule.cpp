@@ -29,11 +29,10 @@
 #include "clang/CIR/Target/AArch64.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using MissingFeatures = ::cir::MissingFeatures;
-using AArch64ABIKind = ::cir::AArch64ABIKind;
-using X86AVXABILevel = ::cir::X86AVXABILevel;
+using MissingFeatures = cir::MissingFeatures;
+using AArch64ABIKind = cir::AArch64ABIKind;
+using X86AVXABILevel = cir::X86AVXABILevel;
 
-namespace mlir {
 namespace cir {
 
 static CIRCXXABI *createCXXABI(LowerModule &CGM) {
@@ -89,10 +88,10 @@ createTargetLoweringInfo(LowerModule &LM) {
   }
 }
 
-LowerModule::LowerModule(clang::LangOptions opts, ModuleOp &module,
-                         StringAttr DL,
+LowerModule::LowerModule(clang::LangOptions opts, mlir::ModuleOp &module,
+                         mlir::StringAttr DL,
                          std::unique_ptr<clang::TargetInfo> target,
-                         PatternRewriter &rewriter)
+                         mlir::PatternRewriter &rewriter)
     : context(module, opts), module(module), Target(std::move(target)),
       ABI(createCXXABI(*this)), types(*this, DL.getValue()),
       rewriter(rewriter) {
@@ -173,7 +172,7 @@ void LowerModule::setFunctionAttributes(FuncOp oldFn, FuncOp newFn,
 ///
 /// This method is based on CodeGenModule::EmitGlobalFunctionDefinition but it
 /// considerably simplified as it tries to remove any CodeGen related code.
-LogicalResult LowerModule::rewriteFunctionDefinition(FuncOp op) {
+llvm::LogicalResult LowerModule::rewriteFunctionDefinition(FuncOp op) {
   mlir::OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
 
@@ -187,7 +186,7 @@ LogicalResult LowerModule::rewriteFunctionDefinition(FuncOp op) {
   // here, as they are mostly codegen logic.
 
   // Create a new function with the ABI-specific types.
-  FuncOp newFn = cast<FuncOp>(rewriter.cloneWithoutRegions(op));
+  FuncOp newFn = mlir::cast<FuncOp>(rewriter.cloneWithoutRegions(op));
   newFn.setType(Ty);
 
   // NOTE(cir): The clone above will preserve any existing attributes. If there
@@ -204,15 +203,16 @@ LogicalResult LowerModule::rewriteFunctionDefinition(FuncOp op) {
     if (LowerFunction(*this, rewriter, op, newFn)
             .generateCode(op, newFn, FI)
             .failed())
-      return failure();
+      return llvm::failure();
   }
 
   // Erase original ABI-agnostic function.
   rewriter.eraseOp(op);
-  return success();
+  return llvm::success();
 }
 
-LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
+llvm::LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp,
+                                                     FuncOp funcOp) {
   mlir::OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(callOp);
 
@@ -220,24 +220,24 @@ LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
   if (LowerFunction(*this, rewriter, funcOp, callOp)
           .rewriteCallOp(callOp)
           .failed())
-    return failure();
+    return llvm::failure();
 
-  return success();
+  return llvm::success();
 }
 
 // TODO: not to create it every time
-std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
-                                               PatternRewriter &rewriter) {
-  assert(module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()) &&
+std::unique_ptr<LowerModule>
+createLowerModule(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
+  assert(module->getAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName()) &&
          "Missing data layout attribute");
 
   // Fetch the LLVM data layout string.
-  auto dataLayoutStr = cast<StringAttr>(
-      module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
+  auto dataLayoutStr = mlir::cast<mlir::StringAttr>(
+      module->getAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName()));
 
   // Fetch target information.
   llvm::Triple triple(
-      cast<StringAttr>(module->getAttr("cir.triple")).getValue());
+      mlir::cast<mlir::StringAttr>(module->getAttr("cir.triple")).getValue());
   clang::TargetOptions targetOptions;
   targetOptions.Triple = triple.str();
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
@@ -245,7 +245,7 @@ std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
   // FIXME(cir): This just uses the default language options. We need to account
   // for custom options.
   // Create context.
-  cir_cconv_assert(!::cir::MissingFeatures::langOpts());
+  cir_cconv_assert(!cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
 
   return std::make_unique<LowerModule>(langOpts, module, dataLayoutStr,
@@ -253,4 +253,3 @@ std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
 }
 
 } // namespace cir
-} // namespace mlir

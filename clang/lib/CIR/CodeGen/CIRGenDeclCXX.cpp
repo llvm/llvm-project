@@ -18,7 +18,7 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
-using namespace mlir::cir;
+using namespace cir;
 
 void CIRGenModule::buildCXXGlobalInitFunc() {
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
@@ -32,7 +32,7 @@ void CIRGenModule::buildCXXGlobalInitFunc() {
 }
 
 void CIRGenModule::buildCXXGlobalVarDeclInitFunc(const VarDecl *D,
-                                                 mlir::cir::GlobalOp Addr,
+                                                 cir::GlobalOp Addr,
                                                  bool PerformInit) {
   // According to E.2.3.1 in CUDA-7.5 Programming guide: __device__,
   // __constant__ and __shared__ variables defined in namespace scope,

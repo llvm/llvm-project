@@ -24,6 +24,5 @@ CIRGenOpenCLRuntime::~CIRGenOpenCLRuntime() {}
 
 void CIRGenOpenCLRuntime::buildWorkGroupLocalVarDecl(CIRGenFunction &CGF,
                                                      const VarDecl &D) {
-  return CGF.buildStaticVarDecl(D,
-                                mlir::cir::GlobalLinkageKind::InternalLinkage);
+  return CGF.buildStaticVarDecl(D, cir::GlobalLinkageKind::InternalLinkage);
 }

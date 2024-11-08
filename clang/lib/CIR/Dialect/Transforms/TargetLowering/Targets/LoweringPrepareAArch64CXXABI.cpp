@@ -28,22 +28,19 @@ namespace {
 class LoweringPrepareAArch64CXXABI : public LoweringPrepareItaniumCXXABI {
 public:
   LoweringPrepareAArch64CXXABI(AArch64ABIKind k) : Kind(k) {}
-  mlir::Value lowerVAArg(cir::CIRBaseBuilderTy &builder, mlir::cir::VAArgOp op,
+  mlir::Value lowerVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                          const cir::CIRDataLayout &datalayout) override;
 
 private:
   AArch64ABIKind Kind;
-  mlir::Value lowerAAPCSVAArg(cir::CIRBaseBuilderTy &builder,
-                              mlir::cir::VAArgOp op,
+  mlir::Value lowerAAPCSVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                               const cir::CIRDataLayout &datalayout);
   bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
-  mlir::Value lowerMSVAArg(cir::CIRBaseBuilderTy &builder,
-                           mlir::cir::VAArgOp op,
+  mlir::Value lowerMSVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                            const cir::CIRDataLayout &datalayout) {
     cir_cconv_unreachable("MSVC ABI not supported yet");
   }
-  mlir::Value lowerDarwinVAArg(cir::CIRBaseBuilderTy &builder,
-                               mlir::cir::VAArgOp op,
+  mlir::Value lowerDarwinVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                                const cir::CIRDataLayout &datalayout) {
     cir_cconv_unreachable("Darwin ABI not supported yet");
   }
@@ -56,16 +53,15 @@ cir::LoweringPrepareCXXABI::createAArch64ABI(AArch64ABIKind k) {
 }
 
 mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
-    cir::CIRBaseBuilderTy &builder, mlir::cir::VAArgOp op,
+    cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
     const cir::CIRDataLayout &datalayout) {
   auto loc = op->getLoc();
   auto valist = op->getOperand(0);
   auto opResTy = op.getType();
   // front end should not produce non-scalar type of VAArgOp
   bool isSupportedType =
-      mlir::isa<mlir::cir::IntType, mlir::cir::SingleType,
-                mlir::cir::PointerType, mlir::cir::BoolType,
-                mlir::cir::DoubleType, mlir::cir::ArrayType>(opResTy);
+      mlir::isa<cir::IntType, cir::SingleType, cir::PointerType, cir::BoolType,
+                cir::DoubleType, cir::ArrayType>(opResTy);
 
   // Homogenous Aggregate type not supported and indirect arg
   // passing not supported yet. And for these supported types,
@@ -82,7 +78,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   // but it depends on arg type indirectness and coercion defined by ABI.
   auto baseTy = opResTy;
 
-  if (mlir::isa<mlir::cir::ArrayType>(baseTy)) {
+  if (mlir::isa<cir::ArrayType>(baseTy)) {
     cir_cconv_unreachable("ArrayType VAArg loweing NYI");
   }
   // numRegs may not be 1 if ArrayType is supported.
@@ -91,7 +87,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   if (Kind == AArch64ABIKind::AAPCSSoft) {
     cir_cconv_unreachable("AAPCSSoft cir.var_arg lowering NYI");
   }
-  bool IsFPR = mlir::cir::isAnyFloatingPointType(baseTy);
+  bool IsFPR = cir::isAnyFloatingPointType(baseTy);
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:
@@ -136,18 +132,18 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   int regSize = isIndirect ? 8 : tySize.getQuantity();
   int regTopIndex;
   mlir::Value regOffsP;
-  mlir::cir::LoadOp regOffs;
+  cir::LoadOp regOffs;
 
   builder.restoreInsertionPoint(curInsertionP);
   // 3 is the field number of __gr_offs, 4 is the field number of __vr_offs
   if (!IsFPR) {
     regOffsP = builder.createGetMemberOp(loc, valist, "gr_offs", 3);
-    regOffs = builder.create<mlir::cir::LoadOp>(loc, regOffsP);
+    regOffs = builder.create<cir::LoadOp>(loc, regOffsP);
     regTopIndex = 1;
     regSize = llvm::alignTo(regSize, 8);
   } else {
     regOffsP = builder.createGetMemberOp(loc, valist, "vr_offs", 4);
-    regOffs = builder.create<mlir::cir::LoadOp>(loc, regOffsP);
+    regOffs = builder.create<cir::LoadOp>(loc, regOffsP);
     regTopIndex = 2;
     regSize = 16 * numRegs;
   }
@@ -160,12 +156,11 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   // argument. We don't want to keep updating regOffs (in case it overflows,
   // though anyone passing 2GB of arguments, each at most 16 bytes, deserves
   // whatever they get).
-  auto zeroValue = builder.create<mlir::cir::ConstantOp>(
-      loc, regOffs.getType(), mlir::cir::IntAttr::get(regOffs.getType(), 0));
-  auto usingStack = builder.create<mlir::cir::CmpOp>(
-      loc, boolTy, mlir::cir::CmpOpKind::ge, regOffs, zeroValue);
-  builder.create<mlir::cir::BrCondOp>(loc, usingStack, onStackBlock,
-                                      maybeRegBlock);
+  auto zeroValue = builder.create<cir::ConstantOp>(
+      loc, regOffs.getType(), cir::IntAttr::get(regOffs.getType(), 0));
+  auto usingStack = builder.create<cir::CmpOp>(loc, boolTy, cir::CmpOpKind::ge,
+                                               regOffs, zeroValue);
+  builder.create<cir::BrCondOp>(loc, usingStack, onStackBlock, maybeRegBlock);
 
   auto contBlock = currentBlock->splitBlock(op);
   // now contBlock should be the block after onStackBlock in CFG.
@@ -196,17 +191,16 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   // The fact that this is done unconditionally reflects the fact that
   // allocating an argument to the stack also uses up all the remaining
   // registers of the appropriate kind.
-  auto regSizeValue = builder.create<mlir::cir::ConstantOp>(
-      loc, regOffs.getType(),
-      mlir::cir::IntAttr::get(regOffs.getType(), regSize));
-  auto newOffset = builder.create<mlir::cir::BinOp>(
-      loc, regOffs.getType(), mlir::cir::BinOpKind::Add, regOffs, regSizeValue);
+  auto regSizeValue = builder.create<cir::ConstantOp>(
+      loc, regOffs.getType(), cir::IntAttr::get(regOffs.getType(), regSize));
+  auto newOffset = builder.create<cir::BinOp>(
+      loc, regOffs.getType(), cir::BinOpKind::Add, regOffs, regSizeValue);
   builder.createStore(loc, newOffset, regOffsP);
   // Now we're in a position to decide whether this argument really was in
   // registers or not.
-  auto inRegs = builder.create<mlir::cir::CmpOp>(
-      loc, boolTy, mlir::cir::CmpOpKind::le, newOffset, zeroValue);
-  builder.create<mlir::cir::BrCondOp>(loc, inRegs, inRegBlock, onStackBlock);
+  auto inRegs = builder.create<cir::CmpOp>(loc, boolTy, cir::CmpOpKind::le,
+                                           newOffset, zeroValue);
+  builder.create<cir::BrCondOp>(loc, inRegs, inRegBlock, onStackBlock);
 
   //=======================================
   // Argument was in registers
@@ -216,12 +210,12 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   builder.setInsertionPointToEnd(inRegBlock);
   auto regTopP = builder.createGetMemberOp(
       loc, valist, IsFPR ? "vr_top" : "gr_top", regTopIndex);
-  auto regTop = builder.create<mlir::cir::LoadOp>(loc, regTopP);
+  auto regTop = builder.create<cir::LoadOp>(loc, regTopP);
   auto i8Ty = mlir::IntegerType::get(builder.getContext(), 8);
-  auto i8PtrTy = mlir::cir::PointerType::get(builder.getContext(), i8Ty);
+  auto i8PtrTy = cir::PointerType::get(builder.getContext(), i8Ty);
   auto castRegTop = builder.createBitcast(regTop, i8PtrTy);
-  auto resAsInt8P = builder.create<mlir::cir::PtrStrideOp>(
-      loc, castRegTop.getType(), castRegTop, regOffs);
+  auto resAsInt8P = builder.create<cir::PtrStrideOp>(loc, castRegTop.getType(),
+                                                     castRegTop, regOffs);
 
   if (isIndirect) {
     cir_cconv_assert(!cir::MissingFeatures::handleAArch64Indirect());
@@ -256,12 +250,12 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
     if (isBigEndian && !isIndirect && (isHFA || isAggregateTypeForABI) &&
         tySize < slotSize) {
       clang::CharUnits offset = slotSize - tySize;
-      auto offsetConst = builder.create<mlir::cir::ConstantOp>(
+      auto offsetConst = builder.create<cir::ConstantOp>(
           loc, regOffs.getType(),
-          mlir::cir::IntAttr::get(regOffs.getType(), offset.getQuantity()));
+          cir::IntAttr::get(regOffs.getType(), offset.getQuantity()));
 
-      resAsInt8P = builder.create<mlir::cir::PtrStrideOp>(
-          loc, castRegTop.getType(), resAsInt8P, offsetConst);
+      resAsInt8P = builder.create<cir::PtrStrideOp>(loc, castRegTop.getType(),
+                                                    resAsInt8P, offsetConst);
     }
   }
 
@@ -276,7 +270,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   cir_cconv_assert(!cir::MissingFeatures::supportTySizeQueryForAArch64());
   cir_cconv_assert(!cir::MissingFeatures::supportTyAlignQueryForAArch64());
 
-  builder.create<mlir::cir::BrOp>(loc, mlir::ValueRange{resAsVoidP}, contBlock);
+  builder.create<cir::BrOp>(loc, mlir::ValueRange{resAsVoidP}, contBlock);
 
   //=======================================
   // Argument was on the stack
@@ -284,9 +278,9 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   builder.setInsertionPointToEnd(onStackBlock);
   auto stackP = builder.createGetMemberOp(loc, valist, "stack", 0);
 
-  auto onStackPtr = builder.create<mlir::cir::LoadOp>(loc, stackP);
+  auto onStackPtr = builder.create<cir::LoadOp>(loc, stackP);
   auto ptrDiffTy =
-      mlir::cir::IntType::get(builder.getContext(), 64, /*signed=*/false);
+      cir::IntType::get(builder.getContext(), 64, /*signed=*/false);
 
   cir_cconv_assert(!cir::MissingFeatures::handleAArch64Indirect());
   cir_cconv_assert(!cir::MissingFeatures::supportTyAlignQueryForAArch64());
@@ -314,51 +308,47 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   cir_cconv_assert(!cir::MissingFeatures::handleBigEndian());
   cir_cconv_assert(!cir::MissingFeatures::supportTySizeQueryForAArch64());
 
-  auto stackSizeC = builder.create<mlir::cir::ConstantOp>(
-      loc, ptrDiffTy,
-      mlir::cir::IntAttr::get(ptrDiffTy, stackSize.getQuantity()));
+  auto stackSizeC = builder.create<cir::ConstantOp>(
+      loc, ptrDiffTy, cir::IntAttr::get(ptrDiffTy, stackSize.getQuantity()));
   auto castStack = builder.createBitcast(onStackPtr, i8PtrTy);
   // Write the new value of __stack for the next call to va_arg
-  auto newStackAsi8Ptr = builder.create<mlir::cir::PtrStrideOp>(
+  auto newStackAsi8Ptr = builder.create<cir::PtrStrideOp>(
       loc, castStack.getType(), castStack, stackSizeC);
   auto newStack = builder.createBitcast(newStackAsi8Ptr, onStackPtr.getType());
   builder.createStore(loc, newStack, stackP);
 
   if (isBigEndian && !isAggregateTypeForABI && tySize < stackSlotSize) {
     clang::CharUnits offset = stackSlotSize - tySize;
-    auto offsetConst = builder.create<mlir::cir::ConstantOp>(
-        loc, ptrDiffTy,
-        mlir::cir::IntAttr::get(ptrDiffTy, offset.getQuantity()));
-    auto offsetStackAsi8Ptr = builder.create<mlir::cir::PtrStrideOp>(
+    auto offsetConst = builder.create<cir::ConstantOp>(
+        loc, ptrDiffTy, cir::IntAttr::get(ptrDiffTy, offset.getQuantity()));
+    auto offsetStackAsi8Ptr = builder.create<cir::PtrStrideOp>(
         loc, castStack.getType(), castStack, offsetConst);
     auto onStackPtrBE =
         builder.createBitcast(offsetStackAsi8Ptr, onStackPtr.getType());
-    builder.create<mlir::cir::BrOp>(loc, mlir::ValueRange{onStackPtrBE},
-                                    contBlock);
+    builder.create<cir::BrOp>(loc, mlir::ValueRange{onStackPtrBE}, contBlock);
   } else {
-    builder.create<mlir::cir::BrOp>(loc, mlir::ValueRange{onStackPtr},
-                                    contBlock);
+    builder.create<cir::BrOp>(loc, mlir::ValueRange{onStackPtr}, contBlock);
   }
 
   // generate additional instructions for end block
   builder.setInsertionPoint(op);
   contBlock->addArgument(onStackPtr.getType(), loc);
   auto resP = contBlock->getArgument(0);
-  cir_cconv_assert(mlir::isa<mlir::cir::PointerType>(resP.getType()));
-  auto opResPTy = mlir::cir::PointerType::get(builder.getContext(), opResTy);
+  cir_cconv_assert(mlir::isa<cir::PointerType>(resP.getType()));
+  auto opResPTy = cir::PointerType::get(builder.getContext(), opResTy);
   auto castResP = builder.createBitcast(resP, opResPTy);
-  auto res = builder.create<mlir::cir::LoadOp>(loc, castResP);
+  auto res = builder.create<cir::LoadOp>(loc, castResP);
   // there would be another level of ptr dereference if indirect arg passing
   cir_cconv_assert(!cir::MissingFeatures::handleAArch64Indirect());
   if (isIndirect) {
-    res = builder.create<mlir::cir::LoadOp>(loc, res.getResult());
+    res = builder.create<cir::LoadOp>(loc, res.getResult());
   }
   return res.getResult();
 }
 
 mlir::Value
 LoweringPrepareAArch64CXXABI::lowerVAArg(cir::CIRBaseBuilderTy &builder,
-                                         mlir::cir::VAArgOp op,
+                                         cir::VAArgOp op,
                                          const cir::CIRDataLayout &datalayout) {
   return Kind == AArch64ABIKind::Win64 ? lowerMSVAArg(builder, op, datalayout)
          : isDarwinPCS() ? lowerDarwinVAArg(builder, op, datalayout)

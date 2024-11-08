@@ -41,10 +41,10 @@ struct CIRToLLVMPipelineOptions
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
   mlir::DialectRegistry registry;
-  registry.insert<mlir::BuiltinDialect, mlir::arith::ArithDialect,
-                  mlir::cir::CIRDialect, mlir::memref::MemRefDialect,
-                  mlir::LLVM::LLVMDialect, mlir::DLTIDialect,
-                  mlir::omp::OpenMPDialect>();
+  registry
+      .insert<mlir::BuiltinDialect, mlir::arith::ArithDialect, cir::CIRDialect,
+              mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect,
+              mlir::DLTIDialect, mlir::omp::OpenMPDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return cir::createConvertMLIRToLLVMPass();

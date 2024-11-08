@@ -15,10 +15,9 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using ABIArgInfo = ::cir::ABIArgInfo;
-using MissingFeature = ::cir::MissingFeatures;
+using ABIArgInfo = cir::ABIArgInfo;
+using MissingFeature = cir::MissingFeatures;
 
-namespace mlir {
 namespace cir {
 
 //===----------------------------------------------------------------------===//
@@ -33,7 +32,7 @@ public:
 
 private:
   void computeInfo(LowerFunctionInfo &FI) const override {
-    cir_cconv_assert_or_abort(!::cir::MissingFeatures::SPIRVABI(), "NYI");
+    cir_cconv_assert_or_abort(!cir::MissingFeatures::SPIRVABI(), "NYI");
   }
 };
 
@@ -43,8 +42,8 @@ public:
       : TargetLoweringInfo(std::make_unique<SPIRVABIInfo>(LT)) {}
 
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
-      mlir::cir::AddressSpaceAttr addressSpaceAttr) const override {
-    using Kind = mlir::cir::AddressSpaceAttr::Kind;
+      cir::AddressSpaceAttr addressSpaceAttr) const override {
+    using Kind = cir::AddressSpaceAttr::Kind;
     switch (addressSpaceAttr.getValue()) {
     case Kind::offload_private:
       return 0;
@@ -70,4 +69,3 @@ createSPIRVTargetLoweringInfo(LowerModule &lowerModule) {
 }
 
 } // namespace cir
-} // namespace mlir

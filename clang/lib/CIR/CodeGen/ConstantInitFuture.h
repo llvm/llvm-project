@@ -70,7 +70,7 @@ public:
 
   /// Install the initializer into a global variable.  This cannot
   /// be called multiple times.
-  void installInGlobal(mlir::cir::GlobalOp global);
+  void installInGlobal(cir::GlobalOp global);
 
   void *getOpaqueValue() const { return Data.getOpaqueValue(); }
   static ConstantInitFuture getFromOpaqueValue(void *value) {

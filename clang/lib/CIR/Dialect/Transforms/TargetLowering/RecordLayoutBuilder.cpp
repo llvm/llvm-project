@@ -18,7 +18,7 @@
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 namespace {
 
@@ -58,11 +58,11 @@ public:
 
 void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
   // Check the bases.
-  cir_cconv_assert(!::cir::MissingFeatures::getCXXRecordBases());
+  cir_cconv_assert(!cir::MissingFeatures::getCXXRecordBases());
 
   // Check the fields.
   for (const auto FT : Class.getMembers()) {
-    cir_cconv_assert(!::cir::MissingFeatures::qualifiedTypes());
+    cir_cconv_assert(!cir::MissingFeatures::qualifiedTypes());
     const auto RT = dyn_cast<StructType>(FT);
 
     // We only care about record types.
@@ -70,7 +70,7 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
       continue;
 
     // TODO(cir): Handle nested record types.
-    cir_cconv_assert_or_abort(!::cir::MissingFeatures::ABINestedRecordLayout(),
+    cir_cconv_assert_or_abort(!cir::MissingFeatures::ABINestedRecordLayout(),
                               "NYI");
   }
 }
@@ -87,7 +87,7 @@ bool EmptySubobjectMap::canPlaceFieldAtOffset(const Type Ty,
 class ItaniumRecordLayoutBuilder {
 protected:
   // FIXME(cir):  Remove this and make the appropriate fields public.
-  friend class mlir::cir::CIRLowerContext;
+  friend class cir::CIRLowerContext;
 
   const CIRLowerContext &Context;
 
@@ -108,7 +108,7 @@ protected:
   /// \brief The maximum of the alignments of top-level members.
   clang::CharUnits UnadjustedAlignment;
 
-  SmallVector<uint64_t, 16> FieldOffsets;
+  llvm::SmallVector<uint64_t, 16> FieldOffsets;
 
   /// Whether the external AST source has provided a layout for this
   /// record.
@@ -235,25 +235,25 @@ void ItaniumRecordLayoutBuilder::layout(const StructType RT) {
   initializeLayout(RT);
 
   // Lay out the vtable and the non-virtual bases.
-  cir_cconv_assert(!::cir::MissingFeatures::isCXXRecordDecl() &&
-                   !::cir::MissingFeatures::CXXRecordIsDynamicClass());
+  cir_cconv_assert(!cir::MissingFeatures::isCXXRecordDecl() &&
+                   !cir::MissingFeatures::CXXRecordIsDynamicClass());
 
   layoutFields(RT);
 
   // FIXME(cir): Handle virtual-related layouts.
-  cir_cconv_assert(!::cir::MissingFeatures::getCXXRecordBases());
+  cir_cconv_assert(!cir::MissingFeatures::getCXXRecordBases());
 
   cir_cconv_assert(
-      !::cir::MissingFeatures::itaniumRecordLayoutBuilderFinishLayout());
+      !cir::MissingFeatures::itaniumRecordLayoutBuilderFinishLayout());
 }
 
 void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
   if (const auto RT = dyn_cast<StructType>(Ty)) {
     IsUnion = RT.isUnion();
-    cir_cconv_assert(!::cir::MissingFeatures::recordDeclIsMSStruct());
+    cir_cconv_assert(!cir::MissingFeatures::recordDeclIsMSStruct());
   }
 
-  cir_cconv_assert(!::cir::MissingFeatures::recordDeclIsPacked());
+  cir_cconv_assert(!cir::MissingFeatures::recordDeclIsPacked());
 
   // Honor the default struct packing maximum alignment flag.
   if (unsigned DefaultMaxFieldAlignment = Context.getLangOpts().PackStruct) {
@@ -264,16 +264,16 @@ void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
   // and forces all structures to have 2-byte alignment. The IBM docs on it
   // allude to additional (more complicated) semantics, especially with regard
   // to bit-fields, but gcc appears not to follow that.
-  if (::cir::MissingFeatures::declHasAlignMac68kAttr()) {
+  if (cir::MissingFeatures::declHasAlignMac68kAttr()) {
     cir_cconv_unreachable("NYI");
   } else {
-    if (::cir::MissingFeatures::declHasAlignNaturalAttr())
+    if (cir::MissingFeatures::declHasAlignNaturalAttr())
       cir_cconv_unreachable("NYI");
 
-    if (::cir::MissingFeatures::declHasMaxFieldAlignmentAttr())
+    if (cir::MissingFeatures::declHasMaxFieldAlignmentAttr())
       cir_cconv_unreachable("NYI");
 
-    if (::cir::MissingFeatures::declGetMaxAlignment())
+    if (cir::MissingFeatures::declGetMaxAlignment())
       cir_cconv_unreachable("NYI");
   }
 
@@ -282,7 +282,7 @@ void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
 
   // If there is an external AST source, ask it for the various offsets.
   if (const auto RT = dyn_cast<StructType>(Ty)) {
-    if (::cir::MissingFeatures::astContextGetExternalSource()) {
+    if (cir::MissingFeatures::astContextGetExternalSource()) {
       cir_cconv_unreachable("NYI");
     }
   }
@@ -291,9 +291,8 @@ void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
 void ItaniumRecordLayoutBuilder::layoutField(const Type D,
                                              bool InsertExtraPadding) {
   // auto FieldClass = D.dyn_cast<StructType>();
-  cir_cconv_assert(
-      !::cir::MissingFeatures::fieldDeclIsPotentiallyOverlapping() &&
-      !::cir::MissingFeatures::CXXRecordDeclIsEmptyCXX11());
+  cir_cconv_assert(!cir::MissingFeatures::fieldDeclIsPotentiallyOverlapping() &&
+                   !cir::MissingFeatures::CXXRecordDeclIsEmptyCXX11());
   bool IsOverlappingEmptyField = false; // FIXME(cir): Needs more features.
 
   clang::CharUnits FieldOffset = (IsUnion || IsOverlappingEmptyField)
@@ -307,7 +306,7 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
     cir_cconv_unreachable("NYI");
   }
 
-  cir_cconv_assert(!::cir::MissingFeatures::fieldDeclIsBitfield());
+  cir_cconv_assert(!cir::MissingFeatures::fieldDeclIsBitfield());
 
   uint64_t UnpaddedFieldOffset = getDataSizeInBits() - UnfilledBitsInLastUnit;
   // Reset the unfilled bits.
@@ -340,15 +339,15 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   } else {
     setDeclInfo(false /* IsIncompleteArrayType */);
 
-    if (::cir::MissingFeatures::fieldDeclIsPotentiallyOverlapping())
+    if (cir::MissingFeatures::fieldDeclIsPotentiallyOverlapping())
       cir_cconv_unreachable("NYI");
 
     if (IsMsStruct)
       cir_cconv_unreachable("NYI");
   }
 
-  cir_cconv_assert(!::cir::MissingFeatures::recordDeclIsPacked() &&
-                   !::cir::MissingFeatures::CXXRecordDeclIsPOD());
+  cir_cconv_assert(!cir::MissingFeatures::recordDeclIsPacked() &&
+                   !cir::MissingFeatures::CXXRecordDeclIsPOD());
   bool FieldPacked = false; // FIXME(cir): Needs more features.
 
   // When used as part of a typedef, or together with a 'packed' attribute, the
@@ -386,7 +385,7 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   clang::CharUnits UnpackedFieldOffset = FieldOffset;
   // clang::CharUnits OriginalFieldAlign = UnpackedFieldAlign;
 
-  cir_cconv_assert(!::cir::MissingFeatures::fieldDeclGetMaxFieldAlignment());
+  cir_cconv_assert(!cir::MissingFeatures::fieldDeclGetMaxFieldAlignment());
   clang::CharUnits MaxAlignmentInChars = clang::CharUnits::Zero();
   PackedFieldAlign = std::max(PackedFieldAlign, MaxAlignmentInChars);
   PreferredAlign = std::max(PreferredAlign, MaxAlignmentInChars);
@@ -459,7 +458,7 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   // laid out. A regular mlir::Type has not way of doing this. In fact, we will
   // likely need an external abstraction, as I don't think this is possible with
   // just the field type.
-  cir_cconv_assert(!::cir::MissingFeatures::fieldDeclAbstraction());
+  cir_cconv_assert(!cir::MissingFeatures::fieldDeclAbstraction());
 
   if (Packed && !FieldPacked && PackedFieldAlign < FieldAlign)
     cir_cconv_unreachable("NYI");
@@ -468,10 +467,10 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
 void ItaniumRecordLayoutBuilder::layoutFields(const StructType D) {
   // Layout each field, for now, just sequentially, respecting alignment.  In
   // the future, this will need to be tweakable by targets.
-  cir_cconv_assert(!::cir::MissingFeatures::recordDeclMayInsertExtraPadding() &&
+  cir_cconv_assert(!cir::MissingFeatures::recordDeclMayInsertExtraPadding() &&
                    !Context.getLangOpts().SanitizeAddressFieldPadding);
   bool InsertExtraPadding = false;
-  cir_cconv_assert(!::cir::MissingFeatures::recordDeclHasFlexibleArrayMember());
+  cir_cconv_assert(!cir::MissingFeatures::recordDeclHasFlexibleArrayMember());
   bool HasFlexibleArrayMember = false;
   for (const auto FT : D.getMembers()) {
     layoutField(FT, InsertExtraPadding && (FT != D.getMembers().back() ||
@@ -511,7 +510,7 @@ void ItaniumRecordLayoutBuilder::checkFieldPadding(
     unsigned UnpackedAlign, bool isPacked, const Type Ty) {
   // We let objc ivars without warning, objc interfaces generally are not used
   // for padding tricks.
-  if (::cir::MissingFeatures::objCIvarDecls())
+  if (cir::MissingFeatures::objCIvarDecls())
     cir_cconv_unreachable("NYI");
 
   // FIXME(cir): Should the following be skiped in CIR?
@@ -528,7 +527,7 @@ void ItaniumRecordLayoutBuilder::checkFieldPadding(
       PadSize = PadSize / CharBitNum;
       // InBits = false;
     }
-    cir_cconv_assert(::cir::MissingFeatures::bitFieldPaddingDiagnostics());
+    cir_cconv_assert(cir::MissingFeatures::bitFieldPaddingDiagnostics());
   }
   if (isPacked && Offset != UnpackedOffset) {
     HasPackedField = true;
@@ -547,7 +546,7 @@ bool isMsLayout(const CIRLowerContext &Context) {
 /// of the given class (considering it as a base class) when allocating
 /// objects?
 static bool mustSkipTailPadding(clang::TargetCXXABI ABI, const StructType RD) {
-  cir_cconv_assert(!::cir::MissingFeatures::recordDeclIsCXXDecl());
+  cir_cconv_assert(!cir::MissingFeatures::recordDeclIsCXXDecl());
   switch (ABI.getTailPaddingUseRules()) {
   case clang::TargetCXXABI::AlwaysUseTailPadding:
     return false;
@@ -569,7 +568,7 @@ static bool mustSkipTailPadding(clang::TargetCXXABI ABI, const StructType RD) {
     //   intended.
     // FIXME(cir): This always returns true since we can't check if a CIR record
     // is a POD type.
-    cir_cconv_assert(!::cir::MissingFeatures::CXXRecordDeclIsPOD());
+    cir_cconv_assert(!cir::MissingFeatures::CXXRecordDeclIsPOD());
     return true;
 
   case clang::TargetCXXABI::UseTailPaddingUnlessPOD11:
@@ -606,7 +605,7 @@ const CIRRecordLayout &CIRLowerContext::getCIRRecordLayout(const Type D) const {
     cir_cconv_unreachable("NYI");
   } else {
     // FIXME(cir): Add if-else separating C and C++ records.
-    cir_cconv_assert(!::cir::MissingFeatures::isCXXRecordDecl());
+    cir_cconv_assert(!cir::MissingFeatures::isCXXRecordDecl());
     EmptySubobjectMap EmptySubobjects(*this, RT);
     ItaniumRecordLayoutBuilder Builder(*this, &EmptySubobjects);
     Builder.layout(RT);
@@ -621,7 +620,7 @@ const CIRRecordLayout &CIRLowerContext::getCIRRecordLayout(const Type D) const {
         skipTailPadding ? Builder.getSize() : Builder.getDataSize();
     clang::CharUnits NonVirtualSize =
         skipTailPadding ? DataSize : Builder.NonVirtualSize;
-    cir_cconv_assert(!::cir::MissingFeatures::CXXRecordIsDynamicClass());
+    cir_cconv_assert(!cir::MissingFeatures::CXXRecordIsDynamicClass());
     // FIXME(cir): Whose responsible for freeing the allocation below?
     NewEntry = new CIRRecordLayout(
         *this, Builder.getSize(), Builder.Alignment, Builder.PreferredAlignment,
@@ -636,7 +635,7 @@ const CIRRecordLayout &CIRLowerContext::getCIRRecordLayout(const Type D) const {
   }
 
   // TODO(cir): Add option to dump the layouts.
-  cir_cconv_assert(!::cir::MissingFeatures::cacheRecordLayouts());
+  cir_cconv_assert(!cir::MissingFeatures::cacheRecordLayouts());
 
   return *NewEntry;
 }

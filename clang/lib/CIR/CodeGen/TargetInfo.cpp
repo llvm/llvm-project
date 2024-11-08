@@ -156,7 +156,7 @@ public:
 namespace {
 
 /// The AVX ABI leel for X86 targets.
-using X86AVXABILevel = ::cir::X86AVXABILevel;
+using X86AVXABILevel = cir::X86AVXABILevel;
 
 class X86_64ABIInfo : public ABIInfo {
   using Class = cir::X86ArgClass;
@@ -247,7 +247,7 @@ public:
   void computeInfo(CIRGenFunctionInfo &FI) const override {
     // The logic is same as in DefaultABIInfo with an exception on the kernel
     // arguments handling.
-    mlir::cir::CallingConv CC = FI.getCallingConvention();
+    cir::CallingConv CC = FI.getCallingConvention();
 
     bool cxxabiHit = getCXXABI().classifyReturnType(FI);
     assert(!cxxabiHit && "C++ ABI not considered");
@@ -255,7 +255,7 @@ public:
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
     for (auto &I : FI.arguments()) {
-      if (CC == mlir::cir::CallingConv::SpirKernel) {
+      if (CC == cir::CallingConv::SpirKernel) {
         I.info = classifyKernelArgumentType(I.type);
       } else {
         I.info = classifyArgumentType(I.type);
@@ -286,14 +286,14 @@ public:
   CommonSPIRTargetCIRGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
       : TargetCIRGenInfo(std::move(ABIInfo)) {}
 
-  mlir::cir::AddressSpaceAttr getCIRAllocaAddressSpace() const override {
-    return mlir::cir::AddressSpaceAttr::get(
+  cir::AddressSpaceAttr getCIRAllocaAddressSpace() const override {
+    return cir::AddressSpaceAttr::get(
         &getABIInfo().CGT.getMLIRContext(),
-        mlir::cir::AddressSpaceAttr::Kind::offload_private);
+        cir::AddressSpaceAttr::Kind::offload_private);
   }
 
-  mlir::cir::CallingConv getOpenCLKernelCallingConv() const override {
-    return mlir::cir::CallingConv::SpirKernel;
+  cir::CallingConv getOpenCLKernelCallingConv() const override {
+    return cir::CallingConv::SpirKernel;
   }
 };
 
@@ -401,7 +401,7 @@ cir::ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
 
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
-    if (Hi == Class::NoClass && mlir::isa<mlir::cir::IntType>(ResType)) {
+    if (Hi == Class::NoClass && mlir::isa<cir::IntType>(ResType)) {
       assert(!Ty->getAs<EnumType>() && "NYI");
       if (Ty->isSignedIntegerOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty))
@@ -532,7 +532,7 @@ cir::ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
     // TODO: extend the above consideration to MLIR
-    if (Hi == Class::NoClass && mlir::isa<mlir::cir::IntType>(ResType)) {
+    if (Hi == Class::NoClass && mlir::isa<cir::IntType>(ResType)) {
       // Treat an enum type as its underlying type.
       if (const auto *EnumTy = RetTy->getAs<EnumType>())
         RetTy = EnumTy->getDecl()->getIntegerType();
@@ -572,12 +572,11 @@ TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &CGM,
 }
 
 mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
-    CIRGenFunction &CGF, mlir::Value Src, mlir::cir::AddressSpaceAttr SrcAddr,
-    mlir::cir::AddressSpaceAttr DestAddr, mlir::Type DestTy,
-    bool IsNonNull) const {
+    CIRGenFunction &CGF, mlir::Value Src, cir::AddressSpaceAttr SrcAddr,
+    cir::AddressSpaceAttr DestAddr, mlir::Type DestTy, bool IsNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
-  if (auto globalOp = Src.getDefiningOp<mlir::cir::GlobalOp>())
+  if (auto globalOp = Src.getDefiningOp<cir::GlobalOp>())
     llvm_unreachable("Global ops addrspace cast NYI");
   // Try to preserve the source's name to make IR more readable.
   return CGF.getBuilder().createAddrSpaceCast(Src, DestTy);

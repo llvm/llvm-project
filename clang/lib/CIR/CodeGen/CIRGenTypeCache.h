@@ -30,18 +30,18 @@ struct CIRGenTypeCache {
   CIRGenTypeCache() {}
 
   /// void
-  mlir::cir::VoidType VoidTy;
+  cir::VoidType VoidTy;
   // char, int, short, long, __int128
-  mlir::cir::IntType SInt8Ty, SInt16Ty, SInt32Ty, SInt64Ty, SInt128Ty;
+  cir::IntType SInt8Ty, SInt16Ty, SInt32Ty, SInt64Ty, SInt128Ty;
   // usigned char, unsigned, unsigned short, unsigned long, unsigned __int128
-  mlir::cir::IntType UInt8Ty, UInt16Ty, UInt32Ty, UInt64Ty, UInt128Ty;
+  cir::IntType UInt8Ty, UInt16Ty, UInt32Ty, UInt64Ty, UInt128Ty;
   /// half, bfloat, float, double, fp80
-  mlir::cir::FP16Type FP16Ty;
-  mlir::cir::BF16Type BFloat16Ty;
-  mlir::cir::SingleType FloatTy;
-  mlir::cir::DoubleType DoubleTy;
-  mlir::cir::FP80Type FP80Ty;
-  mlir::cir::FP128Type FP128Ty;
+  cir::FP16Type FP16Ty;
+  cir::BF16Type BFloat16Ty;
+  cir::SingleType FloatTy;
+  cir::DoubleType DoubleTy;
+  cir::FP80Type FP80Ty;
+  cir::FP128Type FP128Ty;
 
   /// int
   mlir::Type UIntTy;
@@ -58,29 +58,29 @@ struct CIRGenTypeCache {
   mlir::Type PtrDiffTy;
 
   /// void* in address space 0
-  mlir::cir::PointerType VoidPtrTy;
-  mlir::cir::PointerType UInt8PtrTy;
+  cir::PointerType VoidPtrTy;
+  cir::PointerType UInt8PtrTy;
 
   /// void** in address space 0
   union {
-    mlir::cir::PointerType VoidPtrPtrTy;
-    mlir::cir::PointerType UInt8PtrPtrTy;
+    cir::PointerType VoidPtrPtrTy;
+    cir::PointerType UInt8PtrPtrTy;
   };
 
   /// void* in alloca address space
   union {
-    mlir::cir::PointerType AllocaVoidPtrTy;
-    mlir::cir::PointerType AllocaInt8PtrTy;
+    cir::PointerType AllocaVoidPtrTy;
+    cir::PointerType AllocaInt8PtrTy;
   };
 
   /// void* in default globals address space
   //   union {
-  //     mlir::cir::PointerType GlobalsVoidPtrTy;
-  //     mlir::cir::PointerType GlobalsInt8PtrTy;
+  //     cir::PointerType GlobalsVoidPtrTy;
+  //     cir::PointerType GlobalsInt8PtrTy;
   //   };
 
   /// void* in the address space for constant globals
-  //   mlir::cir::PointerType ConstGlobalsPtrTy;
+  //   cir::PointerType ConstGlobalsPtrTy;
 
   /// The size and alignment of the builtin C type 'int'.  This comes
   /// up enough in various ABI lowering tasks to be worth pre-computing.
@@ -110,7 +110,7 @@ struct CIRGenTypeCache {
   //     unsigned char SizeAlignInBytes;
   //   };
 
-  mlir::cir::AddressSpaceAttr CIRAllocaAddressSpace;
+  cir::AddressSpaceAttr CIRAllocaAddressSpace;
 
   //   clang::CharUnits getSizeSize() const {
   //     return clang::CharUnits::fromQuantity(SizeSizeInBytes);
@@ -125,7 +125,7 @@ struct CIRGenTypeCache {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
   }
 
-  mlir::cir::AddressSpaceAttr getCIRAllocaAddressSpace() const {
+  cir::AddressSpaceAttr getCIRAllocaAddressSpace() const {
     return CIRAllocaAddressSpace;
   }
 };

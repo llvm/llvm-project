@@ -27,16 +27,15 @@ namespace cir {
 class LoweringPrepareCXXABI {
 public:
   static LoweringPrepareCXXABI *createItaniumABI();
-  static LoweringPrepareCXXABI *createAArch64ABI(::cir::AArch64ABIKind k);
+  static LoweringPrepareCXXABI *createAArch64ABI(cir::AArch64ABIKind k);
 
-  virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder,
-                                 mlir::cir::VAArgOp op,
+  virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder, cir::VAArgOp op,
                                  const cir::CIRDataLayout &datalayout) = 0;
   virtual ~LoweringPrepareCXXABI() {}
 
   virtual mlir::Value lowerDynamicCast(CIRBaseBuilderTy &builder,
                                        clang::ASTContext &astCtx,
-                                       mlir::cir::DynamicCastOp op) = 0;
+                                       cir::DynamicCastOp op) = 0;
 };
 
 } // namespace cir

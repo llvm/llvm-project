@@ -39,7 +39,7 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenFunctionInfo *CIRGenFunctionInfo::create(
-    mlir::cir::CallingConv cirCC, bool instanceMethod, bool chainCall,
+    cir::CallingConv cirCC, bool instanceMethod, bool chainCall,
     const FunctionType::ExtInfo &info,
     llvm::ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
     llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
@@ -195,12 +195,12 @@ static bool hasInAllocaArgs(CIRGenModule &CGM, CallingConv ExplicitCC,
   return false;
 }
 
-mlir::cir::FuncType CIRGenTypes::GetFunctionType(GlobalDecl GD) {
+cir::FuncType CIRGenTypes::GetFunctionType(GlobalDecl GD) {
   const CIRGenFunctionInfo &FI = arrangeGlobalDeclaration(GD);
   return GetFunctionType(FI);
 }
 
-mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
+cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   bool Inserted = FunctionsBeingProcessed.insert(&FI).second;
   (void)Inserted;
   assert(Inserted && "Recursively being processed?");
@@ -260,12 +260,12 @@ mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   (void)Erased;
   assert(Erased && "Not in set?");
 
-  return mlir::cir::FuncType::get(
-      ArgTypes, (resultType ? resultType : Builder.getVoidTy()),
-      FI.isVariadic());
+  return cir::FuncType::get(ArgTypes,
+                            (resultType ? resultType : Builder.getVoidTy()),
+                            FI.isVariadic());
 }
 
-mlir::cir::FuncType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
+cir::FuncType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
 
@@ -322,7 +322,7 @@ static void AddAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
 
   if (!isUnresolvedExceptionSpec(FPT->getExceptionSpecType()) &&
       FPT->isNothrow()) {
-    auto nu = mlir::cir::NoThrowAttr::get(builder.getContext());
+    auto nu = cir::NoThrowAttr::get(builder.getContext());
     FuncAttrs.set(nu.getMnemonic(), nu);
   }
 }
@@ -348,7 +348,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
                                           const CIRGenFunctionInfo &FI,
                                           CIRGenCalleeInfo CalleeInfo,
                                           mlir::NamedAttrList &funcAttrs,
-                                          mlir::cir::CallingConv &callingConv,
+                                          cir::CallingConv &callingConv,
                                           bool AttrOnCallSite, bool IsThunk) {
   // Implementation Disclaimer
   //
@@ -382,7 +382,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   if (TargetDecl) {
 
     if (TargetDecl->hasAttr<NoThrowAttr>()) {
-      auto nu = mlir::cir::NoThrowAttr::get(&getMLIRContext());
+      auto nu = cir::NoThrowAttr::get(&getMLIRContext());
       funcAttrs.set(nu.getMnemonic(), nu);
     }
 
@@ -434,11 +434,11 @@ void CIRGenModule::constructAttributeList(StringRef Name,
     }
 
     if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
-      auto cirKernelAttr = mlir::cir::OpenCLKernelAttr::get(&getMLIRContext());
+      auto cirKernelAttr = cir::OpenCLKernelAttr::get(&getMLIRContext());
       funcAttrs.set(cirKernelAttr.getMnemonic(), cirKernelAttr);
 
-      auto uniformAttr = mlir::cir::OpenCLKernelUniformWorkGroupSizeAttr::get(
-          &getMLIRContext());
+      auto uniformAttr =
+          cir::OpenCLKernelUniformWorkGroupSizeAttr::get(&getMLIRContext());
       if (getLangOpts().OpenCLVersion <= 120) {
         // OpenCL v1.2 Work groups are always uniform
         funcAttrs.set(uniformAttr.getMnemonic(), uniformAttr);
@@ -465,24 +465,22 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, funcAttrs);
 }
 
-static mlir::cir::CIRCallOpInterface
-buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
-                mlir::cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
-                mlir::cir::FuncOp directFuncOp,
-                SmallVectorImpl<mlir::Value> &CIRCallArgs, bool isInvoke,
-                mlir::cir::CallingConv callingConv,
-                mlir::cir::ExtraFuncAttributesAttr extraFnAttrs) {
+static cir::CIRCallOpInterface buildCallLikeOp(
+    CIRGenFunction &CGF, mlir::Location callLoc, cir::FuncType indirectFuncTy,
+    mlir::Value indirectFuncVal, cir::FuncOp directFuncOp,
+    SmallVectorImpl<mlir::Value> &CIRCallArgs, bool isInvoke,
+    cir::CallingConv callingConv, cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
   auto getOrCreateSurroundingTryOp = [&]() {
     // In OG, we build the landing pad for this scope. In CIR, we emit a
     // synthetic cir.try because this didn't come from codegenerating from a
     // try/catch in C++.
     assert(CGF.currLexScope && "expected scope");
-    mlir::cir::TryOp op = CGF.currLexScope->getClosestTryParent();
+    cir::TryOp op = CGF.currLexScope->getClosestTryParent();
     if (op)
       return op;
 
-    op = builder.create<mlir::cir::TryOp>(
+    op = builder.create<cir::TryOp>(
         *CGF.currSrcLoc, /*scopeBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {},
         // Don't emit the code right away for catch clauses, for
@@ -517,9 +515,9 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
       assert(builder.getInsertionBlock() && "expected valid basic block");
     }
 
-    mlir::cir::CallOp callOpWithExceptions;
+    cir::CallOp callOpWithExceptions;
     // TODO(cir): Set calling convention for `cir.try_call`.
-    assert(callingConv == mlir::cir::CallingConv::C && "NYI");
+    assert(callingConv == cir::CallingConv::C && "NYI");
     if (indirectFuncTy) {
       callOpWithExceptions = builder.createIndirectTryCallOp(
           callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
@@ -535,7 +533,7 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
     CGF.callWithExceptionCtx = nullptr;
 
     if (tryOp.getSynthetic()) {
-      builder.create<mlir::cir::YieldOp>(tryOp.getLoc());
+      builder.create<cir::YieldOp>(tryOp.getLoc());
       builder.restoreInsertionPoint(ip);
     }
     return callOpWithExceptions;
@@ -544,10 +542,10 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
   assert(builder.getInsertionBlock() && "expected valid basic block");
   if (indirectFuncTy) {
     // TODO(cir): Set calling convention for indirect calls.
-    assert(callingConv == mlir::cir::CallingConv::C && "NYI");
-    return builder.createIndirectCallOp(
-        callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs,
-        mlir::cir::CallingConv::C, extraFnAttrs);
+    assert(callingConv == cir::CallingConv::C && "NYI");
+    return builder.createIndirectCallOp(callLoc, indirectFuncVal,
+                                        indirectFuncTy, CIRCallArgs,
+                                        cir::CallingConv::C, extraFnAttrs);
   }
   return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs, callingConv,
                               extraFnAttrs);
@@ -557,7 +555,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
-                                 mlir::cir::CIRCallOpInterface *callOrTryCall,
+                                 cir::CIRCallOpInterface *callOrTryCall,
                                  bool IsMustTail, mlir::Location loc,
                                  std::optional<const clang::CallExpr *> E) {
   auto builder = CGM.getBuilder();
@@ -570,7 +568,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   QualType RetTy = CallInfo.getReturnType();
   const auto &RetAI = CallInfo.getReturnInfo();
 
-  mlir::cir::FuncType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
+  cir::FuncType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
   // This is not always tied to a FunctionDecl (e.g. builtins that are xformed
@@ -634,7 +632,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     switch (ArgInfo.getKind()) {
     case cir::ABIArgInfo::Direct: {
-      if (!mlir::isa<mlir::cir::StructType>(ArgInfo.getCoerceToType()) &&
+      if (!mlir::isa<cir::StructType>(ArgInfo.getCoerceToType()) &&
           ArgInfo.getCoerceToType() == convertType(info_it->type) &&
           ArgInfo.getDirectOffset() == 0) {
         assert(NumCIRArgs == 1);
@@ -648,7 +646,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
         // We might have to widen integers, but we should never truncate.
         if (ArgInfo.getCoerceToType() != V.getType() &&
-            mlir::isa<mlir::cir::IntType>(V.getType()))
+            mlir::isa<cir::IntType>(V.getType()))
           llvm_unreachable("NYI");
 
         // If the argument doesn't match, perform a bitcast to coerce it. This
@@ -675,7 +673,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      auto STy = dyn_cast<mlir::cir::StructType>(ArgInfo.getCoerceToType());
+      auto STy = dyn_cast<cir::StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         auto SrcTy = Src.getElementType();
         // FIXME(cir): get proper location for each argument.
@@ -741,10 +739,10 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // Compute the calling convention and attributes.
   mlir::NamedAttrList Attrs;
   StringRef FnName;
-  if (auto calleeFnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
+  if (auto calleeFnOp = dyn_cast<cir::FuncOp>(CalleePtr))
     FnName = calleeFnOp.getName();
 
-  mlir::cir::CallingConv callingConv;
+  cir::CallingConv callingConv;
   CGM.constructAttributeList(FnName, CallInfo, Callee.getAbstractInfo(), Attrs,
                              callingConv,
                              /*AttrOnCallSite=*/true,
@@ -778,10 +776,10 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     CannotThrow = true;
   } else {
     // Otherwise, nounwind call sites will never throw.
-    auto noThrowAttr = mlir::cir::NoThrowAttr::get(&getMLIRContext());
+    auto noThrowAttr = cir::NoThrowAttr::get(&getMLIRContext());
     CannotThrow = Attrs.getNamed(noThrowAttr.getMnemonic()).has_value();
 
-    if (auto fptr = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
+    if (auto fptr = dyn_cast<cir::FuncOp>(CalleePtr))
       if (fptr.getExtraAttrs().getElements().contains(
               noThrowAttr.getMnemonic()))
         CannotThrow = true;
@@ -795,44 +793,43 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // TODO: alignment attributes
 
   auto callLoc = loc;
-  mlir::cir::CIRCallOpInterface theCall = [&]() {
-    mlir::cir::FuncType indirectFuncTy;
+  cir::CIRCallOpInterface theCall = [&]() {
+    cir::FuncType indirectFuncTy;
     mlir::Value indirectFuncVal;
-    mlir::cir::FuncOp directFuncOp;
+    cir::FuncOp directFuncOp;
 
-    if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr)) {
+    if (auto fnOp = dyn_cast<cir::FuncOp>(CalleePtr)) {
       directFuncOp = fnOp;
-    } else if (auto getGlobalOp = dyn_cast<mlir::cir::GetGlobalOp>(CalleePtr)) {
+    } else if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(CalleePtr)) {
       // FIXME(cir): This peephole optimization to avoids indirect calls for
       // builtins. This should be fixed in the builting declaration instead by
       // not emitting an unecessary get_global in the first place.
       auto *globalOp = mlir::SymbolTable::lookupSymbolIn(CGM.getModule(),
                                                          getGlobalOp.getName());
       assert(getGlobalOp && "undefined global function");
-      directFuncOp = llvm::dyn_cast<mlir::cir::FuncOp>(globalOp);
+      directFuncOp = llvm::dyn_cast<cir::FuncOp>(globalOp);
       assert(directFuncOp && "operation is not a function");
     } else {
       [[maybe_unused]] auto resultTypes = CalleePtr->getResultTypes();
       [[maybe_unused]] auto FuncPtrTy =
-          mlir::dyn_cast<mlir::cir::PointerType>(resultTypes.front());
-      assert(FuncPtrTy &&
-             mlir::isa<mlir::cir::FuncType>(FuncPtrTy.getPointee()) &&
+          mlir::dyn_cast<cir::PointerType>(resultTypes.front());
+      assert(FuncPtrTy && mlir::isa<cir::FuncType>(FuncPtrTy.getPointee()) &&
              "expected pointer to function");
 
       indirectFuncTy = CIRFuncTy;
       indirectFuncVal = CalleePtr->getResult(0);
     }
 
-    auto extraFnAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
+    auto extraFnAttrs = cir::ExtraFuncAttributesAttr::get(
         &getMLIRContext(), Attrs.getDictionary(&getMLIRContext()));
 
-    mlir::cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
+    cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
         *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
         CIRCallArgs, isInvoke, callingConv, extraFnAttrs);
 
     if (E)
-      callLikeOp->setAttr(
-          "ast", mlir::cir::ASTCallExprAttr::get(&getMLIRContext(), *E));
+      callLikeOp->setAttr("ast",
+                          cir::ASTCallExprAttr::get(&getMLIRContext(), *E));
 
     if (callOrTryCall)
       *callOrTryCall = callLikeOp;
@@ -925,7 +922,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 }
 
 mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
-                                             mlir::cir::FuncOp callee,
+                                             cir::FuncOp callee,
                                              ArrayRef<mlir::Value> args) {
   // TODO(cir): set the calling convention to this runtime call.
   assert(!cir::MissingFeatures::setCallingConv());
@@ -1580,7 +1577,7 @@ mlir::Value CIRGenFunction::buildVAArg(VAArgExpr *VE, Address &VAListAddr) {
   auto loc = CGM.getLoc(VE->getExprLoc());
   auto type = ConvertType(VE->getType());
   auto vaList = buildVAListRef(VE->getSubExpr()).getPointer();
-  return builder.create<mlir::cir::VAArgOp>(loc, type, vaList);
+  return builder.create<cir::VAArgOp>(loc, type, vaList);
 }
 
 static void getTrivialDefaultFunctionAttributes(
@@ -1595,7 +1592,7 @@ static void getTrivialDefaultFunctionAttributes(
     // applied around them).  LLVM will remove this attribute where it safely
     // can.
 
-    auto convgt = mlir::cir::ConvergentAttr::get(CGM.getBuilder().getContext());
+    auto convgt = cir::ConvergentAttr::get(CGM.getBuilder().getContext());
     funcAttrs.set(convgt.getMnemonic(), convgt);
   }
 
@@ -1605,7 +1602,7 @@ static void getTrivialDefaultFunctionAttributes(
   if ((langOpts.CUDA && langOpts.CUDAIsDevice) || langOpts.SYCLIsDevice)
     llvm_unreachable("NYI");
   if (langOpts.OpenCL) {
-    auto noThrow = mlir::cir::NoThrowAttr::get(CGM.getBuilder().getContext());
+    auto noThrow = cir::NoThrowAttr::get(CGM.getBuilder().getContext());
     funcAttrs.set(noThrow.getMnemonic(), noThrow);
   }
 }

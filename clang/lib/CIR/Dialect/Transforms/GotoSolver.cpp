@@ -10,7 +10,7 @@
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 namespace {
 
@@ -20,17 +20,17 @@ struct GotoSolverPass : public GotoSolverBase<GotoSolverPass> {
   void runOnOperation() override;
 };
 
-static void process(mlir::cir::FuncOp func) {
+static void process(cir::FuncOp func) {
 
   mlir::OpBuilder rewriter(func.getContext());
   std::map<std::string, Block *> labels;
-  std::vector<mlir::cir::GotoOp> gotos;
+  std::vector<cir::GotoOp> gotos;
 
   func.getBody().walk([&](mlir::Operation *op) {
-    if (auto lab = dyn_cast<mlir::cir::LabelOp>(op)) {
+    if (auto lab = dyn_cast<cir::LabelOp>(op)) {
       labels.emplace(lab.getLabel().str(), lab->getBlock());
       lab.erase();
-    } else if (auto goTo = dyn_cast<mlir::cir::GotoOp>(op)) {
+    } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.push_back(goTo);
     }
   });
@@ -39,15 +39,15 @@ static void process(mlir::cir::FuncOp func) {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(goTo);
     auto dest = labels[goTo.getLabel().str()];
-    rewriter.create<mlir::cir::BrOp>(goTo.getLoc(), dest);
+    rewriter.create<cir::BrOp>(goTo.getLoc(), dest);
     goTo.erase();
   }
 }
 
 void GotoSolverPass::runOnOperation() {
   llvm::TimeTraceScope scope("Goto Solver");
-  SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](mlir::cir::FuncOp op) { process(op); });
+  llvm::SmallVector<Operation *, 16> ops;
+  getOperation()->walk([&](cir::FuncOp op) { process(op); });
 }
 
 } // namespace

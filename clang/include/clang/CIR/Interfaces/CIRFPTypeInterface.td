@@ -15,7 +15,7 @@ def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
   let description = [{
     Contains helper functions to query properties about a floating-point type.
   }];
-  let cppNamespace = "::mlir::cir";
+  let cppNamespace = "::cir";
 
   let methods = [
     InterfaceMethod<[{

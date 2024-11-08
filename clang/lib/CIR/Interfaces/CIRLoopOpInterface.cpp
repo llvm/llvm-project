@@ -12,12 +12,11 @@
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.cpp.inc"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace mlir {
 namespace cir {
 
 void LoopOpInterface::getLoopOpSuccessorRegions(
-    LoopOpInterface op, RegionBranchPoint point,
-    SmallVectorImpl<RegionSuccessor> &regions) {
+    LoopOpInterface op, mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   assert(point.isParent() || point.getRegionOrNull());
 
   // Branching to first region: go to condition or body (do-while).
@@ -26,7 +25,7 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
   }
   // Branching from condition: go to body or exit.
   else if (&op.getCond() == point.getRegionOrNull()) {
-    regions.emplace_back(RegionSuccessor(op->getResults()));
+    regions.emplace_back(mlir::RegionSuccessor(op->getResults()));
     regions.emplace_back(&op.getBody(), op.getBody().getArguments());
   }
   // Branching from body: go to step (for) or condition.
@@ -44,14 +43,13 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
 }
 
 /// Verify invariants of the LoopOpInterface.
-LogicalResult detail::verifyLoopOpInterface(Operation *op) {
+llvm::LogicalResult detail::verifyLoopOpInterface(mlir::Operation *op) {
   // FIXME: fix this so the conditionop isn't requiring MLIRCIR
-  // auto loopOp = cast<LoopOpInterface>(op);
-  // if (!isa<ConditionOp>(loopOp.getCond().back().getTerminator()))
+  // auto loopOp = mlir::cast<LoopOpInterface>(op);
+  // if (!mlir::isa<ConditionOp>(loopOp.getCond().back().getTerminator()))
   //   return op->emitOpError(
   //       "expected condition region to terminate with 'cir.condition'");
-  return success();
+  return llvm::success();
 }
 
 } // namespace cir
-} // namespace mlir

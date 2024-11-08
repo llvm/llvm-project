@@ -19,15 +19,11 @@
 #include "clang/AST/Mangle.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
-namespace mlir {
 namespace cir {} // namespace cir
-} // namespace mlir
 
 /// Include the generated interface declarations.
 #include "clang/CIR/Interfaces/CIROpInterfaces.h.inc"
 
-namespace mlir {
 namespace cir {} // namespace cir
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_CIR_OP_H_

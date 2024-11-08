@@ -18,8 +18,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 mlir::DenseElementsAttr
-convertStringAttrToDenseElementsAttr(mlir::cir::ConstArrayAttr attr,
-                                     mlir::Type type);
+convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr, mlir::Type type);
 
 template <typename StorageTy> StorageTy getZeroInitFromType(mlir::Type Ty);
 template <> mlir::APInt getZeroInitFromType(mlir::Type Ty);
@@ -28,16 +27,16 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type Ty);
 mlir::Type getNestedTypeAndElemQuantity(mlir::Type Ty, unsigned &elemQuantity);
 
 template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
+void convertToDenseElementsAttrImpl(cir::ConstArrayAttr attr,
                                     llvm::SmallVectorImpl<StorageTy> &values);
 
 template <typename AttrTy, typename StorageTy>
 mlir::DenseElementsAttr
-convertToDenseElementsAttr(mlir::cir::ConstArrayAttr attr,
+convertToDenseElementsAttr(cir::ConstArrayAttr attr,
                            const llvm::SmallVectorImpl<int64_t> &dims,
                            mlir::Type type);
 
 std::optional<mlir::Attribute>
-lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr,
+lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     const mlir::TypeConverter *converter);
 #endif

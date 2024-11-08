@@ -11,7 +11,7 @@
 
 include "mlir/IR/OpBase.td"
 
-let cppNamespace = "::mlir::cir" in {
+let cppNamespace = "::cir" in {
   def ASTDeclInterface : AttrInterface<"ASTDeclInterface"> {
     let methods = [
       InterfaceMethod<"", "bool", "hasOwnerAttr", (ins), [{}],
@@ -93,14 +93,14 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "bool", "isCopyAssignmentOperator", (ins), [{}],
         /*defaultImplementation=*/ [{
-          if (auto decl = dyn_cast<clang::CXXMethodDecl>($_attr.getAst()))
+          if (auto decl = mlir::dyn_cast<clang::CXXMethodDecl>($_attr.getAst()))
             return decl->isCopyAssignmentOperator();
           return false;
         }]
       >,
       InterfaceMethod<"", "bool", "isMoveAssignmentOperator", (ins), [{}],
         /*defaultImplementation=*/ [{
-          if (auto decl = dyn_cast<clang::CXXMethodDecl>($_attr.getAst()))
+          if (auto decl = mlir::dyn_cast<clang::CXXMethodDecl>($_attr.getAst()))
             return decl->isMoveAssignmentOperator();
           return false;
         }]
@@ -190,7 +190,7 @@ let cppNamespace = "::mlir::cir" in {
   }
 
   def AnyASTFunctionDeclAttr : Attr<
-      CPred<"::mlir::isa<::mlir::cir::ASTFunctionDeclInterface>($_self)">,
+      CPred<"::mlir::isa<::cir::ASTFunctionDeclInterface>($_self)">,
             "AST Function attribute"> {
     let storageType = "::mlir::Attribute";
     let returnType = "::mlir::Attribute";
@@ -210,11 +210,11 @@ let cppNamespace = "::mlir::cir" in {
           auto callee = $_attr.getAst()->getCallee();
           if (!callee)
             return false;
-          auto *ice = dyn_cast<clang::ImplicitCastExpr>(callee);
+          auto *ice = mlir::dyn_cast<clang::ImplicitCastExpr>(callee);
           if (!ice)
             return false;
 
-          auto *dre = dyn_cast_or_null<clang::DeclRefExpr>(ice->getSubExpr());
+          auto *dre = mlir::dyn_cast_or_null<clang::DeclRefExpr>(ice->getSubExpr());
           if (!dre)
             return false;
           auto qual = dre->getQualifier();
@@ -248,7 +248,7 @@ let cppNamespace = "::mlir::cir" in {
       InterfaceMethod<"", "bool", "isMemberCallTo",
                       (ins "llvm::StringRef":$fn),
                       [{}], /*defaultImplementation=*/ [{
-          auto memberCall = dyn_cast<clang::CXXMemberCallExpr>($_attr.getAst());
+          auto memberCall = mlir::dyn_cast<clang::CXXMemberCallExpr>($_attr.getAst());
           if (!memberCall)
             return false;
           auto methodDecl = memberCall->getMethodDecl();
@@ -277,6 +277,6 @@ let cppNamespace = "::mlir::cir" in {
   }
 
 
-} // namespace mlir::cir
+} // namespace cir
 
 #endif // MLIR_CIR_INTERFACES_AST_ATTR_INTERFACES

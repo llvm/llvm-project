@@ -671,7 +671,7 @@ static Address ApplyNonVirtualAndVirtualOffset(
                                               nonVirtualOffset.getQuantity());
     if (virtualOffset) {
       baseOffset = CGF.getBuilder().createBinop(
-          virtualOffset, mlir::cir::BinOpKind::Add, baseOffset);
+          virtualOffset, cir::BinOpKind::Add, baseOffset);
     }
   } else {
     baseOffset = virtualOffset;
@@ -682,11 +682,11 @@ static Address ApplyNonVirtualAndVirtualOffset(
 
   mlir::Value ptr = addr.getPointer();
   mlir::Type charPtrType = CGF.CGM.UInt8PtrTy;
-  mlir::Value charPtr = CGF.getBuilder().createCast(
-      mlir::cir::CastKind::bitcast, ptr, charPtrType);
-  mlir::Value adjusted = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+  mlir::Value charPtr =
+      CGF.getBuilder().createCast(cir::CastKind::bitcast, ptr, charPtrType);
+  mlir::Value adjusted = CGF.getBuilder().create<cir::PtrStrideOp>(
       loc, charPtrType, charPtr, baseOffset);
-  ptr = CGF.getBuilder().createCast(mlir::cir::CastKind::bitcast, adjusted,
+  ptr = CGF.getBuilder().createCast(cir::CastKind::bitcast, adjusted,
                                     ptr.getType());
 
   // If we have a virtual component, the alignment of the result will
@@ -1127,7 +1127,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
   if (DtorType != Dtor_Base && Dtor->getParent()->isAbstract()) {
     SourceLocation Loc =
         Dtor->hasBody() ? Dtor->getBody()->getBeginLoc() : Dtor->getLocation();
-    builder.create<mlir::cir::TrapOp>(getLoc(Loc));
+    builder.create<cir::TrapOp>(getLoc(Loc));
     // The corresponding clang/CodeGen logic clears the insertion point here,
     // but MLIR's builder requires a valid insertion point, so we create a dummy
     // block (since the trap is a block terminator).
@@ -1774,11 +1774,9 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
   // llvm::BranchInst *zeroCheckBranch = nullptr;
 
   // Optimize for a constant count.
-  auto constantCount =
-      dyn_cast<mlir::cir::ConstantOp>(numElements.getDefiningOp());
+  auto constantCount = dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
   if (constantCount) {
-    auto constIntAttr =
-        mlir::dyn_cast<mlir::cir::IntAttr>(constantCount.getValue());
+    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
     // Just skip out if the constant count is zero.
     if (constIntAttr && constIntAttr.getUInt() == 0)
       return;
@@ -1787,8 +1785,7 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
     llvm_unreachable("NYI");
   }
 
-  auto arrayTy =
-      mlir::dyn_cast<mlir::cir::ArrayType>(arrayBase.getElementType());
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayBase.getElementType());
   assert(arrayTy && "expected array type");
   auto elementType = arrayTy.getEltType();
   auto ptrToElmType = builder.getPointerTo(elementType);
@@ -1829,7 +1826,7 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
     }
 
     // Wmit the constructor call that will execute for every array element.
-    builder.create<mlir::cir::ArrayCtor>(
+    builder.create<cir::ArrayCtor>(
         *currSrcLoc, arrayBase.getPointer(),
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
@@ -1843,7 +1840,7 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
           buildCXXConstructorCall(ctor, Ctor_Complete,
                                   /*ForVirtualBase=*/false,
                                   /*Delegating=*/false, currAVS, E);
-          builder.create<mlir::cir::YieldOp>(loc);
+          builder.create<cir::YieldOp>(loc);
         });
   }
 
@@ -1955,7 +1952,7 @@ void CIRGenFunction::buildCXXConstructorCall(
   const CIRGenFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CIRGenCallee Callee = CIRGenCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
-  mlir::cir::CIRCallOpInterface C;
+  cir::CIRCallOpInterface C;
   buildCall(Info, Callee, ReturnValueSlot(), Args, &C, false, getLoc(Loc));
 
   assert(CGM.getCodeGenOpts().OptimizationLevel == 0 ||

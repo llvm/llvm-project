@@ -12,19 +12,16 @@ using namespace clang::CIRGen;
 mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
                                                   mlir::Value arrayPtr,
                                                   mlir::Type eltTy) {
-  auto arrayPtrTy =
-      ::mlir::dyn_cast<::mlir::cir::PointerType>(arrayPtr.getType());
+  auto arrayPtrTy = ::mlir::dyn_cast<cir::PointerType>(arrayPtr.getType());
   assert(arrayPtrTy && "expected pointer type");
-  auto arrayTy =
-      ::mlir::dyn_cast<::mlir::cir::ArrayType>(arrayPtrTy.getPointee());
+  auto arrayTy = ::mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
 
   if (arrayTy) {
-    auto addrSpace = ::mlir::cast_if_present<::mlir::cir::AddressSpaceAttr>(
+    auto addrSpace = ::mlir::cast_if_present<cir::AddressSpaceAttr>(
         arrayPtrTy.getAddrSpace());
-    mlir::cir::PointerType flatPtrTy =
-        getPointerTo(arrayTy.getEltType(), addrSpace);
-    return create<mlir::cir::CastOp>(
-        loc, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay, arrayPtr);
+    cir::PointerType flatPtrTy = getPointerTo(arrayTy.getEltType(), addrSpace);
+    return create<cir::CastOp>(loc, flatPtrTy, cir::CastKind::array_to_ptrdecay,
+                               arrayPtr);
   }
 
   assert(arrayPtrTy.getPointee() == eltTy &&
@@ -41,29 +38,28 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   if (shouldDecay)
     basePtr = maybeBuildArrayDecay(arrayLocBegin, arrayPtr, eltTy);
   mlir::Type flatPtrTy = basePtr.getType();
-  return create<mlir::cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
+  return create<cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
 }
 
-mlir::cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
-                                                   llvm::APSInt intVal) {
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
+                                             llvm::APSInt intVal) {
   bool isSigned = intVal.isSigned();
   auto width = intVal.getBitWidth();
-  mlir::cir::IntType t = isSigned ? getSIntNTy(width) : getUIntNTy(width);
+  cir::IntType t = isSigned ? getSIntNTy(width) : getUIntNTy(width);
   return getConstInt(loc, t,
                      isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
 }
 
-mlir::cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
-                                                   llvm::APInt intVal) {
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
+                                             llvm::APInt intVal) {
   auto width = intVal.getBitWidth();
-  mlir::cir::IntType t = getUIntNTy(width);
+  cir::IntType t = getUIntNTy(width);
   return getConstInt(loc, t, intVal.getZExtValue());
 }
 
-mlir::cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
-                                                   mlir::Type t, uint64_t C) {
-  auto intTy = mlir::dyn_cast<mlir::cir::IntType>(t);
-  assert(intTy && "expected mlir::cir::IntType");
-  return create<mlir::cir::ConstantOp>(loc, intTy,
-                                       mlir::cir::IntAttr::get(t, C));
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
+                                             uint64_t C) {
+  auto intTy = mlir::dyn_cast<cir::IntType>(t);
+  assert(intTy && "expected cir::IntType");
+  return create<cir::ConstantOp>(loc, intTy, cir::IntAttr::get(t, C));
 }

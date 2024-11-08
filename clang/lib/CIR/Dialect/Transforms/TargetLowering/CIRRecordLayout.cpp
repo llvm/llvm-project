@@ -14,7 +14,6 @@
 #include "CIRRecordLayout.h"
 #include "clang/CIR/MissingFeatures.h"
 
-namespace mlir {
 namespace cir {
 
 // Constructor for C++ records.
@@ -23,11 +22,11 @@ CIRRecordLayout::CIRRecordLayout(
     clang::CharUnits alignment, clang::CharUnits preferredAlignment,
     clang::CharUnits unadjustedAlignment, clang::CharUnits requiredAlignment,
     bool hasOwnVFPtr, bool hasExtendableVFPtr, clang::CharUnits vbptroffset,
-    clang::CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
+    clang::CharUnits datasize, llvm::ArrayRef<uint64_t> fieldoffsets,
     clang::CharUnits nonvirtualsize, clang::CharUnits nonvirtualalignment,
     clang::CharUnits preferrednvalignment,
-    clang::CharUnits SizeOfLargestEmptySubobject, const Type PrimaryBase,
-    bool IsPrimaryBaseVirtual, const Type BaseSharingVBPtr,
+    clang::CharUnits SizeOfLargestEmptySubobject, const mlir::Type PrimaryBase,
+    bool IsPrimaryBaseVirtual, const mlir::Type BaseSharingVBPtr,
     bool EndsWithZeroSizedObject, bool LeadsWithZeroSizedBase)
     : Size(size), DataSize(datasize), Alignment(alignment),
       PreferredAlignment(preferredAlignment),
@@ -48,7 +47,7 @@ CIRRecordLayout::CIRRecordLayout(
   CXXInfo->PreferredNVAlignment = preferrednvalignment;
   CXXInfo->SizeOfLargestEmptySubobject = SizeOfLargestEmptySubobject;
   // FIXME(cir): Initialize base classes offsets.
-  cir_cconv_assert(!::cir::MissingFeatures::getCXXRecordBases());
+  cir_cconv_assert(!cir::MissingFeatures::getCXXRecordBases());
   CXXInfo->HasOwnVFPtr = hasOwnVFPtr;
   CXXInfo->VBPtrOffset = vbptroffset;
   CXXInfo->HasExtendableVFPtr = hasExtendableVFPtr;
@@ -59,4 +58,3 @@ CIRRecordLayout::CIRRecordLayout(
 }
 
 } // namespace cir
-} // namespace mlir

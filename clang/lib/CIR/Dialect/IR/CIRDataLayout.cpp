@@ -9,7 +9,7 @@ using namespace cir;
 // Support for StructLayout
 //===----------------------------------------------------------------------===//
 
-StructLayout::StructLayout(mlir::cir::StructType ST, const CIRDataLayout &DL)
+StructLayout::StructLayout(cir::StructType ST, const CIRDataLayout &DL)
     : StructSize(llvm::TypeSize::getFixed(0)) {
   assert(!ST.isIncomplete() && "Cannot get layout of opaque structs");
   IsPadded = false;
@@ -18,10 +18,10 @@ StructLayout::StructLayout(mlir::cir::StructType ST, const CIRDataLayout &DL)
   // Loop over each of the elements, placing them in memory.
   for (unsigned i = 0, e = NumElements; i != e; ++i) {
     mlir::Type Ty = ST.getMembers()[i];
-    if (i == 0 && ::cir::MissingFeatures::typeIsScalableType())
+    if (i == 0 && cir::MissingFeatures::typeIsScalableType())
       llvm_unreachable("Scalable types are not yet supported in CIR");
 
-    assert(!::cir::MissingFeatures::recordDeclIsPacked() &&
+    assert(!cir::MissingFeatures::recordDeclIsPacked() &&
            "Cannot identify packed structs");
     const llvm::Align TyAlign =
         ST.getPacked() ? llvm::Align(1) : DL.getABITypeAlign(Ty);
@@ -92,7 +92,7 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
 namespace {
 
 class StructLayoutMap {
-  using LayoutInfoTy = llvm::DenseMap<mlir::cir::StructType, StructLayout *>;
+  using LayoutInfoTy = llvm::DenseMap<cir::StructType, StructLayout *>;
   LayoutInfoTy LayoutInfo;
 
 public:
@@ -105,9 +105,7 @@ public:
     }
   }
 
-  StructLayout *&operator[](mlir::cir::StructType STy) {
-    return LayoutInfo[STy];
-  }
+  StructLayout *&operator[](cir::StructType STy) { return LayoutInfo[STy]; }
 };
 
 } // namespace
@@ -144,8 +142,7 @@ void CIRDataLayout::clear() {
   LayoutMap = nullptr;
 }
 
-const StructLayout *
-CIRDataLayout::getStructLayout(mlir::cir::StructType Ty) const {
+const StructLayout *CIRDataLayout::getStructLayout(cir::StructType Ty) const {
   if (!LayoutMap)
     LayoutMap = new StructLayoutMap();
 
@@ -178,18 +175,18 @@ CIRDataLayout::getStructLayout(mlir::cir::StructType Ty) const {
  */
 llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abiOrPref) const {
 
-  if (llvm::isa<mlir::cir::StructType>(Ty)) {
+  if (llvm::isa<cir::StructType>(Ty)) {
     // Packed structure types always have an ABI alignment of one.
-    if (::cir::MissingFeatures::recordDeclIsPacked() && abiOrPref)
+    if (cir::MissingFeatures::recordDeclIsPacked() && abiOrPref)
       llvm_unreachable("NYI");
 
-    auto stTy = llvm::dyn_cast<mlir::cir::StructType>(Ty);
+    auto stTy = llvm::dyn_cast<cir::StructType>(Ty);
     if (stTy && stTy.getPacked() && abiOrPref)
       return llvm::Align(1);
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout =
-        getStructLayout(llvm::cast<mlir::cir::StructType>(Ty));
+        getStructLayout(llvm::cast<cir::StructType>(Ty));
     const llvm::Align Align =
         abiOrPref ? StructAlignment.ABIAlign : StructAlignment.PrefAlign;
     return std::max(Align, Layout->getAlignment());
@@ -197,7 +194,7 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abiOrPref) const {
 
   // FIXME(cir): This does not account for differnt address spaces, and relies
   // on CIR's data layout to give the proper alignment.
-  assert(!::cir::MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::addressSpace());
 
   // Fetch type alignment from MLIR's data layout.
   unsigned align = abiOrPref ? layout.getTypeABIAlignment(Ty)
@@ -208,10 +205,10 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type Ty, bool abiOrPref) const {
 // The implementation of this method is provided inline as it is particularly
 // well suited to constant folding when called on a specific Type subclass.
 llvm::TypeSize CIRDataLayout::getTypeSizeInBits(mlir::Type Ty) const {
-  assert(!::cir::MissingFeatures::typeIsSized() &&
+  assert(!cir::MissingFeatures::typeIsSized() &&
          "Cannot getTypeInfo() on a type that is unsized!");
 
-  if (auto structTy = llvm::dyn_cast<mlir::cir::StructType>(Ty)) {
+  if (auto structTy = llvm::dyn_cast<cir::StructType>(Ty)) {
 
     // FIXME(cir): CIR struct's data layout implementation doesn't do a good job
     // of handling unions particularities. We should have a separate union type.
@@ -229,7 +226,7 @@ llvm::TypeSize CIRDataLayout::getTypeSizeInBits(mlir::Type Ty) const {
 
   // FIXME(cir): This does not account for different address spaces, and relies
   // on CIR's data layout to give the proper ABI-specific type width.
-  assert(!::cir::MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::addressSpace());
 
   return llvm::TypeSize::getFixed(layout.getTypeSizeInBits(Ty));
 }

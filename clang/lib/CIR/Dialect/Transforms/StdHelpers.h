@@ -25,12 +25,10 @@
 #ifndef DIALECT_CIR_TRANSFORMS_STDHELPERS_H_
 #define DIALECT_CIR_TRANSFORMS_STDHELPERS_H_
 
-namespace mlir {
 namespace cir {
 
 bool isStdArrayType(mlir::Type t);
 
 } // namespace cir
-} // namespace mlir
 
 #endif

@@ -10,7 +10,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "llvm/ADT/SmallVector.h"
 
-using namespace mlir::cir;
+using namespace cir;
 
 /// Include the generated type qualifiers interfaces.
 #include "clang/CIR/Interfaces/CIROpInterfaces.cpp.inc"
@@ -18,13 +18,13 @@ using namespace mlir::cir;
 #include "clang/CIR/MissingFeatures.h"
 
 bool CIRGlobalValueInterface::hasDefaultVisibility() {
-  assert(!::cir::MissingFeatures::hiddenVisibility());
-  assert(!::cir::MissingFeatures::protectedVisibility());
+  assert(!cir::MissingFeatures::hiddenVisibility());
+  assert(!cir::MissingFeatures::protectedVisibility());
   return isPublic() || isPrivate();
 }
 
 bool CIRGlobalValueInterface::canBenefitFromLocalAlias() {
-  assert(!::cir::MissingFeatures::supportIFuncAttr());
+  assert(!cir::MissingFeatures::supportIFuncAttr());
   // hasComdat here should be isDeduplicateComdat, but as far as clang codegen
   // is concerned, there is no case for Comdat::NoDeduplicate as all comdat
   // would be Comdat::Any or Comdat::Largest (in the case of MS ABI). And CIRGen

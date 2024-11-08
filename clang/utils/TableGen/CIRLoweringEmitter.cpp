@@ -21,14 +21,14 @@ void GenerateLowering(const Record *Operation) {
   std::string LLVMOp = Operation->getValueAsString("llvmOp").str();
   ClassDefinitions +=
       "class CIR" + Name +
-      "Lowering : public mlir::OpConversionPattern<mlir::cir::" + Name +
+      "Lowering : public mlir::OpConversionPattern<cir::" + Name +
       R"C++(> {
   public:
-    using OpConversionPattern<mlir::cir::)C++" +
+    using OpConversionPattern<cir::)C++" +
       Name + R"C++(>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::)C++" +
+  matchAndRewrite(cir::)C++" +
       Name +
       " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
       "const "

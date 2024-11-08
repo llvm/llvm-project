@@ -19,21 +19,17 @@
 #include "clang/CIR/Target/AArch64.h"
 #include "clang/CIR/Target/x86.h"
 
-namespace mlir {
 namespace cir {
 
 std::unique_ptr<TargetLoweringInfo>
-createX86_64TargetLoweringInfo(LowerModule &CGM,
-                               ::cir::X86AVXABILevel AVXLevel);
+createX86_64TargetLoweringInfo(LowerModule &CGM, cir::X86AVXABILevel AVXLevel);
 
 std::unique_ptr<TargetLoweringInfo>
-createAArch64TargetLoweringInfo(LowerModule &CGM,
-                                ::cir::AArch64ABIKind AVXLevel);
+createAArch64TargetLoweringInfo(LowerModule &CGM, cir::AArch64ABIKind AVXLevel);
 
 std::unique_ptr<TargetLoweringInfo>
 createSPIRVTargetLoweringInfo(LowerModule &CGM);
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETINFO_H

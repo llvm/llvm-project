@@ -41,7 +41,7 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    if (isa<mlir::cir::LabelOp>(dest->front()))
+    if (isa<cir::LabelOp>(dest->front()))
       return failure();
 
     // Single edge between blocks: merge it.
@@ -167,7 +167,7 @@ void CIRCanonicalizePass::runOnOperation() {
   populateCIRCanonicalizePatterns(patterns);
 
   // Collect operations to apply patterns.
-  SmallVector<Operation *, 16> ops;
+  llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
     // CastOp here is to perform a manual `fold` in
     // applyOpPatternsAndFold

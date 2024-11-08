@@ -6,7 +6,6 @@
 // RUN: FileCheck --input-file=%t.ll --check-prefix=NONATIVE-LLVM %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +fullbf16 -fclangir -emit-llvm -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefix=NATIVE-LLVM %s
-// XFAIL: *
 
 volatile unsigned test;
 volatile int i0;

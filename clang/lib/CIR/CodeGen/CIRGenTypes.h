@@ -62,10 +62,11 @@ class GlobalDecl;
 
 namespace mlir {
 class Type;
+} // namespace mlir
+
 namespace cir {
 class StructType;
 } // namespace cir
-} // namespace mlir
 
 namespace clang::CIRGen {
 class CallArgList;
@@ -92,7 +93,7 @@ class CIRGenTypes {
       CIRGenRecordLayouts;
 
   /// Contains the CIR type for any converted RecordDecl
-  llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
+  llvm::DenseMap<const clang::Type *, cir::StructType> recordDeclTypes;
 
   /// Hold memoized CIRGenFunctionInfo results
   llvm::FoldingSet<CIRGenFunctionInfo> FunctionInfos;
@@ -127,7 +128,7 @@ public:
   bool isFuncParamTypeConvertible(clang::QualType Ty);
 
   /// Convert clang calling convention to CIR calling convention.
-  mlir::cir::CallingConv ClangCallConvToCIRCallConv(clang::CallingConv CC);
+  cir::CallingConv ClangCallConvToCIRCallConv(clang::CallingConv CC);
 
   /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
   /// qualification.
@@ -169,7 +170,7 @@ public:
   mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
 
   std::unique_ptr<CIRGenRecordLayout>
-  computeRecordLayout(const clang::RecordDecl *D, mlir::cir::StructType *Ty);
+  computeRecordLayout(const clang::RecordDecl *D, cir::StructType *Ty);
 
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
@@ -189,14 +190,14 @@ public:
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
   /// Get the CIR function type for \arg Info.
-  mlir::cir::FuncType GetFunctionType(const CIRGenFunctionInfo &Info);
+  cir::FuncType GetFunctionType(const CIRGenFunctionInfo &Info);
 
-  mlir::cir::FuncType GetFunctionType(clang::GlobalDecl GD);
+  cir::FuncType GetFunctionType(clang::GlobalDecl GD);
 
   /// Get the LLVM function type for use in a vtable, given a CXXMethodDecl. If
   /// the method to has an incomplete return type, and/or incomplete argument
   /// types, this will return the opaque type.
-  mlir::cir::FuncType GetFunctionTypeForVTable(clang::GlobalDecl GD);
+  cir::FuncType GetFunctionTypeForVTable(clang::GlobalDecl GD);
 
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue

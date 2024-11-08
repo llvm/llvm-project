@@ -16,11 +16,10 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using AArch64ABIKind = ::cir::AArch64ABIKind;
-using ABIArgInfo = ::cir::ABIArgInfo;
-using MissingFeatures = ::cir::MissingFeatures;
+using AArch64ABIKind = cir::AArch64ABIKind;
+using ABIArgInfo = cir::ABIArgInfo;
+using MissingFeatures = cir::MissingFeatures;
 
-namespace mlir {
 namespace cir {
 
 //===----------------------------------------------------------------------===//
@@ -40,12 +39,12 @@ private:
   AArch64ABIKind getABIKind() const { return Kind; }
   bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
 
-  ABIArgInfo classifyReturnType(Type RetTy, bool IsVariadic) const;
-  ABIArgInfo classifyArgumentType(Type RetTy, bool IsVariadic,
+  ABIArgInfo classifyReturnType(mlir::Type RetTy, bool IsVariadic) const;
+  ABIArgInfo classifyArgumentType(mlir::Type RetTy, bool IsVariadic,
                                   unsigned CallingConvention) const;
 
   void computeInfo(LowerFunctionInfo &FI) const override {
-    if (!::mlir::cir::classifyReturnType(getCXXABI(), FI, *this))
+    if (!cir::classifyReturnType(getCXXABI(), FI, *this))
       FI.getReturnInfo() =
           classifyReturnType(FI.getReturnType(), FI.isVariadic());
 
@@ -63,8 +62,8 @@ public:
   }
 
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
-      mlir::cir::AddressSpaceAttr addressSpaceAttr) const override {
-    using Kind = mlir::cir::AddressSpaceAttr::Kind;
+      cir::AddressSpaceAttr addressSpaceAttr) const override {
+    using Kind = cir::AddressSpaceAttr::Kind;
     switch (addressSpaceAttr.getValue()) {
     case Kind::offload_private:
     case Kind::offload_local:
@@ -80,17 +79,17 @@ public:
 
 } // namespace
 
-ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
+ABIArgInfo AArch64ABIInfo::classifyReturnType(mlir::Type RetTy,
                                               bool IsVariadic) const {
-  if (isa<VoidType>(RetTy))
+  if (mlir::isa<VoidType>(RetTy))
     return ABIArgInfo::getIgnore();
 
-  if (const auto _ = dyn_cast<VectorType>(RetTy)) {
-    cir_cconv_assert_or_abort(!::cir::MissingFeatures::vectorType(), "NYI");
+  if (const auto _ = mlir::dyn_cast<VectorType>(RetTy)) {
+    cir_cconv_assert_or_abort(!cir::MissingFeatures::vectorType(), "NYI");
   }
 
   // Large vector types should be returned via memory.
-  if (isa<VectorType>(RetTy) && getContext().getTypeSize(RetTy) > 128)
+  if (mlir::isa<VectorType>(RetTy) && getContext().getTypeSize(RetTy) > 128)
     cir_cconv_unreachable("NYI");
 
   if (!isAggregateTypeForABI(RetTy)) {
@@ -105,9 +104,9 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
   }
 
   uint64_t Size = getContext().getTypeSize(RetTy);
-  cir_cconv_assert(!::cir::MissingFeatures::emitEmptyRecordCheck());
+  cir_cconv_assert(!cir::MissingFeatures::emitEmptyRecordCheck());
   cir_cconv_assert(
-      !::cir::MissingFeatures::supportisHomogeneousAggregateQueryForAArch64());
+      !cir::MissingFeatures::supportisHomogeneousAggregateQueryForAArch64());
 
   // Aggregates <= 16 bytes are returned directly in registers or on the stack.
   if (Size <= 128) {
@@ -119,7 +118,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
       // BE, otherwise composite types will be indistinguishable from integer
       // types.
       return ABIArgInfo::getDirect(
-          mlir::cir::IntType::get(LT.getMLIRContext(), Size, false));
+          cir::IntType::get(LT.getMLIRContext(), Size, false));
     }
 
     unsigned Alignment = getContext().getTypeAlign(RetTy);
@@ -128,10 +127,9 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     if (Alignment < 128 && Size == 128) {
-      mlir::Type baseTy =
-          mlir::cir::IntType::get(LT.getMLIRContext(), 64, false);
+      mlir::Type baseTy = cir::IntType::get(LT.getMLIRContext(), 64, false);
       return ABIArgInfo::getDirect(
-          mlir::cir::ArrayType::get(LT.getMLIRContext(), baseTy, Size / 64));
+          cir::ArrayType::get(LT.getMLIRContext(), baseTy, Size / 64));
     }
 
     return ABIArgInfo::getDirect(
@@ -142,7 +140,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
 }
 
 ABIArgInfo
-AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
+AArch64ABIInfo::classifyArgumentType(mlir::Type Ty, bool IsVariadic,
                                      unsigned CallingConvention) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
@@ -178,12 +176,12 @@ AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
 
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
-    Type baseTy =
-        mlir::cir::IntType::get(LT.getMLIRContext(), Alignment, false);
+    mlir::Type baseTy =
+        cir::IntType::get(LT.getMLIRContext(), Alignment, false);
     auto argTy = Size == Alignment
                      ? baseTy
-                     : mlir::cir::ArrayType::get(LT.getMLIRContext(), baseTy,
-                                                 Size / Alignment);
+                     : cir::ArrayType::get(LT.getMLIRContext(), baseTy,
+                                           Size / Alignment);
     return ABIArgInfo::getDirect(argTy);
   }
 
@@ -196,4 +194,3 @@ createAArch64TargetLoweringInfo(LowerModule &CGM, AArch64ABIKind Kind) {
 }
 
 } // namespace cir
-} // namespace mlir

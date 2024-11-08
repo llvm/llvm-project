@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace mlir {
 namespace cir {
 
 /// Encapsulates information about the way function arguments from
@@ -68,9 +67,9 @@ public:
                  bool onlyRequiredArgs = false) {
     unsigned IRArgNo = 0;
     bool SwapThisWithSRet = false;
-    const ::cir::ABIArgInfo &RetAI = FI.getReturnInfo();
+    const cir::ABIArgInfo &RetAI = FI.getReturnInfo();
 
-    if (RetAI.getKind() == ::cir::ABIArgInfo::Indirect) {
+    if (RetAI.getKind() == cir::ABIArgInfo::Indirect) {
       SwapThisWithSRet = RetAI.isSRetAfterThis();
       SRetArgNo = SwapThisWithSRet ? 1 : IRArgNo++;
     }
@@ -82,20 +81,20 @@ public:
          ArgNo < NumArgs; ++I, ++ArgNo) {
       cir_cconv_assert(I != FI.arg_end());
       // Type ArgType = I->type;
-      const ::cir::ABIArgInfo &AI = I->info;
+      const cir::ABIArgInfo &AI = I->info;
       // Collect data about IR arguments corresponding to Clang argument ArgNo.
       auto &IRArgs = ArgInfo[ArgNo];
 
-      if (::cir::MissingFeatures::argumentPadding()) {
+      if (cir::MissingFeatures::argumentPadding()) {
         cir_cconv_unreachable("NYI");
       }
 
       switch (AI.getKind()) {
-      case ::cir::ABIArgInfo::Extend:
-      case ::cir::ABIArgInfo::Direct: {
+      case cir::ABIArgInfo::Extend:
+      case cir::ABIArgInfo::Direct: {
         // FIXME(cir): handle sseregparm someday...
         cir_cconv_assert(AI.getCoerceToType() && "Missing coerced type!!");
-        StructType STy = dyn_cast<StructType>(AI.getCoerceToType());
+        StructType STy = mlir::dyn_cast<StructType>(AI.getCoerceToType());
         if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
           IRArgs.NumberOfArgs = STy.getNumElements();
         } else {
@@ -103,8 +102,8 @@ public:
         }
         break;
       }
-      case ::cir::ABIArgInfo::Indirect:
-      case ::cir::ABIArgInfo::IndirectAliased:
+      case cir::ABIArgInfo::Indirect:
+      case cir::ABIArgInfo::IndirectAliased:
         IRArgs.NumberOfArgs = 1;
         break;
 
@@ -124,7 +123,7 @@ public:
     }
     cir_cconv_assert(ArgNo == ArgInfo.size());
 
-    if (::cir::MissingFeatures::inallocaArgs()) {
+    if (cir::MissingFeatures::inallocaArgs()) {
       cir_cconv_unreachable("NYI");
     }
 
@@ -148,6 +147,5 @@ public:
 };
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRTOCIRARGMAPPING_H

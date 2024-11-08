@@ -59,7 +59,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                                      mlir::Location loc, unsigned nestLevel);
   void updatePointsTo(mlir::Value addr, mlir::Value data, mlir::Location loc);
   void updatePointsToForConstStruct(mlir::Value addr,
-                                    mlir::cir::ConstStructAttr value,
+                                    cir::ConstStructAttr value,
                                     mlir::Location loc);
   void updatePointsToForZeroStruct(mlir::Value addr, StructType sTy,
                                    mlir::Location loc);
@@ -133,8 +133,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     unsigned histLimit = 1;
     bool isOptionsParsed = false;
 
-    void parseOptions(ArrayRef<StringRef> remarks, ArrayRef<StringRef> hist,
-                      unsigned hist_limit) {
+    void parseOptions(ArrayRef<llvm::StringRef> remarks,
+                      ArrayRef<llvm::StringRef> hist, unsigned hist_limit) {
       if (isOptionsParsed)
         return;
 
@@ -157,8 +157,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     }
 
     void parseOptions(LifetimeCheckPass &pass) {
-      SmallVector<llvm::StringRef, 4> remarks;
-      SmallVector<llvm::StringRef, 4> hists;
+      llvm::SmallVector<llvm::StringRef, 4> remarks;
+      llvm::SmallVector<llvm::StringRef, 4> hists;
 
       for (auto &r : pass.remarksList)
         remarks.push_back(r);
@@ -671,8 +671,8 @@ void LifetimeCheckPass::checkLoop(LoopOpInterface loopOp) {
   //   { /*body*/ }
   //
   // See checkIf for additional explanations.
-  SmallVector<PMapType, 4> pmapOps;
-  SmallVector<Region *, 4> regionsToCheck;
+  llvm::SmallVector<PMapType, 4> pmapOps;
+  llvm::SmallVector<Region *, 4> regionsToCheck;
 
   auto setupLoopRegionsToCheck = [&](bool isSubsequentTaken = false) {
     regionsToCheck = loopOp.getRegionsInExecutionOrder();
@@ -733,7 +733,7 @@ void LifetimeCheckPass::checkAwait(AwaitOp awaitOp) {
   //
   // FIXME: use branch interface here and only tackle
   // the necessary regions.
-  SmallVector<PMapType, 4> pmapOps;
+  llvm::SmallVector<PMapType, 4> pmapOps;
 
   for (auto r : awaitOp.getRegions()) {
     PMapType regionPmap = getPmap();
@@ -789,7 +789,7 @@ void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
   //    else {/*3*/}.
   //
   // See checkIf for additional explanations.
-  SmallVector<PMapType, 2> pmapOps;
+  llvm::SmallVector<PMapType, 2> pmapOps;
 
   // If there are no regions, return early pmap is the same.
   // TODO: if the switch is not in a simple form, return early now and try to
@@ -845,7 +845,7 @@ void LifetimeCheckPass::checkIf(IfOp ifOp) {
   //
   // To that intent the pmap is copied out before checking each region and
   // pmap(ifOp) computed after analysing both paths.
-  SmallVector<PMapType, 2> pmapOps;
+  llvm::SmallVector<PMapType, 2> pmapOps;
 
   {
     PMapType localThenPmap = getPmap();
@@ -869,9 +869,9 @@ void LifetimeCheckPass::checkIf(IfOp ifOp) {
 }
 
 template <class T> bool isStructAndHasAttr(mlir::Type ty) {
-  if (!mlir::isa<mlir::cir::StructType>(ty))
+  if (!mlir::isa<cir::StructType>(ty))
     return false;
-  return hasAttr<T>(mlir::cast<mlir::cir::StructType>(ty).getAst());
+  return hasAttr<T>(mlir::cast<cir::StructType>(ty).getAst());
 }
 
 static bool isOwnerType(mlir::Type ty) {
@@ -900,15 +900,15 @@ static bool isOwnerType(mlir::Type ty) {
   return isStructAndHasAttr<clang::OwnerAttr>(ty);
 }
 
-static bool containsPointerElts(mlir::cir::StructType s) {
+static bool containsPointerElts(cir::StructType s) {
   auto members = s.getMembers();
   return std::any_of(members.begin(), members.end(), [](mlir::Type t) {
-    return mlir::isa<mlir::cir::PointerType>(t);
+    return mlir::isa<cir::PointerType>(t);
   });
 }
 
 static bool isAggregateType(LifetimeCheckPass *pass, mlir::Type agg) {
-  auto t = mlir::dyn_cast<mlir::cir::StructType>(agg);
+  auto t = mlir::dyn_cast<cir::StructType>(agg);
   if (!t)
     return false;
   // Lambdas have their special handling, and shall not be considered as
@@ -958,7 +958,7 @@ static bool isPointerType(mlir::Type t) {
   // library headers, the following well- known standard types are treated as-if
   // annotated as Pointers, in addition to raw pointers and references: ref-
   // erence_wrapper, and vector<bool>::reference.
-  if (mlir::isa<mlir::cir::PointerType>(t))
+  if (mlir::isa<cir::PointerType>(t))
     return true;
   return isStructAndHasAttr<clang::PointerAttr>(t);
 }
@@ -1019,14 +1019,14 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
       break;
 
     // Map values for members to it's index in the aggregate.
-    auto members = mlir::cast<mlir::cir::StructType>(t).getMembers();
-    SmallVector<mlir::Value, 4> fieldVals;
+    auto members = mlir::cast<cir::StructType>(t).getMembers();
+    llvm::SmallVector<mlir::Value, 4> fieldVals;
     fieldVals.assign(members.size(), {});
 
     // Go through uses of the alloca via `cir.struct_element_addr`, and
     // track only the fields that are actually used.
     std::for_each(addr.use_begin(), addr.use_end(), [&](mlir::OpOperand &use) {
-      auto op = dyn_cast<mlir::cir::GetMemberOp>(use.getOwner());
+      auto op = dyn_cast<cir::GetMemberOp>(use.getOwner());
       if (!op)
         return;
 
@@ -1036,8 +1036,7 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
       if (eltAddr.use_empty())
         return;
 
-      auto eltTy =
-          mlir::cast<mlir::cir::PointerType>(eltAddr.getType()).getPointee();
+      auto eltTy = mlir::cast<cir::PointerType>(eltAddr.getType()).getPointee();
 
       // Classify exploded types. Keep alloca original location.
       classifyAndInitTypeCategories(eltAddr, eltTy, loc, ++nestLevel);
@@ -1091,10 +1090,10 @@ void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
   // Bind values that are coming from alloca's (like %arg0 above) to the
   // pset of %task - this effectively leads to some invalidation of %task
   // when %arg0 finishes its lifetime at the end of the enclosing cir.scope.
-  if (auto call = dyn_cast<mlir::cir::CallOp>(taskTmp.getDefiningOp())) {
+  if (auto call = dyn_cast<cir::CallOp>(taskTmp.getDefiningOp())) {
     bool potentialTaintedTask = false;
     for (auto arg : call.getArgOperands()) {
-      auto alloca = dyn_cast<mlir::cir::AllocaOp>(arg.getDefiningOp());
+      auto alloca = dyn_cast<cir::AllocaOp>(arg.getDefiningOp());
       if (alloca && currScope->localValues.count(alloca)) {
         getPmap()[taskAddr].insert(State::getLocalValue(alloca));
         potentialTaintedTask = true;
@@ -1113,10 +1112,9 @@ void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
 mlir::Value LifetimeCheckPass::getLambdaFromMemberAccess(mlir::Value addr) {
   auto op = addr.getDefiningOp();
   // FIXME: we likely want to consider more indirections here...
-  if (!isa<mlir::cir::GetMemberOp>(op))
+  if (!isa<cir::GetMemberOp>(op))
     return nullptr;
-  auto allocaOp =
-      dyn_cast<mlir::cir::AllocaOp>(op->getOperand(0).getDefiningOp());
+  auto allocaOp = dyn_cast<cir::AllocaOp>(op->getOperand(0).getDefiningOp());
   if (!allocaOp || !isLambdaType(allocaOp.getAllocaType()))
     return nullptr;
   return allocaOp;
@@ -1126,7 +1124,7 @@ void LifetimeCheckPass::checkLambdaCaptureStore(StoreOp storeOp) {
   auto localByRefAddr = storeOp.getValue();
   auto lambdaCaptureAddr = storeOp.getAddr();
 
-  if (!isa_and_nonnull<mlir::cir::AllocaOp>(localByRefAddr.getDefiningOp()))
+  if (!isa_and_nonnull<cir::AllocaOp>(localByRefAddr.getDefiningOp()))
     return;
   auto lambdaAddr = getLambdaFromMemberAccess(lambdaCaptureAddr);
   if (!lambdaAddr)
@@ -1136,8 +1134,9 @@ void LifetimeCheckPass::checkLambdaCaptureStore(StoreOp storeOp) {
     getPmap()[lambdaAddr].insert(State::getLocalValue(localByRefAddr));
 }
 
-void LifetimeCheckPass::updatePointsToForConstStruct(
-    mlir::Value addr, mlir::cir::ConstStructAttr value, mlir::Location loc) {
+void LifetimeCheckPass::updatePointsToForConstStruct(mlir::Value addr,
+                                                     cir::ConstStructAttr value,
+                                                     mlir::Location loc) {
   assert(aggregates.count(addr) && "expected association with aggregate");
   int memberIdx = 0;
   for (auto &attr : value.getMembers()) {
@@ -1145,8 +1144,8 @@ void LifetimeCheckPass::updatePointsToForConstStruct(
     assert(ta && "expected typed attribute");
     auto fieldAddr = aggregates[addr][memberIdx];
     // Unseen fields are not tracked.
-    if (fieldAddr && mlir::isa<mlir::cir::PointerType>(ta.getType())) {
-      assert(mlir::isa<mlir::cir::ConstPtrAttr>(ta) &&
+    if (fieldAddr && mlir::isa<cir::PointerType>(ta.getType())) {
+      assert(mlir::isa<cir::ConstPtrAttr>(ta) &&
              "other than null not implemented");
       markPsetNull(fieldAddr, loc);
     }
@@ -1162,7 +1161,7 @@ void LifetimeCheckPass::updatePointsToForZeroStruct(mlir::Value addr,
   for (auto &t : sTy.getMembers()) {
     auto fieldAddr = aggregates[addr][memberIdx];
     // Unseen fields are not tracked.
-    if (fieldAddr && mlir::isa<mlir::cir::PointerType>(t)) {
+    if (fieldAddr && mlir::isa<cir::PointerType>(t)) {
       markPsetNull(fieldAddr, loc);
     }
     memberIdx++;
@@ -1219,12 +1218,12 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     // individual exploded fields.
     if (aggregates.count(addr)) {
       if (auto constStruct =
-              mlir::dyn_cast<mlir::cir::ConstStructAttr>(cstOp.getValue())) {
+              mlir::dyn_cast<cir::ConstStructAttr>(cstOp.getValue())) {
         updatePointsToForConstStruct(addr, constStruct, loc);
         return;
       }
 
-      if (auto zero = mlir::dyn_cast<mlir::cir::ZeroAttr>(cstOp.getValue())) {
+      if (auto zero = mlir::dyn_cast<cir::ZeroAttr>(cstOp.getValue())) {
         if (auto zeroStructTy = dyn_cast<StructType>(zero.getType())) {
           updatePointsToForZeroStruct(addr, zeroStructTy, loc);
           return;
@@ -1344,7 +1343,7 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
     }
     case InvalidStyle::EndOfScope: {
       if (tasks.count(histKey)) {
-        StringRef resource = "resource";
+        llvm::StringRef resource = "resource";
         if (auto allocaOp = dyn_cast<AllocaOp>(info.val->getDefiningOp())) {
           if (isLambdaType(allocaOp.getAllocaType()))
             resource = "lambda";
@@ -1354,7 +1353,7 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
         D.attachNote(info.loc) << "at the end of scope or full-expression";
       } else if (derefStyle == DerefStyle::RetLambda) {
         assert(currFunc && "expected function");
-        StringRef parent = currFunc->getLambda() ? "lambda" : "function";
+        llvm::StringRef parent = currFunc->getLambda() ? "lambda" : "function";
         D.attachNote(info.val->getLoc())
             << "declared here but invalid after enclosing " << parent
             << " ends";
@@ -1446,7 +1445,7 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
     emitPsetRemark();
 }
 
-static FuncOp getCalleeFromSymbol(ModuleOp mod, StringRef name) {
+static FuncOp getCalleeFromSymbol(ModuleOp mod, llvm::StringRef name) {
   auto global = mlir::SymbolTable::lookupSymbolIn(mod, name);
   assert(global && "expected to find symbol for function");
   return dyn_cast<FuncOp>(global);
@@ -1455,7 +1454,7 @@ static FuncOp getCalleeFromSymbol(ModuleOp mod, StringRef name) {
 static const ASTCXXMethodDeclInterface getMethod(ModuleOp mod, CallOp callOp) {
   if (!callOp.getCallee())
     return nullptr;
-  StringRef name = *callOp.getCallee();
+  llvm::StringRef name = *callOp.getCallee();
   auto method = getCalleeFromSymbol(mod, name);
   if (!method || method.getBuiltin())
     return nullptr;
@@ -1734,7 +1733,7 @@ bool LifetimeCheckPass::isLambdaType(mlir::Type ty) {
     return IsLambdaTyCache[ty];
 
   IsLambdaTyCache[ty] = false;
-  auto taskTy = mlir::dyn_cast<mlir::cir::StructType>(ty);
+  auto taskTy = mlir::dyn_cast<cir::StructType>(ty);
   if (!taskTy)
     return false;
   if (taskTy.getAst().isLambda())
@@ -1749,7 +1748,7 @@ bool LifetimeCheckPass::isTaskType(mlir::Value taskVal) {
     return IsTaskTyCache[ty];
 
   bool result = [&] {
-    auto taskTy = mlir::dyn_cast<mlir::cir::StructType>(taskVal.getType());
+    auto taskTy = mlir::dyn_cast<cir::StructType>(taskVal.getType());
     if (!taskTy)
       return false;
     return taskTy.getAst().hasPromiseType();
@@ -1885,10 +1884,10 @@ std::unique_ptr<Pass> mlir::createLifetimeCheckPass(clang::ASTContext *astCtx) {
   return std::move(lifetime);
 }
 
-std::unique_ptr<Pass> mlir::createLifetimeCheckPass(ArrayRef<StringRef> remark,
-                                                    ArrayRef<StringRef> hist,
-                                                    unsigned hist_limit,
-                                                    clang::ASTContext *astCtx) {
+std::unique_ptr<Pass>
+mlir::createLifetimeCheckPass(ArrayRef<llvm::StringRef> remark,
+                              ArrayRef<llvm::StringRef> hist,
+                              unsigned hist_limit, clang::ASTContext *astCtx) {
   auto lifetime = std::make_unique<LifetimeCheckPass>();
   lifetime->setASTContext(astCtx);
   lifetime->opts.parseOptions(remark, hist, hist_limit);

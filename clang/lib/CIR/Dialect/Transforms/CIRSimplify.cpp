@@ -60,10 +60,10 @@ struct SimplifyTernary final : public OpRewritePattern<TernaryOp> {
         !isSimpleTernaryBranch(op.getFalseRegion()))
       return mlir::failure();
 
-    mlir::cir::YieldOp trueBranchYieldOp = mlir::cast<mlir::cir::YieldOp>(
-        op.getTrueRegion().front().getTerminator());
-    mlir::cir::YieldOp falseBranchYieldOp = mlir::cast<mlir::cir::YieldOp>(
-        op.getFalseRegion().front().getTerminator());
+    cir::YieldOp trueBranchYieldOp =
+        mlir::cast<cir::YieldOp>(op.getTrueRegion().front().getTerminator());
+    cir::YieldOp falseBranchYieldOp =
+        mlir::cast<cir::YieldOp>(op.getFalseRegion().front().getTerminator());
     auto trueValue = trueBranchYieldOp.getArgs()[0];
     auto falseValue = falseBranchYieldOp.getArgs()[0];
 
@@ -71,8 +71,8 @@ struct SimplifyTernary final : public OpRewritePattern<TernaryOp> {
     rewriter.inlineBlockBefore(&op.getFalseRegion().front(), op);
     rewriter.eraseOp(trueBranchYieldOp);
     rewriter.eraseOp(falseBranchYieldOp);
-    rewriter.replaceOpWithNewOp<mlir::cir::SelectOp>(op, op.getCond(),
-                                                     trueValue, falseValue);
+    rewriter.replaceOpWithNewOp<cir::SelectOp>(op, op.getCond(), trueValue,
+                                               falseValue);
 
     return mlir::success();
   }
@@ -96,8 +96,8 @@ private:
 
     // Check whether the region/block contains a cir.const followed by a
     // cir.yield that yields the value.
-    auto yieldOp = mlir::cast<mlir::cir::YieldOp>(onlyBlock.getTerminator());
-    auto yieldValueDefOp = mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(
+    auto yieldOp = mlir::cast<cir::YieldOp>(onlyBlock.getTerminator());
+    auto yieldValueDefOp = mlir::dyn_cast_if_present<cir::ConstantOp>(
         yieldOp.getArgs()[0].getDefiningOp());
     return yieldValueDefOp && yieldValueDefOp->getBlock() == &onlyBlock;
   }
@@ -111,16 +111,15 @@ struct SimplifySelect : public OpRewritePattern<SelectOp> {
     mlir::Operation *trueValueOp = op.getTrueValue().getDefiningOp();
     mlir::Operation *falseValueOp = op.getFalseValue().getDefiningOp();
     auto trueValueConstOp =
-        mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(trueValueOp);
+        mlir::dyn_cast_if_present<cir::ConstantOp>(trueValueOp);
     auto falseValueConstOp =
-        mlir::dyn_cast_if_present<mlir::cir::ConstantOp>(falseValueOp);
+        mlir::dyn_cast_if_present<cir::ConstantOp>(falseValueOp);
     if (!trueValueConstOp || !falseValueConstOp)
       return mlir::failure();
 
-    auto trueValue =
-        mlir::dyn_cast<mlir::cir::BoolAttr>(trueValueConstOp.getValue());
+    auto trueValue = mlir::dyn_cast<cir::BoolAttr>(trueValueConstOp.getValue());
     auto falseValue =
-        mlir::dyn_cast<mlir::cir::BoolAttr>(falseValueConstOp.getValue());
+        mlir::dyn_cast<cir::BoolAttr>(falseValueConstOp.getValue());
     if (!trueValue || !falseValue)
       return mlir::failure();
 
@@ -133,8 +132,8 @@ struct SimplifySelect : public OpRewritePattern<SelectOp> {
 
     // cir.select if %0 then #false else #true -> cir.unary not %0
     if (!trueValue.getValue() && falseValue.getValue()) {
-      rewriter.replaceOpWithNewOp<mlir::cir::UnaryOp>(
-          op, mlir::cir::UnaryOpKind::Not, op.getCondition());
+      rewriter.replaceOpWithNewOp<cir::UnaryOp>(op, cir::UnaryOpKind::Not,
+                                                op.getCondition());
       return mlir::success();
     }
 
@@ -167,7 +166,7 @@ void CIRSimplifyPass::runOnOperation() {
   populateMergeCleanupPatterns(patterns);
 
   // Collect operations to apply patterns.
-  SmallVector<Operation *, 16> ops;
+  llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
     if (isa<TernaryOp, SelectOp>(op))
       ops.push_back(op);

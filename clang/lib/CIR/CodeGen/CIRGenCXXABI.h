@@ -179,7 +179,7 @@ public:
   /// \param Dtor - a function taking a single pointer argument
   /// \param Addr - a pointer to pass to the destructor function.
   virtual void registerGlobalDtor(CIRGenFunction &CGF, const VarDecl *D,
-                                  mlir::cir::FuncOp dtor, mlir::Value Addr) = 0;
+                                  cir::FuncOp dtor, mlir::Value Addr) = 0;
 
   virtual size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
                                       FunctionArgList &Args) const = 0;
@@ -188,8 +188,8 @@ public:
 
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.
-  virtual mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
-                                              CharUnits VPtrOffset) = 0;
+  virtual cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
+                                        CharUnits VPtrOffset) = 0;
 
   /// Build a virtual function pointer in the ABI-specific way.
   virtual CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &CGF,
@@ -227,7 +227,7 @@ public:
   virtual bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
                                       CXXDtorType DT) const = 0;
 
-  virtual mlir::cir::GlobalLinkageKind
+  virtual cir::GlobalLinkageKind
   getCXXDestructorLinkage(GVALinkage Linkage, const CXXDestructorDecl *Dtor,
                           CXXDtorType DT) const;
 
@@ -244,10 +244,10 @@ public:
                                   const CXXRecordDecl *NearestVBase) = 0;
 
   /// Gets the pure virtual member call function.
-  virtual StringRef getPureVirtualCallName() = 0;
+  virtual llvm::StringRef getPureVirtualCallName() = 0;
 
   /// Gets the deleted virtual member call name.
-  virtual StringRef getDeletedVirtualCallName() = 0;
+  virtual llvm::StringRef getDeletedVirtualCallName() = 0;
 
   /// Specify how one should pass an argument of a record type.
   enum class RecordArgABI {
@@ -343,12 +343,11 @@ public:
   virtual mlir::Value buildDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
                                        QualType SrcRecordTy,
                                        QualType DestRecordTy,
-                                       mlir::cir::PointerType DestCIRTy,
+                                       cir::PointerType DestCIRTy,
                                        bool isRefCast, Address Src) = 0;
 
-  virtual mlir::cir::MethodAttr
-  buildVirtualMethodAttr(mlir::cir::MethodType MethodTy,
-                         const CXXMethodDecl *MD) = 0;
+  virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType MethodTy,
+                                                 const CXXMethodDecl *MD) = 0;
 };
 
 /// Creates and Itanium-family ABI

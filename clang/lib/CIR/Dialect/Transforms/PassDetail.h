@@ -12,14 +12,14 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 
+namespace cir {
+class CIRDialect;
+} // namespace cir
+
 namespace mlir {
 // Forward declaration from Dialect.h
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
-
-namespace cir {
-class CIRDialect;
-} // namespace cir
 
 #define GEN_PASS_CLASSES
 #include "clang/CIR/Dialect/Passes.h.inc"

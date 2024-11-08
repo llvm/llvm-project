@@ -20,7 +20,6 @@
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
-namespace mlir {
 namespace cir {
 
 class TargetLoweringInfo {
@@ -33,10 +32,9 @@ public:
 
   const ABIInfo &getABIInfo() const { return *Info; }
   virtual unsigned getTargetAddrSpaceFromCIRAddrSpace(
-      mlir::cir::AddressSpaceAttr addressSpaceAttr) const = 0;
+      cir::AddressSpaceAttr addressSpaceAttr) const = 0;
 };
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H

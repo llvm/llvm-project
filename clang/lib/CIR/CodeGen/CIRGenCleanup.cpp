@@ -23,7 +23,7 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
-using namespace mlir::cir;
+using namespace cir;
 
 //===----------------------------------------------------------------------===//
 // CIRGenFunction cleanup related
@@ -33,8 +33,8 @@ using namespace mlir::cir;
 /// or with the labeled blocked if already solved.
 ///
 /// Track on scope basis, goto's we need to fix later.
-mlir::cir::BrOp CIRGenFunction::buildBranchThroughCleanup(mlir::Location Loc,
-                                                          JumpDest Dest) {
+cir::BrOp CIRGenFunction::buildBranchThroughCleanup(mlir::Location Loc,
+                                                    JumpDest Dest) {
   // Remove this once we go for making sure unreachable code is
   // well modeled (or not).
   assert(builder.getInsertionBlock() && "not yet implemented");
@@ -266,11 +266,11 @@ static void buildCleanup(CIRGenFunction &CGF, EHScopeStack::Cleanup *Fn,
 
   if (ActiveFlag.isValid()) {
     mlir::Value isActive = builder.createLoad(loc, ActiveFlag);
-    builder.create<mlir::cir::IfOp>(loc, isActive, false,
-                                    [&](mlir::OpBuilder &b, mlir::Location) {
-                                      emitCleanup();
-                                      builder.createYield(loc);
-                                    });
+    builder.create<cir::IfOp>(loc, isActive, false,
+                              [&](mlir::OpBuilder &b, mlir::Location) {
+                                emitCleanup();
+                                builder.createYield(loc);
+                              });
   } else {
     emitCleanup();
   }
@@ -323,8 +323,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
                        FallthroughSource->mightHaveTerminator() &&
                        FallthroughSource->getTerminator();
   bool HasPrebranchedFallthrough =
-      HasTerminator &&
-      !isa<mlir::cir::YieldOp>(FallthroughSource->getTerminator());
+      HasTerminator && !isa<cir::YieldOp>(FallthroughSource->getTerminator());
 
   // If this is a normal cleanup, then having a prebranched
   // fallthrough implies that the fallthrough source unconditionally
@@ -423,8 +422,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // Emit the EH cleanup if required.
   if (RequiresEHCleanup) {
-    mlir::cir::TryOp tryOp =
-        ehEntry->getParentOp()->getParentOfType<mlir::cir::TryOp>();
+    cir::TryOp tryOp = ehEntry->getParentOp()->getParentOfType<cir::TryOp>();
     auto *nextAction = getEHDispatchBlock(EHParent, tryOp);
     (void)nextAction;
 
@@ -476,8 +474,8 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         // If nextAction is an EH resume block, also update all try locations
         // for these "to-patch" blocks with the appropriate resume content.
         if (nextAction == ehResumeBlock) {
-          if (auto tryToPatch = currYield->getParentOp()
-                                    ->getParentOfType<mlir::cir::TryOp>()) {
+          if (auto tryToPatch =
+                  currYield->getParentOp()->getParentOfType<cir::TryOp>()) {
             mlir::Block *resumeBlockToPatch =
                 tryToPatch.getCatchUnwindEntryBlock();
             buildEHResumeBlock(/*isCleanup=*/true, resumeBlockToPatch,

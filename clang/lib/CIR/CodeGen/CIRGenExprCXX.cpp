@@ -560,7 +560,7 @@ static mlir::Value buildCXXNewAllocSize(CIRGenFunction &CGF,
     CharUnits typeSize = CGF.getContext().getTypeSizeInChars(type);
     sizeWithoutCookie = CGF.getBuilder().getConstant(
         CGF.getLoc(e->getSourceRange()),
-        mlir::cir::IntAttr::get(CGF.SizeTy, typeSize.getQuantity()));
+        cir::IntAttr::get(CGF.SizeTy, typeSize.getQuantity()));
     return sizeWithoutCookie;
   }
 
@@ -1034,14 +1034,14 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   if (nullCheck) {
     mlir::Value nullPtr =
         builder.getNullPtr(allocation.getPointer().getType(), loc);
-    nullCmpResult = builder.createCompare(loc, mlir::cir::CmpOpKind::ne,
+    nullCmpResult = builder.createCompare(loc, cir::CmpOpKind::ne,
                                           allocation.getPointer(), nullPtr);
     preIfBody = builder.saveInsertionPoint();
-    builder.create<mlir::cir::IfOp>(loc, nullCmpResult,
-                                    /*withElseRegion=*/false,
-                                    [&](mlir::OpBuilder &, mlir::Location) {
-                                      ifBody = builder.saveInsertionPoint();
-                                    });
+    builder.create<cir::IfOp>(loc, nullCmpResult,
+                              /*withElseRegion=*/false,
+                              [&](mlir::OpBuilder &, mlir::Location) {
+                                ifBody = builder.saveInsertionPoint();
+                              });
     postIfBody = builder.saveInsertionPoint();
   }
 
@@ -1071,7 +1071,7 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
                           allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
     cleanupDominator =
-        builder.create<mlir::cir::UnreachableOp>(getLoc(E->getSourceRange()))
+        builder.create<cir::UnreachableOp>(getLoc(E->getSourceRange()))
             .getOperation();
   }
 
@@ -1143,7 +1143,7 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
 
     // Reset insertion point to resume back to post ifOp.
     if (postIfBody.isSet()) {
-      builder.create<mlir::cir::YieldOp>(loc);
+      builder.create<cir::YieldOp>(loc);
       builder.restoreInsertionPoint(postIfBody);
     }
   }
@@ -1185,7 +1185,7 @@ static RValue buildNewDeleteCall(CIRGenFunction &CGF,
                                  const FunctionDecl *CalleeDecl,
                                  const FunctionProtoType *CalleeType,
                                  const CallArgList &Args) {
-  mlir::cir::CIRCallOpInterface CallOrTryCall;
+  cir::CIRCallOpInterface CallOrTryCall;
   auto CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CIRGenCallee Callee =
       CIRGenCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
@@ -1248,7 +1248,7 @@ void CIRGenFunction::buildDeleteCall(const FunctionDecl *DeleteFD,
   if (Params.Size) {
     QualType SizeType = *ParamTypeIt++;
     CharUnits DeleteTypeSize = getContext().getTypeSizeInChars(DeleteTy);
-    assert(SizeTy && "expected mlir::cir::IntType");
+    assert(SizeTy && "expected cir::IntType");
     auto Size = builder.getConstInt(*currSrcLoc, ConvertType(SizeType),
                                     DeleteTypeSize.getQuantity());
 
@@ -1263,7 +1263,7 @@ void CIRGenFunction::buildDeleteCall(const FunctionDecl *DeleteFD,
     if (!CookieSize.isZero()) {
       // Uncomment upon adding testcase.
       // builder.createBinop(
-      //     Size, mlir::cir::BinOpKind::Add,
+      //     Size, cir::BinOpKind::Add,
       //     builder.getConstInt(*currSrcLoc, SizeTy,
       //     CookieSize.getQuantity()));
       llvm_unreachable("NYI");
@@ -1293,7 +1293,7 @@ void CIRGenFunction::buildDeleteCall(const FunctionDecl *DeleteFD,
 static mlir::Value buildDynamicCastToNull(CIRGenFunction &CGF,
                                           mlir::Location Loc, QualType DestTy) {
   mlir::Type DestCIRTy = CGF.ConvertType(DestTy);
-  assert(mlir::isa<mlir::cir::PointerType>(DestCIRTy) &&
+  assert(mlir::isa<cir::PointerType>(DestCIRTy) &&
          "result of dynamic_cast should be a ptr");
 
   mlir::Value NullPtrValue = CGF.getBuilder().getNullPtr(DestCIRTy, Loc);
@@ -1346,7 +1346,7 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
   if (DCE->isAlwaysNull())
     return buildDynamicCastToNull(*this, loc, destTy);
 
-  auto destCirTy = mlir::cast<mlir::cir::PointerType>(ConvertType(destTy));
+  auto destCirTy = mlir::cast<cir::PointerType>(ConvertType(destTy));
   return CGM.getCXXABI().buildDynamicCast(*this, loc, srcRecordTy, destRecordTy,
                                           destCirTy, isRefCast, ThisAddr);
 }

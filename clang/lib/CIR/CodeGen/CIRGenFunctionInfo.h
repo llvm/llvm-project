@@ -88,11 +88,11 @@ class CIRGenFunctionInfo final
   typedef clang::FunctionProtoType::ExtParameterInfo ExtParameterInfo;
 
   /// The cir::CallingConv to use for this function (as specified by the user).
-  mlir::cir::CallingConv CallingConvention : 8;
+  cir::CallingConv CallingConvention : 8;
 
   /// The cir::CallingConv to actually use for this function, which may depend
   /// on the ABI.
-  mlir::cir::CallingConv EffectiveCallingConvention : 8;
+  cir::CallingConv EffectiveCallingConvention : 8;
 
   /// The clang::CallingConv that this was originally created with.
   unsigned ASTCallingConvention : 6;
@@ -129,7 +129,7 @@ class CIRGenFunctionInfo final
   /// TODO: think about modeling this properly, this is just a dumb subsitution
   /// for now since we arent supporting anything other than arguments in
   /// registers atm
-  mlir::cir::StructType *ArgStruct;
+  cir::StructType *ArgStruct;
   unsigned ArgStructAlign : 31;
   unsigned HasExtParameterInfos : 1;
 
@@ -150,7 +150,7 @@ class CIRGenFunctionInfo final
   CIRGenFunctionInfo() : Required(RequiredArgs::All) {}
 
 public:
-  static CIRGenFunctionInfo *create(mlir::cir::CallingConv cirCC, bool instanceMethod,
+  static CIRGenFunctionInfo *create(cir::CallingConv cirCC, bool instanceMethod,
                                     bool chainCall,
                                     const clang::FunctionType::ExtInfo &extInfo,
                                     llvm::ArrayRef<ExtParameterInfo> paramInfos,
@@ -252,13 +252,11 @@ public:
 
   /// getCallingConvention - Return the user specified calling convention, which
   /// has been translated into a CIR CC.
-  mlir::cir::CallingConv getCallingConvention() const {
-    return CallingConvention;
-  }
+  cir::CallingConv getCallingConvention() const { return CallingConvention; }
 
   /// getEffectiveCallingConvention - Return the actual calling convention to
   /// use, which may depend on the ABI.
-  mlir::cir::CallingConv getEffectiveCallingConvention() const {
+  cir::CallingConv getEffectiveCallingConvention() const {
     return EffectiveCallingConvention;
   }
 
@@ -277,7 +275,7 @@ public:
     return isVariadic() ? getRequiredArgs().getNumRequiredArgs() : arg_size();
   }
 
-  mlir::cir::StructType *getArgStruct() const { return ArgStruct; }
+  cir::StructType *getArgStruct() const { return ArgStruct; }
 
   /// Return true if this function uses inalloca arguments.
   bool usesInAlloca() const { return ArgStruct; }

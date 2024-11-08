@@ -300,7 +300,7 @@ bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
 }
 
 Address AtomicInfo::castToAtomicIntPointer(Address addr) const {
-  auto intTy = mlir::dyn_cast<mlir::cir::IntType>(addr.getElementType());
+  auto intTy = mlir::dyn_cast<cir::IntType>(addr.getElementType());
   // Don't bother with int casts if the integer size is the same.
   if (intTy && intTy.getWidth() == AtomicSizeInBits)
     return addr;
@@ -334,14 +334,14 @@ Address AtomicInfo::CreateTempAlloca() const {
 // of casts if necessary.
 //
 // FIXME(cir): figure out warning issue and move this to CIRBaseBuilder.h
-static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
+static cir::IntAttr getConstOpIntAttr(mlir::Value v) {
   mlir::Operation *op = v.getDefiningOp();
-  mlir::cir::IntAttr constVal;
-  while (auto c = dyn_cast<mlir::cir::CastOp>(op))
+  cir::IntAttr constVal;
+  while (auto c = dyn_cast<cir::CastOp>(op))
     op = c.getOperand().getDefiningOp();
-  if (auto c = dyn_cast<mlir::cir::ConstantOp>(op)) {
-    if (mlir::isa<mlir::cir::IntType>(c.getType()))
-      constVal = mlir::cast<mlir::cir::IntAttr>(c.getValue());
+  if (auto c = dyn_cast<cir::ConstantOp>(op)) {
+    if (mlir::isa<cir::IntType>(c.getType()))
+      constVal = mlir::cast<cir::IntAttr>(c.getValue());
   }
   return constVal;
 }
@@ -352,15 +352,15 @@ static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
 // false.
 static bool isCstWeak(mlir::Value weakVal, bool &val) {
   mlir::Operation *op = weakVal.getDefiningOp();
-  while (auto c = dyn_cast<mlir::cir::CastOp>(op)) {
+  while (auto c = dyn_cast<cir::CastOp>(op)) {
     op = c.getOperand().getDefiningOp();
   }
-  if (auto c = dyn_cast<mlir::cir::ConstantOp>(op)) {
-    if (mlir::isa<mlir::cir::IntType>(c.getType())) {
-      val = mlir::cast<mlir::cir::IntAttr>(c.getValue()).getUInt() != 0;
+  if (auto c = dyn_cast<cir::ConstantOp>(op)) {
+    if (mlir::isa<cir::IntType>(c.getType())) {
+      val = mlir::cast<cir::IntAttr>(c.getValue()).getUInt() != 0;
       return true;
-    } else if (mlir::isa<mlir::cir::BoolType>(c.getType())) {
-      val = mlir::cast<mlir::cir::BoolAttr>(c.getValue()).getValue();
+    } else if (mlir::isa<cir::BoolType>(c.getType())) {
+      val = mlir::cast<cir::BoolAttr>(c.getValue()).getValue();
       return true;
     }
   }
@@ -375,8 +375,8 @@ static bool isCstWeak(mlir::Value weakVal, bool &val) {
 static void buildDefaultCase(CIRGenBuilderTy &builder, mlir::Location loc) {
   auto EmptyArrayAttr = builder.getArrayAttr({});
   mlir::OpBuilder::InsertPoint insertPoint;
-  builder.create<mlir::cir::CaseOp>(
-      loc, EmptyArrayAttr, mlir::cir::CaseOpKind::Default, insertPoint);
+  builder.create<cir::CaseOp>(loc, EmptyArrayAttr, cir::CaseOpKind::Default,
+                              insertPoint);
   builder.restoreInsertionPoint(insertPoint);
 }
 
@@ -385,13 +385,13 @@ static void buildDefaultCase(CIRGenBuilderTy &builder, mlir::Location loc) {
 // will hold the body of the "case" block.
 static void buildSingleMemOrderCase(CIRGenBuilderTy &builder,
                                     mlir::Location loc, mlir::Type Type,
-                                    mlir::cir::MemOrder Order) {
+                                    cir::MemOrder Order) {
   SmallVector<mlir::Attribute, 1> OneOrder{
-      mlir::cir::IntAttr::get(Type, static_cast<int>(Order))};
+      cir::IntAttr::get(Type, static_cast<int>(Order))};
   auto OneAttribute = builder.getArrayAttr(OneOrder);
   mlir::OpBuilder::InsertPoint insertPoint;
-  builder.create<mlir::cir::CaseOp>(loc, OneAttribute,
-                                    mlir::cir::CaseOpKind::Equal, insertPoint);
+  builder.create<cir::CaseOp>(loc, OneAttribute, cir::CaseOpKind::Equal,
+                              insertPoint);
   builder.restoreInsertionPoint(insertPoint);
 }
 
@@ -400,40 +400,39 @@ static void buildSingleMemOrderCase(CIRGenBuilderTy &builder,
 // Create the region that will hold the body of the "case" block.
 static void buildDoubleMemOrderCase(CIRGenBuilderTy &builder,
                                     mlir::Location loc, mlir::Type Type,
-                                    mlir::cir::MemOrder Order1,
-                                    mlir::cir::MemOrder Order2) {
+                                    cir::MemOrder Order1,
+                                    cir::MemOrder Order2) {
   SmallVector<mlir::Attribute, 2> TwoOrders{
-      mlir::cir::IntAttr::get(Type, static_cast<int>(Order1)),
-      mlir::cir::IntAttr::get(Type, static_cast<int>(Order2))};
+      cir::IntAttr::get(Type, static_cast<int>(Order1)),
+      cir::IntAttr::get(Type, static_cast<int>(Order2))};
   auto TwoAttributes = builder.getArrayAttr(TwoOrders);
   mlir::OpBuilder::InsertPoint insertPoint;
-  builder.create<mlir::cir::CaseOp>(loc, TwoAttributes,
-                                    mlir::cir::CaseOpKind::Anyof, insertPoint);
+  builder.create<cir::CaseOp>(loc, TwoAttributes, cir::CaseOpKind::Anyof,
+                              insertPoint);
   builder.restoreInsertionPoint(insertPoint);
 }
 
 static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
                                Address Dest, Address Ptr, Address Val1,
                                Address Val2, uint64_t Size,
-                               mlir::cir::MemOrder SuccessOrder,
-                               mlir::cir::MemOrder FailureOrder,
+                               cir::MemOrder SuccessOrder,
+                               cir::MemOrder FailureOrder,
                                llvm::SyncScope::ID Scope) {
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
   auto Expected = builder.createLoad(loc, Val1);
   auto Desired = builder.createLoad(loc, Val2);
   auto boolTy = builder.getBoolTy();
-  auto cmpxchg = builder.create<mlir::cir::AtomicCmpXchg>(
+  auto cmpxchg = builder.create<cir::AtomicCmpXchg>(
       loc, Expected.getType(), boolTy, Ptr.getPointer(), Expected, Desired,
       SuccessOrder, FailureOrder);
   cmpxchg.setIsVolatile(E->isVolatile());
   cmpxchg.setWeak(IsWeak);
 
   auto cmp = builder.createNot(cmpxchg.getCmp());
-  builder.create<mlir::cir::IfOp>(
+  builder.create<cir::IfOp>(
       loc, cmp, false, [&](mlir::OpBuilder &, mlir::Location) {
-        auto ptrTy =
-            mlir::cast<mlir::cir::PointerType>(Val1.getPointer().getType());
+        auto ptrTy = mlir::cast<cir::PointerType>(Val1.getPointer().getType());
         if (Val1.getElementType() != ptrTy.getPointee()) {
           Val1 = Val1.withPointer(builder.createPtrBitcast(
               Val1.getPointer(), Val1.getElementType()));
@@ -453,30 +452,30 @@ static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
 static void buildAtomicCmpXchgFailureSet(
     CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak, Address Dest, Address Ptr,
     Address Val1, Address Val2, mlir::Value FailureOrderVal, uint64_t Size,
-    mlir::cir::MemOrder SuccessOrder, llvm::SyncScope::ID Scope) {
+    cir::MemOrder SuccessOrder, llvm::SyncScope::ID Scope) {
 
-  mlir::cir::MemOrder FailureOrder;
+  cir::MemOrder FailureOrder;
   if (auto ordAttr = getConstOpIntAttr(FailureOrderVal)) {
     // We should not ever get to a case where the ordering isn't a valid CABI
     // value, but it's hard to enforce that in general.
     auto ord = ordAttr.getUInt();
-    if (!mlir::cir::isValidCIRAtomicOrderingCABI(ord)) {
-      FailureOrder = mlir::cir::MemOrder::Relaxed;
+    if (!cir::isValidCIRAtomicOrderingCABI(ord)) {
+      FailureOrder = cir::MemOrder::Relaxed;
     } else {
-      switch ((mlir::cir::MemOrder)ord) {
-      case mlir::cir::MemOrder::Relaxed:
+      switch ((cir::MemOrder)ord) {
+      case cir::MemOrder::Relaxed:
         // 31.7.2.18: "The failure argument shall not be memory_order_release
         // nor memory_order_acq_rel". Fallback to monotonic.
-      case mlir::cir::MemOrder::Release:
-      case mlir::cir::MemOrder::AcquireRelease:
-        FailureOrder = mlir::cir::MemOrder::Relaxed;
+      case cir::MemOrder::Release:
+      case cir::MemOrder::AcquireRelease:
+        FailureOrder = cir::MemOrder::Relaxed;
         break;
-      case mlir::cir::MemOrder::Consume:
-      case mlir::cir::MemOrder::Acquire:
-        FailureOrder = mlir::cir::MemOrder::Acquire;
+      case cir::MemOrder::Consume:
+      case cir::MemOrder::Acquire:
+        FailureOrder = cir::MemOrder::Acquire;
         break;
-      case mlir::cir::MemOrder::SequentiallyConsistent:
-        FailureOrder = mlir::cir::MemOrder::SequentiallyConsistent;
+      case cir::MemOrder::SequentiallyConsistent:
+        FailureOrder = cir::MemOrder::SequentiallyConsistent;
         break;
       }
     }
@@ -493,7 +492,7 @@ static void buildAtomicCmpXchgFailureSet(
   // can't handle a runtime value; all memory orders must be hard coded.
   // Generate a "switch" statement that converts the runtime value into a
   // compile-time value.
-  CGF.getBuilder().create<mlir::cir::SwitchOp>(
+  CGF.getBuilder().create<cir::SwitchOp>(
       FailureOrderVal.getLoc(), FailureOrderVal,
       [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
         auto &builder = CGF.getBuilder();
@@ -505,7 +504,7 @@ static void buildAtomicCmpXchgFailureSet(
         // because there is no practical way to report an error at runtime.
         buildDefaultCase(builder, loc);
         buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                           SuccessOrder, mlir::cir::MemOrder::Relaxed, Scope);
+                           SuccessOrder, cir::MemOrder::Relaxed, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -515,10 +514,9 @@ static void buildAtomicCmpXchgFailureSet(
         // memory_order_consume is not implemented and always falls back to
         // memory_order_acquire
         buildDoubleMemOrderCase(builder, loc, FailureOrderVal.getType(),
-                                mlir::cir::MemOrder::Consume,
-                                mlir::cir::MemOrder::Acquire);
+                                cir::MemOrder::Consume, cir::MemOrder::Acquire);
         buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                           SuccessOrder, mlir::cir::MemOrder::Acquire, Scope);
+                           SuccessOrder, cir::MemOrder::Acquire, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -529,10 +527,10 @@ static void buildAtomicCmpXchgFailureSet(
 
         // case seq_cst:
         buildSingleMemOrderCase(builder, loc, FailureOrderVal.getType(),
-                                mlir::cir::MemOrder::SequentiallyConsistent);
+                                cir::MemOrder::SequentiallyConsistent);
         buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                           SuccessOrder,
-                           mlir::cir::MemOrder::SequentiallyConsistent, Scope);
+                           SuccessOrder, cir::MemOrder::SequentiallyConsistent,
+                           Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -543,15 +541,14 @@ static void buildAtomicCmpXchgFailureSet(
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                           Address Ptr, Address Val1, Address Val2,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
-                          uint64_t Size, mlir::cir::MemOrder Order,
-                          uint8_t Scope) {
+                          uint64_t Size, cir::MemOrder Order, uint8_t Scope) {
   assert(!cir::MissingFeatures::syncScopeID());
   StringRef Op;
 
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
-  auto orderAttr = mlir::cir::MemOrderAttr::get(builder.getContext(), Order);
-  mlir::cir::AtomicFetchKindAttr fetchAttr;
+  auto orderAttr = cir::MemOrderAttr::get(builder.getContext(), Order);
+  cir::AtomicFetchKindAttr fetchAttr;
   bool fetchFirst = true;
 
   switch (E->getOp()) {
@@ -599,8 +596,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
     // TODO(cir): this logic should be part of createStore, but doing so
     // currently breaks CodeGen/union.cpp and CodeGen/union.cpp.
-    auto ptrTy =
-        mlir::cast<mlir::cir::PointerType>(Dest.getPointer().getType());
+    auto ptrTy = mlir::cast<cir::PointerType>(Dest.getPointer().getType());
     if (Dest.getElementType() != ptrTy.getPointee()) {
       Dest = Dest.withPointer(
           builder.createPtrBitcast(Dest.getPointer(), Dest.getElementType()));
@@ -631,7 +627,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_exchange:
-    Op = mlir::cir::AtomicXchg::getOperationName();
+    Op = cir::AtomicXchg::getOperationName();
     break;
 
   case AtomicExpr::AO__atomic_add_fetch:
@@ -643,9 +639,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Add);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Add);
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
@@ -657,9 +653,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Sub);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Sub);
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -671,9 +667,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Min);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Min);
     break;
 
   case AtomicExpr::AO__atomic_max_fetch:
@@ -685,9 +681,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Max);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Max);
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -699,9 +695,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::And);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::And);
     break;
 
   case AtomicExpr::AO__atomic_or_fetch:
@@ -713,9 +709,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Or);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Or);
     break;
 
   case AtomicExpr::AO__atomic_xor_fetch:
@@ -727,9 +723,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Xor);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Xor);
     break;
 
   case AtomicExpr::AO__atomic_nand_fetch:
@@ -739,9 +735,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    Op = mlir::cir::AtomicFetch::getOperationName();
-    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
-        builder.getContext(), mlir::cir::AtomicFetchKind::Nand);
+    Op = cir::AtomicFetch::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Nand);
     break;
   }
 
@@ -758,14 +754,14 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   RMWI->setAttr("mem_order", orderAttr);
   if (E->isVolatile())
     RMWI->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
-  if (fetchFirst && Op == mlir::cir::AtomicFetch::getOperationName())
+  if (fetchFirst && Op == cir::AtomicFetch::getOperationName())
     RMWI->setAttr("fetch_first", mlir::UnitAttr::get(builder.getContext()));
 
   auto Result = RMWI->getResult(0);
 
   // TODO(cir): this logic should be part of createStore, but doing so currently
   // breaks CodeGen/union.cpp and CodeGen/union.cpp.
-  auto ptrTy = mlir::cast<mlir::cir::PointerType>(Dest.getPointer().getType());
+  auto ptrTy = mlir::cast<cir::PointerType>(Dest.getPointer().getType());
   if (Dest.getElementType() != ptrTy.getPointee()) {
     Dest = Dest.withPointer(
         builder.createPtrBitcast(Dest.getPointer(), Dest.getElementType()));
@@ -784,7 +780,7 @@ static RValue buildAtomicLibcall(CIRGenFunction &CGF, StringRef fnName,
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                           Address Ptr, Address Val1, Address Val2,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
-                          uint64_t Size, mlir::cir::MemOrder Order,
+                          uint64_t Size, cir::MemOrder Order,
                           mlir::Value Scope) {
   auto ScopeModel = Expr->getScopeModel();
 
@@ -1202,34 +1198,34 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     // We should not ever get to a case where the ordering isn't a valid CABI
     // value, but it's hard to enforce that in general.
     auto ord = ordAttr.getUInt();
-    if (mlir::cir::isValidCIRAtomicOrderingCABI(ord)) {
-      switch ((mlir::cir::MemOrder)ord) {
-      case mlir::cir::MemOrder::Relaxed:
+    if (cir::isValidCIRAtomicOrderingCABI(ord)) {
+      switch ((cir::MemOrder)ord) {
+      case cir::MemOrder::Relaxed:
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::Relaxed, Scope);
+                      cir::MemOrder::Relaxed, Scope);
         break;
-      case mlir::cir::MemOrder::Consume:
-      case mlir::cir::MemOrder::Acquire:
+      case cir::MemOrder::Consume:
+      case cir::MemOrder::Acquire:
         if (IsStore)
           break; // Avoid crashing on code with undefined behavior
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::Acquire, Scope);
+                      cir::MemOrder::Acquire, Scope);
         break;
-      case mlir::cir::MemOrder::Release:
+      case cir::MemOrder::Release:
         if (IsLoad)
           break; // Avoid crashing on code with undefined behavior
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::Release, Scope);
+                      cir::MemOrder::Release, Scope);
         break;
-      case mlir::cir::MemOrder::AcquireRelease:
+      case cir::MemOrder::AcquireRelease:
         if (IsLoad || IsStore)
           break; // Avoid crashing on code with undefined behavior
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::AcquireRelease, Scope);
+                      cir::MemOrder::AcquireRelease, Scope);
         break;
-      case mlir::cir::MemOrder::SequentiallyConsistent:
+      case cir::MemOrder::SequentiallyConsistent:
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::SequentiallyConsistent, Scope);
+                      cir::MemOrder::SequentiallyConsistent, Scope);
         break;
       }
     }
@@ -1244,7 +1240,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   // can't handle runtime memory orders; the memory order must be hard coded.
   // Generate a "switch" statement that converts a runtime value into a
   // compile-time value.
-  builder.create<mlir::cir::SwitchOp>(
+  builder.create<cir::SwitchOp>(
       Order.getLoc(), Order,
       [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
         mlir::Block *switchBlock = builder.getBlock();
@@ -1256,7 +1252,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         // memory_order_relaxed.
         buildDefaultCase(builder, loc);
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::Relaxed, Scope);
+                      cir::MemOrder::Relaxed, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -1268,10 +1264,10 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
           // memory_order_acquire.  These memory orders are not valid for
           // write-only operations.
           buildDoubleMemOrderCase(builder, loc, Order.getType(),
-                                  mlir::cir::MemOrder::Consume,
-                                  mlir::cir::MemOrder::Acquire);
+                                  cir::MemOrder::Consume,
+                                  cir::MemOrder::Acquire);
           buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                        Size, mlir::cir::MemOrder::Acquire, Scope);
+                        Size, cir::MemOrder::Acquire, Scope);
           builder.createBreak(loc);
         }
 
@@ -1281,9 +1277,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
           // case release:
           // memory_order_release is not valid for read-only operations.
           buildSingleMemOrderCase(builder, loc, Order.getType(),
-                                  mlir::cir::MemOrder::Release);
+                                  cir::MemOrder::Release);
           buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                        Size, mlir::cir::MemOrder::Release, Scope);
+                        Size, cir::MemOrder::Release, Scope);
           builder.createBreak(loc);
         }
 
@@ -1293,9 +1289,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
           // case acq_rel:
           // memory_order_acq_rel is only valid for read-write operations.
           buildSingleMemOrderCase(builder, loc, Order.getType(),
-                                  mlir::cir::MemOrder::AcquireRelease);
+                                  cir::MemOrder::AcquireRelease);
           buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                        Size, mlir::cir::MemOrder::AcquireRelease, Scope);
+                        Size, cir::MemOrder::AcquireRelease, Scope);
           builder.createBreak(loc);
         }
 
@@ -1303,9 +1299,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
         // case seq_cst:
         buildSingleMemOrderCase(builder, loc, Order.getType(),
-                                mlir::cir::MemOrder::SequentiallyConsistent);
+                                cir::MemOrder::SequentiallyConsistent);
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      mlir::cir::MemOrder::SequentiallyConsistent, Scope);
+                      cir::MemOrder::SequentiallyConsistent, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -1321,11 +1317,11 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
                                       bool isInit) {
   bool IsVolatile = lvalue.isVolatileQualified();
-  mlir::cir::MemOrder MO;
+  cir::MemOrder MO;
   if (lvalue.getType()->isAtomicType()) {
-    MO = mlir::cir::MemOrder::SequentiallyConsistent;
+    MO = cir::MemOrder::SequentiallyConsistent;
   } else {
-    MO = mlir::cir::MemOrder::Release;
+    MO = cir::MemOrder::Release;
     IsVolatile = true;
   }
   return buildAtomicStore(rvalue, lvalue, MO, IsVolatile, isInit);
@@ -1337,9 +1333,9 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
 /// floating point operands.  TODO: Allow compare-and-exchange and FP - see
 /// comment in CIRGenAtomicExpandPass.cpp.
 static bool shouldCastToInt(mlir::Type ValTy, bool CmpXchg) {
-  if (mlir::cir::isAnyFloatingPointType(ValTy))
-    return isa<mlir::cir::FP80Type>(ValTy) || CmpXchg;
-  return !isa<mlir::cir::IntType>(ValTy) && !isa<mlir::cir::PointerType>(ValTy);
+  if (cir::isAnyFloatingPointType(ValTy))
+    return isa<cir::FP80Type>(ValTy) || CmpXchg;
+  return !isa<cir::IntType>(ValTy) && !isa<cir::PointerType>(ValTy);
 }
 
 mlir::Value AtomicInfo::getScalarRValValueOrNull(RValue RVal) const {
@@ -1420,7 +1416,7 @@ mlir::Value AtomicInfo::convertRValueToInt(RValue RVal, bool CmpXchg) const {
 /// type*; this means that for aggregate r-values, it should include
 /// storage for any padding that was necessary.
 void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
-                                      mlir::cir::MemOrder MO, bool IsVolatile,
+                                      cir::MemOrder MO, bool IsVolatile,
                                       bool isInit) {
   // If this is an aggregate r-value, it should agree in type except
   // maybe for address-space qualification.
@@ -1456,10 +1452,10 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
       }
     auto store = builder.createStore(loc, ValToStore, Addr);
 
-    if (MO == mlir::cir::MemOrder::Acquire)
-      MO = mlir::cir::MemOrder::Relaxed; // Monotonic
-    else if (MO == mlir::cir::MemOrder::AcquireRelease)
-      MO = mlir::cir::MemOrder::Release;
+    if (MO == cir::MemOrder::Acquire)
+      MO = cir::MemOrder::Relaxed; // Monotonic
+    else if (MO == cir::MemOrder::AcquireRelease)
+      MO = cir::MemOrder::Release;
     // Initializations don't need to be atomic.
     if (!isInit)
       store.setAtomic(MO);

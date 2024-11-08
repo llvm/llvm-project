@@ -38,9 +38,9 @@ mlir::Value createIntCast(mlir::ConversionPatternRewriter &rewriter,
     return rewriter.create<mlir::arith::BitcastOp>(loc, dstTy, src);
 }
 
-mlir::arith::CmpIPredicate
-convertCmpKindToCmpIPredicate(mlir::cir::CmpOpKind kind, bool isSigned) {
-  using CIR = mlir::cir::CmpOpKind;
+mlir::arith::CmpIPredicate convertCmpKindToCmpIPredicate(cir::CmpOpKind kind,
+                                                         bool isSigned) {
+  using CIR = cir::CmpOpKind;
   using arithCmpI = mlir::arith::CmpIPredicate;
   switch (kind) {
   case CIR::eq:
@@ -59,9 +59,8 @@ convertCmpKindToCmpIPredicate(mlir::cir::CmpOpKind kind, bool isSigned) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
-mlir::arith::CmpFPredicate
-convertCmpKindToCmpFPredicate(mlir::cir::CmpOpKind kind) {
-  using CIR = mlir::cir::CmpOpKind;
+mlir::arith::CmpFPredicate convertCmpKindToCmpFPredicate(cir::CmpOpKind kind) {
+  using CIR = cir::CmpOpKind;
   using arithCmpF = mlir::arith::CmpFPredicate;
   switch (kind) {
   case CIR::eq:

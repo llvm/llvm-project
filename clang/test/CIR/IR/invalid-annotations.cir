@@ -3,7 +3,7 @@
 
 
 // expected-error @below {{invalid kind of attribute specified}}
-// expected-error @below {{failed to parse AnnotationAttr parameter 'name' which is to be a `StringAttr`}}
+// expected-error @below {{failed to parse AnnotationAttr parameter 'name' which is to be a `mlir::StringAttr`}}
 cir.global  external @a = #cir.ptr<null> : !cir.ptr<!cir.double> [#cir.annotation<name = 18, args = ["21", 12 : i32]>]
 
 // -----

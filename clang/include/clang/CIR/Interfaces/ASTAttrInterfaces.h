@@ -15,19 +15,16 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 
-namespace mlir {
 namespace cir {
 
 mlir::Attribute makeFuncDeclAttr(const clang::Decl *decl,
                                  mlir::MLIRContext *ctx);
 
 } // namespace cir
-} // namespace mlir
 
 /// Include the generated interface declarations.
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h.inc"
 
-namespace mlir {
 namespace cir {
 
 template <typename T> bool hasAttr(ASTDeclInterface decl) {
@@ -40,6 +37,5 @@ template <typename T> bool hasAttr(ASTDeclInterface decl) {
 }
 
 } // namespace cir
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_CIR_AST_ATAR_INTERFACES_H_

@@ -21,7 +21,7 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
     Contains helper functions to query properties and perform transformations
     on a loop.
   }];
-  let cppNamespace = "::mlir::cir";
+  let cppNamespace = "::cir";
 
   let methods = [
     InterfaceMethod<[{
@@ -71,11 +71,11 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
       }],
       /*retTy=*/"mlir::WalkResult",
       /*methodName=*/"walkBodySkippingNestedLoops",
-      /*args=*/(ins "::llvm::function_ref<mlir::WalkResult (Operation *)>":$callback),
+      /*args=*/(ins "::llvm::function_ref<mlir::WalkResult (mlir::Operation *)>":$callback),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getBody().template walk<WalkOrder::PreOrder>([&](Operation *op) {
-          if (isa<LoopOpInterface>(op))
+        return $_op.getBody().template walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+          if (mlir::isa<LoopOpInterface>(op))
             return mlir::WalkResult::skip();
           return callback(op);
         });
@@ -86,7 +86,7 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
   let extraClassDeclaration = [{
     /// Generic method to retrieve the successors of a LoopOpInterface operation.
     static void getLoopOpSuccessorRegions(
-        ::mlir::cir::LoopOpInterface op, ::mlir::RegionBranchPoint point,
+        ::cir::LoopOpInterface op, ::mlir::RegionBranchPoint point,
         ::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &regions);
   }];
 

@@ -20,12 +20,11 @@
 
 #include "llvm/Support/TimeProfiler.h"
 
-namespace mlir {
 namespace cir {
 
 FuncType getFuncPointerTy(mlir::Type typ) {
-  if (auto ptr = dyn_cast<PointerType>(typ))
-    return dyn_cast<FuncType>(ptr.getPointee());
+  if (auto ptr = mlir::dyn_cast<PointerType>(typ))
+    return mlir::dyn_cast<FuncType>(ptr.getPointee());
   return {};
 }
 
@@ -33,7 +32,7 @@ bool isFuncPointerTy(mlir::Type typ) { return (bool)getFuncPointerTy(typ); }
 
 struct CallConvLowering {
 
-  CallConvLowering(ModuleOp module)
+  CallConvLowering(mlir::ModuleOp module)
       : rewriter(module.getContext()),
         lowerModule(createLowerModule(module, rewriter)) {}
 
@@ -43,13 +42,12 @@ struct CallConvLowering {
     auto calls = op.getSymbolUses(module);
     if (calls.has_value()) {
       for (auto call : calls.value()) {
-        if (auto g = dyn_cast<GetGlobalOp>(call.getUser()))
+        if (auto g = mlir::dyn_cast<GetGlobalOp>(call.getUser()))
           rewriteGetGlobalOp(g);
-        else if (auto c = dyn_cast<CallOp>(call.getUser()))
+        else if (auto c = mlir::dyn_cast<CallOp>(call.getUser()))
           lowerDirectCallOp(c, op);
         else {
-          cir_cconv_assert_or_abort(!::cir::MissingFeatures::ABIFuncPtr(),
-                                    "NYI");
+          cir_cconv_assert_or_abort(!cir::MissingFeatures::ABIFuncPtr(), "NYI");
         }
       }
     }
@@ -75,7 +73,7 @@ private:
     return t;
   }
 
-  void bitcast(Value src, Type newTy) {
+  void bitcast(mlir::Value src, mlir::Type newTy) {
     if (src.getType() != newTy) {
       auto cast =
           rewriter.create<CastOp>(src.getLoc(), newTy, CastKind::bitcast, src);
@@ -125,18 +123,22 @@ struct CallConvLoweringPass
   using CallConvLoweringBase::CallConvLoweringBase;
 
   void runOnOperation() override;
-  StringRef getArgument() const override { return "cir-call-conv-lowering"; };
+  llvm::StringRef getArgument() const override {
+    return "cir-call-conv-lowering";
+  };
 };
 
 void CallConvLoweringPass::runOnOperation() {
-  auto module = dyn_cast<ModuleOp>(getOperation());
+  auto module = mlir::dyn_cast<mlir::ModuleOp>(getOperation());
   CallConvLowering cc(module);
   module.walk([&](FuncOp op) { cc.lower(op); });
 }
 
 } // namespace cir
 
-std::unique_ptr<Pass> createCallConvLoweringPass() {
+namespace mlir {
+
+std::unique_ptr<mlir::Pass> createCallConvLoweringPass() {
   return std::make_unique<cir::CallConvLoweringPass>();
 }
 

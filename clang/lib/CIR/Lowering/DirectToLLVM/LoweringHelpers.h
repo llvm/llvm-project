@@ -13,12 +13,10 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
-using namespace llvm;
-
 mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
                           mlir::IntegerType dstTy, bool isSigned = false) {
   auto srcTy = src.getType();
-  assert(isa<mlir::IntegerType>(srcTy));
+  assert(mlir::isa<mlir::IntegerType>(srcTy));
 
   auto srcWidth = mlir::cast<mlir::IntegerType>(srcTy).getWidth();
   auto dstWidth = mlir::cast<mlir::IntegerType>(dstTy).getWidth();

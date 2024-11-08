@@ -24,7 +24,6 @@
 #include "LowerModule.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace mlir {
 namespace cir {
 
 namespace {
@@ -46,9 +45,9 @@ public:
 
   // FIXME(cir): This expects a CXXRecordDecl! Not any record type.
   RecordArgABI getRecordArgABI(const StructType RD) const override {
-    cir_cconv_assert(!::cir::MissingFeatures::recordDeclIsCXXDecl());
+    cir_cconv_assert(!cir::MissingFeatures::recordDeclIsCXXDecl());
     // If C++ prohibits us from making a copy, pass by address.
-    cir_cconv_assert(!::cir::MissingFeatures::recordDeclCanPassInRegisters());
+    cir_cconv_assert(!cir::MissingFeatures::recordDeclCanPassInRegisters());
     return RAA_Default;
   }
 };
@@ -56,12 +55,12 @@ public:
 } // namespace
 
 bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
-  const StructType RD = dyn_cast<StructType>(FI.getReturnType());
+  const StructType RD = mlir::dyn_cast<StructType>(FI.getReturnType());
   if (!RD)
     return false;
 
   // If C++ prohibits us from making a copy, return by address.
-  if (::cir::MissingFeatures::recordDeclCanPassInRegisters())
+  if (cir::MissingFeatures::recordDeclCanPassInRegisters())
     cir_cconv_unreachable("NYI");
 
   return false;
@@ -76,7 +75,7 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
   case clang::TargetCXXABI::AppleARM64:
     // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
     // from ARMCXXABI. We'll have to follow suit.
-    cir_cconv_assert(!::cir::MissingFeatures::appleArm64CXXABI());
+    cir_cconv_assert(!cir::MissingFeatures::appleArm64CXXABI());
     return new ItaniumCXXABI(LM, /*UseARMMethodPtrABI=*/true,
                              /*UseARMGuardVarABI=*/true);
 
@@ -93,14 +92,13 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
 }
 
 } // namespace cir
-} // namespace mlir
 
 // FIXME(cir): Merge this into the CIRCXXABI class above.
 class LoweringPrepareItaniumCXXABI : public cir::LoweringPrepareCXXABI {
 public:
   mlir::Value lowerDynamicCast(cir::CIRBaseBuilderTy &builder,
                                clang::ASTContext &astCtx,
-                               mlir::cir::DynamicCastOp op) override;
-  mlir::Value lowerVAArg(cir::CIRBaseBuilderTy &builder, mlir::cir::VAArgOp op,
+                               cir::DynamicCastOp op) override;
+  mlir::Value lowerVAArg(cir::CIRBaseBuilderTy &builder, cir::VAArgOp op,
                          const cir::CIRDataLayout &datalayout) override;
 };

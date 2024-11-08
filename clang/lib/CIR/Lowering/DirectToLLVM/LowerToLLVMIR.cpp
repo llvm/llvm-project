@@ -68,8 +68,8 @@ private:
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
     llvm::LLVMContext &llvmContext = llvmModule->getContext();
 
-    if (auto openclVersionAttr = mlir::dyn_cast<mlir::cir::OpenCLVersionAttr>(
-            attribute.getValue())) {
+    if (auto openclVersionAttr =
+            mlir::dyn_cast<cir::OpenCLVersionAttr>(attribute.getValue())) {
       auto *int32Ty = llvm::IntegerType::get(llvmContext, 32);
       llvm::Metadata *oclVerElts[] = {
           llvm::ConstantAsMetadata::get(
@@ -92,11 +92,11 @@ private:
                      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
     llvm::LLVMContext &llvmCtx = moduleTranslation.getLLVMContext();
-    if (auto extraAttr = mlir::dyn_cast<mlir::cir::ExtraFuncAttributesAttr>(
+    if (auto extraAttr = mlir::dyn_cast<cir::ExtraFuncAttributesAttr>(
             attribute.getValue())) {
       for (auto attr : extraAttr.getElements()) {
         if (auto inlineAttr =
-                mlir::dyn_cast<mlir::cir::InlineAttr>(attr.getValue())) {
+                mlir::dyn_cast<cir::InlineAttr>(attr.getValue())) {
           if (inlineAttr.isNoInline())
             llvmFunc->addFnAttr(llvm::Attribute::NoInline);
           else if (inlineAttr.isAlwaysInline())
@@ -105,28 +105,27 @@ private:
             llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
           else
             llvm_unreachable("Unknown inline kind");
-        } else if (mlir::dyn_cast<mlir::cir::OptNoneAttr>(attr.getValue())) {
+        } else if (mlir::dyn_cast<cir::OptNoneAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
-        } else if (mlir::dyn_cast<mlir::cir::NoThrowAttr>(attr.getValue())) {
+        } else if (mlir::dyn_cast<cir::NoThrowAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
-        } else if (mlir::dyn_cast<mlir::cir::ConvergentAttr>(attr.getValue())) {
+        } else if (mlir::dyn_cast<cir::ConvergentAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::Convergent);
-        } else if (mlir::dyn_cast<mlir::cir::OpenCLKernelAttr>(
-                       attr.getValue())) {
+        } else if (mlir::dyn_cast<cir::OpenCLKernelAttr>(attr.getValue())) {
           const auto uniformAttrName =
-              mlir::cir::OpenCLKernelUniformWorkGroupSizeAttr::getMnemonic();
+              cir::OpenCLKernelUniformWorkGroupSizeAttr::getMnemonic();
           const bool isUniform =
               extraAttr.getElements().getNamed(uniformAttrName).has_value();
           auto attrs = llvmFunc->getAttributes().addFnAttribute(
               llvmCtx, "uniform-work-group-size", isUniform ? "true" : "false");
           llvmFunc->setAttributes(attrs);
         } else if (auto clKernelMetadata =
-                       mlir::dyn_cast<mlir::cir::OpenCLKernelMetadataAttr>(
+                       mlir::dyn_cast<cir::OpenCLKernelMetadataAttr>(
                            attr.getValue())) {
           emitOpenCLKernelMetadata(clKernelMetadata, llvmFunc,
                                    moduleTranslation);
         } else if (auto clArgMetadata =
-                       mlir::dyn_cast<mlir::cir::OpenCLKernelArgMetadataAttr>(
+                       mlir::dyn_cast<cir::OpenCLKernelArgMetadataAttr>(
                            attr.getValue())) {
           emitOpenCLKernelArgMetadata(clArgMetadata, func.getNumArguments(),
                                       llvmFunc, moduleTranslation);
@@ -139,8 +138,7 @@ private:
   }
 
   void emitOpenCLKernelMetadata(
-      mlir::cir::OpenCLKernelMetadataAttr clKernelMetadata,
-      llvm::Function *llvmFunc,
+      cir::OpenCLKernelMetadataAttr clKernelMetadata, llvm::Function *llvmFunc,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const {
     auto &vmCtx = moduleTranslation.getLLVMContext();
 
@@ -192,7 +190,7 @@ private:
   }
 
   void emitOpenCLKernelArgMetadata(
-      mlir::cir::OpenCLKernelArgMetadataAttr clArgMetadata, unsigned numArgs,
+      cir::OpenCLKernelArgMetadataAttr clArgMetadata, unsigned numArgs,
       llvm::Function *llvmFunc,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const {
     auto &vmCtx = moduleTranslation.getLLVMContext();
@@ -266,11 +264,10 @@ private:
 };
 
 void registerCIRDialectTranslation(mlir::DialectRegistry &registry) {
-  registry.insert<mlir::cir::CIRDialect>();
-  registry.addExtension(
-      +[](mlir::MLIRContext *ctx, mlir::cir::CIRDialect *dialect) {
-        dialect->addInterfaces<CIRDialectLLVMIRTranslationInterface>();
-      });
+  registry.insert<cir::CIRDialect>();
+  registry.addExtension(+[](mlir::MLIRContext *ctx, cir::CIRDialect *dialect) {
+    dialect->addInterfaces<CIRDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void registerCIRDialectTranslation(mlir::MLIRContext &context) {

@@ -15,6 +15,6 @@
 int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
-  registry.insert<mlir::cir::CIRDialect>();
+  registry.insert<cir::CIRDialect>();
   return failed(mlir::MlirLspServerMain(argc, argv, registry));
 }

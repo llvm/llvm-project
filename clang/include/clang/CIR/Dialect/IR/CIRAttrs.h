@@ -35,13 +35,11 @@ class VarDecl;
 class RecordDecl;
 } // namespace clang
 
-namespace mlir {
 namespace cir {
 class ArrayType;
 class StructType;
 class BoolType;
 } // namespace cir
-} // namespace mlir
 
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.h.inc"

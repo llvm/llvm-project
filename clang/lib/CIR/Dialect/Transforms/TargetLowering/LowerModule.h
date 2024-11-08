@@ -28,24 +28,23 @@
 #include "clang/CIR/MissingFeatures.h"
 #include <memory>
 
-namespace mlir {
 namespace cir {
 
 class LowerModule {
   CIRLowerContext context;
-  ModuleOp module;
+  mlir::ModuleOp module;
   const std::unique_ptr<clang::TargetInfo> Target;
   mutable std::unique_ptr<TargetLoweringInfo> TheTargetCodeGenInfo;
   std::unique_ptr<CIRCXXABI> ABI;
 
   LowerTypes types;
 
-  PatternRewriter &rewriter;
+  mlir::PatternRewriter &rewriter;
 
 public:
-  LowerModule(clang::LangOptions opts, ModuleOp &module, StringAttr DL,
-              std::unique_ptr<clang::TargetInfo> target,
-              PatternRewriter &rewriter);
+  LowerModule(clang::LangOptions opts, mlir::ModuleOp &module,
+              mlir::StringAttr DL, std::unique_ptr<clang::TargetInfo> target,
+              mlir::PatternRewriter &rewriter);
   ~LowerModule() = default;
 
   // Trivial getters.
@@ -53,10 +52,10 @@ public:
   CIRLowerContext &getContext() { return context; }
   CIRCXXABI &getCXXABI() const { return *ABI; }
   const clang::TargetInfo &getTarget() const { return *Target; }
-  MLIRContext *getMLIRContext() { return module.getContext(); }
-  ModuleOp &getModule() { return module; }
+  mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
+  mlir::ModuleOp &getModule() { return module; }
 
-  const ::cir::CIRDataLayout &getDataLayout() const {
+  const cir::CIRDataLayout &getDataLayout() const {
     return types.getDataLayout();
   }
 
@@ -68,12 +67,12 @@ public:
   // FIXME(cir): This would be in ASTContext, not CodeGenModule.
   clang::TargetCXXABI::Kind getCXXABIKind() const {
     auto kind = getTarget().getCXXABI().getKind();
-    cir_cconv_assert(!::cir::MissingFeatures::langOpts());
+    cir_cconv_assert(!cir::MissingFeatures::langOpts());
     return kind;
   }
 
   void
-  constructAttributeList(StringRef Name, const LowerFunctionInfo &FI,
+  constructAttributeList(llvm::StringRef Name, const LowerFunctionInfo &FI,
                          FuncOp CalleeInfo, // TODO(cir): Implement CalleeInfo?
                          FuncOp newFn, unsigned &CallingConv,
                          bool AttrOnCallSite, bool IsThunk);
@@ -86,23 +85,23 @@ public:
                              bool IsIncompleteFunction, bool IsThunk);
 
   // Create a CIR FuncOp with with the given signature.
-  FuncOp createCIRFunction(
-      StringRef MangledName, FuncType Ty, FuncOp D, bool ForVTable,
-      bool DontDefer = false, bool IsThunk = false,
-      ArrayRef<Attribute> = {}, // TODO(cir): __attribute__(()) stuff.
-      bool IsForDefinition = false);
+  FuncOp createCIRFunction(llvm::StringRef MangledName, FuncType Ty, FuncOp D,
+                           bool ForVTable, bool DontDefer = false,
+                           bool IsThunk = false,
+                           llvm::ArrayRef<mlir::Attribute> =
+                               {}, // TODO(cir): __attribute__(()) stuff.
+                           bool IsForDefinition = false);
 
   // Rewrite CIR FuncOp to match the target ABI.
-  LogicalResult rewriteFunctionDefinition(FuncOp op);
+  llvm::LogicalResult rewriteFunctionDefinition(FuncOp op);
 
   // Rewrite CIR CallOp to match the target ABI.
-  LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp = {});
+  llvm::LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp = {});
 };
 
-std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
-                                               PatternRewriter &rewriter);
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module,
+                                               mlir::PatternRewriter &rewriter);
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERMODULE_H

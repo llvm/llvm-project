@@ -22,7 +22,7 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
-using namespace mlir::cir;
+using namespace cir;
 
 Address CIRGenFunction::buildCompoundStmtWithoutScope(const CompoundStmt &S,
                                                       bool getLast,
@@ -72,7 +72,7 @@ Address CIRGenFunction::buildCompoundStmt(const CompoundStmt &S, bool getLast,
   // Add local scope to track new declared variables.
   SymTableScopeTy varScope(symbolTable);
   auto scopeLoc = getLoc(S.getSourceRange());
-  builder.create<mlir::cir::ScopeOp>(
+  builder.create<cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
         LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
@@ -437,7 +437,7 @@ mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
   // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
   // The if scope contains the full source range for IfStmt.
   auto scopeLoc = getLoc(S.getSourceRange());
-  builder.create<mlir::cir::ScopeOp>(
+  builder.create<cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         LexicalScope lexScope{*this, scopeLoc, builder.getInsertionBlock()};
@@ -533,11 +533,10 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
     // dispatched by `handleReturnVal()` might needs to manipulate blocks and
     // look into parents, which are all unlinked.
     mlir::OpBuilder::InsertPoint scopeBody;
-    builder.create<mlir::cir::ScopeOp>(
-        scopeLoc, /*scopeBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          scopeBody = b.saveInsertionPoint();
-        });
+    builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                                 [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                   scopeBody = b.saveInsertionPoint();
+                                 });
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(scopeBody);
@@ -567,8 +566,8 @@ mlir::LogicalResult CIRGenFunction::buildGotoStmt(const GotoStmt &S) {
   // info support just yet, look at this again once we have it.
   assert(builder.getInsertionBlock() && "not yet implemented");
 
-  builder.create<mlir::cir::GotoOp>(getLoc(S.getSourceRange()),
-                                    S.getLabel()->getName());
+  builder.create<cir::GotoOp>(getLoc(S.getSourceRange()),
+                              S.getLabel()->getName());
 
   // A goto marks the end of a block, create a new one for codegen after
   // buildGotoStmt can resume building in that block.
@@ -594,7 +593,7 @@ mlir::LogicalResult CIRGenFunction::buildLabel(const LabelDecl *D) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  builder.create<mlir::cir::LabelOp>(getLoc(D->getSourceRange()), D->getName());
+  builder.create<cir::LabelOp>(getLoc(D->getSourceRange()), D->getName());
   builder.setInsertionPointToEnd(labelBlock);
 
   //  FIXME: emit debug info for labels, incrementProfileCounter
@@ -623,7 +622,7 @@ mlir::LogicalResult CIRGenFunction::buildBreakStmt(const clang::BreakStmt &S) {
 const CaseStmt *CIRGenFunction::foldCaseStmt(const clang::CaseStmt &S,
                                              mlir::Type condType,
                                              mlir::ArrayAttr &value,
-                                             mlir::cir::CaseOpKind &kind) {
+                                             cir::CaseOpKind &kind) {
   const CaseStmt *caseStmt = &S;
   const CaseStmt *lastCase = &S;
   SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
@@ -637,17 +636,17 @@ const CaseStmt *CIRGenFunction::foldCaseStmt(const clang::CaseStmt &S,
     if (auto *rhs = caseStmt->getRHS()) {
       auto endVal = rhs->EvaluateKnownConstInt(getContext());
       SmallVector<mlir::Attribute, 4> rangeCaseAttr = {
-          mlir::cir::IntAttr::get(condType, intVal),
-          mlir::cir::IntAttr::get(condType, endVal)};
+          cir::IntAttr::get(condType, intVal),
+          cir::IntAttr::get(condType, endVal)};
       value = builder.getArrayAttr(rangeCaseAttr);
-      kind = mlir::cir::CaseOpKind::Range;
+      kind = cir::CaseOpKind::Range;
 
       // We may not be able to fold rangaes. Due to we can't present range case
       // with other trivial cases now.
       return caseStmt;
     }
 
-    caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(condType, intVal));
+    caseEltValueListAttr.push_back(cir::IntAttr::get(condType, intVal));
 
     caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
 
@@ -659,8 +658,8 @@ const CaseStmt *CIRGenFunction::foldCaseStmt(const clang::CaseStmt &S,
 
   if (!caseEltValueListAttr.empty()) {
     value = builder.getArrayAttr(caseEltValueListAttr);
-    kind = caseEltValueListAttr.size() > 1 ? mlir::cir::CaseOpKind::Anyof
-                                           : mlir::cir::CaseOpKind::Equal;
+    kind = caseEltValueListAttr.size() > 1 ? cir::CaseOpKind::Anyof
+                                           : cir::CaseOpKind::Equal;
   }
 
   return lastCase;
@@ -763,7 +762,7 @@ mlir::LogicalResult
 CIRGenFunction::buildDefaultStmt(const DefaultStmt &S, mlir::Type condType,
                                  bool buildingTopLevelCase) {
   return buildCaseDefaultCascade(&S, condType, builder.getArrayAttr({}),
-                                 mlir::cir::CaseOpKind::Default,
+                                 cir::CaseOpKind::Default,
                                  buildingTopLevelCase);
 }
 
@@ -786,7 +785,7 @@ mlir::LogicalResult CIRGenFunction::buildSwitchCase(const SwitchCase &S,
 mlir::LogicalResult
 CIRGenFunction::buildCXXForRangeStmt(const CXXForRangeStmt &S,
                                      ArrayRef<const Attr *> ForAttrs) {
-  mlir::cir::ForOp forOp;
+  cir::ForOp forOp;
 
   // TODO(cir): pass in array of attributes.
   auto forStmtBuilder = [&]() -> mlir::LogicalResult {
@@ -842,15 +841,16 @@ CIRGenFunction::buildCXXForRangeStmt(const CXXForRangeStmt &S,
 
   auto res = mlir::success();
   auto scopeLoc = getLoc(S.getSourceRange());
-  builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // Create a cleanup scope for the condition variable cleanups.
-        // Logical equivalent from LLVM codegn for
-        // LexicalScope ConditionScope(*this, S.getSourceRange())...
-        LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        res = forStmtBuilder();
-      });
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 // Create a cleanup scope for the condition
+                                 // variable cleanups. Logical equivalent from
+                                 // LLVM codegn for LexicalScope
+                                 // ConditionScope(*this, S.getSourceRange())...
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = forStmtBuilder();
+                               });
 
   if (res.failed())
     return res;
@@ -860,7 +860,7 @@ CIRGenFunction::buildCXXForRangeStmt(const CXXForRangeStmt &S,
 }
 
 mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
-  mlir::cir::ForOp forOp;
+  cir::ForOp forOp;
 
   // TODO: pass in array of attributes.
   auto forStmtBuilder = [&]() -> mlir::LogicalResult {
@@ -893,10 +893,9 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
             // scalar type.
             condVal = evaluateExprAsBool(S.getCond());
           } else {
-            auto boolTy = mlir::cir::BoolType::get(b.getContext());
-            condVal = b.create<mlir::cir::ConstantOp>(
-                loc, boolTy,
-                mlir::cir::BoolAttr::get(b.getContext(), boolTy, true));
+            auto boolTy = cir::BoolType::get(b.getContext());
+            condVal = b.create<cir::ConstantOp>(
+                loc, boolTy, cir::BoolAttr::get(b.getContext(), boolTy, true));
           }
           builder.createCondition(condVal);
         },
@@ -924,12 +923,12 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
 
   auto res = mlir::success();
   auto scopeLoc = getLoc(S.getSourceRange());
-  builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        res = forStmtBuilder();
-      });
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = forStmtBuilder();
+                               });
 
   if (res.failed())
     return res;
@@ -939,7 +938,7 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
 }
 
 mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
-  mlir::cir::DoWhileOp doWhileOp;
+  cir::DoWhileOp doWhileOp;
 
   // TODO: pass in array of attributes.
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
@@ -974,12 +973,12 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
 
   auto res = mlir::success();
   auto scopeLoc = getLoc(S.getSourceRange());
-  builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        res = doStmtBuilder();
-      });
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = doStmtBuilder();
+                               });
 
   if (res.failed())
     return res;
@@ -989,7 +988,7 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
 }
 
 mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
-  mlir::cir::WhileOp whileOp;
+  cir::WhileOp whileOp;
 
   // TODO: pass in array of attributes.
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
@@ -1029,12 +1028,12 @@ mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
 
   auto res = mlir::success();
   auto scopeLoc = getLoc(S.getSourceRange());
-  builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        res = whileStmtBuilder();
-      });
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = whileStmtBuilder();
+                               });
 
   if (res.failed())
     return res;
@@ -1120,12 +1119,12 @@ mlir::LogicalResult CIRGenFunction::buildSwitchStmt(const SwitchStmt &S) {
   // The switch scope contains the full source range for SwitchStmt.
   auto scopeLoc = getLoc(S.getSourceRange());
   auto res = mlir::success();
-  builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        res = switchStmtBuilder();
-      });
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = switchStmtBuilder();
+                               });
 
   llvm::SmallVector<CaseOp> cases;
   swop.collectCases(cases);

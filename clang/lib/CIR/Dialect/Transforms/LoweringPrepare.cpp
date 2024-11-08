@@ -32,7 +32,7 @@
 
 using cir::CIRBaseBuilderTy;
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 static SmallString<128> getTransformedFileName(ModuleOp theModule) {
   SmallString<128> FileName;
@@ -101,17 +101,15 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   /// Build attribute of global annotation values
   void buildGlobalAnnotationValues();
 
-  FuncOp
-  buildRuntimeFunction(mlir::OpBuilder &builder, llvm::StringRef name,
-                       mlir::Location loc, mlir::cir::FuncType type,
-                       mlir::cir::GlobalLinkageKind linkage =
-                           mlir::cir::GlobalLinkageKind::ExternalLinkage);
+  FuncOp buildRuntimeFunction(
+      mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+      cir::FuncType type,
+      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
-  GlobalOp
-  buildRuntimeVariable(mlir::OpBuilder &Builder, llvm::StringRef Name,
-                       mlir::Location Loc, mlir::Type type,
-                       mlir::cir::GlobalLinkageKind Linkage =
-                           mlir::cir::GlobalLinkageKind::ExternalLinkage);
+  GlobalOp buildRuntimeVariable(
+      mlir::OpBuilder &Builder, llvm::StringRef Name, mlir::Location Loc,
+      mlir::Type type,
+      cir::GlobalLinkageKind Linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
   /// Track the current number of global array string count for when the symbol
   /// has an empty name, and prevent collisions.
@@ -122,14 +120,14 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   /// -----------
 
   clang::ASTContext *astCtx;
-  std::shared_ptr<::cir::LoweringPrepareCXXABI> cxxABI;
+  std::shared_ptr<cir::LoweringPrepareCXXABI> cxxABI;
 
   void setASTContext(clang::ASTContext *c) {
     astCtx = c;
     auto abiStr = c->getTargetInfo().getABI();
     switch (c->getCXXABIKind()) {
     case clang::TargetCXXABI::GenericItanium:
-      cxxABI.reset(::cir::LoweringPrepareCXXABI::createItaniumABI());
+      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
       break;
     case clang::TargetCXXABI::GenericAArch64:
     case clang::TargetCXXABI::AppleARM64:
@@ -138,11 +136,11 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
       // query system.
       assert(abiStr == "aapcs" || abiStr == "darwinpcs" ||
              abiStr == "aapcs-soft");
-      cxxABI.reset(::cir::LoweringPrepareCXXABI::createAArch64ABI(
+      cxxABI.reset(cir::LoweringPrepareCXXABI::createAArch64ABI(
           abiStr == "aapcs"
-              ? ::cir::AArch64ABIKind::AAPCS
-              : (abiStr == "darwinpccs" ? ::cir::AArch64ABIKind::DarwinPCS
-                                        : ::cir::AArch64ABIKind::AAPCSSoft)));
+              ? cir::AArch64ABIKind::AAPCS
+              : (abiStr == "darwinpccs" ? cir::AArch64ABIKind::DarwinPCS
+                                        : cir::AArch64ABIKind::AAPCSSoft)));
       break;
     default:
       llvm_unreachable("NYI");
@@ -157,23 +155,23 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   llvm::SmallVector<FuncOp, 4> dynamicInitializers;
 
   /// List of ctors to be called before main()
-  SmallVector<mlir::Attribute, 4> globalCtorList;
+  llvm::SmallVector<mlir::Attribute, 4> globalCtorList;
   /// List of dtors to be called when unloading module.
-  SmallVector<mlir::Attribute, 4> globalDtorList;
+  llvm::SmallVector<mlir::Attribute, 4> globalDtorList;
   /// List of annotations in the module
-  SmallVector<mlir::Attribute, 4> globalAnnotations;
+  llvm::SmallVector<mlir::Attribute, 4> globalAnnotations;
 };
 } // namespace
 
 GlobalOp LoweringPreparePass::buildRuntimeVariable(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    mlir::Type type, mlir::cir::GlobalLinkageKind linkage) {
+    mlir::Type type, cir::GlobalLinkageKind linkage) {
   GlobalOp g = dyn_cast_or_null<GlobalOp>(SymbolTable::lookupNearestSymbolFrom(
       theModule, StringAttr::get(theModule->getContext(), name)));
   if (!g) {
-    g = builder.create<mlir::cir::GlobalOp>(loc, name, type);
+    g = builder.create<cir::GlobalOp>(loc, name, type);
     g.setLinkageAttr(
-        mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+        cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
   }
@@ -182,17 +180,17 @@ GlobalOp LoweringPreparePass::buildRuntimeVariable(
 
 FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    mlir::cir::FuncType type, mlir::cir::GlobalLinkageKind linkage) {
+    cir::FuncType type, cir::GlobalLinkageKind linkage) {
   FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
       theModule, StringAttr::get(theModule->getContext(), name)));
   if (!f) {
-    f = builder.create<mlir::cir::FuncOp>(loc, name, type);
+    f = builder.create<cir::FuncOp>(loc, name, type);
     f.setLinkageAttr(
-        mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+        cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
     mlir::NamedAttrList attrs;
-    f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
+    f.setExtraAttrsAttr(cir::ExtraFuncAttributesAttr::get(
         builder.getContext(), attrs.getDictionary(builder.getContext())));
   }
   return f;
@@ -212,11 +210,10 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
   // Create a variable initialization function.
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
-  auto voidTy = ::mlir::cir::VoidType::get(builder.getContext());
-  auto fnType = mlir::cir::FuncType::get({}, voidTy);
-  FuncOp f =
-      buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
-                           mlir::cir::GlobalLinkageKind::InternalLinkage);
+  auto voidTy = cir::VoidType::get(builder.getContext());
+  auto fnType = cir::FuncType::get({}, voidTy);
+  FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
+                                  cir::GlobalLinkageKind::InternalLinkage);
 
   // Move over the initialzation code of the ctor region.
   auto &block = op.getCtorRegion().front();
@@ -236,8 +233,8 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
 
     // Look for the destructor call in dtorBlock
     auto &dtorBlock = dtorRegion.front();
-    mlir::cir::CallOp dtorCall;
-    for (auto op : reverse(dtorBlock.getOps<mlir::cir::CallOp>())) {
+    cir::CallOp dtorCall;
+    for (auto op : reverse(dtorBlock.getOps<cir::CallOp>())) {
       dtorCall = op;
       break;
     }
@@ -249,16 +246,14 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
 
     // Create a runtime helper function:
     //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-    auto voidPtrTy =
-        ::mlir::cir::PointerType::get(builder.getContext(), voidTy);
-    auto voidFnTy = mlir::cir::FuncType::get({voidPtrTy}, voidTy);
-    auto voidFnPtrTy =
-        ::mlir::cir::PointerType::get(builder.getContext(), voidFnTy);
+    auto voidPtrTy = cir::PointerType::get(builder.getContext(), voidTy);
+    auto voidFnTy = cir::FuncType::get({voidPtrTy}, voidTy);
+    auto voidFnPtrTy = cir::PointerType::get(builder.getContext(), voidFnTy);
     auto HandlePtrTy =
-        mlir::cir::PointerType::get(builder.getContext(), Handle.getSymType());
-    auto fnAtExitType = mlir::cir::FuncType::get(
-        {voidFnPtrTy, voidPtrTy, HandlePtrTy},
-        mlir::cir::VoidType::get(builder.getContext()));
+        cir::PointerType::get(builder.getContext(), Handle.getSymType());
+    auto fnAtExitType =
+        cir::FuncType::get({voidFnPtrTy, voidPtrTy, HandlePtrTy},
+                           cir::VoidType::get(builder.getContext()));
     const char *nameAtExit = "__cxa_atexit";
     FuncOp fnAtExit =
         buildRuntimeFunction(builder, nameAtExit, op.getLoc(), fnAtExitType);
@@ -267,18 +262,18 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
     // &__dso_handle)
     builder.setInsertionPointAfter(dtorCall);
     mlir::Value args[3];
-    auto dtorPtrTy = mlir::cir::PointerType::get(builder.getContext(),
-                                                 dtorFunc.getFunctionType());
+    auto dtorPtrTy =
+        cir::PointerType::get(builder.getContext(), dtorFunc.getFunctionType());
     // dtorPtrTy
-    args[0] = builder.create<mlir::cir::GetGlobalOp>(
-        dtorCall.getLoc(), dtorPtrTy, dtorFunc.getSymName());
-    args[0] = builder.create<mlir::cir::CastOp>(
-        dtorCall.getLoc(), voidFnPtrTy, mlir::cir::CastKind::bitcast, args[0]);
-    args[1] = builder.create<mlir::cir::CastOp>(dtorCall.getLoc(), voidPtrTy,
-                                                mlir::cir::CastKind::bitcast,
-                                                dtorCall.getArgOperand(0));
-    args[2] = builder.create<mlir::cir::GetGlobalOp>(
-        Handle.getLoc(), HandlePtrTy, Handle.getSymName());
+    args[0] = builder.create<cir::GetGlobalOp>(dtorCall.getLoc(), dtorPtrTy,
+                                               dtorFunc.getSymName());
+    args[0] = builder.create<cir::CastOp>(dtorCall.getLoc(), voidFnPtrTy,
+                                          cir::CastKind::bitcast, args[0]);
+    args[1] = builder.create<cir::CastOp>(dtorCall.getLoc(), voidPtrTy,
+                                          cir::CastKind::bitcast,
+                                          dtorCall.getArgOperand(0));
+    args[2] = builder.create<cir::GetGlobalOp>(Handle.getLoc(), HandlePtrTy,
+                                               Handle.getSymName());
     builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
     dtorCall->erase();
     entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
@@ -305,11 +300,11 @@ static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
   }
 
   auto canonicalizedCmpInfo =
-      mlir::cir::CmpThreeWayInfoAttr::get(builder.getContext(), -1, 0, 1);
+      cir::CmpThreeWayInfoAttr::get(builder.getContext(), -1, 0, 1);
   mlir::Value result =
       builder
-          .create<mlir::cir::CmpThreeWayOp>(loc, op.getType(), op.getLhs(),
-                                            op.getRhs(), canonicalizedCmpInfo)
+          .create<cir::CmpThreeWayOp>(loc, op.getType(), op.getLhs(),
+                                      op.getRhs(), canonicalizedCmpInfo)
           .getResult();
 
   auto compareAndYield = [&](mlir::Value input, int64_t test,
@@ -317,12 +312,12 @@ static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
     // Create a conditional branch that tests whether `input` is equal to
     // `test`. If `input` is equal to `test`, yield `yield`. Otherwise, yield
     // `input` as is.
-    auto testValue = builder.getConstant(
-        loc, mlir::cir::IntAttr::get(input.getType(), test));
-    auto yieldValue = builder.getConstant(
-        loc, mlir::cir::IntAttr::get(input.getType(), yield));
+    auto testValue =
+        builder.getConstant(loc, cir::IntAttr::get(input.getType(), test));
+    auto yieldValue =
+        builder.getConstant(loc, cir::IntAttr::get(input.getType(), yield));
     auto eqToTest =
-        builder.createCompare(loc, mlir::cir::CmpOpKind::eq, input, testValue);
+        builder.createCompare(loc, cir::CmpOpKind::eq, input, testValue);
     return builder.createSelect(loc, eqToTest, yieldValue, input);
   };
 
@@ -342,7 +337,7 @@ static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
 void LoweringPreparePass::lowerVAArgOp(VAArgOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPoint(op);
-  ::cir::CIRDataLayout datalayout(theModule);
+  cir::CIRDataLayout datalayout(theModule);
 
   auto res = cxxABI->lowerVAArg(builder, op, datalayout);
   if (res) {
@@ -354,7 +349,7 @@ void LoweringPreparePass::lowerVAArgOp(VAArgOp op) {
 
 void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
   auto ty = op.getType();
-  if (!mlir::isa<mlir::cir::ComplexType>(ty))
+  if (!mlir::isa<cir::ComplexType>(ty))
     return;
 
   auto loc = op.getLoc();
@@ -371,22 +366,22 @@ void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
   mlir::Value resultReal;
   mlir::Value resultImag;
   switch (opKind) {
-  case mlir::cir::UnaryOpKind::Inc:
-  case mlir::cir::UnaryOpKind::Dec:
+  case cir::UnaryOpKind::Inc:
+  case cir::UnaryOpKind::Dec:
     resultReal = builder.createUnaryOp(loc, opKind, operandReal);
     resultImag = operandImag;
     break;
 
-  case mlir::cir::UnaryOpKind::Plus:
-  case mlir::cir::UnaryOpKind::Minus:
+  case cir::UnaryOpKind::Plus:
+  case cir::UnaryOpKind::Minus:
     resultReal = builder.createUnaryOp(loc, opKind, operandReal);
     resultImag = builder.createUnaryOp(loc, opKind, operandImag);
     break;
 
-  case mlir::cir::UnaryOpKind::Not:
+  case cir::UnaryOpKind::Not:
     resultReal = operandReal;
     resultImag =
-        builder.createUnaryOp(loc, mlir::cir::UnaryOpKind::Minus, operandImag);
+        builder.createUnaryOp(loc, cir::UnaryOpKind::Minus, operandImag);
     break;
   }
 
@@ -397,13 +392,12 @@ void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
 
 void LoweringPreparePass::lowerBinOp(BinOp op) {
   auto ty = op.getType();
-  if (!mlir::isa<mlir::cir::ComplexType>(ty))
+  if (!mlir::isa<cir::ComplexType>(ty))
     return;
 
   auto loc = op.getLoc();
   auto opKind = op.getKind();
-  assert((opKind == mlir::cir::BinOpKind::Add ||
-          opKind == mlir::cir::BinOpKind::Sub) &&
+  assert((opKind == cir::BinOpKind::Add || opKind == cir::BinOpKind::Sub) &&
          "invalid binary op kind on complex numbers");
 
   CIRBaseBuilderTy builder(getContext());
@@ -441,18 +435,18 @@ static mlir::Value lowerComplexToScalarCast(MLIRContext &ctx, CastOp op) {
 
   auto src = op.getSrc();
 
-  if (!mlir::isa<mlir::cir::BoolType>(op.getType()))
+  if (!mlir::isa<cir::BoolType>(op.getType()))
     return builder.createComplexReal(op.getLoc(), src);
 
   // Complex cast to bool: (bool)(a+bi) => (bool)a || (bool)b
   auto srcReal = builder.createComplexReal(op.getLoc(), src);
   auto srcImag = builder.createComplexImag(op.getLoc(), src);
 
-  mlir::cir::CastKind elemToBoolKind;
-  if (op.getKind() == mlir::cir::CastKind::float_complex_to_bool)
-    elemToBoolKind = mlir::cir::CastKind::float_to_bool;
-  else if (op.getKind() == mlir::cir::CastKind::int_complex_to_bool)
-    elemToBoolKind = mlir::cir::CastKind::int_to_bool;
+  cir::CastKind elemToBoolKind;
+  if (op.getKind() == cir::CastKind::float_complex_to_bool)
+    elemToBoolKind = cir::CastKind::float_to_bool;
+  else if (op.getKind() == cir::CastKind::int_complex_to_bool)
+    elemToBoolKind = cir::CastKind::int_to_bool;
   else
     llvm_unreachable("invalid complex to bool cast kind");
 
@@ -472,24 +466,24 @@ static mlir::Value lowerComplexToComplexCast(MLIRContext &ctx, CastOp op) {
 
   auto src = op.getSrc();
   auto dstComplexElemTy =
-      mlir::cast<mlir::cir::ComplexType>(op.getType()).getElementTy();
+      mlir::cast<cir::ComplexType>(op.getType()).getElementTy();
 
   auto srcReal = builder.createComplexReal(op.getLoc(), src);
   auto srcImag = builder.createComplexReal(op.getLoc(), src);
 
-  mlir::cir::CastKind scalarCastKind;
+  cir::CastKind scalarCastKind;
   switch (op.getKind()) {
-  case mlir::cir::CastKind::float_complex:
-    scalarCastKind = mlir::cir::CastKind::floating;
+  case cir::CastKind::float_complex:
+    scalarCastKind = cir::CastKind::floating;
     break;
-  case mlir::cir::CastKind::float_complex_to_int_complex:
-    scalarCastKind = mlir::cir::CastKind::float_to_int;
+  case cir::CastKind::float_complex_to_int_complex:
+    scalarCastKind = cir::CastKind::float_to_int;
     break;
-  case mlir::cir::CastKind::int_complex:
-    scalarCastKind = mlir::cir::CastKind::integral;
+  case cir::CastKind::int_complex:
+    scalarCastKind = cir::CastKind::integral;
     break;
-  case mlir::cir::CastKind::int_complex_to_float_complex:
-    scalarCastKind = mlir::cir::CastKind::int_to_float;
+  case cir::CastKind::int_complex_to_float_complex:
+    scalarCastKind = cir::CastKind::int_to_float;
     break;
   default:
     llvm_unreachable("invalid complex to complex cast kind");
@@ -505,22 +499,22 @@ static mlir::Value lowerComplexToComplexCast(MLIRContext &ctx, CastOp op) {
 void LoweringPreparePass::lowerCastOp(CastOp op) {
   mlir::Value loweredValue;
   switch (op.getKind()) {
-  case mlir::cir::CastKind::float_to_complex:
-  case mlir::cir::CastKind::int_to_complex:
+  case cir::CastKind::float_to_complex:
+  case cir::CastKind::int_to_complex:
     loweredValue = lowerScalarToComplexCast(getContext(), op);
     break;
 
-  case mlir::cir::CastKind::float_complex_to_real:
-  case mlir::cir::CastKind::int_complex_to_real:
-  case mlir::cir::CastKind::float_complex_to_bool:
-  case mlir::cir::CastKind::int_complex_to_bool:
+  case cir::CastKind::float_complex_to_real:
+  case cir::CastKind::int_complex_to_real:
+  case cir::CastKind::float_complex_to_bool:
+  case cir::CastKind::int_complex_to_bool:
     loweredValue = lowerComplexToScalarCast(getContext(), op);
     break;
 
-  case mlir::cir::CastKind::float_complex:
-  case mlir::cir::CastKind::float_complex_to_int_complex:
-  case mlir::cir::CastKind::int_complex:
-  case mlir::cir::CastKind::int_complex_to_float_complex:
+  case cir::CastKind::float_complex:
+  case cir::CastKind::float_complex_to_int_complex:
+  case cir::CastKind::int_complex:
+  case cir::CastKind::int_complex_to_float_complex:
     loweredValue = lowerComplexToComplexCast(getContext(), op);
     break;
 
@@ -535,16 +529,16 @@ void LoweringPreparePass::lowerCastOp(CastOp op) {
 static mlir::Value buildComplexBinOpLibCall(
     LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
     llvm::StringRef (*libFuncNameGetter)(llvm::APFloat::Semantics),
-    mlir::Location loc, mlir::cir::ComplexType ty, mlir::Value lhsReal,
+    mlir::Location loc, cir::ComplexType ty, mlir::Value lhsReal,
     mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag) {
-  auto elementTy = mlir::cast<mlir::cir::CIRFPTypeInterface>(ty.getElementTy());
+  auto elementTy = mlir::cast<cir::CIRFPTypeInterface>(ty.getElementTy());
 
   auto libFuncName = libFuncNameGetter(
       llvm::APFloat::SemanticsToEnum(elementTy.getFloatSemantics()));
   llvm::SmallVector<mlir::Type, 4> libFuncInputTypes(4, elementTy);
-  auto libFuncTy = mlir::cir::FuncType::get(libFuncInputTypes, ty);
+  auto libFuncTy = cir::FuncType::get(libFuncInputTypes, ty);
 
-  mlir::cir::FuncOp libFunc;
+  cir::FuncOp libFunc;
   {
     mlir::OpBuilder::InsertionGuard ipGuard{builder};
     builder.setInsertionPointToStart(pass.theModule.getBody());
@@ -598,32 +592,31 @@ getComplexDivLibCallName(llvm::APFloat::Semantics semantics) {
 
 static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
                                    CIRBaseBuilderTy &builder,
-                                   mlir::Location loc,
-                                   mlir::cir::ComplexBinOp op,
+                                   mlir::Location loc, cir::ComplexBinOp op,
                                    mlir::Value lhsReal, mlir::Value lhsImag,
                                    mlir::Value rhsReal, mlir::Value rhsImag) {
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
   auto resultRealLhs =
-      builder.createBinop(lhsReal, mlir::cir::BinOpKind::Mul, rhsReal);
+      builder.createBinop(lhsReal, cir::BinOpKind::Mul, rhsReal);
   auto resultRealRhs =
-      builder.createBinop(lhsImag, mlir::cir::BinOpKind::Mul, rhsImag);
+      builder.createBinop(lhsImag, cir::BinOpKind::Mul, rhsImag);
   auto resultImagLhs =
-      builder.createBinop(lhsReal, mlir::cir::BinOpKind::Mul, rhsImag);
+      builder.createBinop(lhsReal, cir::BinOpKind::Mul, rhsImag);
   auto resultImagRhs =
-      builder.createBinop(lhsImag, mlir::cir::BinOpKind::Mul, rhsReal);
-  auto resultReal = builder.createBinop(
-      resultRealLhs, mlir::cir::BinOpKind::Sub, resultRealRhs);
-  auto resultImag = builder.createBinop(
-      resultImagLhs, mlir::cir::BinOpKind::Add, resultImagRhs);
+      builder.createBinop(lhsImag, cir::BinOpKind::Mul, rhsReal);
+  auto resultReal =
+      builder.createBinop(resultRealLhs, cir::BinOpKind::Sub, resultRealRhs);
+  auto resultImag =
+      builder.createBinop(resultImagLhs, cir::BinOpKind::Add, resultImagRhs);
   auto algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
   auto ty = op.getType();
   auto range = op.getRange();
-  if (mlir::isa<mlir::cir::IntType>(ty.getElementTy()) ||
-      range == mlir::cir::ComplexRangeKind::Basic ||
-      range == mlir::cir::ComplexRangeKind::Improved ||
-      range == mlir::cir::ComplexRangeKind::Promoted)
+  if (mlir::isa<cir::IntType>(ty.getElementTy()) ||
+      range == cir::ComplexRangeKind::Basic ||
+      range == cir::ComplexRangeKind::Improved ||
+      range == cir::ComplexRangeKind::Promoted)
     return algebraicResult;
 
   // Check whether the real part and the imaginary part of the result are both
@@ -634,7 +627,7 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
   auto resultRealAndImagAreNaN =
       builder.createLogicalAnd(loc, resultRealIsNaN, resultImagIsNaN);
   return builder
-      .create<mlir::cir::TernaryOp>(
+      .create<cir::TernaryOp>(
           loc, resultRealAndImagAreNaN,
           [&](mlir::OpBuilder &, mlir::Location) {
             auto libCallResult = buildComplexBinOpLibCall(
@@ -658,23 +651,18 @@ buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   auto &c = rhsReal;
   auto &d = rhsImag;
 
-  auto ac = builder.createBinop(loc, a, mlir::cir::BinOpKind::Mul, c); // a*c
-  auto bd = builder.createBinop(loc, b, mlir::cir::BinOpKind::Mul, d); // b*d
-  auto cc = builder.createBinop(loc, c, mlir::cir::BinOpKind::Mul, c); // c*c
-  auto dd = builder.createBinop(loc, d, mlir::cir::BinOpKind::Mul, d); // d*d
-  auto acbd =
-      builder.createBinop(loc, ac, mlir::cir::BinOpKind::Add, bd); // ac+bd
-  auto ccdd =
-      builder.createBinop(loc, cc, mlir::cir::BinOpKind::Add, dd); // cc+dd
-  auto resultReal =
-      builder.createBinop(loc, acbd, mlir::cir::BinOpKind::Div, ccdd);
+  auto ac = builder.createBinop(loc, a, cir::BinOpKind::Mul, c);     // a*c
+  auto bd = builder.createBinop(loc, b, cir::BinOpKind::Mul, d);     // b*d
+  auto cc = builder.createBinop(loc, c, cir::BinOpKind::Mul, c);     // c*c
+  auto dd = builder.createBinop(loc, d, cir::BinOpKind::Mul, d);     // d*d
+  auto acbd = builder.createBinop(loc, ac, cir::BinOpKind::Add, bd); // ac+bd
+  auto ccdd = builder.createBinop(loc, cc, cir::BinOpKind::Add, dd); // cc+dd
+  auto resultReal = builder.createBinop(loc, acbd, cir::BinOpKind::Div, ccdd);
 
-  auto bc = builder.createBinop(loc, b, mlir::cir::BinOpKind::Mul, c); // b*c
-  auto ad = builder.createBinop(loc, a, mlir::cir::BinOpKind::Mul, d); // a*d
-  auto bcad =
-      builder.createBinop(loc, bc, mlir::cir::BinOpKind::Sub, ad); // bc-ad
-  auto resultImag =
-      builder.createBinop(loc, bcad, mlir::cir::BinOpKind::Div, ccdd);
+  auto bc = builder.createBinop(loc, b, cir::BinOpKind::Mul, c);     // b*c
+  auto ad = builder.createBinop(loc, a, cir::BinOpKind::Mul, d);     // a*d
+  auto bcad = builder.createBinop(loc, bc, cir::BinOpKind::Sub, ad); // bc-ad
+  auto resultImag = builder.createBinop(loc, bcad, cir::BinOpKind::Div, ccdd);
 
   return builder.createComplexCreate(loc, resultReal, resultImag);
 }
@@ -709,52 +697,47 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   auto &d = rhsImag;
 
   auto trueBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    auto r = builder.createBinop(loc, d, mlir::cir::BinOpKind::Div,
-                                 c); // r := d / c
-    auto rd = builder.createBinop(loc, r, mlir::cir::BinOpKind::Mul, d); // r*d
-    auto tmp = builder.createBinop(loc, c, mlir::cir::BinOpKind::Add,
+    auto r = builder.createBinop(loc, d, cir::BinOpKind::Div,
+                                 c);                               // r := d / c
+    auto rd = builder.createBinop(loc, r, cir::BinOpKind::Mul, d); // r*d
+    auto tmp = builder.createBinop(loc, c, cir::BinOpKind::Add,
                                    rd); // tmp := c + r*d
 
-    auto br = builder.createBinop(loc, b, mlir::cir::BinOpKind::Mul, r); // b*r
-    auto abr =
-        builder.createBinop(loc, a, mlir::cir::BinOpKind::Add, br); // a + b*r
-    auto e = builder.createBinop(loc, abr, mlir::cir::BinOpKind::Div, tmp);
+    auto br = builder.createBinop(loc, b, cir::BinOpKind::Mul, r);   // b*r
+    auto abr = builder.createBinop(loc, a, cir::BinOpKind::Add, br); // a + b*r
+    auto e = builder.createBinop(loc, abr, cir::BinOpKind::Div, tmp);
 
-    auto ar = builder.createBinop(loc, a, mlir::cir::BinOpKind::Mul, r); // a*r
-    auto bar =
-        builder.createBinop(loc, b, mlir::cir::BinOpKind::Sub, ar); // b - a*r
-    auto f = builder.createBinop(loc, bar, mlir::cir::BinOpKind::Div, tmp);
+    auto ar = builder.createBinop(loc, a, cir::BinOpKind::Mul, r);   // a*r
+    auto bar = builder.createBinop(loc, b, cir::BinOpKind::Sub, ar); // b - a*r
+    auto f = builder.createBinop(loc, bar, cir::BinOpKind::Div, tmp);
 
     auto result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
   auto falseBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    auto r = builder.createBinop(loc, c, mlir::cir::BinOpKind::Div,
-                                 d); // r := c / d
-    auto rc = builder.createBinop(loc, r, mlir::cir::BinOpKind::Mul, c); // r*c
-    auto tmp = builder.createBinop(loc, d, mlir::cir::BinOpKind::Add,
+    auto r = builder.createBinop(loc, c, cir::BinOpKind::Div,
+                                 d);                               // r := c / d
+    auto rc = builder.createBinop(loc, r, cir::BinOpKind::Mul, c); // r*c
+    auto tmp = builder.createBinop(loc, d, cir::BinOpKind::Add,
                                    rc); // tmp := d + r*c
 
-    auto ar = builder.createBinop(loc, a, mlir::cir::BinOpKind::Mul, r); // a*r
-    auto arb =
-        builder.createBinop(loc, ar, mlir::cir::BinOpKind::Add, b); // a*r + b
-    auto e = builder.createBinop(loc, arb, mlir::cir::BinOpKind::Div, tmp);
+    auto ar = builder.createBinop(loc, a, cir::BinOpKind::Mul, r);   // a*r
+    auto arb = builder.createBinop(loc, ar, cir::BinOpKind::Add, b); // a*r + b
+    auto e = builder.createBinop(loc, arb, cir::BinOpKind::Div, tmp);
 
-    auto br = builder.createBinop(loc, b, mlir::cir::BinOpKind::Mul, r); // b*r
-    auto bra =
-        builder.createBinop(loc, br, mlir::cir::BinOpKind::Sub, a); // b*r - a
-    auto f = builder.createBinop(loc, bra, mlir::cir::BinOpKind::Div, tmp);
+    auto br = builder.createBinop(loc, b, cir::BinOpKind::Mul, r);   // b*r
+    auto bra = builder.createBinop(loc, br, cir::BinOpKind::Sub, a); // b*r - a
+    auto f = builder.createBinop(loc, bra, cir::BinOpKind::Div, tmp);
 
     auto result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
-  auto cFabs = builder.create<mlir::cir::FAbsOp>(loc, c);
-  auto dFabs = builder.create<mlir::cir::FAbsOp>(loc, d);
-  auto cmpResult =
-      builder.createCompare(loc, mlir::cir::CmpOpKind::ge, cFabs, dFabs);
-  auto ternary = builder.create<mlir::cir::TernaryOp>(
+  auto cFabs = builder.create<cir::FAbsOp>(loc, c);
+  auto dFabs = builder.create<cir::FAbsOp>(loc, d);
+  auto cmpResult = builder.createCompare(loc, cir::CmpOpKind::ge, cFabs, dFabs);
+  auto ternary = builder.create<cir::TernaryOp>(
       loc, cmpResult, trueBranchBuilder, falseBranchBuilder);
 
   return ternary.getResult();
@@ -762,18 +745,17 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
 
 static mlir::Value lowerComplexDiv(LoweringPreparePass &pass,
                                    CIRBaseBuilderTy &builder,
-                                   mlir::Location loc,
-                                   mlir::cir::ComplexBinOp op,
+                                   mlir::Location loc, cir::ComplexBinOp op,
                                    mlir::Value lhsReal, mlir::Value lhsImag,
                                    mlir::Value rhsReal, mlir::Value rhsImag) {
   auto ty = op.getType();
-  if (mlir::isa<mlir::cir::CIRFPTypeInterface>(ty.getElementTy())) {
+  if (mlir::isa<cir::CIRFPTypeInterface>(ty.getElementTy())) {
     auto range = op.getRange();
-    if (range == mlir::cir::ComplexRangeKind::Improved ||
-        (range == mlir::cir::ComplexRangeKind::Promoted && !op.getPromoted()))
+    if (range == cir::ComplexRangeKind::Improved ||
+        (range == cir::ComplexRangeKind::Promoted && !op.getPromoted()))
       return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
                                            rhsReal, rhsImag);
-    if (range == mlir::cir::ComplexRangeKind::Full)
+    if (range == cir::ComplexRangeKind::Full)
       return buildComplexBinOpLibCall(pass, builder, &getComplexDivLibCallName,
                                       loc, ty, lhsReal, lhsImag, rhsReal,
                                       rhsImag);
@@ -796,7 +778,7 @@ void LoweringPreparePass::lowerComplexBinOp(ComplexBinOp op) {
   auto rhsImag = builder.createComplexImag(loc, rhs);
 
   mlir::Value loweredResult;
-  if (op.getKind() == mlir::cir::ComplexBinOpKind::Mul)
+  if (op.getKind() == cir::ComplexBinOpKind::Mul)
     loweredResult = lowerComplexMul(*this, builder, loc, op, lhsReal, lhsImag,
                                     rhsReal, rhsImag);
   else
@@ -832,8 +814,8 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   auto cmpInfo = op.getInfo();
 
   auto buildCmpRes = [&](int64_t value) -> mlir::Value {
-    return builder.create<mlir::cir::ConstantOp>(
-        loc, op.getType(), mlir::cir::IntAttr::get(op.getType(), value));
+    return builder.create<cir::ConstantOp>(
+        loc, op.getType(), cir::IntAttr::get(op.getType(), value));
   };
   auto ltRes = buildCmpRes(cmpInfo.getLt());
   auto eqRes = buildCmpRes(cmpInfo.getEq());
@@ -841,8 +823,7 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
 
   auto buildCmp = [&](CmpOpKind kind) -> mlir::Value {
     auto ty = BoolType::get(&getContext());
-    return builder.create<mlir::cir::CmpOp>(loc, ty, kind, op.getLhs(),
-                                            op.getRhs());
+    return builder.create<cir::CmpOp>(loc, ty, kind, op.getLhs(), op.getRhs());
   };
   auto buildSelect = [&](mlir::Value condition, mlir::Value trueResult,
                          mlir::Value falseResult) -> mlir::Value {
@@ -915,7 +896,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
 
   for (auto &f : dynamicInitializers) {
     // TODO: handle globals with a user-specified initialzation priority.
-    auto ctorAttr = mlir::cir::GlobalCtorAttr::get(&getContext(), f.getName());
+    auto ctorAttr = cir::GlobalCtorAttr::get(&getContext(), f.getName());
     globalCtorList.push_back(ctorAttr);
   }
 
@@ -939,11 +920,10 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&theModule.getBodyRegion().back());
-  auto fnType = mlir::cir::FuncType::get(
-      {}, mlir::cir::VoidType::get(builder.getContext()));
-  FuncOp f =
-      buildRuntimeFunction(builder, fnName, theModule.getLoc(), fnType,
-                           mlir::cir::GlobalLinkageKind::ExternalLinkage);
+  auto fnType =
+      cir::FuncType::get({}, cir::VoidType::get(builder.getContext()));
+  FuncOp f = buildRuntimeFunction(builder, fnName, theModule.getLoc(), fnType,
+                                  cir::GlobalLinkageKind::ExternalLinkage);
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (auto &f : dynamicInitializers) {
     builder.createCallOp(f.getLoc(), f);
@@ -973,14 +953,14 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
   // TODO: instead of fixed integer size, create alias for PtrDiffTy and unify
   // with CIRGen stuff.
   auto ptrDiffTy =
-      mlir::cir::IntType::get(builder.getContext(), 64, /*signed=*/false);
-  auto numArrayElementsConst = builder.create<mlir::cir::ConstantOp>(
-      loc, ptrDiffTy, mlir::cir::IntAttr::get(ptrDiffTy, arrayLen));
+      cir::IntType::get(builder.getContext(), 64, /*signed=*/false);
+  auto numArrayElementsConst = builder.create<cir::ConstantOp>(
+      loc, ptrDiffTy, cir::IntAttr::get(ptrDiffTy, arrayLen));
 
-  auto begin = builder.create<mlir::cir::CastOp>(
-      loc, eltTy, mlir::cir::CastKind::array_to_ptrdecay, arrayAddr);
-  mlir::Value end = builder.create<mlir::cir::PtrStrideOp>(
-      loc, eltTy, begin, numArrayElementsConst);
+  auto begin = builder.create<cir::CastOp>(
+      loc, eltTy, cir::CastKind::array_to_ptrdecay, arrayAddr);
+  mlir::Value end = builder.create<cir::PtrStrideOp>(loc, eltTy, begin,
+                                                     numArrayElementsConst);
 
   auto tmpAddr = builder.createAlloca(
       loc, /*addr type*/ builder.getPointerTo(eltTy),
@@ -991,29 +971,29 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       loc,
       /*condBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
-        mlir::Type boolTy = mlir::cir::BoolType::get(b.getContext());
-        auto cmp = builder.create<mlir::cir::CmpOp>(
-            loc, boolTy, mlir::cir::CmpOpKind::eq, currentElement, end);
+        auto currentElement = b.create<cir::LoadOp>(loc, eltTy, tmpAddr);
+        mlir::Type boolTy = cir::BoolType::get(b.getContext());
+        auto cmp = builder.create<cir::CmpOp>(loc, boolTy, cir::CmpOpKind::eq,
+                                              currentElement, end);
         builder.createCondition(cmp);
       },
       /*bodyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
+        auto currentElement = b.create<cir::LoadOp>(loc, eltTy, tmpAddr);
 
         CallOp ctorCall;
         op->walk([&](CallOp c) { ctorCall = c; });
         assert(ctorCall && "expected ctor call");
 
-        auto one = builder.create<mlir::cir::ConstantOp>(
-            loc, ptrDiffTy, mlir::cir::IntAttr::get(ptrDiffTy, 1));
+        auto one = builder.create<cir::ConstantOp>(
+            loc, ptrDiffTy, cir::IntAttr::get(ptrDiffTy, 1));
 
         ctorCall->moveAfter(one);
         ctorCall->setOperand(0, currentElement);
 
         // Advance pointer and store them to temporary variable
-        auto nextElement = builder.create<mlir::cir::PtrStrideOp>(
-            loc, eltTy, currentElement, one);
+        auto nextElement =
+            builder.create<cir::PtrStrideOp>(loc, eltTy, currentElement, one);
         builder.createStore(loc, nextElement, tmpAddr);
         builder.createYield(loc);
       });
@@ -1027,27 +1007,26 @@ void LoweringPreparePass::lowerArrayDtor(ArrayDtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   auto eltTy = op->getRegion(0).getArgument(0).getType();
-  auto arrayLen = mlir::cast<mlir::cir::ArrayType>(
-                      mlir::cast<mlir::cir::PointerType>(op.getAddr().getType())
-                          .getPointee())
-                      .getSize();
+  auto arrayLen =
+      mlir::cast<cir::ArrayType>(
+          mlir::cast<cir::PointerType>(op.getAddr().getType()).getPointee())
+          .getSize();
   lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
 }
 
-static std::string getGlobalVarNameForConstString(mlir::cir::StoreOp op,
+static std::string getGlobalVarNameForConstString(cir::StoreOp op,
                                                   uint64_t &cnt) {
   llvm::SmallString<64> finalName;
   llvm::raw_svector_ostream Out(finalName);
 
   Out << "__const.";
-  if (auto fnOp = op->getParentOfType<mlir::cir::FuncOp>()) {
+  if (auto fnOp = op->getParentOfType<cir::FuncOp>()) {
     Out << fnOp.getSymNameAttr().getValue() << ".";
   } else {
     Out << "module.";
   }
 
-  auto allocaOp =
-      dyn_cast_or_null<mlir::cir::AllocaOp>(op.getAddr().getDefiningOp());
+  auto allocaOp = dyn_cast_or_null<cir::AllocaOp>(op.getAddr().getDefiningOp());
   if (allocaOp && !allocaOp.getName().empty())
     Out << allocaOp.getName();
   else
@@ -1059,29 +1038,29 @@ void LoweringPreparePass::lowerToMemCpy(StoreOp op) {
   // Now that basic filter is done, do more checks before proceding with the
   // transformation.
   auto cstOp =
-      dyn_cast_if_present<mlir::cir::ConstantOp>(op.getValue().getDefiningOp());
+      dyn_cast_if_present<cir::ConstantOp>(op.getValue().getDefiningOp());
   if (!cstOp)
     return;
 
-  if (!isa<mlir::cir::ConstArrayAttr>(cstOp.getValue()))
+  if (!isa<cir::ConstArrayAttr>(cstOp.getValue()))
     return;
   CIRBaseBuilderTy builder(getContext());
 
   // Create a global which is initialized with the attribute that is either a
   // constant array or struct.
-  assert(!::cir::MissingFeatures::unnamedAddr() && "NYI");
+  assert(!cir::MissingFeatures::unnamedAddr() && "NYI");
   builder.setInsertionPointToStart(&theModule.getBodyRegion().front());
   std::string globalName =
       getGlobalVarNameForConstString(op, annonGlobalConstArrayCount);
-  mlir::cir::GlobalOp globalCst = buildRuntimeVariable(
+  cir::GlobalOp globalCst = buildRuntimeVariable(
       builder, globalName, op.getLoc(), op.getValue().getType(),
-      mlir::cir::GlobalLinkageKind::PrivateLinkage);
+      cir::GlobalLinkageKind::PrivateLinkage);
   globalCst.setInitialValueAttr(cstOp.getValue());
   globalCst.setConstant(true);
 
   // Transform the store into a cir.copy.
   builder.setInsertionPointAfter(op.getOperation());
-  mlir::cir::CopyOp memCpy =
+  cir::CopyOp memCpy =
       builder.createCopy(op.getAddr(), builder.createGetGlobal(globalCst));
   op->replaceAllUsesWith(memCpy);
   op->erase();
@@ -1094,10 +1073,10 @@ void LoweringPreparePass::lowerArrayCtor(ArrayCtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   auto eltTy = op->getRegion(0).getArgument(0).getType();
-  auto arrayLen = mlir::cast<mlir::cir::ArrayType>(
-                      mlir::cast<mlir::cir::PointerType>(op.getAddr().getType())
-                          .getPointee())
-                      .getSize();
+  auto arrayLen =
+      mlir::cast<cir::ArrayType>(
+          mlir::cast<cir::PointerType>(op.getAddr().getType()).getPointee())
+          .getSize();
   lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
 }
 
@@ -1139,7 +1118,7 @@ void LoweringPreparePass::addGlobalAnnotations(mlir::Operation *op,
   auto globalValue = cast<mlir::SymbolOpInterface>(op);
   mlir::StringAttr globalValueName = globalValue.getNameAttr();
   for (auto &annot : annotations) {
-    SmallVector<mlir::Attribute, 2> entryArray = {globalValueName, annot};
+    llvm::SmallVector<mlir::Attribute, 2> entryArray = {globalValueName, annot};
     globalAnnotations.push_back(
         mlir::ArrayAttr::get(theModule.getContext(), entryArray));
   }
@@ -1151,7 +1130,7 @@ void LoweringPreparePass::buildGlobalAnnotationValues() {
   mlir::ArrayAttr annotationValueArray =
       mlir::ArrayAttr::get(theModule.getContext(), globalAnnotations);
   theModule->setAttr("cir.global_annotations",
-                     mlir::cir::GlobalAnnotationValuesAttr::get(
+                     cir::GlobalAnnotationValuesAttr::get(
                          theModule.getContext(), annotationValueArray));
 }
 
@@ -1184,9 +1163,9 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerArrayDtor(arrayDtor);
   } else if (auto storeOp = dyn_cast<StoreOp>(op)) {
     mlir::Type valTy = storeOp.getValue().getType();
-    if (isa<mlir::cir::ArrayType>(valTy) || isa<mlir::cir::StructType>(valTy))
+    if (isa<cir::ArrayType>(valTy) || isa<cir::StructType>(valTy))
       lowerToMemCpy(storeOp);
-  } else if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(op)) {
+  } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorAttr()) {
       globalCtorList.push_back(globalCtor);
     } else if (auto globalDtor = fnOp.getGlobalDtorAttr()) {
@@ -1204,12 +1183,12 @@ void LoweringPreparePass::runOnOperation() {
     theModule = cast<::mlir::ModuleOp>(op);
   }
 
-  SmallVector<Operation *> opsToTransform;
+  llvm::SmallVector<Operation *> opsToTransform;
 
   op->walk([&](Operation *op) {
     if (isa<UnaryOp, BinOp, CastOp, ComplexBinOp, CmpThreeWayOp, VAArgOp,
             GlobalOp, DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp,
-            ArrayCtor, ArrayDtor, mlir::cir::FuncOp, StoreOp>(op))
+            ArrayCtor, ArrayDtor, cir::FuncOp, StoreOp>(op))
       opsToTransform.push_back(op);
   });
 

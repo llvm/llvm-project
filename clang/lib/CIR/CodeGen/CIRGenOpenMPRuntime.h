@@ -81,7 +81,7 @@ public:
   /// Checks if the provided global decl \a GD is a declare target variable and
   /// registers it when emitting code for the host.
   virtual void registerTargetGlobalVariable(const clang::VarDecl *VD,
-                                            mlir::cir::GlobalOp globalOp);
+                                            cir::GlobalOp globalOp);
 
   /// Emit deferred declare target variables marked for deferred emission.
   void emitDeferredTargetDecls() const;

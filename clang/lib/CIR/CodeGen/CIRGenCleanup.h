@@ -414,7 +414,7 @@ public:
     bool used = false;
 
     // Records a potentially unused instruction to be erased later.
-    void add(mlir::cir::AllocaOp allocaOp) { auxAllocas.push_back(allocaOp); }
+    void add(cir::AllocaOp allocaOp) { auxAllocas.push_back(allocaOp); }
 
     // Mark all recorded instructions as used. These will not be erased later.
     void markUsed() {

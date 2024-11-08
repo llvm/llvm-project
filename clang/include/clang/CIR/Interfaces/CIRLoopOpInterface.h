@@ -19,7 +19,6 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
-namespace mlir {
 namespace cir {
 namespace detail {
 
@@ -28,7 +27,6 @@ namespace detail {
 
 } // namespace detail
 } // namespace cir
-} // namespace mlir
 
 /// Include the tablegen'd interface declarations.
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h.inc"

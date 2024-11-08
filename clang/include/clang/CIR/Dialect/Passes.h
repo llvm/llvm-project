@@ -22,8 +22,8 @@ namespace mlir {
 
 std::unique_ptr<Pass> createLifetimeCheckPass();
 std::unique_ptr<Pass> createLifetimeCheckPass(clang::ASTContext *astCtx);
-std::unique_ptr<Pass> createLifetimeCheckPass(ArrayRef<StringRef> remark,
-                                              ArrayRef<StringRef> hist,
+std::unique_ptr<Pass> createLifetimeCheckPass(llvm::ArrayRef<StringRef> remark,
+                                              llvm::ArrayRef<StringRef> hist,
                                               unsigned hist_limit,
                                               clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createCIRCanonicalizePass();

@@ -80,12 +80,12 @@ def CIR_IntType : CIR_Type<"Int", "int",
 // Unsigned integer type of a specific width.
 class UInt<int width>
   : Type<And<[
-        CPred<"::mlir::isa<::mlir::cir::IntType>($_self)">,
-        CPred<"::mlir::cast<::mlir::cir::IntType>($_self).isUnsigned()">,
-        CPred<"::mlir::cast<::mlir::cir::IntType>($_self).getWidth() == " # width>
-        ]>, width # "-bit unsigned integer", "::mlir::cir::IntType">,
+        CPred<"::mlir::isa<::cir::IntType>($_self)">,
+        CPred<"::mlir::cast<::cir::IntType>($_self).isUnsigned()">,
+        CPred<"::mlir::cast<::cir::IntType>($_self).getWidth() == " # width>
+        ]>, width # "-bit unsigned integer", "::cir::IntType">,
     BuildableType<
-      "mlir::cir::IntType::get($_builder.getContext(), "
+      "cir::IntType::get($_builder.getContext(), "
       # width # ", /*isSigned=*/false)"> {
   int bitwidth = width;
 }
@@ -99,12 +99,12 @@ def UInt64 : UInt<64>;
 // Signed integer type of a specific width.
 class SInt<int width>
   : Type<And<[
-        CPred<"::mlir::isa<::mlir::cir::IntType>($_self)">,
-        CPred<"::mlir::cast<::mlir::cir::IntType>($_self).isSigned()">,
-        CPred<"::mlir::cast<::mlir::cir::IntType>($_self).getWidth() == " # width>
-        ]>, width # "-bit signed integer", "::mlir::cir::IntType">,
+        CPred<"::mlir::isa<::cir::IntType>($_self)">,
+        CPred<"::mlir::cast<::cir::IntType>($_self).isSigned()">,
+        CPred<"::mlir::cast<::cir::IntType>($_self).getWidth() == " # width>
+        ]>, width # "-bit signed integer", "::cir::IntType">,
     BuildableType<
-      "mlir::cir::IntType::get($_builder.getContext(), "
+      "cir::IntType::get($_builder.getContext(), "
       # width # ", /*isSigned=*/true)"> {
   int bitwidth = width;
 }
@@ -117,13 +117,13 @@ def SInt64 : SInt<64>;
 
 def PrimitiveUInt
     : AnyTypeOf<[UInt8, UInt16, UInt32, UInt64], "primitive unsigned int",
-                "::mlir::cir::IntType">;
+                "::cir::IntType">;
 def PrimitiveSInt
     : AnyTypeOf<[SInt8, SInt16, SInt32, SInt64], "primitive signed int",
-                "::mlir::cir::IntType">;
+                "::cir::IntType">;
 def PrimitiveInt
     : AnyTypeOf<[UInt8, UInt16, UInt32, UInt64, SInt8, SInt16, SInt32, SInt64],
-                "primitive int", "::mlir::cir::IntType">;
+                "primitive int", "::cir::IntType">;
 
 //===----------------------------------------------------------------------===//
 // FloatType
@@ -276,7 +276,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
 
   let extraClassDeclaration = [{
     bool isVoidPtr() const {
-      return mlir::isa<mlir::cir::VoidType>(getPointee());
+      return mlir::isa<cir::VoidType>(getPointee());
     }
   }];
 }
@@ -296,7 +296,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
   }];
 
   let parameters = (ins "mlir::Type":$memberTy,
-                        "mlir::cir::StructType":$clsTy);
+                        "cir::StructType":$clsTy);
 
   let assemblyFormat = [{
     `<` $memberTy `in` $clsTy `>`
@@ -381,7 +381,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     ```
   }];
 
-  let parameters = (ins ArrayRefParameter<"Type">:$inputs, "Type":$returnType,
+  let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs, "mlir::Type":$returnType,
                         "bool":$varArg);
   let assemblyFormat = [{
     `<` $returnType ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
@@ -389,7 +389,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "ArrayRef<Type>":$inputs, "Type":$returnType,
+      "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
       CArg<"bool", "false">:$isVarArg), [{
       return $_get(returnType.getContext(), inputs, returnType, isVarArg);
     }]>
@@ -400,21 +400,21 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     bool isVarArg() const { return getVarArg(); }
 
     /// Returns the `i`th input operand type. Asserts if out of bounds.
-    Type getInput(unsigned i) const { return getInputs()[i]; }
+    mlir::Type getInput(unsigned i) const { return getInputs()[i]; }
 
     /// Returns the number of arguments to the function.
     unsigned getNumInputs() const { return getInputs().size(); }
 
     /// Returns the result type of the function as an ArrayRef, enabling better
     /// integration with generic MLIR utilities.
-    ArrayRef<Type> getReturnTypes() const;
+    llvm::ArrayRef<mlir::Type> getReturnTypes() const;
 
     /// Returns whether the function is returns void.
     bool isVoid() const;
 
     /// Returns a clone of this function type with the given argument
     /// and result types.
-    FuncType clone(TypeRange inputs, TypeRange results) const;
+    FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
   }];
 }
 
@@ -430,8 +430,8 @@ def CIR_MethodType : CIR_Type<"Method", "method",
     of this type is ABI-dependent.
   }];
 
-  let parameters = (ins "mlir::cir::FuncType":$memberFuncTy,
-                        "mlir::cir::StructType":$clsTy);
+  let parameters = (ins "cir::FuncType":$memberFuncTy,
+                        "cir::StructType":$clsTy);
 
   let assemblyFormat = [{
     `<` qualified($memberFuncTy) `in` $clsTy `>`
@@ -478,62 +478,62 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 // Pointer to void
 def VoidPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::VoidType>("
-            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::VoidType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
     ]>, "void*">,
     BuildableType<
-      "mlir::cir::PointerType::get($_builder.getContext(),"
-      "mlir::cir::VoidType::get($_builder.getContext()))"> {
+      "cir::PointerType::get($_builder.getContext(),"
+      "cir::VoidType::get($_builder.getContext()))"> {
 }
 
 // Pointer to a primitive int, float or double
 def PrimitiveIntOrFPPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::IntType, ::mlir::cir::SingleType,"
-            "::mlir::cir::DoubleType>("
-            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::IntType, ::cir::SingleType,"
+            "::cir::DoubleType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
     ]>, "{int,void}*"> {
 }
 
 def ComplexPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::ComplexType>("
-        "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::ComplexType>("
+        "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
     ]>, "!cir.complex*"> {
 }
 
 // Pointer to struct
 def StructPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::StructType>("
-            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::StructType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">
     ]>, "!cir.struct*"> {
 }
 
 // Pointer to exception info
 def ExceptionPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::ExceptionInfoType>("
-            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::ExceptionInfoType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">
     ]>, "!cir.eh_info*">,
     BuildableType<
-      "mlir::cir::PointerType::get($_builder.getContext(),"
-      "mlir::cir::ExceptionInfoType::get($_builder.getContext()))"> {
+      "cir::PointerType::get($_builder.getContext(),"
+      "cir::ExceptionInfoType::get($_builder.getContext()))"> {
 }
 
 // Vector of integral type
 def IntegerVector : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::VectorType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::IntType>("
-            "::mlir::cast<::mlir::cir::VectorType>($_self).getEltType())">,
-      CPred<"::mlir::cast<::mlir::cir::IntType>("
-            "::mlir::cast<::mlir::cir::VectorType>($_self).getEltType())"
+      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
+      CPred<"::mlir::isa<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getEltType())">,
+      CPred<"::mlir::cast<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getEltType())"
             ".isPrimitive()">
     ]>, "!cir.vector of !cir.int"> {
 }
@@ -544,18 +544,18 @@ def CIR_AnyIntOrVecOfInt: AnyTypeOf<[CIR_IntType, IntegerVector]>;
 // Pointer to Arrays
 def ArrayPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::ArrayType>("
-            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::ArrayType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
     ]>, "!cir.ptr<!cir.eh_info>"> {
 }
 
 // Pointer to functions
 def FuncPtr : Type<
     And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::mlir::cir::FuncType>("
-            "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())">,
+      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
+      CPred<"::mlir::isa<::cir::FuncType>("
+            "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
     ]>, "!cir.ptr<!cir.func>"> {
 }
 
@@ -563,7 +563,7 @@ def FuncPtr : Type<
 // StructType (defined in cpp files)
 //===----------------------------------------------------------------------===//
 
-def CIR_StructType : Type<CPred<"::mlir::isa<::mlir::cir::StructType>($_self)">,
+def CIR_StructType : Type<CPred<"::mlir::isa<::cir::StructType>($_self)">,
                           "CIR struct type">;
 
 //===----------------------------------------------------------------------===//

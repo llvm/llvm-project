@@ -105,7 +105,7 @@ private:
 
   /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
   /// the function metadata.
-  void buildKernelMetadata(const FunctionDecl *FD, mlir::cir::FuncOp Fn);
+  void buildKernelMetadata(const FunctionDecl *FD, cir::FuncOp Fn);
 
 public:
   /// A non-RAII class containing all the information about a bound
@@ -195,11 +195,12 @@ public:
     OpaqueValueMapping(CIRGenFunction &CGF,
                        const AbstractConditionalOperator *op)
         : CGF(CGF) {
-      if (isa<ConditionalOperator>(op))
+      if (mlir::isa<ConditionalOperator>(op))
         // Leave Data empty.
         return;
 
-      const BinaryConditionalOperator *e = cast<BinaryConditionalOperator>(op);
+      const BinaryConditionalOperator *e =
+          mlir::cast<BinaryConditionalOperator>(op);
       Data = OpaqueValueMappingData::bind(CGF, e->getOpaqueValue(),
                                           e->getCommon());
     }
@@ -490,7 +491,7 @@ public:
   const CIRGenModule &getCIRGenModule() const { return CGM; }
 
   mlir::Block *getCurFunctionEntryBlock() {
-    auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
+    auto Fn = mlir::dyn_cast<cir::FuncOp>(CurFn);
     assert(Fn && "other callables NYI");
     return &Fn.getRegion().front();
   }
@@ -832,10 +833,10 @@ public:
   VlaSizePair getVLASize(QualType vla);
 
   mlir::Value emitBuiltinObjectSize(const Expr *E, unsigned Type,
-                                    mlir::cir::IntType ResType,
-                                    mlir::Value EmittedE, bool IsDynamic);
+                                    cir::IntType ResType, mlir::Value EmittedE,
+                                    bool IsDynamic);
   mlir::Value evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
-                                              mlir::cir::IntType ResType,
+                                              cir::IntType ResType,
                                               mlir::Value EmittedE,
                                               bool IsDynamic);
 
@@ -920,13 +921,13 @@ public:
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
                    const CallArgList &Args,
-                   mlir::cir::CIRCallOpInterface *callOrTryCall,
-                   bool IsMustTail, mlir::Location loc,
+                   cir::CIRCallOpInterface *callOrTryCall, bool IsMustTail,
+                   mlir::Location loc,
                    std::optional<const clang::CallExpr *> E = std::nullopt);
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
                    const CallArgList &Args,
-                   mlir::cir::CIRCallOpInterface *callOrTryCall = nullptr,
+                   cir::CIRCallOpInterface *callOrTryCall = nullptr,
                    bool IsMustTail = false) {
     assert(currSrcLoc && "source location must have been set");
     return buildCall(CallInfo, Callee, ReturnValue, Args, callOrTryCall,
@@ -945,8 +946,8 @@ public:
     return getAsNaturalAddressOf(Addr, PointeeType).getBasePointer();
   }
 
-  mlir::Value buildRuntimeCall(mlir::Location loc, mlir::cir::FuncOp callee,
-                               ArrayRef<mlir::Value> args = {});
+  mlir::Value buildRuntimeCall(mlir::Location loc, cir::FuncOp callee,
+                               llvm::ArrayRef<mlir::Value> args = {});
 
   void buildInvariantStart(CharUnits Size);
 
@@ -980,13 +981,11 @@ public:
   mlir::LogicalResult buildCoroutineBody(const CoroutineBodyStmt &S);
   mlir::LogicalResult buildCoreturnStmt(const CoreturnStmt &S);
 
-  mlir::cir::CallOp buildCoroIDBuiltinCall(mlir::Location loc,
-                                           mlir::Value nullPtr);
-  mlir::cir::CallOp buildCoroAllocBuiltinCall(mlir::Location loc);
-  mlir::cir::CallOp buildCoroBeginBuiltinCall(mlir::Location loc,
-                                              mlir::Value coroframeAddr);
-  mlir::cir::CallOp buildCoroEndBuiltinCall(mlir::Location loc,
-                                            mlir::Value nullPtr);
+  cir::CallOp buildCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp buildCoroAllocBuiltinCall(mlir::Location loc);
+  cir::CallOp buildCoroBeginBuiltinCall(mlir::Location loc,
+                                        mlir::Value coroframeAddr);
+  cir::CallOp buildCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
 
   RValue buildCoawaitExpr(const CoawaitExpr &E,
                           AggValueSlot aggSlot = AggValueSlot::ignored(),
@@ -1027,8 +1026,9 @@ public:
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult buildStmt(const clang::Stmt *S, bool useCurrentScope,
-                                ArrayRef<const Attr *> Attrs = std::nullopt);
+  mlir::LogicalResult
+  buildStmt(const clang::Stmt *S, bool useCurrentScope,
+            llvm::ArrayRef<const Attr *> Attrs = std::nullopt);
 
   mlir::LogicalResult buildSimpleStmt(const clang::Stmt *S,
                                       bool useCurrentScope);
@@ -1038,12 +1038,12 @@ public:
   mlir::LogicalResult buildDoStmt(const clang::DoStmt &S);
   mlir::LogicalResult
   buildCXXForRangeStmt(const CXXForRangeStmt &S,
-                       ArrayRef<const Attr *> Attrs = std::nullopt);
+                       llvm::ArrayRef<const Attr *> Attrs = std::nullopt);
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);
 
   mlir::LogicalResult buildCXXTryStmtUnderScope(const clang::CXXTryStmt &S);
   mlir::LogicalResult buildCXXTryStmt(const clang::CXXTryStmt &S);
-  void enterCXXTryStmt(const CXXTryStmt &S, mlir::cir::TryOp catchOp,
+  void enterCXXTryStmt(const CXXTryStmt &S, cir::TryOp catchOp,
                        bool IsFnTryBlock = false);
   void exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 
@@ -1171,7 +1171,7 @@ public:
   mlir::LogicalResult buildIfOnBoolExpr(const clang::Expr *cond,
                                         const clang::Stmt *thenS,
                                         const clang::Stmt *elseS);
-  mlir::cir::IfOp buildIfOnBoolExpr(
+  cir::IfOp buildIfOnBoolExpr(
       const clang::Expr *cond,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> thenBuilder,
       mlir::Location thenLoc,
@@ -1205,7 +1205,7 @@ public:
     bool isReference() const { return ValueAndIsReference.getInt(); }
     LValue getReferenceLValue(CIRGenFunction &CGF, Expr *refExpr) const {
       assert(isReference());
-      // create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
+      // create<cir::ConstantOp>(loc, ty, getZeroAttr(ty));
       // CGF.getBuilder().const
       // return CGF.MakeNaturalAlignAddrLValue(ValueAndIsReference.getPointer(),
       //                                       refExpr->getType());
@@ -1235,13 +1235,12 @@ public:
   mlir::Type getCIRType(const clang::QualType &type);
 
   const CaseStmt *foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
-                               mlir::ArrayAttr &value,
-                               mlir::cir::CaseOpKind &kind);
+                               mlir::ArrayAttr &value, cir::CaseOpKind &kind);
 
   template <typename T>
   mlir::LogicalResult
   buildCaseDefaultCascade(const T *stmt, mlir::Type condType,
-                          mlir::ArrayAttr value, mlir::cir::CaseOpKind kind,
+                          mlir::ArrayAttr value, cir::CaseOpKind kind,
                           bool buildingTopLevelCase);
 
   mlir::LogicalResult buildCaseStmt(const clang::CaseStmt &S,
@@ -1257,8 +1256,8 @@ public:
 
   mlir::LogicalResult buildSwitchBody(const clang::Stmt *S);
 
-  mlir::cir::FuncOp generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
-                                 const CIRGenFunctionInfo &FnInfo);
+  cir::FuncOp generateCode(clang::GlobalDecl GD, cir::FuncOp Fn,
+                           const CIRGenFunctionInfo &FnInfo);
 
   clang::QualType buildFunctionArgList(clang::GlobalDecl GD,
                                        FunctionArgList &Args);
@@ -1343,7 +1342,7 @@ public:
   void buildStoreThroughBitfieldLValue(RValue Src, LValue Dst,
                                        mlir::Value &Result);
 
-  mlir::cir::BrOp buildBranchThroughCleanup(mlir::Location Loc, JumpDest Dest);
+  cir::BrOp buildBranchThroughCleanup(mlir::Location Loc, JumpDest Dest);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
   /// nonnull, if 1\p LHS is marked _Nonnull.
@@ -1356,7 +1355,7 @@ public:
   /// \p IsSubtraction indicates whether the expression used to form the GEP
   /// is a subtraction.
   mlir::Value buildCheckedInBoundsGEP(mlir::Type ElemTy, mlir::Value Ptr,
-                                      ArrayRef<mlir::Value> IdxList,
+                                      llvm::ArrayRef<mlir::Value> IdxList,
                                       bool SignedIndices, bool IsSubtraction,
                                       SourceLocation Loc);
 
@@ -1434,12 +1433,11 @@ public:
   /// inside a function, including static vars etc.
   void buildVarDecl(const clang::VarDecl &D);
 
-  mlir::cir::GlobalOp
-  addInitializerToStaticVarDecl(const VarDecl &D, mlir::cir::GlobalOp GV,
-                                mlir::cir::GetGlobalOp GVAddr);
+  cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &D,
+                                              cir::GlobalOp GV,
+                                              cir::GetGlobalOp GVAddr);
 
-  void buildStaticVarDecl(const VarDecl &D,
-                          mlir::cir::GlobalLinkageKind Linkage);
+  void buildStaticVarDecl(const VarDecl &D, cir::GlobalLinkageKind Linkage);
 
   /// Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
@@ -1643,7 +1641,7 @@ public:
   /// \param Loc       The location to be associated with the function.
   /// \param StartLoc  The location of the function body.
   void StartFunction(clang::GlobalDecl GD, clang::QualType RetTy,
-                     mlir::cir::FuncOp Fn, const CIRGenFunctionInfo &FnInfo,
+                     cir::FuncOp Fn, const CIRGenFunctionInfo &FnInfo,
                      const FunctionArgList &Args, clang::SourceLocation Loc,
                      clang::SourceLocation StartLoc);
 
@@ -1700,7 +1698,7 @@ public:
 
   RValue buildAtomicExpr(AtomicExpr *E);
   void buildAtomicStore(RValue rvalue, LValue lvalue, bool isInit);
-  void buildAtomicStore(RValue rvalue, LValue lvalue, mlir::cir::MemOrder MO,
+  void buildAtomicStore(RValue rvalue, LValue lvalue, cir::MemOrder MO,
                         bool IsVolatile, bool isInit);
   void buildAtomicInit(Expr *init, LValue dest);
 
@@ -1782,7 +1780,7 @@ public:
   /// TODO(cir): this could be a common AST helper between LLVM / CIR.
   bool hasVolatileMember(QualType T) {
     if (const RecordType *RT = T->getAs<RecordType>()) {
-      const RecordDecl *RD = cast<RecordDecl>(RT->getDecl());
+      const RecordDecl *RD = mlir::cast<RecordDecl>(RT->getDecl());
       return RD->hasVolatileMember();
     }
     return false;
@@ -1830,13 +1828,13 @@ public:
   };
 
   /// Emits try/catch information for the current EH stack.
-  mlir::cir::CallOp callWithExceptionCtx = nullptr;
-  mlir::Operation *buildLandingPad(mlir::cir::TryOp tryOp);
+  cir::CallOp callWithExceptionCtx = nullptr;
+  mlir::Operation *buildLandingPad(cir::TryOp tryOp);
   void buildEHResumeBlock(bool isCleanup, mlir::Block *ehResumeBlock,
                           mlir::Location loc);
-  mlir::Block *getEHResumeBlock(bool isCleanup, mlir::cir::TryOp tryOp);
+  mlir::Block *getEHResumeBlock(bool isCleanup, cir::TryOp tryOp);
   mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope,
-                                  mlir::cir::TryOp tryOp);
+                                  cir::TryOp tryOp);
   /// Unified block containing a call to cir.resume
   mlir::Block *ehResumeBlock = nullptr;
   llvm::DenseMap<mlir::Block *, mlir::Block *> cleanupsToPatch;
@@ -1845,8 +1843,8 @@ public:
   /// parameters.
   EHScopeStack::stable_iterator PrologueCleanupDepth;
 
-  mlir::Operation *getInvokeDestImpl(mlir::cir::TryOp tryOp);
-  mlir::Operation *getInvokeDest(mlir::cir::TryOp tryOp) {
+  mlir::Operation *getInvokeDestImpl(cir::TryOp tryOp);
+  mlir::Operation *getInvokeDest(cir::TryOp tryOp) {
     if (!EHStack.requiresLandingPad())
       return nullptr;
     // Return the respective cir.try, this can be used to compute
@@ -2102,7 +2100,7 @@ public:
     LexicalScope *ParentScope = nullptr;
 
     // Holds actual value for ScopeKind::Try
-    mlir::cir::TryOp tryOp = nullptr;
+    cir::TryOp tryOp = nullptr;
 
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
@@ -2173,16 +2171,16 @@ public:
     bool isSwitch() { return ScopeKind == Kind::Switch; }
     bool isTernary() { return ScopeKind == Kind::Ternary; }
     bool isTry() { return ScopeKind == Kind::Try; }
-    mlir::cir::TryOp getTry() {
+    cir::TryOp getTry() {
       assert(isTry());
       return tryOp;
     }
-    mlir::cir::TryOp getClosestTryParent();
+    cir::TryOp getClosestTryParent();
 
     void setAsGlobalInit() { ScopeKind = Kind::GlobalInit; }
     void setAsSwitch() { ScopeKind = Kind::Switch; }
     void setAsTernary() { ScopeKind = Kind::Ternary; }
-    void setAsTry(mlir::cir::TryOp op) {
+    void setAsTry(cir::TryOp op) {
       ScopeKind = Kind::Try;
       tryOp = op;
     }
@@ -2220,7 +2218,7 @@ public:
     // have their own scopes but are distinct regions nonetheless.
     llvm::SmallVector<mlir::Block *> RetBlocks;
     llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
-    llvm::DenseMap<mlir::cir::CaseOp, unsigned> RetBlockInCaseIndex;
+    llvm::DenseMap<cir::CaseOp, unsigned> RetBlockInCaseIndex;
     std::optional<unsigned> NormalRetBlockIndex;
     llvm::SmallVector<std::unique_ptr<mlir::Region>> SwitchRegions;
 
@@ -2228,7 +2226,7 @@ public:
     // get or create because of potential unreachable return statements, note
     // that for those, all source location maps to the first one found.
     mlir::Block *createRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      assert((isa_and_nonnull<mlir::cir::CaseOp>(
+      assert((isa_and_nonnull<cir::CaseOp>(
                   CGF.builder.getBlock()->getParentOp()) ||
               RetBlocks.size() == 0) &&
              "only switches can hold more than one ret block");
@@ -2241,7 +2239,7 @@ public:
       return b;
     }
 
-    mlir::cir::ReturnOp buildReturn(mlir::Location loc);
+    cir::ReturnOp buildReturn(mlir::Location loc);
     void buildImplicitReturn();
 
   public:
@@ -2261,7 +2259,7 @@ public:
     }
 
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      if (auto caseOp = dyn_cast_if_present<mlir::cir::CaseOp>(
+      if (auto caseOp = mlir::dyn_cast_if_present<cir::CaseOp>(
               CGF.builder.getBlock()->getParentOp())) {
         auto iter = RetBlockInCaseIndex.find(caseOp);
         if (iter != RetBlockInCaseIndex.end())
@@ -2302,7 +2300,7 @@ public:
               std::move(CGF.CXXInheritedCtorInitExprArgs)) {
       CGF.CurGD = GD;
       CGF.CurFuncDecl = CGF.CurCodeDecl =
-          cast<CXXConstructorDecl>(GD.getDecl());
+          mlir::cast<CXXConstructorDecl>(GD.getDecl());
       CGF.CXXABIThisDecl = nullptr;
       CGF.CXXABIThisValue = nullptr;
       CGF.CXXThisValue = nullptr;
@@ -2373,18 +2371,18 @@ public:
   ///
   /// The cast is not performaed in CreateTempAllocaWithoutCast. This is
   /// more efficient if the caller knows that the address will not be exposed.
-  mlir::cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
-                                       const Twine &Name = "tmp",
-                                       mlir::Value ArraySize = nullptr,
-                                       bool insertIntoFnEntryBlock = false);
-  mlir::cir::AllocaOp
-  CreateTempAllocaInFnEntryBlock(mlir::Type Ty, mlir::Location Loc,
+  cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
                                  const Twine &Name = "tmp",
+                                 mlir::Value ArraySize = nullptr,
+                                 bool insertIntoFnEntryBlock = false);
+  cir::AllocaOp CreateTempAllocaInFnEntryBlock(mlir::Type Ty,
+                                               mlir::Location Loc,
+                                               const Twine &Name = "tmp",
+                                               mlir::Value ArraySize = nullptr);
+  cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
+                                 const Twine &Name = "tmp",
+                                 mlir::OpBuilder::InsertPoint ip = {},
                                  mlir::Value ArraySize = nullptr);
-  mlir::cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
-                                       const Twine &Name = "tmp",
-                                       mlir::OpBuilder::InsertPoint ip = {},
-                                       mlir::Value ArraySize = nullptr);
   Address CreateTempAlloca(mlir::Type Ty, CharUnits align, mlir::Location Loc,
                            const Twine &Name = "tmp",
                            mlir::Value ArraySize = nullptr,
@@ -2450,13 +2448,13 @@ struct DominatingCIRValue {
     if (!currBlock->isEntryBlock() || !definingOp->getParentOp())
       return false;
 
-    if (auto fnOp = definingOp->getParentOfType<mlir::cir::FuncOp>()) {
+    if (auto fnOp = definingOp->getParentOfType<cir::FuncOp>()) {
       if (&fnOp.getBody().front() == currBlock)
         return true;
       return false;
     }
 
-    if (auto globalOp = definingOp->getParentOfType<mlir::cir::GlobalOp>()) {
+    if (auto globalOp = definingOp->getParentOfType<cir::GlobalOp>()) {
       assert(globalOp.getNumRegions() == 2 && "other regions NYI");
       if (&globalOp.getCtorRegion().front() == currBlock)
         return true;
@@ -2495,10 +2493,10 @@ inline mlir::Value DominatingCIRValue::restore(CIRGenFunction &CGF,
     return value.getPointer();
 
   // Otherwise, it should be an alloca instruction, as set up in save().
-  auto alloca = cast<mlir::cir::AllocaOp>(value.getPointer().getDefiningOp());
+  auto alloca = mlir::cast<cir::AllocaOp>(value.getPointer().getDefiningOp());
   mlir::Value val = CGF.getBuilder().createAlignedLoad(
       alloca.getLoc(), alloca.getType(), alloca);
-  mlir::cir::LoadOp loadOp = cast<mlir::cir::LoadOp>(val.getDefiningOp());
+  cir::LoadOp loadOp = mlir::cast<cir::LoadOp>(val.getDefiningOp());
   loadOp.setAlignment(alloca.getAlignment());
   return val;
 }

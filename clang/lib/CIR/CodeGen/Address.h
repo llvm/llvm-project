@@ -42,7 +42,7 @@ public:
           KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
       : PointerAndKnownNonNull(pointer, IsKnownNonNull),
         ElementType(elementType), Alignment(alignment) {
-    assert(mlir::isa<mlir::cir::PointerType>(pointer.getType()) &&
+    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
            "Expected cir.ptr type");
 
     assert(pointer && "Pointer cannot be null");
@@ -50,10 +50,9 @@ public:
     assert(!alignment.isZero() && "Alignment cannot be zero");
   }
   Address(mlir::Value pointer, clang::CharUnits alignment)
-      : Address(
-            pointer,
-            mlir::cast<mlir::cir::PointerType>(pointer.getType()).getPointee(),
-            alignment) {
+      : Address(pointer,
+                mlir::cast<cir::PointerType>(pointer.getType()).getPointee(),
+                alignment) {
 
     assert((!alignment.isZero() || pointer == nullptr) &&
            "creating valid address with invalid alignment");
@@ -113,8 +112,8 @@ public:
   }
 
   /// Return the type of the pointer value.
-  mlir::cir::PointerType getType() const {
-    return mlir::cast<mlir::cir::PointerType>(getPointer().getType());
+  cir::PointerType getType() const {
+    return mlir::cast<cir::PointerType>(getPointer().getType());
   }
 
   mlir::Type getElementType() const {

@@ -76,7 +76,7 @@ CIRGenFunction::buildOMPParallelDirective(const OMPParallelDirective &S) {
   mlir::OpBuilder::InsertionGuard guardCase(builder);
   builder.setInsertionPointToEnd(&block);
   // Create a scope for the OpenMP region.
-  builder.create<mlir::cir::ScopeOp>(
+  builder.create<cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         LexicalScope lexScope{*this, scopeLoc, builder.getInsertionBlock()};

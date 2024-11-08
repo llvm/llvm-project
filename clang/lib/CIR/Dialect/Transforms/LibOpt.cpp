@@ -28,7 +28,7 @@
 
 using cir::CIRBaseBuilderTy;
 using namespace mlir;
-using namespace mlir::cir;
+using namespace cir;
 
 namespace {
 
@@ -47,7 +47,7 @@ struct LibOptPass : public LibOptBase<LibOptPass> {
     unsigned val = None;
     bool isOptionsParsed = false;
 
-    void parseOptions(ArrayRef<StringRef> remarks) {
+    void parseOptions(ArrayRef<llvm::StringRef> remarks) {
       if (isOptionsParsed)
         return;
 
@@ -61,7 +61,7 @@ struct LibOptPass : public LibOptBase<LibOptPass> {
     }
 
     void parseOptions(LibOptPass &pass) {
-      SmallVector<llvm::StringRef, 4> remarks;
+      llvm::SmallVector<llvm::StringRef, 4> remarks;
 
       for (auto &r : pass.remarksList)
         remarks.push_back(r);
@@ -188,7 +188,7 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
             findOp.getLoc(), memchrOp0, memchrOp1,
             builder.create<ConstantOp>(
                 findOp.getLoc(), uInt64Ty,
-                mlir::cir::IntAttr::get(uInt64Ty, staticSize)));
+                cir::IntAttr::get(uInt64Ty, staticSize)));
       }
     }
     return builder.create<MemChrOp>(
@@ -228,7 +228,7 @@ void LibOptPass::runOnOperation() {
   if (isa<::mlir::ModuleOp>(op))
     theModule = cast<::mlir::ModuleOp>(op);
 
-  SmallVector<StdFindOp> stdFindToTransform;
+  llvm::SmallVector<StdFindOp> stdFindToTransform;
   op->walk([&](StdFindOp findOp) { stdFindToTransform.push_back(findOp); });
 
   for (auto c : stdFindToTransform)

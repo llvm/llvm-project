@@ -51,10 +51,10 @@ class CIRGenModule;
 ///                                                 /*constant*/ true);
 class ConstantInitBuilderBase {
   struct SelfReference {
-    mlir::cir::GlobalOp Dummy;
+    cir::GlobalOp Dummy;
     llvm::SmallVector<mlir::Attribute, 4> Indices;
 
-    SelfReference(mlir::cir::GlobalOp dummy) : Dummy(dummy) {}
+    SelfReference(cir::GlobalOp dummy) : Dummy(dummy) {}
   };
   CIRGenModule &CGM;
   CIRGenBuilderTy &builder;
@@ -75,19 +75,17 @@ protected:
   }
 
 private:
-  mlir::cir::GlobalOp
-  createGlobal(mlir::Attribute initializer, const llvm::Twine &name,
-               CharUnits alignment, bool constant = false,
-               mlir::cir::GlobalLinkageKind linkage =
-                   mlir::cir::GlobalLinkageKind::InternalLinkage,
-               unsigned addressSpace = 0);
+  cir::GlobalOp createGlobal(
+      mlir::Attribute initializer, const llvm::Twine &name, CharUnits alignment,
+      bool constant = false,
+      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::InternalLinkage,
+      unsigned addressSpace = 0);
 
   ConstantInitFuture createFuture(mlir::Attribute initializer);
 
-  void setGlobalInitializer(mlir::cir::GlobalOp GV,
-                            mlir::Attribute initializer);
+  void setGlobalInitializer(cir::GlobalOp GV, mlir::Attribute initializer);
 
-  void resolveSelfReferences(mlir::cir::GlobalOp GV);
+  void resolveSelfReferences(cir::GlobalOp GV);
 
   void abandon(size_t newEnd);
 };
@@ -188,16 +186,16 @@ public:
   void addSize(CharUnits size);
 
   /// Add an integer value of a specific type.
-  void addInt(mlir::cir::IntType intTy, uint64_t value, bool isSigned = false) {
+  void addInt(cir::IntType intTy, uint64_t value, bool isSigned = false) {
     add(mlir::IntegerAttr::get(intTy,
                                llvm::APInt{intTy.getWidth(), value, isSigned}));
   }
 
   /// Add a pointer of a specific type.
-  void addPointer(mlir::cir::PointerType ptrTy, uint64_t value) {
+  void addPointer(cir::PointerType ptrTy, uint64_t value) {
     auto val = mlir::IntegerAttr::get(
         mlir::IntegerType::get(ptrTy.getContext(), 64), value);
-    add(mlir::cir::ConstPtrAttr::get(ptrTy.getContext(), ptrTy, val));
+    add(cir::ConstPtrAttr::get(ptrTy.getContext(), ptrTy, val));
   }
 
   /// Add a bitcast of a value to a specific type.
@@ -219,15 +217,15 @@ public:
   /// in the current linkage unit.  The offset will have the given
   /// integer type, which must be no wider than intptr_t.  Some
   /// targets may not fully support this operation.
-  void addRelativeOffset(mlir::cir::IntType type, mlir::Attribute target) {
+  void addRelativeOffset(cir::IntType type, mlir::Attribute target) {
     llvm_unreachable("NYI");
     // add(getRelativeOffset(type, target));
   }
 
   /// Same as addRelativeOffset(), but instead relative to an element in this
   /// aggregate, identified by its index.
-  void addRelativeOffsetToPosition(mlir::cir::IntType type,
-                                   mlir::Attribute target, size_t position) {
+  void addRelativeOffsetToPosition(cir::IntType type, mlir::Attribute target,
+                                   size_t position) {
     llvm_unreachable("NYI");
     // add(getRelativeOffsetToPosition(type, target, position));
   }
@@ -236,7 +234,7 @@ public:
   /// constant offset.  This is primarily useful when the relative
   /// offset is known to be a multiple of (say) four and therefore
   /// the tag can be used to express an extra two bits of information.
-  void addTaggedRelativeOffset(mlir::cir::IntType type, mlir::Attribute address,
+  void addTaggedRelativeOffset(cir::IntType type, mlir::Attribute address,
                                unsigned tag) {
     llvm_unreachable("NYI");
     // mlir::Attribute offset =
@@ -287,9 +285,8 @@ public:
   PlaceholderPosition addPlaceholderWithSize(mlir::Type expectedType);
 
   /// Fill a previously-added placeholder.
-  void fillPlaceholderWithInt(PlaceholderPosition position,
-                              mlir::cir::IntType type, uint64_t value,
-                              bool isSigned = false) {
+  void fillPlaceholderWithInt(PlaceholderPosition position, cir::IntType type,
+                              uint64_t value, bool isSigned = false) {
     llvm_unreachable("NYI");
     // fillPlaceholder(position, llvm::ConstantInt::get(type, value, isSigned));
   }
@@ -328,16 +325,16 @@ public:
 protected:
   mlir::Attribute finishArray(mlir::Type eltTy);
   mlir::Attribute finishStruct(mlir::MLIRContext *ctx,
-                               mlir::cir::StructType structTy);
+                               cir::StructType structTy);
 
 private:
   void getGEPIndicesTo(llvm::SmallVectorImpl<mlir::Attribute> &indices,
                        size_t position) const;
 
-  mlir::Attribute getRelativeOffset(mlir::cir::IntType offsetType,
+  mlir::Attribute getRelativeOffset(cir::IntType offsetType,
                                     mlir::Attribute target);
 
-  mlir::Attribute getRelativeOffsetToPosition(mlir::cir::IntType offsetType,
+  mlir::Attribute getRelativeOffsetToPosition(cir::IntType offsetType,
                                               mlir::Attribute target,
                                               size_t position);
 
@@ -367,7 +364,7 @@ public:
     return ArrayBuilder(static_cast<InitBuilder &>(this->Builder), this, eltTy);
   }
 
-  StructBuilder beginStruct(mlir::cir::StructType ty = nullptr) {
+  StructBuilder beginStruct(cir::StructType ty = nullptr) {
     return StructBuilder(static_cast<InitBuilder &>(this->Builder), this, ty);
   }
 
@@ -389,8 +386,7 @@ public:
   /// directly on a ConstantInitBuilder, finish the array/struct and
   /// create a global variable with it as the initializer.
   template <class... As>
-  mlir::cir::GlobalOp finishAndCreateGlobal(mlir::MLIRContext *ctx,
-                                            As &&...args) {
+  cir::GlobalOp finishAndCreateGlobal(mlir::MLIRContext *ctx, As &&...args) {
     assert(!this->Parent && "finishing non-root builder");
     return this->Builder.createGlobal(asImpl().finishImpl(ctx),
                                       std::forward<As>(args)...);
@@ -399,16 +395,15 @@ public:
   /// Given that this builder was created by beginning an array or struct
   /// directly on a ConstantInitBuilder, finish the array/struct and
   /// set it as the initializer of the given global variable.
-  void finishAndSetAsInitializer(mlir::cir::GlobalOp global,
-                                 bool forVTable = false) {
+  void finishAndSetAsInitializer(cir::GlobalOp global, bool forVTable = false) {
     assert(!this->Parent && "finishing non-root builder");
     mlir::Attribute init = asImpl().finishImpl(global.getContext());
-    auto initCSA = mlir::dyn_cast<mlir::cir::ConstStructAttr>(init);
+    auto initCSA = mlir::dyn_cast<cir::ConstStructAttr>(init);
     assert(initCSA &&
            "expected #cir.const_struct attribute to represent vtable data");
     return this->Builder.setGlobalInitializer(
-        global, forVTable ? mlir::cir::VTableAttr::get(initCSA.getType(),
-                                                       initCSA.getMembers())
+        global, forVTable ? cir::VTableAttr::get(initCSA.getType(),
+                                                 initCSA.getMembers())
                           : init);
   }
 
@@ -475,14 +470,14 @@ public:
   using AggregateBuilderBase = typename Traits::AggregateBuilderBase;
 
 private:
-  mlir::cir::StructType StructTy;
+  cir::StructType StructTy;
 
   template <class, class> friend class ConstantAggregateBuilderTemplateBase;
 
 protected:
   ConstantStructBuilderTemplateBase(InitBuilder &builder,
                                     AggregateBuilderBase *parent,
-                                    mlir::cir::StructType structTy)
+                                    cir::StructType structTy)
       : super(builder, parent), StructTy(structTy) {
     if (structTy) {
       llvm_unreachable("NYI");
@@ -495,7 +490,7 @@ public:
 
   /// Use the given type for the struct if its element count is correct.
   /// Don't add more elements after calling this.
-  void suggestType(mlir::cir::StructType structTy) {
+  void suggestType(cir::StructType structTy) {
     if (this->size() == structTy.getNumElements()) {
       StructTy = structTy;
     }
@@ -529,7 +524,7 @@ public:
     return ArrayBuilder(static_cast<InitBuilder &>(*this), nullptr, eltTy);
   }
 
-  StructBuilder beginStruct(mlir::cir::StructType structTy = nullptr) {
+  StructBuilder beginStruct(cir::StructType structTy = nullptr) {
     return StructBuilder(static_cast<InitBuilder &>(*this), nullptr, structTy);
   }
 };
@@ -580,7 +575,7 @@ class ConstantStructBuilder
 
   ConstantStructBuilder(ConstantInitBuilder &builder,
                         ConstantAggregateBuilderBase *parent,
-                        mlir::cir::StructType structTy)
+                        cir::StructType structTy)
       : ConstantStructBuilderTemplateBase(builder, parent, structTy) {}
 };
 

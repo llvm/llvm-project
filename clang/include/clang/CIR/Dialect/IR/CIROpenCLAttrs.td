@@ -57,11 +57,11 @@ def OpenCLKernelMetadataAttr
   }];
 
   let parameters = (ins
-    OptionalParameter<"ArrayAttr">:$work_group_size_hint,
-    OptionalParameter<"ArrayAttr">:$reqd_work_group_size,
-    OptionalParameter<"TypeAttr">:$vec_type_hint,
+    OptionalParameter<"mlir::ArrayAttr">:$work_group_size_hint,
+    OptionalParameter<"mlir::ArrayAttr">:$reqd_work_group_size,
+    OptionalParameter<"mlir::TypeAttr">:$vec_type_hint,
     OptionalParameter<"std::optional<bool>">:$vec_type_hint_signedness,
-    OptionalParameter<"IntegerAttr">:$intel_reqd_sub_group_size
+    OptionalParameter<"mlir::IntegerAttr">:$intel_reqd_sub_group_size
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -76,14 +76,14 @@ def OpenCLKernelMetadataAttr
   let extraClassDefinition = [{
     std::optional<bool> $cppClass::isSignedHint(mlir::Type hintQTy) {
       // Only types in CIR carry signedness
-      if (!mlir::isa<mlir::cir::CIRDialect>(hintQTy.getDialect()))
+      if (!mlir::isa<cir::CIRDialect>(hintQTy.getDialect()))
         return std::nullopt;
       
       // See also clang::CodeGen::CodeGenFunction::EmitKernelMetadata
-      auto hintEltQTy = mlir::dyn_cast<mlir::cir::VectorType>(hintQTy);
+      auto hintEltQTy = mlir::dyn_cast<cir::VectorType>(hintQTy);
       auto isCIRSignedIntType = [](mlir::Type t) {
-        return mlir::isa<mlir::cir::IntType>(t) &&
-               mlir::cast<mlir::cir::IntType>(t).isSigned();
+        return mlir::isa<cir::IntType>(t) &&
+               mlir::cast<cir::IntType>(t).isSigned();
       };
       return isCIRSignedIntType(hintQTy) ||
               (hintEltQTy && isCIRSignedIntType(hintEltQTy.getEltType()));
@@ -134,12 +134,12 @@ def OpenCLKernelArgMetadataAttr
   }];
 
   let parameters = (ins
-    "ArrayAttr":$addr_space,
-    "ArrayAttr":$access_qual,
-    "ArrayAttr":$type,
-    "ArrayAttr":$base_type,
-    "ArrayAttr":$type_qual,
-    OptionalParameter<"ArrayAttr">:$name
+    "mlir::ArrayAttr":$addr_space,
+    "mlir::ArrayAttr":$access_qual,
+    "mlir::ArrayAttr":$type,
+    "mlir::ArrayAttr":$base_type,
+    "mlir::ArrayAttr":$type_qual,
+    OptionalParameter<"mlir::ArrayAttr">:$name
   );
 
   let assemblyFormat = "`<` struct(params) `>`";

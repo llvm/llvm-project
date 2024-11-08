@@ -17,7 +17,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h.inc"
 
-namespace mlir {
 namespace cir {
 
 static bool isExternalLinkage(GlobalLinkageKind Linkage) {
@@ -115,19 +114,18 @@ LLVM_ATTRIBUTE_UNUSED static bool isValidLinkage(GlobalLinkageKind L) {
          isLinkOnceLinkage(L);
 }
 
-bool operator<(mlir::cir::MemOrder, mlir::cir::MemOrder) = delete;
-bool operator>(mlir::cir::MemOrder, mlir::cir::MemOrder) = delete;
-bool operator<=(mlir::cir::MemOrder, mlir::cir::MemOrder) = delete;
-bool operator>=(mlir::cir::MemOrder, mlir::cir::MemOrder) = delete;
+bool operator<(cir::MemOrder, cir::MemOrder) = delete;
+bool operator>(cir::MemOrder, cir::MemOrder) = delete;
+bool operator<=(cir::MemOrder, cir::MemOrder) = delete;
+bool operator>=(cir::MemOrder, cir::MemOrder) = delete;
 
 // Validate an integral value which isn't known to fit within the enum's range
 // is a valid AtomicOrderingCABI.
 template <typename Int> inline bool isValidCIRAtomicOrderingCABI(Int I) {
-  return (Int)mlir::cir::MemOrder::Relaxed <= I &&
-         I <= (Int)mlir::cir::MemOrder::SequentiallyConsistent;
+  return (Int)cir::MemOrder::Relaxed <= I &&
+         I <= (Int)cir::MemOrder::SequentiallyConsistent;
 }
 
 } // namespace cir
-} // namespace mlir
 
 #endif // MLIR_DIALECT_CIR_CIROPSENUMS_H_

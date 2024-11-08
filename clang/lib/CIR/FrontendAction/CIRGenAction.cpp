@@ -428,7 +428,7 @@ void CIRGenAction::ExecuteAction() {
   if (!mainFile)
     return;
 
-  mlirContext->getOrLoadDialect<mlir::cir::CIRDialect>();
+  mlirContext->getOrLoadDialect<cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::func::FuncDialect>();
   mlirContext->getOrLoadDialect<mlir::memref::MemRefDialect>();
 

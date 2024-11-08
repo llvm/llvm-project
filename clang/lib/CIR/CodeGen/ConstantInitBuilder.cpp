@@ -40,7 +40,7 @@ void ConstantInitFuture::abandon() {
   Data = nullptr;
 }
 
-void ConstantInitFuture::installInGlobal(mlir::cir::GlobalOp GV) {
+void ConstantInitFuture::installInGlobal(cir::GlobalOp GV) {
   assert(Data && "installing null future");
   if (Data.is<mlir::Attribute>()) {
     CIRGenModule::setInitializer(GV, Data.get<mlir::Attribute>());
@@ -69,10 +69,9 @@ inline ConstantInitFuture::ConstantInitFuture(ConstantInitBuilderBase *builder)
   assert(builder->Buffer[0] != nullptr);
 }
 
-mlir::cir::GlobalOp ConstantInitBuilderBase::createGlobal(
+cir::GlobalOp ConstantInitBuilderBase::createGlobal(
     mlir::Attribute initializer, const llvm::Twine &name, CharUnits alignment,
-    bool constant, mlir::cir::GlobalLinkageKind linkage,
-    unsigned addressSpace) {
+    bool constant, cir::GlobalLinkageKind linkage, unsigned addressSpace) {
   llvm_unreachable("NYI");
   // auto GV =
   //     new llvm::GlobalVariable(CGM.getModule(), initializer->getType(),
@@ -86,14 +85,14 @@ mlir::cir::GlobalOp ConstantInitBuilderBase::createGlobal(
 }
 
 void ConstantInitBuilderBase::setGlobalInitializer(
-    mlir::cir::GlobalOp GV, mlir::Attribute initializer) {
+    cir::GlobalOp GV, mlir::Attribute initializer) {
   CIRGenModule::setInitializer(GV, initializer);
 
   if (!SelfReferences.empty())
     resolveSelfReferences(GV);
 }
 
-void ConstantInitBuilderBase::resolveSelfReferences(mlir::cir::GlobalOp GV) {
+void ConstantInitBuilderBase::resolveSelfReferences(cir::GlobalOp GV) {
   llvm_unreachable("NYI");
   // for (auto &entry : SelfReferences) {
   //   mlir::Attribute resolvedReference =
@@ -129,14 +128,14 @@ void ConstantAggregateBuilderBase::addSize(CharUnits size) {
 }
 
 mlir::Attribute
-ConstantAggregateBuilderBase::getRelativeOffset(mlir::cir::IntType offsetType,
+ConstantAggregateBuilderBase::getRelativeOffset(cir::IntType offsetType,
                                                 mlir::Attribute target) {
   return getRelativeOffsetToPosition(offsetType, target,
                                      Builder.Buffer.size() - Begin);
 }
 
 mlir::Attribute ConstantAggregateBuilderBase::getRelativeOffsetToPosition(
-    mlir::cir::IntType offsetType, mlir::Attribute target, size_t position) {
+    cir::IntType offsetType, mlir::Attribute target, size_t position) {
   llvm_unreachable("NYI");
   // // Compute the address of the relative-address slot.
   // auto base = getAddrOfPosition(offsetType, position);
@@ -273,9 +272,9 @@ ConstantAggregateBuilderBase::getOffsetFromGlobalTo(size_t end) const {
 // FIXME(cir): ideally we should use CIRGenBuilder for both static function
 // bellow by threading ConstantAggregateBuilderBase through
 // ConstantAggregateBuilderBase.
-static mlir::cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
-                                               mlir::cir::ArrayType arrayTy) {
-  return mlir::cir::ConstArrayAttr::get(arrayTy, attrs);
+static cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
+                                         cir::ArrayType arrayTy) {
+  return cir::ConstArrayAttr::get(arrayTy, attrs);
 }
 
 mlir::Attribute ConstantAggregateBuilderBase::finishArray(mlir::Type eltTy) {
@@ -295,14 +294,14 @@ mlir::Attribute ConstantAggregateBuilderBase::finishArray(mlir::Type eltTy) {
 
   auto constant = getConstArray(
       mlir::ArrayAttr::get(eltTy.getContext(), elts),
-      mlir::cir::ArrayType::get(eltTy.getContext(), eltTy, elts.size()));
+      cir::ArrayType::get(eltTy.getContext(), eltTy, elts.size()));
   buffer.erase(buffer.begin() + Begin, buffer.end());
   return constant;
 }
 
 mlir::Attribute
 ConstantAggregateBuilderBase::finishStruct(mlir::MLIRContext *ctx,
-                                           mlir::cir::StructType ty) {
+                                           cir::StructType ty) {
   markFinished();
 
   auto &buffer = getBuffer();

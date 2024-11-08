@@ -59,7 +59,7 @@ mlir::Type CIRGenVTables::getVTableType(const VTableLayout &layout) {
   auto componentType = getVTableComponentType();
   for (unsigned i = 0, e = layout.getNumVTables(); i != e; ++i)
     tys.push_back(
-        mlir::cir::ArrayType::get(ctx, componentType, layout.getVTableSize(i)));
+        cir::ArrayType::get(ctx, componentType, layout.getVTableSize(i)));
 
   // FIXME(cir): should VTableLayout be encoded like we do for some
   // AST nodes?
@@ -212,8 +212,8 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       //                             vtableHasLocalLinkage,
       //                             /*isCompleteDtor=*/false);
     } else {
-      assert((mlir::isa<mlir::cir::GlobalViewAttr>(rtti) ||
-              mlir::isa<mlir::cir::ConstPtrAttr>(rtti)) &&
+      assert((mlir::isa<cir::GlobalViewAttr>(rtti) ||
+              mlir::isa<cir::ConstPtrAttr>(rtti)) &&
              "expected GlobalViewAttr or ConstPtrAttr");
       return builder.add(rtti);
     }
@@ -227,7 +227,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       llvm_unreachable("NYI");
     }
 
-    auto getSpecialVirtualFn = [&](StringRef name) -> mlir::cir::FuncOp {
+    auto getSpecialVirtualFn = [&](StringRef name) -> cir::FuncOp {
       // FIXME(PR43094): When merging comdat groups, lld can select a local
       // symbol as the signature symbol even though it cannot be accessed
       // outside that symbol's TU. The relative vtables ABI would make
@@ -244,15 +244,15 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
           CGM.getTriple().isNVPTX())
         llvm_unreachable("NYI");
 
-      mlir::cir::FuncType fnTy =
+      cir::FuncType fnTy =
           CGM.getBuilder().getFuncType({}, CGM.getBuilder().getVoidTy());
-      mlir::cir::FuncOp fnPtr = CGM.createRuntimeFunction(fnTy, name);
+      cir::FuncOp fnPtr = CGM.createRuntimeFunction(fnTy, name);
       // LLVM codegen handles unnamedAddr
       assert(!cir::MissingFeatures::unnamedAddr());
       return fnPtr;
     };
 
-    mlir::cir::FuncOp fnPtr;
+    cir::FuncOp fnPtr;
     if (cast<CXXMethodDecl>(GD.getDecl())->isPureVirtual()) {
       // Pure virtual member functions.
       if (!PureVirtualFn)
@@ -286,7 +286,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     if (useRelativeLayout()) {
       llvm_unreachable("NYI");
     } else {
-      return builder.add(mlir::cir::GlobalViewAttr::get(
+      return builder.add(cir::GlobalViewAttr::get(
           CGM.getBuilder().getUInt8PtrTy(),
           mlir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr())));
     }
@@ -328,10 +328,9 @@ void CIRGenVTables::createVTableInitializer(ConstantStructBuilder &builder,
   }
 }
 
-mlir::cir::GlobalOp CIRGenVTables::generateConstructionVTable(
+cir::GlobalOp CIRGenVTables::generateConstructionVTable(
     const CXXRecordDecl *RD, const BaseSubobject &Base, bool BaseIsVirtual,
-    mlir::cir::GlobalLinkageKind Linkage,
-    VTableAddressPointsMapTy &AddressPoints) {
+    cir::GlobalLinkageKind Linkage, VTableAddressPointsMapTy &AddressPoints) {
   if (CGM.getModuleDebugInfo())
     llvm_unreachable("NYI");
 
@@ -360,8 +359,8 @@ mlir::cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   // emitting an available_externally VTT, we provide references to an internal
   // linkage construction vtable. The ABI only requires complete-object vtables
   // to be the same for all instances of a type, not construction vtables.
-  if (Linkage == mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage)
-    Linkage = mlir::cir::GlobalLinkageKind::InternalLinkage;
+  if (Linkage == cir::GlobalLinkageKind::AvailableExternallyLinkage)
+    Linkage = cir::GlobalLinkageKind::InternalLinkage;
 
   auto Align = CGM.getDataLayout().getABITypeAlign(VTType);
   auto Loc = CGM.getLoc(RD->getSourceRange());
@@ -380,7 +379,7 @@ mlir::cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   ConstantInitBuilder builder(CGM);
   auto components = builder.beginStruct();
   createVTableInitializer(components, *VTLayout, RTTI,
-                          mlir::cir::isLocalLinkage(VTable.getLinkage()));
+                          cir::isLocalLinkage(VTable.getLinkage()));
   components.finishAndSetAsInitializer(VTable);
 
   // Set properties only after the initializer has been set to ensure that the
@@ -400,10 +399,9 @@ mlir::cir::GlobalOp CIRGenVTables::generateConstructionVTable(
 /// Compute the required linkage of the vtable for the given class.
 ///
 /// Note that we only call this at the end of the translation unit.
-mlir::cir::GlobalLinkageKind
-CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
+cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
-    return mlir::cir::GlobalLinkageKind::InternalLinkage;
+    return cir::GlobalLinkageKind::InternalLinkage;
 
   // We're at the end of the translation unit, so the current key
   // function is fully correct.
@@ -424,24 +422,24 @@ CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
           "Shouldn't query vtable linkage without key function, "
           "optimizations, or debug info");
       if (!def && codeGenOpts.OptimizationLevel > 0)
-        return mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
+        return cir::GlobalLinkageKind::AvailableExternallyLinkage;
 
       if (keyFunction->isInlined())
         return !astCtx.getLangOpts().AppleKext
-                   ? mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage
-                   : mlir::cir::GlobalLinkageKind::InternalLinkage;
+                   ? cir::GlobalLinkageKind::LinkOnceODRLinkage
+                   : cir::GlobalLinkageKind::InternalLinkage;
 
-      return mlir::cir::GlobalLinkageKind::ExternalLinkage;
+      return cir::GlobalLinkageKind::ExternalLinkage;
 
     case TSK_ImplicitInstantiation:
       return !astCtx.getLangOpts().AppleKext
-                 ? mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage
-                 : mlir::cir::GlobalLinkageKind::InternalLinkage;
+                 ? cir::GlobalLinkageKind::LinkOnceODRLinkage
+                 : cir::GlobalLinkageKind::InternalLinkage;
 
     case TSK_ExplicitInstantiationDefinition:
       return !astCtx.getLangOpts().AppleKext
-                 ? mlir::cir::GlobalLinkageKind::WeakODRLinkage
-                 : mlir::cir::GlobalLinkageKind::InternalLinkage;
+                 ? cir::GlobalLinkageKind::WeakODRLinkage
+                 : cir::GlobalLinkageKind::InternalLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
       llvm_unreachable("Should not have been asked to emit this");
@@ -451,19 +449,18 @@ CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   // -fapple-kext mode does not support weak linkage, so we must use
   // internal linkage.
   if (astCtx.getLangOpts().AppleKext)
-    return mlir::cir::GlobalLinkageKind::InternalLinkage;
+    return cir::GlobalLinkageKind::InternalLinkage;
 
-  auto DiscardableODRLinkage = mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage;
-  auto NonDiscardableODRLinkage = mlir::cir::GlobalLinkageKind::WeakODRLinkage;
+  auto DiscardableODRLinkage = cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  auto NonDiscardableODRLinkage = cir::GlobalLinkageKind::WeakODRLinkage;
   if (RD->hasAttr<DLLExportAttr>()) {
     // Cannot discard exported vtables.
     DiscardableODRLinkage = NonDiscardableODRLinkage;
   } else if (RD->hasAttr<DLLImportAttr>()) {
     // Imported vtables are available externally.
-    DiscardableODRLinkage =
-        mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
+    DiscardableODRLinkage = cir::GlobalLinkageKind::AvailableExternallyLinkage;
     NonDiscardableODRLinkage =
-        mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
+        cir::GlobalLinkageKind::AvailableExternallyLinkage;
   }
 
   switch (RD->getTemplateSpecializationKind()) {
@@ -478,9 +475,9 @@ CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     if (getTarget().getCXXABI().isMicrosoft())
       return DiscardableODRLinkage;
     auto r = shouldEmitAvailableExternallyVTable(*this, RD)
-                 ? mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage
-                 : mlir::cir::GlobalLinkageKind::ExternalLinkage;
-    assert(r == mlir::cir::GlobalLinkageKind::ExternalLinkage &&
+                 ? cir::GlobalLinkageKind::AvailableExternallyLinkage
+                 : cir::GlobalLinkageKind::ExternalLinkage;
+    assert(r == cir::GlobalLinkageKind::ExternalLinkage &&
            "available external NYI");
     return r;
   }
@@ -492,11 +489,10 @@ CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
-mlir::cir::GlobalOp
+cir::GlobalOp
 getAddrOfVTTVTable(CIRGenVTables &CGVT, CIRGenModule &CGM,
                    const CXXRecordDecl *MostDerivedClass,
-                   const VTTVTable &vtable,
-                   mlir::cir::GlobalLinkageKind linkage,
+                   const VTTVTable &vtable, cir::GlobalLinkageKind linkage,
                    VTableLayout::AddressPointsMapTy &addressPoints) {
   if (vtable.getBase() == MostDerivedClass) {
     assert(vtable.getBaseOffset().isZero() &&
@@ -509,7 +505,7 @@ getAddrOfVTTVTable(CIRGenVTables &CGVT, CIRGenModule &CGM,
       addressPoints);
 }
 
-mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD) {
+cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD) {
   assert(RD->getNumVBases() && "Only classes with virtual bases need a VTT");
 
   SmallString<256> OutName;
@@ -523,15 +519,14 @@ mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD) {
 
   VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/false);
 
-  auto ArrayType = mlir::cir::ArrayType::get(CGM.getBuilder().getContext(),
-                                             CGM.getBuilder().getUInt8PtrTy(),
-                                             Builder.getVTTComponents().size());
+  auto ArrayType = cir::ArrayType::get(CGM.getBuilder().getContext(),
+                                       CGM.getBuilder().getUInt8PtrTy(),
+                                       Builder.getVTTComponents().size());
   auto Align =
       CGM.getDataLayout().getABITypeAlign(CGM.getBuilder().getUInt8PtrTy());
   auto VTT = CGM.createOrReplaceCXXRuntimeVariable(
       CGM.getLoc(RD->getSourceRange()), Name, ArrayType,
-      mlir::cir::GlobalLinkageKind::ExternalLinkage,
-      CharUnits::fromQuantity(Align));
+      cir::GlobalLinkageKind::ExternalLinkage, CharUnits::fromQuantity(Align));
   CGM.setGVProperties(VTT, RD);
   return VTT;
 }
@@ -590,16 +585,16 @@ uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
 }
 
 /// Emit the definition of the given vtable.
-void CIRGenVTables::buildVTTDefinition(mlir::cir::GlobalOp VTT,
-                                       mlir::cir::GlobalLinkageKind Linkage,
+void CIRGenVTables::buildVTTDefinition(cir::GlobalOp VTT,
+                                       cir::GlobalLinkageKind Linkage,
                                        const CXXRecordDecl *RD) {
   VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/true);
 
-  auto ArrayType = mlir::cir::ArrayType::get(CGM.getBuilder().getContext(),
-                                             CGM.getBuilder().getUInt8PtrTy(),
-                                             Builder.getVTTComponents().size());
+  auto ArrayType = cir::ArrayType::get(CGM.getBuilder().getContext(),
+                                       CGM.getBuilder().getUInt8PtrTy(),
+                                       Builder.getVTTComponents().size());
 
-  SmallVector<mlir::cir::GlobalOp, 8> VTables;
+  SmallVector<cir::GlobalOp, 8> VTables;
   SmallVector<VTableAddressPointsMapTy, 8> VTableAddressPoints;
   for (const VTTVTable *i = Builder.getVTTVTables().begin(),
                        *e = Builder.getVTTVTables().end();
@@ -614,7 +609,7 @@ void CIRGenVTables::buildVTTDefinition(mlir::cir::GlobalOp VTT,
                           *e = Builder.getVTTComponents().end();
        i != e; ++i) {
     const VTTVTable &VTTVT = Builder.getVTTVTables()[i->VTableIndex];
-    mlir::cir::GlobalOp VTable = VTables[i->VTableIndex];
+    cir::GlobalOp VTable = VTables[i->VTableIndex];
     VTableLayout::AddressPointLocation AddressPoint;
     if (VTTVT.getBase() == RD) {
       // Just get the address point for the regular vtable.

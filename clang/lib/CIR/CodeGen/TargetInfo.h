@@ -80,7 +80,7 @@ public:
                                                  const clang::VarDecl *D) const;
 
   /// Get the CIR address space for alloca.
-  virtual mlir::cir::AddressSpaceAttr getCIRAllocaAddressSpace() const {
+  virtual cir::AddressSpaceAttr getCIRAllocaAddressSpace() const {
     // Return the null attribute, which means the target does not care about the
     // alloca address space.
     return {};
@@ -93,13 +93,13 @@ public:
   /// \param DestTy is the destination pointer type.
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
   virtual mlir::Value performAddrSpaceCast(CIRGenFunction &CGF, mlir::Value V,
-                                           mlir::cir::AddressSpaceAttr SrcAddr,
-                                           mlir::cir::AddressSpaceAttr DestAddr,
+                                           cir::AddressSpaceAttr SrcAddr,
+                                           cir::AddressSpaceAttr DestAddr,
                                            mlir::Type DestTy,
                                            bool IsNonNull = false) const;
 
   /// Get CIR calling convention for OpenCL kernel.
-  virtual mlir::cir::CallingConv getOpenCLKernelCallingConv() const {
+  virtual cir::CallingConv getOpenCLKernelCallingConv() const {
     // OpenCL kernels are called via an explicit runtime API with arguments
     // set with clSetKernelArg(), not as normal sub-functions.
     // Return SPIR_KERNEL by default as the kernel calling convention to
@@ -110,7 +110,7 @@ public:
     // clSetKernelArg() might break depending on the target-specific
     // conventions; different targets might split structs passed as values
     // to multiple function arguments etc.
-    return mlir::cir::CallingConv::SpirKernel;
+    return cir::CallingConv::SpirKernel;
   }
 
   virtual ~TargetCIRGenInfo() {}

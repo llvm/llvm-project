@@ -23,10 +23,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 
-namespace mlir {
 namespace cir {
 
-using CallArgList = SmallVector<Value, 8>;
+using CallArgList = llvm::SmallVector<mlir::Value, 8>;
 
 class LowerFunction {
   LowerFunction(const LowerFunction &) = delete;
@@ -36,72 +35,74 @@ class LowerFunction {
 
   const clang::TargetInfo &Target;
 
-  PatternRewriter &rewriter;
+  mlir::PatternRewriter &rewriter;
   FuncOp SrcFn;  // Original ABI-agnostic function.
   FuncOp NewFn;  // New ABI-aware function.
   CallOp callOp; // Call operation to be lowered.
 
 public:
   /// Builder for lowering calling convention of a function definition.
-  LowerFunction(LowerModule &LM, PatternRewriter &rewriter, FuncOp srcFn,
+  LowerFunction(LowerModule &LM, mlir::PatternRewriter &rewriter, FuncOp srcFn,
                 FuncOp newFn);
 
   /// Builder for lowering calling convention of a call operation.
-  LowerFunction(LowerModule &LM, PatternRewriter &rewriter, FuncOp srcFn,
+  LowerFunction(LowerModule &LM, mlir::PatternRewriter &rewriter, FuncOp srcFn,
                 CallOp callOp);
 
   ~LowerFunction() = default;
 
   LowerModule &LM; // Per-module state.
 
-  PatternRewriter &getRewriter() const { return rewriter; }
+  mlir::PatternRewriter &getRewriter() const { return rewriter; }
 
   const clang::TargetInfo &getTarget() const { return Target; }
 
   // Build ABI/Target-specific function prologue.
-  LogicalResult buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
-                                    MutableArrayRef<BlockArgument> Args);
+  llvm::LogicalResult
+  buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
+                      llvm::MutableArrayRef<mlir::BlockArgument> Args);
 
   // Build ABI/Target-specific function epilogue.
-  LogicalResult buildFunctionEpilog(const LowerFunctionInfo &FI);
+  llvm::LogicalResult buildFunctionEpilog(const LowerFunctionInfo &FI);
 
   // Parity with CodeGenFunction::GenerateCode. Keep in mind that several
   // sections in the original function are focused on codegen unrelated to the
   // ABI. Such sections are handled in CIR's codegen, not here.
-  LogicalResult generateCode(FuncOp oldFn, FuncOp newFn,
-                             const LowerFunctionInfo &FnInfo);
+  llvm::LogicalResult generateCode(FuncOp oldFn, FuncOp newFn,
+                                   const LowerFunctionInfo &FnInfo);
 
   // Emit the most simple cir.store possible (e.g. a store for a whole
   // struct), which can later be broken down in other CIR levels (or prior
   // to dialect codegen).
-  void buildAggregateStore(Value Val, Value Dest, bool DestIsVolatile);
+  void buildAggregateStore(mlir::Value Val, mlir::Value Dest,
+                           bool DestIsVolatile);
 
   // Emit a simple bitcast for a coerced aggregate type to convert it from an
   // ABI-agnostic to an ABI-aware type.
-  Value buildAggregateBitcast(Value Val, Type DestTy);
+  mlir::Value buildAggregateBitcast(mlir::Value Val, mlir::Type DestTy);
 
   /// Rewrite a call operation to abide to the ABI calling convention.
-  LogicalResult rewriteCallOp(CallOp op,
-                              ReturnValueSlot retValSlot = ReturnValueSlot());
-  Value rewriteCallOp(FuncType calleeTy, FuncOp origCallee, CallOp callOp,
-                      ReturnValueSlot retValSlot, Value Chain = nullptr);
-  Value rewriteCallOp(const LowerFunctionInfo &CallInfo, FuncOp Callee,
-                      CallOp Caller, ReturnValueSlot ReturnValue,
-                      CallArgList &CallArgs, CallOp CallOrInvoke,
-                      bool isMustTail, Location loc);
+  llvm::LogicalResult
+  rewriteCallOp(CallOp op, ReturnValueSlot retValSlot = ReturnValueSlot());
+  mlir::Value rewriteCallOp(FuncType calleeTy, FuncOp origCallee, CallOp callOp,
+                            ReturnValueSlot retValSlot,
+                            mlir::Value Chain = nullptr);
+  mlir::Value rewriteCallOp(const LowerFunctionInfo &CallInfo, FuncOp Callee,
+                            CallOp Caller, ReturnValueSlot ReturnValue,
+                            CallArgList &CallArgs, CallOp CallOrInvoke,
+                            bool isMustTail, mlir::Location loc);
 
   /// Get an appropriate 'undef' value for the given type.
-  Value getUndefRValue(Type Ty);
+  mlir::Value getUndefRValue(mlir::Type Ty);
 
   /// Return the TypeEvaluationKind of Type \c T.
-  static ::cir::TypeEvaluationKind getEvaluationKind(Type T);
+  static cir::TypeEvaluationKind getEvaluationKind(mlir::Type T);
 
-  static bool hasScalarEvaluationKind(Type T) {
-    return getEvaluationKind(T) == ::cir::TypeEvaluationKind::TEK_Scalar;
+  static bool hasScalarEvaluationKind(mlir::Type T) {
+    return getEvaluationKind(T) == cir::TypeEvaluationKind::TEK_Scalar;
   }
 };
 
 } // namespace cir
-} // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERFUNCTION_H

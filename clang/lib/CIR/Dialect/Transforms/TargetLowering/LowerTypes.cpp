@@ -20,9 +20,9 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using namespace ::mlir::cir;
+using namespace cir;
 
-using ABIArgInfo = ::cir::ABIArgInfo;
+using ABIArgInfo = cir::ABIArgInfo;
 
 unsigned LowerTypes::clangCallConvToLLVMCallConv(clang::CallingConv CC) {
   switch (CC) {
@@ -33,7 +33,7 @@ unsigned LowerTypes::clangCallConvToLLVMCallConv(clang::CallingConv CC) {
   }
 }
 
-LowerTypes::LowerTypes(LowerModule &LM, StringRef DLString)
+LowerTypes::LowerTypes(LowerModule &LM, llvm::StringRef DLString)
     : LM(LM), context(LM.getContext()), Target(LM.getTarget()),
       CXXABI(LM.getCXXABI()),
       TheABIInfo(LM.getTargetLoweringInfo().getABIInfo()),
@@ -43,14 +43,14 @@ LowerTypes::LowerTypes(LowerModule &LM, StringRef DLString)
 FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
 
   mlir::Type resultType = {};
-  const ::cir::ABIArgInfo &retAI = FI.getReturnInfo();
+  const cir::ABIArgInfo &retAI = FI.getReturnInfo();
   switch (retAI.getKind()) {
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
     resultType = retAI.getCoerceToType();
     break;
-  case ::cir::ABIArgInfo::Ignore:
-  case ::cir::ABIArgInfo::Indirect:
+  case cir::ABIArgInfo::Ignore:
+  case cir::ABIArgInfo::Indirect:
     resultType = VoidType::get(getMLIRContext());
     break;
   default:
@@ -58,17 +58,17 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
   }
 
   CIRToCIRArgMapping IRFunctionArgs(getContext(), FI, true);
-  SmallVector<Type, 8> ArgTypes(IRFunctionArgs.totalIRArgs());
+  llvm::SmallVector<mlir::Type, 8> ArgTypes(IRFunctionArgs.totalIRArgs());
 
   // Add type for sret argument.
   if (IRFunctionArgs.hasSRetArg()) {
     mlir::Type ret = FI.getReturnType();
     ArgTypes[IRFunctionArgs.getSRetArgNo()] =
-        mlir::cir::PointerType::get(getMLIRContext(), ret);
+        cir::PointerType::get(getMLIRContext(), ret);
   }
 
   // Add type for inalloca argument.
-  cir_cconv_assert(!::cir::MissingFeatures::inallocaArgs());
+  cir_cconv_assert(!cir::MissingFeatures::inallocaArgs());
 
   // Add in all of the required arguments.
   unsigned ArgNo = 0;
@@ -77,7 +77,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
   for (; it != ie; ++it, ++ArgNo) {
     const ABIArgInfo &ArgInfo = it->info;
 
-    cir_cconv_assert(!::cir::MissingFeatures::argumentPadding());
+    cir_cconv_assert(!cir::MissingFeatures::argumentPadding());
 
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
@@ -87,8 +87,8 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
     case ABIArgInfo::Direct: {
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      Type argType = ArgInfo.getCoerceToType();
-      StructType st = dyn_cast<StructType>(argType);
+      mlir::Type argType = ArgInfo.getCoerceToType();
+      StructType st = mlir::dyn_cast<StructType>(argType);
       if (st && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         cir_cconv_assert(NumIRArgs == st.getNumElements());
         for (unsigned i = 0, e = st.getNumElements(); i != e; ++i)
@@ -101,8 +101,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
     }
     case ABIArgInfo::Indirect: {
       mlir::Type argType = (FI.arg_begin() + ArgNo)->type;
-      ArgTypes[FirstIRArg] =
-          mlir::cir::PointerType::get(getMLIRContext(), argType);
+      ArgTypes[FirstIRArg] = cir::PointerType::get(getMLIRContext(), argType);
       break;
     }
     default:
@@ -114,7 +113,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
 }
 
 /// Convert a CIR type to its ABI-specific default form.
-mlir::Type LowerTypes::convertType(Type T) {
+mlir::Type LowerTypes::convertType(mlir::Type T) {
   /// NOTE(cir): It the original codegen this method is used to get the default
   /// LLVM IR representation for a given AST type. When a the ABI-specific
   /// function info sets a nullptr for a return or argument type, the default
@@ -123,12 +122,12 @@ mlir::Type LowerTypes::convertType(Type T) {
   /// It's kept here for codegen parity's sake.
 
   // Certain CIR types are already ABI-specific, so we just return them.
-  if (isa<BoolType, IntType, SingleType, DoubleType>(T)) {
+  if (mlir::isa<BoolType, IntType, SingleType, DoubleType>(T)) {
     return T;
   }
 
   llvm::outs() << "Missing default ABI-specific type for " << T << "\n";
   cir_cconv_assert_or_abort(
-      !::cir::MissingFeatures::X86DefaultABITypeConvertion(), "NYI");
+      !cir::MissingFeatures::X86DefaultABITypeConvertion(), "NYI");
   return T;
 }

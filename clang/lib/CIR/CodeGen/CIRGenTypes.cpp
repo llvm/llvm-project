@@ -25,15 +25,15 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-mlir::cir::CallingConv
+cir::CallingConv
 CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
   switch (CC) {
   case CC_C:
-    return mlir::cir::CallingConv::C;
+    return cir::CallingConv::C;
   case CC_OpenCLKernel:
     return CGM.getTargetCIRGenInfo().getOpenCLKernelCallingConv();
   case CC_SpirFunction:
-    return mlir::cir::CallingConv::SpirFunction;
+    return cir::CallingConv::SpirFunction;
   default:
     llvm_unreachable("No other calling conventions implemented.");
   }
@@ -98,7 +98,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
 
 /// Return true if the specified type is already completely laid out.
 bool CIRGenTypes::isRecordLayoutComplete(const Type *Ty) const {
-  llvm::DenseMap<const Type *, mlir::cir::StructType>::const_iterator I =
+  llvm::DenseMap<const Type *, cir::StructType>::const_iterator I =
       recordDeclTypes.find(Ty);
   return I != recordDeclTypes.end() && I->second.isComplete();
 }
@@ -189,7 +189,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
   // connected to the decl.
   const auto *key = Context.getTagDeclType(RD).getTypePtr();
-  mlir::cir::StructType entry = recordDeclTypes[key];
+  cir::StructType entry = recordDeclTypes[key];
 
   // Handle forward decl / incomplete types.
   if (!entry) {
@@ -418,7 +418,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::Bool:
-      ResultType = ::mlir::cir::BoolType::get(&getMLIRContext());
+      ResultType = cir::BoolType::get(&getMLIRContext());
       break;
 
     // Signed types.
@@ -442,9 +442,8 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     case BuiltinType::SatLongFract:
     case BuiltinType::SatShortAccum:
     case BuiltinType::SatShortFract:
-      ResultType =
-          mlir::cir::IntType::get(&getMLIRContext(), Context.getTypeSize(T),
-                                  /*isSigned=*/true);
+      ResultType = cir::IntType::get(&getMLIRContext(), Context.getTypeSize(T),
+                                     /*isSigned=*/true);
       break;
     // Unsigned types.
     case BuiltinType::Char16:
@@ -471,8 +470,8 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     case BuiltinType::SatUShortAccum:
     case BuiltinType::SatUShortFract:
       ResultType =
-          mlir::cir::IntType::get(Builder.getContext(), Context.getTypeSize(T),
-                                  /*isSigned=*/false);
+          cir::IntType::get(Builder.getContext(), Context.getTypeSize(T),
+                            /*isSigned=*/false);
       break;
 
     case BuiltinType::Float16:
@@ -617,7 +616,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   case Type::Complex: {
     const ComplexType *CT = cast<ComplexType>(Ty);
     auto ElementTy = ConvertType(CT->getElementType());
-    ResultType = ::mlir::cir::ComplexType::get(Builder.getContext(), ElementTy);
+    ResultType = cir::ComplexType::get(Builder.getContext(), ElementTy);
     break;
   }
   case Type::LValueReference:
@@ -675,16 +674,16 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     // FIXME: In LLVM, "lower arrays of undefined struct type to arrays of
     // i8 just to have a concrete type". Not sure this makes sense in CIR yet.
     assert(Builder.isSized(EltTy) && "not implemented");
-    ResultType = ::mlir::cir::ArrayType::get(Builder.getContext(), EltTy,
-                                             A->getSize().getZExtValue());
+    ResultType = cir::ArrayType::get(Builder.getContext(), EltTy,
+                                     A->getSize().getZExtValue());
     break;
   }
   case Type::ExtVector:
   case Type::Vector: {
     const VectorType *V = cast<VectorType>(Ty);
     auto ElementType = convertTypeForMem(V->getElementType());
-    ResultType = ::mlir::cir::VectorType::get(Builder.getContext(), ElementType,
-                                              V->getNumElements());
+    ResultType = cir::VectorType::get(Builder.getContext(), ElementType,
+                                      V->getNumElements());
     break;
   }
   case Type::ConstantMatrix: {
@@ -729,15 +728,15 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     const auto *MPT = cast<MemberPointerType>(Ty);
 
     auto memberTy = ConvertType(MPT->getPointeeType());
-    auto clsTy = mlir::cast<mlir::cir::StructType>(
-        ConvertType(QualType(MPT->getClass(), 0)));
+    auto clsTy =
+        mlir::cast<cir::StructType>(ConvertType(QualType(MPT->getClass(), 0)));
     if (MPT->isMemberDataPointer())
       ResultType =
-          mlir::cir::DataMemberType::get(Builder.getContext(), memberTy, clsTy);
+          cir::DataMemberType::get(Builder.getContext(), memberTy, clsTy);
     else {
-      auto memberFuncTy = mlir::cast<mlir::cir::FuncType>(memberTy);
+      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
       ResultType =
-          mlir::cir::MethodType::get(Builder.getContext(), memberFuncTy, clsTy);
+          cir::MethodType::get(Builder.getContext(), memberFuncTy, clsTy);
     }
     break;
   }
@@ -760,8 +759,8 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
   case Type::BitInt: {
     const auto *bitIntTy = cast<BitIntType>(Ty);
-    ResultType = mlir::cir::IntType::get(
-        Builder.getContext(), bitIntTy->getNumBits(), bitIntTy->isSigned());
+    ResultType = cir::IntType::get(Builder.getContext(), bitIntTy->getNumBits(),
+                                   bitIntTy->isSigned());
     break;
   }
   }
@@ -792,7 +791,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   if (FI)
     return *FI;
 
-  mlir::cir::CallingConv CC = ClangCallConvToCIRCallConv(info.getCC());
+  cir::CallingConv CC = ClangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
   FI = CIRGenFunctionInfo::create(CC, instanceMethod, chainCall, info,
@@ -804,7 +803,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
-  if (CC == mlir::cir::CallingConv::SpirKernel) {
+  if (CC == cir::CallingConv::SpirKernel) {
     // Force target independent argument handling for the host visible
     // kernel functions.
     computeSPIRKernelABIInfo(CGM, *FI);
