@@ -46,18 +46,22 @@ void test2(void) {
   // respectively).
   char str1[] = "string literal";
   char str2[] = { "string literal" };
-  char str3[] = u8"string literal";
-  char str4[] = { u8"string literal" };
 
   float str5[] = "this doesn't work";          // expected-error {{array initializer must be an initializer list}}
   float str6[] = { "this also doesn't work" }; // expected-error {{initializing 'float' with an expression of incompatible type 'char[23]'}}
 
   wchar_t str7[] = L"string literal";
   wchar_t str8[] = { L"string literal" };
+
+#if __STDC_VERSION__ >= 201112L
+  char str3[] = u8"string literal";
+  char str4[] = { u8"string literal" };
+
   char16_t str9[] = u"string literal";
   char16_t str10[] = { u"string literal" };
   char32_t str11[] = U"string literal";
   char32_t str12[] = { U"string literal" };
+#endif
 
   wchar_t str13[] = "nope";      // expected-error {{initializing wide char array with non-wide string literal}}
   wchar_t str14[] = { "nope" };  // expected-error-re {{incompatible pointer to integer conversion initializing 'wchar_t' (aka '{{.*}}') with an expression of type 'char[5]'}}
