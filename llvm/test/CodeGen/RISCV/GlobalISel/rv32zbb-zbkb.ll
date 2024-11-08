@@ -143,8 +143,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    bltu a6, a4, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    sub a5, a6, a4
-; CHECK-NEXT:    sll a7, a0, a5
+; CHECK-NEXT:    sll a7, a0, a6
 ; CHECK-NEXT:    j .LBB7_3
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    sll a3, a0, a2
@@ -162,8 +161,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    andi a6, a5, 63
 ; CHECK-NEXT:    bltu a6, a4, .LBB7_7
 ; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    sub a7, a6, a4
-; CHECK-NEXT:    srl a7, a1, a7
+; CHECK-NEXT:    srl a7, a1, a6
 ; CHECK-NEXT:    bnez a6, .LBB7_8
 ; CHECK-NEXT:    j .LBB7_9
 ; CHECK-NEXT:  .LBB7_7:
@@ -220,8 +218,7 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sub a3, a5, a4
-; CHECK-NEXT:    srl a6, a1, a3
+; CHECK-NEXT:    srl a6, a1, a5
 ; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    bnez a5, .LBB9_3
 ; CHECK-NEXT:    j .LBB9_4
@@ -235,33 +232,32 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    mv a3, a6
 ; CHECK-NEXT:  .LBB9_4:
-; CHECK-NEXT:    neg a7, a2
+; CHECK-NEXT:    neg a6, a2
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_7
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    andi a5, a7, 63
+; CHECK-NEXT:    andi a5, a6, 63
 ; CHECK-NEXT:    bgeu a5, a4, .LBB9_8
 ; CHECK-NEXT:  .LBB9_6:
-; CHECK-NEXT:    sll a6, a0, a7
-; CHECK-NEXT:    neg a4, a5
-; CHECK-NEXT:    srl a0, a0, a4
-; CHECK-NEXT:    sll a4, a1, a7
-; CHECK-NEXT:    or a0, a0, a4
+; CHECK-NEXT:    sll a4, a0, a6
+; CHECK-NEXT:    neg a7, a5
+; CHECK-NEXT:    srl a0, a0, a7
+; CHECK-NEXT:    sll a6, a1, a6
+; CHECK-NEXT:    or a0, a0, a6
 ; CHECK-NEXT:    bnez a5, .LBB9_9
 ; CHECK-NEXT:    j .LBB9_10
 ; CHECK-NEXT:  .LBB9_7:
 ; CHECK-NEXT:    srl a2, a1, a2
-; CHECK-NEXT:    andi a5, a7, 63
+; CHECK-NEXT:    andi a5, a6, 63
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_6
 ; CHECK-NEXT:  .LBB9_8:
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    sub a4, a5, a4
-; CHECK-NEXT:    sll a0, a0, a4
+; CHECK-NEXT:    li a4, 0
+; CHECK-NEXT:    sll a0, a0, a5
 ; CHECK-NEXT:    beqz a5, .LBB9_10
 ; CHECK-NEXT:  .LBB9_9:
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB9_10:
-; CHECK-NEXT:    or a0, a3, a6
+; CHECK-NEXT:    or a0, a3, a4
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %b)
