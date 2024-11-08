@@ -246,13 +246,6 @@ let Predicates = [HasStdExtZmmul, IsRV64] in {
 def : PatGprGpr<mul, MULW, i32, i32>;
 }
 
-let Predicates = [HasStdExtM, IsRV64] in {
-def : PatGprGpr<sdiv, DIVW, i32, i32>;
-def : PatGprGpr<udiv, DIVUW, i32, i32>;
-def : PatGprGpr<srem, REMW, i32, i32>;
-def : PatGprGpr<urem, REMUW, i32, i32>;
-}
-
 //===----------------------------------------------------------------------===//
 // Zb* RV64 i32 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
