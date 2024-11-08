@@ -121,3 +121,108 @@ entry:
   %d = insertelement <vscale x 16 x i8> %vec, i8 %elt, i64 %idx
   ret <vscale x 16 x i8> %d
 }
+
+define i64 @extract_vscale_2_i64(<vscale x 2 x i64> %vec, i64 %idx) {
+; CHECK-SD-LABEL: extract_vscale_2_i64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    whilels p0.d, xzr, x0
+; CHECK-SD-NEXT:    lastb x0, p0, z0.d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_vscale_2_i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    whilels p0.d, xzr, x0
+; CHECK-GI-NEXT:    lastb d0, p0, z0.d
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 2 x i64> %vec, i64 %idx
+  ret i64 %d
+}
+
+define i64 @extract_vscale_2_i64_zero(<vscale x 2 x i64> %vec, i64 %idx) {
+; CHECK-LABEL: extract_vscale_2_i64_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 2 x i64> %vec, i64 0
+  ret i64 %d
+}
+
+define i32 @extract_vscale_4_i32(<vscale x 4 x i32> %vec, i64 %idx) {
+; CHECK-SD-LABEL: extract_vscale_4_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    whilels p0.s, xzr, x0
+; CHECK-SD-NEXT:    lastb w0, p0, z0.s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_vscale_4_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    whilels p0.s, xzr, x0
+; CHECK-GI-NEXT:    lastb s0, p0, z0.s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 4 x i32> %vec, i64 %idx
+  ret i32 %d
+}
+
+define i32 @extract_vscale_4_i32_zero(<vscale x 4 x i32> %vec, i64 %idx) {
+; CHECK-LABEL: extract_vscale_4_i32_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 4 x i32> %vec, i64 0
+  ret i32 %d
+}
+
+define i16 @extract_vscale_8_i16(<vscale x 8 x i16> %vec, i64 %idx) {
+; CHECK-SD-LABEL: extract_vscale_8_i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    whilels p0.h, xzr, x0
+; CHECK-SD-NEXT:    lastb w0, p0, z0.h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_vscale_8_i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    whilels p0.h, xzr, x0
+; CHECK-GI-NEXT:    lastb h0, p0, z0.h
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 8 x i16> %vec, i64 %idx
+  ret i16 %d
+}
+
+define i16 @extract_vscale_8_i16_zero(<vscale x 8 x i16> %vec, i64 %idx) {
+; CHECK-LABEL: extract_vscale_8_i16_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 8 x i16> %vec, i64 0
+  ret i16 %d
+}
+
+define i8 @extract_vscale_16_i8(<vscale x 16 x i8> %vec, i64 %idx) {
+; CHECK-LABEL: extract_vscale_16_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    whilels p0.b, xzr, x0
+; CHECK-NEXT:    lastb w0, p0, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 16 x i8> %vec, i64 %idx
+  ret i8 %d
+}
+
+define i8 @extract_vscale_16_i8_zero(<vscale x 16 x i8> %vec, i64 %idx) {
+; CHECK-LABEL: extract_vscale_16_i8_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %d = extractelement <vscale x 16 x i8> %vec, i64 0
+  ret i8 %d
+}
