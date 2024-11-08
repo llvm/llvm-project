@@ -111,10 +111,17 @@
 #define ULLONG_MAX (__LONG_LONG_MAX__*2ULL+1ULL)
 #endif
 
+<<<<<<< HEAD
 /* LONG_LONG_MIN/LONG_LONG_MAX/ULONG_LONG_MAX are a GNU extension. Bionic also
    defines them. It's too bad that we don't have something like #pragma poison
    that could be used to deprecate a macro - the code should just use LLONG_MAX
    and friends.
+=======
+/* LONG_LONG_MIN/LONG_LONG_MAX/ULONG_LONG_MAX are a GNU extension. Android's
+   bionic also defines them. It's too bad that we don't have something like
+   #pragma poison that could be used to deprecate a macro - the code should just
+   use LLONG_MAX and friends.
+>>>>>>> 16ef50bd1f66 (Extend clang's <limits.h> to define *LONG_LONG*_ macros for bionic)
  */
 #if (defined(__GNU_LIBRARY__) ? defined(__USE_GNU) : !defined(__STRICT_ANSI__)) || defined(__BIONIC__)
 
