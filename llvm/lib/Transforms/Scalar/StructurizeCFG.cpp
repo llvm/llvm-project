@@ -616,7 +616,6 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
     PhiInserter.Initialize(Boolean, "");
-    PhiInserter.AddAvailableValue(&Func->getEntryBlock(), Default);
     PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
 
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
