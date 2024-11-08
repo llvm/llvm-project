@@ -1,4 +1,4 @@
-//===- mlir_test_spirv_cpu_runner_c_wrappers.cpp - Runner testing library -===//
+//===- SpirvCpuRuntimeWrappers.cpp - Runner testing library -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
