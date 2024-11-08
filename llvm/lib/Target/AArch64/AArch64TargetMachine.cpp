@@ -575,7 +575,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
   if (getTargetTriple().isOSWindows())
     PB.registerPipelineEarlySimplificationEPCallback(
-        [](ModulePassManager &PM, OptimizationLevel Level) {
+        [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           PM.addPass(LowerIFuncPass());
         });
 }
