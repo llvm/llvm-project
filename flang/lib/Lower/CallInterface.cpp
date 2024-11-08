@@ -1116,8 +1116,12 @@ private:
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
       isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
-    if (obj.attrs.test(Attrs::Volatile))
+    if (obj.attrs.test(Attrs::Volatile)) {
       TODO(loc, "VOLATILE in procedure interface");
+      addMLIRAttr(fir::getVolatileAttrName());
+    }
+    if (obj.attrs.test(Attrs::Asynchronous))
+      addMLIRAttr(fir::getAsynchronousAttrName());
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
     if (obj.cudaDataAttr)
