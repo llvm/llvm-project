@@ -21818,6 +21818,11 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
   auto Input = ExtInput->getOperand(0);
   EVT InputVT = Input.getValueType();
 
+  if (!(InputVT == MVT::nxv4i32 && AccVT == MVT::nxv2i64) &&
+      !(InputVT == MVT::nxv8i16 && AccVT == MVT::nxv4i32) &&
+      !(InputVT == MVT::nxv16i8 && AccVT == MVT::nxv8i16))
+    return SDValue();
+
   // To do this transformation, output element size needs to be double input
   // element size, and output number of elements needs to be half the input
   // number of elements

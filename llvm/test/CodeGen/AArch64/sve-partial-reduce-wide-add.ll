@@ -72,3 +72,70 @@ entry:
     %partial.reduce = tail call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> %acc, <vscale x 16 x i16> %input.wide)
     ret <vscale x 8 x i16> %partial.reduce
 }
+
+define <vscale x 2 x i32> @signed_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vscale x 4 x i16> %input){
+; CHECK-LABEL: signed_wide_add_nxv4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-NEXT:    uunpklo z2.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+entry:
+    %input.wide = sext <vscale x 4 x i16> %input to <vscale x 4 x i32>
+    %partial.reduce = tail call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
+    ret <vscale x 2 x i32> %partial.reduce
+}
+
+define <vscale x 2 x i32> @unsigned_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vscale x 4 x i16> %input){
+; CHECK-LABEL: unsigned_wide_add_nxv4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEXT:    uunpklo z2.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+entry:
+    %input.wide = zext <vscale x 4 x i16> %input to <vscale x 4 x i32>
+    %partial.reduce = tail call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
+    ret <vscale x 2 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i64> @signed_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vscale x 8 x i32> %input){
+; CHECK-LABEL: signed_wide_add_nxv8i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sunpkhi z4.d, z2.s
+; CHECK-NEXT:    sunpklo z2.d, z2.s
+; CHECK-NEXT:    sunpkhi z5.d, z3.s
+; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    add z1.d, z1.d, z4.d
+; CHECK-NEXT:    add z0.d, z3.d, z0.d
+; CHECK-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+    %input.wide = sext <vscale x 8 x i32> %input to <vscale x 8 x i64>
+    %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
+    ret <vscale x 4 x i64> %partial.reduce
+}
+
+define <vscale x 4 x i64> @unsigned_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vscale x 8 x i32> %input){
+; CHECK-LABEL: unsigned_wide_add_nxv8i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uunpkhi z4.d, z2.s
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpkhi z5.d, z3.s
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    add z1.d, z1.d, z4.d
+; CHECK-NEXT:    add z0.d, z3.d, z0.d
+; CHECK-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+    %input.wide = zext <vscale x 8 x i32> %input to <vscale x 8 x i64>
+    %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
+    ret <vscale x 4 x i64> %partial.reduce
+}
