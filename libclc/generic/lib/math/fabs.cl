@@ -1,5 +1,5 @@
-#include "../clcmacro.h"
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
 
 #undef __CLC_FUNCTION

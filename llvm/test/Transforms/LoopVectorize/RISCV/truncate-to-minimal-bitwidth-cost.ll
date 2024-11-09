@@ -162,7 +162,7 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i8> poison, i8 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i8> [[BROADCAST_SPLATINSERT]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc <2 x i8> [[BROADCAST_SPLAT]] to <2 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i1> <i1 true, i1 true>, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i1> splat (i1 true), [[TMP0]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 0, i32 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[ACTIVE_LANE_MASK]], <2 x i1> [[TMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x ptr> poison, ptr [[DST]], i64 0

@@ -146,9 +146,9 @@ private:
 
 public:
   CheckedRef() : t{} {};
-  CheckedRef(T &t) : t(&t) { t.incrementPtrCount(); }
-  CheckedRef(const CheckedRef &o) : t(o.t) { if (t) t->incrementPtrCount(); }
-  ~CheckedRef() { if (t) t->decrementPtrCount(); }
+  CheckedRef(T &t) : t(&t) { t.incrementCheckedPtrCount(); }
+  CheckedRef(const CheckedRef &o) : t(o.t) { if (t) t->incrementCheckedPtrCount(); }
+  ~CheckedRef() { if (t) t->decrementCheckedPtrCount(); }
   T &get() { return *t; }
   T *ptr() { return t; }
   T *operator->() { return t; }
@@ -165,14 +165,14 @@ public:
   CheckedPtr(T *t)
     : t(t) {
     if (t)
-      t->incrementPtrCount();
+      t->incrementCheckedPtrCount();
   }
   CheckedPtr(Ref<T> &&o)
     : t(o.leakRef())
   { }
   ~CheckedPtr() {
     if (t)
-      t->decrementPtrCount();
+      t->decrementCheckedPtrCount();
   }
   T *get() { return t; }
   T *operator->() { return t; }
@@ -184,16 +184,16 @@ public:
 
 class CheckedObj {
 public:
-  void incrementPtrCount();
-  void decrementPtrCount();
+  void incrementCheckedPtrCount();
+  void decrementCheckedPtrCount();
   void method();
   int trivial() { return 123; }
 };
 
 class RefCountableAndCheckable {
 public:
-  void incrementPtrCount() const;
-  void decrementPtrCount() const;
+  void incrementCheckedPtrCount() const;
+  void decrementCheckedPtrCount() const;
   void ref() const;
   void deref() const;
   void method();

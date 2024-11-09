@@ -99,3 +99,11 @@ _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(SimpleTemplat
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(SimpleTemplate<float>), "");
 
 
+typedef int myInt;
+
+struct TypeDefTest {
+    int x;
+    myInt y;
+};
+
+_Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(TypeDefTest), "");

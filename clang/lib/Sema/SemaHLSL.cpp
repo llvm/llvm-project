@@ -1947,6 +1947,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+
+    const Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+    QualType EltTy = ArgTy;
+
+    QualType ResTy = SemaRef.Context.UnsignedIntTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>()) {
+      EltTy = VecTy->getElementType();
+      ResTy = SemaRef.Context.getVectorType(ResTy, VecTy->getNumElements(),
+                                            VecTy->getVectorKind());
+    }
+
+    if (!EltTy->isIntegerType()) {
+      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* integer ty */ 6 << ArgTy;
+      return true;
+    }
+
+    TheCall->setType(ResTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_select: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
@@ -2212,7 +2237,7 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
 
   assert(QTTypes.size() > 0 &&
          "expected at least one constituent type from non-null type");
-  QualType FirstQT = QTTypes[0];
+  QualType FirstQT = SemaRef.Context.getCanonicalType(QTTypes[0]);
 
   // element count cannot exceed 4
   if (QTTypes.size() > 4)
@@ -2220,18 +2245,17 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
 
   for (QualType TempQT : QTTypes) {
     // ensure homogeneity
-    if (TempQT != FirstQT)
+    if (!getASTContext().hasSameUnqualifiedType(FirstQT, TempQT))
+      return false;
+  }
+
+  if (const BuiltinType *BT = FirstQT->getAs<BuiltinType>()) {
+    if (BT->isBooleanType() || BT->isEnumeralType())
       return false;
 
-    if (const BuiltinType *BT = TempQT->getAs<BuiltinType>()) {
-      if (BT->getKind() == BuiltinType::Bool ||
-          BT->getKind() == BuiltinType::Enum)
-        return false;
-
-      // Check if it is an array type.
-      if (TempQT->isArrayType())
-        return false;
-    }
+    // Check if it is an array type.
+    if (FirstQT->isArrayType())
+      return false;
   }
 
   // if the loop above completes without returning, then

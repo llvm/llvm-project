@@ -3459,8 +3459,8 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 .. code-block:: cpp
 
  struct CheckableObj {
-   void incrementPtrCount() {}
-   void decrementPtrCount() {}
+   void incrementCheckedPtrCount() {}
+   void decrementCheckedPtrCount() {}
  };
 
  struct Foo {
@@ -3559,6 +3559,12 @@ We also define a set of safe transformations which if passed a safe value as an 
 - member overloaded operators
 - casts
 - unary operators like ``&`` or ``*``
+
+alpha.webkit.UncheckedCallArgsChecker
+"""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
+
+The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""

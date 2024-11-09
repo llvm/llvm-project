@@ -9,13 +9,13 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i40> poison, i40 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i40> [[BROADCAST_SPLATINSERT1]], <16 x i40> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i40> [[BROADCAST_SPLAT2]], <i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24, i40 24>
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i40> [[TMP1]], <i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28, i40 28>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i40> [[BROADCAST_SPLAT2]], splat (i40 24)
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i40> [[TMP1]], splat (i40 28)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i40> [[TMP2]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <16 x i32> [[TMP3]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i1> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i1> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i1> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

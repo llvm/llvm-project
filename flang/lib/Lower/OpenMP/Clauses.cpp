@@ -347,8 +347,10 @@ makeDepType(const parser::OmpTaskDependenceType &inp) {
     return clause::TaskDependenceType::In;
   case parser::OmpTaskDependenceType::Type::Inout:
     return clause::TaskDependenceType::Inout;
-  // Inoutset        // missing-in-parser
-  // Mutexinoutset   // missing-in-parser
+  case parser::OmpTaskDependenceType::Type::Inoutset:
+    return clause::TaskDependenceType::Inoutset;
+  case parser::OmpTaskDependenceType::Type::Mutexinoutset:
+    return clause::TaskDependenceType::Mutexinoutset;
   case parser::OmpTaskDependenceType::Type::Out:
     return clause::TaskDependenceType::Out;
   case parser::OmpTaskDependenceType::Type::Sink:
@@ -1090,8 +1092,7 @@ Order make(const parser::OmpClause::Order &inp,
   auto &t1 = std::get<wrapped::Type>(inp.v.t);
 
   auto convert3 = [&](const parser::OmpOrderModifier &s) {
-    return Fortran::common::visit(
-        [&](parser::OmpOrderModifier::Kind k) { return convert1(k); }, s.u);
+    return convert1(s.v);
   };
   return Order{
       {/*OrderModifier=*/maybeApply(convert3, t0), /*Ordering=*/convert2(t1)}};
