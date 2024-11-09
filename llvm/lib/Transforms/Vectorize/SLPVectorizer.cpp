@@ -2241,10 +2241,9 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          auto *It = HashMap.find(NumFreeOpsHash.Hash);
-          if (It == HashMap.end())
-            HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
-          else
+          auto [It, Inserted] =
+              HashMap.try_emplace(NumFreeOpsHash.Hash, 1, Lane);
+          if (!Inserted)
             ++It->second.first;
         }
       }
