@@ -1060,6 +1060,25 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+        // Can copy any metadata that cannot trigger UB. In particular do not
+        // copy !noundef or !invariant.load.
+        unsigned SafeMDKinds[] = {LLVMContext::MD_dbg,
+                                  LLVMContext::MD_tbaa,
+                                  LLVMContext::MD_prof,
+                                  LLVMContext::MD_fpmath,
+                                  LLVMContext::MD_tbaa_struct,
+                                  LLVMContext::MD_alias_scope,
+                                  LLVMContext::MD_noalias,
+                                  LLVMContext::MD_nontemporal,
+                                  LLVMContext::MD_mem_parallel_loop_access,
+                                  LLVMContext::MD_access_group,
+                                  LLVMContext::MD_nonnull,
+                                  LLVMContext::MD_align,
+                                  LLVMContext::MD_dereferenceable,
+                                  LLVMContext::MD_dereferenceable_or_null,
+                                  LLVMContext::MD_range};
+        V1->copyMetadata(LI, SafeMDKinds);
+        V2->copyMetadata(LI, SafeMDKinds);
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
 

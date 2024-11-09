@@ -186,12 +186,12 @@ entry:
   ret i32 %c
 }
 
-; FIXME: Should preserve none-UB metadata on loads.
+; Preserve none-UB metadata on loads.
 define ptr @preserve_load_metadata_after_select_transform1(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B:%.*]], align 1, !tbaa [[TBAA0]], !dereferenceable [[META8]], !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A:%.*]], align 1, !tbaa [[TBAA0]], !dereferenceable [[META8]], !llvm.access.group [[META6]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C:%.*]], ptr [[B_VAL]], ptr [[A_VAL]]
 ; CHECK-NEXT:    ret ptr [[L_SEL]]
 ;
@@ -201,7 +201,7 @@ entry:
   ret ptr %l.sel
 }
 
-; FIXME: Should preserve none-UB metadata on loads.
+; Preserve none-UB metadata on loads.
 define i32 @preserve_load_metadata_after_select_transform_range(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform_range(
 ; CHECK-NEXT:  entry:
