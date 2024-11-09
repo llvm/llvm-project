@@ -810,10 +810,6 @@ memprof::extractCallsFromIR(Module &M) {
 
     for (auto &BB : F) {
       for (auto &I : BB) {
-        const DILocation *DIL = I.getDebugLoc();
-        if (!DIL)
-          continue;
-
         if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
           continue;
 
@@ -824,11 +820,17 @@ memprof::extractCallsFromIR(Module &M) {
           continue;
 
         StringRef CalleeName = CalledFunction->getName();
-        uint64_t CallerGUID =
-            IndexedMemProfRecord::getGUID(DIL->getSubprogramLinkageName());
-        uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
-        LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
-        Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+        for (const DILocation *DIL = I.getDebugLoc(); DIL;
+             DIL = DIL->getInlinedAt()) {
+          StringRef CallerName = DIL->getSubprogramLinkageName();
+          assert(!CallerName.empty() &&
+                 "Be sure to enable -fdebug-info-for-profiling");
+          uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
+          uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+          LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
+          Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
+          CalleeName = CallerName;
+        }
       }
     }
   }
