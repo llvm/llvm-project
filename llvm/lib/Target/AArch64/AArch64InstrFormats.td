@@ -2579,8 +2579,7 @@ class BaseAddSubCarry<bit isSub, RegisterClass regtype, string asm,
 class BaseAddSubCarrySetFlags<bit isSub, RegisterClass regtype, string asm,
                               SDNode OpNode>
     : BaseBaseAddSubCarry<isSub, regtype, asm,
-        [(set regtype:$Rd, (OpNode regtype:$Rn, regtype:$Rm, NZCV)),
-         (implicit NZCV)]> {
+        [(set regtype:$Rd, (OpNode regtype:$Rn, regtype:$Rm, NZCV))]> {
   let Defs = [NZCV];
 }
 
@@ -5912,34 +5911,34 @@ multiclass FPComparison<bit signalAllNans, string asm,
                         SDPatternOperator OpNode = null_frag> {
   let Defs = [NZCV] in {
   def Hrr : BaseTwoOperandFPComparison<signalAllNans, FPR16, asm,
-      [(OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm)), (implicit NZCV)]> {
+      [(OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm))]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
   }
 
   def Hri : BaseOneOperandFPComparison<signalAllNans, FPR16, asm,
-      [(OpNode (f16 FPR16:$Rn), fpimm0), (implicit NZCV)]> {
+      [(OpNode (f16 FPR16:$Rn), fpimm0)]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
   }
 
   def Srr : BaseTwoOperandFPComparison<signalAllNans, FPR32, asm,
-      [(OpNode FPR32:$Rn, (f32 FPR32:$Rm)), (implicit NZCV)]> {
+      [(OpNode FPR32:$Rn, (f32 FPR32:$Rm))]> {
     let Inst{23-22} = 0b00;
   }
 
   def Sri : BaseOneOperandFPComparison<signalAllNans, FPR32, asm,
-      [(OpNode (f32 FPR32:$Rn), fpimm0), (implicit NZCV)]> {
+      [(OpNode (f32 FPR32:$Rn), fpimm0)]> {
     let Inst{23-22} = 0b00;
   }
 
   def Drr : BaseTwoOperandFPComparison<signalAllNans, FPR64, asm,
-      [(OpNode FPR64:$Rn, (f64 FPR64:$Rm)), (implicit NZCV)]> {
+      [(OpNode FPR64:$Rn, (f64 FPR64:$Rm))]> {
     let Inst{23-22} = 0b01;
   }
 
   def Dri : BaseOneOperandFPComparison<signalAllNans, FPR64, asm,
-      [(OpNode (f64 FPR64:$Rn), fpimm0), (implicit NZCV)]> {
+      [(OpNode (f64 FPR64:$Rn), fpimm0)]> {
     let Inst{23-22} = 0b01;
   }
   } // Defs = [NZCV]
