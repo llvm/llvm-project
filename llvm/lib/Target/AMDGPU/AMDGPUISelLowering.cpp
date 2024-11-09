@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPUMemoryUtils.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -512,18 +513,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   for (MVT VT : VectorIntTypes) {
     // Expand the following operations for the current type by default.
-    setOperationAction({ISD::ADD,        ISD::AND,     ISD::FP_TO_SINT,
-                        ISD::FP_TO_UINT, ISD::MUL,     ISD::MULHU,
-                        ISD::MULHS,      ISD::OR,      ISD::SHL,
-                        ISD::SRA,        ISD::SRL,     ISD::ROTL,
-                        ISD::ROTR,       ISD::SUB,     ISD::SINT_TO_FP,
-                        ISD::UINT_TO_FP, ISD::SDIV,    ISD::UDIV,
-                        ISD::SREM,       ISD::UREM,    ISD::SMUL_LOHI,
-                        ISD::UMUL_LOHI,  ISD::SDIVREM, ISD::UDIVREM,
-                        ISD::SELECT,     ISD::VSELECT, ISD::SELECT_CC,
-                        ISD::XOR,        ISD::BSWAP,   ISD::CTPOP,
-                        ISD::CTTZ,       ISD::CTLZ,    ISD::VECTOR_SHUFFLE,
-                        ISD::SETCC},
+    setOperationAction({ISD::ADD,        ISD::AND,          ISD::FP_TO_SINT,
+                        ISD::FP_TO_UINT, ISD::MUL,          ISD::MULHU,
+                        ISD::MULHS,      ISD::OR,           ISD::SHL,
+                        ISD::SRA,        ISD::SRL,          ISD::ROTL,
+                        ISD::ROTR,       ISD::SUB,          ISD::SINT_TO_FP,
+                        ISD::UINT_TO_FP, ISD::SDIV,         ISD::UDIV,
+                        ISD::SREM,       ISD::UREM,         ISD::SMUL_LOHI,
+                        ISD::UMUL_LOHI,  ISD::SDIVREM,      ISD::UDIVREM,
+                        ISD::SELECT,     ISD::VSELECT,      ISD::SELECT_CC,
+                        ISD::XOR,        ISD::BSWAP,        ISD::CTPOP,
+                        ISD::CTTZ,       ISD::CTLZ,         ISD::VECTOR_SHUFFLE,
+                        ISD::SETCC,      ISD::ADDRSPACECAST},
                        VT, Expand);
   }
 
@@ -1508,7 +1509,8 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        GV->getName() != "llvm.amdgcn.module.lds") {
+        GV->getName() != "llvm.amdgcn.module.lds" &&
+        !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(

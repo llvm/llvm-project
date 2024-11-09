@@ -1703,6 +1703,13 @@ public:
   void Unparse(const IntrinsicStmt &x) { // R1519
     Word("INTRINSIC :: "), Walk(x.v, ", ");
   }
+  void Unparse(const CallStmt::StarOrExpr &x) {
+    if (x.v) {
+      Walk(*x.v);
+    } else {
+      Word("*");
+    }
+  }
   void Unparse(const CallStmt::Chevrons &x) { // CUDA
     Walk(std::get<0>(x.t)); // grid
     Word(","), Walk(std::get<1>(x.t)); // block
@@ -2138,6 +2145,27 @@ public:
     Put(",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
+  void Unparse(const OmpFromClause &x) {
+    auto &expect{
+        std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    bool needComma{false};
+    if (expect) {
+      Walk(*expect);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (needComma) {
+      Put(": ");
+    }
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpIfClause &x) {
     Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
     Walk(std::get<ScalarLogicalExpr>(x.t));
@@ -2157,6 +2185,7 @@ public:
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpInReductionClause &x) {
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
@@ -2196,6 +2225,16 @@ public:
     Walk(std::get<std::optional<OmpOrderModifier>>(x.t), ":");
     Walk(std::get<OmpOrderClause::Type>(x.t));
   }
+  void Unparse(const OmpGrainsizeClause &x) {
+    Walk(std::get<std::optional<OmpGrainsizeClause::Prescriptiveness>>(x.t),
+        ":");
+    Walk(std::get<ScalarIntExpr>(x.t));
+  }
+  void Unparse(const OmpNumTasksClause &x) {
+    Walk(
+        std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
+    Walk(std::get<ScalarIntExpr>(x.t));
+  }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
     Walk(std::get<ScalarIntConstantExpr>(x.t));
@@ -2205,11 +2244,9 @@ public:
     Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
   }
   void Unparse(const OmpDependClause::InOut &x) {
-    Put("(");
-    Walk(std::get<OmpDependenceType>(x.t));
+    Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
-    Walk(std::get<std::list<Designator>>(x.t), ",");
-    Put(")");
+    Walk(std::get<OmpObjectList>(x.t));
   }
   bool Pre(const OmpDependClause &x) {
     return common::visit(
@@ -2232,6 +2269,27 @@ public:
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":",
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
+  }
+  void Unparse(const OmpToClause &x) {
+    auto &expect{
+        std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
+    bool needComma{false};
+    if (expect) {
+      Walk(*expect);
+      needComma = true;
+    }
+    if (iter) {
+      if (needComma) {
+        Put(", ");
+      }
+      Walk(*iter);
+      needComma = true;
+    }
+    if (needComma) {
+      Put(": ");
+    }
+    Walk(std::get<OmpObjectList>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2264,6 +2322,12 @@ public:
     case llvm::omp::Directive::OMPD_masked_taskloop:
       Word("MASKED TASKLOOP");
       break;
+    case llvm::omp::Directive::OMPD_master_taskloop_simd:
+      Word("MASTER TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_master_taskloop:
+      Word("MASTER TASKLOOP");
+      break;
     case llvm::omp::Directive::OMPD_parallel_do:
       Word("PARALLEL DO ");
       break;
@@ -2275,6 +2339,12 @@ public:
       break;
     case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
       Word("PARALLEL MASKED TASKLOOP");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_master_taskloop_simd:
+      Word("PARALLEL MASTER TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_master_taskloop:
+      Word("PARALLEL MASTER TASKLOOP");
       break;
     case llvm::omp::Directive::OMPD_simd:
       Word("SIMD ");
@@ -2380,11 +2450,17 @@ public:
     case llvm::omp::Directive::OMPD_parallel_masked:
       Word("PARALLEL MASKED");
       break;
+    case llvm::omp::Directive::OMPD_parallel_master:
+      Word("PARALLEL MASTER");
+      break;
     case llvm::omp::Directive::OMPD_parallel_workshare:
       Word("PARALLEL WORKSHARE ");
       break;
     case llvm::omp::Directive::OMPD_parallel:
       Word("PARALLEL ");
+      break;
+    case llvm::omp::Directive::OMPD_scope:
+      Word("SCOPE ");
       break;
     case llvm::omp::Directive::OMPD_single:
       Word("SINGLE ");
@@ -2693,6 +2769,16 @@ public:
                   },
         x.u);
   }
+  void Unparse(const OpenMPDepobjConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP DEPOBJ");
+    Put("(");
+    Walk(std::get<OmpObject>(x.t));
+    Put(") ");
+    Walk(std::get<OmpClause>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH ");
@@ -2816,16 +2902,20 @@ public:
       OmpLastprivateClause, LastprivateModifier) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpScheduleModifierType, ModType) // OMP schedule-modifier
   WALK_NESTED_ENUM(OmpLinearModifier, Type) // OMP linear-modifier
-  WALK_NESTED_ENUM(OmpDependenceType, Type) // OMP dependence-type
+  WALK_NESTED_ENUM(OmpTaskDependenceType, Type) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
   WALK_NESTED_ENUM(
       OmpReductionClause, ReductionModifier) // OMP reduction-modifier
+  WALK_NESTED_ENUM(OmpFromClause, Expectation) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
+  WALK_NESTED_ENUM(
+      OmpGrainsizeClause, Prescriptiveness) // OMP grainsize-modifier
+  WALK_NESTED_ENUM(OmpNumTasksClause, Prescriptiveness) // OMP numtasks-modifier
   WALK_NESTED_ENUM(OmpMapClause, Type) // OMP map-type
   WALK_NESTED_ENUM(OmpMapClause, TypeModifier) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM

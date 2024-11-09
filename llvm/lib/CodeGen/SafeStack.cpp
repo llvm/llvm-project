@@ -192,7 +192,7 @@ public:
   SafeStack(Function &F, const TargetLoweringBase &TL, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), DL(DL), DTU(DTU), SE(SE),
-        StackPtrTy(PointerType::getUnqual(F.getContext())),
+        StackPtrTy(DL.getAllocaPtrType(F.getContext())),
         IntPtrTy(DL.getIntPtrType(F.getContext())),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
@@ -616,7 +616,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       IRBuilder<> IRBUser(InsertBefore);
       Value *Off =
           IRBUser.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
-      Value *Replacement = IRBUser.CreateBitCast(Off, AI->getType(), Name);
+      Value *Replacement =
+          IRBUser.CreateAddrSpaceCast(Off, AI->getType(), Name);
 
       if (auto *PHI = dyn_cast<PHINode>(User))
         // PHI nodes may have multiple incoming edges from the same BB (why??),
@@ -898,7 +899,7 @@ public:
     bool ShouldPreserveDominatorTree;
     std::optional<DominatorTree> LazilyComputedDomTree;
 
-    // Do we already have a DominatorTree avaliable from the previous pass?
+    // Do we already have a DominatorTree available from the previous pass?
     // Note that we should *NOT* require it, to avoid the case where we end up
     // not needing it, but the legacy PM would have computed it for us anyways.
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>()) {

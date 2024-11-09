@@ -512,7 +512,7 @@ define void @f92() sanitize_realtime
 }
 
 ; CHECK: define void @f93() #54
-define void @f93() sanitize_realtime_unsafe {
+define void @f93() sanitize_realtime_blocking {
         ret void;
 }
 
@@ -616,7 +616,7 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
 ; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes #53 = { sanitize_realtime }
-; CHECK: attributes #54 = { sanitize_realtime_unsafe }
+; CHECK: attributes #54 = { sanitize_realtime_blocking }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }

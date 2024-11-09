@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
+#include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
@@ -332,6 +333,9 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   }
   Payload >>= 3;
   if (Payload & 0x01)
+    Info.setLifetimebound(Payload & 0x02);
+  Payload >>= 2;
+  if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
   assert(Payload == 0 && "Bad API notes");
@@ -393,12 +397,19 @@ public:
                                         const uint8_t *&Data) {
     ObjCMethodInfo Info;
     uint8_t Payload = *Data++;
+    bool HasSelf = Payload & 0x01;
+    Payload >>= 1;
     Info.RequiredInit = Payload & 0x01;
     Payload >>= 1;
     Info.DesignatedInit = Payload & 0x01;
     Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
 
     ReadFunctionInfo(Data, Info);
+    if (HasSelf) {
+      Info.Self = ParamInfo{};
+      ReadParamInfo(Data, *Info.Self);
+    }
     return Info;
   }
 };
@@ -513,7 +524,17 @@ public:
   static CXXMethodInfo readUnversioned(internal_key_type Key,
                                        const uint8_t *&Data) {
     CXXMethodInfo Info;
+
+    uint8_t Payload = *Data++;
+    bool HasThis = Payload & 0x01;
+    Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
+
     ReadFunctionInfo(Data, Info);
+    if (HasThis) {
+      Info.This = ParamInfo{};
+      ReadParamInfo(Data, *Info.This);
+    }
     return Info;
   }
 };

@@ -19,6 +19,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2535,6 +2536,11 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
     case AArch64ISD::FCMLTz:
       // Compares return either 0 or all-ones
       return VTBits;
+    case AArch64ISD::VASHR: {
+      unsigned Tmp =
+          DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      return std::min<uint64_t>(Tmp + Op.getConstantOperandVal(1), VTBits);
+    }
   }
 
   return 1;
@@ -7921,10 +7927,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                 APInt(Ptr.getValueSizeInBits().getFixedValue(), PartSize), DL,
                 Ptr.getValueType());
           }
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
           Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                            BytesIncrement, Flags);
+                            BytesIncrement, SDNodeFlags::NoUnsignedWrap);
           ExtraArgLocs++;
           i++;
         }
@@ -8980,12 +8984,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                 APInt(Ptr.getValueSizeInBits().getFixedValue(), PartSize), DL,
                 Ptr.getValueType());
           }
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
-
           MPI = MachinePointerInfo(MPI.getAddrSpace());
           Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                            BytesIncrement, Flags);
+                            BytesIncrement, SDNodeFlags::NoUnsignedWrap);
           ExtraArgLocs++;
           i++;
         }
@@ -9598,6 +9599,11 @@ SDValue AArch64TargetLowering::getGOT(NodeTy *N, SelectionDAG &DAG,
   SDValue GotAddr = getTargetNode(N, Ty, DAG, AArch64II::MO_GOT | Flags);
   // FIXME: Once remat is capable of dealing with instructions with register
   // operands, expand this into two nodes instead of using a wrapper node.
+  if (DAG.getMachineFunction()
+          .getInfo<AArch64FunctionInfo>()
+          ->hasELFSignedGOT())
+    return SDValue(DAG.getMachineNode(AArch64::LOADgotAUTH, DL, Ty, GotAddr),
+                   0);
   return DAG.getNode(AArch64ISD::LOADgot, DL, Ty, GotAddr);
 }
 
@@ -10082,9 +10088,9 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 // Thus, it's only used for ptrauth references to extern_weak to avoid null
 // checks.
 
-SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressStatically(
+static SDValue LowerPtrAuthGlobalAddressStatically(
     SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
-    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
+    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) {
   const auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
   assert(TGN->getGlobal()->hasExternalWeakLinkage());
 
@@ -11771,8 +11777,7 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags;
-      Flags.setAllowReassociation(true);
+      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
 
       // Newton reciprocal square root iteration: E * 0.5 * (3 - X * E^2)
       // AArch64 reciprocal square root iteration instruction: 0.5 * (3 - M * N)
@@ -11801,8 +11806,7 @@ SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags;
-      Flags.setAllowReassociation(true);
+      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
 
       // Newton reciprocal iteration: E * (2 - X * E)
       // AArch64 reciprocal iteration instruction: (2 - M * N)
@@ -27572,6 +27576,22 @@ AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
     return UseTlsOffset(IRB, -0x8);
 
   return TargetLowering::getSafeStackPointerLocation(IRB);
+}
+
+/// If a physical register, this returns the register that receives the
+/// exception address on entry to an EH pad.
+Register AArch64TargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  // FIXME: This is a guess. Has this been defined yet?
+  return AArch64::X0;
+}
+
+/// If a physical register, this returns the register that receives the
+/// exception typeid on entry to a landing pad.
+Register AArch64TargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  // FIXME: This is a guess. Has this been defined yet?
+  return AArch64::X1;
 }
 
 bool AArch64TargetLowering::isMaskAndCmp0FoldingBeneficial(

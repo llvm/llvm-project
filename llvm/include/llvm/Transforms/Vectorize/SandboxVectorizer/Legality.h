@@ -13,8 +13,11 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_LEGALITY_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
 
@@ -28,8 +31,15 @@ enum class LegalityResultID {
 
 /// The reason for vectorizing or not vectorizing.
 enum class ResultReason {
+  NotInstructions,
   DiffOpcodes,
   DiffTypes,
+  DiffMathFlags,
+  DiffWrapFlags,
+  NotConsecutive,
+  CantSchedule,
+  Unimplemented,
+  Infeasible,
 };
 
 #ifndef NDEBUG
@@ -46,10 +56,24 @@ struct ToStr {
 
   static const char *getVecReason(ResultReason Reason) {
     switch (Reason) {
+    case ResultReason::NotInstructions:
+      return "NotInstructions";
     case ResultReason::DiffOpcodes:
       return "DiffOpcodes";
     case ResultReason::DiffTypes:
       return "DiffTypes";
+    case ResultReason::DiffMathFlags:
+      return "DiffMathFlags";
+    case ResultReason::DiffWrapFlags:
+      return "DiffWrapFlags";
+    case ResultReason::NotConsecutive:
+      return "NotConsecutive";
+    case ResultReason::CantSchedule:
+      return "CantSchedule";
+    case ResultReason::Unimplemented:
+      return "Unimplemented";
+    case ResultReason::Infeasible:
+      return "Infeasible";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }
@@ -66,6 +90,10 @@ protected:
   /// Only Legality can create LegalityResults.
   LegalityResult(LegalityResultID ID) : ID(ID) {}
   friend class LegalityAnalysis;
+
+  /// We shouldn't need copies.
+  LegalityResult(const LegalityResult &) = delete;
+  LegalityResult &operator=(const LegalityResult &) = delete;
 
 public:
   virtual ~LegalityResult() {}
@@ -90,6 +118,7 @@ class LegalityResultWithReason : public LegalityResult {
   friend class Pack; // For constructor.
 
 public:
+  ResultReason getReason() const { return Reason; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
     LegalityResult::print(OS);
@@ -121,6 +150,7 @@ public:
 
 /// Performs the legality analysis and returns a LegalityResult object.
 class LegalityAnalysis {
+  Scheduler Sched;
   /// Owns the legality result objects created by createLegalityResult().
   SmallVector<std::unique_ptr<LegalityResult>> ResultPool;
   /// Checks opcodes, types and other IR-specifics and returns a ResultReason
@@ -128,8 +158,13 @@ class LegalityAnalysis {
   std::optional<ResultReason>
   notVectorizableBasedOnOpcodesAndTypes(ArrayRef<Value *> Bndl);
 
+  ScalarEvolution &SE;
+  const DataLayout &DL;
+
 public:
-  LegalityAnalysis() = default;
+  LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
+                   Context &Ctx)
+      : Sched(AA, Ctx), SE(SE), DL(DL) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT... Args) {
@@ -138,7 +173,10 @@ public:
   }
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
-  LegalityResult &canVectorize(ArrayRef<Value *> Bndl);
+  /// \p SkipScheduling skips the scheduler check and is only meant for testing.
+  // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
+  const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
+                                     bool SkipScheduling = false);
 };
 
 } // namespace llvm::sandboxir

@@ -78,12 +78,24 @@ private:
   // Whether to serialize the full schema.
   bool MemProfFullSchema;
 
+  // Whether to generated random memprof hotness for testing.
+  bool MemprofGenerateRandomHotness;
+
 public:
-  InstrProfWriter(
-      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
-      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
-      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
-      bool MemProfFullSchema = false);
+  // For memprof testing, random hotness can be assigned to the contexts if
+  // MemprofGenerateRandomHotness is enabled. The random seed can be either
+  // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
+  // generated in the writer using the current time.
+  InstrProfWriter(bool Sparse = false,
+                  uint64_t TemporalProfTraceReservoirSize = 0,
+                  uint64_t MaxTemporalProfTraceLength = 0,
+                  bool WritePrevVersion = false,
+                  memprof::IndexedVersion MemProfVersionRequested =
+                      static_cast<memprof::IndexedVersion>(
+                          memprof::MinimumSupportedVersion),
+                  bool MemProfFullSchema = false,
+                  bool MemprofGenerateRandomHotness = false,
+                  unsigned MemprofGenerateRandomHotnessSeed = 0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
