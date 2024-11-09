@@ -287,8 +287,8 @@ CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &CGF) const {
   return *this;
 }
 
-void CIRGenFunction::buildAggregateStore(mlir::Value Val, Address Dest,
-                                         bool DestIsVolatile) {
+void CIRGenFunction::emitAggregateStore(mlir::Value Val, Address Dest,
+                                        bool DestIsVolatile) {
   // In LLVM codegen:
   // Function to store a first-class aggregate into memory. We prefer to
   // store the elements rather than the aggregate to be more friendly to
@@ -465,7 +465,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, funcAttrs);
 }
 
-static cir::CIRCallOpInterface buildCallLikeOp(
+static cir::CIRCallOpInterface emitCallLikeOp(
     CIRGenFunction &CGF, mlir::Location callLoc, cir::FuncType indirectFuncTy,
     mlir::Value indirectFuncVal, cir::FuncOp directFuncOp,
     SmallVectorImpl<mlir::Value> &CIRCallArgs, bool isInvoke,
@@ -486,7 +486,7 @@ static cir::CIRCallOpInterface buildCallLikeOp(
         // Don't emit the code right away for catch clauses, for
         // now create the regions and consume the try scope result.
         // Note that clauses are later populated in
-        // CIRGenFunction::buildLandingPad.
+        // CIRGenFunction::emitLandingPad.
         [&](mlir::OpBuilder &b, mlir::Location loc,
             mlir::OperationState &result) {
           // Since this didn't come from an explicit try, we only need one
@@ -551,13 +551,13 @@ static cir::CIRCallOpInterface buildCallLikeOp(
                               extraFnAttrs);
 }
 
-RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
-                                 const CIRGenCallee &Callee,
-                                 ReturnValueSlot ReturnValue,
-                                 const CallArgList &CallArgs,
-                                 cir::CIRCallOpInterface *callOrTryCall,
-                                 bool IsMustTail, mlir::Location loc,
-                                 std::optional<const clang::CallExpr *> E) {
+RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &CallInfo,
+                                const CIRGenCallee &Callee,
+                                ReturnValueSlot ReturnValue,
+                                const CallArgList &CallArgs,
+                                cir::CIRCallOpInterface *callOrTryCall,
+                                bool IsMustTail, mlir::Location loc,
+                                std::optional<const clang::CallExpr *> E) {
   auto builder = CGM.getBuilder();
   // FIXME: We no longer need the types from CallArgs; lift up and simplify
 
@@ -823,7 +823,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     auto extraFnAttrs = cir::ExtraFuncAttributesAttr::get(
         &getMLIRContext(), Attrs.getDictionary(&getMLIRContext()));
 
-    cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
+    cir::CIRCallOpInterface callLikeOp = emitCallLikeOp(
         *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
         CIRCallArgs, isInvoke, callingConv, extraFnAttrs);
 
@@ -880,7 +880,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
           assert(Results.size() <= 1 && "multiple returns NYI");
 
           SourceLocRAIIObject Loc{*this, callLoc};
-          buildAggregateStore(Results[0], DestPtr, DestIsVolatile);
+          emitAggregateStore(Results[0], DestPtr, DestIsVolatile);
           return RValue::getAggregate(DestPtr);
         }
         case cir::TEK_Scalar: {
@@ -921,9 +921,9 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   return ret;
 }
 
-mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
-                                             cir::FuncOp callee,
-                                             ArrayRef<mlir::Value> args) {
+mlir::Value CIRGenFunction::emitRuntimeCall(mlir::Location loc,
+                                            cir::FuncOp callee,
+                                            ArrayRef<mlir::Value> args) {
   // TODO(cir): set the calling convention to this runtime call.
   assert(!cir::MissingFeatures::setCallingConv());
 
@@ -937,8 +937,8 @@ mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
   return call->getResult(0);
 }
 
-void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
-                                  QualType type) {
+void CIRGenFunction::emitCallArg(CallArgList &args, const Expr *E,
+                                 QualType type) {
   // TODO: Add the DisableDebugLocationUpdates helper
   assert(!dyn_cast<ObjCIndirectCopyRestoreExpr>(E) && "NYI");
 
@@ -947,7 +947,7 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);
-    return args.add(buildReferenceBindingToExpr(E), type);
+    return args.add(emitReferenceBindingToExpr(E), type);
   }
 
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
@@ -962,13 +962,13 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
       cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
-    LValue L = buildLValue(cast<CastExpr>(E)->getSubExpr());
+    LValue L = emitLValue(cast<CastExpr>(E)->getSubExpr());
     assert(L.isSimple());
     args.addUncopiedAggregate(L, type);
     return;
   }
 
-  args.add(buildAnyExprToTemp(E), type);
+  args.add(emitAnyExprToTemp(E), type);
 }
 
 QualType CIRGenFunction::getVarArgType(const Expr *Arg) {
@@ -989,19 +989,19 @@ QualType CIRGenFunction::getVarArgType(const Expr *Arg) {
   return Arg->getType();
 }
 
-/// Similar to buildAnyExpr(), however, the result will always be accessible
+/// Similar to emitAnyExpr(), however, the result will always be accessible
 /// even if no aggregate location is provided.
-RValue CIRGenFunction::buildAnyExprToTemp(const Expr *E) {
+RValue CIRGenFunction::emitAnyExprToTemp(const Expr *E) {
   AggValueSlot AggSlot = AggValueSlot::ignored();
 
   if (hasAggregateEvaluationKind(E->getType()))
     AggSlot = CreateAggTemp(E->getType(), getLoc(E->getSourceRange()),
                             getCounterAggTmpAsString());
 
-  return buildAnyExpr(E, AggSlot);
+  return emitAnyExpr(E, AggSlot);
 }
 
-void CIRGenFunction::buildCallArgs(
+void CIRGenFunction::emitCallArgs(
     CallArgList &Args, PrototypeWrapper Prototype,
     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
     AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
@@ -1076,11 +1076,11 @@ void CIRGenFunction::buildCallArgs(
     assert(!isa<ObjCIndirectCopyRestoreExpr>(*Arg) && "NYI");
     assert(!isa_and_nonnull<ObjCMethodDecl>(AC.getDecl()) && "NYI");
 
-    buildCallArg(Args, *Arg, ArgTypes[Idx]);
+    emitCallArg(Args, *Arg, ArgTypes[Idx]);
     // In particular, we depend on it being the last arg in Args, and the
     // objectsize bits depend on there only being one arg if !LeftToRight.
     assert(InitialArgSize + 1 == Args.size() &&
-           "The code below depends on only adding one arg per buildCallArg");
+           "The code below depends on only adding one arg per emitCallArg");
     (void)InitialArgSize;
     // Since pointer argument are never emitted as LValue, it is safe to emit
     // non-null argument check for r-value only.
@@ -1343,11 +1343,11 @@ static bool isInAllocaArgument(CIRGenCXXABI &ABI, QualType type) {
          ABI.getRecordArgABI(RD) == CIRGenCXXABI::RecordArgABI::DirectInMemory;
 }
 
-void CIRGenFunction::buildDelegateCallArg(CallArgList &args,
-                                          const VarDecl *param,
-                                          SourceLocation loc) {
+void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
+                                         const VarDecl *param,
+                                         SourceLocation loc) {
   // StartFunction converted the ABI-lowered parameter(s) into a local alloca.
-  // We need to turn that into an r-value suitable for buildCall
+  // We need to turn that into an r-value suitable for emitCall
   Address local = GetAddrOfLocalVar(param);
 
   QualType type = param->getType();
@@ -1553,15 +1553,15 @@ RValue CallArg::getRValue(CIRGenFunction &CGF, mlir::Location loc) const {
   if (!HasLV)
     return RV;
   LValue Copy = CGF.makeAddrLValue(CGF.CreateMemTemp(Ty, loc), Ty);
-  CGF.buildAggregateCopy(Copy, LV, Ty, AggValueSlot::DoesNotOverlap,
-                         LV.isVolatile());
+  CGF.emitAggregateCopy(Copy, LV, Ty, AggValueSlot::DoesNotOverlap,
+                        LV.isVolatile());
   IsUsed = true;
   return RValue::getAggregate(Copy.getAddress());
 }
 
-void CIRGenFunction::buildNonNullArgCheck(RValue RV, QualType ArgType,
-                                          SourceLocation ArgLoc,
-                                          AbstractCallee AC, unsigned ParmNum) {
+void CIRGenFunction::emitNonNullArgCheck(RValue RV, QualType ArgType,
+                                         SourceLocation ArgLoc,
+                                         AbstractCallee AC, unsigned ParmNum) {
   if (!AC.getDecl() || !(SanOpts.has(SanitizerKind::NonnullAttribute) ||
                          SanOpts.has(SanitizerKind::NullabilityArg)))
     return;
@@ -1572,11 +1572,11 @@ void CIRGenFunction::buildNonNullArgCheck(RValue RV, QualType ArgType,
 
 // FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. We
 // need to decide how to handle va_arg target-specific codegen.
-mlir::Value CIRGenFunction::buildVAArg(VAArgExpr *VE, Address &VAListAddr) {
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *VE, Address &VAListAddr) {
   assert(!VE->isMicrosoftABI() && "NYI");
   auto loc = CGM.getLoc(VE->getExprLoc());
   auto type = ConvertType(VE->getType());
-  auto vaList = buildVAListRef(VE->getSubExpr()).getPointer();
+  auto vaList = emitVAListRef(VE->getSubExpr()).getPointer();
   return builder.create<cir::VAArgOp>(loc, type, vaList);
 }
 

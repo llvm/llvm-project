@@ -265,7 +265,7 @@ public:
       if (outputStream && mlirMod) {
         // Emit remaining defaulted C++ methods
         if (!feOptions.ClangIRDisableEmitCXXDefault)
-          gen->buildDefaultMethods();
+          gen->emitDefaultMethods();
 
         // FIXME: we cannot roundtrip prettyForm=true right now.
         mlir::OpPrintingFlags flags;

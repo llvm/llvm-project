@@ -95,8 +95,8 @@ public:
       clang::CXXCtorType Type, bool ForVirtualBase, bool Delegating) = 0;
 
   /// Emit the ABI-specific prolog for the function
-  virtual void buildInstanceFunctionProlog(SourceLocation Loc,
-                                           CIRGenFunction &CGF) = 0;
+  virtual void emitInstanceFunctionProlog(SourceLocation Loc,
+                                          CIRGenFunction &CGF) = 0;
 
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
@@ -162,16 +162,15 @@ public:
                                                     bool Delegating) = 0;
 
   /// Emit constructor variants required by this ABI.
-  virtual void buildCXXConstructors(const clang::CXXConstructorDecl *D) = 0;
+  virtual void emitCXXConstructors(const clang::CXXConstructorDecl *D) = 0;
   /// Emit dtor variants required by this ABI.
-  virtual void buildCXXDestructors(const clang::CXXDestructorDecl *D) = 0;
+  virtual void emitCXXDestructors(const clang::CXXDestructorDecl *D) = 0;
 
   /// Emit the destructor call.
-  virtual void buildDestructorCall(CIRGenFunction &CGF,
-                                   const CXXDestructorDecl *DD,
-                                   CXXDtorType Type, bool ForVirtualBase,
-                                   bool Delegating, Address This,
-                                   QualType ThisTy) = 0;
+  virtual void emitDestructorCall(CIRGenFunction &CGF,
+                                  const CXXDestructorDecl *DD, CXXDtorType Type,
+                                  bool ForVirtualBase, bool Delegating,
+                                  Address This, QualType ThisTy) = 0;
 
   /// Emit code to force the execution of a destructor during global
   /// teardown.  The default implementation of this uses atexit.
@@ -328,23 +327,23 @@ public:
 
   /// Emit a single constructor/destructor with the gien type from a C++
   /// constructor Decl.
-  virtual void buildCXXStructor(clang::GlobalDecl GD) = 0;
+  virtual void emitCXXStructor(clang::GlobalDecl GD) = 0;
 
-  virtual void buildRethrow(CIRGenFunction &CGF, bool isNoReturn) = 0;
-  virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) = 0;
+  virtual void emitRethrow(CIRGenFunction &CGF, bool isNoReturn) = 0;
+  virtual void emitThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) = 0;
 
-  virtual void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) = 0;
+  virtual void emitBadCastCall(CIRGenFunction &CGF, mlir::Location loc) = 0;
 
   virtual mlir::Value
   getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &CGF,
                             Address This, const CXXRecordDecl *ClassDecl,
                             const CXXRecordDecl *BaseClassDecl) = 0;
 
-  virtual mlir::Value buildDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
-                                       QualType SrcRecordTy,
-                                       QualType DestRecordTy,
-                                       cir::PointerType DestCIRTy,
-                                       bool isRefCast, Address Src) = 0;
+  virtual mlir::Value emitDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
+                                      QualType SrcRecordTy,
+                                      QualType DestRecordTy,
+                                      cir::PointerType DestCIRTy,
+                                      bool isRefCast, Address Src) = 0;
 
   virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType MethodTy,
                                                  const CXXMethodDecl *MD) = 0;

@@ -191,16 +191,16 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &CGF) {
   return get(CGF.CGM, dyn_cast_or_null<FunctionDecl>(FD));
 }
 
-void CIRGenFunction::buildCXXThrowExpr(const CXXThrowExpr *E) {
+void CIRGenFunction::emitCXXThrowExpr(const CXXThrowExpr *E) {
   if (const Expr *SubExpr = E->getSubExpr()) {
     QualType ThrowType = SubExpr->getType();
     if (ThrowType->isObjCObjectPointerType()) {
       llvm_unreachable("NYI");
     } else {
-      CGM.getCXXABI().buildThrow(*this, E);
+      CGM.getCXXABI().emitThrow(*this, E);
     }
   } else {
-    CGM.getCXXABI().buildRethrow(*this, /*isNoReturn=*/true);
+    CGM.getCXXABI().emitRethrow(*this, /*isNoReturn=*/true);
   }
 
   // In LLVM codegen the expression emitters expect to leave this
@@ -225,10 +225,10 @@ struct FreeException final : EHScopeStack::Cleanup {
 } // end anonymous namespace
 
 // Emits an exception expression into the given location.  This
-// differs from buildAnyExprToMem only in that, if a final copy-ctor
+// differs from emitAnyExprToMem only in that, if a final copy-ctor
 // call is required, an exception within that copy ctor causes
 // std::terminate to be invoked.
-void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
+void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
   // Make sure the exception object is cleaned up if there's an
   // exception during initialization.
   pushFullExprCleanup<FreeException>(EHCleanup, addr.getPointer());
@@ -247,8 +247,8 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
   // evaluated but before the exception is caught.  But the best way
   // to handle that is to teach EmitAggExpr to do the final copy
   // differently if it can't be elided.
-  buildAnyExprToMem(e, typedAddr, e->getType().getQualifiers(),
-                    /*IsInit*/ true);
+  emitAnyExprToMem(e, typedAddr, e->getType().getQualifiers(),
+                   /*IsInit*/ true);
 
   // Deactivate the cleanup block.
   auto op = typedAddr.getPointer().getDefiningOp();
@@ -257,9 +257,9 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
   DeactivateCleanupBlock(cleanup, op);
 }
 
-void CIRGenFunction::buildEHResumeBlock(bool isCleanup,
-                                        mlir::Block *ehResumeBlock,
-                                        mlir::Location loc) {
+void CIRGenFunction::emitEHResumeBlock(bool isCleanup,
+                                       mlir::Block *ehResumeBlock,
+                                       mlir::Location loc) {
   auto ip = getBuilder().saveInsertionPoint();
   getBuilder().setInsertionPointToStart(ehResumeBlock);
 
@@ -293,11 +293,11 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup,
   if (!ehResumeBlock->empty())
     return ehResumeBlock;
 
-  buildEHResumeBlock(isCleanup, ehResumeBlock, tryOp.getLoc());
+  emitEHResumeBlock(isCleanup, ehResumeBlock, tryOp.getLoc());
   return ehResumeBlock;
 }
 
-mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &S) {
   auto loc = getLoc(S.getSourceRange());
   mlir::OpBuilder::InsertPoint scopeIP;
 
@@ -313,14 +313,14 @@ mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
   {
     mlir::OpBuilder::InsertionGuard guard(getBuilder());
     getBuilder().restoreInsertionPoint(scopeIP);
-    r = buildCXXTryStmtUnderScope(S);
+    r = emitCXXTryStmtUnderScope(S);
     getBuilder().create<cir::YieldOp>(loc);
   }
   return r;
 }
 
 mlir::LogicalResult
-CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
+CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &S) {
   const llvm::Triple &T = getTarget().getTriple();
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
@@ -354,7 +354,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
       // Don't emit the code right away for catch clauses, for
       // now create the regions and consume the try scope result.
       // Note that clauses are later populated in
-      // CIRGenFunction::buildLandingPad.
+      // CIRGenFunction::emitLandingPad.
       [&](mlir::OpBuilder &b, mlir::Location loc,
           mlir::OperationState &result) {
         mlir::OpBuilder::InsertionGuard guard(b);
@@ -384,7 +384,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
       {
         CIRGenFunction::LexicalScope tryBodyScope{
             *this, loc, getBuilder().getInsertionBlock()};
-        if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
+        if (emitStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
           return mlir::failure();
       }
     }
@@ -402,9 +402,8 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
 
 /// Emit the structure of the dispatch block for the given catch scope.
 /// It is an invariant that the dispatch block already exists.
-static void buildCatchDispatchBlock(CIRGenFunction &CGF,
-                                    EHCatchScope &catchScope,
-                                    cir::TryOp tryOp) {
+static void emitCatchDispatchBlock(CIRGenFunction &CGF,
+                                   EHCatchScope &catchScope, cir::TryOp tryOp) {
   if (EHPersonality::get(CGF).isWasmPersonality())
     llvm_unreachable("NYI");
   if (EHPersonality::get(CGF).usesFuncletPads())
@@ -522,7 +521,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   }
 
   // Emit the structure of the EH dispatch for this catch.
-  buildCatchDispatchBlock(*this, CatchScope, tryOp);
+  emitCatchDispatchBlock(*this, CatchScope, tryOp);
 
   // Copy the handler blocks off before we pop the EH stack.  Emitting
   // the handlers might scribble on this memory.
@@ -569,7 +568,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     assert(!cir::MissingFeatures::incrementProfileCounter());
 
     // Perform the body of the catch.
-    (void)buildStmt(C->getHandlerBlock(), /*useCurrentScope=*/true);
+    (void)emitStmt(C->getHandlerBlock(), /*useCurrentScope=*/true);
 
     // [except.handle]p11:
     //   The currently handled exception is rethrown if control
@@ -620,7 +619,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   llvm_unreachable("Invalid EHScope Kind!");
 }
 
-mlir::Operation *CIRGenFunction::buildLandingPad(cir::TryOp tryOp) {
+mlir::Operation *CIRGenFunction::emitLandingPad(cir::TryOp tryOp) {
   assert(EHStack.requiresLandingPad());
   assert(!CGM.getLangOpts().IgnoreExceptions &&
          "LandingPad should not be emitted when -fignore-exceptions are in "
@@ -881,7 +880,7 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl(cir::TryOp tryOp) {
     llvm::errs() << "PersonalityFn: " << Personality.PersonalityFn << "\n";
     llvm_unreachable("NYI");
   } else {
-    LP = buildLandingPad(tryOp);
+    LP = emitLandingPad(tryOp);
   }
 
   assert(LP);

@@ -141,7 +141,7 @@ LoweringPrepareItaniumCXXABI::lowerDynamicCast(CIRBaseBuilderTy &builder,
   auto loc = op->getLoc();
   auto srcValue = op.getSrc();
 
-  cir_cconv_assert(!MissingFeatures::buildTypeCheck());
+  cir_cconv_assert(!MissingFeatures::emitTypeCheck());
 
   if (op.isRefcast())
     return buildDynamicCastAfterNullCheck(builder, op);

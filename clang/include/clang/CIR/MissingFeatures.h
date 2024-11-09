@@ -54,9 +54,9 @@ constexpr bool cirCConvAssertionMode =
 namespace cir {
 
 struct MissingFeatures {
-  // TODO(CIR): Implement the CIRGenFunction::buildTypeCheck method that handles
+  // TODO(CIR): Implement the CIRGenFunction::emitTypeCheck method that handles
   // sanitizer related type check features
-  static bool buildTypeCheck() { return false; }
+  static bool emitTypeCheck() { return false; }
   static bool tbaa() { return false; }
   static bool cleanups() { return false; }
   static bool emitNullabilityCheck() { return false; }
@@ -128,8 +128,8 @@ struct MissingFeatures {
 
   // Missing Emissions
   static bool variablyModifiedTypeEmission() { return false; }
-  static bool buildLValueAlignmentAssumption() { return false; }
-  static bool buildDerivedToBaseCastForDevirt() { return false; }
+  static bool emitLValueAlignmentAssumption() { return false; }
+  static bool emitDerivedToBaseCastForDevirt() { return false; }
   static bool emitFunctionEpilog() { return false; }
 
   // References related stuff
@@ -226,7 +226,7 @@ struct MissingFeatures {
   static bool deferredReplacements() { return false; }
   static bool shouldInstrumentFunction() { return false; }
   static bool xray() { return false; }
-  static bool buildConstrainedFPCall() { return false; }
+  static bool emitConstrainedFPCall() { return false; }
   static bool emitEmptyRecordCheck() { return false; }
 
   // Inline assembly

@@ -20,7 +20,7 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
-void CIRGenModule::buildCXXGlobalInitFunc() {
+void CIRGenModule::emitCXXGlobalInitFunc() {
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
     CXXGlobalInits.pop_back();
 
@@ -31,9 +31,9 @@ void CIRGenModule::buildCXXGlobalInitFunc() {
   assert(0 && "NYE");
 }
 
-void CIRGenModule::buildCXXGlobalVarDeclInitFunc(const VarDecl *D,
-                                                 cir::GlobalOp Addr,
-                                                 bool PerformInit) {
+void CIRGenModule::emitCXXGlobalVarDeclInitFunc(const VarDecl *D,
+                                                cir::GlobalOp Addr,
+                                                bool PerformInit) {
   // According to E.2.3.1 in CUDA-7.5 Programming guide: __device__,
   // __constant__ and __shared__ variables defined in namespace scope,
   // that are of class type, cannot have a non-empty constructor. All
@@ -49,5 +49,5 @@ void CIRGenModule::buildCXXGlobalVarDeclInitFunc(const VarDecl *D,
   if (I != DelayedCXXInitPosition.end() && I->second == ~0U)
     return;
 
-  buildCXXGlobalVarDeclInit(D, Addr, PerformInit);
+  emitCXXGlobalVarDeclInit(D, Addr, PerformInit);
 }

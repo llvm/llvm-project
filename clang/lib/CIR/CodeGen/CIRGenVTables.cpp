@@ -131,7 +131,7 @@ static bool shouldEmitVTableAtEndOfTranslationUnit(CIRGenModule &CGM,
 /// Given that at some point we emitted a reference to one or more
 /// vtables, and that we are now at the end of the translation unit,
 /// decide whether we should emit them.
-void CIRGenModule::buildDeferredVTables() {
+void CIRGenModule::emitDeferredVTables() {
 #ifndef NDEBUG
   // Remember the size of DeferredVTables, because we're going to assume
   // that this entire operation doesn't modify it.
@@ -156,7 +156,7 @@ void CIRGenModule::buildDeferredVTables() {
 /// This is only called for vtables that _must_ be emitted (mainly due to key
 /// functions).  For weak vtables, CodeGen tracks when they are needed and
 /// emits them as-needed.
-void CIRGenModule::buildVTable(CXXRecordDecl *rd) {
+void CIRGenModule::emitVTable(CXXRecordDecl *rd) {
   VTables.GenerateClassData(rd);
 }
 
@@ -387,7 +387,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   assert(!VTable.isDeclaration() && "Shouldn't set properties on declaration");
   CGM.setGVProperties(VTable, RD);
 
-  CGM.buildVTableTypeMetadata(RD, VTable, *VTLayout.get());
+  CGM.emitVTableTypeMetadata(RD, VTable, *VTLayout.get());
 
   if (UsingRelativeLayout) {
     llvm_unreachable("NYI");
@@ -585,9 +585,9 @@ uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
 }
 
 /// Emit the definition of the given vtable.
-void CIRGenVTables::buildVTTDefinition(cir::GlobalOp VTT,
-                                       cir::GlobalLinkageKind Linkage,
-                                       const CXXRecordDecl *RD) {
+void CIRGenVTables::emitVTTDefinition(cir::GlobalOp VTT,
+                                      cir::GlobalLinkageKind Linkage,
+                                      const CXXRecordDecl *RD) {
   VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/true);
 
   auto ArrayType = cir::ArrayType::get(CGM.getBuilder().getContext(),
@@ -651,7 +651,7 @@ void CIRGenVTables::buildVTTDefinition(cir::GlobalOp VTT,
   }
 }
 
-void CIRGenVTables::buildThunks(GlobalDecl GD) {
+void CIRGenVTables::emitThunks(GlobalDecl GD) {
   const CXXMethodDecl *MD =
       cast<CXXMethodDecl>(GD.getDecl())->getCanonicalDecl();
 

@@ -112,7 +112,7 @@ private:
   /// Holds the OpenMP runtime
   std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
 
-  /// Per-function codegen information. Updated everytime buildCIR is called
+  /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *CurCGF = nullptr;
 
@@ -182,7 +182,7 @@ public:
   std::vector<mlir::Operation *> CXXGlobalInits;
 
   /// Emit the function that initializes C++ globals.
-  void buildCXXGlobalInitFunc();
+  void emitCXXGlobalInitFunc();
 
   /// Track whether the CIRGenModule is currently building an initializer
   /// for a global (e.g. as opposed to a regular cir.func).
@@ -340,10 +340,10 @@ public:
       cir::GlobalLinkageKind Linkage, clang::CharUnits Alignment);
 
   /// Emit any vtables which we deferred and still have a use for.
-  void buildDeferredVTables();
+  void emitDeferredVTables();
   bool shouldOpportunisticallyEmitVTables();
 
-  void buildVTable(CXXRecordDecl *rd);
+  void emitVTable(CXXRecordDecl *rd);
 
   void setDSOLocal(cir::CIRGlobalValueInterface GV) const;
 
@@ -352,8 +352,8 @@ public:
   cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
 
   /// Emit type metadata for the given vtable using the given layout.
-  void buildVTableTypeMetadata(const CXXRecordDecl *RD, cir::GlobalOp VTable,
-                               const VTableLayout &VTLayout);
+  void emitVTableTypeMetadata(const CXXRecordDecl *RD, cir::GlobalOp VTable,
+                              const VTableLayout &VTLayout);
 
   /// Get the address of the RTTI descriptor for the given type.
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType Ty,
@@ -536,18 +536,18 @@ public:
       cir::FuncType FnType = nullptr, bool Dontdefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition);
 
-  void buildTopLevelDecl(clang::Decl *decl);
-  void buildLinkageSpec(const LinkageSpecDecl *D);
+  void emitTopLevelDecl(clang::Decl *decl);
+  void emitLinkageSpec(const LinkageSpecDecl *D);
 
   /// Emit code for a single global function or var decl. Forward declarations
   /// are emitted lazily.
-  void buildGlobal(clang::GlobalDecl D);
+  void emitGlobal(clang::GlobalDecl D);
 
   bool tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
 
-  void buildAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                           GlobalDecl aliasGD, cir::FuncOp aliasee,
-                           cir::GlobalLinkageKind linkage);
+  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
+                          GlobalDecl aliasGD, cir::FuncOp aliasee,
+                          cir::GlobalLinkageKind linkage);
 
   mlir::Type getCIRType(const clang::QualType &type);
 
@@ -614,22 +614,22 @@ public:
   }
 
   // C++ related functions.
-  void buildDeclContext(const DeclContext *DC);
+  void emitDeclContext(const DeclContext *DC);
 
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.  This is usually, but not always, an LLVM
   /// null constant.
-  mlir::Value buildNullConstant(QualType T, mlir::Location loc);
+  mlir::Value emitNullConstant(QualType T, mlir::Location loc);
 
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
-  mlir::TypedAttr buildNullConstantForBase(const CXXRecordDecl *Record);
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *Record);
 
-  mlir::Value buildMemberPointerConstant(const UnaryOperator *E);
+  mlir::Value emitMemberPointerConstant(const UnaryOperator *E);
 
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
-  void buildTentativeDefinition(const VarDecl *D);
+  void emitTentativeDefinition(const VarDecl *D);
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const clang::TagDecl *TD);
@@ -647,18 +647,17 @@ public:
   void setCIRFunctionAttributesForDefinition(const Decl *decl,
                                              cir::FuncOp func);
 
-  void buildGlobalDefinition(clang::GlobalDecl D,
-                             mlir::Operation *Op = nullptr);
-  void buildGlobalFunctionDefinition(clang::GlobalDecl D, mlir::Operation *Op);
-  void buildGlobalVarDefinition(const clang::VarDecl *D,
-                                bool IsTentative = false);
+  void emitGlobalDefinition(clang::GlobalDecl D, mlir::Operation *Op = nullptr);
+  void emitGlobalFunctionDefinition(clang::GlobalDecl D, mlir::Operation *Op);
+  void emitGlobalVarDefinition(const clang::VarDecl *D,
+                               bool IsTentative = false);
 
   /// Emit the function that initializes the specified global
-  void buildCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
-                                 bool performInit);
+  void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                bool performInit);
 
-  void buildCXXGlobalVarDeclInitFunc(const VarDecl *D, cir::GlobalOp Addr,
-                                     bool PerformInit);
+  void emitCXXGlobalVarDeclInitFunc(const VarDecl *D, cir::GlobalOp Addr,
+                                    bool PerformInit);
 
   void addDeferredVTable(const CXXRecordDecl *RD) {
     DeferredVTables.push_back(RD);
@@ -671,13 +670,13 @@ public:
   std::nullptr_t getModuleDebugInfo() { return nullptr; }
 
   /// Emit any needed decls for which code generation was deferred.
-  void buildDeferred(unsigned recursionLimit);
+  void emitDeferred(unsigned recursionLimit);
 
-  /// Helper for `buildDeferred` to apply actual codegen.
-  void buildGlobalDecl(clang::GlobalDecl &D);
+  /// Helper for `emitDeferred` to apply actual codegen.
+  void emitGlobalDecl(clang::GlobalDecl &D);
 
   /// Build default methods not emitted before this point.
-  void buildDefaultMethods();
+  void emitDefaultMethods();
 
   const llvm::Triple &getTriple() const { return target.getTriple(); }
 
@@ -759,8 +758,8 @@ public:
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.
-  void buildExplicitCastExprType(const ExplicitCastExpr *E,
-                                 CIRGenFunction *CGF = nullptr);
+  void emitExplicitCastExprType(const ExplicitCastExpr *E,
+                                CIRGenFunction *CGF = nullptr);
 
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
   static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
@@ -810,13 +809,13 @@ public:
                             CIRGenFunction *CGF = nullptr);
 
   /// Emits OpenCL specific Metadata e.g. OpenCL version.
-  void buildOpenCLMetadata();
+  void emitOpenCLMetadata();
 
   /// Create cir::AnnotationAttr which contains the annotation
   /// information for a given GlobalValue. Notice that a GlobalValue could
   /// have multiple annotations, and this function creates attribute for
   /// one of them.
-  cir::AnnotationAttr buildAnnotateAttr(const clang::AnnotateAttr *aa);
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
@@ -836,10 +835,10 @@ private:
   /// Emit all the global annotations.
   /// This actually only emits annotations for deffered declarations of
   /// functions, because global variables need no deffred emission.
-  void buildGlobalAnnotations();
+  void emitGlobalAnnotations();
 
   /// Emit additional args of the annotation.
-  mlir::ArrayAttr buildAnnotationArgs(const clang::AnnotateAttr *attr);
+  mlir::ArrayAttr emitAnnotationArgs(const clang::AnnotateAttr *attr);
 
   /// Add global annotations for a global value.
   /// Those annotations are emitted during lowering to the LLVM code.

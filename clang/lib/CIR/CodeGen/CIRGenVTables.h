@@ -102,11 +102,11 @@ public:
   cir::GlobalOp getAddrOfVTT(const CXXRecordDecl *RD);
 
   /// Emit the definition of the given vtable.
-  void buildVTTDefinition(cir::GlobalOp VTT, cir::GlobalLinkageKind Linkage,
-                          const CXXRecordDecl *RD);
+  void emitVTTDefinition(cir::GlobalOp VTT, cir::GlobalLinkageKind Linkage,
+                         const CXXRecordDecl *RD);
 
   /// Emit the associated thunks for the given global decl.
-  void buildThunks(GlobalDecl GD);
+  void emitThunks(GlobalDecl GD);
 
   /// Generate all the class data required to be generated upon definition of a
   /// KeyFunction. This includes the vtable, the RTTI data structure (if RTTI

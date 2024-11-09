@@ -261,11 +261,11 @@ private:
 
 // This function emits any expression (scalar, complex, or aggregate)
 // into a temporary alloca.
-static Address buildValToTemp(CIRGenFunction &CGF, Expr *E) {
+static Address emitValToTemp(CIRGenFunction &CGF, Expr *E) {
   Address DeclPtr = CGF.CreateMemTemp(
       E->getType(), CGF.getLoc(E->getSourceRange()), ".atomictmp");
-  CGF.buildAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
-                        /*Init*/ true);
+  CGF.emitAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
+                       /*Init*/ true);
   return DeclPtr;
 }
 
@@ -372,7 +372,7 @@ static bool isCstWeak(mlir::Value weakVal, bool &val) {
 
 // Create a "default:" label and add it to the given collection of case labels.
 // Create the region that will hold the body of the "default:" block.
-static void buildDefaultCase(CIRGenBuilderTy &builder, mlir::Location loc) {
+static void emitDefaultCase(CIRGenBuilderTy &builder, mlir::Location loc) {
   auto EmptyArrayAttr = builder.getArrayAttr({});
   mlir::OpBuilder::InsertPoint insertPoint;
   builder.create<cir::CaseOp>(loc, EmptyArrayAttr, cir::CaseOpKind::Default,
@@ -383,9 +383,8 @@ static void buildDefaultCase(CIRGenBuilderTy &builder, mlir::Location loc) {
 // Create a single "case" label with the given MemOrder as its value.  Add the
 // "case" label to the given collection of case labels.  Create the region that
 // will hold the body of the "case" block.
-static void buildSingleMemOrderCase(CIRGenBuilderTy &builder,
-                                    mlir::Location loc, mlir::Type Type,
-                                    cir::MemOrder Order) {
+static void emitSingleMemOrderCase(CIRGenBuilderTy &builder, mlir::Location loc,
+                                   mlir::Type Type, cir::MemOrder Order) {
   SmallVector<mlir::Attribute, 1> OneOrder{
       cir::IntAttr::get(Type, static_cast<int>(Order))};
   auto OneAttribute = builder.getArrayAttr(OneOrder);
@@ -398,10 +397,9 @@ static void buildSingleMemOrderCase(CIRGenBuilderTy &builder,
 // Create a pair of "case" labels with the given MemOrders as their values.
 // Add the combined "case" attribute to the given collection of case labels.
 // Create the region that will hold the body of the "case" block.
-static void buildDoubleMemOrderCase(CIRGenBuilderTy &builder,
-                                    mlir::Location loc, mlir::Type Type,
-                                    cir::MemOrder Order1,
-                                    cir::MemOrder Order2) {
+static void emitDoubleMemOrderCase(CIRGenBuilderTy &builder, mlir::Location loc,
+                                   mlir::Type Type, cir::MemOrder Order1,
+                                   cir::MemOrder Order2) {
   SmallVector<mlir::Attribute, 2> TwoOrders{
       cir::IntAttr::get(Type, static_cast<int>(Order1)),
       cir::IntAttr::get(Type, static_cast<int>(Order2))};
@@ -412,12 +410,12 @@ static void buildDoubleMemOrderCase(CIRGenBuilderTy &builder,
   builder.restoreInsertionPoint(insertPoint);
 }
 
-static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
-                               Address Dest, Address Ptr, Address Val1,
-                               Address Val2, uint64_t Size,
-                               cir::MemOrder SuccessOrder,
-                               cir::MemOrder FailureOrder,
-                               llvm::SyncScope::ID Scope) {
+static void emitAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
+                              Address Dest, Address Ptr, Address Val1,
+                              Address Val2, uint64_t Size,
+                              cir::MemOrder SuccessOrder,
+                              cir::MemOrder FailureOrder,
+                              llvm::SyncScope::ID Scope) {
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
   auto Expected = builder.createLoad(loc, Val1);
@@ -442,14 +440,14 @@ static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
       });
 
   // Update the memory at Dest with Cmp's value.
-  CGF.buildStoreOfScalar(cmpxchg.getCmp(),
-                         CGF.makeAddrLValue(Dest, E->getType()));
+  CGF.emitStoreOfScalar(cmpxchg.getCmp(),
+                        CGF.makeAddrLValue(Dest, E->getType()));
 }
 
 /// Given an ordering required on success, emit all possible cmpxchg
 /// instructions to cope with the provided (but possibly only dynamically known)
 /// FailureOrder.
-static void buildAtomicCmpXchgFailureSet(
+static void emitAtomicCmpXchgFailureSet(
     CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak, Address Dest, Address Ptr,
     Address Val1, Address Val2, mlir::Value FailureOrderVal, uint64_t Size,
     cir::MemOrder SuccessOrder, llvm::SyncScope::ID Scope) {
@@ -483,8 +481,8 @@ static void buildAtomicCmpXchgFailureSet(
     // success argument". This condition has been lifted and the only
     // precondition is 31.7.2.18. Effectively treat this as a DR and skip
     // language version checks.
-    buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                       SuccessOrder, FailureOrder, Scope);
+    emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size, SuccessOrder,
+                      FailureOrder, Scope);
     return;
   }
 
@@ -502,9 +500,9 @@ static void buildAtomicCmpXchgFailureSet(
         // default:
         // Unsupported memory orders get generated as memory_order_relaxed,
         // because there is no practical way to report an error at runtime.
-        buildDefaultCase(builder, loc);
-        buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                           SuccessOrder, cir::MemOrder::Relaxed, Scope);
+        emitDefaultCase(builder, loc);
+        emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                          SuccessOrder, cir::MemOrder::Relaxed, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -513,10 +511,10 @@ static void buildAtomicCmpXchgFailureSet(
         // case acquire:
         // memory_order_consume is not implemented and always falls back to
         // memory_order_acquire
-        buildDoubleMemOrderCase(builder, loc, FailureOrderVal.getType(),
-                                cir::MemOrder::Consume, cir::MemOrder::Acquire);
-        buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                           SuccessOrder, cir::MemOrder::Acquire, Scope);
+        emitDoubleMemOrderCase(builder, loc, FailureOrderVal.getType(),
+                               cir::MemOrder::Consume, cir::MemOrder::Acquire);
+        emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                          SuccessOrder, cir::MemOrder::Acquire, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -526,11 +524,11 @@ static void buildAtomicCmpXchgFailureSet(
         // the failure memory order.  They fall back to memory_order_relaxed.
 
         // case seq_cst:
-        buildSingleMemOrderCase(builder, loc, FailureOrderVal.getType(),
-                                cir::MemOrder::SequentiallyConsistent);
-        buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
-                           SuccessOrder, cir::MemOrder::SequentiallyConsistent,
-                           Scope);
+        emitSingleMemOrderCase(builder, loc, FailureOrderVal.getType(),
+                               cir::MemOrder::SequentiallyConsistent);
+        emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                          SuccessOrder, cir::MemOrder::SequentiallyConsistent,
+                          Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -538,10 +536,10 @@ static void buildAtomicCmpXchgFailureSet(
       });
 }
 
-static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
-                          Address Ptr, Address Val1, Address Val2,
-                          mlir::Value IsWeak, mlir::Value FailureOrder,
-                          uint64_t Size, cir::MemOrder Order, uint8_t Scope) {
+static void emitAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
+                         Address Ptr, Address Val1, Address Val2,
+                         mlir::Value IsWeak, mlir::Value FailureOrder,
+                         uint64_t Size, cir::MemOrder Order, uint8_t Scope) {
   assert(!cir::MissingFeatures::syncScopeID());
   StringRef Op;
 
@@ -559,8 +557,8 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
-    buildAtomicCmpXchgFailureSet(CGF, E, false, Dest, Ptr, Val1, Val2,
-                                 FailureOrder, Size, Order, Scope);
+    emitAtomicCmpXchgFailureSet(CGF, E, false, Dest, Ptr, Val1, Val2,
+                                FailureOrder, Size, Order, Scope);
     return;
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
@@ -573,8 +571,8 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n: {
     bool weakVal;
     if (isCstWeak(IsWeak, weakVal)) {
-      buildAtomicCmpXchgFailureSet(CGF, E, weakVal, Dest, Ptr, Val1, Val2,
-                                   FailureOrder, Size, Order, Scope);
+      emitAtomicCmpXchgFailureSet(CGF, E, weakVal, Dest, Ptr, Val1, Val2,
+                                  FailureOrder, Size, Order, Scope);
     } else {
       llvm_unreachable("NYI");
     }
@@ -769,27 +767,27 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   builder.createStore(loc, Result, Dest);
 }
 
-static RValue buildAtomicLibcall(CIRGenFunction &CGF, StringRef fnName,
-                                 QualType resultType, CallArgList &args) {
+static RValue emitAtomicLibcall(CIRGenFunction &CGF, StringRef fnName,
+                                QualType resultType, CallArgList &args) {
   [[maybe_unused]] const CIRGenFunctionInfo &fnInfo =
       CGF.CGM.getTypes().arrangeBuiltinFunctionCall(resultType, args);
   [[maybe_unused]] auto fnTy = CGF.CGM.getTypes().GetFunctionType(fnInfo);
   llvm_unreachable("NYI");
 }
 
-static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
-                          Address Ptr, Address Val1, Address Val2,
-                          mlir::Value IsWeak, mlir::Value FailureOrder,
-                          uint64_t Size, cir::MemOrder Order,
-                          mlir::Value Scope) {
+static void emitAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
+                         Address Ptr, Address Val1, Address Val2,
+                         mlir::Value IsWeak, mlir::Value FailureOrder,
+                         uint64_t Size, cir::MemOrder Order,
+                         mlir::Value Scope) {
   auto ScopeModel = Expr->getScopeModel();
 
   // LLVM atomic instructions always have synch scope. If clang atomic
   // expression has no scope operand, use default LLVM synch scope.
   if (!ScopeModel) {
     assert(!cir::MissingFeatures::syncScopeID());
-    buildAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
-                  Order, /*FIXME(cir): LLVM default scope*/ 1);
+    emitAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
+                 Order, /*FIXME(cir): LLVM default scope*/ 1);
     return;
   }
 
@@ -804,7 +802,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   llvm_unreachable("NYI");
 }
 
-RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
+RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *E) {
   QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
   QualType MemTy = AtomicTy;
   if (const AtomicType *AT = AtomicTy->getAs<AtomicType>())
@@ -814,12 +812,12 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   Address Val1 = Address::invalid();
   Address Val2 = Address::invalid();
   Address Dest = Address::invalid();
-  Address Ptr = buildPointerWithAlignment(E->getPtr());
+  Address Ptr = emitPointerWithAlignment(E->getPtr());
 
   if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||
       E->getOp() == AtomicExpr::AO__opencl_atomic_init) {
     LValue lvalue = makeAddrLValue(Ptr, AtomicTy);
-    buildAtomicInit(E->getVal1(), lvalue);
+    emitAtomicInit(E->getVal1(), lvalue);
     return RValue::get(nullptr);
   }
 
@@ -842,8 +840,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         << (int)TInfo.Width.getQuantity() << (int)MaxInlineWidth.getQuantity();
   }
 
-  auto Order = buildScalarExpr(E->getOrder());
-  auto Scope = E->getScopeModel() ? buildScalarExpr(E->getScope()) : nullptr;
+  auto Order = emitScalarExpr(E->getOrder());
+  auto Scope = E->getScopeModel() ? emitScalarExpr(E->getScope()) : nullptr;
   bool ShouldCastToIntPtrTy = true;
 
   switch (E->getOp()) {
@@ -860,18 +858,18 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load:
-    Dest = buildPointerWithAlignment(E->getVal1());
+    Dest = emitPointerWithAlignment(E->getVal1());
     break;
 
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
-    Val1 = buildPointerWithAlignment(E->getVal1());
+    Val1 = emitPointerWithAlignment(E->getVal1());
     break;
 
   case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange:
-    Val1 = buildPointerWithAlignment(E->getVal1());
-    Dest = buildPointerWithAlignment(E->getVal2());
+    Val1 = emitPointerWithAlignment(E->getVal1());
+    Dest = emitPointerWithAlignment(E->getVal2());
     break;
 
   case AtomicExpr::AO__atomic_compare_exchange:
@@ -884,18 +882,18 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
-    Val1 = buildPointerWithAlignment(E->getVal1());
+    Val1 = emitPointerWithAlignment(E->getVal1());
     if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
         E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
-      Val2 = buildPointerWithAlignment(E->getVal2());
+      Val2 = emitPointerWithAlignment(E->getVal2());
     else
-      Val2 = buildValToTemp(*this, E->getVal2());
-    OrderFail = buildScalarExpr(E->getOrderFail());
+      Val2 = emitValToTemp(*this, E->getVal2());
+    OrderFail = emitScalarExpr(E->getOrderFail());
     if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
         E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
         E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange_n ||
         E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange) {
-      IsWeak = buildScalarExpr(E->getWeak());
+      IsWeak = emitScalarExpr(E->getWeak());
     }
     break;
 
@@ -970,7 +968,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
-    Val1 = buildValToTemp(*this, E->getVal1());
+    Val1 = emitValToTemp(*this, E->getVal1());
     break;
   }
 
@@ -1164,7 +1162,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     }
 
     [[maybe_unused]] RValue Res =
-        buildAtomicLibcall(*this, LibCallName, RetTy, Args);
+        emitAtomicLibcall(*this, LibCallName, RetTy, Args);
     // The value is returned directly from the libcall.
     if (E->isCmpXChg()) {
       llvm_unreachable("NYI");
@@ -1201,31 +1199,31 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     if (cir::isValidCIRAtomicOrderingCABI(ord)) {
       switch ((cir::MemOrder)ord) {
       case cir::MemOrder::Relaxed:
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::Relaxed, Scope);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::Relaxed, Scope);
         break;
       case cir::MemOrder::Consume:
       case cir::MemOrder::Acquire:
         if (IsStore)
           break; // Avoid crashing on code with undefined behavior
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::Acquire, Scope);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::Acquire, Scope);
         break;
       case cir::MemOrder::Release:
         if (IsLoad)
           break; // Avoid crashing on code with undefined behavior
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::Release, Scope);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::Release, Scope);
         break;
       case cir::MemOrder::AcquireRelease:
         if (IsLoad || IsStore)
           break; // Avoid crashing on code with undefined behavior
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::AcquireRelease, Scope);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::AcquireRelease, Scope);
         break;
       case cir::MemOrder::SequentiallyConsistent:
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::SequentiallyConsistent, Scope);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::SequentiallyConsistent, Scope);
         break;
       }
     }
@@ -1250,9 +1248,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         // order value that is not supported.  There is no good way to report
         // an unsupported memory order at runtime, hence the fallback to
         // memory_order_relaxed.
-        buildDefaultCase(builder, loc);
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::Relaxed, Scope);
+        emitDefaultCase(builder, loc);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::Relaxed, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -1263,11 +1261,11 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
           // memory_order_consume is not implemented; it is always treated like
           // memory_order_acquire.  These memory orders are not valid for
           // write-only operations.
-          buildDoubleMemOrderCase(builder, loc, Order.getType(),
-                                  cir::MemOrder::Consume,
-                                  cir::MemOrder::Acquire);
-          buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                        Size, cir::MemOrder::Acquire, Scope);
+          emitDoubleMemOrderCase(builder, loc, Order.getType(),
+                                 cir::MemOrder::Consume,
+                                 cir::MemOrder::Acquire);
+          emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                       cir::MemOrder::Acquire, Scope);
           builder.createBreak(loc);
         }
 
@@ -1276,10 +1274,10 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         if (!IsLoad) {
           // case release:
           // memory_order_release is not valid for read-only operations.
-          buildSingleMemOrderCase(builder, loc, Order.getType(),
-                                  cir::MemOrder::Release);
-          buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                        Size, cir::MemOrder::Release, Scope);
+          emitSingleMemOrderCase(builder, loc, Order.getType(),
+                                 cir::MemOrder::Release);
+          emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                       cir::MemOrder::Release, Scope);
           builder.createBreak(loc);
         }
 
@@ -1288,20 +1286,20 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         if (!IsLoad && !IsStore) {
           // case acq_rel:
           // memory_order_acq_rel is only valid for read-write operations.
-          buildSingleMemOrderCase(builder, loc, Order.getType(),
-                                  cir::MemOrder::AcquireRelease);
-          buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                        Size, cir::MemOrder::AcquireRelease, Scope);
+          emitSingleMemOrderCase(builder, loc, Order.getType(),
+                                 cir::MemOrder::AcquireRelease);
+          emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                       cir::MemOrder::AcquireRelease, Scope);
           builder.createBreak(loc);
         }
 
         builder.setInsertionPointToEnd(switchBlock);
 
         // case seq_cst:
-        buildSingleMemOrderCase(builder, loc, Order.getType(),
-                                cir::MemOrder::SequentiallyConsistent);
-        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      cir::MemOrder::SequentiallyConsistent, Scope);
+        emitSingleMemOrderCase(builder, loc, Order.getType(),
+                               cir::MemOrder::SequentiallyConsistent);
+        emitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                     cir::MemOrder::SequentiallyConsistent, Scope);
         builder.createBreak(loc);
 
         builder.setInsertionPointToEnd(switchBlock);
@@ -1314,8 +1312,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
                              RValTy, E->getExprLoc());
 }
 
-void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
-                                      bool isInit) {
+void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue lvalue,
+                                     bool isInit) {
   bool IsVolatile = lvalue.isVolatileQualified();
   cir::MemOrder MO;
   if (lvalue.getType()->isAtomicType()) {
@@ -1324,7 +1322,7 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
     MO = cir::MemOrder::Release;
     IsVolatile = true;
   }
-  return buildAtomicStore(rvalue, lvalue, MO, IsVolatile, isInit);
+  return emitAtomicStore(rvalue, lvalue, MO, IsVolatile, isInit);
 }
 
 /// Return true if \param ValTy is a type that should be casted to integer
@@ -1390,7 +1388,7 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
 
   // Okay, store the rvalue in.
   if (rvalue.isScalar()) {
-    CGF.buildStoreOfScalar(rvalue.getScalarVal(), TempLVal, /*init*/ true);
+    CGF.emitStoreOfScalar(rvalue.getScalarVal(), TempLVal, /*init*/ true);
   } else {
     llvm_unreachable("NYI");
   }
@@ -1401,7 +1399,7 @@ mlir::Value AtomicInfo::convertRValueToInt(RValue RVal, bool CmpXchg) const {
   // through memory. Floats get casted if needed by AtomicExpandPass.
   if (auto Value = getScalarRValValueOrNull(RVal)) {
     if (!shouldCastToInt(Value.getType(), CmpXchg)) {
-      return CGF.buildToMemory(Value, ValueTy);
+      return CGF.emitToMemory(Value, ValueTy);
     } else {
       llvm_unreachable("NYI");
     }
@@ -1415,9 +1413,9 @@ mlir::Value AtomicInfo::convertRValueToInt(RValue RVal, bool CmpXchg) const {
 /// Note that the r-value is expected to be an r-value *of the atomic
 /// type*; this means that for aggregate r-values, it should include
 /// storage for any padding that was necessary.
-void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
-                                      cir::MemOrder MO, bool IsVolatile,
-                                      bool isInit) {
+void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest,
+                                     cir::MemOrder MO, bool IsVolatile,
+                                     bool isInit) {
   // If this is an aggregate r-value, it should agree in type except
   // maybe for address-space qualification.
   auto loc = dest.getPointer().getLoc();
@@ -1472,12 +1470,12 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
   llvm_unreachable("NYI");
 }
 
-void CIRGenFunction::buildAtomicInit(Expr *init, LValue dest) {
+void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
   AtomicInfo atomics(*this, dest, getLoc(init->getSourceRange()));
 
   switch (atomics.getEvaluationKind()) {
   case cir::TEK_Scalar: {
-    mlir::Value value = buildScalarExpr(init);
+    mlir::Value value = emitScalarExpr(init);
     atomics.emitCopyIntoMemory(RValue::get(value));
     return;
   }

@@ -33,8 +33,8 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenFunction::AutoVarEmission
-CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
-                                   mlir::OpBuilder::InsertPoint ip) {
+CIRGenFunction::emitAutoVarAlloca(const VarDecl &D,
+                                  mlir::OpBuilder::InsertPoint ip) {
   QualType Ty = D.getType();
   assert(
       Ty.getAddressSpace() == LangAS::Default ||
@@ -51,7 +51,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
 
   // If the type is variably-modified, emit all the VLA sizes for it.
   if (Ty->isVariablyModifiedType())
-    buildVariablyModifiedType(Ty);
+    emitVariablyModifiedType(Ty);
 
   assert(!cir::MissingFeatures::generateDebugInfo());
   assert(!cir::MissingFeatures::cxxABI());
@@ -92,7 +92,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
           (!NRVO && !D.isEscapingByref() &&
            CGM.isTypeConstant(Ty, /*ExcludeCtor=*/true,
                               /*ExcludeDtor=*/false))) {
-        buildStaticVarDecl(D, cir::GlobalLinkageKind::InternalLinkage);
+        emitStaticVarDecl(D, cir::GlobalLinkageKind::InternalLinkage);
 
         // Signal this condition to later callbacks.
         emission.Addr = Address::invalid();
@@ -199,7 +199,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   assert(!cir::MissingFeatures::generateDebugInfo());
 
   if (D.hasAttr<AnnotateAttr>())
-    buildVarAnnotations(&D, address.emitRawPointer());
+    emitVarAnnotations(&D, address.emitRawPointer());
 
   // TODO(cir): in LLVM this calls @llvm.lifetime.end.
   assert(!cir::MissingFeatures::shouldEmitLifetimeMarkers());
@@ -254,7 +254,7 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
   builder.createStore(loc, builder.getConstant(loc, constant), addr);
 }
 
-void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
+void CIRGenFunction::emitAutoVarInit(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
 
   // If this was emitted as a global constant, we're done.
@@ -328,7 +328,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   if (!constant || isa<CXXTemporaryObjectExpr>(Init)) {
     initializeWhatIsTechnicallyUninitialized(Loc);
     LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
-    buildExprAsInit(Init, &D, lv);
+    emitExprAsInit(Init, &D, lv);
     // In case lv has uses it means we indeed initialized something
     // out of it while trying to build the expression, mark it as such.
     auto addr = lv.getAddress().getPointer();
@@ -350,7 +350,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
     assert(Init && "expected initializer");
     auto initLoc = getLoc(Init->getSourceRange());
     lv.setNonGC(true);
-    return buildStoreThroughLValue(
+    return emitStoreThroughLValue(
         RValue::get(builder.getConstant(initLoc, typedConstant)), lv);
   }
 
@@ -358,7 +358,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
                         typedConstant, /*IsAutoInit=*/false);
 }
 
-void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {
+void CIRGenFunction::emitAutoVarCleanups(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
 
   // If this was emitted as a global constant, we're done.
@@ -372,7 +372,7 @@ void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {
 
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext()))
-    buildAutoVarTypeCleanup(emission, dtorKind);
+    emitAutoVarTypeCleanup(emission, dtorKind);
 
   // In GC mode, honor objc_precise_lifetime.
   if (getContext().getLangOpts().getGC() != LangOptions::NonGC &&
@@ -389,13 +389,13 @@ void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {
 /// Emit code and set up symbol table for a variable declaration with auto,
 /// register, or no storage class specifier. These turn into simple stack
 /// objects, globals depending on target.
-void CIRGenFunction::buildAutoVarDecl(const VarDecl &D) {
-  AutoVarEmission emission = buildAutoVarAlloca(D);
-  buildAutoVarInit(emission);
-  buildAutoVarCleanups(emission);
+void CIRGenFunction::emitAutoVarDecl(const VarDecl &D) {
+  AutoVarEmission emission = emitAutoVarAlloca(D);
+  emitAutoVarInit(emission);
+  emitAutoVarCleanups(emission);
 }
 
-void CIRGenFunction::buildVarDecl(const VarDecl &D) {
+void CIRGenFunction::emitVarDecl(const VarDecl &D) {
   if (D.hasExternalStorage()) {
     // Don't emit it now, allow it to be emitted lazily on its first use.
     return;
@@ -415,16 +415,16 @@ void CIRGenFunction::buildVarDecl(const VarDecl &D) {
     // some variables even if we can constant-evaluate them because
     // we can't guarantee every translation unit will constant-evaluate them.
 
-    return buildStaticVarDecl(D, Linkage);
+    return emitStaticVarDecl(D, Linkage);
   }
 
   if (D.getType().getAddressSpace() == LangAS::opencl_local)
-    return CGM.getOpenCLRuntime().buildWorkGroupLocalVarDecl(*this, D);
+    return CGM.getOpenCLRuntime().emitWorkGroupLocalVarDecl(*this, D);
 
   assert(D.hasLocalStorage());
 
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &D};
-  return buildAutoVarDecl(D);
+  return emitAutoVarDecl(D);
 }
 
 static std::string getStaticDeclName(CIRGenModule &CGM, const VarDecl &D) {
@@ -618,8 +618,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
   return GV;
 }
 
-void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
-                                        cir::GlobalLinkageKind Linkage) {
+void CIRGenFunction::emitStaticVarDecl(const VarDecl &D,
+                                       cir::GlobalLinkageKind Linkage) {
   // Check to see if we already have a global variable for this
   // declaration.  This can happen when double-emitting function
   // bodies, e.g. with complete and base constructors.
@@ -701,34 +701,34 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
   }
 }
 
-void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
-                                           SourceLocation Loc) {
+void CIRGenFunction::emitNullabilityCheck(LValue LHS, mlir::Value RHS,
+                                          SourceLocation Loc) {
   if (!SanOpts.has(SanitizerKind::NullabilityAssign))
     return;
 
   llvm_unreachable("NYI");
 }
 
-void CIRGenFunction::buildScalarInit(const Expr *init, mlir::Location loc,
-                                     LValue lvalue, bool capturedByInit) {
+void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
+                                    LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = Qualifiers::ObjCLifetime::OCL_None;
   assert(!cir::MissingFeatures::objCLifetime());
 
   if (!lifetime) {
     SourceLocRAIIObject Loc{*this, loc};
-    mlir::Value value = buildScalarExpr(init);
+    mlir::Value value = emitScalarExpr(init);
     if (capturedByInit)
       llvm_unreachable("NYI");
     assert(!cir::MissingFeatures::emitNullabilityCheck());
-    buildStoreThroughLValue(RValue::get(value), lvalue, true);
+    emitStoreThroughLValue(RValue::get(value), lvalue, true);
     return;
   }
 
   llvm_unreachable("NYI");
 }
 
-void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
-                                     LValue lvalue, bool capturedByInit) {
+void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *D,
+                                    LValue lvalue, bool capturedByInit) {
   SourceLocRAIIObject Loc{*this, getLoc(init->getSourceRange())};
   if (capturedByInit)
     llvm_unreachable("NYI");
@@ -736,22 +736,22 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
   QualType type = D->getType();
 
   if (type->isReferenceType()) {
-    RValue rvalue = buildReferenceBindingToExpr(init);
+    RValue rvalue = emitReferenceBindingToExpr(init);
     if (capturedByInit)
       llvm_unreachable("NYI");
-    buildStoreThroughLValue(rvalue, lvalue);
+    emitStoreThroughLValue(rvalue, lvalue);
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
-    buildScalarInit(init, getLoc(D->getSourceRange()), lvalue);
+    emitScalarInit(init, getLoc(D->getSourceRange()), lvalue);
     return;
   case cir::TEK_Complex: {
-    mlir::Value complex = buildComplexExpr(init);
+    mlir::Value complex = emitComplexExpr(init);
     if (capturedByInit)
       llvm_unreachable("NYI");
-    buildStoreOfComplex(getLoc(init->getExprLoc()), complex, lvalue,
-                        /*init*/ true);
+    emitStoreOfComplex(getLoc(init->getExprLoc()), complex, lvalue,
+                       /*init*/ true);
     return;
   }
   case cir::TEK_Aggregate:
@@ -764,16 +764,16 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
     else
       assert(false && "Only VarDecl implemented so far");
     // TODO: how can we delay here if D is captured by its initializer?
-    buildAggExpr(init,
-                 AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
-                                         AggValueSlot::DoesNotNeedGCBarriers,
-                                         AggValueSlot::IsNotAliased, Overlap));
+    emitAggExpr(init,
+                AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
+                                        AggValueSlot::DoesNotNeedGCBarriers,
+                                        AggValueSlot::IsNotAliased, Overlap));
     return;
   }
   llvm_unreachable("bad evaluation kind");
 }
 
-void CIRGenFunction::buildDecl(const Decl &D) {
+void CIRGenFunction::emitDecl(const Decl &D) {
   switch (D.getKind()) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::HLSLBuffer:
@@ -875,11 +875,11 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     const VarDecl &VD = cast<VarDecl>(D);
     assert(VD.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
-    buildVarDecl(VD);
+    emitVarDecl(VD);
     if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
       for (auto *B : DD->bindings())
         if (auto *HD = B->getHoldingVar())
-          buildVarDecl(*HD);
+          emitVarDecl(*HD);
     return;
   }
 
@@ -893,7 +893,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     if (auto *DI = getDebugInfo())
       assert(!cir::MissingFeatures::generateDebugInfo());
     if (Ty->isVariablyModifiedType())
-      buildVariablyModifiedType(Ty);
+      emitVariablyModifiedType(Ty);
     return;
   }
   }
@@ -1095,12 +1095,11 @@ void CIRGenFunction::pushRegularPartialArrayCleanup(mlir::Value arrayBegin,
 /// \param useEHCleanup - whether to push an EH cleanup to destroy
 ///   the remaining elements in case the destruction of a single
 ///   element throws
-void CIRGenFunction::buildArrayDestroy(mlir::Value begin, mlir::Value end,
-                                       QualType elementType,
-                                       CharUnits elementAlign,
-                                       Destroyer *destroyer,
-                                       bool checkZeroLength,
-                                       bool useEHCleanup) {
+void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
+                                      QualType elementType,
+                                      CharUnits elementAlign,
+                                      Destroyer *destroyer,
+                                      bool checkZeroLength, bool useEHCleanup) {
   assert(!elementType->isArrayType());
   if (checkZeroLength) {
     llvm_unreachable("NYI");
@@ -1148,7 +1147,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
   if (!arrayType)
     return destroyer(*this, addr, type);
 
-  auto length = buildArrayLength(arrayType, type, addr);
+  auto length = emitArrayLength(arrayType, type, addr);
 
   CharUnits elementAlign = addr.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
@@ -1170,8 +1169,8 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
 
   auto begin = addr.getPointer();
   mlir::Value end; // Use this for future non-constant counts.
-  buildArrayDestroy(begin, end, type, elementAlign, destroyer, checkZeroLength,
-                    useEHCleanupForArray);
+  emitArrayDestroy(begin, end, type, elementAlign, destroyer, checkZeroLength,
+                   useEHCleanupForArray);
   if (constantCount.use_empty())
     constantCount.erase();
 }
@@ -1196,7 +1195,7 @@ void CIRGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
 }
 
 /// Enter a destroy cleanup for the given local variable.
-void CIRGenFunction::buildAutoVarTypeCleanup(
+void CIRGenFunction::emitAutoVarTypeCleanup(
     const CIRGenFunction::AutoVarEmission &emission,
     QualType::DestructionKind dtorKind) {
   assert(dtorKind != QualType::DK_none);

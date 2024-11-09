@@ -66,7 +66,7 @@ class CIRGenerator : public clang::ASTConsumer {
     ~HandlingTopLevelDeclRAII() {
       unsigned Level = --Self.HandlingTopLevelDecls;
       if (Level == 0 && EmitDeferred)
-        Self.buildDeferredDecls();
+        Self.emitDeferredDecls();
     }
   };
 
@@ -101,8 +101,8 @@ public:
 
   bool verifyModule();
 
-  void buildDeferredDecls();
-  void buildDefaultMethods();
+  void emitDeferredDecls();
+  void emitDefaultMethods();
 };
 
 } // namespace cir
