@@ -162,13 +162,14 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
   }
 
   // Decomposing linalg.generic involves creating `tensor.empty`
-  // which cannot have dnyamic shapes.
-  for (auto &operand : op->getOpOperands()) {
-    auto opType = cast<RankedTensorType>(operand.get().getType());
-    for (auto size : opType.getShape())
-      if (size == ShapedType::kDynamic)
-        return failure();
-  }
+  // which can have dynamic shapes but then we would have to work
+  // out which operand can supply that runtime-value (tensor.dim).
+  // Leaving it as a future TODO.
+  if (llvm::any_of(op->getOpOperands(), [](OpOperand &oper) {
+        auto opType = cast<RankedTensorType>(oper.get().getType());
+        return ShapedType::isDynamicShape(opType.getShape());
+      }))
+    return failure();
 
   auto outputShape = op.getStaticLoopRanges();
 
