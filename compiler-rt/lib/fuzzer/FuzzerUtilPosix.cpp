@@ -116,7 +116,7 @@ void SetTimer(int Seconds) {
   if (timer_settime(timerid, 0, &T, NULL) == -1) {
     Printf("libFuzzer: timer_settime failed with %d\n", errno);
     exit(1);
-  }  
+  }
 }
 
 void SetSignalHandler(const FuzzingOptions& Options) {
