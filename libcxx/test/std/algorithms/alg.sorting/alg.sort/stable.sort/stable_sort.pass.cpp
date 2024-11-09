@@ -168,11 +168,11 @@ TEST_CONSTEXPR_CXX26 void test()
     test_larger_sorts<257>();
     test_larger_sorts<499>();
     test_larger_sorts<500>();
-    test_larger_sorts<997>();
 #if TEST_STD_VER >= 26
     if !consteval // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
 #endif
     {
+        test_larger_sorts<997>();
         test_larger_sorts<1000>();
         test_larger_sorts<1009>();
     }
