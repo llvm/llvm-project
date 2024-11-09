@@ -375,11 +375,15 @@ public:
     return createAlloca(loc, addrType, type, name, alignmentIntAttr);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                              bool threadLocal = false) {
     return create<cir::GetGlobalOp>(
-        global.getLoc(),
-        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
+        loc, getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
         global.getName(), threadLocal);
+  }
+
+  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+    return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
   /// Create a copy with inferred length.
@@ -547,8 +551,7 @@ public:
         });
 
     if (last != block->rend())
-      return OpBuilder::InsertPoint(block,
-                                    ++mlir::Block::iterator(&*last));
+      return OpBuilder::InsertPoint(block, ++mlir::Block::iterator(&*last));
     return OpBuilder::InsertPoint(block, block->begin());
   };
 

@@ -1480,15 +1480,14 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
                       cir::GlobalLinkageKind LT, CIRGenModule &CGM,
                       StringRef GlobalName, CharUnits Alignment) {
-  unsigned AddrSpace = CGM.getASTContext().getTargetAddressSpace(
-      CGM.getGlobalConstantAddressSpace());
-  assert((AddrSpace == 0 && !cir::MissingFeatures::addressSpaceInGlobalVar()) &&
-         "NYI");
+  cir::AddressSpaceAttr addrSpaceAttr =
+      CGM.getBuilder().getAddrSpaceAttr(CGM.getGlobalConstantAddressSpace());
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
   auto GV = CIRGenModule::createGlobalOp(CGM, loc, GlobalName, C.getType(),
-                                         !CGM.getLangOpts().WritableStrings);
+                                         !CGM.getLangOpts().WritableStrings,
+                                         addrSpaceAttr);
 
   // Set up extra information and add to the module
   GV.setAlignmentAttr(CGM.getSize(Alignment));
@@ -1559,7 +1558,8 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
 
   auto ArrayTy = mlir::dyn_cast<cir::ArrayType>(GV.getSymType());
   assert(ArrayTy && "String literal must be array");
-  auto PtrTy = cir::PointerType::get(&getMLIRContext(), ArrayTy.getEltType());
+  auto PtrTy =
+      getBuilder().getPointerTo(ArrayTy.getEltType(), GV.getAddrSpaceAttr());
 
   return builder.getGlobalViewAttr(PtrTy, GV);
 }

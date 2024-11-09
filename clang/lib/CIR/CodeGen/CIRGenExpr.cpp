@@ -1842,12 +1842,9 @@ LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *E) {
   auto g = dyn_cast<cir::GlobalOp>(cstGlobal);
   assert(g && "unaware of other symbol providers");
 
-  auto ptrTy =
-      cir::PointerType::get(CGM.getBuilder().getContext(), g.getSymType());
   assert(g.getAlignment() && "expected alignment for string literal");
   auto align = *g.getAlignment();
-  auto addr = builder.create<cir::GetGlobalOp>(getLoc(E->getSourceRange()),
-                                               ptrTy, g.getSymName());
+  auto addr = builder.createGetGlobal(getLoc(E->getSourceRange()), g);
   return makeAddrLValue(
       Address(addr, g.getSymType(), CharUnits::fromQuantity(align)),
       E->getType(), AlignmentSource::Decl);
