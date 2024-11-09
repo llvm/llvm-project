@@ -108,6 +108,7 @@ void SetTimer(int Seconds) {
   struct itimerspec T {
     {Seconds, 0}, { Seconds, 0 }
   };
+  SetSigaction(SIGALRM, AlarmHandler);
   if (timer_create(CLOCK_REALTIME, NULL, &timerid) == -1) {
     Printf("libFuzzer: timer_create failed with %d\n", errno);
     exit(1);
@@ -115,8 +116,7 @@ void SetTimer(int Seconds) {
   if (timer_settime(timerid, 0, &T, NULL) == -1) {
     Printf("libFuzzer: timer_settime failed with %d\n", errno);
     exit(1);
-  }
-  SetSigaction(SIGALRM, AlarmHandler);
+  }  
 }
 
 void SetSignalHandler(const FuzzingOptions& Options) {
