@@ -11518,9 +11518,7 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
 // this table could be generated automatically from RegInfo.
 Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
-  Register Reg = MatchRegisterAltName(RegName);
-  if (Reg == AArch64::NoRegister)
-    Reg = MatchRegisterName(RegName);
+  Register Reg = MatchRegisterName(RegName);
   if (Reg == AArch64::NoRegister)
     report_fatal_error(
         Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
