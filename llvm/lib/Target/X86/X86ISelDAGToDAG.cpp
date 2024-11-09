@@ -3585,11 +3585,10 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
 // be transferred from a node in the pattern to the result node, probably with
 // a new keyword. For example, we have this
 // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
-//  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
-//   (implicit EFLAGS)]>;
+//  [(store (add (loadi64 addr:$dst), -1), addr:$dst)]>;
 // but maybe need something like this
 // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
-//  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
+//  [(store (X86add_flag (loadi64 addr:$dst), -1), addr:$dst),
 //   (transferrable EFLAGS)]>;
 //
 // Until then, we manually fold these and instruction select the operation
