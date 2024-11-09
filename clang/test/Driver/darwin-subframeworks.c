@@ -1,3 +1,6 @@
+// UNSUPPORTED: system-windows
+//   Windows is unsupported because we use the Unix path separator `\`.
+
 // Add default directories before running clang to check default 
 // search paths. 
 // RUN: rm -rf %t && mkdir -p %t
