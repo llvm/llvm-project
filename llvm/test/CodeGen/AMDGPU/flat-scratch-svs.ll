@@ -15,18 +15,16 @@ define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff1_voff1:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, v1, v0
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v2, 1, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v3, 2, v0
+; GFX940-SDAG-NEXT:    scratch_store_byte v2, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 2
+; GFX940-SDAG-NEXT:    scratch_store_byte v3, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 4
@@ -145,18 +143,17 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff1_voff2:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 1, v1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 1, v2
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v2, 1, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v3, 2, v0
+; GFX940-SDAG-NEXT:    scratch_store_byte v2, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 2
+; GFX940-SDAG-NEXT:    scratch_store_byte v3, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 4
@@ -282,18 +279,17 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff1_voff4:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v2, 1, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v3, 2, v0
+; GFX940-SDAG-NEXT:    scratch_store_byte v2, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 2
+; GFX940-SDAG-NEXT:    scratch_store_byte v3, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 4
@@ -419,19 +415,17 @@ define amdgpu_kernel void @soff2_voff1(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff2_voff1:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, v1, v0
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v2, 1, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v3, 2, v0
+; GFX940-SDAG-NEXT:    scratch_store_byte v2, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 2
+; GFX940-SDAG-NEXT:    scratch_store_byte v3, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 4
@@ -556,14 +550,13 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff2_voff2:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 1, v1
-; GFX940-SDAG-NEXT:    scratch_store_byte v0, v2, off offset:1 sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 1, v2
+; GFX940-SDAG-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
@@ -698,14 +691,13 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff2_voff4:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX940-SDAG-NEXT:    scratch_store_byte v0, v2, off offset:1 sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, v2
+; GFX940-SDAG-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
@@ -840,19 +832,17 @@ define amdgpu_kernel void @soff4_voff1(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff4_voff1:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, v1, v0
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v2, 1, v0
+; GFX940-SDAG-NEXT:    v_add_u32_e32 v3, 2, v0
+; GFX940-SDAG-NEXT:    scratch_store_byte v2, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
-; GFX940-SDAG-NEXT:    scratch_store_byte v1, v2, off sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 2
+; GFX940-SDAG-NEXT:    scratch_store_byte v3, v1, off sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 4
@@ -977,14 +967,13 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff4_voff2:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 1, v1
-; GFX940-SDAG-NEXT:    scratch_store_byte v0, v2, off offset:1 sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 1, v2
+; GFX940-SDAG-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, 2, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
@@ -1119,17 +1108,16 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX940-SDAG-LABEL: soff4_voff4:
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX940-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX940-SDAG-NEXT:    v_add_u32_e32 v1, s0, v1
-; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 2
-; GFX940-SDAG-NEXT:    scratch_store_byte v0, v2, off offset:1 sc0 sc1
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v3, s0
+; GFX940-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, v3
+; GFX940-SDAG-NEXT:    scratch_store_byte v0, v1, off offset:1 sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-SDAG-NEXT:    scratch_store_byte v0, v1, off offset:2 sc0 sc1
+; GFX940-SDAG-NEXT:    scratch_store_byte v0, v2, off offset:2 sc0 sc1
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-SDAG-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 4

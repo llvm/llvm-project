@@ -950,6 +950,7 @@ entry:
   ret void
 }
 
+; FIXME: Fold out s_or_b32 s2, 0, s3
 define amdgpu_kernel void @bit4_inselt(ptr addrspace(1) %out, <4 x i1> %vec, i32 %sel) {
 ; GCN-LABEL: bit4_inselt:
 ; GCN:       ; %bb.0: ; %entry
@@ -962,21 +963,20 @@ define amdgpu_kernel void @bit4_inselt(ptr addrspace(1) %out, <4 x i1> %vec, i32
 ; GCN-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bfe_u32 s6, s2, 0x10003
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    s_bfe_u32 s5, s2, 0x20002
-; GCN-NEXT:    buffer_store_byte v1, off, s[12:15], 0
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
+; GCN-NEXT:    buffer_store_byte v0, off, s[12:15], 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    s_bfe_u32 s4, s2, 0x10001
-; GCN-NEXT:    buffer_store_byte v1, off, s[12:15], 0 offset:3
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:3
+; GCN-NEXT:    v_mov_b32_e32 v0, s5
 ; GCN-NEXT:    s_and_b32 s3, s3, 3
-; GCN-NEXT:    buffer_store_byte v1, off, s[12:15], 0 offset:2
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
-; GCN-NEXT:    v_or_b32_e32 v0, s3, v0
-; GCN-NEXT:    buffer_store_byte v1, off, s[12:15], 0 offset:1
-; GCN-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-NEXT:    buffer_store_byte v1, v0, s[12:15], 0 offen
+; GCN-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:2
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_or_b32_e64 v1, s3, 0
+; GCN-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:1
+; GCN-NEXT:    v_mov_b32_e32 v0, 1
+; GCN-NEXT:    buffer_store_byte v0, v1, s[12:15], 0 offen
 ; GCN-NEXT:    buffer_load_ubyte v0, off, s[12:15], 0
 ; GCN-NEXT:    buffer_load_ubyte v1, off, s[12:15], 0 offset:1
 ; GCN-NEXT:    buffer_load_ubyte v2, off, s[12:15], 0 offset:2
