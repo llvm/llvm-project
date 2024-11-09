@@ -31,7 +31,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Analysis/WithCache.h"
@@ -1427,16 +1426,23 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // this is sufficient to catch some interesting cases.
       unsigned Opcode = BO->getOpcode();
 
-      // If this is a shift recurrence, we know the bits being shifted in.
-      // We can combine that with information about the start value of the
-      // recurrence to conclude facts about the result.
       switch (Opcode) {
+      // If this is a shift recurrence, we know the bits being shifted in. We
+      // can combine that with information about the start value of the
+      // recurrence to conclude facts about the result. If this is a udiv
+      // recurrence, we know that the result can never exceed either the
+      // numerator or the start value, whichever is greater.
       case Instruction::LShr:
       case Instruction::AShr:
-      case Instruction::Shl: {
+      case Instruction::Shl:
+      case Instruction::UDiv:
         if (BO->getOperand(0) != I)
           break;
+        [[fallthrough]];
 
+      // For a urem recurrence, the result can never exceed the start value. The
+      // phi could either be the numerator or the denominator.
+      case Instruction::URem: {
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
         // %iv.next = shift_op %iv, L
@@ -1454,8 +1460,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setLowBits(Known2.countMinTrailingZeros());
           break;
         case Instruction::LShr:
-          // A lshr recurrence will preserve the leading zeros of the
-          // start value
+        case Instruction::UDiv:
+        case Instruction::URem:
+          // lshr, udiv, and urem recurrences will preserve the leading zeros of
+          // the start value.
           Known.Zero.setHighBits(Known2.countMinLeadingZeros());
           break;
         case Instruction::AShr:
@@ -1543,6 +1551,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         }
         break;
       }
+
       default:
         break;
       }
@@ -1566,20 +1575,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // Skip direct self references.
         if (IncValue == P) continue;
 
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
-        // TODO: See if we can base recursion limiter on number of incoming phi
-        // edges so we don't overly clamp analysis.
-        unsigned IncDepth = MaxAnalysisRecursionDepth - 1;
-
         // If the Use is a select of this phi, use the knownbit of the other
         // operand to break the recursion.
         if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
-          if (SI->getTrueValue() == P || SI->getFalseValue() == P) {
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
             IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
                                                : SI->getTrueValue();
-            IncDepth = Depth + 1;
-          }
         }
 
         // Change the context instruction to the "edge" that flows into the
@@ -1590,7 +1591,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
-        computeKnownBits(IncValue, DemandedElts, Known2, IncDepth, RecQ);
+
+        // Recurse, but cap the recursion to one level, because we don't
+        // want to waste time spinning around in loops.
+        // TODO: See if we can base recursion limiter on number of incoming phi
+        // edges so we don't overly clamp analysis.
+        computeKnownBits(IncValue, DemandedElts, Known2,
+                         MaxAnalysisRecursionDepth - 1, RecQ);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
@@ -4231,6 +4238,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_atanf:
   case LibFunc_atanl:
     return Intrinsic::atan;
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2l:
+    return Intrinsic::atan2;
   case LibFunc_sinh:
   case LibFunc_sinhf:
   case LibFunc_sinhl:
@@ -6714,11 +6725,12 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 }
 
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
-  if (!V->getType()->isPointerTy())
-    return V;
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-      V = GEP->getPointerOperand();
+      const Value *PtrOp = GEP->getPointerOperand();
+      if (!PtrOp->getType()->isPointerTy()) // Only handle scalar pointer base.
+        return V;
+      V = PtrOp;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
@@ -9042,12 +9054,14 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, div, gep, uaddo, etc..
+    // TODO: Expand list -- xor, gep, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
     case Instruction::Add:
     case Instruction::Sub:
+    case Instruction::UDiv:
+    case Instruction::URem:
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Mul:

@@ -166,7 +166,21 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    .cfi_restore s2
+; CHECK-NEXT:    .cfi_restore s3
+; CHECK-NEXT:    .cfi_restore s4
+; CHECK-NEXT:    .cfi_restore s5
+; CHECK-NEXT:    .cfi_restore s6
+; CHECK-NEXT:    .cfi_restore s7
+; CHECK-NEXT:    .cfi_restore s8
+; CHECK-NEXT:    .cfi_restore s9
+; CHECK-NEXT:    .cfi_restore s10
+; CHECK-NEXT:    .cfi_restore s11
 ; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()

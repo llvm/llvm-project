@@ -445,9 +445,9 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses(ptr noalias
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP4]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP4]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[DST_1:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[TMP9]], align 4
@@ -535,10 +535,10 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses_chain(ptr n
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP5]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP5]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[TMP6]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP4]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP4]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[DST_1:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP10]], align 4
@@ -841,8 +841,8 @@ define void @sink_dominance(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[TMP7]], <i32 213, i32 213, i32 213, i32 213>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP7]], <4 x i32> <i32 22, i32 22, i32 22, i32 22>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[TMP7]], splat (i32 213)
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP7]], <4 x i32> splat (i32 22)
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -922,9 +922,9 @@ define void @sink_dominance_2(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], <i32 99, i32 99, i32 99, i32 99>
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[TMP7]], <i32 213, i32 213, i32 213, i32 213>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], splat (i32 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], splat (i32 99)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[TMP7]], splat (i32 213)
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP7]], <4 x i32> [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -1045,7 +1045,7 @@ define void @test_for_sink_instruction_after_same_incoming_1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR1]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> splat (double 1.000000e+01), [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x double> [[TMP6]], ptr [[TMP2]], align 8
@@ -1114,7 +1114,7 @@ define void @test_for_sink_instruction_after_same_incoming_2(ptr %ptr) {
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR1]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> splat (double 1.000000e+01), [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x double> [[TMP6]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
