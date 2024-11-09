@@ -142,6 +142,12 @@ bool isASafeCallArg(const Expr *E) {
         return true;
     }
   }
+  if (auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (auto *D = ME->getMemberDecl()) {
+      auto T = D->getType();
+      return isSafePtrType(T) && T.isConstQualified();
+    }
+  }
 
   // TODO: checker for method calls on non-refcounted objects
   return isa<CXXThisExpr>(E);
