@@ -931,6 +931,80 @@ struct LinearCallStackIdConverter {
   }
 };
 
+struct LineLocation {
+  LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
+
+  bool operator<(const LineLocation &O) const {
+    return LineOffset < O.LineOffset ||
+           (LineOffset == O.LineOffset && Column < O.Column);
+  }
+
+  bool operator==(const LineLocation &O) const {
+    return LineOffset == O.LineOffset && Column == O.Column;
+  }
+
+  bool operator!=(const LineLocation &O) const {
+    return LineOffset != O.LineOffset || Column != O.Column;
+  }
+
+  uint64_t getHashCode() const { return ((uint64_t)Column << 32) | LineOffset; }
+
+  uint32_t LineOffset;
+  uint32_t Column;
+};
+
+// A pair of a call site location and its corresponding callee GUID.
+using CallEdgeTy = std::pair<LineLocation, uint64_t>;
+
+// Used to extract caller-callee pairs from the call stack array.  The leaf
+// frame is assumed to call a heap allocation function with GUID 0.  The
+// resulting pairs are accumulated in CallerCalleePairs.  Users can take it
+// with:
+//
+//   auto Pairs = std::move(Extractor.CallerCalleePairs);
+struct CallerCalleePairExtractor {
+  const unsigned char *CallStackBase;
+  std::function<Frame(LinearFrameId)> FrameIdToFrame;
+  DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> CallerCalleePairs;
+
+  CallerCalleePairExtractor() = delete;
+  CallerCalleePairExtractor(const unsigned char *CallStackBase,
+                            std::function<Frame(LinearFrameId)> FrameIdToFrame)
+      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
+
+  void operator()(LinearCallStackId LinearCSId) {
+    const unsigned char *Ptr =
+        CallStackBase +
+        static_cast<uint64_t>(LinearCSId) * sizeof(LinearFrameId);
+    uint32_t NumFrames =
+        support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    // The leaf frame calls a function with GUID 0.
+    uint64_t CalleeGUID = 0;
+    for (; NumFrames; --NumFrames) {
+      LinearFrameId Elem =
+          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      // Follow a pointer to the parent, if any.  See comments below on
+      // CallStackRadixTreeBuilder for the description of the radix tree format.
+      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
+        Ptr += (-Elem) * sizeof(LinearFrameId);
+        Elem =
+            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      }
+      // We shouldn't encounter another pointer.
+      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
+
+      // Add a new caller-callee pair.
+      Frame F = FrameIdToFrame(Elem);
+      uint64_t CallerGUID = F.Function;
+      LineLocation Loc(F.LineOffset, F.Column);
+      CallerCalleePairs[CallerGUID].emplace_back(Loc, CalleeGUID);
+
+      Ptr += sizeof(LinearFrameId);
+      CalleeGUID = CallerGUID;
+    }
+  }
+};
+
 struct IndexedMemProfData {
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.

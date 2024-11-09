@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/MemProf.h"
 
 namespace llvm {
 class Function;
@@ -58,31 +59,6 @@ private:
 };
 
 namespace memprof {
-
-struct LineLocation {
-  LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
-
-  bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Column < O.Column);
-  }
-
-  bool operator==(const LineLocation &O) const {
-    return LineOffset == O.LineOffset && Column == O.Column;
-  }
-
-  bool operator!=(const LineLocation &O) const {
-    return LineOffset != O.LineOffset || Column != O.Column;
-  }
-
-  uint64_t getHashCode() const { return ((uint64_t)Column << 32) | LineOffset; }
-
-  uint32_t LineOffset;
-  uint32_t Column;
-};
-
-// A pair of a call site location and its corresponding callee GUID.
-using CallEdgeTy = std::pair<LineLocation, uint64_t>;
 
 // Extract all calls from the IR.  Arrange them in a map from caller GUIDs to a
 // list of call sites, each of the form {LineLocation, CalleeGUID}.

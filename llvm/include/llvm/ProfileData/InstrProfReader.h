@@ -695,6 +695,9 @@ public:
 
   Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -791,6 +794,11 @@ public:
   /// llvm::md5(Name).
   Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
     return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  getMemProfCallerCalleePairs() {
+    return MemProfReader.getMemProfCallerCalleePairs();
   }
 
   /// Fill Counts with the profile data for the given function name.
