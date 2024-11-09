@@ -22,7 +22,9 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
-using namespace cir;
+using namespace clang;
+using namespace clang::CIRGen;
+
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &cgo,
