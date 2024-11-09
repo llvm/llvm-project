@@ -84,8 +84,8 @@ TEST_CONSTEXPR_CXX26
 void
 test_larger_sorts()
 {
-    static_assert(N != 0);
-    static_assert(M != 0);
+    static_assert(N != 0, "");
+    static_assert(M != 0, "");
     // create array length N filled with M different numbers
     std::array<int, N> array_;
     int* array = array_.data();
