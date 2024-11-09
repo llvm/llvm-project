@@ -4177,6 +4177,24 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
+
+  /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
+  /// \p From's successor to \p To to point to \p BlockPtr and \p To's
+  /// predecessor from \p From to \p BlockPtr. \p From and \p To are added to \p
+  /// BlockPtr's predecessors and successors respectively. There must be a
+  /// single edge between \p From and \p To.
+  static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
+                           VPBlockBase *BlockPtr) {
+    auto &Successors = From->getSuccessors();
+    auto &Predecessors = To->getPredecessors();
+    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
+           "must have single between From and To");
+    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
+    unsigned PredIx =
+        std::distance(Predecessors.begin(), find(Predecessors, From));
+    VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
+    VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
+  }
 };
 
 class VPInterleavedAccessInfo {
