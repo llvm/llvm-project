@@ -402,7 +402,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (NumTy && DenomTy && NumTy == DenomTy &&
                !NumTy->isDependentType()) {
-      // dependent type should not be compared.
+      // Dependent type should not be compared.
       diag(E->getOperatorLoc(),
            "suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions "
            "have the same type")
