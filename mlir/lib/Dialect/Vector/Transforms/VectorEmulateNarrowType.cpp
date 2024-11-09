@@ -217,6 +217,10 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    if (op.getValueToStore().getType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
+
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
     Type oldElementType = op.getValueToStore().getType().getElementType();
@@ -282,6 +286,10 @@ struct ConvertVectorMaskedStore final
   LogicalResult
   matchAndRewrite(vector::MaskedStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    if (op.getValueToStore().getType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
@@ -371,6 +379,10 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
   LogicalResult
   matchAndRewrite(vector::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
@@ -472,6 +484,10 @@ struct ConvertVectorMaskedLoad final
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
@@ -623,6 +639,10 @@ struct ConvertVectorTransferRead final
   LogicalResult
   matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getSource().getType());
