@@ -76,6 +76,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMAXNUM:     R = SoftenFloatRes_FMAXNUM(N); break;
     case ISD::FMINIMUMNUM:    R = SoftenFloatRes_FMINIMUMNUM(N); break;
     case ISD::FMAXIMUMNUM:    R = SoftenFloatRes_FMAXIMUMNUM(N); break;
+    case ISD::FMINIMUM:    R = SoftenFloatRes_FMINIMUM(N); break;
+    case ISD::FMAXIMUM:    R = SoftenFloatRes_FMAXIMUM(N); break;
     case ISD::STRICT_FADD:
     case ISD::FADD:        R = SoftenFloatRes_FADD(N); break;
     case ISD::STRICT_FACOS:
@@ -340,6 +342,20 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUMNUM(SDNode *N) {
       N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUMNUM_F32,
                       RTLIB::FMAXIMUMNUM_F64, RTLIB::FMAXIMUMNUM_F80,
                       RTLIB::FMAXIMUMNUM_F128, RTLIB::FMAXIMUMNUM_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMINIMUM(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_F32,
+                      RTLIB::FMINIMUM_F64, RTLIB::FMINIMUM_F80,
+                      RTLIB::FMINIMUM_F128, RTLIB::FMINIMUM_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXIMUM(SDNode *N) {
+  return SoftenFloatRes_Binary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::FMAXIMUM_F32,
+                      RTLIB::FMAXIMUM_F64, RTLIB::FMAXIMUM_F80,
+                      RTLIB::FMAXIMUM_F128, RTLIB::FMAXIMUM_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
