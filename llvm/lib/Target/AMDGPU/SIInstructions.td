@@ -2196,8 +2196,11 @@ foreach vt = [i32, p3, p5, p6, p2] in {
   >;
 }
 
+// FIXME: The register bank of the frame index should depend on the
+// users, and transitive users of the add. We may require an
+// unnecessary copy from SGPR to VGPR.
 def : GCNPat <
-  (p5 frameindex:$fi),
+  (VGPRImm<(p5 frameindex)>:$fi),
   (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
