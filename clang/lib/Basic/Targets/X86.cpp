@@ -432,8 +432,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXFP8 = true;
     } else if (Feature == "+amx-transpose") {
       HasAMXTRANSPOSE = true;
-    } else if (Feature == "+amx-avx512") {
-      HasAMXAVX512 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -957,8 +955,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_FP8__");
   if (HasAMXTRANSPOSE)
     Builder.defineMacro("__AMX_TRANSPOSE__");
-  if (HasAMXAVX512)
-    Builder.defineMacro("__AMX_AVX512__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1084,7 +1080,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
       .Case("adx", true)
       .Case("aes", true)
-      .Case("amx-avx512", true)
       .Case("amx-bf16", true)
       .Case("amx-complex", true)
       .Case("amx-fp16", true)
@@ -1205,7 +1200,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
-      .Case("amx-avx512", HasAMXAVX512)
       .Case("amx-bf16", HasAMXBF16)
       .Case("amx-complex", HasAMXCOMPLEX)
       .Case("amx-fp16", HasAMXFP16)
