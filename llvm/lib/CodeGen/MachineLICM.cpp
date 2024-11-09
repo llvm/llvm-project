@@ -1764,9 +1764,6 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
