@@ -4094,16 +4094,18 @@ public:
     IfFalse->setParent(BlockPtr->getParent());
   }
 
-  /// Connect VPBlockBases \p From and \p To bi-directionally. Append \p To to
-  /// the successors of \p From and \p From to the predecessors of \p To. Both
-  /// VPBlockBases must have the same parent, which can be null. Both
-  /// VPBlockBases can be already connected to other VPBlockBases.
+  /// Connect VPBlockBases \p From and \p To bi-directionally. If \p PredIdx is
+  /// -1, append \p From to the predecessors of \p To, otherwise set \p To's
+  /// predecessor at \p PredIdx to \p From. If \p SuccIdx is -1, append \p To to
+  /// the successors of \p From, otherwise set \p From's successor at \p SuccIdx
+  /// to \p To. Both VPBlockBases must have the same parent, which can be null.
+  /// Both VPBlockBases can be already connected to other VPBlockBases.
   static void connectBlocks(VPBlockBase *From, VPBlockBase *To,
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
+    assert((PredIdx != -1u || To->getNumPredecessors() < 2) &&
+           "Blocks can't have more than two predecessors.");
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else
@@ -4155,17 +4157,20 @@ public:
     });
   }
 
+  /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
+  /// \p From's successor to \p To to point to \p BlockPtr and \p To's
+  /// predecessor from \p From to \p BlockPtr. \p From and \p To are added to \p
+  /// BlockPtr's predecessors and successors respectively. There must be a
+  /// single edge between \p From and \p To.
   static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
                            VPBlockBase *BlockPtr) {
-    unsigned SuccIdx =
-        std::distance(From->getSuccessors().begin(),
-                      find_if(From->getSuccessors(),
-                              [To](VPBlockBase *Succ) { return To == Succ; }));
+    auto &Successors = From->getSuccessors();
+    auto &Predecessors = To->getPredecessors();
+    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
+           "must have single between From and To");
+    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
     unsigned PredIx =
-        std::distance(To->getPredecessors().begin(),
-                      find_if(To->getPredecessors(), [From](VPBlockBase *Pred) {
-                        return From == Pred;
-                      }));
+        std::distance(Predecessors.begin(), find(Predecessors, From));
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
