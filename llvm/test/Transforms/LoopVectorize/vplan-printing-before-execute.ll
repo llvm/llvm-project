@@ -16,7 +16,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -42,9 +42,6 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
@@ -53,20 +50,27 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
 ; CHECK: Executing best plan with VF=8, UF=2
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={8},UF={2}' {
-; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<16> = VF * UF
+; CHECK-NEXT: Live-in ir<%n.vec> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
-; CHECK-NEXT: No successors
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT:  IR   %n.mod.vf = urem i64 %and, 16
+; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
+; CHECK-NEXT:  IR   %ind.end = sub i64 %and, %n.vec
+; CHECK-NEXT:  IR   %ind.end1 = getelementptr i8, ptr %A, i64 %n.vec
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -84,26 +88,28 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:     vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR3]]>, ir<%add>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR4]]>, ir<%add>.1
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, ir<16>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT: Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VTC]]>
+; CHECK-NEXT: ir-bb<middle.block>:
+; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, ir<%n.vec>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<scalar.ph>:
+; CHECK-NEXT:   IR %bc.resume.val = phi i64 [ %ind.end, %middle.block ], [ %and, %entry ]
+; CHECK-NEXT:   IR %bc.resume.val2 = phi ptr [ %ind.end1, %middle.block ], [ %A, %entry ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %bc.resume.val, %scalar.ph ], [ %iv.next, %loop ]
+; CHECK-NEXT:   IR   %p.src = phi ptr [ %bc.resume.val2, %scalar.ph ], [ %p.src.next, %loop ]
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }

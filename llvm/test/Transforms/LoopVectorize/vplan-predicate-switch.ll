@@ -3,15 +3,18 @@
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
-; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<2> = VF * UF
+; CHECK-NEXT: Live-in ir<%n.vec> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV ((-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64))
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT:   IR %n.mod.vf = urem i64 %0, 2
+; CHECK-NEXT:   IR %n.vec = sub i64 %0, %n.mod.vf
+; CHECK-NEXT:   IR %ind.end = getelementptr i8, ptr %start, i64 %n.vec
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -76,25 +79,26 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): default.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   default.2:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<2>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<%n.vec>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT: Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VTC]]>
+; CHECK-NEXT: ir-bb<middle.block>:
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<%n.vec>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<scalar.ph>:
+; CHECK-NEXT:   IR %bc.resume.val = phi ptr [ %ind.end, %middle.block ], [ %start, %entry ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
+; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %bc.resume.val, %scalar.ph ], [ %ptr.iv.next, %loop.latch ]
 ; CHECK-NEXT:   IR   %l = load i8, ptr %ptr.iv, align 1
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }

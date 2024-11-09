@@ -4104,8 +4104,6 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((PredIdx != -1u || To->getNumPredecessors() < 2) &&
-           "Blocks can't have more than two predecessors.");
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else

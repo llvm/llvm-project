@@ -1023,6 +1023,11 @@ void VPlan::execute(VPTransformState *State) {
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
+  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" <<State->VF
+                    << ", UF=" << getUF()<< '\n');
+  setName("Final VPlan");
+  LLVM_DEBUG(dump());
+
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
   // execution.
