@@ -273,7 +273,7 @@ public:
 private:
   template <class>
   friend struct pointer_traits;
-  template <class, size_t, class>
+  template <class, size_t>
   friend struct __static_bounded_iter;
   __static_bounded_iter_storage<_Iterator, _Size> __storage_;
 
