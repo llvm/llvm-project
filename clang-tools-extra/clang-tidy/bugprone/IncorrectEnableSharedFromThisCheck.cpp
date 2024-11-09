@@ -43,8 +43,7 @@ void IncorrectEnableSharedFromThisCheck::check(
   const bool HasWrittenAccessSpecifier =
       BaseSpec->getAccessSpecifierAsWritten() != AS_none;
   const auto ReplacementRange = CharSourceRange(
-      SourceRange(BaseSpec->getBeginLoc(), BaseSpec->getBeginLoc()),
-      HasWrittenAccessSpecifier);
+      SourceRange(BaseSpec->getBeginLoc()), HasWrittenAccessSpecifier);
   const llvm::StringRef Replacement =
       HasWrittenAccessSpecifier ? "public" : "public ";
   const FixItHint Hint =
