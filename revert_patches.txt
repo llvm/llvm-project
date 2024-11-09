@@ -22,3 +22,7 @@ merge challenges: resource usage
 7f60f1312ae0 [AMDGPU] Fix resource usage information for unnamed functions (#115320)
 Janek and Ron
 ---
+revert: Assertion `Success && "We should not be trying to sink callbases " "with non-intersectable attributes"'
+* 984bca9d [GVN][NewGVN] Take call attributes into account in expressions (#114545)
+Ron
+---
