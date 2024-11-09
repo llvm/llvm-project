@@ -63,6 +63,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
     llvm_unreachable("dx.Sampler handles are not implemented yet");
     break;
   }
+  llvm_unreachable("Unknown llvm::dxil::ResourceClass enum");
 }
 
 } // namespace

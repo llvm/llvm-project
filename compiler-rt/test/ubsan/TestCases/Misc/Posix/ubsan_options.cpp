@@ -1,9 +1,6 @@
 // RUN: %clangxx -fsanitize=integer -fsanitize-recover=integer %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
-// __ubsan_default_options() doesn't work on Darwin.
-// XFAIL: darwin
-
 #include <stdint.h>
 
 extern "C" const char *__ubsan_default_options() {

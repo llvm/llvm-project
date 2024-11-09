@@ -181,8 +181,8 @@ QueryRef QueryParser::doParse() {
     if (!matcher) {
       return makeInvalidQueryFromDiagnostics(diag);
     }
-    auto actualSource = origMatcherSource.slice(0, origMatcherSource.size() -
-                                                       matcherSource.size());
+    auto actualSource = origMatcherSource.substr(0, origMatcherSource.size() -
+                                                        matcherSource.size());
     QueryRef query = new MatchQuery(actualSource, *matcher);
     query->remainingContent = matcherSource;
     return query;

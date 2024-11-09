@@ -241,11 +241,6 @@ def use_support_substitutions(config):
             "-lc++",
         ]
 
-    # Facebook T92898286
-    if config.llvm_test_bolt:
-        host_flags += ["--post-link-optimize"]
-    # End Facebook T92898286
-
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))
     config.substitutions.append(("%clangxx_host", "%clangxx " + host_flags))
@@ -288,20 +283,3 @@ def use_support_substitutions(config):
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)
 
     _disallow(config, "clang")
-
-
-def use_lldb_repro_substitutions(config, mode):
-    lldb_init = _get_lldb_init_path(config)
-    substitutions = [
-        ToolSubst(
-            "%lldb",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "--no-lldbinit", "-S", lldb_init],
-        ),
-        ToolSubst(
-            "%lldb-init",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "-S", lldb_init],
-        ),
-    ]
-    llvm_config.add_tool_substitutions(substitutions, [config.lldb_tools_dir])

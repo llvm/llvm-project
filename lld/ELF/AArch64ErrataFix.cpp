@@ -417,7 +417,7 @@ void Patch843419Section::writeTo(uint8_t *buf) {
 
   // Return address is the next instruction after the one we have just copied.
   uint64_t s = getLDSTAddr() + 4;
-  uint64_t p = patchSym->getVA() + 4;
+  uint64_t p = patchSym->getVA(ctx) + 4;
   ctx.target->relocateNoSym(buf + 4, R_AARCH64_JUMP26, s - p);
 }
 
@@ -553,8 +553,8 @@ static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
       (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
     return;
 
-  log("detected cortex-a53-843419 erratum sequence starting at " +
-      utohexstr(adrpAddr) + " in unpatched output.");
+  Log(ctx) << "detected cortex-a53-843419 erratum sequence starting at " <<
+      utohexstr(adrpAddr) << " in unpatched output.";
 
   auto *ps = make<Patch843419Section>(ctx, isec, patcheeOffset);
   patches.push_back(ps);

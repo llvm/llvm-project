@@ -526,11 +526,11 @@ define void @frem() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4BF16 = frem <4 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8BF16 = frem <8 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16BF16 = frem <16 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV1BF16 = frem <vscale x 1 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2BF16 = frem <vscale x 2 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4BF16 = frem <vscale x 4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8BF16 = frem <vscale x 8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV16BF16 = frem <vscale x 16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1BF16 = frem <vscale x 1 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV2BF16 = frem <vscale x 2 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV4BF16 = frem <vscale x 4 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV8BF16 = frem <vscale x 8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV16BF16 = frem <vscale x 16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F32 = frem <1 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F32 = frem <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = frem <4 x float> undef, undef
@@ -593,37 +593,21 @@ define void @frem() {
 }
 
 define void @frem_f16() {
-; ZVFH-LABEL: 'frem_f16'
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F16 = frem <2 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F16 = frem <4 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F16 = frem <8 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F16 = frem <16 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32F16 = frem <32 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F16 = frem <vscale x 2 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F16 = frem <vscale x 4 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F16 = frem <vscale x 8 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F16 = frem <vscale x 16 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV32F16 = frem <vscale x 32 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
-;
-; ZVFHMIN-LABEL: 'frem_f16'
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F16 = frem <2 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F16 = frem <4 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F16 = frem <8 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F16 = frem <16 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32F16 = frem <32 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2F16 = frem <vscale x 2 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4F16 = frem <vscale x 4 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8F16 = frem <vscale x 8 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV16F16 = frem <vscale x 16 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV32F16 = frem <vscale x 32 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-LABEL: 'frem_f16'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F16 = frem <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F16 = frem <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F16 = frem <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F16 = frem <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32F16 = frem <32 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV2F16 = frem <vscale x 2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV4F16 = frem <vscale x 4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F16 = frem <vscale x 8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F16 = frem <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV32F16 = frem <vscale x 32 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %F16 = frem half undef, undef
 

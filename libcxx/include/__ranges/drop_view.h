@@ -15,6 +15,7 @@
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/bind_back.h>
 #include <__fwd/span.h>
 #include <__fwd/string_view.h>
@@ -42,7 +43,6 @@
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -147,8 +147,7 @@ c.sub a4, a5
 # CHECK-ASM: encoding: [0x01,0x00]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 c.nop
-# CHECK-ASM: c.addi zero, 0
-# CHECK-OBJ: c.nop
+# CHECK-ASM-AND-OBJ: c.nop
 # CHECK-ASM: encoding: [0x01,0x00]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 c.addi x0, 0

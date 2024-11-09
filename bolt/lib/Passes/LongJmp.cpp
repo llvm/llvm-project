@@ -19,6 +19,7 @@
 using namespace llvm;
 
 namespace opts {
+extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
 extern llvm::cl::opt<unsigned> AlignText;
 extern cl::opt<unsigned> AlignFunctions;
@@ -26,9 +27,9 @@ extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool>
-    ExperimentalRelaxation("relax-exp",
-                           cl::desc("run experimental relaxation pass"),
-                           cl::init(false), cl::cat(BoltOptCategory));
+    CompactCodeModel("compact-code-model",
+                     cl::desc("generate code for binaries <128MB on AArch64"),
+                     cl::init(false), cl::cat(BoltCategory));
 
 static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
@@ -331,9 +332,8 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
 uint64_t LongJmpPass::tentativeLayoutRelocMode(
     const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
     uint64_t DotAddress) {
-
   // Compute hot cold frontier
-  uint32_t LastHotIndex = -1u;
+  int64_t LastHotIndex = -1u;
   uint32_t CurrentIndex = 0;
   if (opts::HotFunctionsAtEnd) {
     for (BinaryFunction *BF : SortedFunctions) {
@@ -358,19 +358,20 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   // Hot
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
+  auto runColdLayout = [&]() {
+    DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
+    ColdLayoutDone = true;
+    if (opts::HotFunctionsAtEnd)
+      DotAddress = alignTo(DotAddress, opts::AlignText);
+  };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
       HotAddresses[Func] = Func->getAddress();
       continue;
     }
 
-    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex) {
-      DotAddress =
-          tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
-      ColdLayoutDone = true;
-      if (opts::HotFunctionsAtEnd)
-        DotAddress = alignTo(DotAddress, opts::AlignText);
-    }
+    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex)
+      runColdLayout();
 
     DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
@@ -389,6 +390,11 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
     DotAddress += Func->estimateConstantIslandSize();
     ++CurrentIndex;
   }
+
+  // Ensure that tentative code layout always runs for cold blocks.
+  if (!ColdLayoutDone)
+    runColdLayout();
+
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
     tentativeBBLayout(*Func);
@@ -636,14 +642,9 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
-// Relax internal branches with the assumption that they are not separated by
-// more than 128MB after the function is split into fragments.
 void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
-
-  if (!BF.isSimple())
-    return;
 
   // Quick path.
   if (!BF.isSplit() && BF.estimateSize() < ShortestJumpSpan)
@@ -660,15 +661,15 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
     return isBranchOffsetInRange(Inst, Offset);
   };
 
-  // Keep track of all function trampolines that are going to be added to the
+  // Keep track of *all* function trampolines that are going to be added to the
   // function layout at the end of relaxation.
   std::vector<std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>>>
       FunctionTrampolines;
 
-  // Fragments are relaxed independently.
+  // Function fragments are relaxed independently.
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     // Fill out code size estimation for the fragment. Use output BB address
-    // range for offsets from the start of the function.
+    // ranges to store offsets from the start of the function fragment.
     uint64_t CodeSize = 0;
     for (BinaryBasicBlock *BB : FF) {
       BB->setOutputStartAddress(CodeSize);
@@ -679,15 +680,23 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
     // Dynamically-updated size of the fragment.
     uint64_t FragmentSize = CodeSize;
 
+    // Size of the trampoline in bytes.
+    constexpr uint64_t TrampolineSize = 4;
+
     // Trampolines created for the fragment. DestinationBB -> TrampolineBB.
+    // NB: here we store only the first trampoline created for DestinationBB.
     DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *> FragmentTrampolines;
 
     // Create a trampoline code after \p BB or at the end of the fragment if BB
-    // is nullptr.
+    // is nullptr. If \p UpdateOffsets is true, update FragmentSize and offsets
+    // for basic blocks affected by the insertion of the trampoline.
     auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
                                   BinaryBasicBlock *TargetBB, uint64_t Count,
                                   bool UpdateOffsets = true) {
-      std::unique_ptr<BinaryBasicBlock> TrampolineBB = BF.createBasicBlock();
+      FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
+                                       BF.createBasicBlock());
+      BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
+
       MCInst Inst;
       {
         auto L = BC.scopeLock();
@@ -699,35 +708,49 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       const uint64_t TrampolineAddress =
           BB ? BB->getOutputEndAddress() : FragmentSize;
       TrampolineBB->setOutputStartAddress(TrampolineAddress);
-      TrampolineBB->setOutputEndAddress(TrampolineAddress + InstSize);
+      TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
       TrampolineBB->setFragmentNum(FF.getFragmentNum());
 
-      if (UpdateOffsets) {
-        FragmentSize += InstSize;
-        for (BinaryBasicBlock *TBB : FF) {
-          if (TBB->getOutputStartAddress() >= TrampolineAddress) {
-            TBB->setOutputStartAddress(TBB->getOutputStartAddress() + InstSize);
-            TBB->setOutputEndAddress(TBB->getOutputEndAddress() + InstSize);
-          }
-        }
-        for (auto &Pair : FunctionTrampolines) {
-          BinaryBasicBlock *TBB = Pair.second.get();
-          if (TBB->getFragmentNum() != TrampolineBB->getFragmentNum())
-            continue;
-          if (TBB == TrampolineBB.get())
-            continue;
-          if (TBB->getOutputStartAddress() >= TrampolineAddress) {
-            TBB->setOutputStartAddress(TBB->getOutputStartAddress() + InstSize);
-            TBB->setOutputEndAddress(TBB->getOutputEndAddress() + InstSize);
-          }
+      if (!FragmentTrampolines.lookup(TargetBB))
+        FragmentTrampolines[TargetBB] = TrampolineBB;
+
+      if (!UpdateOffsets)
+        return TrampolineBB;
+
+      FragmentSize += TrampolineSize;
+
+      // If the trampoline was added at the end of the fragment, offsets of
+      // other fragments should stay intact.
+      if (!BB)
+        return TrampolineBB;
+
+      // Update offsets for blocks after BB.
+      for (BinaryBasicBlock *IBB : FF) {
+        if (IBB->getOutputStartAddress() >= TrampolineAddress) {
+          IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
+                                     TrampolineSize);
+          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + TrampolineSize);
         }
       }
 
-      if (!FragmentTrampolines.lookup(TargetBB))
-        FragmentTrampolines[TargetBB] = TrampolineBB.get();
-      FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
-                                       std::move(TrampolineBB));
-      return FunctionTrampolines.back().second.get();
+      // Update offsets for trampolines in this fragment that are placed after
+      // the new trampoline. Note that trampoline blocks are not part of the
+      // function/fragment layout until we add them right before the return
+      // from relaxLocalBranches().
+      for (auto &Pair : FunctionTrampolines) {
+        BinaryBasicBlock *IBB = Pair.second.get();
+        if (IBB->getFragmentNum() != TrampolineBB->getFragmentNum())
+          continue;
+        if (IBB == TrampolineBB)
+          continue;
+        if (IBB->getOutputStartAddress() >= TrampolineAddress) {
+          IBB->setOutputStartAddress(IBB->getOutputStartAddress() +
+                                     TrampolineSize);
+          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + TrampolineSize);
+        }
+      }
+
+      return TrampolineBB;
     };
 
     // Pre-populate trampolines by splitting unconditional branches from the
@@ -739,7 +762,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
 
       const MCSymbol *TargetSymbol = MIB->getTargetSymbol(*Inst);
       BB->eraseInstruction(BB->findInstruction(Inst));
-      BB->setOutputEndAddress(BB->getOutputEndAddress() - InstSize);
+      BB->setOutputEndAddress(BB->getOutputEndAddress() - TrampolineSize);
 
       BinaryBasicBlock::BinaryBranchInfo BI;
       BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
@@ -749,13 +772,14 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
     }
 
-    /// Relax the branch \p Inst. Return true if basic block offsets need an
-    /// update after the trampoline insertion.
+    /// Relax the branch \p Inst in basic block \p BB that targets \p TargetBB.
+    /// \p InstAddress contains offset of the branch from the start of the
+    /// containing function fragment.
     auto relaxBranch = [&](BinaryBasicBlock *BB, MCInst &Inst,
                            uint64_t InstAddress, BinaryBasicBlock *TargetBB) {
       BinaryFunction *BF = BB->getParent();
 
-      // Branch taken count for optimal relaxation.
+      // Use branch taken count for optimal relaxation.
       const uint64_t Count = BB->getBranchInfo(*TargetBB).Count;
       assert(Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
              "Expected valid branch execution count");
@@ -773,7 +797,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
 
       // For cold branches, check if we can introduce a trampoline at the end
       // of the fragment that is within the branch reach. Note that such
-      // trampoline may become unreachable and may need further relaxation.
+      // trampoline may change address later and become unreachable in which
+      // case we will need further relaxation.
       const int64_t OffsetToEnd = FragmentSize - InstAddress;
       if (Count == 0 && isBranchOffsetInRange(Inst, OffsetToEnd)) {
         TrampolineBB = addTrampolineAfter(nullptr, TargetBB, Count);
@@ -785,10 +810,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       }
 
       // Insert a new block after the current one and use it as a trampoline.
-      // If the other successor is a fallthrough invert the condition code.
       TrampolineBB = addTrampolineAfter(BB, TargetBB, Count);
 
-      // Check if there's a fallthrough block.
+      // If the other successor is a fall-through, invert the condition code.
       const BinaryBasicBlock *const NextBB =
           BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
       if (BB->getConditionalSuccessor(false) == NextBB) {
@@ -850,9 +874,10 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
     LLVM_DEBUG({
       if (NumIterations > 2) {
         dbgs() << "BOLT-DEBUG: relaxed fragment " << FF.getFragmentNum().get()
-               << " in " << NumIterations << " iterations in " << BF << '\n';
+               << " of " << BF << " in " << NumIterations << " iterations\n";
       }
     });
+    (void)NumIterations;
   }
 
   // Add trampoline blocks from all fragments to the layout.
@@ -872,180 +897,12 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
   }
 }
 
-void LongJmpPass::relaxCalls(BinaryContext &BC) {
-  // Map every function to its direct callees. Note that this is different from
-  // a typical call graph as we completely ignore indirect calls.
-  uint64_t EstimatedSize = 0;
-  // Conservatively estimate emitted function size.
-  auto estimateFunctionSize = [&](const BinaryFunction &BF) -> uint64_t {
-    if (!BC.shouldEmit(BF))
-      return 0;
-    uint64_t Size = BF.estimateSize();
-    if (BF.hasValidIndex())
-      Size += BF.getAlignment();
-    if (BF.hasIslandsInfo()) {
-      Size += BF.estimateConstantIslandSize();
-      Size += BF.getConstantIslandAlignment();
-    }
-
-    return Size;
-  };
-
-  std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>> CallMap;
-  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (!BC.shouldEmit(BF))
-      continue;
-
-    EstimatedSize += estimateFunctionSize(BF);
-
-    for (const BinaryBasicBlock &BB : BF) {
-      for (const MCInst &Inst : BB) {
-        if (!BC.MIB->isCall(Inst) || BC.MIB->isIndirectCall(Inst) ||
-            BC.MIB->isIndirectBranch(Inst))
-          continue;
-        const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
-        assert(TargetSymbol);
-
-        BinaryFunction *Callee = BC.getFunctionForSymbol(TargetSymbol);
-        if (!Callee) {
-          /* Ignore internall calls */
-          continue;
-        }
-
-        CallMap[&BF].insert(Callee);
-      }
-    }
-  }
-
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << EstimatedSize
-                    << '\n');
-
-  // Build clusters in the order the functions will appear in the output.
-  std::vector<FunctionCluster> Clusters;
-  Clusters.emplace_back(FunctionCluster());
-
-  for (BinaryFunction *BF : BC.getSortedFunctions()) {
-    if (!BC.shouldEmit(*BF))
-      continue;
-
-    const uint64_t BFSize = estimateFunctionSize(*BF);
-    if (Clusters.empty() || Clusters.back().Size + BFSize > MaxClusterSize) {
-      Clusters.emplace_back(FunctionCluster());
-    }
-
-    FunctionCluster &FC = Clusters.back();
-    FC.Functions.insert(BF);
-    auto It = FC.Callees.find(BF);
-    if (It != FC.Callees.end()) {
-      FC.Callees.erase(It);
-    }
-    FC.Size += BFSize;
-    FC.LastBF = BF;
-
-    for (BinaryFunction *Callee : CallMap[BF])
-      if (!FC.Functions.count(Callee))
-        FC.Callees.insert(Callee);
-  }
-
-  // Print cluster stats.
-  dbgs() << "Built " << Clusters.size() << " clusters\n";
-  uint64_t Index = 0;
-  for (const FunctionCluster &FC : Clusters) {
-    dbgs() << "  Cluster: " << Index++ << '\n';
-    dbgs() << "    " << FC.Functions.size() << " functions\n";
-    dbgs() << "    " << FC.Callees.size() << " callees\n";
-    dbgs() << "    " << FC.Size << " bytes\n";
-  }
-
-  if (Clusters.size() > 2) {
-    BC.errs() << "Large code model is unsupported\n";
-    exit(1);
-  }
-
-  if (Clusters.size() == 1)
-    return;
-
-  // Populate one of the clusters with PLT functions based on the proximity of
-  // the PLT section to avoid unneeded thunk redirection.
-  // FIXME: this part is extremely fragile as it depends on the placement
-  //        of PLT section and its proximity to old or new .text.
-  // FIXME: a slightly better approach will be to always use thunks for PLT and
-  //        eliminate redirection later using final addresses in address maps.
-  const size_t PLTClusterNum = opts::UseOldText ? 1 : 0;
-  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (BF.isPLTFunction()) {
-      auto &PLTCluster = Clusters[PLTClusterNum];
-      PLTCluster.Functions.insert(&BF);
-      auto It = PLTCluster.Callees.find(&BF);
-      if (It != PLTCluster.Callees.end())
-        PLTCluster.Callees.erase(It);
-    }
-  }
-
-  // FIXME: section name to use for thunks.
-  std::string SectionName =
-      Clusters[0].LastBF->getCodeSectionName().str().str();
-
-  // Build thunk functions.
-  auto createSmallThunk = [&](BinaryFunction &Callee) {
-    BinaryFunction *ThunkBF =
-        BC.createThunkBinaryFunction("__BThunk__" + Callee.getOneName().str());
-    MCInst Inst;
-    BC.MIB->createTailCall(Inst, Callee.getSymbol(), BC.Ctx.get());
-    ThunkBF->addBasicBlock()->addInstruction(Inst);
-    ThunkBF->setCodeSectionName(SectionName);
-
-    return ThunkBF;
-  };
-
-  DenseMap<BinaryFunction *, BinaryFunction *> Thunks;
-  for (const FunctionCluster &FC : Clusters) {
-    for (BinaryFunction *Callee : FC.Callees) {
-      Thunks[Callee] = createSmallThunk(*Callee);
-    }
-  }
-
-  BC.outs() << "BOLT-INFO: " << Thunks.size() << " thunks created\n";
-
-  // Replace callees with thunks.
-  for (FunctionCluster &FC : Clusters) {
-    for (BinaryFunction *BF : FC.Functions) {
-      if (!CallMap.count(BF))
-        continue;
-
-      for (BinaryBasicBlock &BB : *BF) {
-        for (MCInst &Inst : BB) {
-          if (!BC.MIB->isCall(Inst) || BC.MIB->isIndirectCall(Inst) ||
-              BC.MIB->isIndirectBranch(Inst))
-            continue;
-          const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
-          assert(TargetSymbol);
-
-          BinaryFunction *Callee = BC.getFunctionForSymbol(TargetSymbol);
-          if (!Callee) {
-            /* Ignore internal calls */
-            continue;
-          }
-
-          // Check if the callee is in the same cluster.
-          if (!FC.Callees.count(Callee))
-            continue;
-
-          // Use thunk as the call destination.
-          BC.MIB->replaceBranchTarget(Inst, Thunks[Callee]->getSymbol(),
-                                      BC.Ctx.get());
-        }
-      }
-    }
-  }
-
-  BC.setThunkLocation(Clusters[0].LastBF);
-}
-
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
-  // TODO: set correct code model based on the total size of split-code.
-  if (opts::ExperimentalRelaxation) {
-    BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
+
+  if (opts::CompactCodeModel) {
+    BC.outs()
+        << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
+
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       relaxLocalBranches(BF);
     };
@@ -1057,9 +914,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
     ParallelUtilities::runOnEachFunction(
         BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
-        SkipPredicate, "ExpLongJump");
-
-    relaxCalls(BC);
+        SkipPredicate, "RelaxLocalBranches");
 
     return Error::success();
   }

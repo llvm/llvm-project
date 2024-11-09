@@ -364,7 +364,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
 #  include <__chrono/duration.h>
@@ -594,7 +594,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void set_value_at_thread_exit(_Arg&& __arg);
 
   _LIBCPP_HIDE_FROM_ABI _Rp move();
-  _LIBCPP_HIDE_FROM_ABI __add_lvalue_reference_t<_Rp> copy();
+  _LIBCPP_HIDE_FROM_ABI _Rp& copy();
 };
 
 template <class _Rp>
@@ -636,7 +636,7 @@ _Rp __assoc_state<_Rp>::move() {
 }
 
 template <class _Rp>
-__add_lvalue_reference_t<_Rp> __assoc_state<_Rp>::copy() {
+_Rp& __assoc_state<_Rp>::copy() {
   unique_lock<mutex> __lk(this->__mut_);
   this->__sub_wait(__lk);
   if (this->__exception_ != nullptr)
@@ -2059,7 +2059,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
 #  include <chrono>

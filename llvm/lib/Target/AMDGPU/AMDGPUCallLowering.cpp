@@ -230,13 +230,6 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
-    MIB.addUse(PhysReg, RegState::Implicit);
-    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
-    MIRBuilder.buildCopy(PhysReg, ExtReg);
-  }
-
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             const MachinePointerInfo &MPO,
                             const CCValAssign &VA) override {

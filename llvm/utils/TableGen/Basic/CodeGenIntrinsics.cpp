@@ -324,7 +324,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
     IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
 
   // Parse the intrinsic properties.
-  ListInit *PropList = R->getValueAsListInit("IntrProperties");
+  const ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
     const Record *Property = PropList->getElementAsRecord(i);
     assert(Property->isSubClassOf("IntrinsicProperty") &&

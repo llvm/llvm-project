@@ -99,9 +99,9 @@ static cl::opt<bool> EnableMISchedLoadStoreClustering(
     cl::desc("Enable load and store clustering in the machine scheduler"),
     cl::init(true));
 
-static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
-    "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
-    cl::desc("Insert vsetvls after vector register allocation"),
+static cl::opt<bool> EnablePostMISchedLoadStoreClustering(
+    "riscv-postmisched-load-store-clustering", cl::Hidden,
+    cl::desc("Enable PostRA load and store clustering in the machine scheduler"),
     cl::init(true));
 
 static cl::opt<bool>
@@ -177,6 +177,8 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
 
   if (TT.isOSFuchsia() && !TT.isArch64Bit())
     report_fatal_error("Fuchsia is only supported for 64-bit");
+
+  setCFIFixup(true);
 }
 
 const RISCVSubtarget *
@@ -363,6 +365,19 @@ public:
     return DAG;
   }
 
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override {
+    ScheduleDAGMI *DAG = nullptr;
+    if (EnablePostMISchedLoadStoreClustering) {
+      DAG = createGenericSchedPostRA(C);
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+      DAG->addMutation(createStoreClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+    }
+    return DAG;
+  }
+  
   void addIRPasses() override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;
@@ -413,8 +428,7 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
-  if (EnableVSETVLIAfterRVVRegAlloc)
-    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -424,8 +438,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
-  if (EnableVSETVLIAfterRVVRegAlloc)
-    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -575,15 +588,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupPass());
-
-  // Run RISCVInsertVSETVLI after PHI elimination. On O1 and above do it after
-  // register coalescing so needVSETVLIPHI doesn't need to look through COPYs.
-  if (!EnableVSETVLIAfterRVVRegAlloc) {
-    if (TM->getOptLevel() == CodeGenOptLevel::None)
-      insertPass(&PHIEliminationID, &RISCVInsertVSETVLIID);
-    else
-      insertPass(&RegisterCoalescerID, &RISCVInsertVSETVLIID);
-  }
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

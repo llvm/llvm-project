@@ -1639,8 +1639,6 @@ define amdgpu_kernel void @fma_shuffle_v2f16(ptr addrspace(1) nocapture readonly
 ; GFX11-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
 ; GFX11-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
 ; GFX11-NEXT:    global_store_b64 v6, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -1751,8 +1749,6 @@ define amdgpu_kernel void @shuffle_scalar_load_v8i32_0123(ptr addrspace(4) %in, 
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s7
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ld8 = load <8 x i32>, ptr addrspace(4) %in, align 16
   %id = shufflevector <8 x i32> %ld8, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -4496,8 +4492,6 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX11-NEXT:    v_cndmask_b32_e32 v3, v5, v8, vcc_lo
 ; GFX11-NEXT:    v_perm_b32 v0, v3, v0, 0x7060302
 ; GFX11-NEXT:    global_store_b64 v6, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x()

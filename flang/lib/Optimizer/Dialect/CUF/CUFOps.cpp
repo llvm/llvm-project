@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -276,18 +277,26 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
 
   mlir::SymbolTable symTab(mod);
   auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
-  if (!gpuMod)
+  if (!gpuMod) {
+    // If already a gpu.binary then stop the check here.
+    if (symTab.lookup<mlir::gpu::BinaryOp>(getKernelModuleName()))
+      return mlir::success();
     return emitOpError("gpu module not found");
+  }
 
   mlir::SymbolTable gpuSymTab(gpuMod);
-  auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName());
-  if (!func)
-    return emitOpError("device function not found");
-
-  if (!func.isKernel())
-    return emitOpError("only kernel gpu.func can be registered");
-
-  return mlir::success();
+  if (auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName())) {
+    if (!func.isKernel())
+      return emitOpError("only kernel gpu.func can be registered");
+    return mlir::success();
+  } else if (auto func =
+                 gpuSymTab.lookup<mlir::LLVM::LLVMFuncOp>(getKernelName())) {
+    if (!func->getAttrOfType<mlir::UnitAttr>(
+            mlir::gpu::GPUDialect::getKernelFuncAttrName()))
+      return emitOpError("only gpu.kernel llvm.func can be registered");
+    return mlir::success();
+  }
+  return emitOpError("device function not found");
 }
 
 // Tablegen operators

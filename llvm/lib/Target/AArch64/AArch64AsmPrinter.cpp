@@ -150,6 +150,12 @@ public:
   // Emit the sequence for BRA/BLRA (authenticate + branch/call).
   void emitPtrauthBranch(const MachineInstr *MI);
 
+  void emitPtrauthCheckAuthenticatedValue(Register TestedReg,
+                                          Register ScratchReg,
+                                          AArch64PACKey::ID Key,
+                                          bool ShouldTrap,
+                                          const MCSymbol *OnFailure);
+
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
@@ -162,6 +168,11 @@ public:
   // Emit the sequence for LOADgotPAC/MOVaddrPAC (either GOT adrp-ldr or
   // adrp-add followed by PAC sign)
   void LowerMOVaddrPAC(const MachineInstr &MI);
+
+  // Emit the sequence for LOADgotAUTH (load signed pointer from signed ELF GOT
+  // and authenticate it with, if FPAC bit is not set, check+trap sequence after
+  // authenticating)
+  void LowerLOADgotAUTH(const MachineInstr &MI);
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
@@ -867,6 +878,22 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
 
       OutStreamer->addBlankLine();
     }
+
+    // With signed ELF GOT enabled, the linker looks at the symbol type to
+    // choose between keys IA (for STT_FUNC) and DA (for other types). Symbols
+    // for functions not defined in the module have STT_NOTYPE type by default.
+    // This makes linker to emit signing schema with DA key (instead of IA) for
+    // corresponding R_AARCH64_AUTH_GLOB_DAT dynamic reloc. To avoid that, force
+    // all function symbols used in the module to have STT_FUNC type. See
+    // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#default-signing-schema
+    const auto *PtrAuthELFGOTFlag = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("ptrauth-elf-got"));
+    if (PtrAuthELFGOTFlag && PtrAuthELFGOTFlag->getZExtValue() == 1)
+      for (const GlobalValue &GV : M.global_values())
+        if (!GV.use_empty() && isa<Function>(GV) &&
+            !GV.getName().starts_with("llvm."))
+          OutStreamer->emitSymbolAttribute(getSymbol(&GV),
+                                           MCSA_ELF_TypeFunction);
   }
 
   // Emit stack and fault map information.
@@ -1719,45 +1746,37 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   return AArch64::X17;
 }
 
-void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
-  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
-
-  // We can expand AUT/AUTPAC into 3 possible sequences:
-  // - unchecked:
-  //      autia x16, x0
-  //      pacib x16, x1 ; if AUTPAC
+/// Emits a code sequence to check an authenticated pointer value.
+///
+/// If OnFailure argument is passed, jump there on check failure instead
+/// of proceeding to the next instruction (only if ShouldTrap is false).
+void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
+    Register TestedReg, Register ScratchReg, AArch64PACKey::ID Key,
+    bool ShouldTrap, const MCSymbol *OnFailure) {
+  // Insert a sequence to check if authentication of TestedReg succeeded,
+  // such as:
   //
   // - checked and clearing:
-  //      mov x17, x0
-  //      movk x17, #disc, lsl #48
-  //      autia x16, x17
+  //      ; x16 is TestedReg, x17 is ScratchReg
   //      mov x17, x16
   //      xpaci x17
   //      cmp x16, x17
   //      b.eq Lsuccess
   //      mov x16, x17
   //      b Lend
-  //     Lsuccess:
-  //      mov x17, x1
-  //      movk x17, #disc, lsl #48
-  //      pacib x16, x17
-  //     Lend:
-  //   Where we only emit the AUT if we started with an AUT.
+  //    Lsuccess:
+  //      ; skipped if authentication failed
+  //    Lend:
+  //      ...
   //
   // - checked and trapping:
-  //      mov x17, x0
-  //      movk x17, #disc, lsl #48
-  //      autia x16, x0
   //      mov x17, x16
   //      xpaci x17
   //      cmp x16, x17
   //      b.eq Lsuccess
   //      brk #<0xc470 + aut key>
-  //     Lsuccess:
-  //      mov x17, x1
-  //      movk x17, #disc, lsl #48
-  //      pacib x16, x17 ; if AUTPAC
-  //   Where the b.eq skips over the trap if the PAC is valid.
+  //    Lsuccess:
+  //      ...
   //
   // This sequence is expensive, but we need more information to be able to
   // do better.
@@ -1769,6 +1788,71 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   // based on that).
   // Either way, we also don't always know whether TBI is enabled or not for
   // the specific target environment.
+
+  unsigned XPACOpc = getXPACOpcodeForKey(Key);
+
+  MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+
+  //  mov Xscratch, Xtested
+  emitMovXReg(ScratchReg, TestedReg);
+
+  //  xpac(i|d) Xscratch
+  EmitToStreamer(MCInstBuilder(XPACOpc).addReg(ScratchReg).addReg(ScratchReg));
+
+  //  cmp Xtested, Xscratch
+  EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
+                     .addReg(AArch64::XZR)
+                     .addReg(TestedReg)
+                     .addReg(ScratchReg)
+                     .addImm(0));
+
+  //  b.eq Lsuccess
+  EmitToStreamer(MCInstBuilder(AArch64::Bcc)
+                     .addImm(AArch64CC::EQ)
+                     .addExpr(MCSymbolRefExpr::create(SuccessSym, OutContext)));
+
+  if (ShouldTrap) {
+    assert(!OnFailure && "Cannot specify OnFailure with ShouldTrap");
+    // Trapping sequences do a 'brk'.
+    //  brk #<0xc470 + aut key>
+    EmitToStreamer(MCInstBuilder(AArch64::BRK).addImm(0xc470 | Key));
+  } else {
+    // Non-trapping checked sequences return the stripped result in TestedReg,
+    // skipping over success-only code (such as re-signing the pointer) if
+    // there is one.
+    // Note that this can introduce an authentication oracle (such as based on
+    // the high bits of the re-signed value).
+
+    // FIXME: Can we simply return the AUT result, already in TestedReg?
+    //  mov Xtested, Xscratch
+    emitMovXReg(TestedReg, ScratchReg);
+
+    if (OnFailure) {
+      //  b Lend
+      EmitToStreamer(
+          MCInstBuilder(AArch64::B)
+              .addExpr(MCSymbolRefExpr::create(OnFailure, OutContext)));
+    }
+  }
+
+  // If the auth check succeeds, we can continue.
+  // Lsuccess:
+  OutStreamer->emitLabel(SuccessSym);
+}
+
+void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
+  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
+
+  // We expand AUT/AUTPAC into a sequence of the form
+  //
+  //      ; authenticate x16
+  //      ; check pointer in x16
+  //    Lsuccess:
+  //      ; sign x16 (if AUTPAC)
+  //    Lend:   ; if not trapping on failure
+  //
+  // with the checking sequence chosen depending on whether we should check
+  // the pointer and whether we should trap on failure.
 
   // By default, auth/resign sequences check for auth failures.
   bool ShouldCheck = true;
@@ -1800,8 +1884,6 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   uint64_t AUTDisc = MI->getOperand(1).getImm();
   unsigned AUTAddrDisc = MI->getOperand(2).getReg();
 
-  unsigned XPACOpc = getXPACOpcodeForKey(AUTKey);
-
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
   unsigned AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc);
@@ -1824,59 +1906,12 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   MCSymbol *EndSym = nullptr;
 
-  // Checked sequences do an additional strip-and-compare.
   if (ShouldCheck) {
-    MCSymbol *SuccessSym = createTempSymbol("auth_success_");
+    if (IsAUTPAC && !ShouldTrap)
+      EndSym = createTempSymbol("resign_end_");
 
-    // XPAC has tied src/dst: use x17 as a temporary copy.
-    //  mov x17, x16
-    emitMovXReg(AArch64::X17, AArch64::X16);
-
-    //  xpaci x17
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(XPACOpc).addReg(AArch64::X17).addReg(AArch64::X17));
-
-    //  cmp x16, x17
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSXrs)
-                                     .addReg(AArch64::XZR)
-                                     .addReg(AArch64::X16)
-                                     .addReg(AArch64::X17)
-                                     .addImm(0));
-
-    //  b.eq Lsuccess
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::Bcc)
-                                     .addImm(AArch64CC::EQ)
-                                     .addExpr(MCSymbolRefExpr::create(
-                                         SuccessSym, OutContext)));
-
-    if (ShouldTrap) {
-      // Trapping sequences do a 'brk'.
-      //  brk #<0xc470 + aut key>
-      EmitToStreamer(*OutStreamer,
-                     MCInstBuilder(AArch64::BRK).addImm(0xc470 | AUTKey));
-    } else {
-      // Non-trapping checked sequences return the stripped result in x16,
-      // skipping over the PAC if there is one.
-
-      // FIXME: can we simply return the AUT result, already in x16? without..
-      //        ..traps this is usable as an oracle anyway, based on high bits
-      //  mov x17, x16
-      emitMovXReg(AArch64::X16, AArch64::X17);
-
-      if (IsAUTPAC) {
-        EndSym = createTempSymbol("resign_end_");
-
-        //  b Lend
-        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B)
-                                         .addExpr(MCSymbolRefExpr::create(
-                                             EndSym, OutContext)));
-      }
-    }
-
-    // If the auth check succeeds, we can continue.
-    // Lsuccess:
-    OutStreamer->emitLabel(SuccessSym);
+    emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AUTKey,
+                                       ShouldTrap, EndSym);
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
@@ -2054,6 +2089,10 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
+  const bool IsELFSignedGOT = MI.getParent()
+                                  ->getParent()
+                                  ->getInfo<AArch64FunctionInfo>()
+                                  ->hasELFSignedGOT();
   MachineOperand GAOp = MI.getOperand(0);
   const uint64_t KeyC = MI.getOperand(1).getImm();
   assert(KeyC <= AArch64PACKey::LAST &&
@@ -2070,9 +2109,17 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   // Emit:
   // target materialization:
   // - via GOT:
-  //     adrp x16, :got:target
-  //     ldr x16, [x16, :got_lo12:target]
-  //     add offset to x16 if offset != 0
+  //   - unsigned GOT:
+  //       adrp x16, :got:target
+  //       ldr x16, [x16, :got_lo12:target]
+  //       add offset to x16 if offset != 0
+  //   - ELF signed GOT:
+  //       adrp x17, :got:target
+  //       add x17, x17, :got_auth_lo12:target
+  //       ldr x16, [x17]
+  //       aut{i|d}a x16, x17
+  //       check+trap sequence (if no FPAC)
+  //       add offset to x16 if offset != 0
   //
   // - direct:
   //     adrp x16, target
@@ -2115,13 +2162,48 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
 
   EmitToStreamer(
-      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
+      MCInstBuilder(AArch64::ADRP)
+          .addReg(IsGOTLoad && IsELFSignedGOT ? AArch64::X17 : AArch64::X16)
+          .addOperand(GAMCHi));
 
   if (IsGOTLoad) {
-    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
-                       .addReg(AArch64::X16)
-                       .addReg(AArch64::X16)
-                       .addOperand(GAMCLo));
+    if (IsELFSignedGOT) {
+      EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                         .addReg(AArch64::X17)
+                         .addReg(AArch64::X17)
+                         .addOperand(GAMCLo)
+                         .addImm(0));
+
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X17)
+                         .addImm(0));
+
+      assert(GAOp.isGlobal());
+      assert(GAOp.getGlobal()->getValueType() != nullptr);
+      unsigned AuthOpcode = GAOp.getGlobal()->getValueType()->isFunctionTy()
+                                ? AArch64::AUTIA
+                                : AArch64::AUTDA;
+
+      EmitToStreamer(MCInstBuilder(AuthOpcode)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X17));
+
+      if (!STI->hasFPAC()) {
+        auto AuthKey = (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA
+                                                     : AArch64PACKey::DA);
+
+        emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
+                                           /*ShouldTrap=*/true,
+                                           /*OnFailure=*/nullptr);
+      }
+    } else {
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addOperand(GAMCLo));
+    }
   } else {
     EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
                        .addReg(AArch64::X16)
@@ -2187,6 +2269,69 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   if (DiscReg != AArch64::XZR)
     MIB.addReg(DiscReg);
   EmitToStreamer(MIB);
+}
+
+void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register AuthResultReg = STI->hasFPAC() ? DstReg : AArch64::X16;
+  const MachineOperand &GAMO = MI.getOperand(1);
+  assert(GAMO.getOffset() == 0);
+
+  MachineOperand GAHiOp(GAMO);
+  MachineOperand GALoOp(GAMO);
+  GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
+  GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+
+  MCOperand GAMCHi, GAMCLo;
+  MCInstLowering.lowerOperand(GAHiOp, GAMCHi);
+  MCInstLowering.lowerOperand(GALoOp, GAMCLo);
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(GAMCHi));
+
+  EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                     .addReg(AArch64::X17)
+                     .addReg(AArch64::X17)
+                     .addOperand(GAMCLo)
+                     .addImm(0));
+
+  EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                     .addReg(AuthResultReg)
+                     .addReg(AArch64::X17)
+                     .addImm(0));
+
+  assert(GAMO.isGlobal());
+  MCSymbol *UndefWeakSym;
+  if (GAMO.getGlobal()->hasExternalWeakLinkage()) {
+    UndefWeakSym = createTempSymbol("undef_weak");
+    EmitToStreamer(
+        MCInstBuilder(AArch64::CBZX)
+            .addReg(AuthResultReg)
+            .addExpr(MCSymbolRefExpr::create(UndefWeakSym, OutContext)));
+  }
+
+  assert(GAMO.getGlobal()->getValueType() != nullptr);
+  unsigned AuthOpcode = GAMO.getGlobal()->getValueType()->isFunctionTy()
+                            ? AArch64::AUTIA
+                            : AArch64::AUTDA;
+  EmitToStreamer(MCInstBuilder(AuthOpcode)
+                     .addReg(AuthResultReg)
+                     .addReg(AuthResultReg)
+                     .addReg(AArch64::X17));
+
+  if (GAMO.getGlobal()->hasExternalWeakLinkage())
+    OutStreamer->emitLabel(UndefWeakSym);
+
+  if (!STI->hasFPAC()) {
+    auto AuthKey =
+        (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
+
+    emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
+                                       /*ShouldTrap=*/true,
+                                       /*OnFailure=*/nullptr);
+
+    emitMovXReg(DstReg, AuthResultReg);
+  }
 }
 
 const MCExpr *
@@ -2365,6 +2510,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::LOADgotPAC:
   case AArch64::MOVaddrPAC:
     LowerMOVaddrPAC(*MI);
+    return;
+
+  case AArch64::LOADgotAUTH:
+    LowerLOADgotAUTH(*MI);
     return;
 
   case AArch64::BRA:

@@ -360,10 +360,6 @@ private:
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
 
-  /// True if the function is used for remapping hot text and shall not be
-  /// placed on a huge page.
-  bool IsHotTextMover{false};
-
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -389,6 +385,9 @@ private:
 
   /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
+
+  /// Dynamically executed function bytes, used for density computation.
+  uint64_t SampleCountInBytes{0};
 
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
@@ -909,6 +908,10 @@ public:
     return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
+  const BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockAtOffset(Offset);
+  }
+
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
   /// that is in \p BB. Return nullptr if none exists
   BinaryBasicBlock *getLandingPadBBFor(const BinaryBasicBlock &BB,
@@ -1360,8 +1363,6 @@ public:
   /// Return true if the original entry point was patched.
   bool isPatched() const { return IsPatched; }
 
-  bool isHotTextMover() const { return IsHotTextMover; }
-
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
     return getJumpTableContainingAddress(Address);
@@ -1714,8 +1715,6 @@ public:
 
   void setIsPatched(bool V) { IsPatched = V; }
 
-  void setHotTextMover(bool V) { IsHotTextMover = V; }
-
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
   }
@@ -1851,6 +1850,9 @@ public:
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
   void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+
+  /// Return the number of dynamically executed bytes, from raw perf data.
+  uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
 
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.
