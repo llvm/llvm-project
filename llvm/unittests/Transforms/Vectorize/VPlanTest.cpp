@@ -743,7 +743,7 @@ TEST(VPBasicBlockTest, print) {
   auto * ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(VPBB0, VPBB1);
   VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
-  VPlan Plan(VPBB0, TC, VPBB1, ScalarHeaderVPBB);
+  VPlan Plan(VPBB0, TC, ScalarHeaderVPBB);
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan.printDOT(OS);

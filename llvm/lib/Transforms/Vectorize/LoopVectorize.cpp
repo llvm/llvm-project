@@ -2449,9 +2449,8 @@ static void introduceCheckBlockInVPlan(VPlan &Plan, BasicBlock *CheckIRBB) {
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   VPIRBasicBlock *CheckVPIRBB = VPIRBasicBlock::fromBasicBlock(CheckIRBB);
-  VPBlockUtils::connectBlocks(PreVectorPH, CheckVPIRBB, -1, 1);
   VPBlockUtils::connectBlocks(CheckVPIRBB, ScalarPH);
-  VPBlockUtils::connectBlocks(CheckVPIRBB, VectorPH, 0, -1);
+  VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckVPIRBB);
 }
 
 void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
