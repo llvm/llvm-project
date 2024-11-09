@@ -417,7 +417,6 @@ enum TypeID {
   VoidTyID,      ///< type with no size
   LabelTyID,     ///< Labels
   MetadataTyID,  ///< Metadata
-  X86_MMXTyID,   ///< MMX vectors (64 bits, X86 specific)
   X86_AMXTyID,   ///< AMX vectors (8192 bits, X86 specific)
   TokenTyID,     ///< Tokens
 
@@ -528,7 +527,6 @@ static service_rc hostrpc_pfBuildValist(hostrpc_ValistExt_t *valist,
     case StructTyID:         ///< 13: Structures
     case FunctionTyID:       ///< 12: Functions
     case TokenTyID:          ///< 10: Tokens
-    case X86_MMXTyID:        ///<  9: MMX vectors (64 bits, X86 specific)
     case MetadataTyID:       ///<  8: Metadata
     case LabelTyID:          ///<  7: Labels
     case PPC_FP128TyID:      ///<  6: 128-bit floating point type (two 64-bits,
@@ -766,7 +764,6 @@ static service_rc hostrpc_build_vargs_array(int NumArgs, char *keyptr,
     case StructTyID:         ///< 13: Structures
     case FunctionTyID:       ///< 12: Functions
     case TokenTyID:          ///< 10: Tokens
-    case X86_MMXTyID:        ///<  9: MMX vectors (64 bits, X86 specific)
     case MetadataTyID:       ///<  8: Metadata
     case LabelTyID:          ///<  7: Labels
     case PPC_FP128TyID:      ///<  6: 128-bit floating point type (two 64-bits,

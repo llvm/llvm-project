@@ -12,18 +12,5 @@ define <2 x ptr> @test_gep() {
 ; CHECK-NEXT:    ret <2 x ptr> <ptr @a, ptr @a>
 ;
   %A = getelementptr [1 x %rec8], ptr @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer
-  %B = bitcast <2 x ptr> %A to <2 x ptr>
-  ret <2 x ptr> %B
-}
-
-; Testcase that verify the cast-of-cast when the outer/second cast is to a
-; vector type.
-
-define <4 x i16> @test_mmx_const() {
-; CHECK-LABEL: @test_mmx_const(
-; CHECK-NEXT:    ret <4 x i16> zeroinitializer
-;
-  %A = bitcast <2 x i32> zeroinitializer to x86_mmx
-  %B = bitcast x86_mmx %A to <4 x i16>
-  ret <4 x i16> %B
+  ret <2 x ptr> %A
 }

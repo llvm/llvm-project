@@ -937,27 +937,6 @@ define float @test2c() {
   ret float extractelement (<2 x float> bitcast (double bitcast (<2 x float> <float -1.000000e+00, float -1.000000e+00> to double) to <2 x float>), i32 0)
 }
 
-define i64 @test_mmx(<2 x i32> %x) {
-; ALL-LABEL: @test_mmx(
-; ALL-NEXT:    [[C:%.*]] = bitcast <2 x i32> [[X:%.*]] to i64
-; ALL-NEXT:    ret i64 [[C]]
-;
-  %A = bitcast <2 x i32> %x to x86_mmx
-  %B = bitcast x86_mmx %A to <2 x i32>
-  %C = bitcast <2 x i32> %B to i64
-  ret i64 %C
-}
-
-define i64 @test_mmx_const(<2 x i32> %c) {
-; ALL-LABEL: @test_mmx_const(
-; ALL-NEXT:    ret i64 0
-;
-  %A = bitcast <2 x i32> zeroinitializer to x86_mmx
-  %B = bitcast x86_mmx %A to <2 x i32>
-  %C = bitcast <2 x i32> %B to i64
-  ret i64 %C
-}
-
 ; PR12514
 define i1 @test67(i1 %a, i32 %b) {
 ; ALL-LABEL: @test67(

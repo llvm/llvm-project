@@ -1,6 +1,5 @@
 ; assert in DAGlegalizer with fake use of 1-element vectors.
 ; RUN: llc -stop-after=finalize-isel -mtriple=x86_64-unknown-linux -filetype=asm -o - %s | FileCheck %s
-; XFAIL: *
 ; ModuleID = 't2.cpp'
 ; source_filename = "t2.cpp"
 ; target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

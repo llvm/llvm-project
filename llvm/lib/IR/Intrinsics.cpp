@@ -140,9 +140,6 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     case Type::PPC_FP128TyID:
       Result += "ppcf128";
       break;
-    case Type::X86_MMXTyID:
-      Result += "x86mmx";
-      break;
     case Type::X86_AMXTyID:
       Result += "x86amx";
       break;
@@ -497,7 +494,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::VarArg:
     return Type::getVoidTy(Context);
   case IITDescriptor::MMX:
-    return Type::getX86_MMXTy(Context);
+    return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case IITDescriptor::AMX:
     return Type::getX86_AMXTy(Context);
   case IITDescriptor::Token:
@@ -797,7 +794,11 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return !Ty->isVoidTy();
   case IITDescriptor::VarArg:
     return true;
-  case IITDescriptor::MMX:  return !Ty->isX86_MMXTy();
+  case IITDescriptor::MMX: {
+    FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
+    return !VT || VT->getNumElements() != 1 ||
+           !VT->getElementType()->isIntegerTy(64);
+  }
   case IITDescriptor::AMX:
     return !Ty->isX86_AMXTy();
   case IITDescriptor::Token:
