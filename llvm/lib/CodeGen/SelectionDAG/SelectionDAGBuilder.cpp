@@ -4184,7 +4184,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   // If the target prefers, emit a padded shuffle vector at the
   // source operand width, then extract the original destination
   // type.
-  if (!TLI.shouldScalarizeLengthDescreasingShuffle()) {
+  if (!TLI.shouldScalarizeLengthDecreasingShuffle()) {
     EVT PaddedVT =
         EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), SrcNumElts);
     SmallVector<int, 8> ExtendedMask(Mask);
