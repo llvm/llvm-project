@@ -4173,6 +4173,21 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
+
+  static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
+                           VPBlockBase *BlockPtr) {
+    unsigned SuccIdx =
+        std::distance(From->getSuccessors().begin(),
+                      find_if(From->getSuccessors(),
+                              [To](VPBlockBase *Succ) { return To == Succ; }));
+    unsigned PredIx =
+        std::distance(To->getPredecessors().begin(),
+                      find_if(To->getPredecessors(), [From](VPBlockBase *Pred) {
+                        return From == Pred;
+                      }));
+    VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
+    VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
+  }
 };
 
 class VPInterleavedAccessInfo {
