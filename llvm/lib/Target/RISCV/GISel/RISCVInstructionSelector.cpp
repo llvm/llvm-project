@@ -87,6 +87,12 @@ private:
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
+  ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
+  template <unsigned Bits>
+  ComplexRendererFns selectSExtBits(MachineOperand &Root) const {
+    return selectSExtBits(Root, Bits);
+  }
+
   ComplexRendererFns selectZExtBits(MachineOperand &Root, unsigned Bits) const;
   template <unsigned Bits>
   ComplexRendererFns selectZExtBits(MachineOperand &Root) const {
@@ -249,6 +255,27 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
+                                         unsigned Bits) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  Register RootReg = Root.getReg();
+  MachineInstr *RootDef = MRI->getVRegDef(RootReg);
+
+  if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
+      RootDef->getOperand(2).getImm() == Bits) {
+    return {
+        {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
+  }
+
+  unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
+  if ((Size - KB->computeNumSignBits(RootReg)) < Bits)
+    return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
+
+  return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
                                          unsigned Bits) const {
   if (!Root.isReg())
@@ -260,6 +287,10 @@ RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
   if (mi_match(RootReg, *MRI, m_GAnd(m_Reg(RegX), m_SpecificICst(Mask)))) {
     return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
   }
+
+  if (mi_match(RootReg, *MRI, m_GZExt(m_Reg(RegX))) &&
+      MRI->getType(RegX).getScalarSizeInBits() == Bits)
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
 
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
   if (KB->maskedValueIsZero(RootReg, APInt::getBitsSetFrom(Size, Bits)))

@@ -1924,6 +1924,7 @@ void MappingTraits<ELFYAML::VerdefEntry>::mapping(IO &IO,
   IO.mapOptional("Flags", E.Flags);
   IO.mapOptional("VersionNdx", E.VersionNdx);
   IO.mapOptional("Hash", E.Hash);
+  IO.mapOptional("VDAux", E.VDAux);
   IO.mapRequired("Names", E.VerNames);
 }
 

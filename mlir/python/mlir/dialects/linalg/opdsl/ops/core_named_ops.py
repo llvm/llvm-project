@@ -384,23 +384,6 @@ def select(
 
 
 @linalg_structured_op
-def matmul(
-    A=TensorDef(T1, S.M, S.K),
-    B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
-):
-    """Performs a matrix multiplication of two 2D inputs.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-    """
-    domain(D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
-
-
-@linalg_structured_op
 def quantized_matmul(
     A=TensorDef(T1, S.M, S.K),
     B=TensorDef(T2, S.K, S.N),
@@ -979,6 +962,67 @@ def conv_2d_ngchw_gfchw(
     O[D.n, D.g, D.fg, D.oh, D.ow] += TypeFn.cast_signed(
         U, I[D.n, D.g, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
     ) * TypeFn.cast_signed(U, K[D.g, D.fg, D.c, D.kh, D.kw])
+
+
+@linalg_structured_op
+def conv_2d_nhwgc_gfhwc(
+    I=TensorDef(
+        T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.G, S.C
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.KH, S.KW, S.C),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.G, S.FG, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution.
+
+    Layout:
+      * Input: NHWGC.
+      * Kernel: GFHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.oh, D.ow, D.g, D.fg, D.kh, D.kw, D.c)
+    O[D.n, D.oh, D.ow, D.g, D.fg] += TypeFn.cast_signed(
+        U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.g, D.c]
+    ) * TypeFn.cast_signed(U, K[D.g, D.fg, D.kh, D.kw, D.c])
+
+
+@linalg_structured_op
+def conv_2d_nhwgc_gfhwc_q(
+    I=TensorDef(
+        T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.G, S.C
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.KH, S.KW, S.C),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.G, S.FG, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution with zero point offsets.
+
+    Layout:
+      * Input: NHWGC.
+      * Kernel: GFHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.oh, D.ow, D.g, D.fg, D.kh, D.kw, D.c)
+    O[D.n, D.oh, D.ow, D.g, D.fg] += (
+        TypeFn.cast_signed(
+            U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.g, D.c]
+        )
+        - TypeFn.cast_signed(U, IZp)
+    ) * (
+        TypeFn.cast_signed(U, K[D.g, D.fg, D.kh, D.kw, D.c])
+        - TypeFn.cast_signed(U, KZp)
+    )
 
 
 @linalg_structured_op
