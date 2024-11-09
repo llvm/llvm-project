@@ -177,6 +177,7 @@ public:
   NODE(parser, Call)
   NODE(parser, CallStmt)
   NODE(CallStmt, Chevrons)
+  NODE(CallStmt, StarOrExpr)
   NODE(parser, CaseConstruct)
   NODE(CaseConstruct, Case)
   NODE(parser, CaseSelector)

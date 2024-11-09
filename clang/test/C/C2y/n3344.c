@@ -16,6 +16,7 @@
 void baz(volatile void);         // expected-error {{'void' as parameter must not have type qualifiers}}
 void bar(const void);            // expected-error {{'void' as parameter must not have type qualifiers}}
 void foo(register void);         // expected-error {{invalid storage class specifier in function declarator}}
+void foop(void register);        // expected-error {{invalid storage class specifier in function declarator}}
 void quux(static void);          // expected-error {{invalid storage class specifier in function declarator}}
 void quobble(auto void);         // expected-error {{invalid storage class specifier in function declarator}}
 void quubble(extern void);       // expected-error {{invalid storage class specifier in function declarator}}
@@ -28,3 +29,7 @@ void quabble(_Thread_local void); // expected-error {{'_Thread_local' is only al
 #endif
 void bing(void, ...);            // expected-error {{'void' must be the first and only parameter if specified}}
 
+// These declarations are fine.
+void one(register void *);
+void two(void register *);
+void three(register void * (*)[4]);

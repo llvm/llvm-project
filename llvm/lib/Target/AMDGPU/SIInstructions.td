@@ -3575,7 +3575,7 @@ def : AMDGPUPat <
 >;
 
 def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxTrailingOnes() <= 5;
+  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxActiveBits() <= 5;
 }]>;
 
 // x << (bitwidth - y) >> (bitwidth - y)
