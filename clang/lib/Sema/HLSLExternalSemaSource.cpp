@@ -939,6 +939,16 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addDecrementCounterMethod()
         .completeDefinition();
   });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ByteAddressBuffer")
+             .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/true,
+                    /*RawBuffer=*/true)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
