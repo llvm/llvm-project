@@ -24,11 +24,11 @@ class FxBitsTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T eps = FXRep::EPS();
   constexpr XType get_one_or_saturated_fraction() {
     if (FXRep::INTEGRAL_LEN > 0) {
-      return (XType)((XType)0x1 << FXRep::FRACTION_LEN);
+      return static_cast<XType>(static_cast<XType>(0x1) << FXRep::FRACTION_LEN);
     } else {
-      return (
-          XType)LIBC_NAMESPACE::mask_trailing_ones<typename FXRep::StorageType,
-                                                   FXRep::FRACTION_LEN>();
+      return static_cast<XType>(
+          LIBC_NAMESPACE::mask_trailing_ones<typename FXRep::StorageType,
+                                             FXRep::FRACTION_LEN>());
     }
   }
 
@@ -38,7 +38,8 @@ public:
   void test_special_numbers(FxBitsFunc func) {
     EXPECT_EQ(zero, func(0));
     EXPECT_EQ(eps, func(0x1));
-    EXPECT_EQ(half, func((XType)0x1 << (FXRep::FRACTION_LEN - 1)));
+    // x.1000...
+    EXPECT_EQ(half, func(static_cast<XType>(0x1) << (FXRep::FRACTION_LEN - 1)));
     // Occupy the bit to the left of the fixed point for Accum types
     // Saturate fraction portion for Fract types
     EXPECT_EQ(one, func(get_one_or_saturated_fraction()));
