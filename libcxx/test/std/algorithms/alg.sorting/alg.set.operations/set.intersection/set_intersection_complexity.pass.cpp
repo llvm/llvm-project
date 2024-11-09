@@ -43,7 +43,7 @@
 
 #include "test_iterators.h"
 
-// Debug mode provides no complexity guarantees, testing them would be a waste of effort.
+// We don't check number of operations in Debug mode because they are not stable enough due to additional validations.
 #ifdef _LIBCPP_HARDENING_MODE_DEBUG
 #  define ASSERT_COMPLEXITY(expression) (void)(expression)
 #else

@@ -99,12 +99,10 @@ __set_intersection(
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
 #if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-  if (!__libcpp_is_constant_evaluated()) {
-    _LIBCPP_ASSERT_INTERNAL(
-        std::__is_sorted_until(__first1, __last1, __comp) == __last1, "set_intersection: input range 1 must be sorted");
-    _LIBCPP_ASSERT_INTERNAL(
-        std::__is_sorted_until(__first2, __last2, __comp) == __last2, "set_intersection: input range 2 must be sorted");
-  }
+  _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+      std::__is_sorted_until(__first1, __last1, __comp) == __last1, "set_intersection: input range 1 must be sorted");
+  _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+      std::__is_sorted_until(__first2, __last2, __comp) == __last2, "set_intersection: input range 2 must be sorted");
 #endif
   _LIBCPP_CONSTEXPR std::__identity __proj;
   bool __prev_may_be_equal = false;

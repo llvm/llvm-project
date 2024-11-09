@@ -24,11 +24,11 @@ template <class _Compare, class _ForwardIterator, class _Sent>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __is_sorted_until(_ForwardIterator __first, _Sent __last, _Compare&& __comp) {
   if (__first != __last) {
-    _ForwardIterator __i = __first;
+    _ForwardIterator __prev = __first;
     while (++__first != __last) {
-      if (__comp(*__first, *__i))
+      if (__comp(*__first, *__prev))
         return __first;
-      __i = __first;
+      __prev = __first;
     }
   }
   return __first;
