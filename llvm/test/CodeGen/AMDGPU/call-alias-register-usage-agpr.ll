@@ -12,7 +12,7 @@
 ; ALL-NEXT:     .amdhsa_next_free_sgpr (max(kernel.numbered_sgpr+(extrasgprs(kernel.uses_vcc, kernel.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(kernel.uses_vcc, kernel.uses_flat_scratch, 1))
 ; GFX90A-NEXT:  .amdhsa_accum_offset ((((((alignto(max(1, kernel.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
 
-; ALL:       .set kernel.num_vgpr, max(32, aliasee_default.num_vgpr)
+; ALL:       .set kernel.num_vgpr, max(41, aliasee_default.num_vgpr)
 ; ALL-NEXT:  .set kernel.num_agpr, max(0, aliasee_default.num_agpr)
 ; ALL-NEXT:  .set kernel.numbered_sgpr, max(33, aliasee_default.numbered_sgpr)
 define amdgpu_kernel void @kernel() #0 {
