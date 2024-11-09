@@ -454,7 +454,7 @@ define i8 @srai_i8(i8 %a) nounwind {
 ; RV64ZBB-LABEL: srai_i8:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    sext.b a0, a0
-; RV64ZBB-NEXT:    sraiw a0, a0, 5
+; RV64ZBB-NEXT:    srai a0, a0, 5
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: srai_i8:
@@ -496,7 +496,7 @@ define i16 @srai_i16(i16 %a) nounwind {
 ; RV64ZBB-LABEL: srai_i16:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    sext.h a0, a0
-; RV64ZBB-NEXT:    sraiw a0, a0, 9
+; RV64ZBB-NEXT:    srai a0, a0, 9
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: srai_i16:

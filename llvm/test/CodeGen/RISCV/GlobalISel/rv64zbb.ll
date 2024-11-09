@@ -1113,12 +1113,14 @@ define i32 @abs_i32(i32 %x) {
   ret i32 %abs
 }
 
+; FIXME: sext.w is not needed
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraiw a1, a0, 31
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    srai a1, a0, 31
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs_i32_sext:

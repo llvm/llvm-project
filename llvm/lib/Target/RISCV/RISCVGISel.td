@@ -170,9 +170,6 @@ def : StPat<store, SD, GPR, PtrVT>;
 }
 
 let Predicates = [IsRV64] in {
-// FIXME: tblgen can't import sext_inreg patterns.
-def : Pat<(sra (sexti32 (i64 GPR:$rs1)), uimm5:$shamt),
-          (SRAIW GPR:$rs1, uimm5:$shamt)>;
 // FIXME: Temporary until i32->i64 zext is no longer legal.
 def : Pat <(srl (zext GPR:$rs1), uimm5:$shamt),
            (SRLIW GPR:$rs1, uimm5:$shamt)>;
