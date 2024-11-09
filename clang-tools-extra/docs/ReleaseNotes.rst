@@ -122,7 +122,7 @@ New checks
 - New :doc:`bugprone-incorrect-enable-shared-from-this
   <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
 
-  Detects if a class or struct publicly inherits from 
+  Detect classes or structs that do not publicly inherit from 
   ``std::enable_shared_from_this``, because unintended behavior will 
   otherwise occur when calling ``shared_from_this``.
 
