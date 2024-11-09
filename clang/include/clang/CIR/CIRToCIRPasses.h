@@ -18,10 +18,7 @@
 
 namespace clang {
 class ASTContext;
-namespace CIRGen {
-class CIRGenModule;
-} // namespace CIRGen
-} // namespace clang
+}
 
 namespace mlir {
 class MLIRContext;
@@ -33,12 +30,12 @@ namespace cir {
 // Run set of cleanup/prepare/etc passes CIR <-> CIR.
 mlir::LogicalResult runCIRToCIRPasses(
     mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
-    clang::CIRGen::CIRGenModule &cgm, clang::ASTContext &astCtx,
-    bool enableVerifier, bool enableLifetime, llvm::StringRef lifetimeOpts,
-    bool enableIdiomRecognizer, llvm::StringRef idiomRecognizerOpts,
-    bool enableLibOpt, llvm::StringRef libOptOpts,
-    std::string &passOptParsingFailure, bool enableCIRSimplify, bool flattenCIR,
-    bool emitMLIR, bool enableCallConvLowering, bool enableMem2reg);
+    clang::ASTContext &astCtx, bool enableVerifier, bool enableLifetime,
+    llvm::StringRef lifetimeOpts, bool enableIdiomRecognizer,
+    llvm::StringRef idiomRecognizerOpts, bool enableLibOpt,
+    llvm::StringRef libOptOpts, std::string &passOptParsingFailure,
+    bool enableCIRSimplify, bool flattenCIR, bool emitMLIR,
+    bool enableCallConvLowering, bool enableMem2reg);
 
 } // namespace cir
 

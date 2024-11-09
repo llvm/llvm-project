@@ -98,7 +98,6 @@ public:
   std::unique_ptr<mlir::MLIRContext> takeContext() {
     return std::move(mlirCtx);
   };
-  clang::CIRGen::CIRGenModule &getCGM() { return *CGM; }
 
   bool verifyModule();
 

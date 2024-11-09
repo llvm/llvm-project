@@ -13,7 +13,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/CIR/Dialect/Passes.h"
 
-#include "CIRGenModule.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -25,12 +24,12 @@
 namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(
     mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
-    clang::CIRGen::CIRGenModule &cgm, clang::ASTContext &astCtx,
-    bool enableVerifier, bool enableLifetime, llvm::StringRef lifetimeOpts,
-    bool enableIdiomRecognizer, llvm::StringRef idiomRecognizerOpts,
-    bool enableLibOpt, llvm::StringRef libOptOpts,
-    std::string &passOptParsingFailure, bool enableCIRSimplify, bool flattenCIR,
-    bool emitMLIR, bool enableCallConvLowering, bool enableMem2Reg) {
+    clang::ASTContext &astCtx, bool enableVerifier, bool enableLifetime,
+    llvm::StringRef lifetimeOpts, bool enableIdiomRecognizer,
+    llvm::StringRef idiomRecognizerOpts, bool enableLibOpt,
+    llvm::StringRef libOptOpts, std::string &passOptParsingFailure,
+    bool enableCIRSimplify, bool flattenCIR, bool emitMLIR,
+    bool enableCallConvLowering, bool enableMem2Reg) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -74,7 +73,7 @@ mlir::LogicalResult runCIRToCIRPasses(
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
-  pm.addPass(mlir::createLoweringPreparePass(&astCtx, cgm));
+  pm.addPass(mlir::createLoweringPreparePass(&astCtx));
 
   if (flattenCIR || enableMem2Reg)
     mlir::populateCIRPreLoweringPasses(pm, enableCallConvLowering);

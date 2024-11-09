@@ -44,7 +44,6 @@ add_clang_library(clangCIR
   CIRPasses.cpp
   CIRRecordLayoutBuilder.cpp
   ConstantInitBuilder.cpp
-  LoweringPrepare.cpp
   TargetInfo.cpp
 
   DEPENDS

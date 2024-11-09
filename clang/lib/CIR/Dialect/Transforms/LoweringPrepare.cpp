@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRGenModule.h"
-
+#include "LoweringPrepareCXXABI.h"
+#include "PassDetail.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Region.h"
 #include "clang/AST/ASTContext.h"
@@ -19,8 +19,6 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
-#include "clang/CIR/Dialect/Transforms/LoweringPrepareCXXABI.h"
-#include "clang/CIR/Dialect/Transforms/PassDetail.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -123,7 +121,6 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   clang::ASTContext *astCtx;
   std::shared_ptr<cir::LoweringPrepareCXXABI> cxxABI;
-  clang::CIRGen::CIRGenModule *cgm;
 
   void setASTContext(clang::ASTContext *c) {
     astCtx = c;
@@ -149,8 +146,6 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
       llvm_unreachable("NYI");
     }
   }
-
-  void setCGM(clang::CIRGen::CIRGenModule &cgm) { this->cgm = &cgm; }
 
   /// Tracks current module.
   ModuleOp theModule;
@@ -1210,10 +1205,8 @@ std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
 }
 
 std::unique_ptr<Pass>
-mlir::createLoweringPreparePass(clang::ASTContext *astCtx,
-                                clang::CIRGen::CIRGenModule &cgm) {
+mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
   auto pass = std::make_unique<LoweringPreparePass>();
   pass->setASTContext(astCtx);
-  pass->setCGM(cgm);
   return std::move(pass);
 }
