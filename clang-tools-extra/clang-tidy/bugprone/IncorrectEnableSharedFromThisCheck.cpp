@@ -40,15 +40,16 @@ void IncorrectEnableSharedFromThisCheck::check(
   const auto *Derived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
   const bool IsEnableSharedFromThisDirectBase =
       Result.Nodes.getNodeAs<CXXRecordDecl>("enable_rec") == Base;
-  const SourceRange ReplacementRange = BaseSpec->getSourceRange();
-  const std::string ReplacementString =
-      // BaseSpec->getType().getAsString() results in
-      // std::enable_shared_from_this<ClassName> or
-      // alias/typedefs of std::enable_shared_from_this<ClassName>
-      "public " + BaseSpec->getType().getAsString();
+  const bool HasWrittenAccessSpecifier =
+      BaseSpec->getAccessSpecifierAsWritten() != AS_none;
+  const auto ReplacementRange = CharSourceRange(
+      SourceRange(BaseSpec->getBeginLoc(), BaseSpec->getBeginLoc()),
+      HasWrittenAccessSpecifier);
+  const llvm::StringRef Replacement =
+      HasWrittenAccessSpecifier ? "public" : "public ";
   const FixItHint Hint =
       IsEnableSharedFromThisDirectBase
-          ? FixItHint::CreateReplacement(ReplacementRange, ReplacementString)
+          ? FixItHint::CreateReplacement(ReplacementRange, Replacement)
           : FixItHint();
   diag(Derived->getLocation(),
        "%2 is not publicly inheriting from "
