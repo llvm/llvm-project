@@ -2930,7 +2930,7 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
-    OS << " parent: " << S->getParentComputeConstruct();
+    OS << " parent: " << S->getParentComputeConstructKind();
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
