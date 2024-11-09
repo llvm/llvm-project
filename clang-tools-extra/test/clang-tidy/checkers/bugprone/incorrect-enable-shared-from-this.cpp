@@ -155,3 +155,11 @@ DEFAULT_ESFT_STRUCT(DefaultEsftStruct);
    };
 
 PUBLIC_ESFT_STRUCT(PublicEsftStruct);
+
+struct A : std::enable_shared_from_this<A> {};
+#define MACRO_A A
+class B : MACRO_A {};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'B' is not publicly inheriting from 'A' which inherits from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
+class C : private MACRO_A {};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'C' is not publicly inheriting from 'A' which inherits from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
+class D : public MACRO_A {};
