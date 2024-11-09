@@ -990,34 +990,13 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   // clear Arguments.
   // TODO: Rework TTI interface to be independent of concrete IR values.
   SmallVector<const Value *> Arguments;
-
-  // In fact, we need to get the VP intrinsics cost from the TTI, but currently
-  // the legacy model, it will always calculate cost of the call Intrinsics, eg:
-  // llvm.ctlz/llvm.smax, so VP Intrinsics should have the same cost as their
-  // non-vp counterpart.
-  // TODO: Use VP intrinsics to calculate the cost, if the following conditions
-  // are met
-  // 1. We don't need to compare to the legacy cost model
-  // 2. The cost model of VP is gradually improved in TTI
-  // 3. VPlan can set accurate CostAttrs’s parameters
-  Intrinsic::ID FID = VectorIntrinsicID;
-  unsigned NumOperands = getNumOperands();
-  const_operand_range arg_operands =
-      make_range(op_begin(), op_begin() + getNumOperands());
-  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
-    std::optional<Intrinsic::ID> ID =
-        VPIntrinsic::getFunctionalIntrinsicIDForVP(VectorIntrinsicID);
-    if (ID) {
-      FID = ID.value();
-      NumOperands = getNumOperands() - 2;
-      // Remove the Mask && EVL from arg_operands
-      arg_operands = make_range(op_begin(), op_begin() + getNumOperands() - 2);
-    }
-  }
-
-  for (const auto &[Idx, Op] : enumerate(arg_operands)) {
+  for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
+      if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
+        Arguments.push_back(V);
+        break;
+      }
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
         continue;
@@ -1030,14 +1009,14 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
 
   Type *RetTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
-  for (unsigned I = 0; I != NumOperands; ++I)
+  for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
-      FID, RetTy, Arguments, ParamTys, FMF,
+      VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
       dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
