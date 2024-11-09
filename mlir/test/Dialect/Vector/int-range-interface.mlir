@@ -18,6 +18,7 @@ func.func @constant_splat() -> vector<8xi32> {
 }
 
 // CHECK-LABEL: func @float_constant_splat
+// Don't crash on splat floats.
 func.func @float_constant_splat() -> vector<8xf32> {
   %0 = arith.constant dense<3.0> : vector<8xf32>
   func.return %0: vector<8xf32>
