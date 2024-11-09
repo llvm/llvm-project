@@ -318,8 +318,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[40:41]
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[42:43]
 ; CHECK-NEXT:    ; kill: killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-; CHECK-NEXT:    ; kill: killed $sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59
 ; CHECK-NEXT:    ; kill: killed $sgpr8_sgpr9_sgpr10 killed $sgpr11
+; CHECK-NEXT:    ; kill: killed $sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v4, v3
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v1, v0
