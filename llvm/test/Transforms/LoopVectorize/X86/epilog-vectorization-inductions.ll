@@ -158,14 +158,14 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i16> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i16> [[VEC_IND]], [[TMP1]]
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <16 x i16> [[STEP_ADD]], [[TMP1]]
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <16 x i16> [[STEP_ADD_2]], [[TMP1]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i16> [[VEC_IND]], [[DOTSPLAT3]]
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <16 x i16> [[STEP_ADD]], [[DOTSPLAT3]]
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <16 x i16> [[STEP_ADD_2]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <16 x i16> [[VEC_IND]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub <16 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i16> [[STEP_ADD_2]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub <16 x i16> [[STEP_ADD_3]], [[BROADCAST_SPLAT3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <16 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <16 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i16> [[STEP_ADD_2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub <16 x i16> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[K:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 16
@@ -176,7 +176,7 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[TMP11]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i16> [[STEP_ADD_3]], [[TMP1]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i16> [[STEP_ADD_3]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:

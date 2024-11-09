@@ -124,13 +124,13 @@ define void @_Z3fn1v() #0 {
 ; CHECK:       vector.ph30:
 ; CHECK-NEXT:    [[N_MOD_VF31:%.*]] = urem i64 [[TMP28]], 16
 ; CHECK-NEXT:    [[N_VEC32:%.*]] = sub i64 [[TMP28]], [[N_MOD_VF31]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[TOBOOL6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[IND_END41:%.*]] = add i64 8, [[TMP29]]
 ; CHECK-NEXT:    [[IND_END43:%.*]] = mul i64 [[N_VEC32]], 2
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[TOBOOL6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY33:%.*]]
-; CHECK:       vector.body33:
+; CHECK:       vector.body35:
 ; CHECK-NEXT:    [[INDEX34:%.*]] = phi i64 [ 0, [[VECTOR_PH30]] ], [ [[INDEX_NEXT39:%.*]], [[VECTOR_BODY33]] ]
 ; CHECK-NEXT:    [[VEC_IND35:%.*]] = phi <16 x i64> [ <i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30, i64 32, i64 34, i64 36, i64 38>, [[VECTOR_PH30]] ], [ [[VEC_IND_NEXT36:%.*]], [[VECTOR_BODY33]] ]
 ; CHECK-NEXT:    [[VEC_IND37:%.*]] = phi <16 x i64> [ <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30>, [[VECTOR_PH30]] ], [ [[VEC_IND_NEXT38:%.*]], [[VECTOR_BODY33]] ]
@@ -182,7 +182,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT72:%.*]] = insertelement <8 x i1> poison, i1 [[TOBOOL6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT73:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT72]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY60:%.*]]
-; CHECK:       vec.epilog.vector.body60:
+; CHECK:       vec.epilog.vector.body58:
 ; CHECK-NEXT:    [[INDEX61:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL51]], [[VEC_EPILOG_PH47]] ], [ [[INDEX_NEXT74:%.*]], [[VEC_EPILOG_VECTOR_BODY60]] ]
 ; CHECK-NEXT:    [[VEC_IND65:%.*]] = phi <8 x i64> [ [[INDUCTION64]], [[VEC_EPILOG_PH47]] ], [ [[VEC_IND_NEXT66:%.*]], [[VEC_EPILOG_VECTOR_BODY60]] ]
 ; CHECK-NEXT:    [[VEC_IND70:%.*]] = phi <8 x i64> [ [[INDUCTION69]], [[VEC_EPILOG_PH47]] ], [ [[VEC_IND_NEXT71:%.*]], [[VEC_EPILOG_VECTOR_BODY60]] ]
