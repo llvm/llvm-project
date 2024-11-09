@@ -18,6 +18,7 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::Record;
 
 TypeConstraint::TypeConstraint(const llvm::DefInit *init)
     : TypeConstraint(init->getDef()) {}
@@ -42,7 +43,7 @@ StringRef TypeConstraint::getVariadicOfVariadicSegmentSizeAttr() const {
 // Returns the builder call for this constraint if this is a buildable type,
 // returns std::nullopt otherwise.
 std::optional<StringRef> TypeConstraint::getBuilderCall() const {
-  const llvm::Record *baseType = def;
+  const Record *baseType = def;
   if (isVariableLength())
     baseType = baseType->getValueAsDef("baseType");
 
@@ -64,7 +65,7 @@ StringRef TypeConstraint::getCppType() const {
   return def->getValueAsString("cppType");
 }
 
-Type::Type(const llvm::Record *record) : TypeConstraint(record) {}
+Type::Type(const Record *record) : TypeConstraint(record) {}
 
 Dialect Type::getDialect() const {
   return Dialect(def->getValueAsDef("dialect"));

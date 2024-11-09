@@ -58,10 +58,6 @@ private:
   LLVM_PREFERRED_TYPE(LookupType_t)
   unsigned LookupType : 2;
 
-  /// Whether this is a header map used when building a framework.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsIndexHeaderMap : 1;
-
   /// Whether we've performed an exhaustive search for module maps
   /// within the subdirectories of this directory.
   LLVM_PREFERRED_TYPE(bool)
@@ -73,13 +69,12 @@ public:
                   bool isFramework)
       : u(Dir), DirCharacteristic(DT),
         LookupType(isFramework ? LT_Framework : LT_NormalDir),
-        IsIndexHeaderMap(false), SearchedAllModuleMaps(false) {}
+        SearchedAllModuleMaps(false) {}
 
   /// This ctor *does not take ownership* of 'Map'.
-  DirectoryLookup(const HeaderMap *Map, SrcMgr::CharacteristicKind DT,
-                  bool isIndexHeaderMap)
+  DirectoryLookup(const HeaderMap *Map, SrcMgr::CharacteristicKind DT)
       : u(Map), DirCharacteristic(DT), LookupType(LT_HeaderMap),
-        IsIndexHeaderMap(isIndexHeaderMap), SearchedAllModuleMaps(false) {}
+        SearchedAllModuleMaps(false) {}
 
   /// getLookupType - Return the kind of directory lookup that this is: either a
   /// normal directory, a framework path, or a HeaderMap.
@@ -144,11 +139,6 @@ public:
   /// Whether this describes a system header directory.
   bool isSystemHeaderDirectory() const {
     return getDirCharacteristic() != SrcMgr::C_User;
-  }
-
-  /// Whether this header map is building a framework or not.
-  bool isIndexHeaderMap() const {
-    return isHeaderMap() && IsIndexHeaderMap;
   }
 
   /// LookupFile - Lookup the specified file in this search path, returning it

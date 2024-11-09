@@ -7,7 +7,7 @@ define double @test_mul_fast_flags(ptr %arr_d) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double 0.000000e+00
@@ -37,7 +37,7 @@ define double @test_nsz_nnan_flags_enabled(ptr %arr_d) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double 0.000000e+00
@@ -71,7 +71,7 @@ define double @test_nnan_flag_enabled(ptr %arr_d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL]] = fmul nnan double [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double [[MUL]]
@@ -105,7 +105,7 @@ define double @test_ninf_flag_enabled(ptr %arr_d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL]] = fmul ninf double [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double [[MUL]]
@@ -139,7 +139,7 @@ define double @test_nsz_flag_enabled(ptr %arr_d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL]] = fmul nsz double [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double [[MUL]]
@@ -173,7 +173,7 @@ define double @test_phi_initalise_to_non_zero(ptr %arr_d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL]] = fmul fast double [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double [[MUL]]
@@ -285,7 +285,7 @@ define i32 @test_int_phi_operands(ptr %arr_d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL]] = mul nsw i32 [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i32 [[MUL]]
@@ -319,7 +319,7 @@ define i32 @test_int_phi_operands_initalise_to_non_zero(ptr %arr_d) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL]] = mul i32 [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i32 [[MUL]]

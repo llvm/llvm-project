@@ -342,5 +342,17 @@ define signext i32 @emit_stpncpy() {
   ret i32 0
 }
 
+define void @simplify_memset_chk_pr112633(ptr %p, i32 %conv) {
+; CHECK-LABEL: @simplify_memset_chk_pr112633(
+; CHECK-NEXT:    [[CALL_I:%.*]] = tail call ptr @__memset_chk(ptr [[P:%.*]], i32 range(i32 0, 123) [[CONV:%.*]], i64 1, i64 1)
+; CHECK-NEXT:    ret void
+;
+  %call.i = tail call ptr @__memset_chk(ptr %p, i32 range(i32 0, 123) %conv, i64 1, i64 1)
+  ret void
+}
+
+declare ptr @__memset_chk(ptr, i32, i64, i64)
+
+
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

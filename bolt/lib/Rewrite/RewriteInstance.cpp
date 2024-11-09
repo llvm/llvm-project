@@ -789,9 +789,44 @@ void RewriteInstance::discoverFileObjects() {
     BinarySection Section(*BC, *cantFail(Sym.getSection()));
     return Section.isAllocatable();
   };
+  auto checkSymbolInSection = [this](const SymbolInfo &S) {
+    // Sometimes, we encounter symbols with addresses outside their section. If
+    // such symbols happen to fall into another section, they can interfere with
+    // disassembly. Notably, this occurs with AArch64 marker symbols ($d and $t)
+    // that belong to .eh_frame, but end up pointing into .text.
+    // As a workaround, we ignore all symbols that lie outside their sections.
+    auto Section = cantFail(S.Symbol.getSection());
+
+    // Accept all absolute symbols.
+    if (Section == InputFile->section_end())
+      return true;
+
+    uint64_t SecStart = Section->getAddress();
+    uint64_t SecEnd = SecStart + Section->getSize();
+    uint64_t SymEnd = S.Address + ELFSymbolRef(S.Symbol).getSize();
+    if (S.Address >= SecStart && SymEnd <= SecEnd)
+      return true;
+
+    auto SymType = cantFail(S.Symbol.getType());
+    // Skip warnings for common benign cases.
+    if (opts::Verbosity < 1 && SymType == SymbolRef::ST_Other)
+      return false; // E.g. ELF::STT_TLS.
+
+    auto SymName = S.Symbol.getName();
+    auto SecName = cantFail(S.Symbol.getSection())->getName();
+    BC->errs() << "BOLT-WARNING: ignoring symbol "
+               << (SymName ? *SymName : "[unnamed]") << " at 0x"
+               << Twine::utohexstr(S.Address) << ", which lies outside "
+               << (SecName ? *SecName : "[unnamed]") << "\n";
+
+    return false;
+  };
   for (const SymbolRef &Symbol : InputFile->symbols())
-    if (isSymbolInMemory(Symbol))
-      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
+    if (isSymbolInMemory(Symbol)) {
+      SymbolInfo SymInfo{cantFail(Symbol.getAddress()), Symbol};
+      if (checkSymbolInSection(SymInfo))
+        SortedSymbols.push_back(SymInfo);
+    }
 
   auto CompareSymbols = [this](const SymbolInfo &A, const SymbolInfo &B) {
     if (A.Address != B.Address)
@@ -3721,41 +3756,15 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       return Address;
     };
 
-    // Try to allocate sections before the \p Address and return an address for
-    // the allocation of the first section or 0 if \p is not big enough.
-    auto allocateBefore = [&](uint64_t Address) -> uint64_t {
-      for (auto SI = CodeSections.rbegin(), SE = CodeSections.rend(); SI != SE;
-           ++SI) {
-        BinarySection *Section = *SI;
-        if (Section->getOutputSize() > Address)
-          return 0;
-        Address -= Section->getOutputSize();
-        Address = alignDown(Address, Section->getAlignment());
-        Section->setOutputAddress(Address);
-      }
-      return Address;
-    };
-
     // Check if we can fit code in the original .text
     bool AllocationDone = false;
     if (opts::UseOldText) {
-      uint64_t StartAddress;
-      uint64_t EndAddress;
-      if (opts::HotFunctionsAtEnd) {
-        EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
-        StartAddress = allocateBefore(EndAddress);
-      } else {
-        StartAddress = BC->OldTextSectionAddress;
-        EndAddress = allocateAt(BC->OldTextSectionAddress);
-      }
+      const uint64_t CodeSize =
+          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
 
-      const uint64_t CodeSize = EndAddress - StartAddress;
       if (CodeSize <= BC->OldTextSectionSize) {
         BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment";
-        if (StartAddress != BC->OldTextSectionAddress)
-          BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
-        BC->outs() << '\n';
+                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
         AllocationDone = true;
       } else {
         BC->errs()

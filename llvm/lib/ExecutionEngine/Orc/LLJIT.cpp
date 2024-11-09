@@ -477,12 +477,16 @@ private:
     auto *CxaAtExitCallbackTy = FunctionType::get(VoidTy, {BytePtrTy}, false);
     auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(CxaAtExitCallbackTy);
 
-    addHelperAndWrapper(
+    auto *CxaAtExit = addHelperAndWrapper(
         *M, "__cxa_atexit",
         FunctionType::get(IntTy, {CxaAtExitCallbackPtrTy, BytePtrTy, BytePtrTy},
                           false),
         GlobalValue::DefaultVisibility, "__lljit.cxa_atexit_helper",
         {PlatformInstanceDecl});
+    Attribute::AttrKind CxaAtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (CxaAtExitExtAttr != Attribute::None)
+      CxaAtExit->addRetAttr(CxaAtExitExtAttr);
 
     return ThreadSafeModule(std::move(M), std::move(Ctx));
   }
@@ -608,7 +612,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -621,7 +625,8 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  if (ES.getTargetTriple().isOSBinFormatMachO()) {
+  const Triple &TT = ES.getTargetTriple();
+  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
     if (InitializedDylib.contains(&JD)) {
       WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
       dlupdate = true;
@@ -634,14 +639,11 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
     if (dlupdate) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD],
-                                                 int32_t(ORC_RT_RTLD_LAZY));
-      if (E)
-        return E;
-      else if (result)
+                                                 result, DSOHandles[&JD]);
+      if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
-      return Error::success();
+      return E;
     }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),

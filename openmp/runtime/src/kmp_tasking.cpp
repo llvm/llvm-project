@@ -5491,7 +5491,8 @@ static kmp_tdg_info_t *__kmp_find_tdg(kmp_int32 tdg_id) {
 
 // __kmp_print_tdg_dot: prints the TDG to a dot file
 // tdg:    ID of the TDG
-void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg) {
+// gtid:   Global Thread ID
+void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
   kmp_int32 tdg_id = tdg->tdg_id;
   KA_TRACE(10, ("__kmp_print_tdg_dot(enter): T#%d tdg_id=%d \n", gtid, tdg_id));
 
@@ -5693,7 +5694,7 @@ void __kmp_end_record(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
   KMP_ATOMIC_ST_RLX(&__kmp_tdg_task_id, 0);
 
   if (__kmp_tdg_dot)
-    __kmp_print_tdg_dot(tdg);
+    __kmp_print_tdg_dot(tdg, gtid);
 }
 
 // __kmpc_end_record_task: wrapper around __kmp_end_record to mark

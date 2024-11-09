@@ -209,7 +209,7 @@ bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     return true;
   if (s.isUndefWeak())
     return false;
-  return !PPC::inBranchRange(type, branchAddr, s.getVA(a));
+  return !PPC::inBranchRange(type, branchAddr, s.getVA(ctx, a));
 }
 
 uint32_t PPC::getThunkSectionSpacing() const { return 0x2000000; }
@@ -269,8 +269,8 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HI:
     return R_TPREL;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -482,14 +482,14 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   case R_PPC_TLS: {
     uint32_t insn = read32(ctx, loc);
     if (insn >> 26 != 31)
-      error("unrecognized instruction for IE to LE R_PPC_TLS");
+      ErrAlways(ctx) << "unrecognized instruction for IE to LE R_PPC_TLS";
     // addi rT, rT, x@tls --> addi rT, rT, x@tprel@l
     unsigned secondaryOp = (read32(ctx, loc) & 0x000007fe) >> 1;
     uint32_t dFormOp = getPPCDFormOp(secondaryOp);
     if (dFormOp == 0) { // Expecting a DS-Form instruction.
       dFormOp = getPPCDSFormOp(secondaryOp);
       if (dFormOp == 0)
-        error("unrecognized instruction for IE to LE R_PPC_TLS");
+        ErrAlways(ctx) << "unrecognized instruction for IE to LE R_PPC_TLS";
     }
     write32(ctx, loc, (dFormOp | (insn & 0x03ff0000) | lo(val)));
     break;

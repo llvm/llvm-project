@@ -160,7 +160,7 @@ void PrintFatalError(const RecordVal *RecVal, const Twine &Msg) {
 
 // Check an assertion: Obtain the condition value and be sure it is true.
 // If not, print a nonfatal error along with the message.
-bool CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
+bool CheckAssert(SMLoc Loc, const Init *Condition, const Init *Message) {
   auto *CondValue = dyn_cast_or_null<IntInit>(Condition->convertInitializerTo(
       IntRecTy::get(Condition->getRecordKeeper())));
   if (!CondValue) {
@@ -178,7 +178,7 @@ bool CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
 }
 
 // Dump a message to stderr.
-void dumpMessage(SMLoc Loc, Init *Message) {
+void dumpMessage(SMLoc Loc, const Init *Message) {
   if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(Loc, MessageInit->getValue());
   else

@@ -156,14 +156,14 @@ uint32_t RISCV::calcEFlags() const {
       target |= EF_RISCV_RVC;
 
     if ((eflags & EF_RISCV_FLOAT_ABI) != (target & EF_RISCV_FLOAT_ABI))
-      error(
-          toString(f) +
-          ": cannot link object files with different floating-point ABI from " +
-          toString(ctx.objectFiles[0]));
+      ErrAlways(ctx) << f
+                     << ": cannot link object files with different "
+                        "floating-point ABI from "
+                     << ctx.objectFiles[0];
 
     if ((eflags & EF_RISCV_RVE) != (target & EF_RISCV_RVE))
-      error(toString(f) +
-            ": cannot link object files with different EF_RISCV_RVE");
+      ErrAlways(ctx)
+          << f << ": cannot link object files with different EF_RISCV_RVE";
   }
 
   return target;
@@ -214,9 +214,9 @@ void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA());
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
@@ -325,8 +325,8 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -466,7 +466,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
-    int64_t displace = SignExtend64(val - gp->getVA(), bits);
+    int64_t displace = SignExtend64(val - gp->getVA(ctx), bits);
     checkInt(ctx, loc, displace, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
     if (rel.type == INTERNAL_R_RISCV_GPREL_I)
@@ -657,17 +657,18 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&
             rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
-          auto val = rel.sym->getVA(rel.addend) - rel1.sym->getVA(rel1.addend);
+          auto val = rel.sym->getVA(ctx, rel.addend) -
+                     rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
-            errorOrWarn(sec.getLocation(rel.offset) + ": ULEB128 value " +
-                        Twine(val) + " exceeds available space; references '" +
-                        lld::toString(*rel.sym) + "'");
+            Err(ctx) << sec.getLocation(rel.offset) << ": ULEB128 value "
+                     << Twine(val) << " exceeds available space; references '"
+                     << lld::toString(*rel.sym) << "'";
           ++i;
           continue;
         }
       }
-      errorOrWarn(sec.getLocation(rel.offset) +
-                  ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128");
+      Err(ctx) << sec.getLocation(rel.offset)
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
       return;
     default:
       break;
@@ -737,7 +738,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
   const uint64_t dest =
-      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA()) + r.addend;
+      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
   const int64_t displace = dest - loc;
 
   if (rvc && isInt<12>(displace) && rd == 0) {
@@ -757,9 +758,9 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 }
 
 // Relax local-exec TLS when hi20 is zero.
-static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
-                       Relocation &r, uint32_t &remove) {
-  uint64_t val = r.sym->getVA(r.addend);
+static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
+                       uint64_t loc, Relocation &r, uint32_t &remove) {
+  uint64_t val = r.sym->getVA(ctx, r.addend);
   if (hi20(val) != 0)
     return;
   uint32_t insn = read32le(sec.content().data() + r.offset);
@@ -791,7 +792,7 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   if (!gp)
     return;
 
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+  if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
     return;
 
   switch (r.type) {
@@ -831,12 +832,12 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       remove = nextLoc - ((loc + align - 1) & -align);
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
-                    "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(r.addend) +
-                    " bytes available "
-                    "for requested alignment of " +
-                    Twine(align) + " bytes");
+        Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
+                 << "insufficient padding bytes for " << lld::toString(r.type)
+                 << ": " << Twine(r.addend)
+                 << " bytes available "
+                    "for requested alignment of "
+                 << Twine(align) << " bytes";
         remove = 0;
       }
       break;
@@ -851,7 +852,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
       if (relaxable(relocs, i))
-        relaxTlsLe(sec, i, loc, r, remove);
+        relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
@@ -863,7 +864,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
       tlsdescRelax = relaxable(relocs, i);
       toLeShortForm = tlsdescRelax && r.expr == R_RELAX_TLS_GD_TO_LE &&
-                      !hi20(r.sym->getVA(r.addend));
+                      !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
       // For TLSDESC=>LE/IE, AUIPC and L[DW] are removed if relaxable.
@@ -900,7 +901,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    fatal("section size decrease is too large: " + Twine(delta));
+    Fatal(ctx) << "section size decrease is too large: " << Twine(delta);
   sec.bytesDropped = delta;
   return changed;
 }
@@ -933,7 +934,7 @@ bool RISCV::relaxOnce(int pass) const {
 
 void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
-  log("relaxation passes: " + Twine(passes));
+  Log(ctx) << "relaxation passes: " << Twine(passes);
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -1063,8 +1064,8 @@ static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
   if (!maybeInfo) {
-    errorOrWarn(toString(sec) + ": " + s + ": " +
-                llvm::toString(maybeInfo.takeError()));
+    Err(ctx) << sec << ": " << s << ": "
+             << llvm::toString(maybeInfo.takeError());
     return;
   }
 
@@ -1096,11 +1097,11 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     return;
 
   auto reportAbiError = [&]() {
-    errorOrWarn("atomic abi mismatch for " + oldSection->name + "\n>>> " +
-                toString(oldSection) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(oldTag)) +
-                "\n>>> " + toString(newSection) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(newTag)));
+    Err(ctx) << "atomic abi mismatch for " << oldSection->name << "\n>>> "
+             << oldSection
+             << ": atomic_abi=" << Twine(static_cast<unsigned>(oldTag))
+             << "\n>>> " << newSection
+             << ": atomic_abi=" << Twine(static_cast<unsigned>(newTag));
   };
 
   auto reportUnknownAbiError = [](const InputSectionBase *section,
@@ -1112,9 +1113,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
     case RISCVAtomicAbiTag::A7:
       return;
     };
-    errorOrWarn("unknown atomic abi for " + section->name + "\n>>> " +
-                toString(section) +
-                ": atomic_abi=" + Twine(static_cast<unsigned>(tag)));
+    Err(ctx) << "unknown atomic abi for " << section->name << "\n>>> "
+             << section << ": atomic_abi=" << Twine(static_cast<unsigned>(tag));
   };
   switch (oldTag) {
   case RISCVAtomicAbiTag::UNKNOWN:
@@ -1188,7 +1188,7 @@ mergeAttributesSection(Ctx &ctx,
   for (const InputSectionBase *sec : sections) {
     RISCVAttributeParser parser;
     if (Error e = parser.parse(sec->content(), llvm::endianness::little))
-      warn(toString(sec) + ": " + llvm::toString(std::move(e)));
+      Warn(ctx) << sec << ": " << llvm::toString(std::move(e));
     for (const auto &tag : attributesTags) {
       switch (RISCVAttrs::AttrType(tag.attr)) {
         // Integer attributes.
@@ -1199,9 +1199,9 @@ mergeAttributesSection(Ctx &ctx,
             firstStackAlign = sec;
             firstStackAlignValue = *i;
           } else if (r.first->second != *i) {
-            errorOrWarn(toString(sec) + " has stack_align=" + Twine(*i) +
-                        " but " + toString(firstStackAlign) +
-                        " has stack_align=" + Twine(firstStackAlignValue));
+            Err(ctx) << sec << " has stack_align=" << Twine(*i) << " but "
+                     << firstStackAlign
+                     << " has stack_align=" << Twine(firstStackAlignValue);
           }
         }
         continue;
@@ -1261,7 +1261,7 @@ mergeAttributesSection(Ctx &ctx,
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
                                  saver().save((*result)->toString()));
     } else {
-      errorOrWarn(llvm::toString(result.takeError()));
+      Err(ctx) << llvm::toString(result.takeError());
     }
   }
 

@@ -99,8 +99,6 @@ define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: madak_f32:
@@ -147,8 +145,6 @@ define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FMA-NEXT:    v_fmaak_f32 v1, v1, v2, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, ptr addrspace(1) %in.a, i32 %tid
@@ -283,8 +279,6 @@ define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[2:3] offset:4 dlc
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: madak_2_use_f32:
@@ -346,8 +340,6 @@ define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GFX11-FMA-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[2:3] offset:4 dlc
 ; GFX11-FMA-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
@@ -440,8 +432,6 @@ define amdgpu_kernel void @madak_m_inline_imm_f32(ptr addrspace(1) noalias %out,
 ; GFX11-MAD-NEXT:    v_mul_f32_e32 v1, 4.0, v1
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: madak_m_inline_imm_f32:
@@ -478,8 +468,6 @@ define amdgpu_kernel void @madak_m_inline_imm_f32(ptr addrspace(1) noalias %out,
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FMA-NEXT:    v_fmaak_f32 v1, 4.0, v1, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, ptr addrspace(1) %in.a, i32 %tid
@@ -582,8 +570,6 @@ define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, p
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 4.0, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: madak_inline_imm_f32:
@@ -630,8 +616,6 @@ define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, p
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FMA-NEXT:    v_fma_f32 v1, v1, v2, 4.0
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, ptr addrspace(1) %in.a, i32 %tid
@@ -726,8 +710,6 @@ define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addr
 ; GFX11-MAD-NEXT:    v_mul_f32_e32 v1, s0, v1
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: s_v_madak_f32:
@@ -770,8 +752,6 @@ define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addr
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FMA-NEXT:    v_fmaak_f32 v1, s0, v1, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, ptr addrspace(1) %in.a, i32 %tid
@@ -869,8 +849,6 @@ define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: v_s_madak_f32:
@@ -917,8 +895,6 @@ define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-FMA-NEXT:    v_fmaak_f32 v1, s4, v1, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.b.gep = getelementptr float, ptr addrspace(1) %in.b, i32 %tid
@@ -988,8 +964,6 @@ define amdgpu_kernel void @s_s_madak_f32(ptr addrspace(1) %out, float %a, float 
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_f32 v0, 0x41200000, v0
 ; GFX11-MAD-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: s_s_madak_f32:
@@ -1021,8 +995,6 @@ define amdgpu_kernel void @s_s_madak_f32(ptr addrspace(1) %out, float %a, float 
 ; GFX11-FMA-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FMA-NEXT:    v_fmaak_f32 v0, s2, v0, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %mul = fmul float %a, %b
   %madak = fadd float %mul, 10.0
@@ -1120,8 +1092,6 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: no_madak_src0_modifier_f32:
@@ -1169,8 +1139,6 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FMA-NEXT:    v_fma_f32 v1, |v1|, v2, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, ptr addrspace(1) %in.a, i32 %tid
@@ -1278,8 +1246,6 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: no_madak_src1_modifier_f32:
@@ -1327,8 +1293,6 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FMA-NEXT:    v_fma_f32 v1, v1, |v2|, 0x41200000
 ; GFX11-FMA-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, ptr addrspace(1) %in.a, i32 %tid
@@ -1464,8 +1428,6 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-MAD-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; GFX11-MAD-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-MAD-NEXT:    s_nop 0
-; GFX11-MAD-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
 ; GFX940-FMA-LABEL: madak_constant_bus_violation:
@@ -1533,8 +1495,6 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-FMA-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; GFX11-FMA-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-FMA-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FMA-NEXT:    s_nop 0
-; GFX11-FMA-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FMA-NEXT:    s_endpgm
 bb:
   %tmp = icmp eq i32 %arg1, 0

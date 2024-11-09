@@ -3606,6 +3606,10 @@ def : Pat<(i64 (lround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
 def : Pat<(i64 (lround f32:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
+def : Pat<(i32 (lround f64:$S)),
+          (i32 (MFVSRWZ (FCTIW (XSRDPI $S))))>;
+def : Pat<(i32 (lround f32:$S)),
+          (i32 (MFVSRWZ (FCTIW (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
 def : Pat<(i64 (llround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
 def : Pat<(i64 (llround f32:$S)),

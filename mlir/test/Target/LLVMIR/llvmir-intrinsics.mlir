@@ -363,6 +363,21 @@ llvm.func @umin_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector
   llvm.return
 }
 
+// CHECK-LABEL: @assume_without_opbundles
+llvm.func @assume_without_opbundles(%cond: i1) {
+  // CHECK: call void @llvm.assume(i1 %{{.+}})
+  llvm.intr.assume %cond : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @assume_with_opbundles
+llvm.func @assume_with_opbundles(%cond: i1, %p: !llvm.ptr) {
+  %0 = llvm.mlir.constant(8 : i32) : i32
+  // CHECK: call void @llvm.assume(i1 %{{.+}}) [ "align"(ptr %{{.+}}, i32 8) ]
+  llvm.intr.assume %cond ["align"(%p, %0 : !llvm.ptr, i32)] : i1
+  llvm.return
+}
+
 // CHECK-LABEL: @vector_reductions
 llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi32>) {
   // CHECK: call i32 @llvm.vector.reduce.add.v8i32
