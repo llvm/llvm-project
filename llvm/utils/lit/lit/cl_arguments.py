@@ -167,8 +167,8 @@ def parse_args():
     )
     execution_group.add_argument(
         "--report-failures-only",
-        help="When writing a test report, do not include results for "
-                 "tests that completed successfully or were not run",
+        help="Only include unresolved, timed out, failed"
+        " and unexpectedly passed tests in the report",
         action="store_true"
     )
     execution_group.add_argument(
