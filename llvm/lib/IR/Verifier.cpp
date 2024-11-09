@@ -5519,8 +5519,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
   case Intrinsic::memset:
-  case Intrinsic::memset_inline:
+  case Intrinsic::memset_inline: {
+    break;
+  }
   case Intrinsic::experimental_memset_pattern: {
+    Check(Call.getOperand(1)->getType()->getScalarSizeInBits() % 8 == 0,
+          "pattern type must be an integral number of bytes", Call);
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:
