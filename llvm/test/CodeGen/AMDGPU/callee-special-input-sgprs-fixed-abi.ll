@@ -31,7 +31,7 @@ define hidden void @use_queue_ptr() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_queue_ptr:
 ; GCN: s_swappc_b64 s[30:31], s[10:11]
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
   call void @use_queue_ptr()
   ret void
@@ -470,7 +470,7 @@ define hidden void @use_every_sgpr_input() #1 {
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
@@ -495,7 +495,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
