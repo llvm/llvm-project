@@ -187,6 +187,7 @@ public:
 
     auto mlirMod = gen->getModule();
     auto mlirCtx = gen->takeContext();
+    auto &cgm = gen->getCGM();
 
     auto setupCIRPipelineAndExecute = [&] {
       // Sanitize passes options. MLIR uses spaces between pass options
@@ -205,15 +206,16 @@ public:
 
       // Setup and run CIR pipeline.
       std::string passOptParsingFailure;
-      if (runCIRToCIRPasses(
-              mlirMod, mlirCtx.get(), C, !feOptions.ClangIRDisableCIRVerifier,
-              feOptions.ClangIRLifetimeCheck, lifetimeOpts,
-              feOptions.ClangIRIdiomRecognizer, idiomRecognizerOpts,
-              feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure,
-              codeGenOptions.OptimizationLevel > 0,
-              action == CIRGenAction::OutputType::EmitCIRFlat,
-              action == CIRGenAction::OutputType::EmitMLIR, enableCCLowering,
-              feOptions.ClangIREnableMem2Reg)
+      if (runCIRToCIRPasses(mlirMod, mlirCtx.get(), cgm, C,
+                            !feOptions.ClangIRDisableCIRVerifier,
+                            feOptions.ClangIRLifetimeCheck, lifetimeOpts,
+                            feOptions.ClangIRIdiomRecognizer,
+                            idiomRecognizerOpts, feOptions.ClangIRLibOpt,
+                            libOptOpts, passOptParsingFailure,
+                            codeGenOptions.OptimizationLevel > 0,
+                            action == CIRGenAction::OutputType::EmitCIRFlat,
+                            action == CIRGenAction::OutputType::EmitMLIR,
+                            enableCCLowering, feOptions.ClangIREnableMem2Reg)
               .failed()) {
         if (!passOptParsingFailure.empty())
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)

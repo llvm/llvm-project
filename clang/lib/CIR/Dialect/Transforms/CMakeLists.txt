@@ -2,7 +2,6 @@ add_subdirectory(TargetLowering)
 
 add_clang_library(MLIRCIRTransforms
   LifetimeCheck.cpp
-  LoweringPrepare.cpp
   CIRCanonicalize.cpp
   CIRSimplify.cpp
   DropAST.cpp

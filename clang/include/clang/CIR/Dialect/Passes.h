@@ -17,7 +17,11 @@
 
 namespace clang {
 class ASTContext;
-}
+namespace CIRGen {
+class CIRGenModule;
+} // namespace CIRGen
+} // namespace clang
+
 namespace mlir {
 
 std::unique_ptr<Pass> createLifetimeCheckPass();
@@ -31,7 +35,9 @@ std::unique_ptr<Pass> createCIRSimplifyPass();
 std::unique_ptr<Pass> createDropASTPass();
 std::unique_ptr<Pass> createSCFPreparePass();
 std::unique_ptr<Pass> createLoweringPreparePass();
-std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
+std::unique_ptr<Pass>
+createLoweringPreparePass(clang::ASTContext *astCtx,
+                          clang::CIRGen::CIRGenModule &cgm);
 std::unique_ptr<Pass> createIdiomRecognizerPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createLibOptPass();

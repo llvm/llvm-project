@@ -109,7 +109,7 @@ def SCFPrepare : Pass<"cir-mlir-scf-prepare"> {
 
 def HoistAllocas : Pass<"cir-hoist-allocas"> {
   let summary = "Hoist allocas to the entry of the function";
-  let description = [{ 
+  let description = [{
     This pass hoist all non-dynamic allocas to the entry of the function.
     This is helpful for later code generation.
   }];
@@ -119,7 +119,7 @@ def HoistAllocas : Pass<"cir-hoist-allocas"> {
 
 def FlattenCFG : Pass<"cir-flatten-cfg"> {
   let summary = "Produces flatten cfg";
-  let description = [{ 
+  let description = [{
     This pass transforms CIR and inline all the nested regions. Thus,
     the next post condtions are met after the pass applied:
     - there is not any nested region in a function body
