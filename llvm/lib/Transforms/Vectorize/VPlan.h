@@ -4117,13 +4117,21 @@ public:
   /// the successors of \p From and \p From to the predecessors of \p To. Both
   /// VPBlockBases must have the same parent, which can be null. Both
   /// VPBlockBases can be already connected to other VPBlockBases.
-  static void connectBlocks(VPBlockBase *From, VPBlockBase *To) {
+  static void connectBlocks(VPBlockBase *From, VPBlockBase *To,
+                            unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert(From->getNumSuccessors() < 2 &&
+    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
            "Blocks can't have more than two successors.");
-    From->appendSuccessor(To);
-    To->appendPredecessor(From);
+    if (SuccIdx == -1u)
+      From->appendSuccessor(To);
+    else
+      From->getSuccessors()[SuccIdx] = To;
+
+    if (PredIdx == -1u)
+      To->appendPredecessor(From);
+    else
+      To->getPredecessors()[PredIdx] = From;
   }
 
   /// Disconnect VPBlockBases \p From and \p To bi-directionally. Remove \p To
