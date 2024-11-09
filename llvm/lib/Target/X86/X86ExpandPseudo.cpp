@@ -14,7 +14,6 @@
 
 #include "X86.h"
 #include "X86FrameLowering.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
