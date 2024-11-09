@@ -80,112 +80,119 @@ test_sort_()
 }
 
 template <int N, int M>
-TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
-  static_assert(N != 0);
-  static_assert(M != 0);
-
-  // create array length N filled with M different numbers
-  std::array<int, N> array_;
-  int* const array = array_.data();
-  int x            = 0;
-  for (int i = 0; i < N; ++i) {
-    array[i] = x;
-    if (++x == M)
-      x = 0;
-  }
-  // test saw tooth pattern
-  std::stable_sort(array, array + N);
-  assert(std::is_sorted(array, array + N));
-  // test random pattern
+TEST_CONSTEXPR_CXX26
+void
+test_larger_sorts()
+{
+    static_assert(N != 0);
+    static_assert(M != 0);
+    // create array length N filled with M different numbers
+    std::array<int, N> array_;
+    int* array = array_.data();
+    int x = 0;
+    for (int i = 0; i < N; ++i)
+    {
+        array[i] = x;
+        if (++x == M)
+            x = 0;
+    }
+    // test saw tooth pattern
+    std::stable_sort(array, array+N);
+    assert(std::is_sorted(array, array+N));
+    // test random pattern
 #if TEST_STD_VER >= 26
-  if !consteval // random-number generators not constexpr-friendly
+    if !consteval // random-number generators not constexpr-friendly
 #endif
-  {
-    static std::mt19937 randomness;
-    std::shuffle(array, array + N, randomness);
-    std::stable_sort(array, array + N);
-    assert(std::is_sorted(array, array + N));
-  }
-  // test sorted pattern
-  std::stable_sort(array, array + N);
-  assert(std::is_sorted(array, array + N));
-  // test reverse sorted pattern
-  std::reverse(array, array + N);
-  std::stable_sort(array, array + N);
-  assert(std::is_sorted(array, array + N));
-  // test swap ranges 2 pattern
-  std::swap_ranges(array, array + N / 2, array + N / 2);
-  std::stable_sort(array, array + N);
-  assert(std::is_sorted(array, array + N));
-  // test reverse swap ranges 2 pattern
-  std::reverse(array, array + N);
-  std::swap_ranges(array, array + N / 2, array + N / 2);
-  std::stable_sort(array, array + N);
-  assert(std::is_sorted(array, array + N));
+    {
+        static std::mt19937 randomness;
+        std::shuffle(array, array+N, randomness);
+        std::stable_sort(array, array+N);
+        assert(std::is_sorted(array, array+N));
+    }
+    // test sorted pattern
+    std::stable_sort(array, array+N);
+    assert(std::is_sorted(array, array+N));
+    // test reverse sorted pattern
+    std::reverse(array, array+N);
+    std::stable_sort(array, array+N);
+    assert(std::is_sorted(array, array+N));
+    // test swap ranges 2 pattern
+    std::swap_ranges(array, array+N/2, array+N/2);
+    std::stable_sort(array, array+N);
+    assert(std::is_sorted(array, array+N));
+    // test reverse swap ranges 2 pattern
+    std::reverse(array, array+N);
+    std::swap_ranges(array, array+N/2, array+N/2);
+    std::stable_sort(array, array+N);
+    assert(std::is_sorted(array, array+N));
 }
 
 template <int N>
-TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
-  test_larger_sorts<N, 1>();
-  test_larger_sorts<N, 2>();
-  test_larger_sorts<N, 3>();
-  test_larger_sorts<N, N / 2 - 1>();
-  test_larger_sorts<N, N / 2>();
-  test_larger_sorts<N, N / 2 + 1>();
-  test_larger_sorts<N, N - 2>();
-  test_larger_sorts<N, N - 1>();
-  test_larger_sorts<N, N>();
+TEST_CONSTEXPR_CXX26
+void
+test_larger_sorts()
+{
+    test_larger_sorts<N, 1>();
+    test_larger_sorts<N, 2>();
+    test_larger_sorts<N, 3>();
+    test_larger_sorts<N, N/2-1>();
+    test_larger_sorts<N, N/2>();
+    test_larger_sorts<N, N/2+1>();
+    test_larger_sorts<N, N-2>();
+    test_larger_sorts<N, N-1>();
+    test_larger_sorts<N, N>();
 }
 
-TEST_CONSTEXPR_CXX26 void test() {
-  // test null range
-  int d = 0;
-  std::stable_sort(&d, &d);
-
-  // exhaustively test all possibilities up to length 8
+TEST_CONSTEXPR_CXX26 void test()
+{
+    // test null range
+    int d = 0;
+    std::stable_sort(&d, &d);
+  
+    // exhaustively test all possibilities up to length 8
 #if TEST_STD_VER >= 26
-  if !consteval
+    if !consteval
 #endif
-  {
-    test_sort_<1>();
-    test_sort_<2>();
-    test_sort_<3>();
-    test_sort_<4>();
-    test_sort_<5>();
-    test_sort_<6>();
-    test_sort_<7>();
-    test_sort_<8>();
-  }
-
-  test_larger_sorts<256>();
-  test_larger_sorts<257>();
-  test_larger_sorts<499>();
-  test_larger_sorts<500>();
-  test_larger_sorts<997>();
+    {
+        test_sort_<1>();
+        test_sort_<2>();
+        test_sort_<3>();
+        test_sort_<4>();
+        test_sort_<5>();
+        test_sort_<6>();
+        test_sort_<7>();
+        test_sort_<8>();
+    }
+  
+    test_larger_sorts<256>();
+    test_larger_sorts<257>();
+    test_larger_sorts<499>();
+    test_larger_sorts<500>();
+    test_larger_sorts<997>();
 #if TEST_STD_VER >= 26
-  if !consteval // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
+    if !consteval // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
 #endif
-  {
-    test_larger_sorts<1000>();
-    test_larger_sorts<1009>();
-  }
+    {
+        test_larger_sorts<1000>();
+        test_larger_sorts<1009>();
+    }
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-#  if TEST_STD_VER >= 26
-  if !consteval
-#  endif
-  { // check that the algorithm works without memory
-    std::vector<int> vec(150, 3);
-    getGlobalMemCounter()->throw_after = 0;
-    std::stable_sort(vec.begin(), vec.end());
-  }
+#if TEST_STD_VER >= 26
+    if !consteval
+#endif
+    { // check that the algorithm works without memory
+        std::vector<int> vec(150, 3);
+        getGlobalMemCounter()->throw_after = 0;
+        std::stable_sort(vec.begin(), vec.end());
+    }
 #endif // !defined(TEST_HAS_NO_EXCEPTIONS)
 }
 
 int main(int, char**) {
-  test();
+    test();
 #if TEST_STD_VER >= 26
-  static_assert((test(), true));
+    static_assert((test(), true));
 #endif
-  return 0;
+    return 0;
 }
