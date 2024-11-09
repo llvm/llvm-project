@@ -1263,7 +1263,7 @@ public:
   }
 };
 
-/// This is the base class for memset.pattern
+/// This is the base class for llm.experimental.memset.pattern
 class MemSetPatternIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
 private:
   enum { ARG_VOLATILE = 3 };
@@ -1279,12 +1279,7 @@ public:
 
   // Methods for support of type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    switch (I->getIntrinsicID()) {
-    case Intrinsic::experimental_memset_pattern:
-      return true;
-    default:
-      return false;
-    }
+    return I->getIntrinsicID() == Intrinsic::experimental_memset_pattern;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
