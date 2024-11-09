@@ -19,9 +19,6 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    v_readlane_b32 s14, v40, 0
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[8:9]
-; CHECK-NEXT:    v_mov_b32_e32 v3, v2
-; CHECK-NEXT:    v_mov_b32_e32 v2, v1
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_load_dword s8, s[16:17], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_writelane_b32 v40, s8, 1
@@ -39,8 +36,8 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    s_addc_u32 s15, s9, s15
 ; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
 ; CHECK-NEXT:    s_mov_b32 s9, s15
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0x2000
-; CHECK-NEXT:    ; implicit-def: $sgpr15
+; CHECK-NEXT:    s_mov_b32 s15, 0x2000
+; CHECK-NEXT:    s_mov_b32 s18, s15
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, device_func@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, device_func@gotpcrel32@hi+12
@@ -48,13 +45,14 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[20:21], s[0:1]
 ; CHECK-NEXT:    s_mov_b32 s15, 20
-; CHECK-NEXT:    v_lshlrev_b32_e64 v3, s15, v3
-; CHECK-NEXT:    s_mov_b32 s15, 10
 ; CHECK-NEXT:    v_lshlrev_b32_e64 v2, s15, v2
-; CHECK-NEXT:    v_or3_b32 v31, v1, v2, v3
+; CHECK-NEXT:    s_mov_b32 s15, 10
+; CHECK-NEXT:    v_lshlrev_b32_e64 v1, s15, v1
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; CHECK-NEXT:    v_mov_b32_e32 v0, s18
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_add_i32 s4, s33, 0x100100
