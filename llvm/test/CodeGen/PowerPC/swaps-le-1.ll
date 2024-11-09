@@ -47,20 +47,19 @@ define void @foo() {
 ; CHECK-P8-LABEL: foo:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li 3, 256
-; CHECK-P8-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    addis 4, 2, .LC0@toc@ha
 ; CHECK-P8-NEXT:    addis 5, 2, .LC1@toc@ha
 ; CHECK-P8-NEXT:    addis 6, 2, .LC2@toc@ha
 ; CHECK-P8-NEXT:    addis 7, 2, .LC3@toc@ha
 ; CHECK-P8-NEXT:    li 8, 16
+; CHECK-P8-NEXT:    li 9, 32
 ; CHECK-P8-NEXT:    mtctr 3
 ; CHECK-P8-NEXT:    ld 4, .LC0@toc@l(4)
 ; CHECK-P8-NEXT:    ld 5, .LC1@toc@l(5)
 ; CHECK-P8-NEXT:    ld 6, .LC2@toc@l(6)
 ; CHECK-P8-NEXT:    ld 7, .LC3@toc@l(7)
 ; CHECK-P8-NEXT:    li 3, 0
-; CHECK-P8-NEXT:    li 9, 32
 ; CHECK-P8-NEXT:    li 10, 48
 ; CHECK-P8-NEXT:    .p2align 4
 ; CHECK-P8-NEXT:  .LBB0_1: # %vector.body
@@ -69,107 +68,104 @@ define void @foo() {
 ; CHECK-P8-NEXT:    lxvd2x 35, 5, 3
 ; CHECK-P8-NEXT:    add 11, 4, 3
 ; CHECK-P8-NEXT:    add 12, 5, 3
+; CHECK-P8-NEXT:    lxvd2x 36, 6, 3
 ; CHECK-P8-NEXT:    add 30, 6, 3
-; CHECK-P8-NEXT:    add 29, 7, 3
+; CHECK-P8-NEXT:    lxvd2x 37, 11, 8
+; CHECK-P8-NEXT:    lxvd2x 32, 12, 10
 ; CHECK-P8-NEXT:    vadduwm 2, 3, 2
-; CHECK-P8-NEXT:    lxvd2x 35, 6, 3
-; CHECK-P8-NEXT:    vmuluwm 2, 2, 3
-; CHECK-P8-NEXT:    stxvd2x 34, 7, 3
-; CHECK-P8-NEXT:    addi 3, 3, 64
-; CHECK-P8-NEXT:    lxvd2x 34, 11, 8
 ; CHECK-P8-NEXT:    lxvd2x 35, 12, 8
-; CHECK-P8-NEXT:    vadduwm 2, 3, 2
-; CHECK-P8-NEXT:    lxvd2x 35, 30, 8
-; CHECK-P8-NEXT:    vmuluwm 2, 2, 3
-; CHECK-P8-NEXT:    stxvd2x 34, 29, 8
-; CHECK-P8-NEXT:    lxvd2x 34, 11, 9
-; CHECK-P8-NEXT:    lxvd2x 35, 12, 9
-; CHECK-P8-NEXT:    vadduwm 2, 3, 2
-; CHECK-P8-NEXT:    lxvd2x 35, 30, 9
-; CHECK-P8-NEXT:    vmuluwm 2, 2, 3
-; CHECK-P8-NEXT:    stxvd2x 34, 29, 9
-; CHECK-P8-NEXT:    lxvd2x 34, 11, 10
-; CHECK-P8-NEXT:    lxvd2x 35, 12, 10
-; CHECK-P8-NEXT:    vadduwm 2, 3, 2
-; CHECK-P8-NEXT:    lxvd2x 35, 30, 10
-; CHECK-P8-NEXT:    vmuluwm 2, 2, 3
-; CHECK-P8-NEXT:    stxvd2x 34, 29, 10
+; CHECK-P8-NEXT:    vmuluwm 2, 2, 4
+; CHECK-P8-NEXT:    lxvd2x 36, 11, 9
+; CHECK-P8-NEXT:    vadduwm 3, 3, 5
+; CHECK-P8-NEXT:    lxvd2x 37, 12, 9
+; CHECK-P8-NEXT:    stxvd2x 34, 7, 3
+; CHECK-P8-NEXT:    lxvd2x 34, 30, 10
+; CHECK-P8-NEXT:    vadduwm 4, 5, 4
+; CHECK-P8-NEXT:    lxvd2x 37, 11, 10
+; CHECK-P8-NEXT:    add 11, 7, 3
+; CHECK-P8-NEXT:    addi 3, 3, 64
+; CHECK-P8-NEXT:    vadduwm 5, 0, 5
+; CHECK-P8-NEXT:    lxvd2x 32, 30, 8
+; CHECK-P8-NEXT:    vmuluwm 2, 5, 2
+; CHECK-P8-NEXT:    vmuluwm 3, 3, 0
+; CHECK-P8-NEXT:    lxvd2x 32, 30, 9
+; CHECK-P8-NEXT:    stxvd2x 34, 11, 10
+; CHECK-P8-NEXT:    vmuluwm 4, 4, 0
+; CHECK-P8-NEXT:    stxvd2x 35, 11, 8
+; CHECK-P8-NEXT:    stxvd2x 36, 11, 9
 ; CHECK-P8-NEXT:    bdnz .LBB0_1
 ; CHECK-P8-NEXT:  # %bb.2: # %for.end
 ; CHECK-P8-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    blr
 ;
 ; NOOPTSWAP-P8-LABEL: foo:
 ; NOOPTSWAP-P8:       # %bb.0: # %entry
 ; NOOPTSWAP-P8-NEXT:    li 3, 256
-; NOOPTSWAP-P8-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; NOOPTSWAP-P8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; NOOPTSWAP-P8-NEXT:    addis 4, 2, .LC0@toc@ha
 ; NOOPTSWAP-P8-NEXT:    addis 5, 2, .LC1@toc@ha
 ; NOOPTSWAP-P8-NEXT:    addis 6, 2, .LC2@toc@ha
 ; NOOPTSWAP-P8-NEXT:    addis 7, 2, .LC3@toc@ha
 ; NOOPTSWAP-P8-NEXT:    li 8, 16
+; NOOPTSWAP-P8-NEXT:    li 9, 32
 ; NOOPTSWAP-P8-NEXT:    mtctr 3
 ; NOOPTSWAP-P8-NEXT:    ld 4, .LC0@toc@l(4)
 ; NOOPTSWAP-P8-NEXT:    ld 5, .LC1@toc@l(5)
 ; NOOPTSWAP-P8-NEXT:    ld 6, .LC2@toc@l(6)
 ; NOOPTSWAP-P8-NEXT:    ld 7, .LC3@toc@l(7)
 ; NOOPTSWAP-P8-NEXT:    li 3, 0
-; NOOPTSWAP-P8-NEXT:    li 9, 32
 ; NOOPTSWAP-P8-NEXT:    li 10, 48
 ; NOOPTSWAP-P8-NEXT:    .p2align 4
 ; NOOPTSWAP-P8-NEXT:  .LBB0_1: # %vector.body
 ; NOOPTSWAP-P8-NEXT:    #
 ; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 4, 3
+; NOOPTSWAP-P8-NEXT:    lxvd2x 1, 5, 3
+; NOOPTSWAP-P8-NEXT:    add 30, 6, 3
 ; NOOPTSWAP-P8-NEXT:    add 11, 4, 3
 ; NOOPTSWAP-P8-NEXT:    add 12, 5, 3
-; NOOPTSWAP-P8-NEXT:    add 30, 6, 3
-; NOOPTSWAP-P8-NEXT:    add 29, 7, 3
+; NOOPTSWAP-P8-NEXT:    lxvd2x 2, 11, 8
+; NOOPTSWAP-P8-NEXT:    lxvd2x 3, 12, 8
+; NOOPTSWAP-P8-NEXT:    lxvd2x 4, 11, 9
+; NOOPTSWAP-P8-NEXT:    lxvd2x 5, 12, 9
+; NOOPTSWAP-P8-NEXT:    lxvd2x 6, 11, 10
+; NOOPTSWAP-P8-NEXT:    add 11, 7, 3
+; NOOPTSWAP-P8-NEXT:    lxvd2x 7, 12, 10
 ; NOOPTSWAP-P8-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 5, 3
-; NOOPTSWAP-P8-NEXT:    xxswapd 35, 0
 ; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 6, 3
+; NOOPTSWAP-P8-NEXT:    xxswapd 35, 1
+; NOOPTSWAP-P8-NEXT:    lxvd2x 1, 30, 8
 ; NOOPTSWAP-P8-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P8-NEXT:    xxswapd 36, 0
-; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 4
+; NOOPTSWAP-P8-NEXT:    xxswapd 36, 2
+; NOOPTSWAP-P8-NEXT:    xxswapd 32, 4
+; NOOPTSWAP-P8-NEXT:    xxswapd 38, 6
+; NOOPTSWAP-P8-NEXT:    xxswapd 37, 3
+; NOOPTSWAP-P8-NEXT:    xxswapd 33, 5
+; NOOPTSWAP-P8-NEXT:    xxswapd 39, 7
+; NOOPTSWAP-P8-NEXT:    vadduwm 3, 5, 4
+; NOOPTSWAP-P8-NEXT:    vadduwm 4, 1, 0
+; NOOPTSWAP-P8-NEXT:    xxswapd 40, 0
+; NOOPTSWAP-P8-NEXT:    xxswapd 41, 1
+; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 30, 9
+; NOOPTSWAP-P8-NEXT:    lxvd2x 1, 30, 10
+; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 8
+; NOOPTSWAP-P8-NEXT:    vmuluwm 3, 3, 9
+; NOOPTSWAP-P8-NEXT:    xxswapd 42, 0
+; NOOPTSWAP-P8-NEXT:    xxswapd 43, 1
+; NOOPTSWAP-P8-NEXT:    vmuluwm 4, 4, 10
 ; NOOPTSWAP-P8-NEXT:    xxswapd 0, 34
+; NOOPTSWAP-P8-NEXT:    vadduwm 2, 7, 6
+; NOOPTSWAP-P8-NEXT:    xxswapd 1, 35
+; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 11
 ; NOOPTSWAP-P8-NEXT:    stxvd2x 0, 7, 3
 ; NOOPTSWAP-P8-NEXT:    addi 3, 3, 64
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 11, 8
-; NOOPTSWAP-P8-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 12, 8
-; NOOPTSWAP-P8-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 30, 8
-; NOOPTSWAP-P8-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P8-NEXT:    xxswapd 36, 0
-; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 4
-; NOOPTSWAP-P8-NEXT:    xxswapd 0, 34
-; NOOPTSWAP-P8-NEXT:    stxvd2x 0, 29, 8
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 11, 9
-; NOOPTSWAP-P8-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 12, 9
-; NOOPTSWAP-P8-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 30, 9
-; NOOPTSWAP-P8-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P8-NEXT:    xxswapd 36, 0
-; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 4
-; NOOPTSWAP-P8-NEXT:    xxswapd 0, 34
-; NOOPTSWAP-P8-NEXT:    stxvd2x 0, 29, 9
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 11, 10
-; NOOPTSWAP-P8-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 12, 10
-; NOOPTSWAP-P8-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P8-NEXT:    lxvd2x 0, 30, 10
-; NOOPTSWAP-P8-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P8-NEXT:    xxswapd 36, 0
-; NOOPTSWAP-P8-NEXT:    vmuluwm 2, 2, 4
-; NOOPTSWAP-P8-NEXT:    xxswapd 0, 34
-; NOOPTSWAP-P8-NEXT:    stxvd2x 0, 29, 10
+; NOOPTSWAP-P8-NEXT:    stxvd2x 1, 11, 8
+; NOOPTSWAP-P8-NEXT:    xxswapd 2, 36
+; NOOPTSWAP-P8-NEXT:    stxvd2x 2, 11, 9
+; NOOPTSWAP-P8-NEXT:    xxswapd 3, 34
+; NOOPTSWAP-P8-NEXT:    stxvd2x 3, 11, 10
 ; NOOPTSWAP-P8-NEXT:    bdnz .LBB0_1
 ; NOOPTSWAP-P8-NEXT:  # %bb.2: # %for.end
 ; NOOPTSWAP-P8-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; NOOPTSWAP-P8-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; NOOPTSWAP-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: foo:
@@ -229,10 +225,9 @@ define void @foo() {
 ; NOOPTSWAP-P9-NEXT:    addis 5, 2, .LC1@toc@ha
 ; NOOPTSWAP-P9-NEXT:    addis 6, 2, .LC2@toc@ha
 ; NOOPTSWAP-P9-NEXT:    addis 7, 2, .LC3@toc@ha
-; NOOPTSWAP-P9-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; NOOPTSWAP-P9-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; NOOPTSWAP-P9-NEXT:    ld 4, .LC0@toc@l(4)
 ; NOOPTSWAP-P9-NEXT:    li 3, 256
-; NOOPTSWAP-P9-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; NOOPTSWAP-P9-NEXT:    ld 5, .LC1@toc@l(5)
 ; NOOPTSWAP-P9-NEXT:    ld 6, .LC2@toc@l(6)
 ; NOOPTSWAP-P9-NEXT:    ld 7, .LC3@toc@l(7)
@@ -245,54 +240,53 @@ define void @foo() {
 ; NOOPTSWAP-P9-NEXT:  .LBB0_1: # %vector.body
 ; NOOPTSWAP-P9-NEXT:    #
 ; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 4, 3
-; NOOPTSWAP-P9-NEXT:    add 11, 4, 3
+; NOOPTSWAP-P9-NEXT:    lxvd2x 1, 5, 3
+; NOOPTSWAP-P9-NEXT:    lxvd2x 2, 6, 3
 ; NOOPTSWAP-P9-NEXT:    add 12, 5, 3
+; NOOPTSWAP-P9-NEXT:    add 11, 4, 3
 ; NOOPTSWAP-P9-NEXT:    add 30, 6, 3
-; NOOPTSWAP-P9-NEXT:    add 29, 7, 3
+; NOOPTSWAP-P9-NEXT:    lxvd2x 3, 11, 8
 ; NOOPTSWAP-P9-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 5, 3
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 6, 3
+; NOOPTSWAP-P9-NEXT:    xxswapd 35, 1
+; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 12, 8
+; NOOPTSWAP-P9-NEXT:    xxswapd 36, 2
+; NOOPTSWAP-P9-NEXT:    lxvd2x 1, 11, 9
 ; NOOPTSWAP-P9-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    vmuluwm 2, 2, 3
+; NOOPTSWAP-P9-NEXT:    xxswapd 35, 3
+; NOOPTSWAP-P9-NEXT:    vmuluwm 2, 2, 4
+; NOOPTSWAP-P9-NEXT:    xxswapd 36, 0
+; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 12, 9
+; NOOPTSWAP-P9-NEXT:    vadduwm 3, 4, 3
+; NOOPTSWAP-P9-NEXT:    xxswapd 36, 1
+; NOOPTSWAP-P9-NEXT:    lxvd2x 1, 12, 10
+; NOOPTSWAP-P9-NEXT:    xxswapd 37, 0
+; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 11, 10
+; NOOPTSWAP-P9-NEXT:    add 11, 7, 3
+; NOOPTSWAP-P9-NEXT:    vadduwm 4, 5, 4
+; NOOPTSWAP-P9-NEXT:    xxswapd 32, 1
+; NOOPTSWAP-P9-NEXT:    xxswapd 37, 0
+; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 30, 8
+; NOOPTSWAP-P9-NEXT:    vadduwm 5, 0, 5
+; NOOPTSWAP-P9-NEXT:    xxswapd 32, 0
+; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 30, 9
+; NOOPTSWAP-P9-NEXT:    vmuluwm 3, 3, 0
+; NOOPTSWAP-P9-NEXT:    xxswapd 32, 0
 ; NOOPTSWAP-P9-NEXT:    xxswapd 0, 34
+; NOOPTSWAP-P9-NEXT:    vmuluwm 4, 4, 0
 ; NOOPTSWAP-P9-NEXT:    stxvd2x 0, 7, 3
 ; NOOPTSWAP-P9-NEXT:    addi 3, 3, 64
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 11, 8
-; NOOPTSWAP-P9-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 12, 8
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 30, 8
-; NOOPTSWAP-P9-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    vmuluwm 2, 2, 3
-; NOOPTSWAP-P9-NEXT:    xxswapd 0, 34
-; NOOPTSWAP-P9-NEXT:    stxvd2x 0, 29, 8
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 11, 9
-; NOOPTSWAP-P9-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 12, 9
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 30, 9
-; NOOPTSWAP-P9-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    vmuluwm 2, 2, 3
-; NOOPTSWAP-P9-NEXT:    xxswapd 0, 34
-; NOOPTSWAP-P9-NEXT:    stxvd2x 0, 29, 9
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 11, 10
-; NOOPTSWAP-P9-NEXT:    xxswapd 34, 0
-; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 12, 10
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
+; NOOPTSWAP-P9-NEXT:    xxswapd 1, 35
+; NOOPTSWAP-P9-NEXT:    stxvd2x 1, 11, 8
+; NOOPTSWAP-P9-NEXT:    xxswapd 0, 36
+; NOOPTSWAP-P9-NEXT:    stxvd2x 0, 11, 9
 ; NOOPTSWAP-P9-NEXT:    lxvd2x 0, 30, 10
-; NOOPTSWAP-P9-NEXT:    vadduwm 2, 3, 2
-; NOOPTSWAP-P9-NEXT:    xxswapd 35, 0
-; NOOPTSWAP-P9-NEXT:    vmuluwm 2, 2, 3
+; NOOPTSWAP-P9-NEXT:    xxswapd 34, 0
+; NOOPTSWAP-P9-NEXT:    vmuluwm 2, 5, 2
 ; NOOPTSWAP-P9-NEXT:    xxswapd 0, 34
-; NOOPTSWAP-P9-NEXT:    stxvd2x 0, 29, 10
+; NOOPTSWAP-P9-NEXT:    stxvd2x 0, 11, 10
 ; NOOPTSWAP-P9-NEXT:    bdnz .LBB0_1
 ; NOOPTSWAP-P9-NEXT:  # %bb.2: # %for.end
 ; NOOPTSWAP-P9-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; NOOPTSWAP-P9-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; NOOPTSWAP-P9-NEXT:    blr
 entry:
   br label %vector.body
