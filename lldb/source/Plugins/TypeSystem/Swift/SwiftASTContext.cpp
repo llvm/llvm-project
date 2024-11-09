@@ -5999,15 +5999,18 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeHasDynamicSelf;
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::ElementArchetype:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Module:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
@@ -6018,7 +6021,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
     LOG_PRINTF(GetLog(LLDBLog::Types), "Unexpected type: %s",
@@ -6058,6 +6060,8 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |=
         eTypeIsBuiltIn | eTypeIsPointer | eTypeIsScalar | eTypeHasValue;
     break;
+  case swift::TypeKind::BuiltinFixedArray:
+    return eTypeIsBuiltIn | eTypeHasChildren;
   case swift::TypeKind::BuiltinVector:
     // TODO: OR in eTypeIsFloat or eTypeIsInteger as needed
     return eTypeIsBuiltIn | eTypeHasChildren | eTypeIsVector;
@@ -6159,6 +6163,8 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinPackIndex:    
   case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::Integer:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
@@ -6185,6 +6191,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
     return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinVector:
     return lldb::eTypeClassVector;
+  case swift::TypeKind::BuiltinFixedArray:
   case swift::TypeKind::Tuple:
     return lldb::eTypeClassArray;
   case swift::TypeKind::UnmanagedStorage:
@@ -6692,10 +6699,12 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BoundGenericClass:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
+  case swift::TypeKind::Integer:
     return lldb::eEncodingUint;
 
+  case swift::TypeKind::BuiltinFixedArray:
+  case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinVector:
-    break;
   case swift::TypeKind::Tuple:
     break;
   case swift::TypeKind::UnmanagedStorage:
@@ -6751,53 +6760,59 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
-  case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
-  case swift::TypeKind::BuiltinPackIndex:
-  case swift::TypeKind::Pack:
-  case swift::TypeKind::PackElement:
-  case swift::TypeKind::PackExpansion:
-  case swift::TypeKind::SILPack:
-  case swift::TypeKind::ParameterizedProtocol:
-  case swift::TypeKind::Placeholder:
-  case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILMoveOnlyWrapped:
-  case swift::TypeKind::SILFunction:
-  case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
-  case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
-  case swift::TypeKind::Unresolved:
-  case swift::TypeKind::VariadicSequence:
-    break;
+  case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinIntegerLiteral:
-  case swift::TypeKind::BuiltinFloat:
-  case swift::TypeKind::BuiltinRawPointer:
+  case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinNativeObject:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
+  case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::BuiltinRawPointer:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
-  case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::DependentMember:
+  case swift::TypeKind::DynamicSelf:
+  case swift::TypeKind::ElementArchetype:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::DynamicSelf:
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Metatype:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::Pack:
+  case swift::TypeKind::PackArchetype:
+  case swift::TypeKind::PackElement:
+  case swift::TypeKind::PackExpansion:
+  case swift::TypeKind::ParameterizedProtocol:
+  case swift::TypeKind::Placeholder:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
+  case swift::TypeKind::SILToken:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     break;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return ToCompilerType(swift_can_type->getReferenceStorageReferent())
         .GetNumChildren(omit_empty_base_classes, exe_ctx);
-  case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::DependentMember:
-    break;
 
   case swift::TypeKind::Enum:
   case swift::TypeKind::BoundGenericEnum: {
@@ -6806,9 +6821,10 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
       return cached_enum_info->GetNumElementsWithPayload();
   } break;
 
-  case swift::TypeKind::Tuple:
-  case swift::TypeKind::Struct:
   case swift::TypeKind::BoundGenericStruct:
+  case swift::TypeKind::BuiltinFixedArray:
+  case swift::TypeKind::Struct:
+  case swift::TypeKind::Tuple:
     return GetNumFields(type);
 
   case swift::TypeKind::Class:
@@ -6826,15 +6842,6 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
     return protocol_info.m_num_storage_words;
   }
-
-  case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::Metatype:
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::ElementArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
-  case swift::TypeKind::OpenedArchetype:
-
-    return 0;
 
   case swift::TypeKind::LValue: {
     swift::LValueType *lvalue_type =
@@ -6894,41 +6901,42 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinFloat:
+  case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinNativeObject:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::BuiltinRawPointer:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinUnsafeValueBuffer:
+  case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Module:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
-  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
-    break;
-  case swift::TypeKind::BuiltinInteger:
-  case swift::TypeKind::BuiltinIntegerLiteral:
-  case swift::TypeKind::BuiltinFloat:
-  case swift::TypeKind::BuiltinRawPointer:
-  case swift::TypeKind::BuiltinNativeObject:
-  case swift::TypeKind::BuiltinUnsafeValueBuffer:
-  case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::BuiltinVector:
     break;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
@@ -6948,6 +6956,10 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
 
   case swift::TypeKind::Tuple:
     return swift::cast<swift::TupleType>(swift_can_type)->getNumElements();
+  case swift::TypeKind::BuiltinFixedArray:
+    return swift::cast<swift::BuiltinFixedArrayType>(swift_can_type)
+        ->getFixedInhabitedSize()
+        .value_or(0);
 
   case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
@@ -7120,41 +7132,42 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinFloat:
+  case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinNativeObject:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::BuiltinRawPointer:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinUnsafeValueBuffer:
+  case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Module:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
-  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
-    break;
-  case swift::TypeKind::BuiltinInteger:
-  case swift::TypeKind::BuiltinIntegerLiteral:
-  case swift::TypeKind::BuiltinFloat:
-  case swift::TypeKind::BuiltinRawPointer:
-  case swift::TypeKind::BuiltinNativeObject:
-  case swift::TypeKind::BuiltinUnsafeValueBuffer:
-  case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::BuiltinVector:
     break;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
@@ -7188,6 +7201,12 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
 
     const auto &child = tuple_type->getElement(idx);
     return ToCompilerType(child.getType().getPointer());
+  }
+
+  case swift::TypeKind::BuiltinFixedArray: {
+    auto fixed_array =
+        swift::cast<swift::BuiltinFixedArrayType>(swift_can_type);
+    return ToCompilerType(fixed_array->getElementType());
   }
 
   case swift::TypeKind::Class:
@@ -7314,30 +7333,55 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BoundGenericClass:
+  case swift::TypeKind::BoundGenericEnum:
+  case swift::TypeKind::BoundGenericStruct:
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinFixedArray:
   case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::Class:
+  case swift::TypeKind::DependentMember:
+  case swift::TypeKind::DynamicSelf:
+  case swift::TypeKind::ElementArchetype:
+  case swift::TypeKind::Enum:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::Existential:
+  case swift::TypeKind::ExistentialMetatype:
+  case swift::TypeKind::Function:
+  case swift::TypeKind::GenericFunction:
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Metatype:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
-  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::Protocol:
+  case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
+  case swift::TypeKind::Struct:
+  case swift::TypeKind::Tuple:
   case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
     return 0;
@@ -7356,32 +7400,8 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::WeakStorage:
     return GetNumPointeeChildren(
         swift::cast<swift::ReferenceStorageType>(swift_can_type).getPointer());
-  case swift::TypeKind::Tuple:
-  case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::DependentMember:
-  case swift::TypeKind::Enum:
-  case swift::TypeKind::Struct:
-  case swift::TypeKind::Class:
-  case swift::TypeKind::Protocol:
-  case swift::TypeKind::Metatype:
-  case swift::TypeKind::ElementArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::Function:
-  case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::ProtocolComposition:
-  case swift::TypeKind::Existential:
-    return 0;
   case swift::TypeKind::LValue:
     return 1;
-  case swift::TypeKind::UnboundGeneric:
-  case swift::TypeKind::BoundGenericClass:
-  case swift::TypeKind::BoundGenericEnum:
-  case swift::TypeKind::BoundGenericStruct:
-  case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::DynamicSelf:
-    return 0;
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
@@ -7472,42 +7492,56 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinFloat:
+  case swift::TypeKind::BuiltinInteger:
+  case swift::TypeKind::BuiltinIntegerLiteral:
   case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinNativeObject:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::BuiltinRawPointer:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinUnsafeValueBuffer:
+  case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::DependentMember:
+  case swift::TypeKind::DynamicSelf:
+  case swift::TypeKind::ElementArchetype:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::ExistentialMetatype:
+  case swift::TypeKind::Function:
+  case swift::TypeKind::GenericFunction:
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Metatype:
+  case swift::TypeKind::Module:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
-  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
+  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
     break;
-  case swift::TypeKind::BuiltinInteger:
-  case swift::TypeKind::BuiltinIntegerLiteral:
-  case swift::TypeKind::BuiltinFloat:
-  case swift::TypeKind::BuiltinRawPointer:
-  case swift::TypeKind::BuiltinNativeObject:
-  case swift::TypeKind::BuiltinUnsafeValueBuffer:
-  case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::BuiltinVector:
-    break;
+
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
@@ -7518,9 +7552,6 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
             child_bitfield_bit_size, child_bitfield_bit_offset,
             child_is_base_class, child_is_deref_of_parent, valobj,
             language_flags);
-  case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::DependentMember:
-    break;
 
   case swift::TypeKind::Enum:
   case swift::TypeKind::BoundGenericEnum: {
@@ -7573,6 +7604,37 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
                                      child_name);
 
     child_byte_offset = *offset;
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+
+    return child_type;
+  }
+
+  case swift::TypeKind::BuiltinFixedArray: {
+    auto fixed_array =
+        swift::cast<swift::BuiltinFixedArrayType>(swift_can_type);
+    auto num_elts = fixed_array->getFixedInhabitedSize();
+    if (!num_elts)
+      break;
+    if (idx >= *num_elts)
+      break;
+
+    CompilerType child_type = ToCompilerType(fixed_array->getElementType());
+    llvm::raw_string_ostream(child_name) << idx;
+
+    if (!get_type_size(child_byte_size, child_type))
+      return llvm::createStringError(
+          "could not get size of fixed array element " + child_name);
+    child_is_base_class = false;
+    child_is_deref_of_parent = false;
+
+    CompilerType compiler_type = ToCompilerType(GetSwiftType(type));
+    // FIXME: This is *not* generally correct, but there is no
+    // reflection metadata yet.
+    uint64_t offset = idx * child_byte_size;
+
+    // FIXME: Are there sub-byte strides?
+    child_byte_offset = offset;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
 
@@ -7703,18 +7765,6 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
     return child_type;
   }
 
-  case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::Metatype:
-    break;
-
-  case swift::TypeKind::ElementArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::Function:
-  case swift::TypeKind::GenericFunction:
-    break;
-
   case swift::TypeKind::LValue:
     if (idx < llvm::expectedToStdOptional(
                   GetNumChildren(type, omit_empty_base_classes, exe_ctx))
@@ -7735,9 +7785,6 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
         return pointee_clang_type;
       }
     }
-    break;
-  case swift::TypeKind::UnboundGeneric:
-  case swift::TypeKind::DynamicSelf:
     break;
 
   case swift::TypeKind::Optional:
@@ -7797,41 +7844,52 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
+    case swift::TypeKind::BuiltinBridgeObject:
     case swift::TypeKind::BuiltinDefaultActorStorage:
-    case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
     case swift::TypeKind::BuiltinExecutor:
-    case swift::TypeKind::BuiltinJob:
-    case swift::TypeKind::BuiltinTuple:
-    case swift::TypeKind::BuiltinRawUnsafeContinuation:
-    case swift::TypeKind::Error:
-    case swift::TypeKind::InOut:
-    case swift::TypeKind::Module:
-    case swift::TypeKind::BuiltinPackIndex:
-    case swift::TypeKind::Pack:
-    case swift::TypeKind::PackElement:
-    case swift::TypeKind::PackExpansion:
-    case swift::TypeKind::SILPack:
-    case swift::TypeKind::ParameterizedProtocol:
-    case swift::TypeKind::Placeholder:
-    case swift::TypeKind::SILBlockStorage:
-    case swift::TypeKind::SILBox:
-    case swift::TypeKind::SILMoveOnlyWrapped:
-    case swift::TypeKind::SILFunction:
-    case swift::TypeKind::SILToken:
-    case swift::TypeKind::PackArchetype:
-    case swift::TypeKind::TypeVariable:
-    case swift::TypeKind::ErrorUnion:
-    case swift::TypeKind::Unresolved:
-    case swift::TypeKind::VariadicSequence:
-      break;
+    case swift::TypeKind::BuiltinFloat:
     case swift::TypeKind::BuiltinInteger:
     case swift::TypeKind::BuiltinIntegerLiteral:
-    case swift::TypeKind::BuiltinFloat:
-    case swift::TypeKind::BuiltinRawPointer:
+    case swift::TypeKind::BuiltinJob:
     case swift::TypeKind::BuiltinNativeObject:
+    case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
+    case swift::TypeKind::BuiltinPackIndex:
+    case swift::TypeKind::BuiltinRawPointer:
+    case swift::TypeKind::BuiltinRawUnsafeContinuation:
+    case swift::TypeKind::BuiltinTuple:
+    case swift::TypeKind::BuiltinUnboundGeneric:
     case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    case swift::TypeKind::BuiltinBridgeObject:
     case swift::TypeKind::BuiltinVector:
+    case swift::TypeKind::DynamicSelf:
+    case swift::TypeKind::ElementArchetype:
+    case swift::TypeKind::Error:
+    case swift::TypeKind::ErrorUnion:
+    case swift::TypeKind::ExistentialMetatype:
+    case swift::TypeKind::Function:
+    case swift::TypeKind::GenericFunction:
+    case swift::TypeKind::InOut:
+    case swift::TypeKind::Integer:
+    case swift::TypeKind::Metatype:
+    case swift::TypeKind::Module:
+    case swift::TypeKind::OpaqueTypeArchetype:
+    case swift::TypeKind::OpenedArchetype:
+    case swift::TypeKind::Pack:
+    case swift::TypeKind::PackArchetype:
+    case swift::TypeKind::PackElement:
+    case swift::TypeKind::PackExpansion:
+    case swift::TypeKind::ParameterizedProtocol:
+    case swift::TypeKind::Placeholder:
+    case swift::TypeKind::PrimaryArchetype:
+    case swift::TypeKind::SILBlockStorage:
+    case swift::TypeKind::SILBox:
+    case swift::TypeKind::SILFunction:
+    case swift::TypeKind::SILMoveOnlyWrapped:
+    case swift::TypeKind::SILPack:
+    case swift::TypeKind::SILToken:
+    case swift::TypeKind::TypeVariable:
+    case swift::TypeKind::UnboundGeneric:
+    case swift::TypeKind::Unresolved:
+    case swift::TypeKind::VariadicSequence:
       break;
 
     case swift::TypeKind::UnmanagedStorage:
@@ -7871,8 +7929,8 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
         if (tuple_idx < tuple_type->getNumElements()) {
           child_indexes.push_back(tuple_idx);
           return child_indexes.size();
-        } else
-          return 0;
+        }
+        return 0;
       }
 
       // Otherwise, perform lookup by name.
@@ -7882,6 +7940,22 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
           return child_indexes.size();
         }
       }
+
+      return 0;
+    }
+    case swift::TypeKind::BuiltinFixedArray: {
+      auto fixed_array =
+          swift::cast<swift::BuiltinFixedArrayType>(swift_can_type);
+      auto num_elts = fixed_array->getFixedInhabitedSize();
+      if (!num_elts)
+        return 0;
+
+      uint32_t array_idx = 0;
+      if (llvm::to_integer(name, array_idx))
+        if (array_idx < *num_elts) {
+          child_indexes.push_back(array_idx);
+          return child_indexes.size();
+        }
 
       return 0;
     }
@@ -7953,17 +8027,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       }
     } break;
 
-    case swift::TypeKind::ExistentialMetatype:
-    case swift::TypeKind::Metatype:
-      break;
-
-    case swift::TypeKind::ElementArchetype:
-    case swift::TypeKind::OpaqueTypeArchetype:
-    case swift::TypeKind::OpenedArchetype:
-    case swift::TypeKind::PrimaryArchetype:
-    case swift::TypeKind::Function:
-    case swift::TypeKind::GenericFunction:
-      break;
     case swift::TypeKind::LValue: {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
 
@@ -7972,9 +8035,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
             name, exe_ctx, omit_empty_base_classes, child_indexes);
       }
     } break;
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::DynamicSelf:
-      break;
 
     case swift::TypeKind::Optional:
     case swift::TypeKind::TypeAlias:
@@ -8188,30 +8248,40 @@ bool SwiftASTContext::DumpTypeValue(
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
+  case swift::TypeKind::BoundGenericStruct:
   case swift::TypeKind::BuiltinDefaultActorStorage:
-  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
+  case swift::TypeKind::BuiltinFixedArray:
   case swift::TypeKind::BuiltinJob:
-  case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::BuiltinRawUnsafeContinuation:
-  case swift::TypeKind::Error:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::Module:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinPackIndex:
+  case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinTuple:
+  case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::DynamicSelf:
+  case swift::TypeKind::Error:
+  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::Existential:
+  case swift::TypeKind::InOut:
+  case swift::TypeKind::Integer:
+  case swift::TypeKind::Module:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
-  case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
+  case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
-  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
+  case swift::TypeKind::SILPack:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::PackArchetype:
+  case swift::TypeKind::Tuple:
   case swift::TypeKind::TypeVariable:
-  case swift::TypeKind::ErrorUnion:
+  case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
     break;
@@ -8303,11 +8373,6 @@ bool SwiftASTContext::DumpTypeValue(
                              item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
-  case swift::TypeKind::BuiltinVector:
-    break;
-
-  case swift::TypeKind::Tuple:
-    break;
 
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
@@ -8346,13 +8411,6 @@ bool SwiftASTContext::DumpTypeValue(
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
-
-  case swift::TypeKind::ProtocolComposition:
-  case swift::TypeKind::Existential:
-  case swift::TypeKind::UnboundGeneric:
-  case swift::TypeKind::BoundGenericStruct:
-  case swift::TypeKind::DynamicSelf:
-    break;
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
