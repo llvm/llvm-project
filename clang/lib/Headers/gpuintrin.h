@@ -43,6 +43,10 @@ _Pragma("push_macro(\"bool\")");
 _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {kind(gpu)})");
 
+#define __GPU_X_DIM 0
+#define __GPU_Y_DIM 1
+#define __GPU_Z_DIM 2
+
 // Returns the number of blocks in the requested dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
   switch (__dim) {
@@ -127,7 +131,7 @@ __gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
                                         __builtin_bit_cast(uint64_t, __x)));
 }
 
-// Gets the first floating point value from the active lanes.
+// Shuffles the the lanes according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ float
 __gpu_shuffle_idx_f32(uint64_t __lane_mask, uint32_t __idx, float __x) {
   return __builtin_bit_cast(
@@ -135,7 +139,7 @@ __gpu_shuffle_idx_f32(uint64_t __lane_mask, uint32_t __idx, float __x) {
                                    __builtin_bit_cast(uint32_t, __x)));
 }
 
-// Gets the first floating point value from the active lanes.
+// Shuffles the the lanes according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ double
 __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x) {
   return __builtin_bit_cast(
