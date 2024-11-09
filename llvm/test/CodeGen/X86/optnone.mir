@@ -1,4 +1,4 @@
-# RUN: llc -passes=machine-cse -debug-pass-manager %s -o - 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=machine-cse -debug-pass-manager %s -o - 2>&1 | FileCheck %s
 
 # CHECK: Skipping pass MachineCSEPass on test_optnone due to optnone attribute
 # CHECK: Running pass: MachineCSEPass on test_opt
