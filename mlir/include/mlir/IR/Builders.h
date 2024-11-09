@@ -16,6 +16,7 @@
 namespace mlir {
 
 class AffineExpr;
+class PostDominanceInfo;
 class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
@@ -340,6 +341,19 @@ public:
     /// Creates a new insertion point at the given location.
     InsertPoint(Block *insertBlock, Block::iterator insertPt)
         : block(insertBlock), point(insertPt) {}
+
+    /// Compute an insertion point to a place that post-dominates the
+    /// definitions of all given values. Returns an "empty" insertion point if
+    /// no such insertion point exists.
+    ///
+    /// There may be multiple suitable insertion points. This function chooses
+    /// an insertion right after one of the given values.
+    ///
+    /// Note: Some of the given values may already have gone out of scope at the
+    /// selected insertion point. (E.g., because they are defined in a nested
+    /// region or because they are not visible in an IsolatedFromAbove region.)
+    static InsertPoint after(ArrayRef<Value> values,
+                             const PostDominanceInfo &domInfo);
 
     /// Returns true if this insert point is set.
     bool isSet() const { return (block != nullptr); }

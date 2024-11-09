@@ -11,6 +11,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
@@ -640,4 +641,44 @@ void OpBuilder::cloneRegionBefore(Region &region, Region &parent,
 
 void OpBuilder::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
+}
+
+OpBuilder::InsertPoint
+OpBuilder::InsertPoint::after(ArrayRef<Value> values,
+                              const PostDominanceInfo &domInfo) {
+  // Helper function that computes the point after v's definition.
+  auto computeAfterIp = [](Value v) -> std::pair<Block *, Block::iterator> {
+    if (auto blockArg = dyn_cast<BlockArgument>(v))
+      return std::make_pair(blockArg.getOwner(), blockArg.getOwner()->begin());
+    Operation *op = v.getDefiningOp();
+    return std::make_pair(op->getBlock(), ++op->getIterator());
+  };
+
+  // Compute the insertion point after the first value is defined.
+  assert(!values.empty() && "expected at least one Value");
+  auto [block, blockIt] = computeAfterIp(values.front());
+
+  // Check the other values one-by-one and update the insertion point if
+  // needed.
+  for (Value v : values.drop_front()) {
+    auto [candidateBlock, candidateBlockIt] = computeAfterIp(v);
+    if (domInfo.postDominantes(candidateBlock, candidateBlockIt, block,
+                               blockIt)) {
+      // The point after v's definition post-dominates the current (and all
+      // previous) insertion points. Note: Post-dominance is transitive.
+      block = candidateBlock;
+      blockIt = candidateBlockIt;
+      continue;
+    }
+
+    if (!domInfo.postDominantes(block, blockIt, candidateBlock,
+                                candidateBlockIt)) {
+      // The point after v's definition and the current insertion point do not
+      // post-dominate each other. Therefore, there is no insertion point that
+      // post-dominates all values.
+      return InsertPoint(nullptr, Block::iterator());
+    }
+  }
+
+  return InsertPoint(block, blockIt);
 }
