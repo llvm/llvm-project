@@ -416,7 +416,7 @@ static constexpr bool HasFreeFunctionRBegin =
 } // namespace detail
 
 // Returns an iterator_range over the given container which iterates in reverse.
-// Does not mutate the containers.
+// Does not mutate the container.
 template <typename ContainerTy> [[nodiscard]] auto reverse(ContainerTy &&C) {
   if constexpr (detail::HasFreeFunctionRBegin<ContainerTy>)
     return make_range(adl_rbegin(C), adl_rend(C));
