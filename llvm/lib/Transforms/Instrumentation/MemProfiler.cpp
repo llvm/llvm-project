@@ -795,8 +795,8 @@ struct AllocMatchInfo {
   bool Matched = false;
 };
 
-DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
-memprof::extractCallsFromIR(Module &M) {
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> memprof::extractCallsFromIR(
+    Module &M, function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   auto GetOffset = [](const DILocation *DIL) {
@@ -820,6 +820,8 @@ memprof::extractCallsFromIR(Module &M) {
           continue;
 
         StringRef CalleeName = CalledFunction->getName();
+        bool IsAlloc =
+            isAllocationWithHotColdVariant(CalledFunction, GetTLI(F));
         for (const DILocation *DIL = I.getDebugLoc(); DIL;
              DIL = DIL->getInlinedAt()) {
           StringRef CallerName = DIL->getSubprogramLinkageName();
@@ -827,9 +829,17 @@ memprof::extractCallsFromIR(Module &M) {
                  "Be sure to enable -fdebug-info-for-profiling");
           uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
           uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+          // Pretend that we are calling a function with GUID == 0 if we are
+          // calling a heap allocation function.
+          if (IsAlloc)
+            CalleeGUID = 0;
           LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
           Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
           CalleeName = CallerName;
+          // FIXME: Recognize other frames that are associated with heap
+          // allocation functions.  It may be too early to reset IsAlloc to
+          // false here.
+          IsAlloc = false;
         }
       }
     }
