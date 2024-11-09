@@ -489,7 +489,7 @@ bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
 FunctionSamples &
 ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
   SampleContext Context(FuncName);
-  return ProfileMap.Create(Context);
+  return ProfileMap.create(Context);
 }
 
 void ProfileGenerator::generateProfile() {
@@ -1183,11 +1183,9 @@ void ProfileGeneratorBase::extractProbesFromRange(
     do {
       const AddressProbesMap &Address2ProbesMap =
           Binary->getAddress2ProbesMap();
-      auto It = Address2ProbesMap.find(IP.Address);
-      if (It != Address2ProbesMap.end()) {
-        for (const auto &Probe : It->second) {
-          ProbeCounter[&Probe] += Count;
-        }
+      for (const MCDecodedPseudoProbe &Probe :
+           Address2ProbesMap.find(IP.Address)) {
+        ProbeCounter[&Probe] += Count;
       }
     } while (IP.advance() && IP.Address <= RangeEnd);
   }
@@ -1293,9 +1291,9 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
   // and will be inferred by the compiler.
   for (auto &I : FrameSamples) {
     for (auto *FunctionProfile : I.second) {
-      for (auto *Probe : I.first->getProbes()) {
-        FunctionProfile->addBodySamples(Probe->getIndex(),
-                                        Probe->getDiscriminator(), 0);
+      for (const MCDecodedPseudoProbe &Probe : I.first->getProbes()) {
+        FunctionProfile->addBodySamples(Probe.getIndex(),
+                                        Probe.getDiscriminator(), 0);
       }
     }
   }

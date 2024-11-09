@@ -230,12 +230,6 @@ define i64 @mul_signed_ce() {
 	ret i64 mul nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64 @shl_signed_ce() {
-; CHECK: ret i64 shl nsw (i64 ptrtoint (ptr @addr to i64), i64 17)
-	ret i64 shl nsw (i64 ptrtoint (ptr @addr to i64), i64 17)
-}
-
-
 define i64 @add_unsigned_ce() {
 ; CHECK: ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
@@ -316,6 +310,18 @@ define <2 x i32> @test_trunc_both_reversed_vector(<2 x i64> %a) {
 ; CHECK: %res = trunc nuw nsw <2 x i64> %a to <2 x i32>
   %res = trunc nsw nuw <2 x i64> %a to <2 x i32>
   ret <2 x i32> %res
+}
+
+define i1 @test_icmp_samesign(i32 %a, i32 %b) {
+  ; CHECK: %res = icmp samesign ult i32 %a, %b
+  %res = icmp samesign ult i32 %a, %b
+  ret i1 %res
+}
+
+define <2 x i1> @test_icmp_samesign2(<2 x i32> %a, <2 x i32> %b) {
+  ; CHECK: %res = icmp samesign ult <2 x i32> %a, %b
+  %res = icmp samesign ult <2 x i32> %a, %b
+  ret <2 x i1> %res
 }
 
 define ptr @gep_nuw(ptr %p, i64 %idx) {

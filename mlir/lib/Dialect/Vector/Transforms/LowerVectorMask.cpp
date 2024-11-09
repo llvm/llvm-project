@@ -111,7 +111,7 @@ public:
     if (rank == 0) {
       assert(dimSizes.size() == 1 &&
              "Expected exactly one dim size for a 0-D vector");
-      bool value = cast<IntegerAttr>(dimSizes[0]).getInt() == 1;
+      bool value = dimSizes.front() == 1;
       rewriter.replaceOpWithNewOp<arith::ConstantOp>(
           op, dstType,
           DenseIntElementsAttr::get(VectorType::get({}, rewriter.getI1Type()),
@@ -119,7 +119,7 @@ public:
       return success();
     }
 
-    int64_t trueDimSize = cast<IntegerAttr>(dimSizes[0]).getInt();
+    int64_t trueDimSize = dimSizes.front();
 
     if (rank == 1) {
       if (trueDimSize == 0 || trueDimSize == dstType.getDimSize(0)) {
@@ -147,7 +147,7 @@ public:
 
     VectorType lowType = VectorType::Builder(dstType).dropDim(0);
     Value trueVal = rewriter.create<vector::ConstantMaskOp>(
-        loc, lowType, rewriter.getArrayAttr(dimSizes.getValue().drop_front()));
+        loc, lowType, dimSizes.drop_front());
     Value result = rewriter.create<arith::ConstantOp>(
         loc, dstType, rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDimSize; d++)
@@ -224,7 +224,7 @@ public:
     rewriter.replaceOpWithNewOp<TransferReadOp>(
         maskingOp.getOperation(), readOp.getVectorType(), readOp.getSource(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        maskingOp.getMask(), readOp.getInBounds().value_or(ArrayAttr()));
+        maskingOp.getMask(), readOp.getInBounds());
     return success();
   }
 };
@@ -246,7 +246,7 @@ public:
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getSource(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds().value_or(ArrayAttr()));
+        maskingOp.getMask(), writeOp.getInBounds());
     return success();
   }
 };

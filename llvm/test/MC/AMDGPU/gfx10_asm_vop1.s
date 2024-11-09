@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=GFX10-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_VOP1.
@@ -161,6 +161,15 @@ v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_SEXT src0_sel:DWORD
 // GFX10: encoding: [0xf9,0x02,0x0a,0x7e,0x01,0x0e,0x06,0x00]
 
 v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+// GFX10: encoding: [0xf9,0x02,0x0a,0x7e,0x01,0x16,0x06,0x00]
+
+v_mov_b32_sdwa v5, v1 dst_sel:WORD_1 dst_unused:0 src0_sel:06
+// GFX10: encoding: [0xf9,0x02,0x0a,0x7e,0x01,0x05,0x06,0x00]
+
+v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:1 src0_sel:0x6
+// GFX10: encoding: [0xf9,0x02,0x0a,0x7e,0x01,0x0e,0x06,0x00]
+
+v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:2 src0_sel:6
 // GFX10: encoding: [0xf9,0x02,0x0a,0x7e,0x01,0x16,0x06,0x00]
 
 v_mov_b32_sdwa v5, v1 dst_sel:DWORD src0_sel:DWORD

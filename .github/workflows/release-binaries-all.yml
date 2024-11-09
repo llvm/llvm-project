@@ -1,0 +1,99 @@
+name: Release Binaries All
+
+permissions:
+  contents: read # Default everything to read-only
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: true
+        type: string
+      upload:
+        description: 'Upload binaries to the release page'
+        required: true
+        default: false
+        type: boolean
+
+  workflow_call:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: true
+        type: string
+      upload:
+        description: 'Upload binaries to the release page'
+        required: true
+        default: false
+        type: boolean
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+    paths:
+      - '.github/workflows/release-binaries-all.yml'
+      - '.github/workflows/release-binaries.yml'
+      - '.github/workflows/release-binaries-setup-stage/*'
+      - '.github/workflows/release-binaries-save-stage/*'
+      - 'clang/cmake/caches/Release.cmake'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'dispatch' }}
+  cancel-in-progress: True
+
+jobs:
+  setup-variables:
+    if: >-
+      (github.event_name != 'pull_request' || github.event.action != 'closed')
+    runs-on: ubuntu-22.04
+    outputs:
+      release-version: ${{ steps.vars.outputs.release-version }}
+      upload: ${{ steps.vars.outputs.upload }}
+    steps:
+      - shell: bash
+        id: vars
+        run: |
+          upload="${{ inputs.upload }}"
+          release_version="${{ inputs.release-version }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            upload="false"
+            release_version=""
+          fi
+          echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
+          echo "upload=$upload" >> "$GITHUB_OUTPUT"
+
+  release-binaries-all:
+    name: Build Release Binaries
+    needs:
+      - setup-variables
+    permissions:
+      contents: write # For release uploads
+      id-token: write     # For artifact attestations
+      attestations: write # For artifact attestations
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - ubuntu-22.04
+          - windows-2022
+          - macos-13
+          - macos-14
+
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      release-version: "${{ needs.setup-variables.outputs.release-version }}"
+      upload: ${{ needs.setup-variables.outputs.upload == 'true'}}
+      runs-on: "${{ matrix.runs-on }}"
+    secrets:
+      # This will be empty for pull_request events, but that's fine, because
+      # the release-binaries workflow does not use this secret for the
+      # pull_request event.
+      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}

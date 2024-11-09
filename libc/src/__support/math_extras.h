@@ -14,8 +14,9 @@
 #include "src/__support/CPP/limits.h"      // CHAR_BIT, numeric_limits
 #include "src/__support/CPP/type_traits.h" // is_unsigned_v, is_constant_evaluated
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Create a bitmask with the count right-most bits set to 1, and all other bits
 // set to 0.  Only unsigned types are allowed.
@@ -155,6 +156,6 @@ count_zeros(T value) {
   return cpp::popcount<T>(static_cast<T>(~value));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H

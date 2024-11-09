@@ -9,7 +9,6 @@
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "Lexer.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Constraint.h"
@@ -149,9 +148,8 @@ private:
     std::string docStr;
     {
       llvm::raw_string_ostream docOS(docStr);
-      std::string tmpDocStr = doc.str();
       raw_indented_ostream(docOS).printReindented(
-          StringRef(tmpDocStr).rtrim(" \t"));
+          StringRef(docStr).rtrim(" \t"));
     }
     return docStr;
   }
@@ -165,7 +163,7 @@ private:
                                SmallVectorImpl<ast::Decl *> &decls);
 
   /// Process the records of a parsed tablegen include file.
-  void processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
+  void processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
                                SmallVectorImpl<ast::Decl *> &decls);
 
   /// Create a user defined native constraint for a constraint imported from
@@ -864,7 +862,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   return success();
 }
 
-void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
+void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
                                      SmallVectorImpl<ast::Decl *> &decls) {
   // Return the length kind of the given value.
   auto getLengthKind = [](const auto &value) {
@@ -880,8 +878,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
       -> const ods::TypeConstraint & {
     return odsContext.insertTypeConstraint(
         cst.constraint.getUniqueDefName(),
-        processDoc(cst.constraint.getSummary()),
-        cst.constraint.getCPPClassName());
+        processDoc(cst.constraint.getSummary()), cst.constraint.getCppType());
   };
   auto convertLocToRange = [&](llvm::SMLoc loc) -> llvm::SMRange {
     return {loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)};
@@ -889,7 +886,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
 
   // Process the parsed tablegen records to build ODS information.
   /// Operations.
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Op")) {
+  for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Op")) {
     tblgen::Operator op(def);
 
     // Check to see if this operation is known to support type inferrence.
@@ -922,13 +919,13 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     }
   }
 
-  auto shouldBeSkipped = [this](llvm::Record *def) {
+  auto shouldBeSkipped = [this](const llvm::Record *def) {
     return def->isAnonymous() || curDeclScope->lookup(def->getName()) ||
            def->isSubClassOf("DeclareInterfaceMethods");
   };
 
   /// Attr constraints.
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
+  for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
     if (shouldBeSkipped(def))
       continue;
 
@@ -938,18 +935,19 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
         constraint.getStorageType()));
   }
   /// Type constraints.
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
+  for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
     if (shouldBeSkipped(def))
       continue;
 
     tblgen::TypeConstraint constraint(def);
     decls.push_back(createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
         constraint, convertLocToRange(def->getLoc().front()), typeTy,
-        constraint.getCPPClassName()));
+        constraint.getCppType()));
   }
   /// OpInterfaces.
   ast::Type opTy = ast::OperationType::get(ctx);
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("OpInterface")) {
+  for (const llvm::Record *def :
+       tdRecords.getAllDerivedDefinitions("OpInterface")) {
     if (shouldBeSkipped(def))
       continue;
 

@@ -14,14 +14,16 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_PRESBURGERSPACE_H
 #define MLIR_ANALYSIS_PRESBURGER_PRESBURGERSPACE_H
 
-#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 namespace presburger {
+using llvm::ArrayRef;
+using llvm::SmallVector;
 
 /// Kind of variable. Implementation wise SetDims are treated as Range
 /// vars, and spaces with no distinction between dimension vars are treated
@@ -73,8 +75,8 @@ public:
   template <typename T>
   explicit Identifier(T value)
       : value(llvm::PointerLikeTypeTraits<T>::getAsVoidPointer(value)) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    idType = TypeID::get<T>();
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    idType = llvm::getTypeName<T>();
 #endif
   }
 
@@ -82,8 +84,8 @@ public:
   /// the type of the identifier used to create it.
   template <typename T>
   T getValue() const {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(TypeID::get<T>() == idType &&
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    assert(llvm::getTypeName<T>() == idType &&
            "Identifier was initialized with a different type than the one used "
            "to retrieve it.");
 #endif
@@ -106,9 +108,9 @@ private:
   /// The value of the identifier.
   void *value = nullptr;
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// TypeID of the identifiers in space. This should be used in asserts only.
-  TypeID idType = TypeID::get<void>();
+  llvm::StringRef idType;
 #endif
 };
 

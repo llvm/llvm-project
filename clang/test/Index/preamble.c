@@ -14,7 +14,7 @@ void f(int x) {
 // RUN: env CINDEXTEST_EDITING=1 c-index-test -test-load-source-reparse 5 local -I %S/Inputs -include %t %s -Wunused-macros 2> %t.stderr.txt | FileCheck %s
 // RUN: FileCheck -check-prefix CHECK-DIAG %s < %t.stderr.txt
 // CHECK: preamble.h:1:12: FunctionDecl=bar:1:12 (Definition) Extent=[1:1 - 6:2]
-// CHECK: preamble.h:4:3: BinaryOperator= Extent=[4:3 - 4:13]
+// CHECK: preamble.h:4:3: BinaryOperator== Extent=[4:3 - 4:13]
 // CHECK: preamble.h:4:3: DeclRefExpr=ptr:2:8 Extent=[4:3 - 4:6]
 // CHECK: preamble.h:4:9: UnexposedExpr=ptr1:3:10 Extent=[4:9 - 4:13]
 // CHECK: preamble.h:4:9: DeclRefExpr=ptr1:3:10 Extent=[4:9 - 4:13]

@@ -31,6 +31,9 @@ class X86TargetMachine final : public LLVMTargetMachine {
   // True if this is used in JIT.
   bool IsJIT;
 
+  /// Reset internal state.
+  void reset() override;
+
 public:
   X86TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
@@ -66,8 +69,7 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                              raw_pwrite_stream *, CodeGenFileType,

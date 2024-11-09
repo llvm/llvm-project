@@ -92,6 +92,8 @@ STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
+STATISTIC(NumGlobalArraysPadded,
+          "Number of global arrays padded to alignment boundary");
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -1050,11 +1052,6 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
         continue; // Otherwise, storing through it, or storing into GV... fine.
       }
 
-      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        Worklist.push_back(BCI);
-        continue;
-      }
-
       if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
         Worklist.push_back(GEPI);
         continue;
@@ -1213,7 +1210,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       for(auto *GVe : GVs){
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
-        const DataLayout &DL = GV->getParent()->getDataLayout();
+        const DataLayout &DL = GV->getDataLayout();
         unsigned SizeInOctets =
             DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
 
@@ -1338,6 +1335,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
+  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;
@@ -1356,7 +1354,7 @@ static bool isPointerValueDeadOnEntryToFunction(
   //
   // We don't do an exhaustive search for memory operations - simply look
   // through bitcasts as they're quite common and benign.
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   SmallVector<LoadInst *, 4> Loads;
   SmallVector<StoreInst *, 4> Stores;
   for (auto *U : GV->users()) {
@@ -1452,7 +1450,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
                       function_ref<TargetTransformInfo &(Function &)> GetTTI,
                       function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                       function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  auto &DL = GV->getParent()->getDataLayout();
+  auto &DL = GV->getDataLayout();
   // If this is a first class global and has only one accessing function and
   // this function is non-recursive, we replace the global with a local alloca
   // in this function.
@@ -1469,7 +1467,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       GS.AccessingFunction->doesNotRecurse() &&
       isPointerValueDeadOnEntryToFunction(GS.AccessingFunction, GV,
                                           LookupDomTree)) {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
 
     LLVM_DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
     BasicBlock::iterator FirstI =
@@ -1540,7 +1538,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     ++NumMarked;
   }
   if (!GV->getInitializer()->getType()->isSingleValueType()) {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     if (SRAGlobal(GV, DL))
       return true;
   }
@@ -2033,6 +2031,165 @@ OptimizeFunctions(Module &M,
   return Changed;
 }
 
+static bool callInstIsMemcpy(CallInst *CI) {
+  if (!CI)
+    return false;
+
+  Function *F = CI->getCalledFunction();
+  if (!F || !F->isIntrinsic() || F->getIntrinsicID() != Intrinsic::memcpy)
+    return false;
+
+  return true;
+}
+
+static bool destArrayCanBeWidened(CallInst *CI) {
+  auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+
+  if (!Alloca || !IsVolatile || IsVolatile->isOne())
+    return false;
+
+  if (!Alloca->isStaticAlloca())
+    return false;
+
+  if (!Alloca->getAllocatedType()->isArrayTy())
+    return false;
+
+  return true;
+}
+
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
+                                           unsigned NumBytesToPad,
+                                           unsigned NumBytesToCopy) {
+  if (!OldVar->hasInitializer())
+    return nullptr;
+
+  ConstantDataArray *DataArray =
+      dyn_cast<ConstantDataArray>(OldVar->getInitializer());
+  if (!DataArray)
+    return nullptr;
+
+  // Update to be word aligned (memcpy(...,X,...))
+  // create replacement with padded null bytes.
+  StringRef Data = DataArray->getRawDataValues();
+  std::vector<uint8_t> StrData(Data.begin(), Data.end());
+  for (unsigned int p = 0; p < NumBytesToPad; p++)
+    StrData.push_back('\0');
+  auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
+  // Create new padded version of global variable.
+  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
+  GlobalVariable *NewGV = new GlobalVariable(
+      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
+      SourceReplace, SourceReplace->getName());
+  // Copy any other attributes from original global variable
+  // e.g. unamed_addr
+  NewGV->copyAttributesFrom(OldVar);
+  NewGV->takeName(OldVar);
+  return NewGV;
+}
+
+static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
+                           const unsigned NumBytesToCopy,
+                           ConstantDataArray *SourceDataArray) {
+
+  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+  if (Alloca) {
+    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
+    unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
+    unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
+    // Update destination array to be word aligned (memcpy(X,...,...))
+    IRBuilder<> BuildAlloca(Alloca);
+    AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
+        Alloca->getAllocatedType()->getArrayElementType(), NumElementsToCopy));
+    NewAlloca->takeName(Alloca);
+    NewAlloca->setAlignment(Alloca->getAlign());
+    Alloca->replaceAllUsesWith(NewAlloca);
+    Alloca->eraseFromParent();
+  }
+}
+
+static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
+                                        const unsigned NumBytesToPad,
+                                        const unsigned NumBytesToCopy,
+                                        ConstantInt *BytesToCopyOp,
+                                        ConstantDataArray *SourceDataArray) {
+  auto *NewSourceGV =
+      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
+  if (!NewSourceGV)
+    return false;
+
+  // Update arguments of remaining uses  that
+  // are memcpys.
+  for (auto *User : SourceVar->users()) {
+    auto *CI = dyn_cast<CallInst>(User);
+    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
+      continue;
+
+    if (CI->getArgOperand(1) != SourceVar)
+      continue;
+
+    widenDestArray(CI, NumBytesToPad, NumBytesToCopy, SourceDataArray);
+
+    CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
+                                          NumBytesToCopy + NumBytesToPad));
+  }
+  SourceVar->replaceAllUsesWith(NewSourceGV);
+
+  NumGlobalArraysPadded++;
+  return true;
+}
+
+static bool tryWidenGlobalArraysUsedByMemcpy(
+    GlobalVariable *GV,
+    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+
+  if (!GV->hasInitializer() || !GV->isConstant() || !GV->hasLocalLinkage() ||
+      !GV->hasGlobalUnnamedAddr())
+    return false;
+
+  for (auto *User : GV->users()) {
+    CallInst *CI = dyn_cast<CallInst>(User);
+    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
+      continue;
+
+    Function *F = CI->getCalledFunction();
+
+    auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+    if (!BytesToCopyOp)
+      continue;
+
+    ConstantDataArray *SourceDataArray =
+        dyn_cast<ConstantDataArray>(GV->getInitializer());
+    if (!SourceDataArray)
+      continue;
+
+    unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
+
+    auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+    uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
+    uint64_t SZSize = SourceDataArray->getType()->getNumElements();
+    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
+    // Calculate the number of elements to copy while avoiding floored
+    // division of integers returning wrong values i.e. copying one byte
+    // from an array of i16 would yield 0 elements to copy as supposed to 1.
+    unsigned NumElementsToCopy = divideCeil(NumBytesToCopy, ElementByteWidth);
+
+    // For safety purposes lets add a constraint and only pad when
+    // NumElementsToCopy == destination array size ==
+    // source which is a constant
+    if (NumElementsToCopy != DZSize || DZSize != SZSize)
+      continue;
+
+    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
+        NumBytesToCopy, SourceDataArray->getType());
+    if (NumBytesToPad) {
+      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
+                                         BytesToCopyOp, SourceDataArray);
+    }
+  }
+  return false;
+}
+
 static bool
 OptimizeGlobalVars(Module &M,
                    function_ref<TargetTransformInfo &(Function &)> GetTTI,
@@ -2061,6 +2218,10 @@ OptimizeGlobalVars(Module &M,
       Changed = true;
       continue;
     }
+
+    // For global variable arrays called in a memcpy
+    // we try to pad to nearest valid alignment boundary
+    Changed |= tryWidenGlobalArraysUsedByMemcpy(&GV, GetTTI);
 
     Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
   }
@@ -2458,7 +2619,9 @@ static bool OptimizeStaticIFuncs(Module &M) {
   bool Changed = false;
   for (GlobalIFunc &IF : M.ifuncs())
     if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
-      if (!IF.use_empty()) {
+      if (!IF.use_empty() &&
+          (!Callee->isDeclaration() ||
+           none_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))) {
         IF.replaceAllUsesWith(Callee);
         NumIFuncsResolved++;
         Changed = true;

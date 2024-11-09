@@ -331,4 +331,19 @@ define i1 @and_is_constant(ptr %arg, ptr %arg2) {
   ret i1 %and
 }
 
+define i1 @pr98753(i32 noundef %x, i32 %y) {
+; CHECK-LABEL: @pr98753(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32 [[Y:%.*]], i32 undef
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SEL]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ne i32 %x, 0
+  %sel = select i1 %cmp1, i32 %y, i32 undef
+  %cmp2 = icmp sgt i32 %sel, 0
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
 declare i1 @llvm.is.constant.i1(i1)

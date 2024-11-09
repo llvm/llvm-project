@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "inv_trigf_utils.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Polynomial approximation for 0 <= x <= 1:
 //   atan(x) ~ atan((i/16) + (x - (i/16)) * Q(x - i/16)
@@ -82,4 +83,4 @@ double ATAN_COEFFS[17][9] = {
      0x1.555e31a1e15e9p-6, -0x1.245240d65e629p-7, -0x1.fa9ba66478903p-11},
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

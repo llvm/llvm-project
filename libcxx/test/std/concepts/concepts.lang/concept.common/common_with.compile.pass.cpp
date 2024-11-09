@@ -262,17 +262,16 @@ struct BadBasicCommonType {
   // should be placed so the test doesn't get deleted.
 };
 
-namespace std {
 template <>
-struct common_type<BadBasicCommonType, int> {
+struct std::common_type<BadBasicCommonType, int> {
   using type = BadBasicCommonType;
 };
 
 template <>
-struct common_type<int, BadBasicCommonType> {
+struct std::common_type<int, BadBasicCommonType> {
   using type = int;
 };
-} // namespace std
+
 static_assert(requires {
   typename std::common_type_t<BadBasicCommonType, int>;
 });
@@ -289,17 +288,16 @@ static_assert(!std::convertible_to<DullCommonType, int>);
 struct T1 {};
 static_assert(!std::convertible_to<DullCommonType, T1>);
 
-namespace std {
 template <>
-struct common_type<T1, int> {
+struct std::common_type<T1, int> {
   using type = DullCommonType;
 };
 
 template <>
-struct common_type<int, T1> {
+struct std::common_type<int, T1> {
   using type = DullCommonType;
 };
-} // namespace std
+
 static_assert(HasValidCommonType<T1, int>());
 static_assert(!CheckCommonWith<T1, int>());
 
@@ -314,17 +312,16 @@ struct T2 {};
 static_assert(
     !std::convertible_to<CommonTypeImplicitlyConstructibleFromInt, T2>);
 
-namespace std {
 template <>
-struct common_type<T2, int> {
+struct std::common_type<T2, int> {
   using type = CommonTypeImplicitlyConstructibleFromInt;
 };
 
 template <>
-struct common_type<int, T2> {
+struct std::common_type<int, T2> {
   using type = CommonTypeImplicitlyConstructibleFromInt;
 };
-} // namespace std
+
 static_assert(HasValidCommonType<T2, int>());
 static_assert(!CheckCommonWith<T2, int>());
 
@@ -339,17 +336,16 @@ struct T3 {};
 static_assert(
     !std::convertible_to<CommonTypeExplicitlyConstructibleFromInt, T2>);
 
-namespace std {
 template <>
-struct common_type<T3, int> {
+struct std::common_type<T3, int> {
   using type = CommonTypeExplicitlyConstructibleFromInt;
 };
 
 template <>
-struct common_type<int, T3> {
+struct std::common_type<int, T3> {
   using type = CommonTypeExplicitlyConstructibleFromInt;
 };
-} // namespace std
+
 static_assert(HasValidCommonType<T3, int>());
 static_assert(!CheckCommonWith<T3, int>());
 
@@ -361,17 +357,16 @@ static_assert(requires(T4 t4) {
   static_cast<CommonTypeImplicitlyConstructibleFromT4>(t4);
 });
 
-namespace std {
 template <>
-struct common_type<T4, int> {
+struct std::common_type<T4, int> {
   using type = CommonTypeImplicitlyConstructibleFromT4;
 };
 
 template <>
-struct common_type<int, T4> {
+struct std::common_type<int, T4> {
   using type = CommonTypeImplicitlyConstructibleFromT4;
 };
-} // namespace std
+
 static_assert(HasValidCommonType<T4, int>());
 static_assert(!CheckCommonWith<T4, int>());
 
@@ -383,17 +378,16 @@ static_assert(requires(T5 t5) {
   static_cast<CommonTypeExplicitlyConstructibleFromT5>(t5);
 });
 
-namespace std {
 template <>
-struct common_type<T5, int> {
+struct std::common_type<T5, int> {
   using type = CommonTypeExplicitlyConstructibleFromT5;
 };
 
 template <>
-struct common_type<int, T5> {
+struct std::common_type<int, T5> {
   using type = CommonTypeExplicitlyConstructibleFromT5;
 };
-} // namespace std
+
 static_assert(HasValidCommonType<T5, int>());
 static_assert(!CheckCommonWith<T5, int>());
 
@@ -403,113 +397,111 @@ struct CommonTypeNoCommonReference {
   CommonTypeNoCommonReference(int);
 };
 
-namespace std {
 template <>
-struct common_type<T6, int> {
+struct std::common_type<T6, int> {
   using type = CommonTypeNoCommonReference;
 };
 
 template <>
-struct common_type<int, T6> {
+struct std::common_type<int, T6> {
   using type = CommonTypeNoCommonReference;
 };
 
 template <>
-struct common_type<T6&, int&> {};
+struct std::common_type<T6&, int&> {};
 
 template <>
-struct common_type<int&, T6&> {};
+struct std::common_type<int&, T6&> {};
 
 template <>
-struct common_type<T6&, const int&> {};
+struct std::common_type<T6&, const int&> {};
 
 template <>
-struct common_type<int&, const T6&> {};
+struct std::common_type<int&, const T6&> {};
 
 template <>
-struct common_type<T6&, volatile int&> {};
+struct std::common_type<T6&, volatile int&> {};
 
 template <>
-struct common_type<int&, volatile T6&> {};
+struct std::common_type<int&, volatile T6&> {};
 
 template <>
-struct common_type<T6&, const volatile int&> {};
+struct std::common_type<T6&, const volatile int&> {};
 
 template <>
-struct common_type<int&, const volatile T6&> {};
+struct std::common_type<int&, const volatile T6&> {};
 
 template <>
-struct common_type<const T6&, int&> {};
+struct std::common_type<const T6&, int&> {};
 
 template <>
-struct common_type<const int&, T6&> {};
+struct std::common_type<const int&, T6&> {};
 
 template <>
-struct common_type<const T6&, const int&> {};
+struct std::common_type<const T6&, const int&> {};
 
 template <>
-struct common_type<const int&, const T6&> {};
+struct std::common_type<const int&, const T6&> {};
 
 template <>
-struct common_type<const T6&, volatile int&> {};
+struct std::common_type<const T6&, volatile int&> {};
 
 template <>
-struct common_type<const int&, volatile T6&> {};
+struct std::common_type<const int&, volatile T6&> {};
 
 template <>
-struct common_type<const T6&, const volatile int&> {};
+struct std::common_type<const T6&, const volatile int&> {};
 
 template <>
-struct common_type<const int&, const volatile T6&> {};
+struct std::common_type<const int&, const volatile T6&> {};
 
 template <>
-struct common_type<volatile T6&, int&> {};
+struct std::common_type<volatile T6&, int&> {};
 
 template <>
-struct common_type<volatile int&, T6&> {};
+struct std::common_type<volatile int&, T6&> {};
 
 template <>
-struct common_type<volatile T6&, const int&> {};
+struct std::common_type<volatile T6&, const int&> {};
 
 template <>
-struct common_type<volatile int&, const T6&> {};
+struct std::common_type<volatile int&, const T6&> {};
 
 template <>
-struct common_type<volatile T6&, volatile int&> {};
+struct std::common_type<volatile T6&, volatile int&> {};
 
 template <>
-struct common_type<volatile int&, volatile T6&> {};
+struct std::common_type<volatile int&, volatile T6&> {};
 
 template <>
-struct common_type<volatile T6&, const volatile int&> {};
+struct std::common_type<volatile T6&, const volatile int&> {};
 
 template <>
-struct common_type<volatile int&, const volatile T6&> {};
+struct std::common_type<volatile int&, const volatile T6&> {};
 
 template <>
-struct common_type<const volatile T6&, int&> {};
+struct std::common_type<const volatile T6&, int&> {};
 
 template <>
-struct common_type<const volatile int&, T6&> {};
+struct std::common_type<const volatile int&, T6&> {};
 
 template <>
-struct common_type<const volatile T6&, const int&> {};
+struct std::common_type<const volatile T6&, const int&> {};
 
 template <>
-struct common_type<const volatile int&, const T6&> {};
+struct std::common_type<const volatile int&, const T6&> {};
 
 template <>
-struct common_type<const volatile T6&, volatile int&> {};
+struct std::common_type<const volatile T6&, volatile int&> {};
 
 template <>
-struct common_type<const volatile int&, volatile T6&> {};
+struct std::common_type<const volatile int&, volatile T6&> {};
 
 template <>
-struct common_type<const volatile T6&, const volatile int&> {};
+struct std::common_type<const volatile T6&, const volatile int&> {};
 
 template <>
-struct common_type<const volatile int&, const volatile T6&> {};
-} // namespace std
+struct std::common_type<const volatile int&, const volatile T6&> {};
 
 template <typename T, typename U>
 constexpr bool HasCommonReference() noexcept {
@@ -526,177 +518,176 @@ struct CommonTypeNoMetaCommonReference {
   CommonTypeNoMetaCommonReference(int);
 };
 
-namespace std {
 template <>
-struct common_type<T7, int> {
+struct std::common_type<T7, int> {
   using type = CommonTypeNoMetaCommonReference;
 };
 
 template <>
-struct common_type<int, T7> {
+struct std::common_type<int, T7> {
   using type = CommonTypeNoMetaCommonReference;
 };
 
 template <>
-struct common_type<T7&, int&> {
+struct std::common_type<T7&, int&> {
   using type = void;
 };
 
 template <>
-struct common_type<int&, T7&> {
+struct std::common_type<int&, T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<T7&, const int&> {
+struct std::common_type<T7&, const int&> {
   using type = void;
 };
 
 template <>
-struct common_type<int&, const T7&> {
+struct std::common_type<int&, const T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<T7&, volatile int&> {
+struct std::common_type<T7&, volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<int&, volatile T7&> {
+struct std::common_type<int&, volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<T7&, const volatile int&> {
+struct std::common_type<T7&, const volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<int&, const volatile T7&> {
+struct std::common_type<int&, const volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const T7&, int&> {
+struct std::common_type<const T7&, int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const int&, T7&> {
+struct std::common_type<const int&, T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const T7&, const int&> {
+struct std::common_type<const T7&, const int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const int&, const T7&> {
+struct std::common_type<const int&, const T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const T7&, volatile int&> {
+struct std::common_type<const T7&, volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const int&, volatile T7&> {
+struct std::common_type<const int&, volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const T7&, const volatile int&> {
+struct std::common_type<const T7&, const volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const int&, const volatile T7&> {
+struct std::common_type<const int&, const volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile T7&, int&> {
+struct std::common_type<volatile T7&, int&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile int&, T7&> {
+struct std::common_type<volatile int&, T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile T7&, const int&> {
+struct std::common_type<volatile T7&, const int&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile int&, const T7&> {
+struct std::common_type<volatile int&, const T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile T7&, volatile int&> {
+struct std::common_type<volatile T7&, volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile int&, volatile T7&> {
+struct std::common_type<volatile int&, volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile T7&, const volatile int&> {
+struct std::common_type<volatile T7&, const volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<volatile int&, const volatile T7&> {
+struct std::common_type<volatile int&, const volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile T7&, int&> {
+struct std::common_type<const volatile T7&, int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile int&, T7&> {
+struct std::common_type<const volatile int&, T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile T7&, const int&> {
+struct std::common_type<const volatile T7&, const int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile int&, const T7&> {
+struct std::common_type<const volatile int&, const T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile T7&, volatile int&> {
+struct std::common_type<const volatile T7&, volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile int&, volatile T7&> {
+struct std::common_type<const volatile int&, volatile T7&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile T7&, const volatile int&> {
+struct std::common_type<const volatile T7&, const volatile int&> {
   using type = void;
 };
 
 template <>
-struct common_type<const volatile int&, const volatile T7&> {
+struct std::common_type<const volatile int&, const volatile T7&> {
   using type = void;
 };
-} // namespace std
+
 static_assert(HasValidCommonType<T7, int>());
 static_assert(HasValidCommonType<const T7&, const int&>());
 static_assert(HasCommonReference<const T7&, const int&>());
@@ -709,284 +700,242 @@ struct CommonWithInt {
   operator int() const volatile;
 };
 
-namespace std {
 template <>
-struct common_type<CommonWithInt, int> {
+struct std::common_type<CommonWithInt, int> {
   using type = int;
 };
 
 template <>
-struct common_type<int, CommonWithInt> : common_type<CommonWithInt, int> {};
+struct std::common_type<int, CommonWithInt> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<CommonWithInt&, int&> : common_type<CommonWithInt, int> {};
+struct std::common_type<CommonWithInt&, int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<int&, CommonWithInt&> : common_type<CommonWithInt, int> {};
+struct std::common_type<int&, CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<CommonWithInt&, const int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<CommonWithInt&, const int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<int&, const CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<int&, const CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<CommonWithInt&, volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<CommonWithInt&, volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<int&, volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<int&, volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<CommonWithInt&, const volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<CommonWithInt&, const volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<int&, const volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<int&, const volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const CommonWithInt&, int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const CommonWithInt&, int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const int&, CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const int&, CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const CommonWithInt&, const int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const CommonWithInt&, const int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const int&, const CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const int&, const CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const CommonWithInt&, volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const CommonWithInt&, volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const int&, volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const int&, volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const CommonWithInt&, const volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const CommonWithInt&, const volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const int&, const volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const int&, const volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile CommonWithInt&, int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile CommonWithInt&, int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile int&, CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile int&, CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile CommonWithInt&, const int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile CommonWithInt&, const int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile int&, const CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile int&, const CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile CommonWithInt&, volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile CommonWithInt&, volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile int&, volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile int&, volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile CommonWithInt&, const volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile CommonWithInt&, const volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<volatile int&, const volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<volatile int&, const volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile CommonWithInt&, int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile CommonWithInt&, int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile int&, CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile int&, CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile CommonWithInt&, const int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile CommonWithInt&, const int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile int&, const CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile int&, const CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile CommonWithInt&, volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile CommonWithInt&, volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile int&, volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile int&, volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile CommonWithInt&, const volatile int&>
-    : common_type<CommonWithInt, int> {};
+struct std::common_type<const volatile CommonWithInt&, const volatile int&> : std::common_type<CommonWithInt, int> {};
 
 template <>
-struct common_type<const volatile int&, const volatile CommonWithInt&>
-    : common_type<CommonWithInt, int> {};
-} // namespace std
+struct std::common_type<const volatile int&, const volatile CommonWithInt&> : std::common_type<CommonWithInt, int> {};
+
 static_assert(CheckCommonWith<CommonWithInt, int>());
 
 struct CommonWithIntButRefLong {
   operator int() const volatile;
 };
 
-namespace std {
 template <>
-struct common_type<CommonWithIntButRefLong, int> {
+struct std::common_type<CommonWithIntButRefLong, int> {
   using type = int;
 };
 
 template <>
-struct common_type<int, CommonWithIntButRefLong>
-    : common_type<CommonWithIntButRefLong, int> {};
+struct std::common_type<int, CommonWithIntButRefLong> : std::common_type<CommonWithIntButRefLong, int> {};
 
 template <>
-struct common_type<CommonWithIntButRefLong&, int&> {
+struct std::common_type<CommonWithIntButRefLong&, int&> {
   using type = long;
 };
 
 template <>
-struct common_type<int&, CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<int&, CommonWithIntButRefLong&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<CommonWithIntButRefLong&, const int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<CommonWithIntButRefLong&, const int&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<int&, const CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<int&, const CommonWithIntButRefLong&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<CommonWithIntButRefLong&, volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<CommonWithIntButRefLong&, volatile int&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<int&, volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<int&, volatile CommonWithIntButRefLong&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<CommonWithIntButRefLong&, const volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<CommonWithIntButRefLong&, const volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<int&, const volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<int&, const volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const CommonWithIntButRefLong&, int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const CommonWithIntButRefLong&, int&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const int&, CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const int&, CommonWithIntButRefLong&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const CommonWithIntButRefLong&, const int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const CommonWithIntButRefLong&, const int&> : std::common_type<CommonWithIntButRefLong&, int&> {
+};
 
 template <>
-struct common_type<const int&, const CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const int&, const CommonWithIntButRefLong&> : std::common_type<CommonWithIntButRefLong&, int&> {
+};
 
 template <>
-struct common_type<const CommonWithIntButRefLong&, volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const CommonWithIntButRefLong&, volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const int&, volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const int&, volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const CommonWithIntButRefLong&, const volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const CommonWithIntButRefLong&, const volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const int&, const volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const int&, const volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile CommonWithIntButRefLong&, int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile CommonWithIntButRefLong&, int&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile int&, CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile int&, CommonWithIntButRefLong&> : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile CommonWithIntButRefLong&, const int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile CommonWithIntButRefLong&, const int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile int&, const CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile int&, const CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile CommonWithIntButRefLong&, volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile CommonWithIntButRefLong&, volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile int&, volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile int&, volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile CommonWithIntButRefLong&, const volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile CommonWithIntButRefLong&, const volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<volatile int&, const volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<volatile int&, const volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile CommonWithIntButRefLong&, int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile CommonWithIntButRefLong&, int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile int&, CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile int&, CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile CommonWithIntButRefLong&, const int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile CommonWithIntButRefLong&, const int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile int&, const CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile int&, const CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile CommonWithIntButRefLong&, volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile CommonWithIntButRefLong&, volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile int&, volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile int&, volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile CommonWithIntButRefLong&, const volatile int&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
+struct std::common_type<const volatile CommonWithIntButRefLong&, const volatile int&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
 
 template <>
-struct common_type<const volatile int&, const volatile CommonWithIntButRefLong&>
-    : common_type<CommonWithIntButRefLong&, int&> {};
-} // namespace std
+struct std::common_type<const volatile int&, const volatile CommonWithIntButRefLong&>
+    : std::common_type<CommonWithIntButRefLong&, int&> {};
+
 static_assert(CheckCommonWith<CommonWithIntButRefLong, int>());

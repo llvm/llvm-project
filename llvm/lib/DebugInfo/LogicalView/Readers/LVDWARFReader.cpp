@@ -789,7 +789,7 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);
@@ -1082,10 +1082,17 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
   // FIXME: We are assuming that at most one Reference (DW_AT_specification,
   // DW_AT_abstract_origin, ...) and at most one Type (DW_AT_import, DW_AT_type)
   // appear in any single DIE, but this may not be true.
-  uint64_t Reference = *FormValue.getAsReference();
+  uint64_t Offset;
+  if (std::optional<uint64_t> Off = FormValue.getAsRelativeReference())
+    Offset = FormValue.getUnit()->getOffset() + *Off;
+  else if (Off = FormValue.getAsDebugInfoReference(); Off)
+    Offset = *Off;
+  else
+    llvm_unreachable("Unsupported reference type");
+
   // Get target for the given reference, if already created.
   LVElement *Target = getElementForOffset(
-      Reference, CurrentElement,
+      Offset, CurrentElement,
       /*IsType=*/Attr == dwarf::DW_AT_import || Attr == dwarf::DW_AT_type);
   // Check if we are dealing with cross CU references.
   if (FormValue.getForm() == dwarf::DW_FORM_ref_addr) {
@@ -1093,10 +1100,10 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
       // The global reference is ready. Mark it as global.
       Target->setIsGlobalReference();
       // Remove global reference from the unseen list.
-      removeGlobalOffset(Reference);
+      removeGlobalOffset(Offset);
     } else
       // Record the unseen cross CU reference.
-      addGlobalOffset(Reference);
+      addGlobalOffset(Offset);
   }
 
   // At this point, 'Target' can be null, in the case of the target element
@@ -1132,9 +1139,8 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
 // Get an element given the DIE offset.
 LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
                                               LVElement *Element, bool IsType) {
-  auto Iter = ElementTable.try_emplace(Offset).first;
   // Update the element and all the references pointing to this element.
-  LVElementEntry &Entry = Iter->second;
+  LVElementEntry &Entry = ElementTable[Offset];
   if (!Entry.Element) {
     if (IsType)
       Entry.Types.insert(Element);

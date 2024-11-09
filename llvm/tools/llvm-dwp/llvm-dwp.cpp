@@ -188,8 +188,11 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
                         std::make_move_iterator(DWOs->end()));
   }
 
-  if (DWOFilenames.empty())
+  if (DWOFilenames.empty()) {
+    WithColor::defaultWarningHandler(make_error<DWPError>(
+        "executable file does not contain any references to dwo files"));
     return 0;
+  }
 
   std::string ErrorStr;
   StringRef Context = "dwarf streamer init";
@@ -263,9 +266,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
       *ErrOrTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
-      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE), *MSTI,
-      MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
+      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE),
+      *MSTI));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 

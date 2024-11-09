@@ -28,6 +28,7 @@ static_library("Common") {
     "PredicateExpander.cpp",
     "SubtargetFeatureInfo.cpp",
     "Types.cpp",
+    "Utils.cpp",
     "VarLenCodeEmitterGen.cpp",
   ]
 }

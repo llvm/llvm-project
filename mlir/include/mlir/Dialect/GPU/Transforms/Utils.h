@@ -20,16 +20,12 @@
 #include <string>
 
 namespace mlir {
-struct LogicalResult;
 class Operation;
 class Value;
 
 namespace gpu {
 class GPUFuncOp;
 class LaunchOp;
-
-/// Returns the default annotation name for GPU binary blobs.
-std::string getDefaultGpuBinaryAnnotation();
 
 /// Returns the matching vector combining kind.
 vector::CombiningKind convertReductionKind(gpu::AllReduceOperation mode);

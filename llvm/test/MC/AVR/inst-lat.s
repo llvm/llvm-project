@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=rmw -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=rmw < %s | llvm-objdump -d --mattr=rmw - | FileCheck -check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=rmw < %s | llvm-objdump -dr --mattr=rmw - | FileCheck -check-prefix=CHECK-INST %s
 
 foo:
-
   lat Z, r13
   lat Z, r0
   lat Z, r31

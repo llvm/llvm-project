@@ -1617,7 +1617,7 @@ func.func @do_not_inline_distributed_forall_loop(
     %in: tensor<8x8xf32>) -> tensor<8x8xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.empty() : tensor<8x8xf32>
-  %1 = scf.forall (%i, %j) = (0, 0) to (1, 1) step (8, 8)
+  %1 = scf.forall (%i, %j) = (0, 4) to (1, 5) step (8, 8)
       shared_outs (%out_ = %0) -> (tensor<8x8xf32>) {
     %slice = tensor.extract_slice %out_[%i, %j] [2, 3] [1, 1]
       : tensor<8x8xf32> to tensor<2x3xf32>
@@ -1632,6 +1632,35 @@ func.func @do_not_inline_distributed_forall_loop(
 }
 // CHECK-LABEL: @do_not_inline_distributed_forall_loop
 // CHECK: scf.forall
+// CHECK:   tensor.extract_slice %{{.*}}[0, 4] [2, 3] [1, 1]
+// CHECK:   tensor.parallel_insert_slice %{{.*}}[0, 4] [2, 3] [1, 1]
+
+// -----
+
+func.func @inline_empty_loop_with_empty_mapping(
+    %in: tensor<16xf32>) -> tensor<16xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<16xf32>
+  %1 = scf.forall () in () shared_outs (%out_ = %0) -> (tensor<16xf32>) {
+    %slice = tensor.extract_slice %out_[0] [16] [1]
+      : tensor<16xf32> to tensor<16xf32>
+    %generic = linalg.generic {
+        indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+        iterator_types = ["parallel"]}
+        ins(%slice : tensor<16xf32>) outs(%0 : tensor<16xf32>) {
+      ^bb0(%b0 : f32, %b1 : f32):
+        %2 = arith.addf %b0, %b0 : f32
+        linalg.yield %2 : f32
+    } -> tensor<16xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %generic into %out_[0] [16] [1]
+        : tensor<16xf32> into tensor<16xf32>
+    }
+  }{ mapping = [] }
+  return %1 : tensor<16xf32>
+}
+// CHECK-LABEL: func @inline_empty_loop_with_empty_mapping
+//   CHECK-NOT:   scf.forall
 
 // -----
 
@@ -1846,3 +1875,21 @@ func.func @index_switch_fold() -> (f32, f32) {
 //  CHECK-NEXT:   %[[c1:.*]] = arith.constant 1.000000e+00 : f32
 //  CHECK-NEXT:   %[[c42:.*]] = arith.constant 4.200000e+01 : f32
 //  CHECK-NEXT:   return %[[c1]], %[[c42]] : f32, f32
+
+// -----
+
+func.func @index_switch_fold_no_res() {
+  %c1 = arith.constant 1 : index
+  scf.index_switch %c1
+  case 0 {
+    scf.yield
+  }
+  default {
+    "test.op"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @index_switch_fold_no_res()
+//  CHECK-NEXT: "test.op"() : () -> ()

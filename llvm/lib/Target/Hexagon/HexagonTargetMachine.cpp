@@ -59,6 +59,10 @@ static cl::opt<bool>
     DisableHCP("disable-hcp", cl::Hidden,
                cl::desc("Disable Hexagon constant propagation"));
 
+static cl::opt<bool> DisableHexagonMask(
+    "disable-mask", cl::Hidden,
+    cl::desc("Disable Hexagon specific Mask generation pass"));
+
 static cl::opt<bool> DisableStoreWidening("disable-store-widen", cl::Hidden,
                                           cl::init(false),
                                           cl::desc("Disable store widening"));
@@ -180,6 +184,8 @@ void initializeHexagonGenMuxPass(PassRegistry &);
 void initializeHexagonHardwareLoopsPass(PassRegistry &);
 void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
 void initializeHexagonLoopAlignPass(PassRegistry &);
+void initializeHexagonMaskPass(PassRegistry &);
+void initializeHexagonMergeActivateWeightPass(PassRegistry &);
 void initializeHexagonNewValueJumpPass(PassRegistry &);
 void initializeHexagonOptAddrModePass(PassRegistry &);
 void initializeHexagonPacketizerPass(PassRegistry &);
@@ -213,6 +219,8 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createHexagonLoopAlign();
 FunctionPass *createHexagonLoopRescheduling();
+FunctionPass *createHexagonMask();
+FunctionPass *createHexagonMergeActivateWeight();
 FunctionPass *createHexagonNewValueJump();
 FunctionPass *createHexagonOptAddrMode();
 FunctionPass *createHexagonOptimizeSZextends();
@@ -312,8 +320,7 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "HexagonPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
@@ -475,10 +482,13 @@ void HexagonPassConfig::addPostRegAlloc() {
 }
 
 void HexagonPassConfig::addPreSched2() {
+  bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
   addPass(createHexagonCopyToCombine());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&IfConverterID);
   addPass(createHexagonSplitConst32AndConst64());
+  if (!NoOpt && !DisableHexagonMask)
+    addPass(createHexagonMask());
 }
 
 void HexagonPassConfig::addPreEmitPass() {

@@ -1,0 +1,25 @@
+# RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
+
+# CHECK: ccmpew  {dfv=}  $123, %ax
+# CHECK: encoding: [0x62,0xf4,0x05,0x04,0x83,0xf8,0x7b]
+         ccmpew {dfv=} $123, %ax
+
+# CHECK: ccmpel  {dfv=}  $123, %eax
+# CHECK: encoding: [0x62,0xf4,0x04,0x04,0x83,0xf8,0x7b]
+         ccmpel {dfv=} $123, %eax
+
+# CHECK: ccmpeq  {dfv=}  $123, %rax
+# CHECK: encoding: [0x62,0xf4,0x84,0x04,0x83,0xf8,0x7b]
+         ccmpeq {dfv=} $123, %rax
+
+# CHECK: ccmpew  {dfv=}  $123, (%rdx)
+# CHECK: encoding: [0x62,0xf4,0x05,0x04,0x83,0x3a,0x7b]
+         ccmpew {dfv=} $123, (%rdx)
+
+# CHECK: ccmpel  {dfv=}  $123, (%rdx)
+# CHECK: encoding: [0x62,0xf4,0x04,0x04,0x83,0x3a,0x7b]
+         ccmpel {dfv=} $123, (%rdx)
+
+# CHECK: ccmpeq  {dfv=}  $123, (%rdx)
+# CHECK: encoding: [0x62,0xf4,0x84,0x04,0x83,0x3a,0x7b]
+         ccmpeq {dfv=} $123, (%rdx)

@@ -197,12 +197,6 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("plugin load ", [])
 
     def test_log_enable(self):
-        self.complete_from_to("log enable ll", ["lldb"])
-        self.complete_from_to("log enable dw", ["dwarf"])
-        self.complete_from_to("log enable lldb al", ["all"])
-        self.complete_from_to("log enable lldb sym", ["symbol"])
-
-    def test_log_enable(self):
         self.complete_from_to("log disable ll", ["lldb"])
         self.complete_from_to("log disable dw", ["dwarf"])
         self.complete_from_to("log disable lldb al", ["all"])
@@ -714,7 +708,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.check_completion_with_desc(
             "frame recognizer delete ",
-            [["0", "py_class, module module_name, symbol recognizer_name"]],
+            [["0", "py_class, module module_name, demangled symbol recognizer_name"]],
         )
 
     def test_platform_install_local_file(self):

@@ -11,13 +11,14 @@
 
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_epoll_event.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: sigmask should be nullable
 int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
                 int timeout, const sigset_t *sigmask);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT_H

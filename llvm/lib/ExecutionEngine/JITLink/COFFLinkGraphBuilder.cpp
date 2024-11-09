@@ -467,7 +467,7 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
     return &G->addDefinedSymbol(
         G->createZeroFillBlock(getCommonSection(), Symbol.getValue(),
                                orc::ExecutorAddr(), Symbol.getValue(), 0),
-        0, SymbolName, Symbol.getValue(), Linkage::Strong, Scope::Default,
+        0, SymbolName, Symbol.getValue(), Linkage::Weak, Scope::Default,
         false, false);
   }
   if (Symbol.isAbsolute())

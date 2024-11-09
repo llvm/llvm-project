@@ -67,12 +67,14 @@ ENUM_CLASS(
 const char *AsFortran(DefinedIo);
 
 // Floating-point rounding modes; these are packed into a byte to save
-// room in the runtime's format processing context structure.
+// room in the runtime's format processing context structure.  These
+// enumerators are defined with the corresponding values returned from
+// llvm.get.rounding.
 enum class RoundingMode : std::uint8_t {
-  TiesToEven, // ROUND=NEAREST, RN - default IEEE rounding
   ToZero, // ROUND=ZERO, RZ - truncation
-  Down, // ROUND=DOWN, RD
+  TiesToEven, // ROUND=NEAREST, RN - default IEEE rounding
   Up, // ROUND=UP, RU
+  Down, // ROUND=DOWN, RD
   TiesAwayFromZero, // ROUND=COMPATIBLE, RC - ties round away from zero
 };
 
@@ -116,7 +118,8 @@ static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,
 std::string AsFortran(IgnoreTKRSet);
 
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
-    std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
+    std::optional<CUDADataAttr>, IgnoreTKRSet, std::optional<std::string> *,
+    bool allowUnifiedMatchingRule,
     const LanguageFeatureControl *features = nullptr);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";

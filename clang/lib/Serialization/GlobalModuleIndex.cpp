@@ -430,14 +430,13 @@ namespace {
 
     /// Retrieve the module file information for the given file.
     ModuleFileInfo &getModuleFileInfo(FileEntryRef File) {
-      auto Known = ModuleFiles.find(File);
-      if (Known != ModuleFiles.end())
-        return Known->second;
-
-      unsigned NewID = ModuleFiles.size();
-      ModuleFileInfo &Info = ModuleFiles[File];
-      Info.ID = NewID;
-      return Info;
+      auto [It, Inserted] = ModuleFiles.try_emplace(File);
+      if (Inserted) {
+        unsigned NewID = ModuleFiles.size();
+        ModuleFileInfo &Info = It->second;
+        Info.ID = NewID;
+      }
+      return It->second;
     }
 
   public:
@@ -510,7 +509,8 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID = endian::readNext<uint32_t, llvm::endianness::little>(d);
+      IdentifierID RawID =
+          endian::readNext<IdentifierID, llvm::endianness::little>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }

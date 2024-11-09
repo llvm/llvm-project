@@ -43,16 +43,17 @@ enum class CudaVersion {
   CUDA_123,
   CUDA_124,
   CUDA_125,
+  CUDA_126,
   FULLY_SUPPORTED = CUDA_123,
   PARTIALLY_SUPPORTED =
-      CUDA_125, // Partially supported. Proceed with a warning.
+      CUDA_126, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
-enum class CudaArch {
+enum class OffloadArch {
   UNUSED,
   UNKNOWN,
   // TODO: Deprecate and remove GPU architectures older than sm_52.
@@ -78,6 +79,7 @@ enum class CudaArch {
   SM_89,
   SM_90,
   SM_90a,
+  SM_100,
   GFX600,
   GFX601,
   GFX602,
@@ -125,15 +127,17 @@ enum class CudaArch {
   GFX1150,
   GFX1151,
   GFX1152,
+  GFX1153,
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
+  AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
   LAST,
 
-  CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX906,
+  CudaDefault = OffloadArch::SM_52,
+  HIPDefault = OffloadArch::GFX906,
 };
 
 enum class CUDAFunctionTarget {
@@ -144,26 +148,26 @@ enum class CUDAFunctionTarget {
   InvalidTarget
 };
 
-static inline bool IsNVIDIAGpuArch(CudaArch A) {
-  return A >= CudaArch::SM_20 && A < CudaArch::GFX600;
+static inline bool IsNVIDIAOffloadArch(OffloadArch A) {
+  return A >= OffloadArch::SM_20 && A < OffloadArch::GFX600;
 }
 
-static inline bool IsAMDGpuArch(CudaArch A) {
+static inline bool IsAMDOffloadArch(OffloadArch A) {
   // Generic processor model is for testing only.
-  return A >= CudaArch::GFX600 && A < CudaArch::Generic;
+  return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
 }
 
-const char *CudaArchToString(CudaArch A);
-const char *CudaArchToVirtualArchString(CudaArch A);
+const char *OffloadArchToString(OffloadArch A);
+const char *OffloadArchToVirtualArchString(OffloadArch A);
 
 // The input should have the form "sm_20".
-CudaArch StringToCudaArch(llvm::StringRef S);
+OffloadArch StringToOffloadArch(llvm::StringRef S);
 
-/// Get the earliest CudaVersion that supports the given CudaArch.
-CudaVersion MinVersionForCudaArch(CudaArch A);
+/// Get the earliest CudaVersion that supports the given OffloadArch.
+CudaVersion MinVersionForOffloadArch(OffloadArch A);
 
-/// Get the latest CudaVersion that supports the given CudaArch.
-CudaVersion MaxVersionForCudaArch(CudaArch A);
+/// Get the latest CudaVersion that supports the given OffloadArch.
+CudaVersion MaxVersionForOffloadArch(OffloadArch A);
 
 //  Various SDK-dependent features that affect CUDA compilation
 enum class CudaFeature {

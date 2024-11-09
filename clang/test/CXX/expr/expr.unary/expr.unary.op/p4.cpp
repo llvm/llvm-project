@@ -43,18 +43,36 @@ namespace test2 {
 }
 
 namespace GH40906 {
-  struct A {
-    int val;
-    void func() {}
-  };
+struct S {
+    int x;
+    void func();
+    static_assert(__is_same_as(decltype((S::x)), int&), "");
+    static_assert(__is_same_as(decltype(&(S::x)), int*), "");
 
-  void test() {
-    decltype(&(A::val)) ptr1; // expected-error {{cannot form pointer to member from a parenthesized expression; did you mean to remove the parentheses?}}
-    int A::* ptr2 = &(A::val); // expected-error {{invalid use of non-static data member 'val'}}
+    // FIXME: provide better error messages
+    static_assert(__is_same_as(decltype((S::func)), int&), ""); // expected-error {{call to non-static member function without an object argument}}
+    static_assert(__is_same_as(decltype(&(S::func)), int*), ""); // expected-error {{call to non-static member function without an object argument}}
+};
+static_assert(__is_same_as(decltype((S::x)), int&), "");
+static_assert(__is_same_as(decltype(&(S::x)), int*), "");
+static_assert(__is_same_as(decltype((S::func)), int&), ""); // expected-error {{call to non-static member function without an object argument}}
+static_assert(__is_same_as(decltype(&(S::func)), int*), ""); // expected-error {{call to non-static member function without an object argument}}
 
-    // FIXME: Error messages in these cases are less than clear, we can do
-    // better.
-    int size = sizeof(&(A::func)); // expected-error {{call to non-static member function without an object argument}}
-    void (A::* ptr3)() = &(A::func); // expected-error {{call to non-static member function without an object argument}}
-  }
+struct A { int x;};
+
+char q(int *);
+short q(int A::*);
+
+template <typename T>
+constexpr int f(char (*)[sizeof(q(&T::x))]) { return 1; }
+
+template <typename T>
+constexpr int f(char (*)[sizeof(q(&(T::x)))]) { return 2; }
+
+constexpr int g(char (*p)[sizeof(char)] = 0) { return f<A>(p); }
+constexpr int h(char (*p)[sizeof(short)] = 0) { return f<A>(p); }
+
+static_assert(g() == 2);
+static_assert(h() == 1);
+
 }

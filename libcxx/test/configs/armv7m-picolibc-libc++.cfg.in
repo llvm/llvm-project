@@ -9,7 +9,7 @@ config.substitutions.append(('%{compile_flags}',
 
     # Disable warnings in cxx_atomic_impl.h:
     # "large atomic operation may incur significant performance penalty; the
-    # access size (4 bytes) exceeds the max lock-free size (0  bytes)"
+    # access size (4 bytes) exceeds the max lock-free size (0 bytes)"
     ' -Wno-atomic-alignment'
 
     # Various libc++ headers check for the definition of _NEWLIB_VERSION

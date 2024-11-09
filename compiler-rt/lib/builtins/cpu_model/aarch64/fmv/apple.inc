@@ -5,6 +5,21 @@
 #if __has_include(<arm/cpu_capabilities_public.h>)
 #include <arm/cpu_capabilities_public.h>
 #define HAS_CPU_CAPABILITIES_PUBLIC_H 1
+
+// FB13964283 - A few of these didn't make it into the public SDK yet.
+#ifndef CAP_BIT_FEAT_SME
+#define CAP_BIT_FEAT_SME            40
+#endif
+#ifndef CAP_BIT_FEAT_SME2
+#define CAP_BIT_FEAT_SME2           41
+#endif
+#ifndef CAP_BIT_FEAT_SME_F64F64
+#define CAP_BIT_FEAT_SME_F64F64     42
+#endif
+#ifndef CAP_BIT_FEAT_SME_I16I64
+#define CAP_BIT_FEAT_SME_I16I64     43
+#endif
+
 #endif
 
 static bool isKnownAndSupported(const char *name) {
@@ -16,10 +31,6 @@ static bool isKnownAndSupported(const char *name) {
 }
 
 static uint64_t deriveImplicitFeatures(uint64_t features) {
-  // FEAT_SSBS2 implies FEAT_SSBS
-  if ((1ULL << FEAT_SSBS2) & features)
-    features |= (1ULL << FEAT_SSBS);
-
   // FEAT_FP is always enabled
   features |= (1ULL << FEAT_FP);
 
@@ -62,8 +73,6 @@ void __init_cpu_features_resolver(void) {
     CHECK_BIT(CAP_BIT_FEAT_RDM, FEAT_RDM);
     CHECK_BIT(CAP_BIT_FEAT_LSE, FEAT_LSE);
     CHECK_BIT(CAP_BIT_FEAT_SHA256, FEAT_SHA2);
-    CHECK_BIT(CAP_BIT_FEAT_SHA1, FEAT_SHA1);
-    CHECK_BIT(CAP_BIT_FEAT_AES, FEAT_AES);
     CHECK_BIT(CAP_BIT_FEAT_PMULL, FEAT_PMULL);
     CHECK_BIT(CAP_BIT_FEAT_SPECRES, FEAT_PREDRES);
     CHECK_BIT(CAP_BIT_FEAT_SB, FEAT_SB);
@@ -108,10 +117,8 @@ void __init_cpu_features_resolver(void) {
       {"hw.optional.arm.FEAT_LSE", FEAT_LSE},
       {"hw.optional.AdvSIMD", FEAT_SIMD},
       {"hw.optional.armv8_crc32", FEAT_CRC},
-      {"hw.optional.arm.FEAT_SHA1", FEAT_SHA1},
       {"hw.optional.arm.FEAT_SHA256", FEAT_SHA2},
       {"hw.optional.arm.FEAT_SHA3", FEAT_SHA3},
-      {"hw.optional.arm.FEAT_AES", FEAT_AES},
       {"hw.optional.arm.FEAT_PMULL", FEAT_PMULL},
       {"hw.optional.arm.FEAT_FP16", FEAT_FP16},
       {"hw.optional.arm.FEAT_DIT", FEAT_DIT},

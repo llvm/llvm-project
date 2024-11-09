@@ -57,7 +57,7 @@
 //
 // base = gep a, 0, x, y
 // load base
-// laod base + 1  * sizeof(float)
+// load base + 1  * sizeof(float)
 // load base + 32 * sizeof(float)
 // load base + 33 * sizeof(float)
 //
@@ -245,7 +245,7 @@ public:
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
-      : IP(InsertionPt), DL(InsertionPt->getModule()->getDataLayout()) {}
+      : IP(InsertionPt), DL(InsertionPt->getDataLayout()) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -1179,7 +1179,7 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
   if (DisableSeparateConstOffsetFromGEP)
     return false;
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   bool Changed = false;
   for (BasicBlock &B : F) {
     if (!DT->isReachableFromEntry(&B))
@@ -1238,6 +1238,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
             new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
+        NewSExt->setDebugLoc(I->getDebugLoc());
         RecursivelyDeleteTriviallyDeadInstructions(I);
         return true;
       }
@@ -1250,6 +1251,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
             new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
+        NewSExt->setDebugLoc(I->getDebugLoc());
         RecursivelyDeleteTriviallyDeadInstructions(I);
         return true;
       }
@@ -1369,7 +1371,7 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   Second->setOperand(1, Offset1);
 
   // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
-  const DataLayout &DAL = First->getModule()->getDataLayout();
+  const DataLayout &DAL = First->getDataLayout();
   APInt Offset(DAL.getIndexSizeInBits(
                    cast<PointerType>(First->getType())->getAddressSpace()),
                0);

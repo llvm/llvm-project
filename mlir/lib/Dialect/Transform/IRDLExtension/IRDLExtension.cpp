@@ -18,6 +18,8 @@ namespace {
 class IRDLExtension
     : public transform::TransformDialectExtension<IRDLExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(IRDLExtension)
+
   void init() {
     registerTransformOps<
 #define GET_OP_LIST

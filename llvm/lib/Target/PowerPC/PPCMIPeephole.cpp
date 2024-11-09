@@ -155,14 +155,14 @@ private:
 public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariables>();
+    AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addPreserved<LiveVariables>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -202,8 +202,8 @@ void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MRI = &MF->getRegInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  LV = &getAnalysis<LiveVariables>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   RegsToUpdate.clear();
@@ -448,6 +448,9 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
       if (MRI->isSSA())
         addRegToUpdate(RegMBB.first.getReg());
     }
+    // The liveness of old PHI and new PHI have to be updated.
+    addRegToUpdate(PHI->getOperand(0).getReg());
+    addRegToUpdate(AccReg);
     ChangedPHIMap[PHI] = NewPHI.getInstr();
     LLVM_DEBUG(dbgs() << "Converting PHI: ");
     LLVM_DEBUG(PHI->dump());
@@ -1050,7 +1053,16 @@ bool PPCMIPeephole::simplifyCode() {
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
                    TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
-          // sign-extended.
+          // sign-extended. However, we are not sure whether a spill will occur
+          // during register allocation. If there is no promotion, it will use
+          // 'stw' instead of 'std', and 'lwz' instead of 'ld' when spilling,
+          // since the register class is 32-bits. Consequently, the high 32-bit
+          // information will be lost. Therefore, all these instructions in the
+          // chain used to deduce sign extension to eliminate the 'extsw' will
+          // need to be promoted to 64-bit pseudo instructions when the 'extsw'
+          // is eliminated.
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
+
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
               MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
@@ -1288,6 +1300,10 @@ bool PPCMIPeephole::simplifyCode() {
           addRegToUpdate(OrigOp1Reg);
           if (MI.getOperand(1).isReg())
             addRegToUpdate(MI.getOperand(1).getReg());
+          if (ToErase && ToErase->getOperand(1).isReg())
+            for (auto UseReg : ToErase->explicit_uses())
+              if (UseReg.isReg())
+                addRegToUpdate(UseReg.getReg());
           ++NumRotatesCollapsed;
         }
         break;
@@ -2028,10 +2044,10 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
 
 INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
                       "PowerPC MI Peephole Optimization", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

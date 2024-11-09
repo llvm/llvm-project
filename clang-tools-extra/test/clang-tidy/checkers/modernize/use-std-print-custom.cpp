@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy -std=c++23 %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             { \
-// RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2; bad_format_type_printf', \
-// RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2; bad_format_type_fprintf' \
+// RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2; bad_format_type_printf; fmt::printf', \
+// RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2; bad_format_type_fprintf; fmt::fprintf' \
 // RUN:             } \
 // RUN:            }" \
 // RUN:   -- -isystem %clang_tidy_headers
@@ -106,5 +106,27 @@ void unsupported_format_parameter_type()
   // No fixes here because the format parameter of the function called is not a
   // string.
   bad_format_type_printf("Hello %s", "world");
+// CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'bad_format_type_printf' because first argument is not a narrow string literal [modernize-use-std-print]
+
   bad_format_type_fprintf(stderr, "Hello %s", "world");
+// CHECK-MESSAGES: [[@LINE-1]]:3: warning: unable to use 'std::print' instead of 'bad_format_type_fprintf' because first argument is not a narrow string literal [modernize-use-std-print]
+}
+
+namespace fmt {
+  template <typename S, typename... T>
+  inline int printf(const S& fmt, const T&... args);
+
+  template <typename S, typename... T>
+  inline int fprintf(std::FILE* f, const S& fmt, const T&... args);
+}
+
+void fmt_printf()
+{
+  fmt::printf("fmt::printf templated %s argument %d\n", "format", 424);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("fmt::printf templated {} argument {}", "format", 424);
+
+  fmt::fprintf(stderr, "fmt::fprintf templated %s argument %d\n", "format", 425);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "fmt::fprintf templated {} argument {}", "format", 425);
 }

@@ -278,7 +278,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     IntrinsicNumElts = 16;
   }
 
-  Function *PSADBWFn = Intrinsic::getDeclaration(Op->getModule(), IID);
+  Function *PSADBWFn = Intrinsic::getOrInsertDeclaration(Op->getModule(), IID);
 
   if (NumElts < 16) {
     // Pad input with zeroes.
@@ -508,7 +508,7 @@ bool X86PartialReduction::runOnFunction(Function &F) {
   auto &TM = TPC->getTM<X86TargetMachine>();
   ST = TM.getSubtargetImpl(F);
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   bool MadeChange = false;
   for (auto &BB : F) {

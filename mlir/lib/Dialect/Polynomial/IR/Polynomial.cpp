@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {

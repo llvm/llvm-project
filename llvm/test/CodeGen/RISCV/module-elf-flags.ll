@@ -10,4 +10,4 @@ define i32 @addi(i32 %a) {
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 6, !"riscv-isa", !1}
-!1 = !{!"rv64i2p1_c2p0_ztso0p1"}
+!1 = !{!"rv64i2p1_c2p0_ztso1p0"}

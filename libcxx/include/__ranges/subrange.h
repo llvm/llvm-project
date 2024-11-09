@@ -17,6 +17,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/subrange.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
@@ -33,13 +34,13 @@
 #include <__tuple/tuple_size.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -200,12 +201,11 @@ template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
 subrange(_Iter, _Sent, make_unsigned_t<iter_difference_t<_Iter>>) -> subrange<_Iter, _Sent, subrange_kind::sized>;
 
 template <borrowed_range _Range>
-subrange(_Range&&)
-    -> subrange<iterator_t<_Range>,
-                sentinel_t<_Range>,
-                (sized_range<_Range> || sized_sentinel_for<sentinel_t<_Range>, iterator_t<_Range>>)
-                    ? subrange_kind::sized
-                    : subrange_kind::unsized>;
+subrange(_Range&&) -> subrange<iterator_t<_Range>,
+                               sentinel_t<_Range>,
+                               (sized_range<_Range> || sized_sentinel_for<sentinel_t<_Range>, iterator_t<_Range>>)
+                                   ? subrange_kind::sized
+                                   : subrange_kind::unsized>;
 
 template <borrowed_range _Range>
 subrange(_Range&&, make_unsigned_t<range_difference_t<_Range>>)

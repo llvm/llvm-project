@@ -1,16 +1,20 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify -Wc++20-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify -Wc++17-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -DEXT -Wc++17-extensions -Wc++20-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11,cxx11-17 -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17,since-cxx17 -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected,since-cxx17 -pedantic %s
 
 struct [[nodiscard]] S {};
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 S get_s();
 S& get_s_ref();
 
 enum [[nodiscard]] E {};
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 E get_e();
 
 [[nodiscard]] int get_i();
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 [[nodiscard]] volatile int &get_vi();
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 
 void f() {
   get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -27,6 +31,7 @@ void f() {
 }
 
 [[nodiscard]] volatile char &(*fp)(); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 void g() {
   fp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
@@ -63,15 +68,20 @@ void f() {
 } // namespace PR31526
 
 struct [[nodiscard("reason")]] ReasonStruct {};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 struct LaterReason;
 struct [[nodiscard("later reason")]] LaterReason {};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 ReasonStruct get_reason();
 LaterReason get_later_reason();
 [[nodiscard("another reason")]] int another_reason();
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 [[nodiscard("conflicting reason")]] int conflicting_reason();
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 [[nodiscard("special reason")]] int conflicting_reason();
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 void cxx20_use() {
   get_reason(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: reason}}
@@ -82,17 +92,23 @@ void cxx20_use() {
 
 namespace p1771 {
 struct[[nodiscard("Don't throw me away!")]] ConvertTo{};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 struct S {
   [[nodiscard]] S();
+  // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
   [[nodiscard("Don't let that S-Char go!")]] S(char);
+  // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
   S(int);
   [[gnu::warn_unused_result]] S(double);
   operator ConvertTo();
   [[nodiscard]] operator int();
+  // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
   [[nodiscard("Don't throw away as a double")]] operator double();
+  // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 };
 
 struct[[nodiscard("Don't throw me away either!")]] Y{};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 void usage() {
   S();    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
@@ -103,42 +119,18 @@ void usage() {
   S s;
   ConvertTo{}; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
 
-// AST is different in C++20 mode, pre-2017 a move ctor for ConvertTo is there
-// as well, hense the constructor warning.
-#if __cplusplus >= 201703L
-// expected-warning@+4 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
-#else
-// expected-warning@+2 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
-#endif
+  // AST is different in C++17 mode. Before, a move ctor for ConvertTo is there
+  // as well, hence the constructor warning.
+
+  // since-cxx17-warning@+2 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+  // cxx11-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
   (ConvertTo) s;
   (int)s; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   (S)'c'; // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't let that S-Char go!}}
-#if __cplusplus >= 201703L
-// expected-warning@+4 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
-#else
-// expected-warning@+2 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
-#endif
+  // since-cxx17-warning@+2 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+  // cxx11-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
   static_cast<ConvertTo>(s);
   static_cast<int>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   static_cast<double>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw away as a double}}
 }
-}; // namespace p1771
-
-#ifdef EXT
-// expected-warning@5 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@9 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@12 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@13 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@29 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@65 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@67 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@71 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@73 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@74 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@84 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@86 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@87 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@91 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@92 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// expected-warning@95 {{use of the 'nodiscard' attribute is a C++20 extension}}
-#endif
+} // namespace p1771

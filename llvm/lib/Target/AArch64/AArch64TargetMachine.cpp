@@ -98,7 +98,7 @@ static cl::opt<bool> EnableCollectLOH(
 static cl::opt<bool>
     EnableDeadRegisterElimination("aarch64-enable-dead-defs", cl::Hidden,
                                   cl::desc("Enable the pass that removes dead"
-                                           " definitons and replaces stores to"
+                                           " definitions and replaces stores to"
                                            " them with stores to the zero"
                                            " register"),
                                   cl::init(true));
@@ -167,6 +167,11 @@ static cl::opt<bool>
                            cl::desc("Enable SVE intrinsic opts"),
                            cl::init(true));
 
+static cl::opt<bool>
+    EnableSMEPeepholeOpt("enable-aarch64-sme-peephole-opt", cl::init(true),
+                         cl::Hidden,
+                         cl::desc("Perform SME peephole optimization"));
+
 static cl::opt<bool> EnableFalkorHWPFFix("aarch64-enable-falkor-hwpf-fix",
                                          cl::init(true), cl::Hidden);
 
@@ -186,6 +191,11 @@ static cl::opt<unsigned> SVEVectorBitsMinOpt(
     cl::desc("Assume SVE vector registers are at least this big, "
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
+
+static cl::opt<bool> ForceStreaming(
+    "force-streaming",
+    cl::desc("Force the use of streaming code for all functions"),
+    cl::init(false), cl::Hidden);
 
 static cl::opt<bool> ForceStreamingCompatible(
     "force-streaming-compatible",
@@ -251,6 +261,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(*PR);
   initializeKCFIPass(*PR);
   initializeSMEABIPass(*PR);
+  initializeSMEPeepholeOptPass(*PR);
   initializeSVEIntrinsicOptsPass(*PR);
   initializeAArch64SpeculationHardeningPass(*PR);
   initializeAArch64SLSHardeningPass(*PR);
@@ -260,6 +271,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64DAGToDAGISelLegacyPass(*PR);
   initializeAArch64GlobalsTaggingPass(*PR);
 }
+
+void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
 
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
@@ -279,15 +292,19 @@ static std::string computeDataLayout(const Triple &TT,
                                      bool LittleEndian) {
   if (TT.isOSBinFormatMachO()) {
     if (TT.getArch() == Triple::aarch64_32)
-      return "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32";
-    return "e-m:o-i64:64-i128:128-n32:64-S128-Fn32";
+      return "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+             "n32:64-S128-Fn32";
+    return "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-"
+           "Fn32";
   }
   if (TT.isOSBinFormatCOFF())
-    return "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32";
+    return "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-i64:64-i128:"
+           "128-n32:64-S128-Fn32";
   std::string Endian = LittleEndian ? "e" : "E";
   std::string Ptr32 = TT.getEnvironment() == Triple::GNUILP32 ? "-p:32:32" : "";
   return Endian + "-m:e" + Ptr32 +
-         "-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32";
+         "-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-"
+         "n32:64-S128-Fn32";
 }
 
 static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
@@ -412,11 +429,11 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
   bool HasMinSize = F.hasMinSize();
 
-  bool IsStreaming = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
+  bool IsStreaming = ForceStreaming ||
+                     F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
                      F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool IsStreamingCompatible =
-      F.hasFnAttribute("aarch64_pstate_sm_compatible") ||
-      ForceStreamingCompatible;
+  bool IsStreamingCompatible = ForceStreamingCompatible ||
+                               F.hasFnAttribute("aarch64_pstate_sm_compatible");
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
@@ -549,8 +566,7 @@ public:
 
 } // end anonymous namespace
 
-void AArch64TargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
@@ -578,7 +594,7 @@ void AArch64PassConfig::addIRPasses() {
 
   // Expand any SVE vector library calls that we can't code generate directly.
   if (EnableSVEIntrinsicOpts &&
-      TM->getOptLevel() == CodeGenOptLevel::Aggressive)
+      TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createSVEIntrinsicOptsPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
@@ -750,6 +766,9 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
+    addPass(createSMEPeepholeOptPass());
+
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
 
@@ -767,7 +786,7 @@ bool AArch64PassConfig::addILPOpts() {
   if (EnableCondBrTuning)
     addPass(createAArch64CondBrTuning());
   if (EnableEarlyIfConversion)
-    addPass(&EarlyIfConverterID);
+    addPass(&EarlyIfConverterLegacyID);
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
@@ -857,7 +876,6 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64IndirectThunks());
   addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)

@@ -42,12 +42,12 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   while (sourceDim < sourceShape.size()) {
     unsigned targetDim = reassociationMap.size();
     // If we have mapped all the target dimensions stop and handle the remaining
-    // tail of size-1 dimensions explictly.
+    // tail of size-1 dimensions explicitly.
     if (targetDim == targetShape.size())
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceDim < sourceShape.size() &&
+    while (sourceDim < (sourceShape.size() - 1) &&
            sourceShape[sourceDim] != ShapedType::kDynamic &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];

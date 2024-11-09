@@ -189,6 +189,49 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
+void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
+  // Nothing to do if we have less than 2 functions.
+  if (Funcs.size() < 2)
+    return;
+
+  // Sort the function infos by address range first
+  llvm::sort(Funcs);
+  std::vector<FunctionInfo> TopLevelFuncs;
+
+  // Add the first function info to the top level functions
+  TopLevelFuncs.emplace_back(std::move(Funcs.front()));
+
+  // Now if the next function info has the same address range as the top level,
+  // then merge it into the top level function, otherwise add it to the top
+  // level.
+  for (size_t Idx = 1; Idx < Funcs.size(); ++Idx) {
+    FunctionInfo &TopFunc = TopLevelFuncs.back();
+    FunctionInfo &MatchFunc = Funcs[Idx];
+    if (TopFunc.Range == MatchFunc.Range) {
+      // Both have the same range - add the 2nd func as a child of the 1st func
+      if (!TopFunc.MergedFunctions)
+        TopFunc.MergedFunctions = MergedFunctionsInfo();
+      // Avoid adding duplicate functions to MergedFunctions. Since functions
+      // are already ordered within the Funcs array, we can just check equality
+      // against the last function in the merged array.
+      else if (TopFunc.MergedFunctions->MergedFunctions.back() == MatchFunc)
+        continue;
+      TopFunc.MergedFunctions->MergedFunctions.emplace_back(
+          std::move(MatchFunc));
+    } else
+      // No match, add the function as a top-level function
+      TopLevelFuncs.emplace_back(std::move(MatchFunc));
+  }
+
+  uint32_t mergedCount = Funcs.size() - TopLevelFuncs.size();
+  // If any functions were merged, print a message about it.
+  if (mergedCount != 0)
+    Out << "Have " << mergedCount
+        << " merged functions as children of other functions\n";
+
+  std::swap(Funcs, TopLevelFuncs);
+}
+
 llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
@@ -332,8 +375,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   // Save a mapping of string offsets to the cached string reference in case
   // we need to segment the GSYM file and copy string from one string table to
   // another.
-  if (StringOffsetMap.count(StrOff) == 0)
-    StringOffsetMap.insert(std::make_pair(StrOff, CHStr));
+  StringOffsetMap.try_emplace(StrOff, CHStr);
   return StrOff;
 }
 

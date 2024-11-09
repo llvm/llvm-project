@@ -119,6 +119,12 @@ def Float16Ptr : PtrType<Float16Type>;
 def Float128Ptr : PtrType<Float128Type>;
 def UnsignedCharPtr : PtrType<UnsignedCharType>;
 
+def ConstDoublePtr : ConstType<DoublePtr>;
+def ConstFloatPtr : ConstType<FloatPtr>;
+def ConstLongDoublePtr : ConstType<LongDoublePtr>;
+def ConstFloat16Ptr : ConstType<Float16Ptr>;
+def ConstFloat128Ptr : ConstType<Float128Ptr>;
+
 def SigHandlerT : NamedType<"__sighandler_t">;
 
 def TimeTType : NamedType<"time_t">;
@@ -126,6 +132,8 @@ def TimeTType : NamedType<"time_t">;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
+def RestrictStructTimeSpecPtr : RestrictedPtrType<StructTimeSpec>;
+def ConstRestrictStructTimeSpecPtr : ConstType<RestrictStructTimeSpecPtr>;
 
 def BSearchCompareT : NamedType<"__bsearchcompare_t">;
 def QSortCompareT : NamedType<"__qsortcompare_t">;

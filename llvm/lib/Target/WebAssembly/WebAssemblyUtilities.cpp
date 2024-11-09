@@ -43,6 +43,8 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::THROW:
   case WebAssembly::THROW_S:
+  case WebAssembly::THROW_REF:
+  case WebAssembly::THROW_REF_S:
   case WebAssembly::RETHROW:
   case WebAssembly::RETHROW_S:
     return true;

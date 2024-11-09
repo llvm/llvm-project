@@ -113,8 +113,7 @@ static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
                                             "BPFPreserveStaticOffsetPass");
 }
 
-void BPFTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "BPFPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
@@ -139,7 +138,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
         FPM.addPass(BPFPreserveStaticOffsetPass(false));
       });
   PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel) {
+      [=](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
         MPM.addPass(BPFAdjustOptPass());
       });
 }

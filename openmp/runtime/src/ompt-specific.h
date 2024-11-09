@@ -130,6 +130,25 @@ inline const char *ompt_get_runtime_version() {
   return &__kmp_version_lib_ver[KMP_VERSION_MAGIC_LEN];
 }
 
+inline ompt_work_t ompt_get_work_schedule(enum sched_type schedule) {
+  switch (SCHEDULE_WITHOUT_MODIFIERS(schedule)) {
+  case kmp_sch_static_chunked:
+  case kmp_sch_static_balanced:
+  case kmp_sch_static_greedy:
+    return ompt_work_loop_static;
+  case kmp_sch_dynamic_chunked:
+  case kmp_sch_static_steal:
+    return ompt_work_loop_dynamic;
+  case kmp_sch_guided_iterative_chunked:
+  case kmp_sch_guided_analytical_chunked:
+  case kmp_sch_guided_chunked:
+  case kmp_sch_guided_simd:
+    return ompt_work_loop_guided;
+  default:
+    return ompt_work_loop_other;
+  }
+}
+
 class OmptReturnAddressGuard {
 private:
   bool SetAddress{false};

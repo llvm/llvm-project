@@ -42,41 +42,87 @@ template <class>
 struct OperandTraits;
 
 class User : public Value {
-  template <unsigned>
   friend struct HungoffOperandTraits;
+  template <class ConstantClass> friend struct ConstantAggrKeyType;
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE static void *
   allocateFixedOperandUser(size_t, unsigned, unsigned);
 
 protected:
+  // Disable the default operator new, as all subclasses must use one of the
+  // custom operators below depending on how they store their operands.
+  void *operator new(size_t Size) = delete;
+
+  /// Indicates this User has operands "hung off" in another allocation.
+  struct HungOffOperandsAllocMarker {};
+
+  /// Indicates this User has operands co-allocated.
+  struct IntrusiveOperandsAllocMarker {
+    /// The number of operands for this User.
+    const unsigned NumOps;
+  };
+
+  /// Indicates this User has operands and a descriptor co-allocated .
+  struct IntrusiveOperandsAndDescriptorAllocMarker {
+    /// The number of operands for this User.
+    const unsigned NumOps;
+    /// The number of bytes to allocate for the descriptor. Must be divisible by
+    /// `sizeof(void *)`.
+    const unsigned DescBytes;
+  };
+
+  /// Information about how a User object was allocated, to be passed into the
+  /// User constructor.
+  ///
+  /// DO NOT USE DIRECTLY. Use one of the `AllocMarker` structs instead, they
+  /// call all be implicitly converted to `AllocInfo`.
+  struct AllocInfo {
+  public:
+    const unsigned NumOps : NumUserOperandsBits;
+    const bool HasHungOffUses : 1;
+    const bool HasDescriptor : 1;
+
+    AllocInfo() = delete;
+
+    constexpr AllocInfo(const HungOffOperandsAllocMarker)
+        : NumOps(0), HasHungOffUses(true), HasDescriptor(false) {}
+
+    constexpr AllocInfo(const IntrusiveOperandsAllocMarker Alloc)
+        : NumOps(Alloc.NumOps), HasHungOffUses(false), HasDescriptor(false) {}
+
+    constexpr AllocInfo(const IntrusiveOperandsAndDescriptorAllocMarker Alloc)
+        : NumOps(Alloc.NumOps), HasHungOffUses(false),
+          HasDescriptor(Alloc.DescBytes != 0) {}
+  };
+
   /// Allocate a User with an operand pointer co-allocated.
   ///
   /// This is used for subclasses which need to allocate a variable number
   /// of operands, ie, 'hung off uses'.
-  void *operator new(size_t Size);
+  void *operator new(size_t Size, HungOffOperandsAllocMarker);
 
   /// Allocate a User with the operands co-allocated.
   ///
   /// This is used for subclasses which have a fixed number of operands.
-  void *operator new(size_t Size, unsigned Us);
+  void *operator new(size_t Size, IntrusiveOperandsAllocMarker allocTrait);
 
   /// Allocate a User with the operands co-allocated.  If DescBytes is non-zero
   /// then allocate an additional DescBytes bytes before the operands. These
   /// bytes can be accessed by calling getDescriptor.
-  ///
-  /// DescBytes needs to be divisible by sizeof(void *).  The allocated
-  /// descriptor, if any, is aligned to sizeof(void *) bytes.
-  ///
-  /// This is used for subclasses which have a fixed number of operands.
-  void *operator new(size_t Size, unsigned Us, unsigned DescBytes);
+  void *operator new(size_t Size,
+                     IntrusiveOperandsAndDescriptorAllocMarker allocTrait);
 
-  User(Type *ty, unsigned vty, Use *, unsigned NumOps)
-      : Value(ty, vty) {
-    assert(NumOps < (1u << NumUserOperandsBits) && "Too many operands");
-    NumUserOperands = NumOps;
+  User(Type *ty, unsigned vty, AllocInfo AllocInfo) : Value(ty, vty) {
+    assert(AllocInfo.NumOps < (1u << NumUserOperandsBits) &&
+           "Too many operands");
+    NumUserOperands = AllocInfo.NumOps;
+    assert((!AllocInfo.HasDescriptor || !AllocInfo.HasHungOffUses) &&
+           "Cannot have both hung off uses and a descriptor");
+    HasHungOffUses = AllocInfo.HasHungOffUses;
+    HasDescriptor = AllocInfo.HasDescriptor;
     // If we have hung off uses, then the operand list should initially be
     // null.
-    assert((!HasHungOffUses || !getOperandList()) &&
+    assert((!AllocInfo.HasHungOffUses || !getOperandList()) &&
            "Error in initializing hung off uses for User");
   }
 
@@ -99,7 +145,20 @@ public:
   /// Free memory allocated for User and Use objects.
   void operator delete(void *Usr);
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, unsigned) {
+  void operator delete(void *Usr, HungOffOperandsAllocMarker) {
+    // Note: If a subclass manipulates the information which is required to
+    // calculate the Usr memory pointer, e.g. NumUserOperands, the operator
+    // delete of that subclass has to restore the changed information to the
+    // original value, since the dtor of that class is not called if the ctor
+    // fails.
+    User::operator delete(Usr);
+
+#ifndef LLVM_ENABLE_EXCEPTIONS
+    llvm_unreachable("Constructor throws?");
+#endif
+  }
+  /// Placement delete - required by std, called if the ctor throws.
+  void operator delete(void *Usr, IntrusiveOperandsAllocMarker) {
     // Note: If a subclass manipulates the information which is required to calculate the
     // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
     // to restore the changed information to the original value, since the dtor of that class
@@ -111,7 +170,7 @@ public:
 #endif
   }
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, unsigned, unsigned) {
+  void operator delete(void *Usr, IntrusiveOperandsAndDescriptorAllocMarker) {
     // Note: If a subclass manipulates the information which is required to calculate the
     // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
     // to restore the changed information to the original value, since the dtor of that class
@@ -195,19 +254,6 @@ public:
 
   /// Returns the descriptor co-allocated with this User instance.
   MutableArrayRef<uint8_t> getDescriptor();
-
-  /// Set the number of operands on a GlobalVariable.
-  ///
-  /// GlobalVariable always allocates space for a single operands, but
-  /// doesn't always use it.
-  ///
-  /// FIXME: As that the number of operands is used to find the start of
-  /// the allocated memory in operator delete, we need to always think we have
-  /// 1 operand before delete.
-  void setGlobalVariableNumOperands(unsigned NumOps) {
-    assert(NumOps <= 1 && "GlobalVariable can only have 0 or 1 operands");
-    NumUserOperands = NumOps;
-  }
 
   /// Subclasses with hung off uses need to manage the operand count
   /// themselves.  In these instances, the operand count isn't used to find the

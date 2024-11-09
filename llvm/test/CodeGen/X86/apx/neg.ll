@@ -20,14 +20,12 @@ entry:
 define i16 @neg16r(i16 noundef %a) {
 ; CHECK-LABEL: neg16r:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    negl %edi, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    negw %di, %ax
 ; CHECK-NEXT:    retq
 ;
 ; NF-LABEL: neg16r:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} negl %edi, %eax
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} negw %di, %ax
 ; NF-NEXT:    retq
 entry:
   %neg = sub i16 0, %a
@@ -147,14 +145,12 @@ entry:
 define i16 @uneg16r(i16 noundef %a) {
 ; CHECK-LABEL: uneg16r:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    negl %edi, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    negw %di, %ax
 ; CHECK-NEXT:    retq
 ;
 ; NF-LABEL: uneg16r:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} negl %edi, %eax
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} negw %di, %ax
 ; NF-NEXT:    retq
 entry:
   %t = call {i16, i1} @llvm.usub.with.overflow.i16(i16 0, i16 %a)

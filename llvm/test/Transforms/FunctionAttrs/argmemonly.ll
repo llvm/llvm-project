@@ -489,3 +489,184 @@ define void @test_scc_argmem_read_2(ptr %p) {
   call void @test_scc_argmem_read_1(ptr %p)
   ret void
 }
+
+define i64 @select_same_obj(i1 %c, ptr %p, i64 %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; FNATTRS-LABEL: define i64 @select_same_obj
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
+; FNATTRS-NEXT:  entry:
+; FNATTRS-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; FNATTRS-NEXT:    [[P3:%.*]] = select i1 [[C]], ptr [[P]], ptr [[P2]]
+; FNATTRS-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; FNATTRS-NEXT:    ret i64 [[R]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i64 @select_same_obj
+; ATTRIBUTOR-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:  entry:
+; ATTRIBUTOR-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; ATTRIBUTOR-NEXT:    [[P3:%.*]] = select i1 [[C]], ptr [[P]], ptr [[P2]]
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; ATTRIBUTOR-NEXT:    ret i64 [[R]]
+;
+entry:
+  %p2 = getelementptr i8, ptr %p, i64 %x
+  %p3 = select i1 %c, ptr %p, ptr %p2
+  %r = load i64, ptr %p3
+  ret i64 %r
+}
+
+; FIXME: This could be `memory(argmem: read)`.
+define i64 @select_different_obj(i1 %c, ptr %p, ptr %p2) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS-LABEL: define i64 @select_different_obj
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR3]] {
+; FNATTRS-NEXT:  entry:
+; FNATTRS-NEXT:    [[P3:%.*]] = select i1 [[C]], ptr [[P]], ptr [[P2]]
+; FNATTRS-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; FNATTRS-NEXT:    ret i64 [[R]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i64 @select_different_obj
+; ATTRIBUTOR-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]], ptr nocapture nofree readonly [[P2:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:  entry:
+; ATTRIBUTOR-NEXT:    [[P3:%.*]] = select i1 [[C]], ptr [[P]], ptr [[P2]]
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; ATTRIBUTOR-NEXT:    ret i64 [[R]]
+;
+entry:
+  %p3 = select i1 %c, ptr %p, ptr %p2
+  %r = load i64, ptr %p3
+  ret i64 %r
+}
+
+define i64 @phi_same_obj(i1 %c, ptr %p, i64 %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; FNATTRS-LABEL: define i64 @phi_same_obj
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
+; FNATTRS-NEXT:  entry:
+; FNATTRS-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; FNATTRS-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
+; FNATTRS:       if:
+; FNATTRS-NEXT:    br label [[JOIN]]
+; FNATTRS:       join:
+; FNATTRS-NEXT:    [[P3:%.*]] = phi ptr [ [[P]], [[IF]] ], [ [[P2]], [[ENTRY:%.*]] ]
+; FNATTRS-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; FNATTRS-NEXT:    ret i64 [[R]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; ATTRIBUTOR-LABEL: define i64 @phi_same_obj
+; ATTRIBUTOR-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR-NEXT:  entry:
+; ATTRIBUTOR-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
+; ATTRIBUTOR:       if:
+; ATTRIBUTOR-NEXT:    br label [[JOIN]]
+; ATTRIBUTOR:       join:
+; ATTRIBUTOR-NEXT:    [[P3:%.*]] = phi ptr [ [[P]], [[IF]] ], [ [[P2]], [[ENTRY:%.*]] ]
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; ATTRIBUTOR-NEXT:    ret i64 [[R]]
+;
+entry:
+  %p2 = getelementptr i8, ptr %p, i64 %x
+  br i1 %c, label %if, label %join
+if:
+  br label %join
+join:
+  %p3 = phi ptr [ %p, %if ], [ %p2, %entry ]
+  %r = load i64, ptr %p3
+  ret i64 %r
+}
+
+; FIXME: This could be `memory(argmem: read)`.
+define i64 @phi_different_obj(i1 %c, ptr %p, ptr %p2) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS-LABEL: define i64 @phi_different_obj
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr nocapture readonly [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR3]] {
+; FNATTRS-NEXT:  entry:
+; FNATTRS-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
+; FNATTRS:       if:
+; FNATTRS-NEXT:    br label [[JOIN]]
+; FNATTRS:       join:
+; FNATTRS-NEXT:    [[P3:%.*]] = phi ptr [ [[P]], [[IF]] ], [ [[P2]], [[ENTRY:%.*]] ]
+; FNATTRS-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; FNATTRS-NEXT:    ret i64 [[R]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; ATTRIBUTOR-LABEL: define i64 @phi_different_obj
+; ATTRIBUTOR-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]], ptr nocapture nofree readonly [[P2:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR-NEXT:  entry:
+; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
+; ATTRIBUTOR:       if:
+; ATTRIBUTOR-NEXT:    br label [[JOIN]]
+; ATTRIBUTOR:       join:
+; ATTRIBUTOR-NEXT:    [[P3:%.*]] = phi ptr [ [[P]], [[IF]] ], [ [[P2]], [[ENTRY:%.*]] ]
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
+; ATTRIBUTOR-NEXT:    ret i64 [[R]]
+;
+entry:
+  br i1 %c, label %if, label %join
+if:
+  br label %join
+join:
+  %p3 = phi ptr [ %p, %if ], [ %p2, %entry ]
+  %r = load i64, ptr %p3
+  ret i64 %r
+}
+
+; An `alloca` that won't be handled by `getModRefInfoMask`
+define i64 @alloca_with_phis(i64 %arg, i1 %cmp) {
+; COMMON: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; COMMON-LABEL: define i64 @alloca_with_phis
+; COMMON-SAME: (i64 [[ARG:%.*]], i1 [[CMP:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:  bb:
+; COMMON-NEXT:    [[I:%.*]] = alloca i64, align 8
+; COMMON-NEXT:    store i64 [[ARG]], ptr [[I]], align 4
+; COMMON-NEXT:    br i1 [[CMP]], label [[BB1:%.*]], label [[BB4:%.*]]
+; COMMON:       bb1:
+; COMMON-NEXT:    br i1 [[CMP]], label [[BB8:%.*]], label [[BB2:%.*]]
+; COMMON:       bb2:
+; COMMON-NEXT:    br i1 [[CMP]], label [[BB8]], label [[BB3:%.*]]
+; COMMON:       bb3:
+; COMMON-NEXT:    br i1 [[CMP]], label [[BB8]], label [[BB6:%.*]]
+; COMMON:       bb4:
+; COMMON-NEXT:    br i1 [[CMP]], label [[BB8]], label [[BB5:%.*]]
+; COMMON:       bb5:
+; COMMON-NEXT:    br i1 [[CMP]], label [[BB8]], label [[BB6]]
+; COMMON:       bb6:
+; COMMON-NEXT:    [[I7:%.*]] = phi ptr [ [[I]], [[BB3]] ], [ [[I]], [[BB5]] ]
+; COMMON-NEXT:    br label [[BB8]]
+; COMMON:       bb8:
+; COMMON-NEXT:    [[I9:%.*]] = phi ptr [ [[I]], [[BB1]] ], [ [[I]], [[BB2]] ], [ [[I]], [[BB3]] ], [ [[I]], [[BB4]] ], [ [[I]], [[BB5]] ], [ [[I7]], [[BB6]] ]
+; COMMON-NEXT:    [[RET:%.*]] = load i64, ptr [[I9]], align 4
+; COMMON-NEXT:    ret i64 [[RET]]
+;
+bb:
+  %i = alloca i64
+  store i64 %arg, ptr %i
+  br i1 %cmp, label %bb1, label %bb4
+
+bb1:                                              ; preds = %bb
+  br i1 %cmp, label %bb8, label %bb2
+
+bb2:                                              ; preds = %bb1
+  br i1 %cmp, label %bb8, label %bb3
+
+bb3:                                              ; preds = %bb2
+  br i1 %cmp, label %bb8, label %bb6
+
+bb4:                                              ; preds = %bb
+  br i1 %cmp, label %bb8, label %bb5
+
+bb5:                                              ; preds = %bb4
+  br i1 %cmp, label %bb8, label %bb6
+
+bb6:                                              ; preds = %bb5, %bb3
+  %i7 = phi ptr [ %i, %bb3 ], [ %i, %bb5 ]
+  br label %bb8
+
+bb8:                                              ; preds = %bb6, %bb5, %bb4, %bb3, %bb2, %bb1
+  %i9 = phi ptr [ %i, %bb1 ], [ %i, %bb2 ], [ %i, %bb3 ], [ %i, %bb4 ], [ %i, %bb5 ], [ %i7, %bb6 ]
+  %ret = load i64, ptr %i9
+  ret i64 %ret
+}

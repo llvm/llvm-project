@@ -906,3 +906,12 @@ void negativeNonConstMemberExpr() {
   }
 }
 
+
+bool operator==(ExpensiveToCopyType, ExpensiveToCopyType);
+
+template<typename T> bool OperatorWithNoDirectCallee(T t) {
+  ExpensiveToCopyType a1;
+  ExpensiveToCopyType a2 = a1;
+  return a1 == t;
+}
+

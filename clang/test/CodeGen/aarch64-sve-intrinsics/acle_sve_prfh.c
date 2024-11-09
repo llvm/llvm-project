@@ -5,7 +5,15 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -26,7 +34,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh(svbool_t pg, const void *base)
+void test_svprfh(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PLDL1KEEP);
 }
@@ -43,7 +51,7 @@ void test_svprfh(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 1)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_1(svbool_t pg, const void *base)
+void test_svprfh_1(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PLDL1STRM);
 }
@@ -60,7 +68,7 @@ void test_svprfh_1(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 2)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_2(svbool_t pg, const void *base)
+void test_svprfh_2(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PLDL2KEEP);
 }
@@ -77,7 +85,7 @@ void test_svprfh_2(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_3(svbool_t pg, const void *base)
+void test_svprfh_3(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PLDL2STRM);
 }
@@ -94,7 +102,7 @@ void test_svprfh_3(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 4)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_4(svbool_t pg, const void *base)
+void test_svprfh_4(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PLDL3KEEP);
 }
@@ -111,7 +119,7 @@ void test_svprfh_4(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 5)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_5(svbool_t pg, const void *base)
+void test_svprfh_5(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PLDL3STRM);
 }
@@ -128,7 +136,7 @@ void test_svprfh_5(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 8)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_6(svbool_t pg, const void *base)
+void test_svprfh_6(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PSTL1KEEP);
 }
@@ -145,7 +153,7 @@ void test_svprfh_6(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 9)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_7(svbool_t pg, const void *base)
+void test_svprfh_7(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PSTL1STRM);
 }
@@ -162,7 +170,7 @@ void test_svprfh_7(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 10)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_8(svbool_t pg, const void *base)
+void test_svprfh_8(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PSTL2KEEP);
 }
@@ -179,7 +187,7 @@ void test_svprfh_8(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 11)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_9(svbool_t pg, const void *base)
+void test_svprfh_9(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PSTL2STRM);
 }
@@ -196,7 +204,7 @@ void test_svprfh_9(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 12)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_10(svbool_t pg, const void *base)
+void test_svprfh_10(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PSTL3KEEP);
 }
@@ -213,7 +221,7 @@ void test_svprfh_10(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 13)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_11(svbool_t pg, const void *base)
+void test_svprfh_11(svbool_t pg, const void *base) MODE_ATTR
 {
   return svprfh(pg, base, SV_PSTL3STRM);
 }
@@ -232,10 +240,12 @@ void test_svprfh_11(svbool_t pg, const void *base)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfh_vnum(svbool_t pg, const void *base, int64_t vnum)
+void test_svprfh_vnum(svbool_t pg, const void *base, int64_t vnum) MODE_ATTR
 {
   return svprfh_vnum(pg, base, vnum, SV_PLDL1KEEP);
 }
+
+#ifndef __ARM_FEATURE_SME
 
 // CHECK-LABEL: @test_svprfh_gather_u32base(
 // CHECK-NEXT:  entry:
@@ -376,3 +386,5 @@ void test_svprfh_gather_u64base_index(svbool_t pg, svuint64_t bases, int64_t ind
 {
   return SVE_ACLE_FUNC(svprfh_gather,_u64base,_index,)(pg, bases, index, SV_PLDL1KEEP);
 }
+
+#endif

@@ -2,7 +2,7 @@
 ! RUN: bbc --math-runtime=precise -emit-fir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
 
-! CHECK: fir.call @_FortranAcqpowi({{.*}}){{.*}}: (!fir.complex<16>, i32) -> !fir.complex<16>
+! CHECK: fir.call @_FortranAcqpowi({{.*}}){{.*}}: (complex<f128>, i32) -> complex<f128>
   complex(16) :: a
   integer(4) :: b
   b = a ** b

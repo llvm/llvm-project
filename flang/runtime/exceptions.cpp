@@ -6,73 +6,68 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Map Fortran ieee_arithmetic module exceptions to fenv.h exceptions.
+// Runtime exception support.
 
 #include "flang/Runtime/exceptions.h"
 #include "terminator.h"
-#include "flang/Runtime/magic-numbers.h"
 #include <cfenv>
 
+// When not supported, these macro are undefined in cfenv.h,
+// set them to zero in that case.
+#ifndef FE_INVALID
+#define FE_INVALID 0
+#endif
 #ifndef __FE_DENORM
 #define __FE_DENORM 0 // denorm is nonstandard
+#endif
+#ifndef FE_DIVBYZERO
+#define FE_DIVBYZERO 0
+#endif
+#ifndef FE_OVERFLOW
+#define FE_OVERFLOW 0
+#endif
+#ifndef FE_UNDERFLOW
+#define FE_UNDERFLOW 0
+#endif
+#ifndef FE_INEXACT
+#define FE_INEXACT 0
 #endif
 
 namespace Fortran::runtime {
 
 extern "C" {
 
-std::int32_t RTNAME(MapException)(int32_t except) {
+// Map a set of Fortran ieee_arithmetic module exceptions to a libm fenv.h
+// excepts value.
+uint32_t RTNAME(MapException)(uint32_t excepts) {
   Terminator terminator{__FILE__, __LINE__};
 
-  static constexpr int32_t mask{_FORTRAN_RUNTIME_IEEE_INVALID |
-      _FORTRAN_RUNTIME_IEEE_DENORM | _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO |
-      _FORTRAN_RUNTIME_IEEE_OVERFLOW | _FORTRAN_RUNTIME_IEEE_UNDERFLOW |
-      _FORTRAN_RUNTIME_IEEE_INEXACT};
-  if (except == 0 || except != (except & mask)) {
-    terminator.Crash("Invalid exception value: %d", except);
+  static constexpr uint32_t v{FE_INVALID};
+  static constexpr uint32_t s{__FE_DENORM}; // subnormal
+  static constexpr uint32_t z{FE_DIVBYZERO};
+  static constexpr uint32_t o{FE_OVERFLOW};
+  static constexpr uint32_t u{FE_UNDERFLOW};
+  static constexpr uint32_t x{FE_INEXACT};
+
+#define vm(p) p, p | v
+#define sm(p) vm(p), vm(p | s)
+#define zm(p) sm(p), sm(p | z)
+#define om(p) zm(p), zm(p | o)
+#define um(p) om(p), om(p | u)
+#define xm um(0), um(x)
+
+  static constexpr uint32_t map[]{xm};
+  static constexpr uint32_t mapSize{sizeof(map) / sizeof(uint32_t)};
+  static_assert(mapSize == 64);
+  if (excepts == 0 || excepts >= mapSize) {
+    terminator.Crash("Invalid excepts value: %d", excepts);
   }
-
-  // Fortran and fenv.h values are identical; return the value.
-  if constexpr (_FORTRAN_RUNTIME_IEEE_INVALID == FE_INVALID &&
-      _FORTRAN_RUNTIME_IEEE_DENORM == __FE_DENORM &&
-      _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO == FE_DIVBYZERO &&
-      _FORTRAN_RUNTIME_IEEE_OVERFLOW == FE_OVERFLOW &&
-      _FORTRAN_RUNTIME_IEEE_UNDERFLOW == FE_UNDERFLOW &&
-      _FORTRAN_RUNTIME_IEEE_INEXACT == FE_INEXACT) {
-    return except;
+  uint32_t except_value = map[excepts];
+  if (except_value == 0) {
+    terminator.Crash(
+        "Excepts value %d not supported by flang runtime", excepts);
   }
-
-  // fenv.h calls that take exception arguments are able to process multiple
-  // exceptions in one call, such as FE_OVERFLOW | FE_DIVBYZERO | FE_INVALID.
-  // And intrinsic module procedures that manage exceptions are elemental
-  // procedures that may specify multiple exceptions, such as ieee_all.
-  // However, general elemental call processing places single scalar arguments
-  // in a loop. As a consequence, argument 'except' here will be a power of
-  // two, corresponding to a single exception. If code generation were
-  // modified to bypass normal elemental call processing for calls with
-  // ieee_usual, ieee_all, or user-specified array arguments, this switch
-  // could be extended to support that.
-
-  // Fortran and fenv.h values differ.
-  switch (except) {
-  case _FORTRAN_RUNTIME_IEEE_INVALID:
-    return FE_INVALID;
-  case _FORTRAN_RUNTIME_IEEE_DENORM:
-    if (__FE_DENORM) {
-      return __FE_DENORM;
-    }
-    break;
-  case _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO:
-    return FE_DIVBYZERO;
-  case _FORTRAN_RUNTIME_IEEE_OVERFLOW:
-    return FE_OVERFLOW;
-  case _FORTRAN_RUNTIME_IEEE_UNDERFLOW:
-    return FE_UNDERFLOW;
-  case _FORTRAN_RUNTIME_IEEE_INEXACT:
-    return FE_INEXACT;
-  }
-
-  terminator.Crash("Invalid exception set: %d", except);
+  return except_value;
 }
 
 // Verify that the size of ieee_modes_type and ieee_status_type objects from

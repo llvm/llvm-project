@@ -31,7 +31,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -64,7 +63,7 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
   for (auto expr : xferOp.getPermutationMap().getResults()) {
     if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
       Value prevIdx = indices[dim.getPosition()];
-      SmallVector<OpFoldResult, 3> dims(dimValues.begin(), dimValues.end());
+      SmallVector<OpFoldResult, 3> dims(dimValues);
       dims.push_back(prevIdx);
       AffineExpr d0 = rewriter.getAffineDimExpr(offsetMap.getNumDims());
       indices[dim.getPosition()] = affine::makeComposedAffineApply(
@@ -201,7 +200,9 @@ static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
 /// Return true if this integer extend op can be folded into a contract op.
 template <typename ExtOpTy>
 static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
-  if (!isa<vector::TransferReadOp>(extOp.getOperand().getDefiningOp()))
+  auto transferReadOp =
+      extOp.getOperand().template getDefiningOp<vector::TransferReadOp>();
+  if (!transferReadOp)
     return false;
   return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
 }
@@ -743,7 +744,7 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   }
 
   // Adjust the load offset.
-  auto laneId = rewriter.create<gpu::LaneIdOp>(loc);
+  auto laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
   FailureOr<AffineMap> offsets =
       nvgpu::getLaneIdToLdMatrixMatrixCoord(rewriter, loc, *params);
   if (failed(offsets)) {
@@ -782,7 +783,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
             "conversion to distributed non-ldmatrix compatible load");
   }
 
-  Value laneId = rewriter.create<gpu::LaneIdOp>(loc);
+  Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
   SmallVector<Value, 4> elements;
 
   // This is the individual element type.
@@ -917,7 +918,7 @@ convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
     return rewriter.notifyMatchFailure(op, "not mma sync reg info");
 
   VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
-  Value laneId = rewriter.create<gpu::LaneIdOp>(loc);
+  Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
 
   for (unsigned i = 0; i < vectorType.getShape()[0]; i++) {
     Value logicalValueId = rewriter.create<arith::ConstantOp>(

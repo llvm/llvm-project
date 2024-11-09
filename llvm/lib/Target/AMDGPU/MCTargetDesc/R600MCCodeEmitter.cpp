@@ -52,7 +52,7 @@ private:
   void emit(uint32_t value, SmallVectorImpl<char> &CB) const;
   void emit(uint64_t value, SmallVectorImpl<char> &CB) const;
 
-  unsigned getHWReg(unsigned regNo) const;
+  unsigned getHWReg(MCRegister Reg) const;
 
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
@@ -94,7 +94,8 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI,
     MI.getOpcode() == R600::BUNDLE ||
     MI.getOpcode() == R600::KILL) {
     return;
-  } else if (IS_VTX(Desc)) {
+  }
+  if (IS_VTX(Desc)) {
     uint64_t InstWord01 = getBinaryCodeForInstr(MI, Fixups, STI);
     uint32_t InstWord2 = MI.getOperand(2).getImm(); // Offset
     if (!(STI.hasFeature(R600::FeatureCaymanISA))) {
@@ -105,29 +106,24 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI,
     emit(InstWord2, CB);
     emit((uint32_t)0, CB);
   } else if (IS_TEX(Desc)) {
-      int64_t Sampler = MI.getOperand(14).getImm();
+    int64_t Sampler = MI.getOperand(14).getImm();
 
-      int64_t SrcSelect[4] = {
-        MI.getOperand(2).getImm(),
-        MI.getOperand(3).getImm(),
-        MI.getOperand(4).getImm(),
-        MI.getOperand(5).getImm()
-      };
-      int64_t Offsets[3] = {
-        MI.getOperand(6).getImm() & 0x1F,
-        MI.getOperand(7).getImm() & 0x1F,
-        MI.getOperand(8).getImm() & 0x1F
-      };
+    int64_t SrcSelect[4] = {
+        MI.getOperand(2).getImm(), MI.getOperand(3).getImm(),
+        MI.getOperand(4).getImm(), MI.getOperand(5).getImm()};
+    int64_t Offsets[3] = {MI.getOperand(6).getImm() & 0x1F,
+                          MI.getOperand(7).getImm() & 0x1F,
+                          MI.getOperand(8).getImm() & 0x1F};
 
-      uint64_t Word01 = getBinaryCodeForInstr(MI, Fixups, STI);
-      uint32_t Word2 = Sampler << 15 | SrcSelect[ELEMENT_X] << 20 |
-          SrcSelect[ELEMENT_Y] << 23 | SrcSelect[ELEMENT_Z] << 26 |
-          SrcSelect[ELEMENT_W] << 29 | Offsets[0] << 0 | Offsets[1] << 5 |
-          Offsets[2] << 10;
+    uint64_t Word01 = getBinaryCodeForInstr(MI, Fixups, STI);
+    uint32_t Word2 = Sampler << 15 | SrcSelect[ELEMENT_X] << 20 |
+                     SrcSelect[ELEMENT_Y] << 23 | SrcSelect[ELEMENT_Z] << 26 |
+                     SrcSelect[ELEMENT_W] << 29 | Offsets[0] << 0 |
+                     Offsets[1] << 5 | Offsets[2] << 10;
 
-      emit(Word01, CB);
-      emit(Word2, CB);
-      emit((uint32_t)0, CB);
+    emit(Word01, CB);
+    emit(Word2, CB);
+    emit((uint32_t)0, CB);
   } else {
     uint64_t Inst = getBinaryCodeForInstr(MI, Fixups, STI);
     if ((STI.hasFeature(R600::FeatureR600ALUInst)) &&
@@ -149,8 +145,8 @@ void R600MCCodeEmitter::emit(uint64_t Value, SmallVectorImpl<char> &CB) const {
   support::endian::write(CB, Value, llvm::endianness::little);
 }
 
-unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {
-  return MRI.getEncodingValue(RegNo) & HW_REG_MASK;
+unsigned R600MCCodeEmitter::getHWReg(MCRegister Reg) const {
+  return MRI.getEncodingValue(Reg) & HW_REG_MASK;
 }
 
 uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,

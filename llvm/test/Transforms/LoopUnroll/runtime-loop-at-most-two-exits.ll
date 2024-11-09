@@ -78,7 +78,7 @@ define i32 @test(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i32 [ [[ADD_7]], [[FOR_BODY_7]] ]
 ; ENABLED-NEXT:    br label [[FOR_END_UNR_LCSSA]]
 ; ENABLED:       for.end.unr-lcssa:
-; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
+; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_UNR_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_02_UNR_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0

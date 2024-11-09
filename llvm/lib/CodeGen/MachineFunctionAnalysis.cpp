@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -36,7 +37,7 @@ MachineFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
                   .getCachedResult<MachineModuleAnalysis>(*F.getParent())
                   ->getMMI();
   auto MF = std::make_unique<MachineFunction>(
-      F, *TM, STI, Context.generateMachineFunctionNum(F), MMI);
+      F, *TM, STI, MMI.getContext(), Context.generateMachineFunctionNum(F));
   MF->initTargetMachineFunctionInfo(STI);
 
   // MRI callback for target specific initializations.

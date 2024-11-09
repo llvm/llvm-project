@@ -8,15 +8,38 @@
 
 #include "UseInternalLinkageCheck.h"
 #include "../utils/FileExtensionsUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
+
+namespace clang::tidy {
+
+template <>
+struct OptionEnumMapping<misc::UseInternalLinkageCheck::FixModeKind> {
+  static llvm::ArrayRef<
+      std::pair<misc::UseInternalLinkageCheck::FixModeKind, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<misc::UseInternalLinkageCheck::FixModeKind,
+                               StringRef>
+        Mapping[] = {
+            {misc::UseInternalLinkageCheck::FixModeKind::None, "None"},
+            {misc::UseInternalLinkageCheck::FixModeKind::UseStatic,
+             "UseStatic"},
+        };
+    return {Mapping};
+  }
+};
+
+} // namespace clang::tidy
 
 namespace clang::tidy::misc {
 
@@ -57,6 +80,16 @@ AST_POLYMORPHIC_MATCHER(isExternStorageClass,
 
 } // namespace
 
+UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
+                                                 ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      HeaderFileExtensions(Context->getHeaderFileExtensions()),
+      FixMode(Options.get("FixMode", FixModeKind::UseStatic)) {}
+
+void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "FixMode", FixMode);
+}
+
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
   auto Common =
       allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
@@ -82,11 +115,27 @@ static constexpr StringRef Message =
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
-    diag(FD->getLocation(), Message) << "function" << FD;
+    DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
+    const SourceLocation FixLoc = FD->getInnerLocStart();
+    if (FixLoc.isInvalid() || FixLoc.isMacroID())
+      return;
+    if (FixMode == FixModeKind::UseStatic)
+      DB << FixItHint::CreateInsertion(FixLoc, "static ");
     return;
   }
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var")) {
-    diag(VD->getLocation(), Message) << "variable" << VD;
+    // In C++, const variables at file scope have implicit internal linkage,
+    // so we should not warn there. This is not the case in C.
+    // https://eel.is/c++draft/diff#basic-3
+    if (getLangOpts().CPlusPlus && VD->getType().isConstQualified())
+      return;
+
+    DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
+    const SourceLocation FixLoc = VD->getInnerLocStart();
+    if (FixLoc.isInvalid() || FixLoc.isMacroID())
+      return;
+    if (FixMode == FixModeKind::UseStatic)
+      DB << FixItHint::CreateInsertion(FixLoc, "static ");
     return;
   }
   llvm_unreachable("");

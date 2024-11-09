@@ -28,15 +28,15 @@ endif()
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
 add_custom_command(
   OUTPUT  kmp_i18n_id.inc
-  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --prefix=kmp_i18n --enum=kmp_i18n_id.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
-  DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.pl
+  COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.py
+          --enum=kmp_i18n_id.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
+  DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.py
 )
 add_custom_command(
   OUTPUT  kmp_i18n_default.inc
-  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --prefix=kmp_i18n --default=kmp_i18n_default.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
-  DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.pl
+  COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.py
+          --default=kmp_i18n_default.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
+  DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.py
 )
 
 # Set the -D definitions for all sources
@@ -161,7 +161,9 @@ endif()
 
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
-add_definitions(-U_GLIBCXX_ASSERTIONS)
+if(NOT WIN32)
+  add_definitions(-U_GLIBCXX_ASSERTIONS)
+endif()
 
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
@@ -210,6 +212,15 @@ if(OPENMP_MSVC_NAME_SCHEME)
     LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
     LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
  )
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(LIBOMP_SHARED_OUTPUT_NAME "omp" CACHE STRING "Output name for the shared libomp runtime library.")
+  set_target_properties(omp PROPERTIES
+    OUTPUT_NAME "${LIBOMP_SHARED_OUTPUT_NAME}"
+    LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
+    LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+    VERSION "1.0"
+    SOVERSION "1"
+  )
 else()
   set_target_properties(omp PROPERTIES
     PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_LIB_FILE}"
@@ -242,6 +253,17 @@ if(NOT WIN32)
       libiomp5${LIBOMP_LIBRARY_SUFFIX}
     WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
   )
+  if(LIBOMP_ENABLE_SHARED)
+    if(APPLE)
+      set(VERSIONED_LIBGOMP_NAME libgomp.1${LIBOMP_LIBRARY_SUFFIX})
+    else()
+      set(VERSIONED_LIBGOMP_NAME libgomp${LIBOMP_LIBRARY_SUFFIX}.1)
+    endif()
+    add_custom_command(TARGET omp POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE} ${VERSIONED_LIBGOMP_NAME}
+      WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+    )
+  endif()
 endif()
 
 # Definitions for testing, for reuse when testing libomptarget-nvptx.
@@ -301,11 +323,12 @@ if(WIN32)
   # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
   libomp_get_gdflags(LIBOMP_GDFLAGS)
   libomp_string_to_list("${LIBOMP_GDFLAGS}" LIBOMP_GDFLAGS)
+
   add_custom_command(
     OUTPUT  ${LIBOMP_GENERATED_DEF_FILE}
-    COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE}
+    COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.py ${LIBOMP_GDFLAGS} --name ${LIBOMP_LIB_FILE}
             -o ${LIBOMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.py
   )
 
   if(MSVC)
@@ -317,9 +340,10 @@ if(WIN32)
     set_target_properties(libompimp-needed-def-file PROPERTIES FOLDER "OpenMP/Resources")
     add_custom_command(
       OUTPUT  ${LIBOMPIMP_GENERATED_DEF_FILE}
-      COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE} -D NOORDINALS
-          -o ${LIBOMPIMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
+      COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.py ${LIBOMP_GDFLAGS}
+              --name ${LIBOMP_LIB_FILE} --no-ordinals
+              -o ${LIBOMPIMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.py
     )
     # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one,
     # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
@@ -396,9 +420,6 @@ endif()
 if(NOT WIN32 AND NOT APPLE)
   add_dependencies(libomp-micro-tests libomp-test-execstack)
 endif()
-if(${MIC})
-  add_dependencies(libomp-micro-tests libomp-test-instr)
-endif()
 add_dependencies(libomp-micro-tests libomp-test-deps)
 
 # `omp` needs to be exported if in-tree build.
@@ -429,13 +450,18 @@ else()
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
+    extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
     set(LIBOMP_ALIASES "libgomp;libiomp5")
     foreach(alias IN LISTS LIBOMP_ALIASES)
-      extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")")
     endforeach()
+    if(LIBOMP_ENABLE_SHARED)
+      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
+        \"${VERSIONED_LIBGOMP_NAME}\" WORKING_DIRECTORY
+        \"\$ENV{DESTDIR}${outdir}\")")
+    endif()
   endif()
 endif()
 install(

@@ -207,6 +207,61 @@ define i1 @gep13_no_null_opt(ptr %ptr) #0 {
   ret i1 %cmp
 }
 
+; We can prove this GEP is non-null because it is nuw.
+define i1 @gep_nuw_not_null(ptr %ptr) {
+; CHECK-LABEL: @gep_nuw_not_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; Unlike the inbounds case, this holds even if the null pointer is valid.
+define i1 @gep_nuw_null_pointer_valid(ptr %ptr) null_pointer_is_valid {
+; CHECK-LABEL: @gep_nuw_null_pointer_valid(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; If the base pointer is non-null, the offset doesn't matter.
+define i1 @gep_nuw_maybe_zero_offset(ptr nonnull %ptr, i32 %offset) {
+; CHECK-LABEL: @gep_nuw_maybe_zero_offset(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 %offset
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; We can not prove non-null if both the base pointer may be null and the
+; offset zero.
+define i1 @gep13_nuw_maybe_zero_offset(ptr %ptr, i32 %offset) {
+; CHECK-LABEL: @gep13_nuw_maybe_zero_offset(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nuw i8, ptr [[PTR:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = getelementptr nuw i8, ptr %ptr, i32 %offset
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
+; For gep nusw we don't have any non-null information.
+define i1 @gep_nusw_may_be_null(ptr %ptr) {
+; CHECK-LABEL: @gep_nusw_may_be_null(
+; CHECK-NEXT:    [[X:%.*]] = getelementptr nusw i8, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = getelementptr nusw i8, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
+  ret i1 %cmp
+}
+
 define i1 @gep14(ptr %ptr) {
 ; CHECK-LABEL: @gep14(
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds { {}, i8 }, ptr [[PTR:%.*]], i32 0, i32 1
@@ -1232,7 +1287,7 @@ define i1 @mul3(i32 %X, i32 %Y) {
 
 define <2 x i1> @mul3v(<2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @mul3v(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %XX = mul nsw <2 x i32> %X, %X
   %YY = mul nsw <2 x i32> %Y, %Y
@@ -1410,7 +1465,7 @@ define i1 @compare_always_true_slt(i16 %a) {
 
 define <2 x i1> @compare_always_true_slt_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_true_slt_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1430,7 +1485,7 @@ define i1 @compare_always_true_sle(i16 %a) {
 
 define <2 x i1> @compare_always_true_sle_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_true_sle_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1510,7 +1565,7 @@ define i1 @compare_always_true_ne(i16 %a) {
 
 define <2 x i1> @compare_always_true_ne_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_true_ne_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1670,7 +1725,7 @@ define i1 @icmp_ne_const(i32 %a) {
 
 define <2 x i1> @icmp_ne_const_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_const_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %b = mul nsw <2 x i32> %a, <i32 -2, i32 -2>
   %c = icmp ne <2 x i32> %b, <i32 1, i32 1>
@@ -1796,7 +1851,7 @@ define i1 @icmp_shl_1_V_ule_2147483648(i32 %V) {
 
 define <2 x i1> @icmp_shl_1_ule_signmask(<2 x i8> %V) {
 ; CHECK-LABEL: @icmp_shl_1_ule_signmask(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %shl = shl <2 x i8> <i8 1, i8 1>, %V
   %cmp = icmp ule <2 x i8> %shl, <i8 128, i8 128>
@@ -1805,7 +1860,7 @@ define <2 x i1> @icmp_shl_1_ule_signmask(<2 x i8> %V) {
 
 define <2 x i1> @icmp_shl_1_ule_signmask_poison(<2 x i8> %V) {
 ; CHECK-LABEL: @icmp_shl_1_ule_signmask_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %shl = shl <2 x i8> <i8 1, i8 1>, %V
   %cmp = icmp ule <2 x i8> %shl, <i8 128, i8 poison>
@@ -1814,7 +1869,7 @@ define <2 x i1> @icmp_shl_1_ule_signmask_poison(<2 x i8> %V) {
 
 define <2 x i1> @icmp_shl_1_ule_signmask_poison2(<2 x i8> %V) {
 ; CHECK-LABEL: @icmp_shl_1_ule_signmask_poison2(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %shl = shl <2 x i8> <i8 1, i8 poison>, %V
   %cmp = icmp ule <2 x i8> %shl, <i8 poison, i8 128>
@@ -1859,7 +1914,7 @@ define i1 @shl_1_cmp_ne_nonpow2(i32 %x) {
 
 define <2 x i1> @shl_1_cmp_ne_nonpow2_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_1_cmp_ne_nonpow2_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %s = shl <2 x i32> <i32 1, i32 1>, %x
   %c = icmp ne <2 x i32> %s, <i32 42, i32 42>
@@ -1868,7 +1923,7 @@ define <2 x i1> @shl_1_cmp_ne_nonpow2_splat(<2 x i32> %x) {
 
 define <2 x i1> @shl_1_cmp_ne_nonpow2_splat_poison(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_1_cmp_ne_nonpow2_splat_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %s = shl <2 x i32> <i32 poison, i32 1>, %x
   %c = icmp ne <2 x i32> %s, <i32 42, i32 poison>
@@ -1886,7 +1941,7 @@ define i1 @shl_pow2_cmp_eq_nonpow2(i32 %x) {
 
 define <2 x i1> @shl_pow21_cmp_ne_nonpow2_splat_poison(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_pow21_cmp_ne_nonpow2_splat_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %s = shl <2 x i32> <i32 poison, i32 4>, %x
   %c = icmp ne <2 x i32> %s, <i32 31, i32 poison>
@@ -1910,7 +1965,7 @@ define i1 @shl_pow2_cmp_ne_zero(i32 %x) {
 
 define <2 x i1> @shl_pow2_cmp_ne_zero_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_pow2_cmp_ne_zero_splat(
-; CHECK-NEXT:    [[S:%.*]] = shl <2 x i32> <i32 16, i32 16>, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shl <2 x i32> splat (i32 16), [[X:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[S]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -1930,7 +1985,7 @@ define i1 @shl_pow2_cmp_eq_zero_nuw(i32 %x) {
 
 define <2 x i1> @shl_pow2_cmp_ne_zero_nuw_splat_poison(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_pow2_cmp_ne_zero_nuw_splat_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %s = shl nuw <2 x i32> <i32 16, i32 poison>, %x
   %c = icmp ne <2 x i32> %s, <i32 poison, i32 0>
@@ -2675,7 +2730,7 @@ define i1 @icmp_nsw_i64(i64 %V) {
 
 define <4 x i1> @icmp_nsw_vec(<4 x i32> %V) {
 ; CHECK-LABEL: @icmp_nsw_vec(
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %add5 = add <4 x i32> %V, <i32 5, i32 5, i32 5, i32 5>
   %add6 = add nsw <4 x i32> %V, <i32 6, i32 6, i32 6, i32 6>
@@ -2882,7 +2937,7 @@ define i1 @ctpop_ne_big_bitwidth(i73 %x) {
 
 define <2 x i1> @ctpop_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @ctpop_slt_bitwidth_plus1_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %pop = call <2 x i13> @llvm.ctpop.v2i13(<2 x i13> %x)
   %cmp = icmp slt <2 x i13> %pop, <i13 14, i13 14>
@@ -2894,7 +2949,7 @@ define <2 x i1> @ctpop_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 define <2 x i1> @ctpop_slt_bitwidth_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @ctpop_slt_bitwidth_splat(
 ; CHECK-NEXT:    [[POP:%.*]] = call <2 x i13> @llvm.ctpop.v2i13(<2 x i13> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], <i13 13, i13 13>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], splat (i13 13)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %pop = call <2 x i13> @llvm.ctpop.v2i13(<2 x i13> %x)
@@ -2975,7 +3030,7 @@ define i1 @ctlz_ne_big_bitwidth(i73 %x) {
 
 define <2 x i1> @ctlz_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @ctlz_slt_bitwidth_plus1_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %pop = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> %x)
   %cmp = icmp slt <2 x i13> %pop, <i13 14, i13 14>
@@ -2987,7 +3042,7 @@ define <2 x i1> @ctlz_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 define <2 x i1> @ctlz_slt_bitwidth_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @ctlz_slt_bitwidth_splat(
 ; CHECK-NEXT:    [[POP:%.*]] = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], <i13 13, i13 13>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], splat (i13 13)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %pop = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> %x)
@@ -3068,7 +3123,7 @@ define i1 @cttz_ne_big_bitwidth(i73 %x) {
 
 define <2 x i1> @cttz_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @cttz_slt_bitwidth_plus1_splat(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %pop = call <2 x i13> @llvm.cttz.v2i13(<2 x i13> %x)
   %cmp = icmp slt <2 x i13> %pop, <i13 14, i13 14>
@@ -3080,7 +3135,7 @@ define <2 x i1> @cttz_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 define <2 x i1> @cttz_slt_bitwidth_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @cttz_slt_bitwidth_splat(
 ; CHECK-NEXT:    [[POP:%.*]] = call <2 x i13> @llvm.cttz.v2i13(<2 x i13> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], <i13 13, i13 13>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], splat (i13 13)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %pop = call <2 x i13> @llvm.cttz.v2i13(<2 x i13> %x)

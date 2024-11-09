@@ -121,7 +121,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         symbol 'newSymbol' that are nested within the given operation 'from'.
         Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
       }],
-      "::mlir::LogicalResult", "replaceAllSymbolUses",
+      "::llvm::LogicalResult", "replaceAllSymbolUses",
       (ins "::mlir::StringAttr":$newSymbol, "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
@@ -214,7 +214,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Verify the symbol uses held by this operation.",
-      "::mlir::LogicalResult", "verifySymbolUses",
+      "::llvm::LogicalResult", "verifySymbolUses",
       (ins "::mlir::SymbolTableCollection &":$symbolTable)
     >,
   ];

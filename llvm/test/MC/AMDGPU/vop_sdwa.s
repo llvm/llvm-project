@@ -722,7 +722,7 @@ v_mov_b32 v1, s2 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 v_mov_b32 v1, exec_lo dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: ttmp12 register not available on this GPU
 // GFX9: v_mov_b32_sdwa v1, ttmp12 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x02,0x02,0x7e,0x78,0x10,0x86,0x00]
 v_mov_b32_sdwa v1, ttmp12 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
@@ -743,12 +743,12 @@ v_add_f32 v0, exec_lo, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 s
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: not a valid operand.
 // NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: tba_lo register not available on this GPU
 v_add_f32 v0, v1, tba_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: not a valid operand.
 // NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 v_add_f32 v0, v1, tma_hi dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
@@ -762,22 +762,22 @@ v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: ttmp[12:13] register not available on this GPU
 // GFX9: v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0xf8,0x05,0x02]
 v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
 // NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: tba register not available on this GPU
 v_cmp_eq_f32_sdwa tba, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
 // NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: tma register not available on this GPU
 v_cmp_eq_f32_sdwa tma, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: ttmp15 register not available on this GPU
 // GFX9: v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0xf6,0x84,0x7c,0x01,0x00,0x05,0x82]
 v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2
 

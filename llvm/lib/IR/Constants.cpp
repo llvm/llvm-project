@@ -681,9 +681,8 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   }
 
   PossibleRelocationsTy Result = NoRelocation;
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    Result =
-        std::max(cast<Constant>(getOperand(i))->getRelocationInfo(), Result);
+  for (const Value *Op : operands())
+    Result = std::max(cast<Constant>(Op)->getRelocationInfo(), Result);
 
   return Result;
 }
@@ -933,7 +932,10 @@ Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
 }
 
 ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool isSigned) {
-  return get(Ty->getContext(), APInt(Ty->getBitWidth(), V, isSigned));
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return get(Ty->getContext(),
+             APInt(Ty->getBitWidth(), V, isSigned, /*implicitTrunc=*/true));
 }
 
 Constant *ConstantInt::get(Type *Ty, const APInt& V) {
@@ -1268,9 +1270,9 @@ static Constant *getSequenceIfElementsMatch(Constant *C,
 }
 
 ConstantAggregate::ConstantAggregate(Type *T, ValueTy VT,
-                                     ArrayRef<Constant *> V)
-    : Constant(T, VT, OperandTraits<ConstantAggregate>::op_end(this) - V.size(),
-               V.size()) {
+                                     ArrayRef<Constant *> V,
+                                     AllocInfo AllocInfo)
+    : Constant(T, VT, AllocInfo) {
   llvm::copy(V, op_begin());
 
   // Check that types match, unless this is an opaque struct.
@@ -1283,8 +1285,9 @@ ConstantAggregate::ConstantAggregate(Type *T, ValueTy VT,
   }
 }
 
-ConstantArray::ConstantArray(ArrayType *T, ArrayRef<Constant *> V)
-    : ConstantAggregate(T, ConstantArrayVal, V) {
+ConstantArray::ConstantArray(ArrayType *T, ArrayRef<Constant *> V,
+                             AllocInfo AllocInfo)
+    : ConstantAggregate(T, ConstantArrayVal, V, AllocInfo) {
   assert(V.size() == T->getNumElements() &&
          "Invalid initializer for constant array");
 }
@@ -1347,8 +1350,9 @@ StructType *ConstantStruct::getTypeForElements(ArrayRef<Constant*> V,
   return getTypeForElements(V[0]->getContext(), V, Packed);
 }
 
-ConstantStruct::ConstantStruct(StructType *T, ArrayRef<Constant *> V)
-    : ConstantAggregate(T, ConstantStructVal, V) {
+ConstantStruct::ConstantStruct(StructType *T, ArrayRef<Constant *> V,
+                               AllocInfo AllocInfo)
+    : ConstantAggregate(T, ConstantStructVal, V, AllocInfo) {
   assert((T->isOpaque() || V.size() == T->getNumElements()) &&
          "Invalid initializer for constant struct");
 }
@@ -1389,8 +1393,9 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   return ST->getContext().pImpl->StructConstants.getOrCreate(ST, V);
 }
 
-ConstantVector::ConstantVector(VectorType *T, ArrayRef<Constant *> V)
-    : ConstantAggregate(T, ConstantVectorVal, V) {
+ConstantVector::ConstantVector(VectorType *T, ArrayRef<Constant *> V,
+                               AllocInfo AllocInfo)
+    : ConstantAggregate(T, ConstantVectorVal, V, AllocInfo) {
   assert(V.size() == cast<FixedVectorType>(T)->getNumElements() &&
          "Invalid initializer for constant vector");
 }
@@ -1756,6 +1761,44 @@ const APInt &Constant::getUniqueInteger() const {
   return cast<ConstantInt>(C)->getValue();
 }
 
+ConstantRange Constant::toConstantRange() const {
+  if (auto *CI = dyn_cast<ConstantInt>(this))
+    return ConstantRange(CI->getValue());
+
+  unsigned BitWidth = getType()->getScalarSizeInBits();
+  if (!getType()->isVectorTy())
+    return ConstantRange::getFull(BitWidth);
+
+  if (auto *CI = dyn_cast_or_null<ConstantInt>(
+          getSplatValue(/*AllowPoison=*/true)))
+    return ConstantRange(CI->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(CDV->getElementAsAPInt(I));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantRange::getFull(BitWidth);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CI = dyn_cast<ConstantInt>(Elem);
+      if (!CI)
+        return ConstantRange::getFull(BitWidth);
+      CR = CR.unionWith(CI->getValue());
+    }
+    return CR;
+  }
+
+  return ConstantRange::getFull(BitWidth);
+}
+
 //---- ConstantPointerNull::get() implementation.
 //
 
@@ -1842,7 +1885,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Function *F, BasicBlock *BB)
     : Constant(PointerType::get(F->getContext(), F->getAddressSpace()),
-               Value::BlockAddressVal, &Op<0>(), 2) {
+               Value::BlockAddressVal, AllocMarker) {
   setOperand(0, F);
   setOperand(1, BB);
   BB->AdjustBlockAddressRefCount(1);
@@ -1914,7 +1957,7 @@ DSOLocalEquivalent *DSOLocalEquivalent::get(GlobalValue *GV) {
 }
 
 DSOLocalEquivalent::DSOLocalEquivalent(GlobalValue *GV)
-    : Constant(GV->getType(), Value::DSOLocalEquivalentVal, &Op<0>(), 1) {
+    : Constant(GV->getType(), Value::DSOLocalEquivalentVal, AllocMarker) {
   setOperand(0, GV);
 }
 
@@ -1972,7 +2015,7 @@ NoCFIValue *NoCFIValue::get(GlobalValue *GV) {
 }
 
 NoCFIValue::NoCFIValue(GlobalValue *GV)
-    : Constant(GV->getType(), Value::NoCFIValueVal, &Op<0>(), 1) {
+    : Constant(GV->getType(), Value::NoCFIValueVal, AllocMarker) {
   setOperand(0, GV);
 }
 
@@ -2019,7 +2062,7 @@ ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
 
 ConstantPtrAuth::ConstantPtrAuth(Constant *Ptr, ConstantInt *Key,
                                  ConstantInt *Disc, Constant *AddrDisc)
-    : Constant(Ptr->getType(), Value::ConstantPtrAuthVal, &Op<0>(), 4) {
+    : Constant(Ptr->getType(), Value::ConstantPtrAuthVal, AllocMarker) {
   assert(Ptr->getType()->isPointerTy());
   assert(Key->getBitWidth() == 32);
   assert(Disc->getBitWidth() == 64);
@@ -2058,6 +2101,18 @@ Value *ConstantPtrAuth::handleOperandChangeImpl(Value *From, Value *ToV) {
 
   return getContext().pImpl->ConstantPtrAuths.replaceOperandsInPlace(
       Values, this, From, To, NumUpdated, OperandNo);
+}
+
+bool ConstantPtrAuth::hasSpecialAddressDiscriminator(uint64_t Value) const {
+  const auto *CastV = dyn_cast<ConstantExpr>(getAddrDiscriminator());
+  if (!CastV || CastV->getOpcode() != Instruction::IntToPtr)
+    return false;
+
+  const auto *IntVal = dyn_cast<ConstantInt>(CastV->getOperand(0));
+  if (!IntVal)
+    return false;
+
+  return IntVal->getValue() == Value;
 }
 
 bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
@@ -2285,12 +2340,6 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create a logical operation on a non-integral type!");
     break;
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-    assert(C1->getType()->isIntOrIntVectorTy() &&
-           "Tried to create a shift operation on a non-integer type!");
-    break;
   default:
     break;
   }
@@ -2324,11 +2373,11 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::Or:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::Shl:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::Shl:
   case Instruction::Xor:
     return true;
   default:
@@ -2351,11 +2400,11 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::Or:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::Shl:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::Shl:
   case Instruction::Xor:
     return true;
   default:
@@ -2475,7 +2524,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   }
 
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, NW.getRaw(),
-                                std::nullopt, Ty, InRange);
+                                {}, Ty, InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2589,13 +2638,6 @@ Constant *ConstantExpr::getXor(Constant *C1, Constant *C2) {
   return get(Instruction::Xor, C1, C2);
 }
 
-Constant *ConstantExpr::getShl(Constant *C1, Constant *C2,
-                               bool HasNUW, bool HasNSW) {
-  unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
-                   (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
-  return get(Instruction::Shl, C1, C2, Flags);
-}
-
 Constant *ConstantExpr::getExactLogBase2(Constant *C) {
   Type *Ty = C->getType();
   const APInt *IVal;
@@ -2696,17 +2738,34 @@ Constant *ConstantExpr::getIdentity(Instruction *I, Type *Ty,
   return nullptr;
 }
 
-Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty) {
+Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty,
+                                         bool AllowLHSConstant) {
   switch (Opcode) {
   default:
-    // Doesn't have an absorber.
-    return nullptr;
+    break;
 
-  case Instruction::Or:
+  case Instruction::Or: // -1 | X = -1
     return Constant::getAllOnesValue(Ty);
 
-  case Instruction::And:
-  case Instruction::Mul:
+  case Instruction::And: // 0 & X = 0
+  case Instruction::Mul: // 0 * X = 0
+    return Constant::getNullValue(Ty);
+  }
+
+  // AllowLHSConstant must be set.
+  if (!AllowLHSConstant)
+    return nullptr;
+
+  switch (Opcode) {
+  default:
+    return nullptr;
+  case Instruction::Shl:  // 0 << X = 0
+  case Instruction::LShr: // 0 >>l X = 0
+  case Instruction::AShr: // 0 >>a X = 0
+  case Instruction::SDiv: // 0 /s X = 0
+  case Instruction::UDiv: // 0 /u X = 0
+  case Instruction::URem: // 0 %u X = 0
+  case Instruction::SRem: // 0 %s X = 0
     return Constant::getNullValue(Ty);
   }
 }
@@ -2722,11 +2781,8 @@ const char *ConstantExpr::getOpcodeName() const {
 
 GetElementPtrConstantExpr::GetElementPtrConstantExpr(
     Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy,
-    std::optional<ConstantRange> InRange)
-    : ConstantExpr(DestTy, Instruction::GetElementPtr,
-                   OperandTraits<GetElementPtrConstantExpr>::op_end(this) -
-                       (IdxList.size() + 1),
-                   IdxList.size() + 1),
+    std::optional<ConstantRange> InRange, AllocInfo AllocInfo)
+    : ConstantExpr(DestTy, Instruction::GetElementPtr, AllocInfo),
       SrcElementTy(SrcElementTy),
       ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)),
       InRange(std::move(InRange)) {

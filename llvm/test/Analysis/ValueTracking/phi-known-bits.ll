@@ -375,10 +375,13 @@ F:
 define i8 @phi_ugt_high_bits_and_known(i8 %xx) {
 ; CHECK-LABEL: @phi_ugt_high_bits_and_known(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[XX:%.*]], -65
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[XX]], -65
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    ret i8 65
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 65
+; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;
@@ -398,7 +401,7 @@ define i8 @phi_ugt_high_bits_and_known_todo_high_depths(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-LABEL: @phi_ugt_high_bits_and_known_todo_high_depths(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[XXX:%.*]] = and i8 [[YY]], [[XX:%.*]]
+; CHECK-NEXT:    [[XXX:%.*]] = and i8 [[XX:%.*]], [[YY]]
 ; CHECK-NEXT:    [[ZZ:%.*]] = or i8 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XXX]], [[ZZ]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], -65

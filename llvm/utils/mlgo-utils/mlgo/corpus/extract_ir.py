@@ -18,16 +18,14 @@ specifying -mllvm -lto-embed-bitcode=post-merge-pre-opt.
 In a local ThinLTO case, the compilation is assumedto have been performed
 specifying -Wl,--save-temps=import -Wl,--thinlto-emit-index-files
 
-To change the logging verbosity, pass an integer representing the desired
-verbosity to the --verbosity flag. Use 0 for all logs, status information,
-and detailed debug information, -1 for solely warnings, and -2 to not produce
-any output.
+To change the logging verbosity, set the --verbosity flag to the desired level.
+Setting it to a specific level will enable all messages at that level and
+higher. Exact values can be found by invoking the script with --help.
 """
 
 import argparse
 import json
 import logging
-import multiprocessing
 
 from mlgo.corpus import extract_ir_lib
 
@@ -45,8 +43,8 @@ def parse_args_and_run():
     parser.add_argument(
         "--input_type",
         type=str,
-        help="Input file type - JSON, LLD params, or directory.",
-        choices=["json", "params", "directory"],
+        help="Input file type - JSON, LLD params, directory, or bazel aquery.",
+        choices=["json", "params", "directory", "bazel_aquery"],
         default="json",
         nargs="?",
     )
@@ -113,11 +111,22 @@ def parse_args_and_run():
         default=".llvmbc",
         nargs="?",
     )
+    # TODO(#107898): Refactor this into a common location.
+    parser.add_argument(
+        "--verbosity",
+        type=str,
+        help="The verbosity level to use for logging",
+        default="INFO",
+        nargs="?",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+    )
     args = parser.parse_args()
     main(args)
 
 
 def main(args):
+    logging.basicConfig(level=args.verbosity)
+
     objs = []
     if args.input is not None and args.thinlto_build == "local":
         raise ValueError("--thinlto_build=local cannot be run with --input")
@@ -133,8 +142,8 @@ def main(args):
     elif args.input_type == "params":
         if not args.obj_base_dir:
             logging.info(
-                "-obj_base_dir is unspecified, assuming current directory."
-                "If no objects are found, use this option to specify the root"
+                "-obj_base_dir is unspecified, assuming current directory. "
+                "If no objects are found, use this option to specify the root "
                 "directory for the object file paths in the input file."
             )
         with open(args.input, encoding="utf-8") as f:
@@ -143,12 +152,17 @@ def main(args):
             )
     elif args.input_type == "directory":
         logging.warning(
-            "Using the directory input is only recommended if the build system"
-            "your project uses does not support any structured output that"
-            "ml-compiler-opt understands. If your build system provides a"
+            "Using the directory input is only recommended if the build system "
+            "your project uses does not support any structured output that "
+            "ml-compiler-opt understands. If your build system provides a "
             "structured compilation database, use that instead"
         )
         objs = extract_ir_lib.load_from_directory(args.input, args.output_dir)
+    elif args.input_type == "bazel_aquery":
+        with open(args.input, encoding="utf-8") as aquery_json_handle:
+            objs = extract_ir_lib.load_bazel_aquery(
+                json.load(aquery_json_handle), args.obj_base_dir, args.output_dir
+            )
     else:
         logging.error("Unknown input type: %s", args.input_type)
 

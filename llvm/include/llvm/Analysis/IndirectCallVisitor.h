@@ -37,8 +37,10 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
   // A heuristic is used to find the address feeding instructions.
   static Instruction *tryGetVTableInstruction(CallBase *CB) {
     assert(CB != nullptr && "Caller guaranteed");
-    LoadInst *LI = dyn_cast<LoadInst>(CB->getCalledOperand());
+    if (!CB->isIndirectCall())
+      return nullptr;
 
+    LoadInst *LI = dyn_cast<LoadInst>(CB->getCalledOperand());
     if (LI != nullptr) {
       Value *FuncPtr = LI->getPointerOperand(); // GEP (or bitcast)
       Value *VTablePtr = FuncPtr->stripInBoundsConstantOffsets();

@@ -14,13 +14,14 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/errno/libc_errno.h"
 
 #include "explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t N_EXCEPTS_LO = 8;
 
@@ -180,4 +181,4 @@ LLVM_LIBC_FUNCTION(float, exp2m1f, (float x)) {
   return static_cast<float>(fputil::multiply_add(exp2_lo, mh, -1.0));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

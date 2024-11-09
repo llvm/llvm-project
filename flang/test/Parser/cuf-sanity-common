@@ -23,7 +23,8 @@ module m
   end subroutine
   subroutine test
     logical isPinned
-    real a(10), x, y, z
+    real, device :: a(10)
+    real :: x, y, z
     !$cuf kernel do(1) <<<*, *, stream = 1>>>
     do j = 1, 10
     end do
@@ -39,6 +40,7 @@ module m
     call globalsub<<<1, 2>>>
     call globalsub<<<1, 2, 3>>>
     call globalsub<<<1, 2, 3, 4>>>
+    call globalsub<<<*,5>>>
     allocate(pa(32), pinned = isPinned)
   end subroutine
 end module

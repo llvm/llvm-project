@@ -577,4 +577,13 @@ static_assert(!__is_trivially_constructible(Foo, const Foo &), "");
 static_assert(!__is_trivially_constructible(Foo, Foo &&), "");
 } // namespace GH89544
 
+namespace GH97230 {
+struct X {
+  ~X() = defaul; // expected-error {{initializer on function does not look like a pure-specifier}} \
+                 // expected-error {{use of undeclared identifier 'defaul'}}
+};
+struct Y : X {} y1{ }; // expected-error {{call to implicitly-deleted default constructor of 'struct Y'}} \
+                       // expected-note {{default constructor of 'Y' is implicitly deleted because base class 'X' has no destructor}}
+}
+
 #endif // BE_THE_HEADER

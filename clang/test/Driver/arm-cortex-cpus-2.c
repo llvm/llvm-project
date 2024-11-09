@@ -559,8 +559,10 @@
 // CHECK-CPUV8MBASE:  "-cc1"{{.*}} "-triple" "thumbv8m.base-
 
 // RUN: %clang -target arm -mcpu=cortex-m33 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M33 %s
+// RUN: %clang -target arm -mcpu=star-mc1 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-STAR-MC1 %s
 // RUN: %clang -target arm -mcpu=cortex-m35p -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M35P %s
 // CHECK-CORTEX-M33:  "-cc1"{{.*}} "-triple" "thumbv8m.main-{{.*}} "-target-cpu" "cortex-m33"
+// CHECK-STAR-MC1:  "-cc1"{{.*}} "-triple" "thumbv8m.main-{{.*}} "-target-cpu" "star-mc1"
 // CHECK-CORTEX-M35P:  "-cc1"{{.*}} "-triple" "thumbv8m.main-{{.*}} "-target-cpu" "cortex-m35p"
 
 // RUN: %clang -target arm -mcpu=cortex-m55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M55 %s

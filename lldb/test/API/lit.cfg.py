@@ -7,6 +7,7 @@ import platform
 import shlex
 import shutil
 import subprocess
+import sys
 
 import lit.formats
 
@@ -62,13 +63,14 @@ def find_python_interpreter():
     if "DYLD_INSERT_LIBRARIES" not in config.environment:
         return None
 
-    # If we're running in a virtual environment, we already have a copy of the
-    # Python executable.
-    if "VIRTUAL_ENV" in config.environment:
-        return None
+    # If we're running in a virtual environment, we have to copy Python into
+    # the virtual environment for it to work.
+    if sys.prefix != sys.base_prefix:
+        copied_python = os.path.join(sys.prefix, "bin", "copied-python")
+    else:
+        copied_python = os.path.join(config.lldb_build_directory, "copied-python")
 
     # Avoid doing any work if we already copied the binary.
-    copied_python = os.path.join(config.lldb_build_directory, "copied-python")
     if os.path.isfile(copied_python):
         return copied_python
 
@@ -97,10 +99,11 @@ def find_python_interpreter():
     except subprocess.CalledProcessError:
         # The copied Python didn't work. Assume we're dealing with the Python
         # interpreter in Xcode. Given that this is not a system binary SIP
-        # won't prevent us form injecting the interceptors so we get away with
-        # not copying the executable.
+        # won't prevent us form injecting the interceptors, but when running in
+        # a virtual environment, we can't use it directly. Create a symlink
+        # instead.
         os.remove(copied_python)
-        return real_python
+        os.symlink(real_python, copied_python)
 
     # The copied Python works.
     return copied_python
@@ -124,13 +127,13 @@ def delete_module_cache(path):
 
 
 if is_configured("llvm_use_sanitizer"):
+    config.environment["MallocNanoZone"] = "0"
     if "Address" in config.llvm_use_sanitizer:
         config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
         if "Darwin" in config.host_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
             )
-            config.environment["MallocNanoZone"] = "0"
 
     if "Thread" in config.llvm_use_sanitizer:
         config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
@@ -247,6 +250,9 @@ if is_configured("test_compiler"):
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
 
+if is_configured("make"):
+    dotest_cmd += ["--make", config.make]
+
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--llvm-tools-dir", config.llvm_tools_dir]
 
@@ -261,12 +267,6 @@ if is_configured("lldb_libs_dir"):
 
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
-
-if (
-    "lldb-repro-capture" in config.available_features
-    or "lldb-repro-replay" in config.available_features
-):
-    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
@@ -299,6 +299,13 @@ if is_configured("enabled_plugins"):
 # Check them in this order, so that more specific overrides are visited last.
 # In particular, (1) is visited at the top of the file, since the script
 # derives other information from it.
+
+if is_configured("lldb_platform_url"):
+    dotest_cmd += ["--platform-url", config.lldb_platform_url]
+if is_configured("lldb_platform_working_dir"):
+    dotest_cmd += ["--platform-working-dir", config.lldb_platform_working_dir]
+if is_configured("cmake_sysroot"):
+    dotest_cmd += ["--sysroot", config.cmake_sysroot]
 
 if is_configured("dotest_user_args_str"):
     dotest_cmd.extend(config.dotest_user_args_str.split(";"))

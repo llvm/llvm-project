@@ -14,6 +14,21 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
+add_libc_unittest(
+  mremap_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    mremap_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
+    libc.src.sys.mman.munmap
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
 if (NOT LLVM_USE_SANITIZER)
   add_libc_unittest(
     mprotect_test
@@ -129,6 +144,23 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  remap_file_pages_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    remap_file_pages_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_stat
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.src.sys.mman.remap_file_pages
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+)
+
+add_libc_unittest(
   shm_test
   SUITE
     libc_sys_mman_unittests
@@ -138,6 +170,7 @@ add_libc_unittest(
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
     libc.src.sys.mman.mmap
@@ -145,5 +178,6 @@ add_libc_unittest(
     libc.src.unistd.ftruncate
     libc.src.unistd.close
     libc.src.__support.OSUtil.osutil
+    libc.hdr.fcntl_macros
     libc.test.UnitTest.ErrnoSetterMatcher
 )

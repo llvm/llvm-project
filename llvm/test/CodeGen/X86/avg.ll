@@ -1973,11 +1973,11 @@ define void @not_avg_v16i8_wide_constants(ptr %a, ptr %b) nounwind {
 define <1 x i8> @avg_v1i8(<1 x i8> %x, <1 x i8> %y) {
 ; CHECK-LABEL: avg_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orb %sil, %al
-; CHECK-NEXT:    xorb %sil, %dil
-; CHECK-NEXT:    shrb %dil
-; CHECK-NEXT:    subb %dil, %al
+; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    movzbl %dil, %ecx
+; CHECK-NEXT:    leal 1(%rcx,%rax), %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %a = zext <1 x i8> %x to <1 x i16>
   %b = zext <1 x i8> %y to <1 x i16>

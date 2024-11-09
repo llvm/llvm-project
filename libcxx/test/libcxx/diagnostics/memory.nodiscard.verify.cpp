@@ -10,6 +10,7 @@
 
 // check that <memory> functions are marked [[nodiscard]]
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // clang-format off
@@ -32,18 +33,6 @@ void test_allocator_traits() {
 void test_allocator() {
   std::allocator<int> allocator;
   allocator.allocate(1);          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#if TEST_STD_VER <= 17
-  allocator.allocate(1, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
-#if TEST_STD_VER >= 23
-  allocator.allocate_at_least(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
-}
-
-void test_const_allocator() {
-  std::allocator<const int> allocator;
-  allocator.allocate(1);          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
 #if TEST_STD_VER <= 17
   allocator.allocate(1, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif

@@ -23,7 +23,7 @@ using namespace llvm;
 /// getRegisterValueType - Look up and return the ValueType of the specified
 /// register. If the register is a member of multiple register classes, they
 /// must all have the same type.
-static MVT::SimpleValueType getRegisterValueType(Record *R,
+static MVT::SimpleValueType getRegisterValueType(const Record *R,
                                                  const CodeGenTarget &T) {
   bool FoundRC = false;
   MVT::SimpleValueType VT = MVT::Other;
@@ -91,7 +91,7 @@ class MatcherGen {
   /// PhysRegInputs - List list has an entry for each explicitly specified
   /// physreg input to the pattern.  The first elt is the Register node, the
   /// second is the recorded slot number the input pattern match saved it in.
-  SmallVector<std::pair<Record *, unsigned>, 2> PhysRegInputs;
+  SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
 
   /// Matcher - This is the top level of the generated matcher, the result.
   Matcher *TheMatcher;
@@ -202,7 +202,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   assert(N.isLeaf() && "Not a leaf?");
 
   // Direct match against an integer constant.
-  if (IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
+  if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
     // If this is the root of the dag we're matching, we emit a redundant opcode
     // check to ensure that this gets folded into the normal top-level
     // OpcodeSwitch.
@@ -220,13 +220,13 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     return;
   }
 
-  DefInit *DI = dyn_cast<DefInit>(N.getLeafValue());
+  const DefInit *DI = dyn_cast<DefInit>(N.getLeafValue());
   if (!DI) {
     errs() << "Unknown leaf kind: " << N << "\n";
     abort();
   }
 
-  Record *LeafRec = DI->getDef();
+  const Record *LeafRec = DI->getDef();
 
   // A ValueType leaf node can represent a register when named, or itself when
   // unnamed.
@@ -235,7 +235,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     if (N.hasName())
       return;
     // An unnamed ValueType as in (sext_inreg GPR:$foo, i8).
-    return AddMatcher(new CheckValueTypeMatcher(LeafRec->getName()));
+    return AddMatcher(new CheckValueTypeMatcher(llvm::getValueType(LeafRec)));
   }
 
   if ( // Handle register references.  Nothing to do here, they always match.
@@ -336,7 +336,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
        N.getOperator()->getName() == "or") &&
       N.getChild(1).isLeaf() && N.getChild(1).getPredicateCalls().empty() &&
       N.getPredicateCalls().empty()) {
-    if (IntInit *II = dyn_cast<IntInit>(N.getChild(1).getLeafValue())) {
+    if (const IntInit *II = dyn_cast<IntInit>(N.getChild(1).getLeafValue())) {
       if (!llvm::has_single_bit<uint32_t>(
               II->getValue())) { // Don't bother with single bits.
         // If this is at the root of the pattern, we emit a redundant
@@ -555,7 +555,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // check.
   if (const ComplexPattern *CP =
           Pattern.getSrcPattern().getComplexPatternInfo(CGP)) {
-    const std::vector<Record *> &OpNodes = CP->getRootNodes();
+    ArrayRef<const Record *> OpNodes = CP->getRootNodes();
     assert(!OpNodes.empty() &&
            "Complex Pattern must specify what it can match");
     if (Variant >= OpNodes.size())
@@ -665,15 +665,15 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
                                          SmallVectorImpl<unsigned> &ResultOps) {
   assert(N.isLeaf() && "Must be a leaf");
 
-  if (IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
+  if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
     AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getSimpleType(0)));
     ResultOps.push_back(NextRecordedOperandNo++);
     return;
   }
 
   // If this is an explicit register reference, handle it.
-  if (DefInit *DI = dyn_cast<DefInit>(N.getLeafValue())) {
-    Record *Def = DI->getDef();
+  if (const DefInit *DI = dyn_cast<DefInit>(N.getLeafValue())) {
+    const Record *Def = DI->getDef();
     if (Def->isSubClassOf("Register")) {
       const CodeGenRegister *Reg = CGP.getTargetInfo().getRegBank().getReg(Def);
       AddMatcher(new EmitRegisterMatcher(Reg, N.getSimpleType(0)));
@@ -690,10 +690,10 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     if (Def->getName() == "undef_tied_input") {
       MVT::SimpleValueType ResultVT = N.getSimpleType(0);
       auto IDOperandNo = NextRecordedOperandNo++;
-      Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
+      const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
       CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
-      AddMatcher(new EmitNodeMatcher(II, ResultVT, std::nullopt, false, false,
-                                     false, false, -1, IDOperandNo));
+      AddMatcher(new EmitNodeMatcher(II, ResultVT, {}, false, false, false,
+                                     false, -1, IDOperandNo));
       ResultOps.push_back(IDOperandNo);
       return;
     }
@@ -746,7 +746,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
 
 static bool mayInstNodeLoadOrStore(const TreePatternNode &N,
                                    const CodeGenDAGPatterns &CGP) {
-  Record *Op = N.getOperator();
+  const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   return II.mayLoad || II.mayStore;
@@ -757,7 +757,7 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
   if (N.isLeaf())
     return 0;
 
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
   if (!OpRec->isSubClassOf("Instruction"))
     return 0;
 
@@ -773,7 +773,7 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
 
 void MatcherGen::EmitResultInstructionAsOperand(
     const TreePatternNode &N, SmallVectorImpl<unsigned> &OutputOps) {
-  Record *Op = N.getOperator();
+  const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
@@ -824,7 +824,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
   for (unsigned InstOpNo = NumResults, e = NumFixedOperands; InstOpNo != e;
        ++InstOpNo) {
     // Determine what to emit for this operand.
-    Record *OperandNode = II.Operands[InstOpNo].Rec;
+    const Record *OperandNode = II.Operands[InstOpNo].Rec;
     if (CGP.operandHasDefault(OperandNode) &&
         (InstOpNo < NonOverridableOperands || ChildNo >= N.getNumChildren())) {
       // This is a predicate or optional def operand which the pattern has not
@@ -844,7 +844,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
     // children may themselves emit multiple MI operands.
     unsigned NumSubOps = 1;
     if (OperandNode->isSubClassOf("Operand")) {
-      DagInit *MIOpInfo = OperandNode->getValueAsDag("MIOperandInfo");
+      const DagInit *MIOpInfo = OperandNode->getValueAsDag("MIOperandInfo");
       if (unsigned NumArgs = MIOpInfo->getNumArgs())
         NumSubOps = NumArgs;
     }
@@ -907,11 +907,11 @@ void MatcherGen::EmitResultInstructionAsOperand(
   if (isRoot && !Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
-    Record *HandledReg = nullptr;
+    const Record *HandledReg = nullptr;
     if (II.HasOneImplicitDefWithKnownVT(CGT) != MVT::Other)
       HandledReg = II.ImplicitDefs[0];
 
-    for (Record *Reg : Pattern.getDstRegs()) {
+    for (const Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg)
         continue;
       ResultVTs.push_back(getRegisterValueType(Reg, CGT));
@@ -1010,7 +1010,7 @@ void MatcherGen::EmitResultOperand(const TreePatternNode &N,
   if (N.isLeaf())
     return EmitResultLeafAsOperand(N, ResultOps);
 
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
   if (OpRec->isSubClassOf("Instruction"))
     return EmitResultInstructionAsOperand(N, ResultOps);
   if (OpRec->isSubClassOf("SDNodeXForm"))
@@ -1042,7 +1042,7 @@ void MatcherGen::EmitResultCode() {
   if (!Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
-    Record *HandledReg = nullptr;
+    const Record *HandledReg = nullptr;
     const TreePatternNode &DstPat = Pattern.getDstPattern();
     if (!DstPat.isLeaf() && DstPat.getOperator()->isSubClassOf("Instruction")) {
       const CodeGenTarget &CGT = CGP.getTargetInfo();
@@ -1052,7 +1052,7 @@ void MatcherGen::EmitResultCode() {
         HandledReg = II.ImplicitDefs[0];
     }
 
-    for (Record *Reg : Pattern.getDstRegs()) {
+    for (const Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg)
         continue;
       ++NumSrcResults;

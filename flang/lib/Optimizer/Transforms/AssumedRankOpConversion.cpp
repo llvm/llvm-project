@@ -63,7 +63,7 @@ public:
       : mlir::OpRewritePattern<fir::ReboxAssumedRankOp>(context),
         symbolTable{symbolTable}, kindMap{kindMap} {};
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ReboxAssumedRankOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, kindMap, symbolTable};
@@ -123,7 +123,7 @@ public:
       : mlir::OpRewritePattern<fir::IsAssumedSizeOp>(context),
         symbolTable{symbolTable}, kindMap{kindMap} {};
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::IsAssumedSizeOp isAssumedSizeOp,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, kindMap, symbolTable};
@@ -152,7 +152,8 @@ public:
     patterns.insert<ReboxAssumedRankConv>(context, &symbolTable, kindMap);
     patterns.insert<IsAssumedSizeConv>(context, &symbolTable, kindMap);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
     (void)applyPatternsAndFoldGreedily(mod, std::move(patterns), config);
   }
 };

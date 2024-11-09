@@ -10,6 +10,7 @@ program main
     pure integer function ifunc()
     end function
   end interface
+  !PORTABILITY: Automatic data object 'x1' should not appear in the specification part of a main program
   type(t1(k=4,l=ifunc())) x1
   !PORTABILITY: Statement function 'sf1' should not contain an array constructor
   sf1(n) = sum([(j,j=1,n)])

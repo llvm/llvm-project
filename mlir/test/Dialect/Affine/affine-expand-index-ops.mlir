@@ -11,10 +11,7 @@
 //       CHECK:   %[[Q:.+]] = affine.apply #[[$map2]]()[%[[IDX]]]
 //       CHECK:   return %[[N]], %[[P]], %[[Q]]
 func.func @static_basis(%linear_index: index) -> (index, index, index) {
-  %b0 = arith.constant 16 : index
-  %b1 = arith.constant 224 : index
-  %b2 = arith.constant 224 : index
-  %1:3 = affine.delinearize_index %linear_index into (%b0, %b1, %b2) : index, index, index
+  %1:3 = affine.delinearize_index %linear_index into (16, 224, 224) : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
 }
 
@@ -43,4 +40,30 @@ func.func @dynamic_basis(%linear_index: index, %src: memref<?x?x?xf32>) -> (inde
   %b2 = memref.dim %src, %c2 : memref<?x?x?xf32>
   %1:3 = affine.delinearize_index %linear_index into (%b0, %b1, %b2) : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0, s1, s2] -> (s0 * 15 + s1 * 5 + s2)>
+
+// CHECK-LABEL: @linearize_static
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index)
+// CHECK: %[[val_0:.+]] = affine.apply #[[$map0]]()[%[[arg0]], %[[arg1]], %[[arg2]]]
+// CHECK: return %[[val_0]]
+func.func @linearize_static(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0 = affine.linearize_index [%arg0, %arg1, %arg2] by (2, 3, 5) : index
+  func.return %0 : index
+}
+
+// -----
+
+// CHECK-DAG: #[[$map0:.+]] =  affine_map<()[s0, s1, s2, s3, s4] -> (s1 * s2 + s3 + s0 * (s2 * s4))>
+
+// CHECK-LABEL: @linearize_dynamic
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index, %[[arg4:.+]]: index, %[[arg5:.+]]: index)
+// CHECK: %[[val_0:.+]] = affine.apply #[[$map0]]()[%[[arg0]], %[[arg1]], %[[arg5]], %[[arg2]], %[[arg4]]]
+// CHECK: return %[[val_0]]
+func.func @linearize_dynamic(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> index {
+  %0 = affine.linearize_index [%arg0, %arg1, %arg2] by (%arg3, %arg4, %arg5) : index
+  func.return %0 : index
 }

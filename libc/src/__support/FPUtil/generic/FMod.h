@@ -14,9 +14,10 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace generic {
 
@@ -160,7 +161,8 @@ template <typename T> struct FModDivisionInvMultHelper {
 template <typename T, typename U = typename FPBits<T>::StorageType,
           typename DivisionHelper = FModDivisionSimpleHelper<U>>
 class FMod {
-  static_assert(cpp::is_floating_point_v<T> && cpp::is_unsigned_v<U> &&
+  static_assert(cpp::is_floating_point_v<T> &&
+                    is_unsigned_integral_or_big_int_v<U> &&
                     (sizeof(U) * CHAR_BIT > FPBits<T>::FRACTION_LEN),
                 "FMod instantiated with invalid type.");
 
@@ -289,6 +291,6 @@ public:
 
 } // namespace generic
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H

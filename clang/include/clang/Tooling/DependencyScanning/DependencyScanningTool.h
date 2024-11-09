@@ -144,6 +144,8 @@ public:
       StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput);
 
+  llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
+
 private:
   DependencyScanningWorker Worker;
 };

@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_STATVFS_H
 #define LLVM_LIBC_TYPES_STRUCT_STATVFS_H
 
-#include <llvm-libc-types/fsblkcnt_t.h>
-#include <llvm-libc-types/fsfilcnt_t.h>
+#include "fsblkcnt_t.h"
+#include "fsfilcnt_t.h"
 
 struct statvfs {
   unsigned long f_bsize;   /* Filesystem block size */

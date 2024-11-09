@@ -16,8 +16,8 @@ mlir_tablegen(TestOpInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRTestInterfaceIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
-mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls)
-mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs)
+mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=test)
+mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=test)
 add_public_tablegen_target(MLIRTestAttrDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
@@ -86,6 +86,7 @@ add_mlir_library(MLIRTestDialect
   MLIRLinalgTransforms
   MLIRLLVMDialect
   MLIRPass
+  MLIRPolynomialDialect
   MLIRReduce
   MLIRTensorDialect
   MLIRTransformUtils

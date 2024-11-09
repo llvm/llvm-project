@@ -95,6 +95,8 @@ tools = [
     "llvm-ifs",
     "yaml2obj",
     "clang-linker-wrapper",
+    "clang-nvlink-wrapper",
+    "clang-sycl-linker",
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",

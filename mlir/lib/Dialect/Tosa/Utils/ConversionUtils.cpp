@@ -38,7 +38,11 @@ Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
 }
 
 Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
-                                 OpBuilder &rewriter) {
+                                 OpBuilder &rewriter, bool isUnsigned) {
+  if (isUnsigned) {
+    auto minOrArg = rewriter.create<arith::MaxUIOp>(loc, min, arg);
+    return rewriter.create<arith::MinUIOp>(loc, max, minOrArg);
+  }
   auto minOrArg = rewriter.create<arith::MaxSIOp>(loc, min, arg);
   return rewriter.create<arith::MinSIOp>(loc, max, minOrArg);
 }
@@ -98,6 +102,12 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
 
 LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
                                         Value &input1, Value &input2) {
+  ImplicitLocOpBuilder builder(loc, rewriter);
+  return EqualizeRanks(builder, input1, input2);
+}
+
+LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
+                                        Value &input1, Value &input2) {
   auto input1Ty = llvm::dyn_cast<RankedTensorType>(input1.getType());
   auto input2Ty = llvm::dyn_cast<RankedTensorType>(input2.getType());
 
@@ -136,9 +146,9 @@ LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
   auto reshapeOutputType = RankedTensorType::get(
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
 
-  auto reshapeLower = rewriter.create<tosa::ReshapeOp>(
-      loc, reshapeOutputType, lowerTensorValue,
-      rewriter.getDenseI64ArrayAttr(reshapeOutputShape));
+  auto reshapeLower = builder.create<tosa::ReshapeOp>(
+      reshapeOutputType, lowerTensorValue,
+      builder.getDenseI64ArrayAttr(reshapeOutputShape));
 
   if (input1Rank > input2Rank) {
     input1 = higherTensorValue;

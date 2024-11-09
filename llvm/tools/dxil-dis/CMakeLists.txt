@@ -25,7 +25,9 @@ include(ExternalProject)
 
 set(SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/DXC-src)
 set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/DXC-bins)
-set(GIT_SETTINGS GIT_REPOSITORY https://github.com/microsoft/DirectXShaderCompiler.git)
+set(GIT_SETTINGS
+    GIT_REPOSITORY https://github.com/microsoft/DirectXShaderCompiler.git
+    GIT_TAG main)
 
 if (DXC_SOURCE_DIR)
   set(SOURCE_DIR ${DXC_SOURCE_DIR})

@@ -10,6 +10,7 @@
 #define _LIBCPP___TUPLE_MAKE_TUPLE_TYPES_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_element.h>
@@ -17,9 +18,8 @@
 #include <__tuple/tuple_size.h>
 #include <__tuple/tuple_types.h>
 #include <__type_traits/copy_cvref.h>
-#include <__type_traits/remove_cv.h>
+#include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,7 +58,7 @@ template <class _Tp,
           bool _SameSize = (_Ep == tuple_size<__libcpp_remove_reference_t<_Tp> >::value)>
 struct __make_tuple_types {
   static_assert(_Sp <= _Ep, "__make_tuple_types input error");
-  using _RawTp = __remove_cv_t<__libcpp_remove_reference_t<_Tp> >;
+  using _RawTp = __remove_cvref_t<_Tp>;
   using _Maker = __make_tuple_types_flat<_RawTp, typename __make_tuple_indices<_Ep, _Sp>::type>;
   using type   = typename _Maker::template __apply_quals<_Tp>;
 };

@@ -545,6 +545,10 @@ int inline_decl() {
 // CHECK3-NEXT:    [[LOADGEP_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 // CHECK3-NEXT:    [[GEP_K:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 1
 // CHECK3-NEXT:    [[LOADGEP_K:%.*]] = load ptr, ptr [[GEP_K]], align 8
+// CHECK3-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
@@ -552,10 +556,6 @@ int inline_decl() {
 // CHECK3-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
 // CHECK3-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 4
 // CHECK3-NEXT:    [[DOTCOUNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK3:       omp.par.region:
 // CHECK3-NEXT:    store i32 0, ptr [[LOADGEP_I]], align 4
@@ -572,9 +572,9 @@ int inline_decl() {
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK3:       for.body:
 // CHECK3-NEXT:    store i32 0, ptr [[LOADGEP_K]], align 4
-// CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[LOADGEP_K]], ptr [[TMP3]], align 8
-// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[LOADGEP_K]], align 4
 // CHECK3-NEXT:    store i32 [[TMP5]], ptr [[TMP4]], align 4
 // CHECK3-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
@@ -635,7 +635,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store ptr [[DISTANCE]], ptr [[DISTANCE_ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK3-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
@@ -674,7 +674,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store i32 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 4
 // CHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK3-NEXT:    [[MUL:%.*]] = mul i32 1, [[TMP3]]
@@ -713,6 +713,10 @@ int inline_decl() {
 // CHECK3-NEXT:    [[LOADGEP_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 // CHECK3-NEXT:    [[GEP_RES:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 1
 // CHECK3-NEXT:    [[LOADGEP_RES:%.*]] = load ptr, ptr [[GEP_RES]], align 8
+// CHECK3-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
@@ -721,10 +725,6 @@ int inline_decl() {
 // CHECK3-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_1:%.*]], align 8
 // CHECK3-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_2:%.*]], align 4
 // CHECK3-NEXT:    [[DOTCOUNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK3:       omp.par.region:
 // CHECK3-NEXT:    store i32 0, ptr [[LOADGEP_I]], align 4
@@ -741,9 +741,9 @@ int inline_decl() {
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK3:       for.body:
 // CHECK3-NEXT:    store i32 0, ptr [[K]], align 4
-// CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[K]], ptr [[TMP3]], align 8
-// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_2]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[K]], align 4
 // CHECK3-NEXT:    store i32 [[TMP5]], ptr [[TMP4]], align 4
 // CHECK3-NEXT:    call void @__captured_stmt.2(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
@@ -804,7 +804,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store ptr [[DISTANCE]], ptr [[DISTANCE_ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_1:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK3-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
@@ -843,7 +843,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store i32 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 4
 // CHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_2:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_2:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK3-NEXT:    [[MUL:%.*]] = mul i32 1, [[TMP3]]
@@ -884,6 +884,10 @@ int inline_decl() {
 // CHECK4-NEXT:    [[LOADGEP_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 // CHECK4-NEXT:    [[GEP_K:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 1
 // CHECK4-NEXT:    [[LOADGEP_K:%.*]] = load ptr, ptr [[GEP_K]], align 8
+// CHECK4-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
@@ -891,10 +895,6 @@ int inline_decl() {
 // CHECK4-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
 // CHECK4-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 4
 // CHECK4-NEXT:    [[DOTCOUNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    store i32 0, ptr [[LOADGEP_I]], align 4, !dbg [[DBG23:![0-9]+]]
@@ -911,9 +911,9 @@ int inline_decl() {
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG27]]
 // CHECK4:       for.body:
 // CHECK4-NEXT:    store i32 0, ptr [[LOADGEP_K]], align 4, !dbg [[DBG28:![0-9]+]]
-// CHECK4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0, !dbg [[DBG28]]
+// CHECK4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0, !dbg [[DBG28]]
 // CHECK4-NEXT:    store ptr [[LOADGEP_K]], ptr [[TMP3]], align 8, !dbg [[DBG28]]
-// CHECK4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0, !dbg [[DBG28]]
+// CHECK4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0, !dbg [[DBG28]]
 // CHECK4-NEXT:    [[TMP5:%.*]] = load i32, ptr [[LOADGEP_K]], align 4, !dbg [[DBG32:![0-9]+]]
 // CHECK4-NEXT:    store i32 [[TMP5]], ptr [[TMP4]], align 4, !dbg [[DBG28]]
 // CHECK4-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]]), !dbg [[DBG28]]
@@ -977,7 +977,7 @@ int inline_decl() {
 // CHECK4-NEXT:      #dbg_declare(ptr [[__CONTEXT_ADDR]], [[META49:![0-9]+]], !DIExpression(), [[META48]])
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
 // CHECK4-NEXT:      #dbg_declare(ptr [[DOTSTART]], [[META50:![0-9]+]], !DIExpression(), [[META52:![0-9]+]])
-// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG53:![0-9]+]]
+// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG53:![0-9]+]]
 // CHECK4-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !dbg [[DBG53]]
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !dbg [[DBG53]]
 // CHECK4-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4, !dbg [[META52]]
@@ -1021,7 +1021,7 @@ int inline_decl() {
 // CHECK4-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK4-NEXT:      #dbg_declare(ptr [[__CONTEXT_ADDR]], [[META71:![0-9]+]], !DIExpression(), [[META69]])
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG72:![0-9]+]]
+// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG72:![0-9]+]]
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4, !dbg [[DBG72]]
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4, !dbg [[DBG74:![0-9]+]]
 // CHECK4-NEXT:    [[MUL:%.*]] = mul i32 1, [[TMP3]], !dbg [[DBG74]]
@@ -1062,6 +1062,10 @@ int inline_decl() {
 // CHECK4-NEXT:    [[LOADGEP_I:%.*]] = load ptr, ptr [[GEP_I]], align 8
 // CHECK4-NEXT:    [[GEP_RES:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 1
 // CHECK4-NEXT:    [[LOADGEP_RES:%.*]] = load ptr, ptr [[GEP_RES]], align 8
+// CHECK4-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
@@ -1070,10 +1074,6 @@ int inline_decl() {
 // CHECK4-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_1:%.*]], align 8
 // CHECK4-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_2:%.*]], align 4
 // CHECK4-NEXT:    [[DOTCOUNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    store i32 0, ptr [[LOADGEP_I]], align 4, !dbg [[DBG86:![0-9]+]]
@@ -1091,9 +1091,9 @@ int inline_decl() {
 // CHECK4:       for.body:
 // CHECK4-NEXT:      #dbg_declare(ptr [[K]], [[META91:![0-9]+]], !DIExpression(), [[META95:![0-9]+]])
 // CHECK4-NEXT:    store i32 0, ptr [[K]], align 4, !dbg [[META95]]
-// CHECK4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0, !dbg [[META95]]
+// CHECK4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0, !dbg [[META95]]
 // CHECK4-NEXT:    store ptr [[K]], ptr [[TMP3]], align 8, !dbg [[META95]]
-// CHECK4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], ptr [[AGG_CAPTURED1]], i32 0, i32 0, !dbg [[META95]]
+// CHECK4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_2]], ptr [[AGG_CAPTURED1]], i32 0, i32 0, !dbg [[META95]]
 // CHECK4-NEXT:    [[TMP5:%.*]] = load i32, ptr [[K]], align 4, !dbg [[DBG96:![0-9]+]]
 // CHECK4-NEXT:    store i32 [[TMP5]], ptr [[TMP4]], align 4, !dbg [[META95]]
 // CHECK4-NEXT:    call void @__captured_stmt.2(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]]), !dbg [[META95]]
@@ -1157,7 +1157,7 @@ int inline_decl() {
 // CHECK4-NEXT:      #dbg_declare(ptr [[__CONTEXT_ADDR]], [[META105:![0-9]+]], !DIExpression(), [[META104]])
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
 // CHECK4-NEXT:      #dbg_declare(ptr [[DOTSTART]], [[META106:![0-9]+]], !DIExpression(), [[META108:![0-9]+]])
-// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_1:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG109:![0-9]+]]
+// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG109:![0-9]+]]
 // CHECK4-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !dbg [[DBG109]]
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !dbg [[DBG109]]
 // CHECK4-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4, !dbg [[META108]]
@@ -1201,7 +1201,7 @@ int inline_decl() {
 // CHECK4-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK4-NEXT:      #dbg_declare(ptr [[__CONTEXT_ADDR]], [[META120:![0-9]+]], !DIExpression(), [[META118]])
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_2:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG121:![0-9]+]]
+// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_2:%.*]], ptr [[TMP0]], i32 0, i32 0, !dbg [[DBG121:![0-9]+]]
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4, !dbg [[DBG121]]
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4, !dbg [[DBG123:![0-9]+]]
 // CHECK4-NEXT:    [[MUL:%.*]] = mul i32 1, [[TMP3]], !dbg [[DBG123]]

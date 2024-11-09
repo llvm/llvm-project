@@ -8,6 +8,7 @@
 
 #include "canonicalize-directives.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Semantics/tools.h"
 
 namespace Fortran::semantics {
 
@@ -82,35 +83,29 @@ bool CanonicalizationOfDirectives::Pre(parser::ExecutionPart &x) {
   return true;
 }
 
-template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
-  if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
-    if (auto *z{std::get_if<common::Indirection<T>>(&y->u)}) {
-      return &z->value();
-    }
-  }
-  return nullptr;
-}
-
 void CanonicalizationOfDirectives::CheckLoopDirective(
     parser::CompilerDirective &dir, parser::Block &block,
     std::list<parser::ExecutionPartConstruct>::iterator it) {
 
   // Skip over this and other compiler directives
-  while (GetConstructIf<parser::CompilerDirective>(*it)) {
+  while (it != block.end() && parser::Unwrap<parser::CompilerDirective>(*it)) {
     ++it;
   }
 
-  if (it == block.end() || !GetConstructIf<parser::DoConstruct>(*it)) {
+  if (it == block.end() ||
+      (!parser::Unwrap<parser::DoConstruct>(*it) &&
+          !parser::Unwrap<parser::OpenACCLoopConstruct>(*it) &&
+          !parser::Unwrap<parser::OpenACCCombinedConstruct>(*it))) {
     std::string s{parser::ToUpperCaseLetters(dir.source.ToString())};
     s.pop_back(); // Remove trailing newline from source string
     messages_.Say(
-        dir.source, "A DO loop must follow the %s directive"_err_en_US, s);
+        dir.source, "A DO loop must follow the %s directive"_warn_en_US, s);
   }
 }
 
 void CanonicalizationOfDirectives::Post(parser::Block &block) {
   for (auto it{block.begin()}; it != block.end(); ++it) {
-    if (auto *dir{GetConstructIf<parser::CompilerDirective>(*it)}) {
+    if (auto *dir{parser::Unwrap<parser::CompilerDirective>(*it)}) {
       std::visit(
           common::visitors{[&](parser::CompilerDirective::VectorAlways &) {
                              CheckLoopDirective(*dir, block, it);

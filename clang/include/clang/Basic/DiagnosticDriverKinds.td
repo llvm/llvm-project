@@ -37,8 +37,7 @@ def warn_drv_invalid_arch_name_with_suggestion : Warning<
   "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
   InGroup<UnusedCommandLineArgument>;
 def warn_drv_avr_mcu_not_specified : Warning<
-  "no target microcontroller specified on command line, cannot "
-  "link standard libraries, please pass -mmcu=<mcu name>">,
+  "no target microcontroller specified, please pass -mmcu=<mcu name>">,
   InGroup<AVRRtlibLinkingQuirks>;
 def warn_drv_avr_libc_not_found: Warning<
   "no avr-libc installation can be found on the system, "
@@ -98,8 +97,10 @@ def warn_drv_amdgpu_cov6: Warning<
   "code object v6 is still in development and not ready for production use yet;"
   " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
-  "cannot determine %0 architecture: %1; consider passing it via "
-  "'%2'">;
+  "cannot determine %0 architecture: %1; consider passing it via '%2'; "
+  "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
+  "timeout (integer secs, <=0 is infinite)">;
+
 def warn_drv_multi_gpu_arch : Warning<
   "multiple %0 architectures are detected: %1; only the first one is used for "
   "'%2'">, InGroup<MultiGPU>;
@@ -145,6 +146,9 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
+def warn_openmp_experimental : Warning<
+  "OpenMP support in flang is still experimental">,
+  InGroup<ExperimentalOption>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -156,6 +160,8 @@ def err_drv_unsupported_rtlib_for_platform : Error<
   "unsupported runtime library '%0' for platform '%1'">;
 def err_drv_invalid_unwindlib_name : Error<
   "invalid unwind library name in argument '%0'">;
+def err_drv_unsupported_unwind_for_platform : Error<
+  "unsupported unwind library '%0' for platform '%1'">;
 def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
@@ -375,6 +381,9 @@ def err_drv_negative_columns : Error<
   "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
 def err_drv_small_columns : Error<
   "invalid value '%1' in '%0', value must be '%2' or greater">;
+def warn_drv_fraw_string_literals_in_cxx11 : Warning<
+  "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
+  InGroup<UnusedCommandLineArgument>;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -439,6 +448,10 @@ def warn_drv_deprecated_arg : Warning<
 def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
   "argument '-fno-relaxed-template-template-args' is deprecated">,
   InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
+def warn_drv_deprecated_arg_ofast : Warning<
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
+  " or '-O3' to enable only conforming optimizations">,
+  InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
 def warn_drv_assuming_mfloat_abi_is : Warning<
@@ -488,6 +501,10 @@ def err_sls_hardening_arm_not_supported : Error<
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
   "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
+def warn_drv_math_errno_enabled_after_veclib: Warning<
+  "math errno enabled by '%0' after it was implicitly disabled by '%1',"
+  " this may limit the utilization of the vector library">,
+  InGroup<MathErrnoEnabledWithVecLib>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -593,9 +610,6 @@ def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
   " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
-def warn_drv_unsupported_sdata : Warning<
-  "ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64">,
-  InGroup<OptionIgnored>;
 def warn_drv_unsupported_longcalls : Warning<
   "ignoring '-mlong-calls' option as it is not currently supported with "
   "%select{|the implicit usage of }0-mabicalls">,
@@ -791,6 +805,8 @@ def err_drv_loongarch_wrong_fpu_width : Error<
   "wrong fpu width; %select{LSX|LASX}0 depends on 64-bit FPU">;
 def err_drv_loongarch_invalid_simd_option_combination : Error<
   "invalid option combination; LASX depends on LSX">;
+def err_drv_loongarch_invalid_msimd_EQ : Error<
+  "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
@@ -800,6 +816,12 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+def err_drv_multilib_custom_error : Error<
+  "multilib configuration error: %0">;
+
+def err_drv_experimental_crel : Error<
+  "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
+  "CREL is experimental and uses a non-standard section type code">;
 
 def warn_android_unversioned_fallback : Warning<
   "using unversioned Android target directory %0 for target %1; unversioned "

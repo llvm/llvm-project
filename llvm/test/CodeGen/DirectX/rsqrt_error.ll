@@ -1,7 +1,8 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation rsqrt does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload Type
+; CHECK: in function rsqrt_double
+; CHECK-SAME: Cannot create RSqrt operation: Invalid overload type
 
 ; Function Attrs: noinline nounwind optnone
 define noundef double @rsqrt_double(double noundef %a) #0 {

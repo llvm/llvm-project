@@ -16,6 +16,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   template <typename T> struct ILogbFunc {
@@ -82,7 +84,7 @@ public:
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;
@@ -101,7 +103,7 @@ public:
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;

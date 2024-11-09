@@ -21,16 +21,12 @@ entry:
 define i16 @shr16m1(ptr %ptr) {
 ; CHECK-LABEL: shr16m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    shrl %eax # EVEX TO LEGACY Compression encoding: [0xd1,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x2f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16m1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    shrl %eax # EVEX TO LEGACY Compression encoding: [0xd1,0xe8]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd1,0x2f]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -115,19 +111,15 @@ define i16 @shr16mcl(ptr %ptr, i16 %cl) {
 ; CHECK-LABEL: shr16mcl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw %cl, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0x2f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16mcl:
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; NF-NEXT:    # kill: def $cl killed $cl killed $ecx
-; NF-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw %cl, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd3,0x2f]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -139,19 +131,15 @@ define i16 @shr16mcl_mask(ptr %ptr, i16 %cl) {
 ; CHECK-LABEL: shr16mcl_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw %cl, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0x2f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16mcl_mask:
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; NF-NEXT:    # kill: def $cl killed $cl killed $ecx
-; NF-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw %cl, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd3,0x2f]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -261,16 +249,12 @@ entry:
 define i16 @shr16mi(ptr %ptr) {
 ; CHECK-LABEL: shr16mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    shrl $4, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x04]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw $4, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x2f,0x04]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16mi:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    shrl $4, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x04]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw $4, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xc1,0x2f,0x04]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -328,16 +312,12 @@ entry:
 define i16 @shr16r1(i16 noundef %a) {
 ; CHECK-LABEL: shr16r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
-; CHECK-NEXT:    shrl %eax # EVEX TO LEGACY Compression encoding: [0xd1,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
-; NF-NEXT:    shrl %eax # EVEX TO LEGACY Compression encoding: [0xd1,0xe8]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd1,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i16 %a, 1
@@ -417,19 +397,15 @@ define i16 @shr16rcl(i16 noundef %a, i16 %cl) {
 ; CHECK-LABEL: shr16rcl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw %cl, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16rcl:
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; NF-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
 ; NF-NEXT:    # kill: def $cl killed $cl killed $ecx
-; NF-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw %cl, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd3,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i16 %a, %cl
@@ -440,19 +416,15 @@ define i16 @shr16rcl_mask(i16 noundef %a, i16 %cl) {
 ; CHECK-LABEL: shr16rcl_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw %cl, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16rcl_mask:
 ; NF:       # %bb.0: # %entry
 ; NF-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; NF-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
 ; NF-NEXT:    # kill: def $cl killed $cl killed $ecx
-; NF-NEXT:    shrl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe8]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw %cl, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd3,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shamt = and i16 %cl, 31
@@ -556,16 +528,12 @@ entry:
 define i16 @shr16ri(i16 noundef %a) {
 ; CHECK-LABEL: shr16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
-; CHECK-NEXT:    shrl $4, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x04]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    shrw $4, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0xef,0x04]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16ri:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
-; NF-NEXT:    shrl $4, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x04]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} shrw $4, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xc1,0xef,0x04]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i16 %a, 4

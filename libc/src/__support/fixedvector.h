@@ -12,8 +12,9 @@
 #include "src/__support/CPP/array.h"
 
 #include "src/__support/CPP/iterator.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // A fixed size data store backed by an underlying cpp::array data structure. It
 // supports vector like API but is not resizable like a vector.
@@ -26,6 +27,13 @@ public:
 
   using iterator = typename cpp::array<T, CAPACITY>::iterator;
   constexpr FixedVector(iterator begin, iterator end) : store{}, item_count{} {
+    for (; begin != end; ++begin)
+      push_back(*begin);
+  }
+
+  using const_iterator = typename cpp::array<T, CAPACITY>::const_iterator;
+  constexpr FixedVector(const_iterator begin, const_iterator end)
+      : store{}, item_count{} {
     for (; begin != end; ++begin)
       push_back(*begin);
   }
@@ -83,8 +91,13 @@ public:
 
   LIBC_INLINE constexpr iterator begin() { return store.begin(); }
   LIBC_INLINE constexpr iterator end() { return iterator{&store[item_count]}; }
+
+  LIBC_INLINE constexpr const_iterator begin() const { return store.begin(); }
+  LIBC_INLINE constexpr const_iterator end() const {
+    return const_iterator{&store[item_count]};
+  }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H

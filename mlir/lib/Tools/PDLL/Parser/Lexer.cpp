@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lexer.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/PDLL/AST/Diagnostic.h"
 #include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "llvm/ADT/StringExtras.h"

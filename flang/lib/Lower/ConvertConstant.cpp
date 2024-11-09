@@ -105,7 +105,7 @@ public:
                                    const Fortran::lower::SomeExpr &initExpr,
                                    cuf::DataAttributeAttr dataAttr) {
     DenseGlobalBuilder globalBuilder;
-    std::visit(
+    Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeLogical> &
                     x) { globalBuilder.tryConvertingToAttributes(builder, x); },
@@ -152,9 +152,6 @@ private:
                       : TC;
     attributeElementType = Fortran::lower::getFIRType(
         builder.getContext(), attrTc, KIND, std::nullopt);
-    if (auto firCTy = mlir::dyn_cast<fir::ComplexType>(attributeElementType))
-      attributeElementType =
-          mlir::ComplexType::get(firCTy.getEleType(builder.getKindMap()));
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -164,7 +161,7 @@ private:
   template <typename SomeCat>
   void tryConvertingToAttributes(fir::FirOpBuilder &builder,
                                  const Fortran::evaluate::Expr<SomeCat> &expr) {
-    std::visit(
+    Fortran::common::visit(
         [&](const auto &x) {
           using TR = Fortran::evaluate::ResultType<decltype(x)>;
           if (const auto *constant =
@@ -264,14 +261,11 @@ static mlir::Value genScalarLit(
       return genRealConstant<KIND>(builder, loc, floatVal);
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
-    mlir::Value realPart =
-        genScalarLit<Fortran::common::TypeCategory::Real, KIND>(builder, loc,
-                                                                value.REAL());
-    mlir::Value imagPart =
-        genScalarLit<Fortran::common::TypeCategory::Real, KIND>(builder, loc,
-                                                                value.AIMAG());
-    return fir::factory::Complex{builder, loc}.createComplex(KIND, realPart,
-                                                             imagPart);
+    mlir::Value real = genScalarLit<Fortran::common::TypeCategory::Real, KIND>(
+        builder, loc, value.REAL());
+    mlir::Value imag = genScalarLit<Fortran::common::TypeCategory::Real, KIND>(
+        builder, loc, value.AIMAG());
+    return fir::factory::Complex{builder, loc}.createComplex(real, imag);
   } else /*constexpr*/ {
     llvm_unreachable("unhandled constant");
   }
@@ -590,7 +584,8 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
     } while (con.IncrementSubscripts(subscripts));
   } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
-      mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+      mlir::Type eleTy =
+          mlir::cast<fir::SequenceType>(arrayTy).getElementType();
       mlir::Value elementVal =
           genScalarLit(converter, loc, con.At(subscripts), eleTy,
                        /*outlineInReadOnlyMemory=*/false);
@@ -600,7 +595,7 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
   } else {
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
         return builder.createConvert(loc, eleTy,
@@ -649,7 +644,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
                    mlir::Location loc, mlir::Type arrayTy,
                    const Fortran::evaluate::Constant<T> &constant) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
   llvm::StringRef globalName = converter.getUniqueLitName(
       loc, std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(constant)),
       eleTy);
@@ -796,7 +791,7 @@ static fir::ExtendedValue
 genConstantValue(Fortran::lower::AbstractConverter &converter,
                  mlir::Location loc,
                  const Fortran::lower::SomeExpr &constantExpr) {
-  return std::visit(
+  return Fortran::common::visit(
       [&](const auto &x) -> fir::ExtendedValue {
         using T = std::decay_t<decltype(x)>;
         if constexpr (Fortran::common::HasMember<
@@ -805,7 +800,7 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
                         Fortran::common::TypeCategory::Derived) {
             return genConstantValue(converter, loc, x);
           } else {
-            return std::visit(
+            return Fortran::common::visit(
                 [&](const auto &preciseKind) {
                   return genConstantValue(converter, loc, preciseKind);
                 },

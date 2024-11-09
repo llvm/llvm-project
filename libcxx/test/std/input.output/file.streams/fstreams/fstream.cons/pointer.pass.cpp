@@ -13,12 +13,17 @@
 
 // explicit basic_fstream(const char* s, ios_base::openmode mode = ios_base::in | ios_base::out);
 
+// In C++23 and later, this test requires support for P2467R1 in the dylib (a3f17ba3febbd546f2342ffc780ac93b694fdc8d)
+// XFAIL: (!c++03 && !c++11 && !c++14 && !c++17 && !c++20) && using-built-library-before-llvm-18
+
 // XFAIL: LIBCXX-AIX-FIXME
 
 #include <fstream>
 #include <cassert>
+
 #include "test_macros.h"
 #include "platform_support.h"
+#include "operator_hijacker.h"
 
 int main(int, char**)
 {
@@ -34,6 +39,17 @@ int main(int, char**)
     }
     std::remove(temp.c_str());
 
+    {
+      std::basic_fstream<char, operator_hijacker_char_traits<char> > fs(
+          temp.c_str(), std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+      std::basic_string<char, operator_hijacker_char_traits<char> > x;
+      fs << "3.25";
+      fs.seekg(0);
+      fs >> x;
+      assert(x == "3.25");
+    }
+    std::remove(temp.c_str());
+
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wfstream fs(temp.c_str(), std::ios_base::in | std::ios_base::out
@@ -43,6 +59,17 @@ int main(int, char**)
         fs.seekg(0);
         fs >> x;
         assert(x == 3.25);
+    }
+    std::remove(temp.c_str());
+
+    {
+      std::basic_fstream<wchar_t, operator_hijacker_char_traits<wchar_t> > fs(
+          temp.c_str(), std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+      std::basic_string<wchar_t, operator_hijacker_char_traits<wchar_t> > x;
+      fs << L"3.25";
+      fs.seekg(0);
+      fs >> x;
+      assert(x == L"3.25");
     }
     std::remove(temp.c_str());
 #endif

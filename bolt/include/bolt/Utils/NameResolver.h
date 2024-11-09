@@ -61,6 +61,12 @@ public:
     std::tie(LHS, RHS) = UniqueName.split(Sep);
     return (LHS + Suffix + Twine(Sep) + RHS).str();
   }
+
+  // Drops the suffix that describes the function's number of names.
+  static StringRef dropNumNames(StringRef Name) {
+    const size_t Pos = Name.find("(*");
+    return Pos != StringRef::npos ? Name.substr(0, Pos) : Name;
+  }
 };
 
 } // namespace bolt

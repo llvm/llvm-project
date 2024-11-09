@@ -86,12 +86,6 @@ set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the stat
 
 set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE STRING "Path to install the libc++abi headers at.")
 
-if(LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBCXXABI_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
-else()
-  set(LIBCXXABI_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
-endif()
-
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 set(LIBCXXABI_LIBRARY_VERSION "1.0" CACHE STRING
 "Version of libc++abi. This will be reflected in the name of the shared \
@@ -130,11 +124,6 @@ avoid demangling" OFF)
 if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
-
-# TODO: Remove this, which shouldn't be necessary since we know we're being built
-#       side-by-side with libc++.
-set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
-    "Specify path to libc++ includes.")
 
 set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
@@ -227,8 +216,7 @@ set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 set(LIBCXXABI_LIBRARIES "")
-set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBCXXABI_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++abi is linked to which can be provided in cache")
 
@@ -244,7 +232,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
-add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.

@@ -684,9 +684,9 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
       return getIORuntimeFunc<mkIOKey(OutputReal64)>(loc, builder);
   }
   auto kindMap = fir::getKindMapping(builder.getModule());
-  if (auto ty = mlir::dyn_cast<fir::ComplexType>(type)) {
+  if (auto ty = mlir::dyn_cast<mlir::ComplexType>(type)) {
     // COMPLEX(KIND=k) corresponds to a pair of REAL(KIND=k).
-    auto width = kindMap.getRealBitsize(ty.getFKind());
+    auto width = mlir::cast<mlir::FloatType>(ty.getElementType()).getWidth();
     if (width == 32)
       return getIORuntimeFunc<mkIOKey(OutputComplex32)>(loc, builder);
     else if (width == 64)
@@ -788,8 +788,8 @@ static mlir::func::FuncOp getInputFunc(mlir::Location loc,
       return getIORuntimeFunc<mkIOKey(InputReal64)>(loc, builder);
   }
   auto kindMap = fir::getKindMapping(builder.getModule());
-  if (auto ty = mlir::dyn_cast<fir::ComplexType>(type)) {
-    auto width = kindMap.getRealBitsize(ty.getFKind());
+  if (auto ty = mlir::dyn_cast<mlir::ComplexType>(type)) {
+    auto width = mlir::cast<mlir::FloatType>(ty.getElementType()).getWidth();
     if (width == 32)
       return getIORuntimeFunc<mkIOKey(InputComplex32)>(loc, builder);
     else if (width == 64)
@@ -1388,7 +1388,7 @@ static void threadSpecs(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const auto &spec : specList) {
     makeNextConditionalOn(builder, loc, checkResult, ok);
-    ok = std::visit(
+    ok = Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::IoControlSpec::Size &x) -> mlir::Value {
               // Size must be queried after the related READ runtime calls, not
@@ -1425,7 +1425,7 @@ ConditionSpecInfo lowerErrorSpec(Fortran::lower::AbstractConverter &converter,
   ConditionSpecInfo csi;
   const Fortran::lower::SomeExpr *ioMsgExpr = nullptr;
   for (const auto &spec : specList) {
-    std::visit(
+    Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::StatVariable &var) {
               csi.ioStatExpr = Fortran::semantics::GetExpr(var);
@@ -2397,7 +2397,7 @@ lowerIdExpr(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             const std::list<Fortran::parser::InquireSpec> &ispecs,
             Fortran::lower::StatementContext &stmtCtx) {
   for (const Fortran::parser::InquireSpec &spec : ispecs)
-    if (mlir::Value v = std::visit(
+    if (mlir::Value v = Fortran::common::visit(
             Fortran::common::visitors{
                 [&](const Fortran::parser::IdExpr &idExpr) {
                   return fir::getBase(converter.genExprValue(
@@ -2419,11 +2419,11 @@ static void threadInquire(Fortran::lower::AbstractConverter &converter,
   mlir::Value idExpr = lowerIdExpr(converter, loc, ispecs, stmtCtx);
   for (const Fortran::parser::InquireSpec &spec : ispecs) {
     makeNextConditionalOn(builder, loc, checkResult, ok);
-    ok = std::visit(Fortran::common::visitors{[&](const auto &x) {
-                      return genInquireSpec(converter, loc, cookie, idExpr, x,
-                                            stmtCtx);
-                    }},
-                    spec.u);
+    ok = Fortran::common::visit(Fortran::common::visitors{[&](const auto &x) {
+                                  return genInquireSpec(converter, loc, cookie,
+                                                        idExpr, x, stmtCtx);
+                                }},
+                                spec.u);
   }
 }
 

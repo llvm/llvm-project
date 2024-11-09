@@ -43,7 +43,7 @@ private:
 public:
   DependencyGraphCallback(const Preprocessor *_PP, StringRef OutputFile,
                           StringRef SysRoot)
-    : PP(_PP), OutputFile(OutputFile.str()), SysRoot(SysRoot.str()) { }
+      : PP(_PP), OutputFile(OutputFile.str()), SysRoot(SysRoot.str()) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -52,6 +52,10 @@ public:
                           StringRef RelativePath, const Module *SuggestedModule,
                           bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
+
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override;
 
   void EndOfMainFile() override {
     OutputGraphFile();
@@ -71,6 +75,24 @@ void DependencyGraphCallback::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  if (!File)
+    return;
+
+  SourceManager &SM = PP->getSourceManager();
+  OptionalFileEntryRef FromFile =
+      SM.getFileEntryRefForID(SM.getFileID(SM.getExpansionLoc(HashLoc)));
+  if (!FromFile)
+    return;
+
+  Dependencies[*FromFile].push_back(*File);
+
+  AllFiles.insert(*File);
+  AllFiles.insert(*FromFile);
+}
+
+void DependencyGraphCallback::EmbedDirective(SourceLocation HashLoc, StringRef,
+                                             bool, OptionalFileEntryRef File,
+                                             const LexEmbedParametersResult &) {
   if (!File)
     return;
 

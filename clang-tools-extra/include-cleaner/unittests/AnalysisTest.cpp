@@ -12,6 +12,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -21,9 +22,13 @@
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -35,6 +40,7 @@
 
 namespace clang::include_cleaner {
 namespace {
+using testing::_;
 using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAre;
@@ -203,21 +209,37 @@ protected:
   TestInputs Inputs;
   PragmaIncludes PI;
   RecordedPP PP;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> ExtraFS = nullptr;
+
   AnalyzeTest() {
     Inputs.MakeAction = [this] {
       struct Hook : public SyntaxOnlyAction {
       public:
-        Hook(RecordedPP &PP, PragmaIncludes &PI) : PP(PP), PI(PI) {}
+        Hook(RecordedPP &PP, PragmaIncludes &PI,
+             llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> ExtraFS)
+            : PP(PP), PI(PI), ExtraFS(std::move(ExtraFS)) {}
         bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
           CI.getPreprocessor().addPPCallbacks(PP.record(CI.getPreprocessor()));
           PI.record(CI);
           return true;
         }
 
+        bool BeginInvocation(CompilerInstance &CI) override {
+          if (!ExtraFS)
+            return true;
+          auto OverlayFS =
+              llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+                  CI.getFileManager().getVirtualFileSystemPtr());
+          OverlayFS->pushOverlay(ExtraFS);
+          CI.getFileManager().setVirtualFileSystem(std::move(OverlayFS));
+          return true;
+        }
+
         RecordedPP &PP;
         PragmaIncludes &PI;
+        llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> ExtraFS;
       };
-      return std::make_unique<Hook>(PP, PI);
+      return std::make_unique<Hook>(PP, PI, ExtraFS);
     };
   }
 };
@@ -242,10 +264,12 @@ int x = a + c;
   auto Results =
       analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
               PP.MacroReferences, PP.Includes, &PI, AST.preprocessor());
+  auto CHeader = llvm::cantFail(
+      AST.context().getSourceManager().getFileManager().getFileRef("c.h"));
 
   const Include *B = PP.Includes.atLine(3);
   ASSERT_EQ(B->Spelled, "b.h");
-  EXPECT_THAT(Results.Missing, ElementsAre("\"c.h\""));
+  EXPECT_THAT(Results.Missing, ElementsAre(Pair("\"c.h\"", Header(CHeader))));
   EXPECT_THAT(Results.Unused, ElementsAre(B));
 }
 
@@ -296,6 +320,83 @@ TEST_F(AnalyzeTest, ResourceDirIsIgnored) {
   EXPECT_THAT(Results.Missing, testing::IsEmpty());
 }
 
+TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {
+  Inputs.ExtraArgs.push_back("-Ifoo");
+  Inputs.ExtraArgs.push_back("-Ifoo_inner");
+  // `foo` is declared in foo_inner/foo.h, but there's no way to spell it
+  // directly. Make sure we don't generate unusued/missing include findings in
+  // such cases.
+  Inputs.Code = R"cpp(
+    #include <foo.h>
+    void baz() {
+      foo();
+    }
+  )cpp";
+  Inputs.ExtraFiles["foo/foo.h"] = guard("#include_next <foo.h>");
+  Inputs.ExtraFiles["foo_inner/foo.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  TestAST AST(Inputs);
+  std::vector<Decl *> DeclsInTU;
+  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
+    DeclsInTU.push_back(D);
+  auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
+  llvm::Annotations Code(R"cpp(
+  #include "header.h"
+  void $bar^bar() {
+    $foo^foo();
+  }
+  )cpp");
+  Inputs.Code = Code.code();
+  ExtraFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  ExtraFS->addFile("content_for/0", /*ModificationTime=*/{},
+                   llvm::MemoryBuffer::getMemBufferCopy(guard(R"cpp(
+  #include "inner.h"
+  )cpp")));
+  ExtraFS->addSymbolicLink("header.h", "content_for/0",
+                           /*ModificationTime=*/{});
+  ExtraFS->addFile("content_for/1", /*ModificationTime=*/{},
+                   llvm::MemoryBuffer::getMemBufferCopy(guard(R"cpp(
+  void foo();
+  )cpp")));
+  ExtraFS->addSymbolicLink("inner.h", "content_for/1",
+                           /*ModificationTime=*/{});
+
+  TestAST AST(Inputs);
+  std::vector<Decl *> DeclsInTU;
+  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
+    DeclsInTU.push_back(D);
+  auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
+  // Check that we're spelling header using the symlink, and not underlying
+  // path.
+  EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+  // header.h should be unused.
+  EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
+
+  {
+    // Make sure filtering is also applied to symlink, not underlying file.
+    auto HeaderFilter = [](llvm::StringRef Path) { return Path == "inner.h"; };
+    Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
+                      HeaderFilter);
+    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+    // header.h should be unused.
+    EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
+  }
+  {
+    auto HeaderFilter = [](llvm::StringRef Path) { return Path == "header.h"; };
+    Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
+                      HeaderFilter);
+    // header.h should be ignored now.
+    EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
+    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+  }
+}
+
 TEST(FixIncludes, Basic) {
   llvm::StringRef Code = R"cpp(#include "d.h"
 #include "a.h"
@@ -317,9 +418,9 @@ TEST(FixIncludes, Basic) {
   Inc.add(I);
 
   AnalysisResults Results;
-  Results.Missing.push_back("\"aa.h\"");
-  Results.Missing.push_back("\"ab.h\"");
-  Results.Missing.push_back("<e.h>");
+  Results.Missing.emplace_back("\"aa.h\"", Header(""));
+  Results.Missing.emplace_back("\"ab.h\"", Header(""));
+  Results.Missing.emplace_back("<e.h>", Header(""));
   Results.Unused.push_back(Inc.atLine(3));
   Results.Unused.push_back(Inc.atLine(4));
 
@@ -332,7 +433,7 @@ R"cpp(#include "d.h"
 )cpp");
 
   Results = {};
-  Results.Missing.push_back("\"d.h\"");
+  Results.Missing.emplace_back("\"d.h\"", Header(""));
   Code = R"cpp(#include "a.h")cpp";
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
 R"cpp(#include "d.h"

@@ -127,9 +127,6 @@ tls1:
 # PIE-NEXT:       - Name:            memory
 # PIE-NEXT:         Kind:            MEMORY
 # PIE-NEXT:         Index:           0
-# PIE-NEXT:       - Name:            __wasm_apply_data_relocs
-# PIE-NEXT:         Kind:            FUNCTION
-# PIE-NEXT:         Index:           1
 # PIE-NEXT:   - Type:
 
 # .tdata and .data are combined into single segment in PIC mode.

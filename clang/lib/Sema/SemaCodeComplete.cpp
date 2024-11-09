@@ -520,7 +520,6 @@ static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
   // Logical operators, assume we want bool.
   case tok::ampamp:
   case tok::pipepipe:
-  case tok::caretcaret:
     return S.getASTContext().BoolTy;
   // Operators often used for bit manipulation are typically used with the type
   // of the left argument.
@@ -1805,7 +1804,8 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
   if (LangOpts.C99) {
     // C99-specific
     Results.AddResult(Result("_Complex", CCP_Type));
-    Results.AddResult(Result("_Imaginary", CCP_Type));
+    if (!LangOpts.C2y)
+      Results.AddResult(Result("_Imaginary", CCP_Type));
     Results.AddResult(Result("_Bool", CCP_Type));
     Results.AddResult(Result("restrict", CCP_Type));
   }
@@ -2117,8 +2117,6 @@ static void AddOverrideResults(ResultBuilder &Results,
         // Generates a new CodeCompletionResult by taking this function and
         // converting it into an override declaration with only one chunk in the
         // final CodeCompletionString as a TypedTextChunk.
-        std::string OverrideSignature;
-        llvm::raw_string_ostream OS(OverrideSignature);
         CodeCompletionResult CCR(Method, 0);
         PrintingPolicy Policy =
             getCompletionPrintingPolicy(S.getASTContext(), S.getPreprocessor());
@@ -3186,7 +3184,6 @@ static void AddTemplateParameterChunks(
       else if (const auto *TC = TTP->getTypeConstraint()) {
         llvm::raw_string_ostream OS(PlaceholderStr);
         TC->print(OS, Policy);
-        OS.flush();
       } else
         PlaceholderStr = "class";
 
@@ -4025,7 +4022,7 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     FDecl->getDeclName().print(OS, Policy);
-    Result.AddTextChunk(Result.getAllocator().CopyString(OS.str()));
+    Result.AddTextChunk(Result.getAllocator().CopyString(Name));
   } else {
     // Function without a declaration. Just give the return type.
     Result.AddResultTypeChunk(Result.getAllocator().CopyString(
@@ -4343,7 +4340,7 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
         std::string Str;
         llvm::raw_string_ostream OS(Str);
         NNS->print(OS, Policy);
-        Builder.AddTextChunk(Results.getAllocator().CopyString(OS.str()));
+        Builder.AddTextChunk(Results.getAllocator().CopyString(Str));
       }
     } else if (!InContext->Equals(Overridden->getDeclContext()))
       continue;
@@ -4570,8 +4567,7 @@ void SemaCodeCompletion::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
           0) {
     ParsedType T = DS.getRepAsType();
     if (!T.get().isNull() && T.get()->isObjCObjectOrInterfaceType())
-      AddClassMessageCompletions(SemaRef, S, T, std::nullopt, false, false,
-                                 Results);
+      AddClassMessageCompletions(SemaRef, S, T, {}, false, false, Results);
   }
 
   // Note that we intentionally suppress macro results here, since we do not
@@ -4934,7 +4930,7 @@ void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
   if (E.isInvalid())
     CodeCompleteExpression(S, PreferredType);
   else if (getLangOpts().ObjC)
-    CodeCompleteObjCInstanceMessage(S, E.get(), std::nullopt, false);
+    CodeCompleteObjCInstanceMessage(S, E.get(), {}, false);
 }
 
 /// The set of properties that have already been added, referenced by
@@ -6866,7 +6862,7 @@ void SemaCodeCompletion::CodeCompleteNamespaceDecl(Scope *S) {
              NS(Ctx->decls_begin()),
          NSEnd(Ctx->decls_end());
          NS != NSEnd; ++NS)
-      OrigToLatest[NS->getOriginalNamespace()] = *NS;
+      OrigToLatest[NS->getFirstDecl()] = *NS;
 
     // Add the most recent definition (or extended definition) of each
     // namespace to the list of results.
@@ -7750,8 +7746,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertyGetter(Scope *S) {
   Results.EnterNewScope();
 
   VisitedSelectorSet Selectors;
-  AddObjCMethods(Class, true, MK_ZeroArgSelector, std::nullopt,
-                 SemaRef.CurContext, Selectors,
+  AddObjCMethods(Class, true, MK_ZeroArgSelector, {}, SemaRef.CurContext,
+                 Selectors,
                  /*AllowSameLength=*/true, Results);
   Results.ExitScope();
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
@@ -7779,8 +7775,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertySetter(Scope *S) {
   Results.EnterNewScope();
 
   VisitedSelectorSet Selectors;
-  AddObjCMethods(Class, true, MK_OneArgSelector, std::nullopt,
-                 SemaRef.CurContext, Selectors,
+  AddObjCMethods(Class, true, MK_OneArgSelector, {}, SemaRef.CurContext,
+                 Selectors,
                  /*AllowSameLength=*/true, Results);
 
   Results.ExitScope();
@@ -8078,8 +8074,7 @@ void SemaCodeCompletion::CodeCompleteObjCMessageReceiver(Scope *S) {
       if (Iface->getSuperClass()) {
         Results.AddResult(Result("super"));
 
-        AddSuperSendCompletion(SemaRef, /*NeedSuperKeyword=*/true, std::nullopt,
-                               Results);
+        AddSuperSendCompletion(SemaRef, /*NeedSuperKeyword=*/true, {}, Results);
       }
 
   if (getLangOpts().CPlusPlus11)

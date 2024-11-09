@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_ARITH_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class Location;

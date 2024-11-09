@@ -107,6 +107,20 @@ private:
     }
   }
 
+  // Utility to move all parser::CompilerDirective right after it to right
+  // before it.  This allows preserving loop directives $DIR that may lie
+  // between an $acc directive and loop and leave lowering decide if it should
+  // ignore them or lower/apply them to the acc loops.
+  void moveCompilerDirectivesBefore(
+      parser::Block &block, parser::Block::iterator it) {
+    parser::Block::iterator nextIt = std::next(it);
+    while (nextIt != block.end() &&
+        parser::Unwrap<parser::CompilerDirective>(*nextIt)) {
+      block.emplace(it, std::move(*nextIt));
+      nextIt = block.erase(nextIt);
+    }
+  }
+
   void RewriteOpenACCLoopConstruct(parser::OpenACCLoopConstruct &x,
       parser::Block &block, parser::Block::iterator it) {
     parser::Block::iterator nextIt;
@@ -115,6 +129,7 @@ private:
     auto &nestedDo{std::get<std::optional<parser::DoConstruct>>(x.t)};
 
     if (!nestedDo) {
+      moveCompilerDirectivesBefore(block, it);
       nextIt = it;
       if (++nextIt != block.end()) {
         if (auto *doCons{parser::Unwrap<parser::DoConstruct>(*nextIt)}) {
@@ -151,6 +166,7 @@ private:
     auto &nestedDo{std::get<std::optional<parser::DoConstruct>>(x.t)};
 
     if (!nestedDo) {
+      moveCompilerDirectivesBefore(block, it);
       nextIt = it;
       if (++nextIt != block.end()) {
         if (auto *doCons{parser::Unwrap<parser::DoConstruct>(*nextIt)}) {
