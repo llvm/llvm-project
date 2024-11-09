@@ -42,18 +42,15 @@ class BadMultiClass3Example : dummy_class1, dummy_class2, std::enable_shared_fro
 class ClassBase : public std::enable_shared_from_this<ClassBase> {};
 class PrivateInheritClassBase : private ClassBase {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'PrivateInheritClassBase' is not publicly inheriting from 'ClassBase' which inherits from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: class PrivateInheritClassBase : public ClassBase {};
 
 class DefaultInheritClassBase : ClassBase {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'DefaultInheritClassBase' is not publicly inheriting from 'ClassBase' which inherits from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: class DefaultInheritClassBase : public ClassBase {};
 
 class PublicInheritClassBase : public ClassBase {};
 
 struct StructBase : public std::enable_shared_from_this<StructBase> {};
 struct PrivateInheritStructBase : private StructBase {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: 'PrivateInheritStructBase' is not publicly inheriting from 'StructBase' which inherits from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: struct PrivateInheritStructBase : public StructBase {};
 
 struct DefaultInheritStructBase : StructBase {};
 

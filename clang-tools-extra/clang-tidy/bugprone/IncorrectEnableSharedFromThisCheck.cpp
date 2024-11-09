@@ -47,7 +47,9 @@ void IncorrectEnableSharedFromThisCheck::check(
       // alias/typedefs of std::enable_shared_from_this<ClassName>
       "public " + BaseSpec->getType().getAsString();
   const FixItHint Hint =
-      FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
+      IsEnableSharedFromThisDirectBase
+          ? FixItHint::CreateReplacement(ReplacementRange, ReplacementString)
+          : FixItHint();
   diag(Derived->getLocation(),
        "%2 is not publicly inheriting from "
        "%select{%1 which inherits from |}0'std::enable_shared_"
