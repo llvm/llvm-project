@@ -71,6 +71,8 @@ protected:
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
 
+  std::bitset<AArch64::NUM_TARGET_REGS> UserReservedRegister;
+
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
 
@@ -208,6 +210,10 @@ public:
     return MinVectorRegisterBitWidth;
   }
 
+  bool isRegisterReservedByUser(Register i) const {
+    assert(i < AArch64::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i];
+  }
   bool isXRegisterReserved(size_t i) const { return ReserveXRegister[i]; }
   bool isXRegisterReservedForRA(size_t i) const { return ReserveXRegisterForRA[i]; }
   unsigned getNumXRegisterReserved() const {

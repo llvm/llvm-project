@@ -11518,20 +11518,17 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
 // this table could be generated automatically from RegInfo.
 Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
-  Register Reg = MatchRegisterName(RegName);
-  if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
-    const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
-    unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    // check if X Register is reserved at either subtarget level or the
-    // machine function level.
-    if (Subtarget->isXRegisterReserved(DwarfRegNum) ||
-        MRI->isReservedReg(MF, Reg))
-      Reg = 0;
-  }
-  if (Reg)
-    return Reg;
-  report_fatal_error(Twine("Invalid register name \""
-                              + StringRef(RegName)  + "\"."));
+  Register Reg = MatchRegisterAltName(RegName);
+  if (Reg == AArch64::NoRegister)
+    Reg = MatchRegisterName(RegName);
+  if (Reg == AArch64::NoRegister)
+    report_fatal_error(
+        Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
+  BitVector ReservedRegs = Subtarget->getRegisterInfo()->getReservedRegs(MF);
+  if (!ReservedRegs.test(Reg) && !Subtarget->isRegisterReservedByUser(Reg))
+    report_fatal_error(Twine("Trying to obtain non-reserved register \"" +
+                             StringRef(RegName) + "\"."));
+  return Reg;
 }
 
 SDValue AArch64TargetLowering::LowerADDROFRETURNADDR(SDValue Op,
