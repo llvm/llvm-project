@@ -6283,8 +6283,9 @@ def err_typecheck_negative_array_size : Error<"array size is negative">;
 def warn_typecheck_function_qualifiers_ignored : Warning<
   "'%0' qualifier on function type %1 has no effect">,
   InGroup<IgnoredQualifiers>;
-def warn_typecheck_function_qualifiers_unspecified : Warning<
-  "'%0' qualifier on function type %1 has unspecified behavior">;
+def ext_typecheck_function_qualifiers_unspecified : ExtWarn<
+  "'%0' qualifier on function type %1 has no effect and is a Clang extension">,
+  InGroup<IgnoredQualifiers>;
 def warn_typecheck_reference_qualifiers : Warning<
   "'%0' qualifier on reference type %1 has no effect">,
   InGroup<IgnoredReferenceQualifiers>;
