@@ -4,8 +4,8 @@
 define <2 x i8> @PR115575(i8 %x) {
 ; CHECK-LABEL: define <2 x i8> @PR115575(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = sdiv i8 [[X]], poison
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i8> poison, i8 [[BO_SCALAR]], i64 3
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> poison, i8 [[X]], i32 3
+; CHECK-NEXT:    [[BO:%.*]] = sdiv <2 x i8> [[INS]], <i8 5, i8 2>
 ; CHECK-NEXT:    ret <2 x i8> [[BO]]
 ;
   %ins = insertelement <2 x i8> poison, i8 %x, i32 3
