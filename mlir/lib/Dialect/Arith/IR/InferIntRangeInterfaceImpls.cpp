@@ -40,13 +40,14 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     setResultRange(getResult(), ConstantIntRanges::constant(value));
     return;
   }
-  if (auto splatAttr = llvm::dyn_cast_or_null<SplatElementsAttr>(getValue())) {
-    setResultRange(getResult(), ConstantIntRanges::constant(
-                                    splatAttr.getSplatValue<APInt>()));
-    return;
-  }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    if (arrayCstAttr.isSplat()) {
+      setResultRange(getResult(), ConstantIntRanges::constant(
+                                      arrayCstAttr.getSplatValue<APInt>()));
+      return;
+    }
+
     std::optional<ConstantIntRanges> result;
     for (const APInt &val : arrayCstAttr) {
       auto range = ConstantIntRanges::constant(val);

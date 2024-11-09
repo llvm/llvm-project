@@ -754,6 +754,13 @@ def BufferStore : DXILOp<69, bufferStore> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def UpdateCounter : DXILOp<70, bufferUpdateCounter> {
+  let Doc = "increments/decrements a buffer counter";
+  let arguments = [HandleTy, Int8Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let Doc = "checks whether a Sample, Gather, or Load operation "
             "accessed mapped tiles in a tiled resource";
@@ -869,6 +876,15 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let Doc = "returns the index of the current lane in the wave";
   let LLVMIntrinsic = int_dx_wave_getlaneindex;
   let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveAllBitCount : DXILOp<135, waveAllOp> {
+  let Doc = "returns the count of bits set to 1 across the wave";
+  let LLVMIntrinsic = int_dx_wave_active_countbits;
+  let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];

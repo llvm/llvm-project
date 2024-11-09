@@ -7550,6 +7550,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   assert((BestFactor.Width == LegacyVF.Width ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
+                                                CostCtx, OrigLoop) ||
+          planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
                                                 CostCtx, OrigLoop)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
