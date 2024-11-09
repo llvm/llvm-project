@@ -15030,7 +15030,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
                                             : diag::warn_deprecated_register)
           << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
     } else if (!getLangOpts().CPlusPlus &&
-               DS.getTypeSpecType() == DeclSpec::TST_void) {
+               DS.getTypeSpecType() == DeclSpec::TST_void &&
+               D.getNumTypeObjects() == 0) {
       Diag(DS.getStorageClassSpecLoc(),
            diag::err_invalid_storage_class_in_func_decl)
           << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
