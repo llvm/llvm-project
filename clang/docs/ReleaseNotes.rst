@@ -771,7 +771,6 @@ X86 Support
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
-- Support ISA of ``AMX-AVX512``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
