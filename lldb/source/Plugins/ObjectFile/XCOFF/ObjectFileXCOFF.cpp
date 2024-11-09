@@ -67,10 +67,8 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
       return nullptr;
     data_offset = 0;
   }
-
   if (!ObjectFileXCOFF::MagicBytesMatch(data_sp, data_offset, length))
     return nullptr;
-
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
     data_sp = MapFileData(*file, length, file_offset);
@@ -134,6 +132,9 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
   data.SetData(data_sp, data_offset, data_length);
   lldb::offset_t offset = 0;
   uint16_t magic = data.GetU16(&offset);
+  if (magic == 0xF701)
+    magic = 0x01F7; /* Since AIX is big endian, and the host checking platform
+                       might be little endian. */
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 
