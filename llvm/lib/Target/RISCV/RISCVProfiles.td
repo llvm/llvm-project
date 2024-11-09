@@ -77,7 +77,8 @@ defvar RVA23U64Features = !listconcat(RVA22U64Features,
                                        FeatureStdExtSupm]);
 
 defvar RVA23S64BaseFeatures = !listconcat(RVA22S64BaseFeatures,
-                                          [FeatureStdExtSvnapot,
+                                          [FeatureStdExtH,
+                                           FeatureStdExtSvnapot,
                                            FeatureStdExtSstc,
                                            FeatureStdExtSscofpmf,
                                            FeatureStdExtSsnpm,
