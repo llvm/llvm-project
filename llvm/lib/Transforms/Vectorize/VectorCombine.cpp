@@ -952,6 +952,12 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   if (!IsConst0 && !IsConst1 && Index0 != Index1)
     return false;
 
+  auto *VecTy0 = cast<VectorType>(Ins0->getType());
+  auto *VecTy1 = cast<VectorType>(Ins1->getType());
+  if (VecTy0->getElementCount().getKnownMinValue() <= Index0 ||
+      VecTy1->getElementCount().getKnownMinValue() <= Index1)
+    return false;
+
   // Bail for single insertion if it is a load.
   // TODO: Handle this once getVectorInstrCost can cost for load/stores.
   auto *I0 = dyn_cast_or_null<Instruction>(V0);
