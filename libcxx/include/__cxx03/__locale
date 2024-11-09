@@ -10,27 +10,27 @@
 #ifndef _LIBCPP___LOCALE
 #define _LIBCPP___LOCALE
 
-#include <__config>
-#include <__locale_dir/locale_base_api.h>
-#include <__memory/shared_ptr.h> // __shared_count
-#include <__mutex/once_flag.h>
-#include <__type_traits/make_unsigned.h>
-#include <__utility/no_destroy.h>
-#include <__utility/private_constructor_tag.h>
-#include <cctype>
-#include <clocale>
-#include <cstdint>
-#include <cstdlib>
-#include <string>
+#include <__cxx03/__config>
+#include <__cxx03/__locale_dir/locale_base_api.h>
+#include <__cxx03/__memory/shared_ptr.h> // __shared_count
+#include <__cxx03/__mutex/once_flag.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/__utility/no_destroy.h>
+#include <__cxx03/__utility/private_constructor_tag.h>
+#include <__cxx03/cctype>
+#include <__cxx03/clocale>
+#include <__cxx03/cstdint>
+#include <__cxx03/cstdlib>
+#include <__cxx03/string>
 
 // Some platforms require more includes than others. Keep the includes on all plaforms for now.
-#include <cstddef>
-#include <cstring>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstring>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  include <cwchar>
+#  include <__cxx03/cwchar>
 #else
-#  include <__std_mbstate_t.h>
+#  include <__cxx03/__std_mbstate_t.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

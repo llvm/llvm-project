@@ -61,4 +61,16 @@ func.func @_QPsub3(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<
 // CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: fir.call @_FortranACUFMemFree
 
+func.func @_QPtest_type() {
+  %0 = cuf.alloc !fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_typeEa"} -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_typeEa"} : (!fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>) -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  cuf.free %1 : !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtest_type()
+// CHECK: %[[BYTES:.*]] = arith.constant 12 : index
+// CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
 } // end module

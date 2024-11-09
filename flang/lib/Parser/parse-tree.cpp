@@ -252,6 +252,23 @@ CharBlock Variable::GetSource() const {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
+
+OmpTaskDependenceType::Type OmpDependClause::GetDepType() const {
+  return common::visit(
+      common::visitors{
+          [&](const parser::OmpDependClause::Source &) {
+            return parser::OmpTaskDependenceType::Type::Source;
+          },
+          [&](const parser::OmpDependClause::Sink &) {
+            return parser::OmpTaskDependenceType::Type::Sink;
+          },
+          [&](const parser::OmpDependClause::InOut &y) {
+            return std::get<parser::OmpTaskDependenceType>(y.t).v;
+          },
+      },
+      u);
+}
+
 } // namespace Fortran::parser
 
 template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {

@@ -74,21 +74,21 @@ void DAP::PopulateExceptionBreakpoints() {
     exception_breakpoints = std::vector<ExceptionBreakpoint>{};
 
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
-      exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
+      exception_breakpoints->emplace_back(*this, "cpp_catch", "C++ Catch",
                                           lldb::eLanguageTypeC_plus_plus);
-      exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
+      exception_breakpoints->emplace_back(*this, "cpp_throw", "C++ Throw",
                                           lldb::eLanguageTypeC_plus_plus);
     }
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
-      exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
-                                          lldb::eLanguageTypeObjC);
-      exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
-                                          lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back(
+          *this, "objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back(
+          *this, "objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC);
     }
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
-      exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
+      exception_breakpoints->emplace_back(*this, "swift_catch", "Swift Catch",
                                           lldb::eLanguageTypeSwift);
-      exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
+      exception_breakpoints->emplace_back(*this, "swift_throw", "Swift Throw",
                                           lldb::eLanguageTypeSwift);
     }
     // Besides handling the hardcoded list of languages from above, we try to
@@ -119,7 +119,7 @@ void DAP::PopulateExceptionBreakpoints() {
             raw_throw_keyword ? raw_throw_keyword : "throw";
 
         exception_breakpoints->emplace_back(
-            raw_lang_name + "_" + throw_keyword,
+            *this, raw_lang_name + "_" + throw_keyword,
             capitalized_lang_name + " " + capitalize(throw_keyword), lang);
       }
 
@@ -130,7 +130,7 @@ void DAP::PopulateExceptionBreakpoints() {
             raw_catch_keyword ? raw_catch_keyword : "catch";
 
         exception_breakpoints->emplace_back(
-            raw_lang_name + "_" + catch_keyword,
+            *this, raw_lang_name + "_" + catch_keyword,
             capitalized_lang_name + " " + capitalize(catch_keyword), lang);
       }
     }
@@ -1060,7 +1060,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
-    if (bp.second.id == bp_id)
+    if (bp.second.bp.GetID() == bp_id)
       return &bp.second;
   }
   return nullptr;

@@ -505,10 +505,13 @@ bool PPCPassConfig::addPreISel() {
           ? EnableGlobalMerge
           : (TM->getTargetTriple().isOSAIX() &&
              getOptLevel() != CodeGenOptLevel::None))
-    addPass(
-        createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true));
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+                                  true));
 
-  if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
+  if ((MergeStringPool.getNumOccurrences() > 0)
+          ? MergeStringPool
+          : (TM->getTargetTriple().isOSLinux() &&
+             getOptLevel() != CodeGenOptLevel::None))
     addPass(createPPCMergeStringPoolPass());
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)

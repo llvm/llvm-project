@@ -13,10 +13,10 @@
 #include <__assert>
 #include <__bit/bit_ceil.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
-#include <cstddef>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>

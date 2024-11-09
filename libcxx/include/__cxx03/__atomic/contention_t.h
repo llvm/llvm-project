@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___ATOMIC_CONTENTION_T_H
 #define _LIBCPP___ATOMIC_CONTENTION_T_H
 
-#include <__atomic/cxx_atomic_impl.h>
-#include <__config>
-#include <cstdint>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__config>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

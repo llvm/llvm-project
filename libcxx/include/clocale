@@ -36,7 +36,9 @@ lconv* localeconv();
 
 #include <__config>
 
-#include <locale.h>
+#if __has_include(<locale.h>)
+#  include <locale.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

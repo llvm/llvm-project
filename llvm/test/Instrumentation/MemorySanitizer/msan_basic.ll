@@ -2086,12 +2086,12 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[TMP2]], <i64 -9223372036854775808, i64 -9223372036854775808>
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[TMP2]], splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i64> [[TMP5]], <i64 -9223372036854775808, i64 -9223372036854775808>
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i64> [[TMP5]], splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i64> [[TMP6]], splat (i64 -9223372036854775808)
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; CHECK-NEXT:    store <2 x i1> [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2103,12 +2103,12 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[X]] to <2 x i64>
-; ORIGIN-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP3]], <i64 -9223372036854775808, i64 -9223372036854775808>
-; ORIGIN-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP3]], splat (i64 -9223372036854775808)
+; ORIGIN-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; ORIGIN-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP4]], [[TMP1]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 -9223372036854775808, i64 -9223372036854775808>
-; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], splat (i64 -9223372036854775808)
+; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], splat (i64 -9223372036854775808)
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP10]], [[TMP17]]
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; ORIGIN-NEXT:    store <2 x i1> [[TMP18]], ptr @__msan_retval_tls, align 8
@@ -2121,12 +2121,12 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[X]] to <2 x i64>
-; CALLS-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP3]], <i64 -9223372036854775808, i64 -9223372036854775808>
-; CALLS-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CALLS-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP3]], splat (i64 -9223372036854775808)
+; CALLS-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CALLS-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], [[TMP5]]
 ; CALLS-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP4]], [[TMP1]]
-; CALLS-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 -9223372036854775808, i64 -9223372036854775808>
-; CALLS-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CALLS-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], splat (i64 -9223372036854775808)
+; CALLS-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], splat (i64 -9223372036854775808)
 ; CALLS-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP10]], [[TMP17]]
 ; CALLS-NEXT:    [[TMP19:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; CALLS-NEXT:    store <2 x i1> [[TMP18]], ptr @__msan_retval_tls, align 8
@@ -2146,14 +2146,14 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[X]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP5]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> splat (i32 2147483647), [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <2 x i32> splat (i32 2147483647), [[TMP4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <2 x i1> [[TMP8]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[X]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp slt <2 x i32> splat (i32 -1), [[X]]
 ; CHECK-NEXT:    store <2 x i1> [[TMP16]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i1> [[TMP17]]
 ;
@@ -2162,17 +2162,17 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
-; ORIGIN-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
-; ORIGIN-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[X]], splat (i32 -2147483648)
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 -1)
 ; ORIGIN-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP3]], [[TMP4]]
 ; ORIGIN-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP3]], [[TMP1]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP6]]
-; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP5]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> splat (i32 2147483647), [[TMP6]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i32> splat (i32 2147483647), [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP18]], 0
 ; ORIGIN-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32 [[TMP2]], i32 0
-; ORIGIN-NEXT:    [[TMP21:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[X]]
+; ORIGIN-NEXT:    [[TMP21:%.*]] = icmp slt <2 x i32> splat (i32 -1), [[X]]
 ; ORIGIN-NEXT:    store <2 x i1> [[TMP17]], ptr @__msan_retval_tls, align 8
 ; ORIGIN-NEXT:    store i32 [[TMP20]], ptr @__msan_retval_origin_tls, align 4
 ; ORIGIN-NEXT:    ret <2 x i1> [[TMP21]]
@@ -2182,17 +2182,17 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 ; CALLS-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
-; CALLS-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[X]], <i32 -2147483648, i32 -2147483648>
-; CALLS-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CALLS-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[X]], splat (i32 -2147483648)
+; CALLS-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 -1)
 ; CALLS-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP3]], [[TMP4]]
 ; CALLS-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP3]], [[TMP1]]
-; CALLS-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP6]]
-; CALLS-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i32> <i32 2147483647, i32 2147483647>, [[TMP5]]
+; CALLS-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> splat (i32 2147483647), [[TMP6]]
+; CALLS-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i32> splat (i32 2147483647), [[TMP5]]
 ; CALLS-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; CALLS-NEXT:    [[TMP18:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
 ; CALLS-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP18]], 0
 ; CALLS-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32 [[TMP2]], i32 0
-; CALLS-NEXT:    [[TMP21:%.*]] = icmp slt <2 x i32> <i32 -1, i32 -1>, [[X]]
+; CALLS-NEXT:    [[TMP21:%.*]] = icmp slt <2 x i32> splat (i32 -1), [[X]]
 ; CALLS-NEXT:    store <2 x i1> [[TMP17]], ptr @__msan_retval_tls, align 8
 ; CALLS-NEXT:    store i32 [[TMP20]], ptr @__msan_retval_origin_tls, align 4
 ; CALLS-NEXT:    ret <2 x i1> [[TMP21]]

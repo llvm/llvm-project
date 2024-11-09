@@ -1371,7 +1371,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),
-               [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               [&CurLoop, this, DefReg,
+                Cost = std::move(Cost)](MachineInstr &UseMI) {
                  if (!CurLoop->contains(&UseMI))
                    return false;
 
@@ -1763,9 +1764,6 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

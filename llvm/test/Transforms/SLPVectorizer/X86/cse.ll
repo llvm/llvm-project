@@ -179,11 +179,11 @@ define i32 @foo4(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 7.900000e+00, double 7.900000e+00, double 7.900000e+00, double 7.900000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], splat (double 7.900000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 6.000000e+00, double 6.000000e+00, double 6.000000e+00, double 6.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], splat (double 6.000000e+00)
 ; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -335,8 +335,8 @@ define void @cse_for_hoisted_instructions_in_preheader(ptr %dst, i32 %a, i1 %c) 
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> <i32 22, i32 22>, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> splat (i32 22), [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], splat (i32 3)
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i32 [[A]], 3
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 10

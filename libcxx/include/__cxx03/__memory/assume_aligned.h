@@ -10,11 +10,11 @@
 #ifndef _LIBCPP___MEMORY_ASSUME_ALIGNED_H
 #define _LIBCPP___MEMORY_ASSUME_ALIGNED_H
 
-#include <__assert>
-#include <__config>
-#include <__type_traits/is_constant_evaluated.h>
-#include <cstddef>
-#include <cstdint>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

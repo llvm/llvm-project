@@ -48,6 +48,7 @@ class GINodeEquiv<Instruction i, SDNode node> {
 // These are defined in the same order as the G_* instructions.
 def : GINodeEquiv<G_ANYEXT, anyext>;
 def : GINodeEquiv<G_SEXT, sext>;
+def : GINodeEquiv<G_SEXT_INREG, sext_inreg>;
 def : GINodeEquiv<G_ZEXT, zext>;
 def : GINodeEquiv<G_TRUNC, trunc>;
 def : GINodeEquiv<G_BITCAST, bitconvert>;
@@ -148,6 +149,7 @@ def : GINodeEquiv<G_INSERT_VECTOR_ELT, vector_insert>;
 def : GINodeEquiv<G_CONCAT_VECTORS, concat_vectors>;
 def : GINodeEquiv<G_BUILD_VECTOR, build_vector>;
 def : GINodeEquiv<G_EXTRACT_SUBVECTOR, extract_subvector>;
+def : GINodeEquiv<G_SPLAT_VECTOR, splat_vector>;
 def : GINodeEquiv<G_FCEIL, fceil>;
 def : GINodeEquiv<G_FCOS, fcos>;
 def : GINodeEquiv<G_FSIN, fsin>;

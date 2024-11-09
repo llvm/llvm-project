@@ -10,25 +10,25 @@
 #ifndef _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
 #define _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
 
-#include <__config>
-#include <__filesystem/directory_entry.h>
-#include <__filesystem/directory_options.h>
-#include <__filesystem/path.h>
-#include <__iterator/default_sentinel.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/shared_ptr.h>
-#include <__ranges/enable_borrowed_range.h>
-#include <__ranges/enable_view.h>
-#include <__system_error/error_code.h>
-#include <__utility/move.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__filesystem/directory_entry.h>
+#include <__cxx03/__filesystem/directory_options.h>
+#include <__cxx03/__filesystem/path.h>
+#include <__cxx03/__iterator/default_sentinel.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/shared_ptr.h>
+#include <__cxx03/__ranges/enable_borrowed_range.h>
+#include <__cxx03/__ranges/enable_view.h>
+#include <__cxx03/__system_error/error_code.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 

@@ -24,11 +24,40 @@
 #define FORTRAN_RUNTIME_ASSIGN_H_
 
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 class Descriptor;
+class Terminator;
+
+enum AssignFlags {
+  NoAssignFlags = 0,
+  MaybeReallocate = 1 << 0,
+  NeedFinalization = 1 << 1,
+  CanBeDefinedAssignment = 1 << 2,
+  ComponentCanBeDefinedAssignment = 1 << 3,
+  ExplicitLengthCharacterLHS = 1 << 4,
+  PolymorphicLHS = 1 << 5,
+  DeallocateLHS = 1 << 6
+};
+
+using MemmoveFct = void *(*)(void *, const void *, std::size_t);
+
+#ifdef RT_DEVICE_COMPILATION
+static RT_API_ATTRS void *MemmoveWrapper(
+    void *dest, const void *src, std::size_t count) {
+  return Fortran::runtime::memmove(dest, src, count);
+}
+RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
+    Terminator &terminator, int flags, MemmoveFct memmoveFct = &MemmoveWrapper);
+#else
+RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
+    Terminator &terminator, int flags,
+    MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+#endif
 
 extern "C" {
+
 // API for lowering assignment
 void RTDECL(Assign)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);

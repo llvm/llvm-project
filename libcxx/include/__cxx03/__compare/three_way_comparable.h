@@ -9,15 +9,15 @@
 #ifndef _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H
 #define _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H
 
-#include <__compare/common_comparison_category.h>
-#include <__compare/ordering.h>
-#include <__concepts/common_reference_with.h>
-#include <__concepts/equality_comparable.h>
-#include <__concepts/same_as.h>
-#include <__concepts/totally_ordered.h>
-#include <__config>
-#include <__type_traits/common_reference.h>
-#include <__type_traits/make_const_lvalue_ref.h>
+#include <__cxx03/__compare/common_comparison_category.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__concepts/common_reference_with.h>
+#include <__cxx03/__concepts/equality_comparable.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__concepts/totally_ordered.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_reference.h>
+#include <__cxx03/__type_traits/make_const_lvalue_ref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

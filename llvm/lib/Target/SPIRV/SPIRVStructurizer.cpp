@@ -87,7 +87,7 @@ BasicBlock *getExitFor(const ConvergenceRegion *CR) {
 // Returns the merge block designated by I if I is a merge instruction, nullptr
 // otherwise.
 BasicBlock *getDesignatedMergeBlock(Instruction *I) {
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+  IntrinsicInst *II = dyn_cast_or_null<IntrinsicInst>(I);
   if (II == nullptr)
     return nullptr;
 
@@ -102,7 +102,7 @@ BasicBlock *getDesignatedMergeBlock(Instruction *I) {
 // Returns the continue block designated by I if I is an OpLoopMerge, nullptr
 // otherwise.
 BasicBlock *getDesignatedContinueBlock(Instruction *I) {
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+  IntrinsicInst *II = dyn_cast_or_null<IntrinsicInst>(I);
   if (II == nullptr)
     return nullptr;
 
@@ -284,18 +284,6 @@ void replaceBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
   assert(false && "Unhandled terminator type.");
 }
 
-// Replaces basic bloc operands |OldSrc| or OpPhi instructions in |BB| by
-// |NewSrc|. This function does not simplify the OpPhi instruction once
-// transformed.
-void replacePhiTargets(BasicBlock *BB, BasicBlock *OldSrc, BasicBlock *NewSrc) {
-  for (PHINode &Phi : BB->phis()) {
-    int index = Phi.getBasicBlockIndex(OldSrc);
-    if (index == -1)
-      continue;
-    Phi.setIncomingBlock(index, NewSrc);
-  }
-}
-
 } // anonymous namespace
 
 // Given a reducible CFG, produces a structurized CFG in the SPIR-V sense,
@@ -423,7 +411,7 @@ class SPIRVStructurizer : public FunctionPass {
     }
 
     // Splits the given edges by recreating proxy nodes so that the destination
-    // OpPhi instruction can still be viable.
+    // has unique incoming edges from this region.
     //
     // clang-format off
     //
@@ -436,66 +424,58 @@ class SPIRVStructurizer : public FunctionPass {
     // A -> D -> C
     // B -> D -> C
     //
-    // But if C had a phi node, adding such proxy-block breaks it. In such case, we must add 1 new block per
-    // exit, and patchup the phi node:
+    // This is fine (assuming C has no PHI nodes), but requires handling the merge instruction here.
+    // By adding a proxy node, we create a regular divergent shape which can easily be regularized later on.
     // A -> D -> D1 -> C
     // B -> D -> D2 -> C
     //
-    // A, B, D belongs to the construct. D is the exit. D1 and D2 are empty, just used as
-    // source operands for C's phi node.
+    // A, B, D belongs to the construct. D is the exit. D1 and D2 are empty.
     //
     // clang-format on
     std::vector<Edge>
     createAliasBlocksForComplexEdges(std::vector<Edge> Edges) {
-      std::unordered_map<BasicBlock *, BasicBlock *> Seen;
+      std::unordered_set<BasicBlock *> Seen;
       std::vector<Edge> Output;
       Output.reserve(Edges.size());
 
       for (auto &[Src, Dst] : Edges) {
-        auto [iterator, inserted] = Seen.insert({Src, Dst});
-        if (inserted) {
-          Output.emplace_back(Src, Dst);
-          continue;
+        auto [Iterator, Inserted] = Seen.insert(Src);
+        if (!Inserted) {
+          // Src already a source node. Cannot have 2 edges from A to B.
+          // Creating alias source block.
+          BasicBlock *NewSrc = BasicBlock::Create(
+              F.getContext(), Src->getName() + ".new.src", &F);
+          replaceBranchTargets(Src, Dst, NewSrc);
+          IRBuilder<> Builder(NewSrc);
+          Builder.CreateBr(Dst);
+          Src = NewSrc;
         }
 
-        // The exact same edge was already seen. Ignoring.
-        if (iterator->second == Dst)
-          continue;
-
-        // The same Src block branches to 2 distinct blocks. This will be an
-        // issue for the generated OpPhi. Creating alias block.
-        BasicBlock *NewSrc =
-            BasicBlock::Create(F.getContext(), "new.exit.src", &F);
-        replaceBranchTargets(Src, Dst, NewSrc);
-        replacePhiTargets(Dst, Src, NewSrc);
-
-        IRBuilder<> Builder(NewSrc);
-        Builder.CreateBr(Dst);
-
-        Seen.emplace(NewSrc, Dst);
-        Output.emplace_back(NewSrc, Dst);
+        Output.emplace_back(Src, Dst);
       }
 
       return Output;
+    }
+
+    AllocaInst *CreateVariable(Function &F, Type *Type,
+                               BasicBlock::iterator Position) {
+      const DataLayout &DL = F.getDataLayout();
+      return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
+                            Position);
     }
 
     // Given a construct defined by |Header|, and a list of exiting edges
     // |Edges|, creates a new single exit node, fixing up those edges.
     BasicBlock *createSingleExitNode(BasicBlock *Header,
                                      std::vector<Edge> &Edges) {
-      auto NewExit = BasicBlock::Create(F.getContext(), "new.exit", &F);
-      IRBuilder<> ExitBuilder(NewExit);
+
+      std::vector<Edge> FixedEdges = createAliasBlocksForComplexEdges(Edges);
 
       std::vector<BasicBlock *> Dsts;
       std::unordered_map<BasicBlock *, ConstantInt *> DstToIndex;
-
-      // Given 2 edges: Src1 -> Dst, Src2 -> Dst:
-      // If Dst has an PHI node, and Src1 and Src2 are both operands, both Src1
-      // and Src2 cannot be hidden by NewExit. Create 2 new nodes: Alias1,
-      // Alias2 to which NewExit will branch before going to Dst. Then, patchup
-      // Dst PHI node to look for Alias1 and Alias2.
-      std::vector<Edge> FixedEdges = createAliasBlocksForComplexEdges(Edges);
-
+      auto NewExit = BasicBlock::Create(F.getContext(),
+                                        Header->getName() + ".new.exit", &F);
+      IRBuilder<> ExitBuilder(NewExit);
       for (auto &[Src, Dst] : FixedEdges) {
         if (DstToIndex.count(Dst) != 0)
           continue;
@@ -506,33 +486,34 @@ class SPIRVStructurizer : public FunctionPass {
       if (Dsts.size() == 1) {
         for (auto &[Src, Dst] : FixedEdges) {
           replaceBranchTargets(Src, Dst, NewExit);
-          replacePhiTargets(Dst, Src, NewExit);
         }
         ExitBuilder.CreateBr(Dsts[0]);
         return NewExit;
       }
 
-      PHINode *PhiNode =
-          ExitBuilder.CreatePHI(ExitBuilder.getInt32Ty(), FixedEdges.size());
-
+      AllocaInst *Variable = CreateVariable(F, ExitBuilder.getInt32Ty(),
+                                            F.begin()->getFirstInsertionPt());
       for (auto &[Src, Dst] : FixedEdges) {
-        PhiNode->addIncoming(DstToIndex[Dst], Src);
+        IRBuilder<> B2(Src);
+        B2.SetInsertPoint(Src->getFirstInsertionPt());
+        B2.CreateStore(DstToIndex[Dst], Variable);
         replaceBranchTargets(Src, Dst, NewExit);
-        replacePhiTargets(Dst, Src, NewExit);
       }
+
+      llvm::Value *Load =
+          ExitBuilder.CreateLoad(ExitBuilder.getInt32Ty(), Variable);
 
       // If we can avoid an OpSwitch, generate an OpBranch. Reason is some
       // OpBranch are allowed to exist without a new OpSelectionMerge if one of
       // the branch is the parent's merge node, while OpSwitches are not.
       if (Dsts.size() == 2) {
-        Value *Condition = ExitBuilder.CreateCmp(CmpInst::ICMP_EQ,
-                                                 DstToIndex[Dsts[0]], PhiNode);
+        Value *Condition =
+            ExitBuilder.CreateCmp(CmpInst::ICMP_EQ, DstToIndex[Dsts[0]], Load);
         ExitBuilder.CreateCondBr(Condition, Dsts[0], Dsts[1]);
         return NewExit;
       }
 
-      SwitchInst *Sw =
-          ExitBuilder.CreateSwitch(PhiNode, Dsts[0], Dsts.size() - 1);
+      SwitchInst *Sw = ExitBuilder.CreateSwitch(Load, Dsts[0], Dsts.size() - 1);
       for (auto It = Dsts.begin() + 1; It != Dsts.end(); ++It) {
         Sw->addCase(DstToIndex[*It], *It);
       }
@@ -576,7 +557,7 @@ class SPIRVStructurizer : public FunctionPass {
 
   // Creates a new basic block in F with a single OpUnreachable instruction.
   BasicBlock *CreateUnreachable(Function &F) {
-    BasicBlock *BB = BasicBlock::Create(F.getContext(), "new.exit", &F);
+    BasicBlock *BB = BasicBlock::Create(F.getContext(), "unreachable", &F);
     IRBuilder<> Builder(BB);
     Builder.CreateUnreachable();
     return BB;
@@ -1027,17 +1008,8 @@ class SPIRVStructurizer : public FunctionPass {
     return Modified;
   }
 
-  bool IsRequiredForPhiNode(BasicBlock *BB) {
-    for (BasicBlock *Successor : successors(BB)) {
-      for (PHINode &Phi : Successor->phis()) {
-        if (Phi.getBasicBlockIndex(BB) != -1)
-          return true;
-      }
-    }
-
-    return false;
-  }
-
+  // Removes blocks not contributing to any structured CFG. This assumes there
+  // is no PHI nodes.
   bool removeUselessBlocks(Function &F) {
     std::vector<BasicBlock *> ToRemove;
 
@@ -1052,9 +1024,6 @@ class SPIRVStructurizer : public FunctionPass {
         continue;
 
       if (MergeBlocks.count(&BB) != 0 || ContinueBlocks.count(&BB) != 0)
-        continue;
-
-      if (IsRequiredForPhiNode(&BB))
         continue;
 
       if (BB.getUniqueSuccessor() == nullptr)
@@ -1127,6 +1096,18 @@ class SPIRVStructurizer : public FunctionPass {
         continue;
 
       Modified = true;
+
+      if (Merge == nullptr) {
+        Merge = *successors(Header).begin();
+        IRBuilder<> Builder(Header);
+        Builder.SetInsertPoint(Header->getTerminator());
+
+        auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
+        SmallVector<Value *, 1> Args = {MergeAddress};
+        Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+        continue;
+      }
+
       Instruction *SplitInstruction = Merge->getTerminator();
       if (isMergeInstruction(SplitInstruction->getPrevNode()))
         SplitInstruction = SplitInstruction->getPrevNode();

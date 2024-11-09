@@ -290,10 +290,10 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &BranchFolderPassID)
     return applyDisable(TargetID, DisableBranchFold);
 
-  if (StandardID == &TailDuplicateID)
+  if (StandardID == &TailDuplicateLegacyID)
     return applyDisable(TargetID, DisableTailDuplicate);
 
-  if (StandardID == &EarlyTailDuplicateID)
+  if (StandardID == &EarlyTailDuplicateLegacyID)
     return applyDisable(TargetID, DisableEarlyTailDup);
 
   if (StandardID == &MachineBlockPlacementID)
@@ -881,9 +881,6 @@ void TargetPassConfig::addIRPasses() {
   if (!DisableExpandReductions)
     addPass(createExpandReductionsPass());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createTLSVariableHoistPass());
-
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
@@ -1279,7 +1276,7 @@ void TargetPassConfig::addMachinePasses() {
 /// Add passes that optimize machine instructions in SSA form.
 void TargetPassConfig::addMachineSSAOptimization() {
   // Pre-ra tail duplication.
-  addPass(&EarlyTailDuplicateID);
+  addPass(&EarlyTailDuplicateLegacyID);
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more
   // instructions dead.
@@ -1507,7 +1504,7 @@ void TargetPassConfig::addMachineLateOptimization() {
   // performance for targets that require Structured Control Flow.
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM->requiresStructuredCFG())
-    addPass(&TailDuplicateID);
+    addPass(&TailDuplicateLegacyID);
 
   // Copy propagation.
   addPass(&MachineCopyPropagationID);
