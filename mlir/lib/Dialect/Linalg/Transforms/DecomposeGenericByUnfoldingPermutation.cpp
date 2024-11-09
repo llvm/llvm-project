@@ -90,6 +90,9 @@ struct DecomposeProjectedPermutation : public OpRewritePattern<GenericOp> {
 std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 computeTransposeBroadcast(AffineMap &map) {
   assert(map.isProjectedPermutation(false) && "not a projection");
+
+  // As the map is a projection it likely operates on a smaller set of
+  // dimensions as far as the transpose is concerned (rest are broadcast).
   int64_t minorSize = map.getNumResults();
 
   SmallVector<int64_t> minorResult;
@@ -116,13 +119,13 @@ computeTransposeBroadcast(AffineMap &map) {
 
   SmallVector<int64_t> permutation;
   if (hasTranspose) {
-    /// Consider an operand `x : tensor<7x8x9>` of a genericOp that has
-    /// affine map `affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d1)>`
-    /// `x`s access is both transposed and brodcast. But when specifying
-    /// the `linalg.transpose(x : tensor<7x8x9>)` the dimensions need to be
-    /// specified as `affine_map<(d0,d1,d2) -> (d1, d2, d0)` instead of
-    /// refering to d3, d4. Therefore, re-base the transpose dimensions so
-    /// that they start from d0.
+    // Consider an operand `x : tensor<7x8x9>` of a genericOp that has
+    // affine map `affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d1)>`
+    // `x`s access is both transposed and broadcast. But when specifying
+    // the `linalg.transpose(x : tensor<7x8x9>)` the dimensions need to be
+    // specified as `affine_map<(d0,d1,d2) -> (d1, d2, d0)` instead of
+    // refering to d3, d4. Therefore, re-base the transpose dimensions so
+    // that they start from d0.
     permutation.resize(minorSize);
     std::map<int64_t, int64_t> minorMap;
     for (int64_t i = 0; i < minorSize; ++i)
@@ -147,14 +150,19 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
       op.isSingleYieldOp() || !op.isAllParallelLoops())
     return failure();
 
-  // All maps need to be projected permutations.
+  // If the map of an operand is not a `projected permutation` then
+  // it cannot be decomposed to mere transpose and broadcast.
+  // The requirement that all maps be `projected permutation` may be
+  // over-restrictive but since we need to determine shape of the
+  // iteration space as well, reject if any map violates assumption.
   for (auto &opOperand : op->getOpOperands()) {
     auto map = op.getMatchingIndexingMap(&opOperand);
     if (!map.isProjectedPermutation(false))
       return failure();
   }
 
-  // Currently we handle only static shapes.
+  // Decomposing linalg.generic involves creating `tensor.empty`
+  // which cannot have dnyamic shapes.
   for (auto &operand : op->getOpOperands()) {
     auto opType = cast<RankedTensorType>(operand.get().getType());
     for (auto size : opType.getShape())
