@@ -193,10 +193,8 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
   bit HasREX_W = hasREX_W;
 }
 
-def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
-
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem, Imm8, i8imm,
-                       imm_su, imm, i8imm, invalid_node, invalid_node,
+                       imm_su, imm, i8imm, null_frag, null_frag,
                        1, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem, Imm16, i16imm,
                        imm_su, imm, i16i8imm, i16immSExt8_su, i16immSExt8,
