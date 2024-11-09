@@ -159,7 +159,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXCOMPLEX = false;
   bool HasAMXFP8 = false;
   bool HasAMXTRANSPOSE = false;
-  bool HasAMXAVX512 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;

@@ -5952,26 +5952,6 @@ let TargetPrefix = "x86" in {
               Intrinsic<[], [llvm_i8_ty, llvm_i8_ty],
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
-  // AMX-AVX512
-  def int_x86_tcvtrowd2ps : ClangBuiltin<"__builtin_ia32_tcvtrowd2ps">,
-              Intrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_tcvtrowps2pbf16h : ClangBuiltin<"__builtin_ia32_tcvtrowps2pbf16h">,
-              Intrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_tcvtrowps2pbf16l : ClangBuiltin<"__builtin_ia32_tcvtrowps2pbf16l">,
-              Intrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_tcvtrowps2phh : ClangBuiltin<"__builtin_ia32_tcvtrowps2phh">,
-              Intrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_tcvtrowps2phl : ClangBuiltin<"__builtin_ia32_tcvtrowps2phl">,
-              Intrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-  def int_x86_tilemovrow : ClangBuiltin<"__builtin_ia32_tilemovrow">,
-              Intrinsic<[llvm_v16i32_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
-
   // AMX - internal intrinsics
   def int_x86_ldtilecfg_internal :
               ClangBuiltin<"__builtin_ia32_tile_loadconfig_internal">,
@@ -6070,37 +6050,6 @@ let TargetPrefix = "x86" in {
               ClangBuiltin<"__builtin_ia32_ttransposed_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty], []>;
-
-  def int_x86_tcvtrowd2ps_internal :
-              ClangBuiltin<"__builtin_ia32_tcvtrowd2ps_internal">,
-              Intrinsic<[llvm_v16f32_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
-                        []>;
-  def int_x86_tcvtrowps2pbf16h_internal :
-              ClangBuiltin<"__builtin_ia32_tcvtrowps2pbf16h_internal">,
-              Intrinsic<[llvm_v32bf16_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
-                        []>;
-  def int_x86_tcvtrowps2pbf16l_internal :
-              ClangBuiltin<"__builtin_ia32_tcvtrowps2pbf16l_internal">,
-              Intrinsic<[llvm_v32bf16_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
-                        []>;
-  def int_x86_tcvtrowps2phh_internal :
-              ClangBuiltin<"__builtin_ia32_tcvtrowps2phh_internal">,
-              Intrinsic<[llvm_v32f16_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
-                        []>;
-  def int_x86_tcvtrowps2phl_internal :
-              ClangBuiltin<"__builtin_ia32_tcvtrowps2phl_internal">,
-              Intrinsic<[llvm_v32f16_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
-                        []>;
-  def int_x86_tilemovrow_internal :
-              ClangBuiltin<"__builtin_ia32_tilemovrow_internal">,
-              Intrinsic<[llvm_v16i32_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
-                        []>;
 }
 
 //===----------------------------------------------------------------------===//

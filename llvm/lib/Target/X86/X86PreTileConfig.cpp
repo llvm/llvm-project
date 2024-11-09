@@ -118,22 +118,10 @@ class X86PreTileConfig : public MachineFunctionPass {
   bool isAMXInstruction(MachineInstr &MI) {
     if (MI.isPHI() || MI.isDebugInstr() || MI.getNumOperands() < 3)
       return false;
-    switch (MI.getOpcode()) {
-    case X86::PTILESTOREDV:
-    case X86::PTCVTROWD2PSrreV:
-    case X86::PTCVTROWD2PSrriV:
-    case X86::PTCVTROWPS2PBF16HrreV:
-    case X86::PTCVTROWPS2PBF16HrriV:
-    case X86::PTCVTROWPS2PBF16LrreV:
-    case X86::PTCVTROWPS2PBF16LrriV:
-    case X86::PTCVTROWPS2PHHrreV:
-    case X86::PTCVTROWPS2PHHrriV:
-    case X86::PTCVTROWPS2PHLrreV:
-    case X86::PTCVTROWPS2PHLrriV:
-    case X86::PTILEMOVROWrreV:
-    case X86::PTILEMOVROWrriV:
+
+    // PTILESTOREDV is the only exception that doesn't def a AMX register.
+    if (MI.getOpcode() == X86::PTILESTOREDV)
       return true;
-    }
 
     // We can simply check if it is AMX instruction by its def.
     // But we should exclude old API which uses physical registers.

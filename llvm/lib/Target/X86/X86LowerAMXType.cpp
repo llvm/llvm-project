@@ -266,17 +266,6 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     Col = getColFromRow(II, II->getArgOperand(0), 4);
     break;
   }
-  case Intrinsic::x86_tcvtrowd2ps_internal:
-  case Intrinsic::x86_tcvtrowps2pbf16h_internal:
-  case Intrinsic::x86_tcvtrowps2pbf16l_internal:
-  case Intrinsic::x86_tcvtrowps2phh_internal:
-  case Intrinsic::x86_tcvtrowps2phl_internal:
-  case Intrinsic::x86_tilemovrow_internal: {
-    assert(OpNo == 2 && "Illegal Operand Number.");
-    Row = II->getArgOperand(0);
-    Col = II->getArgOperand(1);
-    break;
-  }
   }
 
   return std::make_pair(Row, Col);
