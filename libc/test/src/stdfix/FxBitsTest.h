@@ -11,6 +11,7 @@
 #include "include/llvm-libc-types/stdfix-types.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/fixed_point/fx_bits.h"
+
 template <typename T, typename XType>
 class FxBitsTest : public LIBC_NAMESPACE::testing::Test {
   using FXRep = LIBC_NAMESPACE::fixed_point::FXRep<T>;
