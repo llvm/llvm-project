@@ -76,7 +76,6 @@ private:
   bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectAddr(MachineInstr &MI, MachineIRBuilder &MIB, bool IsLocal = true,
                   bool IsExternWeak = false) const;
-  bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
@@ -761,8 +760,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  case TargetOpcode::G_SEXT_INREG:
-    return selectSExtInreg(MI, MIB);
   case TargetOpcode::G_FRAME_INDEX: {
     // TODO: We may want to replace this code with the SelectionDAG patterns,
     // which fail to get imported because it uses FrameAddrRegImm, which is a
@@ -1158,31 +1155,6 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
   }
 
   return false;
-}
-
-bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
-                                               MachineIRBuilder &MIB) const {
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  unsigned SrcSize = MI.getOperand(2).getImm();
-
-  MachineInstr *NewMI;
-  if (SrcSize == 32) {
-    assert(Subtarget->is64Bit() && "Unexpected extend");
-    // addiw rd, rs, 0 (i.e. sext.w rd, rs)
-    NewMI = MIB.buildInstr(RISCV::ADDIW, {DstReg}, {SrcReg}).addImm(0U);
-  } else {
-    assert(Subtarget->hasStdExtZbb() && "Unexpected extension");
-    assert((SrcSize == 8 || SrcSize == 16) && "Unexpected size");
-    unsigned Opc = SrcSize == 16 ? RISCV::SEXT_H : RISCV::SEXT_B;
-    NewMI = MIB.buildInstr(Opc, {DstReg}, {SrcReg});
-  }
-
-  if (!constrainSelectedInstRegOperands(*NewMI, TII, TRI, RBI))
-    return false;
-
-  MI.eraseFromParent();
-  return true;
 }
 
 bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
