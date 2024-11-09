@@ -270,17 +270,17 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-LABEL: ctlz_lshr_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a0, a0, 1
-; RV64I-NEXT:    slli a1, a0, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    beqz a1, .LBB4_2
+; RV64I-NEXT:    srliw a1, a0, 1
+; RV64I-NEXT:    slli a2, a1, 32
+; RV64I-NEXT:    srli a2, a2, 32
+; RV64I-NEXT:    beqz a2, .LBB4_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    srliw a1, a0, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    srliw a0, a0, 2
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    srliw a1, a0, 2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srliw a1, a0, 4

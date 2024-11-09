@@ -335,13 +335,11 @@ define i8 @srli_i8(i8 %a) nounwind {
 }
 
 ; FIXME: We should use slli+srai with Zbb for better compression.
-; FIXME: We should combine back to back srai.
 define i8 @srai_i8(i8 %a) nounwind {
 ; RV32I-LABEL: srai_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 5
+; RV32I-NEXT:    srai a0, a0, 29
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: srai_i8:
@@ -353,8 +351,7 @@ define i8 @srai_i8(i8 %a) nounwind {
 ; RV32ZBKB-LABEL: srai_i8:
 ; RV32ZBKB:       # %bb.0:
 ; RV32ZBKB-NEXT:    slli a0, a0, 24
-; RV32ZBKB-NEXT:    srai a0, a0, 24
-; RV32ZBKB-NEXT:    srai a0, a0, 5
+; RV32ZBKB-NEXT:    srai a0, a0, 29
 ; RV32ZBKB-NEXT:    ret
   %1 = ashr i8 %a, 5
   ret i8 %1
@@ -380,13 +377,11 @@ define i16 @srli_i16(i16 %a) nounwind {
 }
 
 ; FIXME: We should use slli+srai with Zbb/Zbkb for better compression.
-; FIXME: We should combine back to back sraiw.
 define i16 @srai_i16(i16 %a) nounwind {
 ; RV32I-LABEL: srai_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 9
+; RV32I-NEXT:    srai a0, a0, 25
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: srai_i16:
@@ -398,8 +393,7 @@ define i16 @srai_i16(i16 %a) nounwind {
 ; RV32ZBKB-LABEL: srai_i16:
 ; RV32ZBKB:       # %bb.0:
 ; RV32ZBKB-NEXT:    slli a0, a0, 16
-; RV32ZBKB-NEXT:    srai a0, a0, 16
-; RV32ZBKB-NEXT:    srai a0, a0, 9
+; RV32ZBKB-NEXT:    srai a0, a0, 25
 ; RV32ZBKB-NEXT:    ret
   %1 = ashr i16 %a, 9
   ret i16 %1
