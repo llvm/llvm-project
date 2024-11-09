@@ -754,7 +754,7 @@ type. If the operand is larger than the vector element type, the scalar is
 implicitly truncated to the vector element type.
 
 G_STEP_VECTOR
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
 
 Create a scalable vector where all lanes are linear sequences starting at 0
 with a given unsigned step.

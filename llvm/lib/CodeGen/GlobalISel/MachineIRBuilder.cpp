@@ -834,6 +834,7 @@ MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
                                                   const ConstantInt &MinElts) {
+
   auto VScale = buildInstr(TargetOpcode::G_VSCALE);
   VScale->setDebugLoc(DebugLoc());
   Res.addDefToMIB(*getMRI(), VScale);
