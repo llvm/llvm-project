@@ -1,9 +1,10 @@
+; -mbackchain option
 ; This tests Frame Pointer.
 ; This tests program output for Frame Pointer.
 ; Non-volatile local variable being modified between setjmp and longjmp call.
-; This test is without optimization -O0, modified value persists.
+; This test is with optimization -O2, modified value does not persist.
 
-; RUN: clang -O0 -o %t %s
+; RUN: clang -mbackchain -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 ; ModuleID = 'builtin-setjmp-longjmp-alloca-04.c'
@@ -64,7 +65,6 @@ entry:
 ; CHECK: Dynamic var: 10
 ; CHECK: Returned from func3
 ; CHECK: Dynamic var: 10
-
   %0 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.else6
@@ -105,31 +105,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %puts3 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.17)
-  %1 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
-  %cmp.i = icmp eq i32 %1, 0
-  br i1 %cmp.i, label %if.then.i, label %if.else6.i
-
-if.then.i:                                        ; preds = %if.then
-  %puts13.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
-  %2 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
-  %cmp1.i = icmp eq i32 %2, 0
-  br i1 %cmp1.i, label %if.then2.i, label %if.else.i
-
-if.then2.i:                                       ; preds = %if.then.i
-  %puts15.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
-  tail call void @func4()
-  unreachable
-
-if.else.i:                                        ; preds = %if.then.i
-  %puts14.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
-  %call5.i = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 10)
-  tail call void @func3()
-  unreachable
-
-if.else6.i:                                       ; preds = %if.then
-  %puts.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
-  %call8.i = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 10)
-  tail call void @func2()
+  %call1 = tail call signext i32 @func1()
   unreachable
 
 if.else:                                          ; preds = %entry
@@ -140,12 +116,12 @@ if.else:                                          ; preds = %entry
 ; Function Attrs: nofree nounwind
 declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #6
 
-attributes #0 = { noinline noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #1 = { nofree nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #0 = { noinline noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #1 = { nofree nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #2 = { noreturn nounwind }
-attributes #3 = { noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #3 = { noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #4 = { nounwind }
-attributes #5 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #5 = { nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #6 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}
@@ -154,4 +130,4 @@ attributes #6 = { nofree nounwind }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
-!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git 79880371396d6e486bf6bacd6c4087ebdac591f8)"}
+!3 = !{!"clang version 20.0.0git (https://github.com/llvm/llvm-project.git a0433728375e658551506ce43b0848200fdd6e61)"}

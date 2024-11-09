@@ -1,21 +1,20 @@
+; This tests Frame Pointer.
 ; This tests program output for Frame Pointer.
 ; Non-volatile local variable being modified between setjmp and longjmp call.
-; This test is without optimization -O2, modified value does not persist.
-; Undefined. Anoop
+; This test is with optimization -O2, modified value does not persist.
 
 ; RUN: clang -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
-
-; ModuleID = 'builtin-setjmp-longjmp-alloca-00.c'
-source_filename = "builtin-setjmp-longjmp-alloca-00.c"
+; ModuleID = 'builtin-setjmp-longjmp-alloca-04.c'
+source_filename = "builtin-setjmp-longjmp-alloca-04.c"
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
 @buf3 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf2 = dso_local global [10 x ptr] zeroinitializer, align 8
 @buf1 = dso_local global [10 x ptr] zeroinitializer, align 8
-@.str.6 = private unnamed_addr constant [9 x i8] c"arr: %d\0A\00", align 2
+@.str.6 = private unnamed_addr constant [17 x i8] c"Dynamic var: %d\0A\00", align 2
 @str = private unnamed_addr constant [9 x i8] c"In func4\00", align 1
 @str.10 = private unnamed_addr constant [9 x i8] c"In func3\00", align 1
 @str.11 = private unnamed_addr constant [9 x i8] c"In func2\00", align 1
@@ -62,70 +61,34 @@ entry:
 ; CHECK: First __builtin_setjmp in func1
 ; CHECK: Second __builtin_setjmp in func1
 ; CHECK: Returned from func4
-; CHECK: arr: 0
-; CHECK: arr: 2
-; CHECK: arr: 6
-; CHECK: arr: 12
-; CHECK: arr: 20
-; CHECK: arr: 30
-; CHECK: arr: 42
-; CHECK: arr: 56
-; CHECK: arr: 72
-; CHECK: arr: 90
+; CHECK: Dynamic var: 10
 ; CHECK: Returned from func3
-; CHECK: arr: 0
-; CHECK: arr: 2
-; CHECK: arr: 6
-; CHECK: arr: 12
-; CHECK: arr: 20
-; CHECK: arr: 30
-; CHECK: arr: 42
-; CHECK: arr: 56
-; CHECK: arr: 72
-; CHECK: arr: 90
+; CHECK: Dynamic var: 10
 
   %0 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
-  %cmp3 = icmp eq i32 %0, 0
-  br i1 %cmp3, label %if.then, label %if.else38
+  %cmp = icmp eq i32 %0, 0
+  br i1 %cmp, label %if.then, label %if.else6
 
 if.then:                                          ; preds = %entry
-  %puts77 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
+  %puts13 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
   %1 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
-  %cmp5 = icmp eq i32 %1, 0
-  br i1 %cmp5, label %if.then7, label %if.else
+  %cmp1 = icmp eq i32 %1, 0
+  br i1 %cmp1, label %if.then2, label %if.else
 
-if.then7:                                         ; preds = %if.then
-  %puts82 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
+if.then2:                                         ; preds = %if.then
+  %puts15 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
   tail call void @func4()
   unreachable
 
 if.else:                                          ; preds = %if.then
-  %puts78 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
-  %call18 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 0)
-  %call18.1 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 2)
-  %call18.2 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 6)
-  %call18.3 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 12)
-  %call18.4 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 20)
-  %call18.5 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 30)
-  %call18.6 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 42)
-  %call18.7 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 56)
-  %call18.8 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 72)
-  %call18.9 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 90)
+  %puts14 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
+  %call5 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 10)
   tail call void @func3()
   unreachable
 
-if.else38:                                        ; preds = %entry
+if.else6:                                         ; preds = %entry
   %puts = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
-  %call48 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 0)
-  %call48.1 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 2)
-  %call48.2 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 6)
-  %call48.3 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 12)
-  %call48.4 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 20)
-  %call48.5 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 30)
-  %call48.6 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 42)
-  %call48.7 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 56)
-  %call48.8 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 72)
-  %call48.9 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 90)
+  %call8 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 10)
   tail call void @func2()
   unreachable
 }
@@ -142,7 +105,31 @@ entry:
 
 if.then:                                          ; preds = %entry
   %puts3 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.17)
-  %call1 = tail call signext i32 @func1()
+  %1 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf2)
+  %cmp.i = icmp eq i32 %1, 0
+  br i1 %cmp.i, label %if.then.i, label %if.else6.i
+
+if.then.i:                                        ; preds = %if.then
+  %puts13.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.13)
+  %2 = tail call i32 @llvm.eh.sjlj.setjmp(ptr nonnull @buf3)
+  %cmp1.i = icmp eq i32 %2, 0
+  br i1 %cmp1.i, label %if.then2.i, label %if.else.i
+
+if.then2.i:                                       ; preds = %if.then.i
+  %puts15.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.15)
+  tail call void @func4()
+  unreachable
+
+if.else.i:                                        ; preds = %if.then.i
+  %puts14.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.14)
+  %call5.i = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 10)
+  tail call void @func3()
+  unreachable
+
+if.else6.i:                                       ; preds = %if.then
+  %puts.i = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.12)
+  %call8.i = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str.6, i32 noundef signext 10)
+  tail call void @func2()
   unreachable
 
 if.else:                                          ; preds = %entry

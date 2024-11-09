@@ -1,8 +1,7 @@
-; -mbackchain option
-; This test is intended to test control flow of setjmp/longjmp calls,
+; This test is intended to test control flow of setjmp/longjmp calls, 
 ; reachable and unreachabel paths both.
 
-; RUN: clang -mbackchain -O2 -o %t %s
+; RUN: clang -O2 -o %t %s
 ; RUN: %t | FileCheck %s
 
 ; ********** Output should be as follows: ***********
@@ -71,12 +70,12 @@ declare void @exit(i32 noundef signext) local_unnamed_addr #5
 ; Function Attrs: nofree nounwind
 declare noundef i32 @puts(ptr nocapture noundef readonly) local_unnamed_addr #6
 
-attributes #0 = { noinline noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #0 = { noinline noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #1 = { noreturn nounwind }
-attributes #2 = { nofree noinline nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
-attributes #3 = { noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #2 = { nofree noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #3 = { noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #4 = { nounwind }
-attributes #5 = { nofree noreturn nounwind "backchain" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
+attributes #5 = { nofree noreturn nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="z10" }
 attributes #6 = { nofree nounwind }
 
 !llvm.module.flags = !{!0, !1, !2}

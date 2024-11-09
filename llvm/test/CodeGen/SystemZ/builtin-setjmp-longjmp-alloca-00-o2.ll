@@ -1,6 +1,6 @@
 ; This tests program output for Frame Pointer.
 ; Non-volatile local variable being modified between setjmp and longjmp call.
-; This test is without optimization -O2, modified value does not persist.
+; This test is with optimization -O2, modified value does not persist.
 ; Undefined. Anoop
 
 ; RUN: clang -O2 -o %t %s
