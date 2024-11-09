@@ -186,9 +186,24 @@ entry:
   ret i32 %c
 }
 
+; FIXME: Should preserve metadata on loads, except !noundef and !invariant.load.
+define ptr @preserve_load_metadata_after_select_transform1(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
+; CHECK-LABEL: @preserve_load_metadata_after_select_transform1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B:%.*]], align 1
+; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C:%.*]], ptr [[B_VAL]], ptr [[A_VAL]]
+; CHECK-NEXT:    ret ptr [[L_SEL]]
+;
+entry:
+  %ptr.sel = select i1 %c, ptr %b, ptr %a
+  %l.sel = load ptr, ptr %ptr.sel, align 1, !tbaa !0, !llvm.access.group !7, !dereferenceable !9, !noundef !{}, !invariant.load !7
+  ret ptr %l.sel
+}
+
 ; FIXME: Should preserve metadata on loads.
-define double @preserve_load_metadata_after_select_transform(ptr %a, ptr %b) {
-; CHECK-LABEL: @preserve_load_metadata_after_select_transform(
+define double @preserve_load_metadata_after_select_transform2(ptr %a, ptr %b) {
+; CHECK-LABEL: @preserve_load_metadata_after_select_transform2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8
