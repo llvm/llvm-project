@@ -93,7 +93,7 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
 ; WORKAROUND: .amdhsa_user_sgpr_count 15
 ; NOWORKAROUND: .amdhsa_user_sgpr_count 4
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
-; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 0
+; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
@@ -140,7 +140,7 @@ define amdgpu_kernel void @queue_ptr() #1 {
 ; WORKAROUND: .amdhsa_user_sgpr_count 13
 ; NOWORKAROUND: .amdhsa_user_sgpr_count 8
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 0
+; GCN-NEXT: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN-NEXT: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN-NEXT: .amdhsa_user_sgpr_private_segment_size 0
