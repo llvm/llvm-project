@@ -315,12 +315,14 @@ public:
 
 class SwitchRemoveCase : public IRChangeBase {
   SwitchInst *Switch;
+  unsigned Index;
   ConstantInt *Val;
   BasicBlock *Dest;
 
 public:
-  SwitchRemoveCase(SwitchInst *Switch, ConstantInt *Val, BasicBlock *Dest)
-      : Switch(Switch), Val(Val), Dest(Dest) {}
+  SwitchRemoveCase(SwitchInst *Switch, unsigned Index, ConstantInt *Val,
+                   BasicBlock *Dest)
+      : Switch(Switch), Index(Index), Val(Val), Dest(Dest) {}
   void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG

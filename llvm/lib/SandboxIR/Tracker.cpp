@@ -170,7 +170,19 @@ void CatchSwitchAddHandler::revert(Tracker &Tracker) {
   LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
 }
 
-void SwitchRemoveCase::revert(Tracker &Tracker) { Switch->addCase(Val, Dest); }
+void SwitchRemoveCase::revert(Tracker &Tracker) {
+  // removeCase swaps the last case with the deleted one. To revert it, we use
+  // addCase (which adds the new case to the end), and swap the newly-added
+  // value and successor operands to the positions for the original case index.
+  Switch->addCase(Val, Dest);
+  auto ValUseA = Switch->getOperandUse(2 + Index * 2);
+  auto SucUseA = Switch->getOperandUse(2 + Index * 2 + 1);
+  unsigned NumOps = Switch->getNumOperands();
+  auto ValUseB = Switch->getOperandUse(NumOps - 2);
+  auto SucUseB = Switch->getOperandUse(NumOps - 2 + 1);
+  ValUseA.swap(ValUseB);
+  SucUseA.swap(SucUseB);
+}
 
 #ifndef NDEBUG
 void SwitchRemoveCase::dump() const {

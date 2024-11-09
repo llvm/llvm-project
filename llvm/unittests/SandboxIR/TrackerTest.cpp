@@ -963,6 +963,19 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getNumCases(), 2u);
   EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
+
+  // Check order is preserved after reverting multiple removeCase invocations.
+  Ctx.save();
+  Switch->removeCase(Switch->findCaseValue(Zero));
+  Switch->removeCase(Switch->findCaseValue(One));
+  EXPECT_EQ(Switch->getNumCases(), 0u);
+  Ctx.revert();
+  EXPECT_EQ(Switch->getNumCases(), 2u);
+  EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
+  EXPECT_EQ(Switch->findCaseDest(BB1), One);
+  EXPECT_EQ(Switch->getSuccessor(0), OrigDefaultDest);
+  EXPECT_EQ(Switch->getSuccessor(1), BB0);
+  EXPECT_EQ(Switch->getSuccessor(2), BB1);
 }
 
 TEST_F(TrackerTest, SelectInst) {

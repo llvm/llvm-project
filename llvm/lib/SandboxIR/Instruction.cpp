@@ -1133,7 +1133,7 @@ void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
 SwitchInst::CaseIt SwitchInst::removeCase(CaseIt It) {
   auto &Case = *It;
   Ctx.getTracker().emplaceIfTracking<SwitchRemoveCase>(
-      this, Case.getCaseValue(), Case.getCaseSuccessor());
+      this, Case.getCaseIndex(), Case.getCaseValue(), Case.getCaseSuccessor());
 
   auto *LLVMSwitch = cast<llvm::SwitchInst>(Val);
   unsigned CaseNum = It - case_begin();
