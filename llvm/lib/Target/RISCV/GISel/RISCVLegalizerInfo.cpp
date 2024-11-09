@@ -456,10 +456,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   if (ST.hasStdExtM()) {
-    getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
-        .legalFor({s32, sXLen})
+    getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM})
+        .legalFor({sXLen})
+        .customFor({s32})
         .libcallFor({sDoubleXLen})
         .clampScalar(0, s32, sDoubleXLen)
+        .widenScalarToNextPow2(0);
+    getActionDefinitionsBuilder(G_SREM)
+        .legalFor({sXLen})
+        .libcallFor({sDoubleXLen})
+        .clampScalar(0, sXLen, sDoubleXLen)
         .widenScalarToNextPow2(0);
   } else {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
@@ -1165,6 +1171,12 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case TargetOpcode::G_SDIV:
+    return RISCV::G_DIVW;
+  case TargetOpcode::G_UDIV:
+    return RISCV::G_DIVUW;
+  case TargetOpcode::G_UREM:
+    return RISCV::G_REMUW;
   case TargetOpcode::G_ROTL:
     return RISCV::G_ROLW;
   case TargetOpcode::G_ROTR:
@@ -1216,6 +1228,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
   }
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_UREM:
   case TargetOpcode::G_ROTL:
   case TargetOpcode::G_ROTR: {
     Helper.Observer.changingInstr(MI);
