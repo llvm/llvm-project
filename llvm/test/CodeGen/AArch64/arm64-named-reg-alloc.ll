@@ -4,11 +4,7 @@
 define i32 @get_stack() nounwind {
 entry:
 ; FIXME: Include an allocatable-specific error message
-<<<<<<< Updated upstream
-; CHECK: Couldn't find the register class
-=======
 ; CHECK: Trying to obtain non-reserved register "x5".
->>>>>>> Stashed changes
 	%sp = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %sp
 }
