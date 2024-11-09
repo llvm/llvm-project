@@ -18,6 +18,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__debug_utils/strict_weak_ordering_check.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/construct_at.h>
 #include <__memory/destruct_n.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/unique_temporary_buffer.h>
@@ -37,9 +38,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Workaround for "constexpr placement new" bug in gcc (fixed in 14.2).
 // See https://github.com/llvm/llvm-project/pull/110320#discussion_r1788557715.
-#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 <= 140100)
-#  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter)                                             \
-    [__ptr, &__iter] { ::new ((void*)__ptr) __type(__move_func(__iter)); }()
+#if (_LIBCPP_STD_VER >= 20) ||                                                                                         \
+    (!defined(__clang__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 <= 140100))
+#  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter) std::construct_at(__ptr, __move_func(__iter))
 #else
 #  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter)                                             \
     ::new ((void*)__ptr) __type(__move_func(__iter))
