@@ -264,7 +264,7 @@ def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
+def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
 
 def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
