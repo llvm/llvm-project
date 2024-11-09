@@ -4757,7 +4757,8 @@ public:
 
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
-  ClassTemplateDecl *getStdTypeIdentity() const;
+  const ClassTemplateDecl *getStdTypeIdentity() const;
+  ClassTemplateDecl *getStdTypeIdentity();
   std::optional<QualType> instantiateSpecializedTypeIdentity(QualType Subject);
   bool isTypeIdentitySpecialization(QualType Type) const;
   bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FnDecl) const;
@@ -8146,7 +8147,7 @@ public:
 
   /// The scope in which to find allocation functions.
   enum AllocationFunctionScope {
-    /// Only look for allocation functions in the global scope
+    /// Only look for allocation functions in the global scope.
     AFS_Global,
     /// Only look for allocation functions in the scope of the
     /// allocated class.

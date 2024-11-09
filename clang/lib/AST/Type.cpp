@@ -3103,7 +3103,7 @@ const TemplateDecl *Type::getSpecializedTemplateDecl() const {
   if (const auto *Specialization = DesugaredType->getAs<TemplateSpecializationType>())
     return Specialization->getTemplateName().getAsTemplateDecl();
   if (const auto *Record = DesugaredType->getAsCXXRecordDecl()) {
-    if (auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Record))
+    if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Record))
       return CTS->getSpecializedTemplate();
   }
   return nullptr;

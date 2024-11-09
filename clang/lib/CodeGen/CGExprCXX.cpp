@@ -1395,7 +1395,7 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
 
   if (FD->isTypeAwareOperatorNewOrDelete()) {
     // Assume Sema has ensured a non-pointer first parameter is
-    // a type identity
+    // a type identity.
     Params.TypedAwareDelete = true;
     assert(AI != AE);
     ++AI;
@@ -1441,7 +1441,7 @@ namespace {
       QualType ArgType;
     };
 
-    unsigned NumPlacementArgs : 31;
+    unsigned NumPlacementArgs : 30;
     LLVM_PREFERRED_TYPE(bool)
     unsigned PassAlignmentToPlacementDelete : 1;
     LLVM_PREFERRED_TYPE(bool)
@@ -1829,7 +1829,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   auto Params = getUsualDeleteParams(DeleteFD);
   auto ParamTypeIt = DeleteFTy->param_type_begin();
 
-  llvm::AllocaInst *TypeIdentityag = nullptr;
+  llvm::AllocaInst *TypeIdentityArg = nullptr;
   if (Params.TypedAwareDelete) {
     QualType SpecializedTypeIdentity = *ParamTypeIt++;
     CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity, nullptr,
@@ -1890,8 +1890,8 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   // Emit the call to delete.
   EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs);
 
-  if (TypeIdentityag && TypeIdentityag->use_empty())
-    TypeIdentityag->eraseFromParent();
+  if (TypeIdentityArg && TypeIdentityArg->use_empty())
+    TypeIdentityArg->eraseFromParent();
 
   // If call argument lowering didn't use the destroying_delete_t alloca,
   // remove it again.

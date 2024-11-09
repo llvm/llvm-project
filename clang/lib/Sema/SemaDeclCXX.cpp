@@ -11740,7 +11740,12 @@ NamespaceDecl *Sema::getStdNamespace() const {
                                  StdNamespace.get(Context.getExternalSource()));
 }
 
-ClassTemplateDecl *Sema::getStdTypeIdentity() const {
+const ClassTemplateDecl *Sema::getStdTypeIdentity() const {
+  return cast_or_null<ClassTemplateDecl>(
+      StdTypeIdentity.get(Context.getExternalSource()));
+}
+
+ClassTemplateDecl *Sema::getStdTypeIdentity() {
   return cast_or_null<ClassTemplateDecl>(
       StdTypeIdentity.get(Context.getExternalSource()));
 }
@@ -16124,7 +16129,7 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 }
 
 bool Sema::isTypeIdentitySpecialization(QualType Type) const {
-  ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
+  const ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
   if (!TypeIdentity)
     return false;
   const TemplateDecl *SpecializedDecl = Type->getSpecializedTemplateDecl();
@@ -16175,7 +16180,7 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
 
   for (size_t Idx = 1; Idx < NumParams; ++Idx) {
     // A type aware allocation is only usual if the only dependent parameter is
-    // the first parameter
+    // the first parameter.
     const ParmVarDecl *ParamDecl = FnDecl->getParamDecl(Idx);
     if (ParamDecl->getType()->isDependentType())
       return std::nullopt;
@@ -16231,9 +16236,9 @@ std::optional<QualType>
 Sema::instantiateSpecializedTypeIdentity(QualType Subject) {
   assert(AllowTypeAwareAllocators());
   ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
-  if (!TypeIdentity) {
+  if (!TypeIdentity)
     return std::nullopt;
-  }
+
   auto TN = TemplateName(TypeIdentity);
   TemplateArgumentListInfo Arguments;
   Arguments.addArgument(getTrivialTemplateArgumentLoc(

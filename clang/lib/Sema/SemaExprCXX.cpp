@@ -1781,7 +1781,7 @@ namespace {
           Destroying(false), HasSizeT(false), HasAlignValT(false),
           HasTypeIdentity(false), CUDAPref(SemaCUDA::CFP_Native) {
       // A function template declaration is only a usual deallocation function
-      // if it is a typed delete
+      // if it is a typed delete.
       if (!FD) {
         auto *FTD = dyn_cast<FunctionTemplateDecl>(Found->getUnderlyingDecl());
         if (!FTD)
