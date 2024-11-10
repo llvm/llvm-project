@@ -149,7 +149,7 @@ entry:
 define i64 @red_strided_ld_16xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_strided_ld_16xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> splat (i1 true), i32 16)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;

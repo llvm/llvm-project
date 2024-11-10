@@ -16,8 +16,8 @@ define i1 @set_low_bit_mask_eq(i8 %x) {
 
 define <2 x i1> @set_low_bit_mask_ne(<2 x i8> %x) {
 ; CHECK-LABEL: @set_low_bit_mask_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -4>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 16, i8 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], splat (i8 16)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = or <2 x i8> %x, <i8 3, i8 3>
@@ -220,7 +220,7 @@ define i1 @eq_const_mask_use2(i8 %x, i8 %y) {
 
 define <2 x i1> @decrement_slt_0(<2 x i8> %x) {
 ; CHECK-LABEL: @decrement_slt_0(
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>

@@ -44,7 +44,7 @@ template <class charT, class traits, class Allocator>
 
 #include <__config>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__ostream/basic_ostream.h>
 #  include <ios>
@@ -544,6 +544,6 @@ quoted(basic_string_view<_CharT, _Traits> __sv, _CharT __delim = _CharT('"'), _C
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP_IOMANIP

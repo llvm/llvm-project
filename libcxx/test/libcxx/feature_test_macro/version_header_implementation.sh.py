@@ -65,7 +65,7 @@ class Test(unittest.TestCase):
                         "value": "201907L",
                         "implemented": True,
                         "need_undef": False,
-                        "condition": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+                        "condition": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
                     },
                 },
                 {
@@ -109,7 +109,7 @@ class Test(unittest.TestCase):
                         "value": "299900L",
                         "implemented": True,
                         "need_undef": True,
-                        "condition": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+                        "condition": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
                     },
                 },
                 {

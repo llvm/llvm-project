@@ -174,6 +174,16 @@ std::optional<bool> isUncounted(const QualType T) {
   return isUncounted(T->getAsCXXRecordDecl());
 }
 
+std::optional<bool> isUnchecked(const QualType T) {
+  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
+    if (auto *Decl = Subst->getAssociatedDecl()) {
+      if (isCheckedPtr(safeGetName(Decl)))
+        return false;
+    }
+  }
+  return isUnchecked(T->getAsCXXRecordDecl());
+}
+
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
@@ -188,7 +198,7 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 }
 
 std::optional<bool> isUnchecked(const CXXRecordDecl *Class) {
-  if (isCheckedPtr(Class))
+  if (!Class || isCheckedPtr(Class))
     return false; // Cheaper than below
   return isCheckedPtrCapable(Class);
 }

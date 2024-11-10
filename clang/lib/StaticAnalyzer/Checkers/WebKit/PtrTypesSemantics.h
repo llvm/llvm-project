@@ -55,9 +55,17 @@ bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::QualType T);
 
+/// \returns true if \p Class is CheckedPtr capable AND not checked, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUnchecked(const clang::QualType T);
+
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
+
+/// \returns true if \p Class is CheckedPtr capable AND not checked, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUnchecked(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p T is either a raw pointer or reference to an uncounted
 /// class, false if not, std::nullopt if inconclusive.
