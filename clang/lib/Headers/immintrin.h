@@ -630,9 +630,6 @@ _storebe_i64(void * __P, long long __D) {
 #if !defined(__SCE__) || __has_feature(modules) || defined(__INVPCID__)
 #include <invpcidintrin.h>
 #endif
-#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_FP16__)
-#include <amxfp16intrin.h>
-#endif
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__KL__) ||          \
     defined(__WIDEKL__)
@@ -642,6 +639,10 @@ _storebe_i64(void * __P, long long __D) {
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_TILE__) ||    \
     defined(__AMX_INT8__) || defined(__AMX_BF16__)
 #include <amxintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_FP16__)
+#include <amxfp16intrin.h>
 #endif
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_COMPLEX__)
@@ -658,6 +659,21 @@ _storebe_i64(void * __P, long long __D) {
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_AVX512__)
 #include <amxavx512intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AMX_BF16__) && defined(__AMX_TRANSPOSE__))
+#include <amxbf16transposeintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AMX_FP16__) && defined(__AMX_TRANSPOSE__))
+#include <amxfp16transposeintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AMX_COMPLEX__) && defined(__AMX_TRANSPOSE__))
+#include <amxcomplextransposeintrin.h>
 #endif
 
 #if !defined(__SCE__) || __has_feature(modules) ||                             \
