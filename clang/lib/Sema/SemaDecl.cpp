@@ -6732,7 +6732,7 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   }
 
   if (ShadowedDecl && !Redeclaration)
-    CheckShadow(NewTD, ShadowedDecl, Previous);
+    CheckShadow(S, NewTD, ShadowedDecl, Previous);
 
   // If this is the C FILE type, notify the AST context.
   if (IdentifierInfo *II = NewTD->getIdentifier())
@@ -8092,7 +8092,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   // Diagnose shadowed variables iff this isn't a redeclaration.
   if (!IsPlaceholderVariable && ShadowedDecl && !D.isRedeclaration())
-    CheckShadow(NewVD, ShadowedDecl, Previous);
+    CheckShadow(S, NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
 
@@ -8237,7 +8237,7 @@ NamedDecl *Sema::getShadowedDeclaration(const BindingDecl *D,
                                                             : nullptr;
 }
 
-void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
+void Sema::CheckShadow(Scope *S, NamedDecl *D, NamedDecl *ShadowedDecl,
                        const LookupResult &R) {
   DeclContext *NewDC = D->getDeclContext();
 
@@ -8341,6 +8341,11 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     // shadowing context, but that's just a false negative.
   }
 
+  // Skip shadowing check if we're in a class scope, dealing with an enum
+  // constant in a different context.
+  if (S->isClassScope() && isa<EnumConstantDecl>(D) &&
+      !OldDC->Equals(NewDC->getRedeclContext()))
+    return;
 
   DeclarationName Name = R.getLookupName();
 
@@ -8389,7 +8394,7 @@ void Sema::CheckShadow(Scope *S, VarDecl *D) {
                  RedeclarationKind::ForVisibleRedeclaration);
   LookupName(R, S);
   if (NamedDecl *ShadowedDecl = getShadowedDeclaration(D, R))
-    CheckShadow(D, ShadowedDecl, R);
+    CheckShadow(S, D, ShadowedDecl, R);
 }
 
 /// Check if 'E', which is an expression that is about to be modified, refers
@@ -19736,7 +19741,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   if (PrevDecl) {
     if (!TheEnumDecl->isScoped() && isa<ValueDecl>(PrevDecl)) {
       // Check for other kinds of shadowing not already handled.
-      CheckShadow(New, PrevDecl, R);
+      CheckShadow(S, New, PrevDecl, R);
     }
 
     // When in C++, we may get a TagDecl with the same name; in this case the

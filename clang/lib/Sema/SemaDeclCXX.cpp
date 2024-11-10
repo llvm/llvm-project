@@ -924,7 +924,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
         Diag(Old->getLocation(), diag::note_previous_definition);
       }
     } else if (ShadowedDecl && !D.isRedeclaration()) {
-      CheckShadow(BD, ShadowedDecl, Previous);
+      CheckShadow(S, BD, ShadowedDecl, Previous);
     }
     PushOnScopeChains(BD, S, true);
     Bindings.push_back(BD);

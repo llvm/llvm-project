@@ -527,6 +527,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
