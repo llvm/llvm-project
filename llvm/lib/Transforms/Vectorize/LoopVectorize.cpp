@@ -512,13 +512,14 @@ public:
   /// Fix the non-induction PHIs in \p Plan.
   void fixNonInductionPHIs(VPTransformState &State);
 
-  /// Create a new phi node for the induction variable \p OrigPhi to resume
-  /// iteration count in the scalar epilogue, from where the vectorized loop
-  /// left off. \p Step is the SCEV-expanded induction step to use. In cases
-  /// where the loop skeleton is more complicated (i.e., epilogue vectorization)
-  /// and the resume values can come from an additional bypass block, the \p
-  /// AdditionalBypass pair provides information about the bypass block and the
-  /// end value on the edge from bypass to this loop.
+  /// Create a ResumePHI VPInstruction for the induction variable \p OrigPhi to
+  /// resume iteration count in the scalar epilogue, from where the vectorized
+  /// loop left off and add it the scalar preheader of the VPlan. \p Step is the
+  /// SCEV-expanded induction step to use. In cases where the loop skeleton is
+  /// more complicated (i.e., epilogue vectorization) and the resume values can
+  /// come from an additional bypass block, the \p AdditionalBypass pair
+  /// provides information about the bypass block and the end value on the edge
+  /// from bypass to this loop.
   void createInductionResumeValue(
       PHINode *OrigPhi, const InductionDescriptor &ID, Value *Step,
       ArrayRef<BasicBlock *> BypassBlocks, VPBuilder &ScalarPHBuilder,
