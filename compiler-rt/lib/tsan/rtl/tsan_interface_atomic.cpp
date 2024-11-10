@@ -515,359 +515,364 @@ static morder to_morder(int mo) {
   // since we use __sync_ atomics for actual atomic operations,
   // we can safely ignore it as well. It also subtly affects semantics,
   // but we don't model the difference.
-  return static_cast<morder>(mo & 0x7fff);
+  morder res = static_cast<morder>(static_cast<u8>(mo));
+  DCHECK_LE(res, mo_seq_cst);
+  return res;
 }
 
-#  define ATOMIC_IMPL(func, mo, ...)                                  \
-    ThreadState *const thr = cur_thread();                            \
-    ProcessPendingSignals(thr);                                       \
-    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))       \
-      return Op##func::NoTsanAtomic(mo, ##__VA_ARGS__);               \
-    return Op##func::Atomic(thr, GET_CALLER_PC(), convert_morder(mo), \
-                            ##__VA_ARGS__);
+template <class Op, class... Types>
+ALWAYS_INLINE auto AtomicImpl(morder mo, Types... args) {
+  ThreadState *const thr = cur_thread();
+  ProcessPendingSignals(thr);
+  if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))
+    return Op::NoTsanAtomic(mo, args...);
+  return Op::Atomic(thr, GET_CALLER_PC(), convert_morder(mo), args...);
+}
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_load(const volatile a8 *a, int mo) {
-  ATOMIC_IMPL(Load, to_morder(mo), a);
+  return AtomicImpl<OpLoad>(to_morder(mo), a);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_load(const volatile a16 *a, int mo) {
-  ATOMIC_IMPL(Load, to_morder(mo), a);
+  return AtomicImpl<OpLoad>(to_morder(mo), a);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_load(const volatile a32 *a, int mo) {
-  ATOMIC_IMPL(Load, to_morder(mo), a);
+  return AtomicImpl<OpLoad>(to_morder(mo), a);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_load(const volatile a64 *a, int mo) {
-  ATOMIC_IMPL(Load, to_morder(mo), a);
+  return AtomicImpl<OpLoad>(to_morder(mo), a);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_load(const volatile a128 *a, int mo) {
-  ATOMIC_IMPL(Load, to_morder(mo), a);
+  return AtomicImpl<OpLoad>(to_morder(mo), a);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic8_store(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(Store, to_morder(mo), a, v);
+  return AtomicImpl<OpStore>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic16_store(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(Store, to_morder(mo), a, v);
+  return AtomicImpl<OpStore>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic32_store(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(Store, to_morder(mo), a, v);
+  return AtomicImpl<OpStore>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic64_store(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(Store, to_morder(mo), a, v);
+  return AtomicImpl<OpStore>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic128_store(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(Store, to_morder(mo), a, v);
+  return AtomicImpl<OpStore>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_exchange(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(Exchange, to_morder(mo), a, v);
+  return AtomicImpl<OpExchange>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_exchange(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(Exchange, to_morder(mo), a, v);
+  return AtomicImpl<OpExchange>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_exchange(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(Exchange, to_morder(mo), a, v);
+  return AtomicImpl<OpExchange>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_exchange(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(Exchange, to_morder(mo), a, v);
+  return AtomicImpl<OpExchange>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_exchange(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(Exchange, to_morder(mo), a, v);
+  return AtomicImpl<OpExchange>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_fetch_add(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAdd>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_fetch_add(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAdd>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_fetch_add(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAdd>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_fetch_add(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAdd>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_fetch_add(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAdd>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_fetch_sub(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchSub, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchSub>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_fetch_sub(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchSub, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchSub>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_fetch_sub(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchSub, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchSub>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_fetch_sub(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchSub, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchSub>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_fetch_sub(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchSub, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchSub>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_fetch_and(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAnd>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_fetch_and(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAnd>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_fetch_and(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAnd>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_fetch_and(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAnd>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_fetch_and(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchAnd>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_fetch_or(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchOr, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchOr>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_fetch_or(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchOr, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchOr>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_fetch_or(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchOr, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchOr>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_fetch_or(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchOr, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchOr>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_fetch_or(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchOr, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchOr>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_fetch_xor(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchXor, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchXor>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_fetch_xor(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchXor, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchXor>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_fetch_xor(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchXor, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchXor>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_fetch_xor(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchXor, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchXor>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_fetch_xor(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchXor, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchXor>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_fetch_nand(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchNand, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchNand>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_fetch_nand(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchNand, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchNand>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_fetch_nand(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchNand, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchNand>(to_morder(mo), a, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_fetch_nand(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchNand, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchNand>(to_morder(mo), a, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_fetch_nand(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchNand, to_morder(mo), a, v);
+  return AtomicImpl<OpFetchNand>(to_morder(mo), a, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic8_compare_exchange_strong(volatile a8 *a, a8 *c, a8 v, int mo,
                                            int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic16_compare_exchange_strong(volatile a16 *a, a16 *c, a16 v,
                                             int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic32_compare_exchange_strong(volatile a32 *a, a32 *c, a32 v,
                                             int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic64_compare_exchange_strong(volatile a64 *a, a64 *c, a64 v,
                                             int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic128_compare_exchange_strong(volatile a128 *a, a128 *c, a128 v,
                                              int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic8_compare_exchange_weak(volatile a8 *a, a8 *c, a8 v, int mo,
                                          int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic16_compare_exchange_weak(volatile a16 *a, a16 *c, a16 v,
                                           int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic32_compare_exchange_weak(volatile a32 *a, a32 *c, a32 v,
                                           int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic64_compare_exchange_weak(volatile a64 *a, a64 *c, a64 v,
                                           int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic128_compare_exchange_weak(volatile a128 *a, a128 *c, a128 v,
                                            int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a8 __tsan_atomic8_compare_exchange_val(volatile a8 *a, a8 c, a8 v, int mo,
                                        int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a16 __tsan_atomic16_compare_exchange_val(volatile a16 *a, a16 c, a16 v, int mo,
                                          int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a32 __tsan_atomic32_compare_exchange_val(volatile a32 *a, a32 c, a32 v, int mo,
                                          int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 a64 __tsan_atomic64_compare_exchange_val(volatile a64 *a, a64 c, a64 v, int mo,
                                          int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_compare_exchange_val(volatile a128 *a, a128 c, a128 v,
                                            int mo, int fmo) {
-  ATOMIC_IMPL(CAS, to_morder(mo), to_morder(fmo), a, c, v);
+  return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic_thread_fence(int mo) { ATOMIC_IMPL(Fence, to_morder(mo)); }
+void __tsan_atomic_thread_fence(int mo) {
+  return AtomicImpl<OpFence>(to_morder(mo));
+}
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic_signal_fence(int mo) {}
@@ -877,110 +882,113 @@ void __tsan_atomic_signal_fence(int mo) {}
 
 // Go
 
-#  define ATOMIC(func, ...)                   \
-    if (thr->ignore_sync) {                   \
-      Op##func::NoTsanAtomic(__VA_ARGS__);    \
-    } else {                                  \
-      FuncEntry(thr, cpc);                    \
-      Op##func::Atomic(thr, pc, __VA_ARGS__); \
-      FuncExit(thr);                          \
-    }
+template <class Op, class... Types>
+void AtomicGo(ThreadState *thr, uptr cpc, uptr pc, Types... args) {
+  if (thr->ignore_sync) {
+    (void)Op::NoTsanAtomic(args...);
+  } else {
+    FuncEntry(thr, cpc);
+    (void)Op::Atomic(thr, pc, args...);
+    FuncExit(thr);
+  }
+}
 
-#  define ATOMIC_RET(func, ret, ...)                  \
-    if (thr->ignore_sync) {                           \
-      (ret) = Op##func::NoTsanAtomic(__VA_ARGS__);    \
-    } else {                                          \
-      FuncEntry(thr, cpc);                            \
-      (ret) = Op##func::Atomic(thr, pc, __VA_ARGS__); \
-      FuncExit(thr);                                  \
-    }
+template <class Op, class... Types>
+auto AtomicGoRet(ThreadState *thr, uptr cpc, uptr pc, Types... args) {
+  if (thr->ignore_sync) {
+    return Op::NoTsanAtomic(args...);
+  } else {
+    FuncEntry(thr, cpc);
+    auto ret = Op::Atomic(thr, pc, args...);
+    FuncExit(thr);
+    return ret;
+  }
+}
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Load, *(a32 *)(a + 8), mo_acquire, *(a32 **)a);
+  *(a32 *)(a + 8) = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a32 **)a);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Load, *(a64 *)(a + 8), mo_acquire, *(a64 **)a);
+  *(a64 *)(a + 8) = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a64 **)a);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC(Store, mo_release, *(a32 **)a, *(a32 *)(a + 8));
+  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a32 **)a, *(a32 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC(Store, mo_release, *(a64 **)a, *(a64 *)(a + 8));
+  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a64 **)a, *(a64 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_add(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAdd, *(a32 *)(a + 16), mo_acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  *(a32 *)(a + 16) = AtomicGoRet<OpFetchAdd>(thr, cpc, pc, mo_acq_rel,
+                                             *(a32 **)a, *(a32 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_fetch_add(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAdd, *(a64 *)(a + 16), mo_acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  *(a64 *)(a + 16) = AtomicGoRet<OpFetchAdd>(thr, cpc, pc, mo_acq_rel,
+                                             *(a64 **)a, *(a64 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_and(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAnd, *(a32 *)(a + 16), mo_acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  *(a32 *)(a + 16) = AtomicGoRet<OpFetchAnd>(thr, cpc, pc, mo_acq_rel,
+                                             *(a32 **)a, *(a32 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_fetch_and(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAnd, *(a64 *)(a + 16), mo_acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  *(a64 *)(a + 16) = AtomicGoRet<OpFetchAnd>(thr, cpc, pc, mo_acq_rel,
+                                             *(a64 **)a, *(a64 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_or(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchOr, *(a32 *)(a + 16), mo_acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  *(a32 *)(a + 16) = AtomicGoRet<OpFetchOr>(thr, cpc, pc, mo_acq_rel,
+                                            *(a32 **)a, *(a32 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_fetch_or(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchOr, *(a64 *)(a + 16), mo_acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  *(a64 *)(a + 16) = AtomicGoRet<OpFetchOr>(thr, cpc, pc, mo_acq_rel,
+                                            *(a64 **)a, *(a64 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_exchange(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Exchange, *(a32 *)(a + 16), mo_acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  *(a32 *)(a + 16) = AtomicGoRet<OpExchange>(thr, cpc, pc, mo_acq_rel,
+                                             *(a32 **)a, *(a32 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_exchange(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Exchange, *(a64 *)(a + 16), mo_acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  *(a64 *)(a + 16) = AtomicGoRet<OpExchange>(thr, cpc, pc, mo_acq_rel,
+                                             *(a64 **)a, *(a64 *)(a + 8));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a) {
-  a32 cur = 0;
   a32 cmp = *(a32 *)(a + 8);
-  ATOMIC_RET(CAS, cur, mo_acq_rel, mo_acquire, *(a32 **)a, cmp,
-             *(a32 *)(a + 12));
+  a32 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire, *(a32 **)a,
+                               cmp, *(a32 *)(a + 12));
   *(bool *)(a + 16) = (cur == cmp);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a) {
-  a64 cur = 0;
   a64 cmp = *(a64 *)(a + 8);
-  ATOMIC_RET(CAS, cur, mo_acq_rel, mo_acquire, *(a64 **)a, cmp,
-             *(a64 *)(a + 16));
+  a32 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire, *(a64 **)a,
+                               cmp, *(a64 *)(a + 16));
   *(bool *)(a + 24) = (cur == cmp);
 }
 }  // extern "C"

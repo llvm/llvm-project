@@ -535,6 +535,42 @@ INTERCEPTOR(int, shm_unlink, const char *name) {
 }
 
 // Sockets
+INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
+            const struct addrinfo *hints, struct addrinfo **res) {
+  __rtsan_notify_intercepted_call("getaddrinfo");
+  return REAL(getaddrinfo)(node, service, hints, res);
+}
+
+INTERCEPTOR(int, getnameinfo, const struct sockaddr *sa, socklen_t salen,
+            char *host, socklen_t hostlen, char *serv, socklen_t servlen,
+            int flags) {
+  __rtsan_notify_intercepted_call("getnameinfo");
+  return REAL(getnameinfo)(sa, salen, host, hostlen, serv, servlen, flags);
+}
+
+INTERCEPTOR(int, bind, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("bind");
+  return REAL(bind)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, listen, int socket, int backlog) {
+  __rtsan_notify_intercepted_call("listen");
+  return REAL(listen)(socket, backlog);
+}
+
+INTERCEPTOR(int, accept, int socket, struct sockaddr *address,
+            socklen_t *address_len) {
+  __rtsan_notify_intercepted_call("accept");
+  return REAL(accept)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, connect, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("connect");
+  return REAL(connect)(socket, address, address_len);
+}
+
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   __rtsan_notify_intercepted_call("socket");
   return REAL(socket)(domain, type, protocol);
@@ -648,14 +684,20 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
 
-  INTERCEPT_FUNCTION(socket);
+  INTERCEPT_FUNCTION(accept);
+  INTERCEPT_FUNCTION(bind);
+  INTERCEPT_FUNCTION(connect);
+  INTERCEPT_FUNCTION(getaddrinfo);
+  INTERCEPT_FUNCTION(getnameinfo);
+  INTERCEPT_FUNCTION(listen);
+  INTERCEPT_FUNCTION(recv);
+  INTERCEPT_FUNCTION(recvfrom);
+  INTERCEPT_FUNCTION(recvmsg);
   INTERCEPT_FUNCTION(send);
   INTERCEPT_FUNCTION(sendmsg);
   INTERCEPT_FUNCTION(sendto);
-  INTERCEPT_FUNCTION(recv);
-  INTERCEPT_FUNCTION(recvmsg);
-  INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
+  INTERCEPT_FUNCTION(socket);
 }
 
 #endif // SANITIZER_POSIX

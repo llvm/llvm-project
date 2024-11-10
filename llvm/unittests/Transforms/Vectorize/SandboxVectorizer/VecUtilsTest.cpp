@@ -368,3 +368,74 @@ define void @foo(ptr %ptr) {
   EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L0, V2L2, SE, DL));
   EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L1, L0, SE, DL));
 }
+
+TEST_F(VecUtilsTest, GetNumLanes) {
+  parseIR(R"IR(
+define <4 x float> @foo(float %v, <2 x float> %v2, <4 x float> %ret, ptr %ptr) {
+  store float %v, ptr %ptr
+  store <2 x float> %v2, ptr %ptr
+  ret <4 x float> %ret
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+
+  auto It = BB.begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S0->getValueOperand()->getType()),
+            1u);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S0), 1u);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S1->getValueOperand()->getType()),
+            2u);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(S1), 2u);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Ret->getReturnValue()->getType()),
+            4u);
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Ret), 4u);
+
+  SmallVector<sandboxir::Value *> Bndl({S0, S1, Ret});
+  EXPECT_EQ(sandboxir::VecUtils::getNumLanes(Bndl), 7u);
+}
+
+TEST_F(VecUtilsTest, GetWideType) {
+  sandboxir::Context Ctx(C);
+
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Int32X4Ty = sandboxir::FixedVectorType::get(Int32Ty, 4);
+  EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32Ty, 4), Int32X4Ty);
+  auto *Int32X8Ty = sandboxir::FixedVectorType::get(Int32Ty, 8);
+  EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32X4Ty, 2), Int32X8Ty);
+}
+
+TEST_F(VecUtilsTest, GetLowest) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+bb0:
+  %A = add i8 %v, %v
+  %B = add i8 %v, %v
+  %C = add i8 %v, %v
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *IA = &*It++;
+  auto *IB = &*It++;
+  auto *IC = &*It++;
+  SmallVector<sandboxir::Instruction *> ABC({IA, IB, IC});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC), IC);
+  SmallVector<sandboxir::Instruction *> ACB({IA, IC, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ACB), IC);
+  SmallVector<sandboxir::Instruction *> CAB({IC, IA, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(CAB), IC);
+  SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
+}
