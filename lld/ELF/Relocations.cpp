@@ -1095,9 +1095,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       if (!(flags & NEEDS_GOT)) {
         sym.setFlags(needsGotAuth ? (NEEDS_GOT | NEEDS_GOT_AUTH) : NEEDS_GOT);
       } else if (needsGotAuth != static_cast<bool>(flags & NEEDS_GOT_AUTH)) {
-        fatal("both AUTH and non-AUTH GOT entries for '" + sym.getName() +
-              "' requested, but only one type of GOT entry per symbol is "
-              "supported");
+        Err(ctx) << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
+                 << "' requested, but only one type of GOT entry per symbol is "
+                    "supported"
+                 << getLocation(ctx, *sec, sym, offset);
       }
     }
   } else if (needsPlt(expr)) {
