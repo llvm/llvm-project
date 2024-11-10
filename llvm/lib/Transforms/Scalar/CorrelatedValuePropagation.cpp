@@ -288,15 +288,15 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Cmp->getOperand(0)->getType()->isIntOrIntVectorTy())
     return false;
 
-  if (!(Cmp->isSigned() || (Cmp->isUnsigned() && !Cmp->hasSameSign())))
+  if (!Cmp->isSigned() && (!Cmp->isUnsigned() || Cmp->hasSameSign()))
     return false;
 
   bool Changed = false;
 
   ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                                 /*UndefAllowed=*/ true),
+                                                 /*UndefAllowed=*/ false),
                 CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                                 /*UndefAllowed=*/ true);
+                                                 /*UndefAllowed=*/ false);
 
   if (Cmp->isSigned()) {
     ICmpInst::Predicate UnsignedPred =
@@ -311,8 +311,7 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
     Changed = true;
   }
 
-  if ((CR1.isAllNonNegative() && CR2.isAllNonNegative()) ||
-      (CR1.isAllNegative() && CR2.isAllNegative())) {
+  if (ConstantRange::areInsensitiveToSignednessOfICmpPredicate(CR1, CR2)) {
     Cmp->setSameSign();
     Changed = true;
   }
