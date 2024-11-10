@@ -96,8 +96,10 @@ public:
 /// in `integers` is `kDynamic` or (2) the next value otherwise. If `valueTypes`
 /// is non-empty, it is expected to contain as many elements as `values`
 /// indicating their types. This allows idiomatic printing of mixed value and
-/// integer attributes in a list. E.g.
-/// `[%arg0 : index, 7, 42, %arg42 : i32]`.
+/// integer attributes in a list. E.g., `[%arg0 : index, 7, 42, %arg42 : i32]`.
+/// If `hasSameTypeDynamicValues` is `true`, `valueTypes` are expected to be the
+/// same and only one type is printed at the end of the list. E.g.,
+/// `[0, %arg2, 3, %arg42, 2 : i8]`.
 ///
 /// Indices can be scalable. For example, "4" in "[2, [4], 8]" is scalable.
 /// This notation is similar to how scalable dims are marked when defining
@@ -108,7 +110,8 @@ void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
     ArrayRef<int64_t> integers, ArrayRef<bool> scalables,
     TypeRange valueTypes = TypeRange(),
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square,
+    bool hasSameTypeDynamicValues = false);
 inline void printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                   OperandRange values,
                                   ArrayRef<int64_t> integers,
@@ -122,6 +125,13 @@ inline void printDynamicIndexList(
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
   return printDynamicIndexList(printer, op, values, integers, {}, valueTypes,
                                delimiter);
+}
+inline void printSameTypeDynamicIndexList(
+    OpAsmPrinter &printer, Operation *op, OperandRange values,
+    ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+  return printDynamicIndexList(printer, op, values, integers, {}, valueTypes,
+                               delimiter, /*hasSameTypeDynamicValues=*/true);
 }
 
 /// Parser hook for custom directive in assemblyFormat.
@@ -150,7 +160,8 @@ ParseResult parseDynamicIndexList(
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableVals,
     SmallVectorImpl<Type> *valueTypes = nullptr,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square,
+    bool hasSameTypeDynamicValues = false);
 inline ParseResult
 parseDynamicIndexList(OpAsmParser &parser,
                       SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
@@ -187,6 +198,16 @@ inline ParseResult parseDynamicIndexList(
 
   return parseDynamicIndexList(parser, values, integers, scalableVals,
                                &valueTypes, delimiter);
+}
+inline ParseResult parseSameTypeDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+  DenseBoolArrayAttr scalableVals = {};
+  return parseDynamicIndexList(parser, values, integers, scalableVals,
+                               &valueTypes, delimiter,
+                               /*hasSameTypeDynamicValues=*/true);
 }
 
 /// Verify that a the `values` has as many elements as the number of entries in

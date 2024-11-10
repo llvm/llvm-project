@@ -126,7 +126,7 @@ func.func @extract_from_create_mask_dynamic_position(%dim0: index, %index: index
   %mask = vector.create_mask %c3, %c4, %dim0 : vector<4x4x6xi1>
   // CHECK: vector.create_mask %[[DIM0]] : vector<6xi1>
   // CHECK-NOT: vector.extract
-  %extract = vector.extract %mask[2, %index] : vector<6xi1> from vector<4x4x6xi1>
+  %extract = vector.extract %mask[2, %index : index] : vector<6xi1> from vector<4x4x6xi1>
   return %extract : vector<6xi1>
 }
 
@@ -140,7 +140,7 @@ func.func @extract_from_create_mask_dynamic_position_all_false(%dim0: index, %in
   %mask = vector.create_mask %c1, %c0, %dim0 : vector<1x4x6xi1>
   // CHECK: arith.constant dense<false> : vector<6xi1>
   // CHECK-NOT: vector.extract
-  %extract = vector.extract %mask[0, %index] : vector<6xi1> from vector<1x4x6xi1>
+  %extract = vector.extract %mask[0, %index : index] : vector<6xi1> from vector<1x4x6xi1>
   return %extract : vector<6xi1>
 }
 
@@ -153,8 +153,8 @@ func.func @extract_from_create_mask_dynamic_position_unknown(%dim0: index, %inde
   %mask = vector.create_mask %c2, %dim0 : vector<4x6xi1>
   // CHECK: %[[C2:.*]] = arith.constant 2 : index
   // CHECK-NEXT: %[[MASK:.*]] = vector.create_mask %[[C2]], %[[DIM0]] : vector<4x6xi1>
-  // CHECK-NEXT: vector.extract %[[MASK]][%[[INDEX]]] : vector<6xi1> from vector<4x6xi1>
-  %extract = vector.extract %mask[%index] : vector<6xi1> from vector<4x6xi1>
+  // CHECK-NEXT: vector.extract %[[MASK]][%[[INDEX]] : index] : vector<6xi1> from vector<4x6xi1>
+  %extract = vector.extract %mask[%index : index] : vector<6xi1> from vector<4x6xi1>
   return %extract : vector<6xi1>
 }
 
@@ -167,8 +167,8 @@ func.func @extract_from_create_mask_mixed_position_unknown(%dim0: index, %index0
   %mask = vector.create_mask %c2, %c2, %dim0 : vector<2x4x4xi1>
   // CHECK: %[[C2:.*]] = arith.constant 2 : index
   // CHECK-NEXT: %[[MASK:.*]] = vector.create_mask %[[C2]], %[[C2]], %[[DIM0]] : vector<2x4x4xi1>
-  // CHECK-NEXT: vector.extract %[[MASK]][1, %[[INDEX]]] : vector<4xi1> from vector<2x4x4xi1>
-  %extract = vector.extract %mask[1, %index0] : vector<4xi1> from vector<2x4x4xi1>
+  // CHECK-NEXT: vector.extract %[[MASK]][1, %[[INDEX]] : index] : vector<4xi1> from vector<2x4x4xi1>
+  %extract = vector.extract %mask[1, %index0 : index] : vector<4xi1> from vector<2x4x4xi1>
   return %extract : vector<4xi1>
 }
 
@@ -1918,10 +1918,10 @@ func.func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %
 
 // CHECK-LABEL: extract_from_extract_chain_should_not_fold_dynamic_extracts
 //  CHECK-SAME: (%[[VEC:.*]]: vector<2x4xf32>, %[[IDX:.*]]: index)
-//       CHECK: %[[A:.*]] = vector.extract %[[VEC]][%[[IDX]]] : vector<4xf32> from vector<2x4xf32>
+//       CHECK: %[[A:.*]] = vector.extract %[[VEC]][%[[IDX]] : index] : vector<4xf32> from vector<2x4xf32>
 //       CHECK: %[[B:.*]] = vector.extract %[[A]][1] : f32 from vector<4xf32>
 func.func @extract_from_extract_chain_should_not_fold_dynamic_extracts(%v: vector<2x4xf32>, %index: index) -> f32 {
-  %0 = vector.extract %v[%index] : vector<4xf32> from vector<2x4xf32>
+  %0 = vector.extract %v[%index : index] : vector<4xf32> from vector<2x4xf32>
   %1 = vector.extract %0[1] : f32 from vector<4xf32>
   return %1 : f32
 }

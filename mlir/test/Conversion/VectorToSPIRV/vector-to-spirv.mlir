@@ -191,7 +191,7 @@ func.func @extract_size1_vector(%arg0 : vector<1xf32>) -> f32 {
 //       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[R]]
 func.func @extract_size1_vector_dynamic(%arg0 : vector<1xf32>, %id : index) -> f32 {
-  %0 = vector.extract %arg0[%id] : f32 from vector<1xf32>
+  %0 = vector.extract %arg0[%id : index] : f32 from vector<1xf32>
   return %0: f32
 }
 
@@ -202,7 +202,7 @@ func.func @extract_size1_vector_dynamic(%arg0 : vector<1xf32>, %id : index) -> f
 //       CHECK:   %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
 //       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[ID]]] : vector<4xf32>, i32
 func.func @extract_dynamic(%arg0 : vector<4xf32>, %id : index) -> f32 {
-  %0 = vector.extract %arg0[%id] : f32 from vector<4xf32>
+  %0 = vector.extract %arg0[%id : index] : f32 from vector<4xf32>
   return %0: f32
 }
 
@@ -211,7 +211,7 @@ func.func @extract_dynamic(%arg0 : vector<4xf32>, %id : index) -> f32 {
 //       CHECK:   spirv.CompositeExtract %[[V]][1 : i32] : vector<4xf32>
 func.func @extract_dynamic_cst(%arg0 : vector<4xf32>) -> f32 {
   %idx = arith.constant 1 : index
-  %0 = vector.extract %arg0[%idx] : f32 from vector<4xf32>
+  %0 = vector.extract %arg0[%idx : index] : f32 from vector<4xf32>
   return %0: f32
 }
 
@@ -252,7 +252,7 @@ func.func @insert_size1_vector(%arg0 : vector<1xf32>, %arg1: f32) -> vector<1xf3
 //       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[S]]
 //       CHECK:   return %[[R]]
 func.func @insert_size1_vector_dynamic(%arg0 : vector<1xf32>, %arg1: f32, %id : index) -> vector<1xf32> {
-  %1 = vector.insert %arg1, %arg0[%id] : f32 into vector<1xf32>
+  %1 = vector.insert %arg1, %arg0[%id : index] : f32 into vector<1xf32>
   return %1 : vector<1xf32>
 }
 
@@ -263,7 +263,7 @@ func.func @insert_size1_vector_dynamic(%arg0 : vector<1xf32>, %arg1: f32, %id : 
 //       CHECK: %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : index to i32
 //       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
 func.func @insert_dynamic(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vector<4xf32> {
-  %0 = vector.insert %val, %arg0[%id] : f32 into vector<4xf32>
+  %0 = vector.insert %val, %arg0[%id : index] : f32 into vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -274,7 +274,7 @@ func.func @insert_dynamic(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vect
 //       CHECK:   spirv.CompositeInsert %[[VAL]], %[[V]][2 : i32] : f32 into vector<4xf32>
 func.func @insert_dynamic_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32> {
   %idx = arith.constant 2 : index
-  %0 = vector.insert %val, %arg0[%idx] : f32 into vector<4xf32>
+  %0 = vector.insert %val, %arg0[%idx : index] : f32 into vector<4xf32>
   return %0: vector<4xf32>
 }
 

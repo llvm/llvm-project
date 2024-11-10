@@ -695,14 +695,14 @@ def Vector_ExtractOp :
     %1 = vector.extract %0[3]: vector<8x16xf32> from vector<4x8x16xf32>
     %2 = vector.extract %0[2, 1, 3]: f32 from vector<4x8x16xf32>
     %3 = vector.extract %1[]: vector<f32> from vector<f32>
-    %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
-    %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
+    %4 = vector.extract %0[%a, %b, %c : index] : f32 from vector<4x8x16xf32>
+    %5 = vector.extract %0[2, %b : index] : vector<16xf32> from vector<4x8x16xf32>
     ```
   }];
 
   let arguments = (ins
     AnyVectorOfAnyRank:$vector,
-    Variadic<Index>:$dynamic_position,
+    Variadic<AnySignlessIntegerOrIndex>:$dynamic_position,
     DenseI64ArrayAttr:$static_position
   );
   let results = (outs AnyType:$result);
@@ -737,7 +737,8 @@ def Vector_ExtractOp :
 
   let assemblyFormat = [{
     $vector ``
-    custom<DynamicIndexList>($dynamic_position, $static_position)
+    custom<SameTypeDynamicIndexList>($dynamic_position, $static_position,
+                                     type($dynamic_position))
     attr-dict `:` type($result) `from` type($vector)
   }];
 
@@ -883,15 +884,15 @@ def Vector_InsertOp :
     %2 = vector.insert %0, %1[3] : vector<8x16xf32> into vector<4x8x16xf32>
     %5 = vector.insert %3, %4[2, 1, 3] : f32 into vector<4x8x16xf32>
     %8 = vector.insert %6, %7[] : f32 into vector<f32>
-    %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
-    %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
+    %11 = vector.insert %9, %10[%a, %b, %c : index] : vector<f32> into vector<4x8x16xf32>
+    %12 = vector.insert %4, %10[2, %b : index] : vector<16xf32> into vector<4x8x16xf32>
     ```
   }];
 
   let arguments = (ins
     AnyType:$source,
     AnyVectorOfAnyRank:$dest,
-    Variadic<Index>:$dynamic_position,
+    Variadic<AnySignlessIntegerOrIndex>:$dynamic_position,
     DenseI64ArrayAttr:$static_position
   );
   let results = (outs AnyVectorOfAnyRank:$result);
@@ -926,7 +927,9 @@ def Vector_InsertOp :
   }];
 
   let assemblyFormat = [{
-    $source `,` $dest custom<DynamicIndexList>($dynamic_position, $static_position)
+    $source `,` $dest
+    custom<SameTypeDynamicIndexList>($dynamic_position, $static_position,
+                                     type($dynamic_position))
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1344,7 +1347,7 @@ def Vector_TransferReadOp :
           %a = load %A[%expr1 + %k, %expr2, %expr3 + %i, %expr4] : memref<?x?x?x?xf32>
           // Update the temporary gathered slice with the individual element
           %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
-          %updated = vector.insert %a, %slice[%i, %j, %k] : f32 into vector<3x4x5xf32>
+          %updated = vector.insert %a, %slice[%i, %j, %k : index] : f32 into vector<3x4x5xf32>
           memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}}
     // At this point we gathered the elements from the original
@@ -1367,7 +1370,7 @@ def Vector_TransferReadOp :
         %a = load %A[%expr1 + %k, %expr2, %expr3 + %i, %expr4] : memref<?x?x?x?xf32>
         %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
         // Here we only store to the first element in dimension one
-        %updated = vector.insert %a, %slice[%i, 0, %k] : f32 into vector<3x4x5xf32>
+        %updated = vector.insert %a, %slice[%i, 0, %k : index] : f32 into vector<3x4x5xf32>
         memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}
     // At this point we gathered the elements from the original

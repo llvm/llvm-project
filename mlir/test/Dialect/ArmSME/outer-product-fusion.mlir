@@ -814,12 +814,12 @@ func.func @extract_from_arith_ext(%src: vector<4x[8]xi8>) -> vector<[8]xi32> {
 // CHECK-LABEL: @non_constant_extract_from_arith_ext(
 // CHECK-SAME:                                       %[[SRC:[a-z0-9]+]]: vector<4x[8]xi8>,
 // CHECK-SAME:                                       %[[DIM:[a-z0-9]+]]: index
-// CHECK: %[[EXTRACT:.*]] = vector.extract %[[SRC]][%[[DIM]]] : vector<[8]xi8> from vector<4x[8]xi8>
+// CHECK: %[[EXTRACT:.*]] = vector.extract %[[SRC]][%[[DIM]] : index] : vector<[8]xi8> from vector<4x[8]xi8>
 // CHECK: %[[EXTEND:.*]] = arith.extui %[[EXTRACT]] : vector<[8]xi8> to vector<[8]xi32>
 // CHECK: return %[[EXTEND]]
 func.func @non_constant_extract_from_arith_ext(%src: vector<4x[8]xi8>, %dim: index) -> vector<[8]xi32> {
   %0 = arith.extui %src : vector<4x[8]xi8> to vector<4x[8]xi32>
-  %1 = vector.extract %0[%dim] : vector<[8]xi32> from vector<4x[8]xi32>
+  %1 = vector.extract %0[%dim : index] : vector<[8]xi32> from vector<4x[8]xi32>
   return %1 : vector<[8]xi32>
 }
 

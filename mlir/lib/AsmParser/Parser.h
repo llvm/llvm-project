@@ -46,10 +46,17 @@ public:
   /// Parse a list of comma-separated items with an optional delimiter.  If a
   /// delimiter is provided, then an empty list is allowed.  If not, then at
   /// least one element will be parsed.
+  ParseResult parseCommaSeparatedList(
+      Delimiter delimiter, function_ref<ParseResult()> parseElementFn,
+      std::optional<function_ref<ParseResult()>> parseSuffixFn = std::nullopt,
+      StringRef contextMessage = StringRef());
   ParseResult
   parseCommaSeparatedList(Delimiter delimiter,
                           function_ref<ParseResult()> parseElementFn,
-                          StringRef contextMessage = StringRef());
+                          StringRef contextMessage) {
+    return parseCommaSeparatedList(delimiter, parseElementFn, std::nullopt,
+                                   contextMessage);
+  }
 
   /// Parse a comma separated list of elements that must have at least one entry
   /// in it.

@@ -1050,10 +1050,10 @@ getMaskDimSizes(Value mask, VscaleConstantBuilder &createVscaleMultiple) {
 /// %vscale = vector.vscale
 /// %c4_vscale = arith.muli %vscale, %c4 : index
 /// scf.for %idx = %c0 to %c4_vscale step %c1 {
-///   %4 = vector.extract %0[%idx] : f32 from vector<[4]xf32>
-///   %5 = vector.extract %1[%idx] : f32 from vector<[4]xf32>
-///   %6 = vector.extract %2[%idx] : f32 from vector<[4]xf32>
-///   %7 = vector.extract %3[%idx] : f32 from vector<[4]xf32>
+///   %4 = vector.extract %0[%idx : index] : f32 from vector<[4]xf32>
+///   %5 = vector.extract %1[%idx : index] : f32 from vector<[4]xf32>
+///   %6 = vector.extract %2[%idx : index] : f32 from vector<[4]xf32>
+///   %7 = vector.extract %3[%idx : index] : f32 from vector<[4]xf32>
 ///   %slice_i = affine.apply #map(%idx)[%i]
 ///   %slice = vector.from_elements %4, %5, %6, %7 : vector<4xf32>
 ///   vector.transfer_write %slice, %arg1[%slice_i, %j] {in_bounds = [true]}

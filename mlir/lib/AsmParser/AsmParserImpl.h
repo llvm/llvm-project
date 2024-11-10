@@ -340,11 +340,15 @@ public:
   /// Parse a list of comma-separated items with an optional delimiter.  If a
   /// delimiter is provided, then an empty list is allowed.  If not, then at
   /// least one element will be parsed.
-  ParseResult parseCommaSeparatedList(Delimiter delimiter,
-                                      function_ref<ParseResult()> parseElt,
-                                      StringRef contextMessage) override {
-    return parser.parseCommaSeparatedList(delimiter, parseElt, contextMessage);
+  ParseResult parseCommaSeparatedList(
+      Delimiter delimiter, function_ref<ParseResult()> parseElt,
+      std::optional<function_ref<ParseResult()>> parseSuffix,
+      StringRef contextMessage) override {
+    return parser.parseCommaSeparatedList(delimiter, parseElt, parseSuffix,
+                                          contextMessage);
   }
+
+  using BaseT::parseCommaSeparatedList;
 
   //===--------------------------------------------------------------------===//
   // Keyword Parsing
@@ -588,6 +592,17 @@ public:
     if (!parser.consumeIf(Token::colon))
       return success();
     return parser.parseTypeListNoParens(result);
+  }
+
+  /// Parse an optional colon followed by a type.
+  ParseResult parseOptionalColonType(Type &result) override {
+    SmallVector<Type, 1> types;
+    ParseResult parseResult = parseOptionalColonTypeList(types);
+    if (llvm::succeeded(parseResult) && types.size() > 1)
+      return emitError(getCurrentLocation(), "expected single type");
+    if (!types.empty())
+      result = types[0];
+    return parseResult;
   }
 
   ParseResult parseDimensionList(SmallVectorImpl<int64_t> &dimensions,
