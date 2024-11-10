@@ -126,8 +126,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryLoadVector(N))
       return;
     break;
-  case NVPTXISD::LDGV2:
-  case NVPTXISD::LDGV4:
   case NVPTXISD::LDUV2:
   case NVPTXISD::LDUV4:
     if (tryLDGLDU(N))
@@ -164,6 +162,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     break;
   case ISD::INTRINSIC_W_CHAIN:
     if (tryIntrinsicChain(N))
+      return;
+    break;
+  case ISD::INTRINSIC_VOID:
+    if (tryIntrinsicVoid(N))
       return;
     break;
   case NVPTXISD::Tex1DFloatS32:
@@ -550,9 +552,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_p:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_p:
@@ -1028,6 +1027,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
     }
+    break;
   }
   case NVPTX::Ordering::SequentiallyConsistent: {
     switch (S) {
@@ -1046,6 +1046,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       report_fatal_error(formatv("Unsupported scope \"{}\" for seq_cst fence.",
                                  ScopeToString(S)));
     }
+    break;
   }
   case NVPTX::Ordering::NotAtomic:
   case NVPTX::Ordering::Relaxed:
@@ -1557,34 +1558,11 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
-  SDValue Op1;
-  MemSDNode *Mem;
-  bool IsLDG = true;
+  auto *Mem = cast<MemSDNode>(N);
 
   // If this is an LDG intrinsic, the address is the third operand. If its an
   // LDG/LDU SD node (from custom vector handling), then its the second operand
-  if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-    Op1 = N->getOperand(2);
-    Mem = cast<MemIntrinsicSDNode>(N);
-    unsigned IID = N->getConstantOperandVal(1);
-    switch (IID) {
-    default:
-      return false;
-    case Intrinsic::nvvm_ldg_global_f:
-    case Intrinsic::nvvm_ldg_global_i:
-    case Intrinsic::nvvm_ldg_global_p:
-      IsLDG = true;
-      break;
-    case Intrinsic::nvvm_ldu_global_f:
-    case Intrinsic::nvvm_ldu_global_i:
-    case Intrinsic::nvvm_ldu_global_p:
-      IsLDG = false;
-      break;
-    }
-  } else {
-    Op1 = N->getOperand(1);
-    Mem = cast<MemSDNode>(N);
-  }
+  SDValue Op1 = N->getOperand(N->getOpcode() == ISD::INTRINSIC_W_CHAIN ? 2 : 1);
 
   EVT OrigType = N->getValueType(0);
   EVT EltVT = Mem->getMemoryVT();
@@ -1627,26 +1605,20 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     default:
       return false;
     case ISD::LOAD:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8avar,
+          NVPTX::INT_PTX_LDG_GLOBAL_i16avar, NVPTX::INT_PTX_LDG_GLOBAL_i32avar,
+          NVPTX::INT_PTX_LDG_GLOBAL_i64avar, NVPTX::INT_PTX_LDG_GLOBAL_f32avar,
+          NVPTX::INT_PTX_LDG_GLOBAL_f64avar);
+      break;
     case ISD::INTRINSIC_W_CHAIN:
-      if (IsLDG)
-        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                 NVPTX::INT_PTX_LDG_GLOBAL_i8avar,
-                                 NVPTX::INT_PTX_LDG_GLOBAL_i16avar,
-                                 NVPTX::INT_PTX_LDG_GLOBAL_i32avar,
-                                 NVPTX::INT_PTX_LDG_GLOBAL_i64avar,
-                                 NVPTX::INT_PTX_LDG_GLOBAL_f32avar,
-                                 NVPTX::INT_PTX_LDG_GLOBAL_f64avar);
-      else
-        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                 NVPTX::INT_PTX_LDU_GLOBAL_i8avar,
-                                 NVPTX::INT_PTX_LDU_GLOBAL_i16avar,
-                                 NVPTX::INT_PTX_LDU_GLOBAL_i32avar,
-                                 NVPTX::INT_PTX_LDU_GLOBAL_i64avar,
-                                 NVPTX::INT_PTX_LDU_GLOBAL_f32avar,
-                                 NVPTX::INT_PTX_LDU_GLOBAL_f64avar);
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8avar,
+          NVPTX::INT_PTX_LDU_GLOBAL_i16avar, NVPTX::INT_PTX_LDU_GLOBAL_i32avar,
+          NVPTX::INT_PTX_LDU_GLOBAL_i64avar, NVPTX::INT_PTX_LDU_GLOBAL_f32avar,
+          NVPTX::INT_PTX_LDU_GLOBAL_f64avar);
       break;
     case NVPTXISD::LoadV2:
-    case NVPTXISD::LDGV2:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                NVPTX::INT_PTX_LDG_G_v2i8_ELE_avar,
                                NVPTX::INT_PTX_LDG_G_v2i16_ELE_avar,
@@ -1665,7 +1637,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                NVPTX::INT_PTX_LDU_G_v2f64_ELE_avar);
       break;
     case NVPTXISD::LoadV4:
-    case NVPTXISD::LDGV4:
       Opcode = pickOpcodeForVT(
           EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_avar,
           NVPTX::INT_PTX_LDG_G_v4i16_ELE_avar,
@@ -1691,26 +1662,24 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
       default:
         return false;
       case ISD::LOAD:
+        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i8ari64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i16ari64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i32ari64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i64ari64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_f32ari64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_f64ari64);
+        break;
       case ISD::INTRINSIC_W_CHAIN:
-        if (IsLDG)
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i8ari64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i16ari64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i32ari64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i64ari64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_f32ari64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_f64ari64);
-        else
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i8ari64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i16ari64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i32ari64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i64ari64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_f32ari64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_f64ari64);
+        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i8ari64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i16ari64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i32ari64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i64ari64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_f32ari64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_f64ari64);
         break;
       case NVPTXISD::LoadV2:
-      case NVPTXISD::LDGV2:
         Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                      NVPTX::INT_PTX_LDG_G_v2i8_ELE_ari64,
                                      NVPTX::INT_PTX_LDG_G_v2i16_ELE_ari64,
@@ -1729,7 +1698,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                      NVPTX::INT_PTX_LDU_G_v2f64_ELE_ari64);
         break;
       case NVPTXISD::LoadV4:
-      case NVPTXISD::LDGV4:
         Opcode = pickOpcodeForVT(
             EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_ari64,
             NVPTX::INT_PTX_LDG_G_v4i16_ELE_ari64,
@@ -1749,26 +1717,20 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
       default:
         return false;
       case ISD::LOAD:
+        Opcode = pickOpcodeForVT(
+            EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8ari,
+            NVPTX::INT_PTX_LDG_GLOBAL_i16ari, NVPTX::INT_PTX_LDG_GLOBAL_i32ari,
+            NVPTX::INT_PTX_LDG_GLOBAL_i64ari, NVPTX::INT_PTX_LDG_GLOBAL_f32ari,
+            NVPTX::INT_PTX_LDG_GLOBAL_f64ari);
+        break;
       case ISD::INTRINSIC_W_CHAIN:
-        if (IsLDG)
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i8ari,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i16ari,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i32ari,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i64ari,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_f32ari,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_f64ari);
-        else
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i8ari,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i16ari,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i32ari,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i64ari,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_f32ari,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_f64ari);
+        Opcode = pickOpcodeForVT(
+            EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8ari,
+            NVPTX::INT_PTX_LDU_GLOBAL_i16ari, NVPTX::INT_PTX_LDU_GLOBAL_i32ari,
+            NVPTX::INT_PTX_LDU_GLOBAL_i64ari, NVPTX::INT_PTX_LDU_GLOBAL_f32ari,
+            NVPTX::INT_PTX_LDU_GLOBAL_f64ari);
         break;
       case NVPTXISD::LoadV2:
-      case NVPTXISD::LDGV2:
         Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                  NVPTX::INT_PTX_LDG_G_v2i8_ELE_ari32,
                                  NVPTX::INT_PTX_LDG_G_v2i16_ELE_ari32,
@@ -1787,7 +1749,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                  NVPTX::INT_PTX_LDU_G_v2f64_ELE_ari32);
         break;
       case NVPTXISD::LoadV4:
-      case NVPTXISD::LDGV4:
         Opcode = pickOpcodeForVT(
             EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_ari32,
             NVPTX::INT_PTX_LDG_G_v4i16_ELE_ari32,
@@ -1813,26 +1774,24 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
       default:
         return false;
       case ISD::LOAD:
+        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i8areg64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i16areg64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i32areg64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i64areg64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_f32areg64,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_f64areg64);
+        break;
       case ISD::INTRINSIC_W_CHAIN:
-        if (IsLDG)
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i8areg64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i16areg64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i32areg64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_i64areg64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_f32areg64,
-                                       NVPTX::INT_PTX_LDG_GLOBAL_f64areg64);
-        else
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i8areg64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i16areg64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i32areg64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_i64areg64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_f32areg64,
-                                       NVPTX::INT_PTX_LDU_GLOBAL_f64areg64);
+        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i8areg64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i16areg64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i32areg64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i64areg64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_f32areg64,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_f64areg64);
         break;
       case NVPTXISD::LoadV2:
-      case NVPTXISD::LDGV2:
         Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                      NVPTX::INT_PTX_LDG_G_v2i8_ELE_areg64,
                                      NVPTX::INT_PTX_LDG_G_v2i16_ELE_areg64,
@@ -1851,7 +1810,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                      NVPTX::INT_PTX_LDU_G_v2f64_ELE_areg64);
         break;
       case NVPTXISD::LoadV4:
-      case NVPTXISD::LDGV4:
         Opcode = pickOpcodeForVT(
             EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_areg64,
             NVPTX::INT_PTX_LDG_G_v4i16_ELE_areg64,
@@ -1871,26 +1829,24 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
       default:
         return false;
       case ISD::LOAD:
+        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i8areg,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i16areg,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i32areg,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_i64areg,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_f32areg,
+                                 NVPTX::INT_PTX_LDG_GLOBAL_f64areg);
+        break;
       case ISD::INTRINSIC_W_CHAIN:
-        if (IsLDG)
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i8areg,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i16areg,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i32areg,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_i64areg,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_f32areg,
-                                   NVPTX::INT_PTX_LDG_GLOBAL_f64areg);
-        else
-          Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i8areg,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i16areg,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i32areg,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_i64areg,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_f32areg,
-                                   NVPTX::INT_PTX_LDU_GLOBAL_f64areg);
+        Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i8areg,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i16areg,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i32areg,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_i64areg,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_f32areg,
+                                 NVPTX::INT_PTX_LDU_GLOBAL_f64areg);
         break;
       case NVPTXISD::LoadV2:
-      case NVPTXISD::LDGV2:
         Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
                                  NVPTX::INT_PTX_LDG_G_v2i8_ELE_areg32,
                                  NVPTX::INT_PTX_LDG_G_v2i16_ELE_areg32,
@@ -1909,7 +1865,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
                                  NVPTX::INT_PTX_LDU_G_v2f64_ELE_areg32);
         break;
       case NVPTXISD::LoadV4:
-      case NVPTXISD::LDGV4:
         Opcode = pickOpcodeForVT(
             EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_areg32,
             NVPTX::INT_PTX_LDG_G_v4i16_ELE_areg32,
@@ -4199,3 +4154,272 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
 }
 
 bool NVPTXScopes::empty() const { return Scopes.size() == 0; }
+
+#define CP_ASYNC_BULK_TENSOR_OPCODE(dir, dim, mode, suffix)                    \
+  (IsShared32                                                                  \
+       ? NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_SHARED32_##mode##suffix   \
+       : NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_##mode##suffix)
+
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(dim, mode)                         \
+  (IsCacheHint ? (CP_ASYNC_BULK_TENSOR_OPCODE(S2G, dim, mode, _CH))            \
+               : (CP_ASYNC_BULK_TENSOR_OPCODE(S2G, dim, mode, )))
+
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(dim, mode)                         \
+  [&]() -> auto {                                                              \
+    if (IsMultiCast && IsCacheHint)                                            \
+      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, _MC_CH);              \
+    if (IsCacheHint)                                                           \
+      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, _CH);                 \
+    if (IsMultiCast)                                                           \
+      return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, _MC);                 \
+    return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, );                      \
+  }()
+
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(dim, mode)                    \
+  (IsCacheHint ? NVPTX::CP_ASYNC_BULK_TENSOR_PREFETCH_##dim##_##mode##_CH      \
+               : NVPTX::CP_ASYNC_BULK_TENSOR_PREFETCH_##dim##_##mode)
+
+static unsigned GetCpAsyncBulkTensorS2GOpcode(size_t Dim, bool IsShared32,
+                                              bool IsCacheHint, bool IsIm2Col) {
+  if (IsIm2Col) {
+    switch (Dim) {
+    case 3:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, IM2COL);
+    case 4:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, IM2COL);
+    case 5:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, IM2COL);
+    default:
+      llvm_unreachable("Invalid Dimension in im2col mode for "
+                       "GetCpAsyncBulkTensorS2GOpcode.");
+    }
+  } else {
+    switch (Dim) {
+    case 1:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(1D, TILE);
+    case 2:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(2D, TILE);
+    case 3:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, TILE);
+    case 4:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, TILE);
+    case 5:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, TILE);
+    default:
+      llvm_unreachable(
+          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorS2GOpcode.");
+    }
+  }
+}
+
+static unsigned GetCpAsyncBulkTensorG2SOpcode(size_t Dim, bool IsShared32,
+                                              bool IsMultiCast,
+                                              bool IsCacheHint, bool IsIm2Col) {
+  if (IsIm2Col) {
+    switch (Dim) {
+    case 3:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, IM2COL);
+    case 4:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, IM2COL);
+    case 5:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, IM2COL);
+    default:
+      llvm_unreachable("Invalid Dimension in im2col mode for "
+                       "GetCpAsyncBulkTensorG2SOpcode.");
+    }
+  } else {
+    switch (Dim) {
+    case 1:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(1D, TILE);
+    case 2:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(2D, TILE);
+    case 3:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(3D, TILE);
+    case 4:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(4D, TILE);
+    case 5:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(5D, TILE);
+    default:
+      llvm_unreachable(
+          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorG2SOpcode.");
+    }
+  }
+}
+
+static unsigned GetCpAsyncBulkTensorPrefetchOpcode(size_t Dim, bool IsCacheHint,
+                                                   bool IsIm2Col) {
+  if (IsIm2Col) {
+    switch (Dim) {
+    case 3:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(3D, IM2COL);
+    case 4:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(4D, IM2COL);
+    case 5:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(5D, IM2COL);
+    default:
+      llvm_unreachable("Invalid Dimension in im2col mode for "
+                       "GetCpAsyncBulkTensorPrefetchOpcode.");
+    }
+  } else {
+    switch (Dim) {
+    case 1:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(1D, TILE);
+    case 2:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(2D, TILE);
+    case 3:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(3D, TILE);
+    case 4:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(4D, TILE);
+    case 5:
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(5D, TILE);
+    default:
+      llvm_unreachable("Invalid Dimension in tile mode for "
+                       "GetCpAsyncBulkTensorPrefetchOpcode.");
+    }
+  }
+}
+
+static size_t GetDimsFromIntrinsic(unsigned IID) {
+  switch (IID) {
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d:
+    return 3;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d:
+    return 4;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d:
+    return 5;
+  default:
+    llvm_unreachable("Invalid im2col intrinsic in GetDimsFromIntrinsic.");
+  }
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
+                                                         bool IsIm2Col) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // {dst, mbar, src, dims{d0...dN}, im2col_offsets{dims-2}
+  // multicast, cache_hint,
+  // multicast_flag, cache_hint_flag}
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {7 + dims + im2col_offsets}
+  size_t NumOps = N->getNumOperands();
+  size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
+                            : (NumOps - 9);
+  // Offsets is always 'NumDims - 2' and only for im2col mode
+  size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  bool IsMultiCast = N->getConstantOperandVal(NumOps - 2) == 1;
+  size_t NumBaseArgs = NumDims + NumOffsets + 3; // for {dst, mbar, src}
+  size_t MultiCastIdx = NumBaseArgs + 2;         // for Chain and IID
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumBaseArgs));
+
+  // Push MultiCast operand, if available
+  if (IsMultiCast)
+    Ops.push_back(N->getOperand(MultiCastIdx));
+
+  // Push CacheHint operand, if available
+  if (IsCacheHint)
+    Ops.push_back(N->getOperand(MultiCastIdx + 1));
+
+  // Finally, the chain operand
+  Ops.push_back(N->getOperand(0));
+
+  bool IsShared32 =
+      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
+  unsigned Opcode = GetCpAsyncBulkTensorG2SOpcode(
+      NumDims, IsShared32, IsMultiCast, IsCacheHint, IsIm2Col);
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorS2GCommon(SDNode *N,
+                                                         bool IsIm2Col) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // src, dst, dims{d0...dN}, cache_hint, cache_hint_flag
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {4 + dims}
+  size_t NumOps = N->getNumOperands();
+  size_t NumDims = NumOps - 6;
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  size_t NumArgs = NumDims + (IsCacheHint ? 3 : 2); // src, dst, cache_hint
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumArgs));
+  Ops.push_back(N->getOperand(0)); // Chain operand
+
+  bool IsShared32 =
+      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
+  unsigned Opcode =
+      GetCpAsyncBulkTensorS2GOpcode(NumDims, IsShared32, IsCacheHint, IsIm2Col);
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N,
+                                                              bool IsIm2Col) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // {src, dims{d0...dN}, im2col_offsets{dims-2}
+  // cache_hint, cache_hint_flag}
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {3 + dims + im2col_offsets}
+  size_t NumOps = N->getNumOperands();
+  size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
+                            : (NumOps - 5);
+  // Offsets is always 'NumDims - 2' and only for im2col mode
+  size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  size_t NumArgs = NumDims + NumOffsets + (IsCacheHint ? 2 : 1);
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 12> Ops(N->ops().slice(2, NumArgs));
+  Ops.push_back(N->getOperand(0)); // Chain operand
+
+  unsigned Opcode =
+      GetCpAsyncBulkTensorPrefetchOpcode(NumDims, IsCacheHint, IsIm2Col);
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
+bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
+  unsigned IID = N->getConstantOperandVal(1);
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d:
+    SelectCpAsyncBulkTensorS2GCommon(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d:
+    SelectCpAsyncBulkTensorS2GCommon(N, /*IsIm2Col=*/true);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d:
+    SelectCpAsyncBulkTensorG2SCommon(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
+    SelectCpAsyncBulkTensorG2SCommon(N, /*IsIm2Col=*/true);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d:
+    SelectCpAsyncBulkTensorPrefetchCommon(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d:
+    SelectCpAsyncBulkTensorPrefetchCommon(N, /*IsIm2Col=*/true);
+    return true;
+  }
+}

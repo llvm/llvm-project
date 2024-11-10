@@ -9,14 +9,21 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
-#include "BreakpointBase.h"
 #include "DAPForward.h"
-#include "lldb/API/SBModule.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBType.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 
@@ -380,17 +387,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread);
 
-/// Create a "instruction" object for a LLDB disassemble object as described in
-/// the Visual Studio Code debug adaptor definition.
-///
-/// \param[in] bp
-///     The LLDB instruction object used to populate the disassembly
-///     instruction.
-/// \return
-///     A "Scope" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp);
-
 /// Create a "Thread" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
@@ -479,6 +475,16 @@ struct VariableDescription {
   /// Returns a description of the value appropriate for the specified context.
   std::string GetResult(llvm::StringRef context);
 };
+
+/// Does the given variable have an associated value location?
+bool ValuePointsToCode(lldb::SBValue v);
+
+/// Pack a location into a single integer which we can send via
+/// the debug adapter protocol.
+int64_t PackLocation(int64_t var_ref, bool is_value_location);
+
+/// Reverse of `PackLocation`
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 
 /// Create a "Variable" object for a LLDB thread object.
 ///

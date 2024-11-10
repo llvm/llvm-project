@@ -235,6 +235,7 @@ set(files
   __bit/rotate.h
   __bit_reference
   __charconv/chars_format.h
+  __charconv/from_chars_floating_point.h
   __charconv/from_chars_integral.h
   __charconv/from_chars_result.h
   __charconv/tables.h
@@ -357,6 +358,8 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __flat_map/flat_map.h
+  __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -486,20 +489,22 @@ set(files
   __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
+  __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
+  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/locale_guard.h
   __locale_dir/locale_base_api/musl.h
-  __locale_dir/locale_base_api/newlib.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
+  __locale_dir/locale_guard.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -747,6 +752,7 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
@@ -880,6 +886,14 @@ set(files
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
+  __vector/comparison.h
+  __vector/container_traits.h
+  __vector/erase.h
+  __vector/pmr.h
+  __vector/swap.h
+  __vector/vector.h
+  __vector/vector_bool.h
+  __vector/vector_bool_formatter.h
   __verbose_abort
   algorithm
   any
@@ -910,6 +924,7 @@ set(files
   coroutine
   csetjmp
   csignal
+  cstdalign
   cstdarg
   cstdbool
   cstddef
@@ -948,6 +963,7 @@ set(files
   ext/hash_set
   fenv.h
   filesystem
+  flat_map
   float.h
   format
   forward_list
@@ -966,7 +982,6 @@ set(files
   limits
   list
   locale
-  locale.h
   map
   math.h
   mdspan
@@ -997,7 +1012,6 @@ set(files
   stdbool.h
   stddef.h
   stdexcept
-  stdint.h
   stdio.h
   stdlib.h
   stop_token

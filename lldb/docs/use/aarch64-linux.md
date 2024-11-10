@@ -160,7 +160,7 @@ Kernel does.
 ### Visibility of an Inactive ZA Register
 
 LLDB does not handle registers that can come and go at runtime (SVE changes
-size but it does not dissappear). Therefore when `za` is not enabled, LLDB
+size but it does not disappear). Therefore when `za` is not enabled, LLDB
 will return a block of 0s instead. This block will match the expected size of
 `za`:
 ```
@@ -183,9 +183,9 @@ If you want to know whether `za` is active or not, refer to bit 2 of the
 
 As for SVE, LLDB does not know how the debugee will use `za`, and therefore
 does not know how it would be best to display it. At any time any given
-instrucion could interpret its contents as many kinds and sizes of data.
+instruction could interpret its contents as many kinds and sizes of data.
 
-So LLDB will default to showing  `za` as one large vector of individual bytes.
+So LLDB will default to showing `za` as one large vector of individual bytes.
 You can override this with a format option (see the SVE example above).
 
 ### Expression Evaluation

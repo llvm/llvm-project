@@ -2075,13 +2075,15 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPAllocateClause(Expr *Allocate, ArrayRef<Expr *> VarList,
+  OMPClause *RebuildOMPAllocateClause(Expr *Allocate,
+                                      OpenMPAllocateClauseModifier ACModifier,
+                                      ArrayRef<Expr *> VarList,
                                       SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation ColonLoc,
                                       SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPAllocateClause(
-        Allocate, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
+        Allocate, ACModifier, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -3423,8 +3425,7 @@ public:
   ExprResult RebuildCXXScalarValueInitExpr(TypeSourceInfo *TSInfo,
                                            SourceLocation LParenLoc,
                                            SourceLocation RParenLoc) {
-    return getSema().BuildCXXTypeConstructExpr(TSInfo, LParenLoc, std::nullopt,
-                                               RParenLoc,
+    return getSema().BuildCXXTypeConstructExpr(TSInfo, LParenLoc, {}, RParenLoc,
                                                /*ListInitialization=*/false);
   }
 
@@ -4243,13 +4244,13 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   // Revert value-initialization back to empty parens.
   if (CXXScalarValueInitExpr *VIE = dyn_cast<CXXScalarValueInitExpr>(Init)) {
     SourceRange Parens = VIE->getSourceRange();
-    return getDerived().RebuildParenListExpr(Parens.getBegin(), std::nullopt,
+    return getDerived().RebuildParenListExpr(Parens.getBegin(), {},
                                              Parens.getEnd());
   }
 
   // FIXME: We shouldn't build ImplicitValueInitExprs for direct-initialization.
   if (isa<ImplicitValueInitExpr>(Init))
-    return getDerived().RebuildParenListExpr(SourceLocation(), std::nullopt,
+    return getDerived().RebuildParenListExpr(SourceLocation(), {},
                                              SourceLocation());
 
   // Revert initialization by constructor back to a parenthesized or braced list
@@ -7436,7 +7437,8 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
 
     result = SemaRef.Context.getAttributedType(TL.getAttrKind(),
                                                modifiedType,
-                                               equivalentType);
+                                               equivalentType,
+                                               TL.getAttr());
   }
 
   AttributedTypeLoc newTL = TLB.push<AttributedTypeLoc>(result);
@@ -8296,7 +8298,9 @@ TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
   // OpenACC Restricts a for-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{SemaRef.OpenACC()};
-  SemaRef.OpenACC().ActOnForStmtBegin(S->getBeginLoc());
+  SemaRef.OpenACC().ActOnForStmtBegin(
+      S->getBeginLoc(), S->getInit(), Init.get(), S->getCond(),
+      Cond.get().second, S->getInc(), Inc.get());
 
   // Transform the body
   StmtResult Body = getDerived().TransformStmt(S->getBody());
@@ -8385,14 +8389,19 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
     if (Transformed != D)
       DeclChanged = true;
 
-    if (LSI && isa<TypeDecl>(Transformed))
-      LSI->ContainsUnexpandedParameterPack |=
-          getSema()
-              .getASTContext()
-              .getTypeDeclType(cast<TypeDecl>(Transformed))
-              .getCanonicalType()
-              .getTypePtr()
-              ->containsUnexpandedParameterPack();
+    if (LSI) {
+      if (auto *TD = dyn_cast<TypeDecl>(Transformed))
+        LSI->ContainsUnexpandedParameterPack |=
+            getSema()
+                .getASTContext()
+                .getTypeDeclType(TD)
+                .getCanonicalType()
+                ->containsUnexpandedParameterPack();
+
+      if (auto *VD = dyn_cast<VarDecl>(Transformed))
+        LSI->ContainsUnexpandedParameterPack |=
+            VD->getType()->containsUnexpandedParameterPack();
+    }
 
     Decls.push_back(Transformed);
   }
@@ -9041,7 +9050,7 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
   // OpenACC Restricts a while-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{SemaRef.OpenACC()};
-  SemaRef.OpenACC().ActOnForStmtBegin(S->getBeginLoc());
+  SemaRef.OpenACC().ActOnRangeForStmtBegin(S->getBeginLoc(), S, NewStmt.get());
 
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
@@ -11123,8 +11132,8 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPAllocateClause(
-      Allocator, Vars, C->getBeginLoc(), C->getLParenLoc(), C->getColonLoc(),
-      C->getEndLoc());
+      Allocator, C->getAllocatorModifier(), Vars, C->getBeginLoc(),
+      C->getLParenLoc(), C->getColonLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11787,6 +11796,61 @@ void OpenACCClauseTransform<Derived>::VisitAsyncClause(
                                          : nullptr,
       ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitWorkerClause(
+    const OpenACCWorkerClause &C) {
+  if (C.hasIntExpr()) {
+    // restrictions on this expression are all "does it exist in certain
+    // situations" that are not possible to be dependent, so the only check we
+    // have is that it transforms, and is an int expression.
+    ExprResult Res = Self.TransformExpr(const_cast<Expr *>(C.getIntExpr()));
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+    ParsedClause.setIntExprDetails(Res.get());
+  }
+
+  NewClause = OpenACCWorkerClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(),
+      ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
+                                         : nullptr,
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitVectorClause(
+    const OpenACCVectorClause &C) {
+  if (C.hasIntExpr()) {
+    // restrictions on this expression are all "does it exist in certain
+    // situations" that are not possible to be dependent, so the only check we
+    // have is that it transforms, and is an int expression.
+    ExprResult Res = Self.TransformExpr(const_cast<Expr *>(C.getIntExpr()));
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+    ParsedClause.setIntExprDetails(Res.get());
+  }
+
+  NewClause = OpenACCVectorClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(),
+      ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
+                                         : nullptr,
+      ParsedClause.getEndLoc());
+}
+
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitWaitClause(
     const OpenACCWaitClause &C) {
@@ -11875,15 +11939,16 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
   SmallVector<Expr *> ValidVars;
 
   for (Expr *Var : TransformedVars) {
-    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(Var);
+    ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(
+        ParsedClause.getDirectiveKind(), C.getReductionOp(), Var);
     if (Res.isUsable())
       ValidVars.push_back(Res.get());
   }
 
-  NewClause = OpenACCReductionClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), C.getReductionOp(), ValidVars,
-      ParsedClause.getEndLoc());
+  NewClause = Self.getSema().OpenACC().CheckReductionClause(
+      ExistingClauses, ParsedClause.getDirectiveKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      C.getReductionOp(), ValidVars, ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -11940,6 +12005,28 @@ void OpenACCClauseTransform<Derived>::VisitTileClause(
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs(),
       ParsedClause.getEndLoc());
 }
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitGangClause(
+    const OpenACCGangClause &C) {
+  llvm::SmallVector<OpenACCGangKind> TransformedGangKinds;
+  llvm::SmallVector<Expr *> TransformedIntExprs;
+
+  for (unsigned I = 0; I < C.getNumExprs(); ++I) {
+    ExprResult ER = Self.TransformExpr(const_cast<Expr *>(C.getExpr(I).second));
+    if (!ER.isUsable())
+      continue;
+
+    ER = Self.getSema().OpenACC().CheckGangExpr(C.getExpr(I).first, ER.get());
+    if (!ER.isUsable())
+      continue;
+    TransformedGangKinds.push_back(C.getExpr(I).first);
+    TransformedIntExprs.push_back(ER.get());
+  }
+
+  NewClause = Self.getSema().OpenACC().CheckGangClause(
+      ExistingClauses, ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
+}
 } // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
@@ -11988,11 +12075,11 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
 
   // Transform Structured Block.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
-      getSema().OpenACC(), C->getDirectiveKind(), C->clauses(),
-      TransformedClauses);
+      getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(),
+      C->clauses(), TransformedClauses);
   StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
   StrBlock = getSema().OpenACC().ActOnAssociatedStmt(
-      C->getBeginLoc(), C->getDirectiveKind(), StrBlock);
+      C->getBeginLoc(), C->getDirectiveKind(), TransformedClauses, StrBlock);
 
   return getDerived().RebuildOpenACCComputeConstruct(
       C->getDirectiveKind(), C->getBeginLoc(), C->getDirectiveLoc(),
@@ -12015,11 +12102,11 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
 
   // Transform Loop.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
-      getSema().OpenACC(), C->getDirectiveKind(), C->clauses(),
-      TransformedClauses);
+      getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(),
+      C->clauses(), TransformedClauses);
   StmtResult Loop = getDerived().TransformStmt(C->getLoop());
-  Loop = getSema().OpenACC().ActOnAssociatedStmt(C->getBeginLoc(),
-                                                 C->getDirectiveKind(), Loop);
+  Loop = getSema().OpenACC().ActOnAssociatedStmt(
+      C->getBeginLoc(), C->getDirectiveKind(), TransformedClauses, Loop);
 
   return getDerived().RebuildOpenACCLoopConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
@@ -15361,7 +15448,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
       return ExprError();
     return getDerived().RebuildSizeOfPackExpr(
         E->getOperatorLoc(), Pack, E->getPackLoc(), E->getRParenLoc(),
-        std::nullopt, std::nullopt);
+        std::nullopt, {});
   }
 
   // Try to compute the result without performing a partial substitution.
@@ -15405,9 +15492,9 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   // Common case: we could determine the number of expansions without
   // substituting.
   if (Result)
-    return getDerived().RebuildSizeOfPackExpr(
-        E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
-        *Result, std::nullopt);
+    return getDerived().RebuildSizeOfPackExpr(E->getOperatorLoc(), E->getPack(),
+                                              E->getPackLoc(),
+                                              E->getRParenLoc(), *Result, {});
 
   TemplateArgumentListInfo TransformedPackArgs(E->getPackLoc(),
                                                E->getPackLoc());
@@ -15438,7 +15525,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
 
   return getDerived().RebuildSizeOfPackExpr(E->getOperatorLoc(), E->getPack(),
                                             E->getPackLoc(), E->getRParenLoc(),
-                                            Args.size(), std::nullopt);
+                                            Args.size(), {});
 }
 
 template <typename Derived>
@@ -15482,7 +15569,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
         return ExprError();
       return getDerived().RebuildPackIndexingExpr(
           E->getEllipsisLoc(), E->getRSquareLoc(), Pack.get(), IndexExpr.get(),
-          std::nullopt);
+          {});
     }
     for (unsigned I = 0; I != *NumExpansions; ++I) {
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);

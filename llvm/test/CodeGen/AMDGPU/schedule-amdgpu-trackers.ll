@@ -7,12 +7,10 @@
 ; RUN: llc -mtriple=amdgcn -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
 ; RUN: llc -mtriple=amdgcn -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GENERIC-GCNTRACKERS %s
 
-; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled, 
+; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled,
 ; allow scheduling of other instructions which reduce RP
 
 ; CHECK-LABEL: {{^}}return_72xi32:
-; GFX11-PAL:    codeLenInByte = 768
-; GFX11-PAL-GCNTRACKERS:    codeLenInByte = 888
 ; GFX11-PAL:    NumSgprs: 33
 ; GFX11-PAL-GCNTRACKERS:    NumSgprs: 33
 ; GFX11-PAL:    NumVgprs: 64
@@ -22,8 +20,6 @@
 
 
 ; CHECK-LABEL: {{^}}call_72xi32:
-; GFX11-PAL:    codeLenInByte = 1300
-; GFX11-PAL-GCNTRACKERS:    codeLenInByte = 1372
 ; GFX11-PAL:    NumSgprs: 35
 ; GFX11-PAL-GCNTRACKERS:    NumSgprs: 35
 ; GFX11-PAL:    NumVgprs: 64
@@ -46,8 +42,6 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}global_extload_v16f16_to_v16f64:
-; TONGA:     codeLenInByte = 420
-; TONGA-GCNTRACKERS:     codeLenInByte = 436
 ; TONGA:    NumSgprs: 96
 ; TONGA-GCNTRACKERS:    NumSgprs: 96
 ; TONGA:    NumVgprs: 33
@@ -64,8 +58,6 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 }
 
 ; CHECK-LABEL: {{^}}constant_zextload_v64i16_to_v64i32:
-; GENERIC:     codeLenInByte = 860
-; GENERIC-GCNTRACKERS:     codeLenInByte = 860
 ; GENERIC:    NumSgprs: 71
 ; GENERIC-GCNTRACKERS:    NumSgprs: 54
 ; GENERIC:    NumVgprs: 16
@@ -81,10 +73,8 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 }
 
 ; CHECK-LABEL: {{^}}excess_soft_clause_reg_pressure:
-; GFX908:     codeLenInByte = 1436
-; GFX908-GCNTRACKERS:     codeLenInByte = 1436
-; GFX908:    NumSgprs: 56
-; GFX908-GCNTRACKERS:    NumSgprs: 56
+; GFX908:    NumSgprs: 64
+; GFX908-GCNTRACKERS:    NumSgprs: 64
 ; GFX908:    NumVgprs: 43
 ; GFX908-GCNTRACKERS:    NumVgprs: 39
 ; GFX908:    Occupancy: 5

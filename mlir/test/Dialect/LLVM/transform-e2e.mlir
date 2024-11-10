@@ -1,17 +1,15 @@
-// RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" -test-transform-dialect-erase-schedule --test-lower-to-llvm --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter -test-transform-dialect-erase-schedule --test-lower-to-llvm --split-input-file | FileCheck %s
 
 // CHECK-LABEL: llvm.func @matmul_tensors
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @matmul_tensors(
-    %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
-      -> tensor<2x6xf32> {
-  // CHECK-NOT: linalg
-  // CHECK: llvm.intr.fmuladd{{.*}}
-    %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
-                       outs(%arg2: tensor<2x6xf32>)
-      -> tensor<2x6xf32>
-    return %0 : tensor<2x6xf32>
-  }
+func.func @matmul_tensors(
+  %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
+    -> tensor<2x6xf32> {
+// CHECK-NOT: linalg
+// CHECK: llvm.intr.fmuladd{{.*}}
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
+                     outs(%arg2: tensor<2x6xf32>)
+    -> tensor<2x6xf32>
+  return %0 : tensor<2x6xf32>
 }
 
 module attributes {transform.with_named_sequence} {

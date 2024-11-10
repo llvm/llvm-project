@@ -71,9 +71,9 @@ define void @bswap_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsrl.vx v9, v8, a1
 ; RV32-NEXT:    li a2, 40
@@ -104,6 +104,7 @@ define void @bswap_v2i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vor.vv v8, v8, v9
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bswap_v2i64:
@@ -223,9 +224,9 @@ define void @bswap_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    lui a1, 1044480
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsrl.vx v10, v8, a1
 ; RV32-NEXT:    li a2, 40
@@ -256,6 +257,7 @@ define void @bswap_v4i64(ptr %x, ptr %y) {
 ; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bswap_v4i64:

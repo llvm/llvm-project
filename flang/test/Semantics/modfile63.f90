@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -fsyntax-only -I%S/Inputs/dir1 %s
-! RUN: not %flang_fc1 -fsyntax-only -I%S/Inputs/dir2 %s 2>&1 | FileCheck --check-prefix=ERROR %s
+! RUN: not %flang_fc1 -fsyntax-only -I%S/Inputs/dir2 -w %s 2>&1 | FileCheck --check-prefix=ERROR %s
 ! RUN: %flang_fc1 -Werror -fsyntax-only -I%S/Inputs/dir1 -I%S/Inputs/dir2 %s
 
 ! Inputs/dir1 and Inputs/dir2 each have identical copies of modfile63b.mod.

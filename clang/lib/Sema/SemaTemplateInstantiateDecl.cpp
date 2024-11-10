@@ -12,7 +12,6 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
@@ -231,7 +230,10 @@ static void instantiateDependentAnnotationAttr(
     ActualArgs.insert(ActualArgs.begin(), Args.begin() + 1, Args.end());
     std::swap(Args, ActualArgs);
   }
-  S.AddAnnotationAttr(New, *Attr, Str, Args);
+  auto *AA = S.CreateAnnotationAttr(*Attr, Str, Args);
+  if (AA) {
+    New->addAttr(AA);
+  }
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(
@@ -873,6 +875,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<CUDAGridConstantAttr>(TmplAttr)) {
+      if (!New->hasAttr<CUDAGridConstantAttr>())
+        New->addAttr(A->clone(Context));
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -1343,7 +1351,7 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   if (Invalid)
     Field->setInvalidDecl();
 
-  if (!Field->getDeclName()) {
+  if (!Field->getDeclName() || Field->isPlaceholderVar(SemaRef.getLangOpts())) {
     // Keep track of where this decl came from.
     SemaRef.Context.setInstantiatedFromUnnamedFieldDecl(Field, D);
   }
@@ -4686,36 +4694,6 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                       ParmVarDecl *Param) {
   assert(Param->hasUninstantiatedDefaultArg());
 
-  NamedDecl *Pattern = FD;
-  std::optional<ArrayRef<TemplateArgument>> Innermost;
-
-  // C++ [dcl.fct.default]p4
-  //   For non-template functions, default arguments can be added in later
-  //   declarations of a function that inhabit the same scope.
-  //
-  // C++ [dcl.fct.default]p6
-  //   Except for member functions of templated classes, the default arguments
-  //   in a member function definition that appears outside of the class
-  //   definition are added to the set of default arguments provided by the
-  //   member function declaration in the class definition; the program is
-  //   ill-formed if a default constructor, copy or move constructor, or copy
-  //   or move assignment operator is so declared. Default arguments for a
-  //   member function of a templated class shall be specified on the initial
-  //   declaration of the member function within the templated class.
-  //
-  // We need to collect the template arguments from the context of the function
-  // where the default argument was defined. For a specialization of a function
-  // template explicitly specialized for an implicit instantiation of a class
-  // template, that context is the (implicitly instantiated) declaration in the
-  // definition of the class template specialization.
-  if (FD->isCXXClassMember() &&
-      !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(FD)) {
-    if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate()) {
-      Pattern = FTD->getFirstDecl();
-      Innermost = FD->getTemplateSpecializationArgs()->asArray();
-    }
-  }
-
   // Instantiate the expression.
   //
   // FIXME: Pass in a correct Pattern argument, otherwise
@@ -4733,10 +4711,12 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   //
   // template<typename T>
   // A<T> Foo(int a = A<T>::FooImpl());
-  MultiLevelTemplateArgumentList TemplateArgs =
-      getTemplateInstantiationArgs(Pattern, Pattern->getLexicalDeclContext(),
-                                   /*Final=*/false, Innermost,
-                                   /*RelativeToPrimary=*/true);
+  MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+      FD, FD->getLexicalDeclContext(),
+      /*Final=*/false, /*Innermost=*/std::nullopt,
+      /*RelativeToPrimary=*/true, /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/false, /*SkipForSpecialization=*/false,
+      /*ForDefaultArgumentSubstitution=*/true);
 
   if (SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
     return true;
@@ -4777,7 +4757,7 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   MultiLevelTemplateArgumentList TemplateArgs =
       getTemplateInstantiationArgs(Decl, Decl->getLexicalDeclContext(),
                                    /*Final=*/false, /*Innermost=*/std::nullopt,
-                                   /*RelativeToPrimary=*/true);
+                                   /*RelativeToPrimary*/ true);
 
   // FIXME: We can't use getTemplateInstantiationPattern(false) in general
   // here, because for a non-defining friend declaration in a class template,
@@ -5224,26 +5204,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    DeclContext *DC = Function;
-    MultiLevelTemplateArgumentList TemplateArgs;
-    if (auto *Primary = Function->getPrimaryTemplate();
-        Primary &&
-        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function)) {
-      auto It = llvm::find_if(Primary->redecls(),
-                              [](const RedeclarableTemplateDecl *RTD) {
-                                return cast<FunctionTemplateDecl>(RTD)
-                                    ->isCompatibleWithDefinition();
-                              });
-      assert(It != Primary->redecls().end() &&
-             "Should't get here without a definition");
-      DC = (*It)->getLexicalDeclContext();
-      if (Function->getTemplateSpecializationKind() !=
-          TSK_ExplicitSpecialization)
-        TemplateArgs.addOuterTemplateArguments(
-            Function, Function->getTemplateSpecializationArgs()->asArray(),
-            /*Final=*/false);
-    }
-    getTemplateInstantiationArgs(TemplateArgs, /*D=*/nullptr, DC);
+    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+        Function, Function->getLexicalDeclContext(), /*Final=*/false,
+        /*Innermost=*/std::nullopt, false, PatternDecl);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.

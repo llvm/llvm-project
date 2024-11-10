@@ -158,6 +158,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
   bool HasAtomicFMinFMaxF64GlobalInsts = false;
@@ -178,6 +179,7 @@ protected:
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
   bool HasDefaultComponentBroadcast = false;
+  bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -588,6 +590,10 @@ public:
 
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool hasUnalignedScratchAccessEnabled() const {
+    return UnalignedScratchAccess && UnalignedAccessMode;
   }
 
   bool hasUnalignedAccessMode() const {
@@ -1297,6 +1303,9 @@ public:
     return getGeneration() == GFX12;
   }
 
+  /// \returns true if the target has instructions with xf32 format support.
+  bool hasXF32Insts() const { return HasXF32Insts; }
+
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
@@ -1352,7 +1361,7 @@ public:
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
+  bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
 
   // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
   // no-return form.

@@ -19,7 +19,7 @@ define void @vdiv(ptr %a, float %b) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

@@ -601,7 +601,6 @@ subroutine omp_target_parallel_do
          end do
          !CHECK: omp.yield
          !CHECK: }
-         !CHECK: omp.terminator
          !CHECK: }
       !CHECK: omp.terminator
       !CHECK: }

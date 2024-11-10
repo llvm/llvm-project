@@ -239,8 +239,12 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
-
+    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+    return TLI->isLegalElementTypeForRVV(ElemType) ||
+           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
+            ST->hasVInstructionsBF16Minimal()) ||
+           (DataTypeVT.getVectorElementType() == MVT::f16 &&
+            ST->hasVInstructionsF16Minimal());
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -270,7 +274,12 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(ElemType);
+    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+    return TLI->isLegalElementTypeForRVV(ElemType) ||
+           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
+            ST->hasVInstructionsBF16Minimal()) ||
+           (DataTypeVT.getVectorElementType() == MVT::f16 &&
+            ST->hasVInstructionsF16Minimal());
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) {
@@ -294,6 +303,14 @@ public:
     EVT DataTypeVT = TLI->getValueType(DL, DataType);
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
+
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
+                                             DL);
+  }
+
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment);
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
@@ -412,6 +429,18 @@ public:
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+  /// Return true if the (vector) instruction I will be lowered to an
+  /// instruction with a scalar splat operand for the given Operand number.
+  bool canSplatOperand(Instruction *I, int Operand) const;
+  /// Return true if a vector instruction will lower to a target instruction
+  /// able to splat the given operand.
+  bool canSplatOperand(unsigned Opcode, int Operand) const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const;
 };
 
 } // end namespace llvm

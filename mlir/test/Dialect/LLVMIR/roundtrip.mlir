@@ -49,6 +49,16 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %mul_flag = llvm.mul %arg0, %arg0 overflow<nsw, nuw> : i32
   %shl_flag = llvm.shl %arg0, %arg0 overflow<nuw, nsw> : i32
 
+// Integer exact flag.
+// CHECK: {{.*}} = llvm.sdiv exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.udiv exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.ashr exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.lshr exact %[[I32]], %[[I32]] : i32
+  %sdiv_flag = llvm.sdiv exact %arg0, %arg0 : i32
+  %udiv_flag = llvm.udiv exact %arg0, %arg0 : i32
+  %ashr_flag = llvm.ashr exact %arg0, %arg0 : i32
+  %lshr_flag = llvm.lshr exact %arg0, %arg0 : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32
@@ -834,5 +844,32 @@ llvm.func @test_call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
   %1 = llvm.mlir.constant(16 : i32) : i32
   // CHECK: llvm.call_intrinsic "llvm.assume"(%{{.+}}) ["align"(%{{.+}}, %{{.+}} : !llvm.ptr, i32)] : (i1) -> ()
   llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_no_opbundle
+llvm.func @test_assume_intr_no_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  // CHECK: llvm.intr.assume %0 : i1
+  llvm.intr.assume %0 : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_empty_opbundle
+llvm.func @test_assume_intr_empty_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  // CHECK: llvm.intr.assume %0 : i1
+  llvm.intr.assume %0 [] : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_with_opbundles
+llvm.func @test_assume_intr_with_opbundles(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  %3 = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
+  llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
   llvm.return
 }

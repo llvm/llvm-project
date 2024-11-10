@@ -737,7 +737,7 @@ class DeclaratorDecl : public ValueDecl {
   // qualifier, to be used for the (uncommon) case of out-of-line declarations
   // and constrained function decls.
   struct ExtInfo : public QualifierInfo {
-    TypeSourceInfo *TInfo;
+    TypeSourceInfo *TInfo = nullptr;
     Expr *TrailingRequiresClause = nullptr;
   };
 
@@ -2297,13 +2297,6 @@ public:
   /// State that this templated function will be late parsed.
   void setLateTemplateParsed(bool ILT = true) {
     FunctionDeclBits.IsLateTemplateParsed = ILT;
-  }
-
-  bool isInstantiatedFromMemberTemplate() const {
-    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
-  }
-  void setInstantiatedFromMemberTemplate(bool Val = true) {
-    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
   }
 
   /// Whether this function is "trivial" in some specialized C++ senses.

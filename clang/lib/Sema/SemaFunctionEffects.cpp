@@ -971,6 +971,7 @@ private:
     PendingFunctionAnalysis &CurrentFunction;
     CallableInfo &CurrentCaller;
     ViolationSite VSite;
+    const Expr *TrailingRequiresClause = nullptr;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
@@ -984,6 +985,9 @@ private:
       // body: member and base destructors. Visit these first.
       if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
         followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
+
+      if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl))
+        TrailingRequiresClause = FD->getTrailingRequiresClause();
 
       // Do an AST traversal of the function/block body
       TraverseDecl(const_cast<Decl *>(CurrentCaller.CDecl));
@@ -1133,10 +1137,37 @@ private:
       return true;
     }
 
+    bool VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *Finally) {
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Finally->getAtFinallyLoc());
+      return true;
+    }
+
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 ViolationID::AccessesObjCMethodOrProperty,
                                 Msg->getBeginLoc());
+      return true;
+    }
+
+    bool VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *ARP) {
+      // Under the hood, @autorelease (potentially?) allocates memory and
+      // invokes ObjC methods. We don't currently have memory allocation as
+      // a "language construct" but we do have ObjC messaging, so diagnose that.
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                ARP->getBeginLoc());
+      return true;
+    }
+
+    bool VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Sync) {
+      // Under the hood, this calls objc_sync_enter and objc_sync_exit, wrapped
+      // in a @try/@finally block. Diagnose this generically as "ObjC
+      // messaging".
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                Sync->getBeginLoc());
       return true;
     }
 
@@ -1232,6 +1263,17 @@ private:
       return true;
     }
 
+    bool TraverseStmt(Stmt *Statement) {
+      // If this statement is a `requires` clause from the top-level function
+      // being traversed, ignore it, since it's not generating runtime code.
+      // We skip the traversal of lambdas (beyond their captures, see
+      // TraverseLambdaExpr below), so just caching this from our constructor
+      // should suffice.
+      if (Statement != TrailingRequiresClause)
+        return Base::TraverseStmt(Statement);
+      return true;
+    }
+
     bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
       ViolationSite PrevVS = VSite;
       if (Init->isAnyMemberInitializer())
@@ -1270,6 +1312,7 @@ private:
     }
 
     bool TraverseBlockExpr(BlockExpr * /*unused*/) {
+      // As with lambdas, don't traverse the block's body.
       // TODO: are the capture expressions (ctor call?) safe?
       return true;
     }
@@ -1513,6 +1556,7 @@ bool Sema::FunctionEffectDiff::shouldDiagnoseConversion(
       // matching is better.
       return true;
     }
+    break;
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
@@ -1536,6 +1580,7 @@ bool Sema::FunctionEffectDiff::shouldDiagnoseRedeclaration(
       // All these forms of mismatches are diagnosed.
       return true;
     }
+    break;
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
@@ -1565,7 +1610,7 @@ Sema::FunctionEffectDiff::shouldDiagnoseMethodOverride(
     case Kind::ConditionMismatch:
       return OverrideResult::Warn;
     }
-
+    break;
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return OverrideResult::NoAction;

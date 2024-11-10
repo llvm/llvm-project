@@ -436,10 +436,10 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
 void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                     Value *Ptr, uint64_t Size) {
-  auto SetTagZeroFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag_zero);
-  auto StgpFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_stgp);
+  auto SetTagZeroFunc = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::aarch64_settag_zero);
+  auto StgpFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                    Intrinsic::aarch64_stgp);
 
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
   bool LittleEndian =
@@ -481,10 +481,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *IRG_SP =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_irg_sp);
   Instruction *Base =
-      IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
+      IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
+                          {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   auto TargetTriple = Triple(M.getTargetTriple());
   // This ABI will make it into Android API level 35.
@@ -563,8 +562,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     LI = DeleteLI.get();
   }
 
-  SetTagFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
+  SetTagFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                 Intrinsic::aarch64_settag);
 
   Instruction *Base =
       insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
@@ -580,11 +579,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Function *TagP = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+        IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
+                            {Constant::getNullValue(Info.AI->getType()), Base,
+                             ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
