@@ -396,8 +396,8 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
       continue;
     }
 
-    if (isa<DebugValueUser *>(Owner)) {
-      cast<DebugValueUser *>(Owner)->handleChangedValue(Pair.first, MD);
+    if (auto *DVU = dyn_cast<DebugValueUser *>(Owner)) {
+      DVU->handleChangedValue(Pair.first, MD);
       continue;
     }
 

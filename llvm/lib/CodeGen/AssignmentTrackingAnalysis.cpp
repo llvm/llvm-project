@@ -1051,8 +1051,8 @@ public:
       OS << ", s=";
       if (Source.isNull())
         OS << "null";
-      else if (isa<DbgAssignIntrinsic *>(Source))
-        OS << cast<DbgAssignIntrinsic *>(Source);
+      else if (const auto *DAI = dyn_cast<DbgAssignIntrinsic *>(Source))
+        OS << DAI;
       else
         OS << cast<DbgVariableRecord *>(Source);
       OS << ")";
