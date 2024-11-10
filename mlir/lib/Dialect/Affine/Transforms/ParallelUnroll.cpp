@@ -25,6 +25,8 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -73,7 +75,6 @@ struct ParallelUnroll
 private:
   // map from original memory definition to newly allocated banks
   DenseMap<Value, SmallVector<Value>> memoryToBanks;
-  SmallVector<Operation *, 8> opsToErase;
 };
 } // namespace
 
@@ -163,133 +164,191 @@ Value computeIntraBankingOffset(OpBuilder &builder, Location loc, Value address,
   return offset;
 }
 
-/// Unrolls a 'affine.parallel' op. Returns success if the loop was unrolled,
-/// failure otherwise. The default unroll factor is 4.
-LogicalResult ParallelUnroll::parallelUnrollByFactor(AffineParallelOp parOp,
-                                                     uint64_t unrollFactor) {
-  // 1. identify memrefs in the parallel region,
-  // 2. create memory banks for each of those memories
-  //   2.1 maybe result of alloc/getglobal, etc
-  //   2.2 maybe block arguments
-  //
+struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
+  BankAffineLoadPattern(MLIRContext *context, uint64_t unrollFactor,
+                        DenseMap<Value, SmallVector<Value>> &memoryToBanks)
+      : OpRewritePattern<AffineLoadOp>(context), unrollFactor(unrollFactor),
+        memoryToBanks(memoryToBanks) {}
 
-  DenseSet<Value> memrefsInPar = collectMemRefs(parOp);
-  Location loc = parOp.getLoc();
-  OpBuilder builder(parOp);
+  LogicalResult matchAndRewrite(AffineLoadOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    llvm::errs() << "load pattern matchAndRewrite\n";
+    Location loc = loadOp.getLoc();
+    auto banks = memoryToBanks[loadOp.getMemref()];
+    Value loadIndex = loadOp.getIndices().front();
+    rewriter.setInsertionPointToStart(loadOp->getBlock());
+    Value bankingFactorValue =
+        rewriter.create<mlir::arith::ConstantIndexOp>(loc, unrollFactor);
+    Value bankIndex = rewriter.create<mlir::arith::RemUIOp>(loc, loadIndex,
+                                                            bankingFactorValue);
+    Value offset =
+        computeIntraBankingOffset(rewriter, loc, loadIndex, unrollFactor);
+
+    SmallVector<Type> resultTypes = {loadOp.getResult().getType()};
+
+    SmallVector<int64_t, 4> caseValues;
+    for (unsigned i = 0; i < unrollFactor; ++i)
+      caseValues.push_back(i);
+
+    rewriter.setInsertionPoint(loadOp);
+    scf::IndexSwitchOp switchOp = rewriter.create<scf::IndexSwitchOp>(
+        loc, resultTypes, bankIndex, caseValues,
+        /*numRegions=*/unrollFactor);
+
+    for (unsigned i = 0; i < unrollFactor; ++i) {
+      Region &caseRegion = switchOp.getCaseRegions()[i];
+      rewriter.setInsertionPointToStart(&caseRegion.emplaceBlock());
+      Value bankedLoad = rewriter.create<AffineLoadOp>(loc, banks[i], offset);
+      rewriter.create<scf::YieldOp>(loc, bankedLoad);
+    }
+
+    Region &defaultRegion = switchOp.getDefaultRegion();
+    assert(defaultRegion.empty() && "Default region should be empty");
+    rewriter.setInsertionPointToStart(&defaultRegion.emplaceBlock());
+
+    TypedAttr zeroAttr =
+        cast<TypedAttr>(rewriter.getZeroAttr(loadOp.getType()));
+    auto defaultValue = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
+    rewriter.create<scf::YieldOp>(loc, defaultValue.getResult());
+
+    loadOp.getResult().replaceAllUsesWith(switchOp.getResult(0));
+
+    rewriter.eraseOp(loadOp);
+    return success();
+  }
+
+private:
+  uint64_t unrollFactor;
+  DenseMap<Value, SmallVector<Value>> &memoryToBanks;
+};
+
+struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
+  BankAffineStorePattern(MLIRContext *context, uint64_t unrollFactor,
+                         DenseMap<Value, SmallVector<Value>> &memoryToBanks)
+      : OpRewritePattern<AffineStoreOp>(context), unrollFactor(unrollFactor),
+        memoryToBanks(memoryToBanks) {}
+
+  LogicalResult matchAndRewrite(AffineStoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    llvm::errs() << "store pattern matchAndRewrite\n";
+    Location loc = storeOp.getLoc();
+    auto banks = memoryToBanks[storeOp.getMemref()];
+    Value loadIndex = storeOp.getIndices().front();
+    rewriter.setInsertionPointToStart(storeOp->getBlock());
+    Value bankingFactorValue =
+        rewriter.create<mlir::arith::ConstantIndexOp>(loc, unrollFactor);
+    Value bankIndex = rewriter.create<mlir::arith::RemUIOp>(loc, loadIndex,
+                                                            bankingFactorValue);
+    Value offset =
+        computeIntraBankingOffset(rewriter, loc, loadIndex, unrollFactor);
+
+    SmallVector<Type> resultTypes = {};
+
+    SmallVector<int64_t, 4> caseValues;
+    for (unsigned i = 0; i < unrollFactor; ++i)
+      caseValues.push_back(i);
+
+    rewriter.setInsertionPoint(storeOp);
+    scf::IndexSwitchOp switchOp = rewriter.create<scf::IndexSwitchOp>(
+        loc, resultTypes, bankIndex, caseValues,
+        /*numRegions=*/unrollFactor);
+
+    for (unsigned i = 0; i < unrollFactor; ++i) {
+      Region &caseRegion = switchOp.getCaseRegions()[i];
+      rewriter.setInsertionPointToStart(&caseRegion.emplaceBlock());
+      rewriter.create<AffineStoreOp>(loc, storeOp.getValueToStore(), banks[i],
+                                     offset);
+      rewriter.create<scf::YieldOp>(loc);
+    }
+
+    Region &defaultRegion = switchOp.getDefaultRegion();
+    assert(defaultRegion.empty() && "Default region should be empty");
+    rewriter.setInsertionPointToStart(&defaultRegion.emplaceBlock());
+
+    rewriter.create<scf::YieldOp>(loc);
+
+    rewriter.eraseOp(storeOp);
+    return success();
+  }
+
+private:
+  uint64_t unrollFactor;
+  DenseMap<Value, SmallVector<Value>> &memoryToBanks;
+};
+
+struct BankReturnPattern : public OpRewritePattern<func::ReturnOp> {
+  BankReturnPattern(MLIRContext *context,
+                    DenseMap<Value, SmallVector<Value>> &memoryToBanks)
+      : OpRewritePattern<func::ReturnOp>(context),
+        memoryToBanks(memoryToBanks) {}
+
+  LogicalResult matchAndRewrite(func::ReturnOp returnOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = returnOp.getLoc();
+    SmallVector<Value, 4> newReturnOperands;
+    bool allOrigMemsUsedByReturn = true;
+    for (auto operand : returnOp.getOperands()) {
+      if (!memoryToBanks.contains(operand)) {
+        newReturnOperands.push_back(operand);
+        continue;
+      }
+      if (operand.hasOneUse())
+        allOrigMemsUsedByReturn = false;
+      auto banks = memoryToBanks[operand];
+      newReturnOperands.append(banks.begin(), banks.end());
+    }
+    func::FuncOp funcOp = returnOp.getParentOp();
+    rewriter.setInsertionPointToEnd(&funcOp.getBlocks().front());
+    auto newReturnOp =
+        rewriter.create<func::ReturnOp>(loc, ValueRange(newReturnOperands));
+    TypeRange newReturnType = TypeRange(newReturnOperands);
+    FunctionType newFuncType =
+        FunctionType::get(funcOp.getContext(),
+                          funcOp.getFunctionType().getInputs(), newReturnType);
+    funcOp.setType(newFuncType);
+
+    if (allOrigMemsUsedByReturn) {
+      rewriter.replaceOp(returnOp, newReturnOp);
+    }
+    return success();
+  }
+
+private:
+  DenseMap<Value, SmallVector<Value>> &memoryToBanks;
+};
+
+void ParallelUnroll::runOnOperation() {
+  if (getOperation().isExternal()) {
+    return;
+  }
+
+  getOperation().walk([&](AffineParallelOp parOp) {
+    DenseSet<Value> memrefsInPar = collectMemRefs(parOp);
+
+    for (auto memrefVal : memrefsInPar) {
+      SmallVector<Value> banks = createBanks(memrefVal, unrollFactor);
+      memoryToBanks[memrefVal] = banks;
+    }
+  });
+
+  auto *ctx = &getContext();
+
+  RewritePatternSet patterns(ctx);
+
+  patterns.add<BankAffineLoadPattern>(ctx, unrollFactor, memoryToBanks);
+  patterns.add<BankAffineStorePattern>(ctx, unrollFactor, memoryToBanks);
+  patterns.add<BankReturnPattern>(ctx, memoryToBanks);
+
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingOps;
+
+  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
+                                          config))) {
+    signalPassFailure();
+  }
 
   DenseSet<Block *> blocksToModify;
-  for (auto memrefVal : memrefsInPar) {
-    SmallVector<Value> banks = createBanks(memrefVal, unrollFactor);
-    memoryToBanks[memrefVal] = banks;
-
-    for (auto *user : memrefVal.getUsers()) {
-      // if user is within parallel region
-      TypeSwitch<Operation *>(user)
-          .Case<affine::AffineLoadOp>([&](affine::AffineLoadOp loadOp) {
-            Value loadIndex = loadOp.getIndices().front();
-            builder.setInsertionPointToStart(parOp.getBody());
-            Value bankingFactorValue =
-                builder.create<mlir::arith::ConstantIndexOp>(loc, unrollFactor);
-            Value bankIndex = builder.create<mlir::arith::RemUIOp>(
-                loc, loadIndex, bankingFactorValue);
-            Value offset = computeIntraBankingOffset(builder, loc, loadIndex,
-                                                     unrollFactor);
-
-            SmallVector<Type> resultTypes = {loadOp.getResult().getType()};
-
-            SmallVector<int64_t, 4> caseValues;
-            for (unsigned i = 0; i < unrollFactor; ++i)
-              caseValues.push_back(i);
-
-            builder.setInsertionPoint(user);
-            scf::IndexSwitchOp switchOp = builder.create<scf::IndexSwitchOp>(
-                loc, resultTypes, bankIndex, caseValues,
-                /*numRegions=*/unrollFactor);
-
-            for (unsigned i = 0; i < unrollFactor; ++i) {
-              Region &caseRegion = switchOp.getCaseRegions()[i];
-              builder.setInsertionPointToStart(&caseRegion.emplaceBlock());
-              Value bankedLoad =
-                  builder.create<AffineLoadOp>(loc, banks[i], offset);
-              builder.create<scf::YieldOp>(loc, bankedLoad);
-            }
-
-            Region &defaultRegion = switchOp.getDefaultRegion();
-            assert(defaultRegion.empty() && "Default region should be empty");
-            builder.setInsertionPointToStart(&defaultRegion.emplaceBlock());
-
-            TypedAttr zeroAttr =
-                cast<TypedAttr>(builder.getZeroAttr(loadOp.getType()));
-            auto defaultValue =
-                builder.create<arith::ConstantOp>(loc, zeroAttr);
-            builder.create<scf::YieldOp>(loc, defaultValue.getResult());
-
-            loadOp.getResult().replaceAllUsesWith(switchOp.getResult(0));
-
-            user->erase();
-          })
-          .Case<affine::AffineStoreOp>([&](affine::AffineStoreOp storeOp) {
-            Value loadIndex = storeOp.getIndices().front();
-            builder.setInsertionPointToStart(parOp.getBody());
-            Value bankingFactorValue =
-                builder.create<mlir::arith::ConstantIndexOp>(loc, unrollFactor);
-            Value bankIndex = builder.create<mlir::arith::RemUIOp>(
-                loc, loadIndex, bankingFactorValue);
-            Value offset = computeIntraBankingOffset(builder, loc, loadIndex,
-                                                     unrollFactor);
-
-            SmallVector<Type> resultTypes = {};
-
-            SmallVector<int64_t, 4> caseValues;
-            for (unsigned i = 0; i < unrollFactor; ++i)
-              caseValues.push_back(i);
-
-            builder.setInsertionPoint(user);
-            scf::IndexSwitchOp switchOp = builder.create<scf::IndexSwitchOp>(
-                loc, resultTypes, bankIndex, caseValues,
-                /*numRegions=*/unrollFactor);
-
-            for (unsigned i = 0; i < unrollFactor; ++i) {
-              Region &caseRegion = switchOp.getCaseRegions()[i];
-              builder.setInsertionPointToStart(&caseRegion.emplaceBlock());
-              builder.create<AffineStoreOp>(loc, storeOp.getValueToStore(),
-                                            banks[i], offset);
-              builder.create<scf::YieldOp>(loc);
-            }
-
-            Region &defaultRegion = switchOp.getDefaultRegion();
-            assert(defaultRegion.empty() && "Default region should be empty");
-            builder.setInsertionPointToStart(&defaultRegion.emplaceBlock());
-
-            builder.create<scf::YieldOp>(loc);
-
-            user->erase();
-          })
-          .Default([](Operation *op) {
-            op->emitWarning("Unhandled operation type");
-            op->dump();
-          });
-    }
-
-    for (auto *user : memrefVal.getUsers()) {
-      if (auto returnOp = dyn_cast<func::ReturnOp>(user)) {
-        OpBuilder builder(returnOp);
-        func::FuncOp funcOp = returnOp.getParentOp();
-        builder.setInsertionPointToEnd(&funcOp.getBlocks().front());
-        auto newReturnOp =
-            builder.create<func::ReturnOp>(loc, ValueRange(banks));
-        TypeRange newReturnType = TypeRange(banks);
-        FunctionType newFuncType = FunctionType::get(
-            funcOp.getContext(), funcOp.getFunctionType().getInputs(),
-            newReturnType);
-        funcOp.setType(newFuncType);
-        returnOp->replaceAllUsesWith(newReturnOp);
-        opsToErase.push_back(returnOp);
-      }
-    }
-
-    // TODO: if use is empty, we should delete the original block args; and
-    // reset function type
+  for (auto &[memrefVal, banks] : memoryToBanks) {
     if (memrefVal.use_empty()) {
       if (auto blockArg = dyn_cast<BlockArgument>(memrefVal)) {
         blockArg.getOwner()->eraseArgument(blockArg.getArgNumber());
@@ -314,32 +373,7 @@ LogicalResult ParallelUnroll::parallelUnrollByFactor(AffineParallelOp parOp,
     funcOp.setType(newFuncType);
   }
 
-  /// - `isDefinedOutsideRegion` returns true if the given value is invariant
-  /// with
-  ///   respect to the given region. A common implementation might be:
-  ///   `value.getParentRegion()->isProperAncestor(region)`.
-
-  if (unrollFactor == 1) {
-    // TODO: how to address "expected pattern to replace the root operation" if
-    // just simply return success
-    return success();
-  }
-
-  return success();
-}
-
-void ParallelUnroll::runOnOperation() {
-  if (getOperation().isExternal()) {
-    return;
-  }
-
-  getOperation().walk([&](AffineParallelOp parOp) {
-    (void)parallelUnrollByFactor(parOp, unrollFactor);
-    return WalkResult::advance();
-  });
-  for (auto *op : opsToErase) {
-    op->erase();
-  }
+  getOperation().dump();
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>>
