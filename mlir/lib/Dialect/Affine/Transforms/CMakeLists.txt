@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   LoopTiling.cpp
   LoopUnroll.cpp
   LoopUnrollAndJam.cpp
+  ParallelUnroll.cpp
   PipelineDataTransfer.cpp
   ReifyValueBounds.cpp
   SuperVectorize.cpp
@@ -39,5 +40,6 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
   MLIRVectorUtils
+  MLIRSCFDialect
   )
 

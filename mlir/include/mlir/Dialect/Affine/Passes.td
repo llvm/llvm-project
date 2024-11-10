@@ -381,6 +381,15 @@ def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
   ];
 }
 
+def AffineParallelUnroll : Pass<"affine-parallel-unroll", "func::FuncOp"> {
+  let summary = "Unroll affine parallel loops";
+  let constructor = "mlir::affine::createParallelUnrollPass()";
+  let options = [
+    Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"1",
+           "Use this unroll factor for all loops being unrolled">
+  ];
+}
+
 def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let summary = "Apply normalization transformations to affine loop-like ops";
   let constructor = "mlir::affine::createAffineLoopNormalizePass()";

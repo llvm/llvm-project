@@ -25,6 +25,7 @@ class FuncOp;
 
 namespace affine {
 class AffineForOp;
+class AffineParallelOp;
 
 /// Fusion mode to attempt. The default mode `Greedy` does both
 /// producer-consumer and sibling fusion.
@@ -107,6 +108,10 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopUnrollPass(
 /// line if provided.
 std::unique_ptr<OperationPass<func::FuncOp>>
 createLoopUnrollAndJamPass(int unrollJamFactor = -1);
+
+std::unique_ptr<OperationPass<func::FuncOp>> createParallelUnrollPass(
+    int unrollFactor = -1,
+    const std::function<unsigned(AffineParallelOp)> &getUnrollFactor = nullptr);
 
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
