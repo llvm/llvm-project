@@ -722,20 +722,14 @@ define i8 @bitcast_scalar_index_variable(i32 %x, i64 %y) {
   ret i8 %r
 }
 
-; extra use is ok if we don't need a shift
+; extra use is not ok, even if we don't need a shift
 
 define i8 @bitcast_scalar_index0_use(i64 %x) {
-; ANYLE-LABEL: @bitcast_scalar_index0_use(
-; ANYLE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
-; ANYLE-NEXT:    call void @use(<8 x i8> [[V]])
-; ANYLE-NEXT:    [[R:%.*]] = trunc i64 [[X]] to i8
-; ANYLE-NEXT:    ret i8 [[R]]
-;
-; ANYBE-LABEL: @bitcast_scalar_index0_use(
-; ANYBE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
-; ANYBE-NEXT:    call void @use(<8 x i8> [[V]])
-; ANYBE-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
-; ANYBE-NEXT:    ret i8 [[R]]
+; ANY-LABEL: @bitcast_scalar_index0_use(
+; ANY-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
+; ANY-NEXT:    call void @use(<8 x i8> [[V]])
+; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
+; ANY-NEXT:    ret i8 [[R]]
 ;
 
   %v = bitcast i64 %x to <8 x i8>

@@ -205,9 +205,9 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
     unsigned ShiftAmountC = ExtIndexC * DestWidth;
-    if (!ShiftAmountC ||
-        (isDesirableIntType(X->getType()->getPrimitiveSizeInBits()) &&
-        Ext.getVectorOperand()->hasOneUse())) {
+    if ((!ShiftAmountC ||
+         isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) &&
+        Ext.getVectorOperand()->hasOneUse()) {
       if (ShiftAmountC)
         X = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
