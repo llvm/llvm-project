@@ -182,13 +182,16 @@ Here are the steps you can follow to do so:
 Testing a Builder Config Locally
 ================================
 
-It's possible to test a builder running against a local version of LLVM's
-buildmaster configuration. This can be helpful to allow quickly identifying
-and iterating over fixes to any issues in either the changes that introduce
-the new builder, or the machine configuration for your worker (preinstalled
-packages etc). A buildmaster launched in this "local testing" mode will bind
-only to local interfaces, use SQLite as the database, use a fixed password for
-workers, and disable things like GitHub authentication.
+It is possible to test a builder running against a local version of LLVM's
+buildmaster configuration. This allows you to test changes to builder,
+worker, and buildmaster configuration. A buildmaster launched in this "local
+testing" mode will:
+* Bind only to local interfaces.
+* Use SQLite as the database.
+* Use a single fixed password for workers.
+* Disable extras like GitHub authentication.
+
+In order to use this "local testing" mode:
 
 * Within a checkout of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_,
   create and activate a Python `venv
@@ -202,7 +205,8 @@ workers, and disable things like GitHub authentication.
        pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
 
 * Initialise the necessary buildmaster files, link to the configuration in
-  ``llvm-zorg`` and run a litmus check (run in the directory of your choice):
+  ``llvm-zorg`` and ask ``buildbot`` to check the configuration. This step can
+  be run from any directory.
 
     .. code-block:: bash
 
@@ -213,22 +217,19 @@ workers, and disable things like GitHub authentication.
        ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
        BUILDMASTER_TEST=1 buildbot checkconfig
 
-* Start the buildmaster using the command below. After a few seconds to
-  startup, you should be able to open the web UI at ``http://localhost:8011``.
-  If there are any errors or this isn't working, be sure to check
-  ``twistd.log`` for more information.
-
+* Start the buildmaster.
     .. code-block:: bash
 
        BUILDMASTER_TEST=1 buildbot start --nodaemon .
 
-* With the above in place, you can now create and start a buildbot worker.
-  Ensure you pick the correct name for the worker attached to the build
-  configuration you want to test in
-  ``buildbot/osuosl/master/config/builders.py``. After doing the below, either
-  wait until the poller sets off a build, or you can force a build to start in
-  the web UI (which is also the best place to review the build results).
+* After waiting a few seconds for startup to complete, you should be able to
+  open the web UI at ``http://localhost:8011``.  If there are any errors or
+  this isn't working, check ``twistd.log`` (within the current directory) for
+  more information.
 
+* You can now create and start a buildbot worker. Ensure you pick the correct
+  name for the worker associated with the build configuration you want to test
+  in ``buildbot/osuosl/master/config/builders.py``.
     .. code-block:: bash
 
        buildbot-worker create-worker <buildbot-worker-root-directory> \
@@ -237,15 +238,24 @@ workers, and disable things like GitHub authentication.
                        test
        buildbot-worker start --nodaemon <buildbot-worker-root-directory>
 
+* Either wait until the poller sets off a build, or alternatively force a
+  build to start in the web UI (which is also the best place to review the
+  build results).
+
 This local testing configuration defaults to binding only to the loopback
-interface for security reasons. If you want to run the test worker on a
-different machine, or to run the buildmaster on a remote server, ssh port
-forwarding can be used to make connection possible. For instance, if running
-the buildmaster on a remote server the following command will suffice to make
-the web UI accessible via ``http://localhost:8011`` and make it possible for a
-local worker to connect to the remote buildmaster by connecting to
-``localhost:9900``: ``ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990
-username@server_address``.
+interface for security reasons.
+
+If you want to run the test worker on a different machine, or to run the
+buildmaster on a remote server, ssh port forwarding can be used to make
+connection possible. For instance, if running the buildmaster on a remote
+server the following command will suffice to make the web UI accessible via
+``http://localhost:8011`` and make it possible for a local worker to connect
+to the remote buildmaster by connecting to ``localhost:9900``:
+
+    .. code-block:: bash
+
+       ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@server_address
+
 
 Best Practices for Configuring a Fast Builder
 =============================================
