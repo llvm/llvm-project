@@ -1051,10 +1051,10 @@ public:
       OS << ", s=";
       if (Source.isNull())
         OS << "null";
-      else if (isa<DbgAssignIntrinsic *>(Source))
-        OS << Source.get<DbgAssignIntrinsic *>();
+      else if (const auto *DAI = dyn_cast<DbgAssignIntrinsic *>(Source))
+        OS << DAI;
       else
-        OS << Source.get<DbgVariableRecord *>();
+        OS << cast<DbgVariableRecord *>(Source);
       OS << ")";
     }
 
