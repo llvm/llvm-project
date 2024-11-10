@@ -1045,6 +1045,7 @@ void request_breakpointLocations(const llvm::json::Object &request) {
         compile_units.GetContextAtIndex(c_idx).GetCompileUnit();
     if (!compile_units.IsValid())
       continue;
+    lldb::SBFileSpec primary_file_spec = compile_unit.GetFileSpec();
 
     // Go through the line table and find all matching lines / columns
     for (uint32_t l_idx = 0, l_limit = compile_unit.GetNumLineEntries();
@@ -1062,6 +1063,16 @@ void request_breakpointLocations(const llvm::json::Object &request) {
         continue;
       if (line == end_line && column > end_column)
         continue;
+
+      // Make sure we are in the right file.
+      // We might have a match on line & column range and still
+      // be in the wrong file, e.g. for included files.
+      if (std::string_view(line_entry.GetFileSpec().GetFilename()) !=
+              primary_file_spec.GetFilename() ||
+          std::string_view(line_entry.GetFileSpec().GetDirectory()) !=
+              primary_file_spec.GetDirectory())
+        continue;
+
       locations.emplace_back(line, column);
     }
   }
