@@ -31,6 +31,11 @@ namespace memref {
 /// contiguous chunk of memory.
 bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 
+/// Return true, if the memref type has a rank and contains at least
+/// one dimension of size 0, indicating it is empty. UnrankedMemRefType is
+/// considered non-empty by this function.
+bool isEmpty(BaseMemRefType type);
+
 /// For a `memref` with `offset`, `sizes` and `strides`, returns the
 /// offset, size, and potentially the size padded at the front to use for the
 /// linearized `memref`.

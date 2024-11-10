@@ -31,6 +31,7 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -997,34 +998,49 @@ static Value bitAndAddrspaceCast(Location loc,
 LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::MemcpyOp memcpyOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto memRefType = cast<MemRefType>(memcpyOp.getSrc().getType());
+  auto srcMemRefType = cast<MemRefType>(memcpyOp.getSrc().getType());
+  auto dstMemRefType = cast<MemRefType>(memcpyOp.getDst().getType());
 
   if (failed(areAllLLVMTypes(memcpyOp, adaptor.getOperands(), rewriter)) ||
-      !isConvertibleAndHasIdentityMaps(memRefType) ||
       failed(isAsyncWithOneDependency(rewriter, memcpyOp)))
     return failure();
 
+  auto isContiguousMemrefType = [&](MemRefType type) {
+    // We can use memcpy for memrefs if they have an identity layout or are
+    // contiguous with an arbitrary offset.
+    return !memref::isEmpty(type) &&
+           memref::isStaticShapeAndContiguousRowMajor(type);
+  };
+
+  if (!(isContiguousMemrefType(srcMemRefType) &&
+        isContiguousMemrefType(dstMemRefType)))
+    return rewriter.notifyMatchFailure(
+        memcpyOp, "Expected both operands to be non-empty memrefs with a "
+                  "static, contiguous row-major shape.");
+
   auto loc = memcpyOp.getLoc();
 
-  MemRefDescriptor srcDesc(adaptor.getSrc());
-  Value numElements = getNumElements(rewriter, loc, memRefType, srcDesc);
+  auto getBufferPtr = [&](Value convertedOperand,
+                          MemRefType originalOperandType) {
+    MemRefDescriptor desc(convertedOperand);
+    return desc.bufferPtr(rewriter, loc, *getTypeConverter(),
+                          originalOperandType);
+  };
 
-  Type elementPtrType = getElementPtrType(memRefType);
-  Value nullPtr = rewriter.create<LLVM::ZeroOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(
-      loc, elementPtrType,
-      typeConverter->convertType(memRefType.getElementType()), nullPtr,
-      numElements);
-  auto sizeBytes =
-      rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
+  auto srcBufferPtr = getBufferPtr(adaptor.getSrc(), srcMemRefType);
+  auto dstBufferPtr = getBufferPtr(adaptor.getDst(), dstMemRefType);
 
-  auto src = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
-                                 srcDesc.alignedPtr(rewriter, loc),
+  Value numElements = ConvertToLLVMPattern::getNumElements(
+      loc, srcMemRefType, /* dynamicSizes */ {}, rewriter);
+  // Get element size.
+  Value sizeInBytes =
+      getSizeInBytes(loc, srcMemRefType.getElementType(), rewriter);
+  Value sizeBytes = rewriter.create<LLVM::MulOp>(loc, numElements, sizeInBytes);
+
+  auto src = bitAndAddrspaceCast(loc, rewriter, llvmPointerType, srcBufferPtr,
                                  *getTypeConverter());
-  auto dst = bitAndAddrspaceCast(
-      loc, rewriter, llvmPointerType,
-      MemRefDescriptor(adaptor.getDst()).alignedPtr(rewriter, loc),
-      *getTypeConverter());
+  auto dst = bitAndAddrspaceCast(loc, rewriter, llvmPointerType, dstBufferPtr,
+                                 *getTypeConverter());
 
   auto stream = adaptor.getAsyncDependencies().front();
   memcpyCallBuilder.create(loc, rewriter, {dst, src, sizeBytes, stream});

@@ -869,7 +869,7 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
       // special case handled by memrefCopy.
       return memrefType &&
              (memrefType.getLayout().isIdentity() ||
-              (memrefType.hasStaticShape() && memrefType.getNumElements() > 0 &&
+              (!memref::isEmpty(memrefType) &&
                memref::isStaticShapeAndContiguousRowMajor(memrefType)));
     };
 
