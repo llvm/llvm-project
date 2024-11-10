@@ -82,7 +82,7 @@
 
 # RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe 2>&1 | FileCheck -DFILE=%t2.o --check-prefix WARN %s
 
-# WARN: warning: [[FILE]]: -z pac-plt: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_PAC property
+# WARN: warning: [[FILE]]: -z pac-plt: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_PAC property and no valid PAuth core info present for this link job
 
 # RUN: llvm-readelf -n %tpacplt.exe | FileCheck --check-prefix=PACPROP %s
 # RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN2 %s
