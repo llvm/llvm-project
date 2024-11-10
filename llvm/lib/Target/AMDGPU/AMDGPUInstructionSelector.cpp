@@ -81,7 +81,7 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
 
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
   const TargetRegisterClass *RC =
-      RegClassOrBank.dyn_cast<const TargetRegisterClass*>();
+      dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
   if (RC) {
     const LLT Ty = MRI.getType(Reg);
     if (!Ty.isValid() || Ty.getSizeInBits() != 1)
@@ -91,7 +91,7 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
            RC->hasSuperClassEq(TRI.getBoolRC());
   }
 
-  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  const RegisterBank *RB = cast<const RegisterBank *>(RegClassOrBank);
   return RB->getID() == AMDGPU::VCCRegBankID;
 }
 
@@ -233,15 +233,15 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const RegClassOrRegBank &RegClassOrBank =
     MRI->getRegClassOrRegBank(DefReg);
 
-  const TargetRegisterClass *DefRC
-    = RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+  const TargetRegisterClass *DefRC =
+      dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
   if (!DefRC) {
     if (!DefTy.isValid()) {
       LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
       return false;
     }
 
-    const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+    const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
     DefRC = TRI.getRegClassForTypeOnBank(DefTy, RB);
     if (!DefRC) {
       LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
@@ -2395,11 +2395,11 @@ const RegisterBank *AMDGPUInstructionSelector::getArtifactRegBank(
   Register Reg, const MachineRegisterInfo &MRI,
   const TargetRegisterInfo &TRI) const {
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
+  if (auto *RB = dyn_cast<const RegisterBank *>(RegClassOrBank))
     return RB;
 
   // Ignore the type, since we don't use vcc in artifacts.
-  if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
+  if (auto *RC = dyn_cast<const TargetRegisterClass *>(RegClassOrBank))
     return &RBI.getRegBankFromRegClass(*RC, LLT());
   return nullptr;
 }

@@ -598,14 +598,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
           MRI->getRegClassOrRegBank(DefReg);
 
       const TargetRegisterClass *DefRC =
-          RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+          dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
       if (!DefRC) {
         if (!DefTy.isValid()) {
           LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
           return false;
         }
 
-        const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+        const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
         DefRC = getRegClassForTypeOnBank(DefTy, RB);
         if (!DefRC) {
           LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
