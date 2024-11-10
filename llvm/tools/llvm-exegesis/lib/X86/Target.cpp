@@ -537,6 +537,8 @@ struct ConstantInliner {
   std::vector<MCInst> loadImplicitRegAndFinalize(unsigned Opcode,
                                                  unsigned Value);
 
+  std::vector<MCInst> loadDirectionFlagAndFinalize();
+
 private:
   ConstantInliner &add(const MCInst &Inst) {
     Instructions.push_back(Inst);
@@ -609,6 +611,15 @@ ConstantInliner::loadImplicitRegAndFinalize(unsigned Opcode, unsigned Value) {
           .addImm(0)        // Disp
           .addReg(0));      // Segment
   add(releaseStackSpace(4));
+  return std::move(Instructions);
+}
+
+std::vector<MCInst> ConstantInliner::loadDirectionFlagAndFinalize() {
+  if (Constant_.isZero())
+    add(MCInstBuilder(X86::CLD));
+  else if (Constant_.isOne())
+    add(MCInstBuilder(X86::STD));
+
   return std::move(Instructions);
 }
 
@@ -1089,6 +1100,8 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
         0x1f80);
   if (Reg == X86::FPCW)
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
+  if (Reg == X86::DF)
+    return CI.loadDirectionFlagAndFinalize();
   return {}; // Not yet implemented.
 }
 
