@@ -122,3 +122,12 @@ define <4 x i16> @test_undef(<8 x i16> %tmp1, <8 x i16> %tmp2) {
   %tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <4 x i32> <i32 undef, i32 8, i32 5, i32 9>
   ret <4 x i16> %tmp3
 }
+
+define <2 x i64> @test_v2s64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: test_v2s64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
+; CHECK-NEXT:    ret
+  %s = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 3, i32 0>
+  ret <2 x i64> %s
+}
