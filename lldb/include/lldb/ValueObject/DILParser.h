@@ -23,9 +23,9 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
-#include "lldb/Core/DILAST.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/DILAST.h"
 
 namespace lldb_private {
 

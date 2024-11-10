@@ -8,8 +8,6 @@
 
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/DILEval.h"
-#include "lldb/Core/DILParser.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
@@ -32,6 +30,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/DILEval.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -526,7 +526,7 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
   DILParser parser(source, shared_from_this(), use_dynamic, !no_synth_child);
   ParseResult tree = parser.Run(parse_error);
   if (parse_error.Fail()) {
-    error = parse_error;
+    error = std::move(parse_error);
     return ValueObjectSP();
   }
 
@@ -536,7 +536,7 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
 
   ret_val = interpreter.DILEval(tree.get(), target, eval_error);
   if (eval_error.Fail()) {
-    error = eval_error;
+    error = std::move(eval_error);
     return ValueObjectSP();
   }
 

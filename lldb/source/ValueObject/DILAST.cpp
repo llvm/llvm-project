@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DILAST.h"
 #include "lldb/API/SBType.h"
-#include "lldb/Core/ValueObjectRegister.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <vector>
@@ -28,7 +28,7 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
   Status error;
 
   if (!in_valobj_sp) {
-    error.SetErrorString("invalid value object");
+    error= Status("invalid value object");
     return in_valobj_sp;
   }
 
@@ -49,7 +49,7 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
     // We don't allow people to play around with ValueObject if the process
     // is running. If you want to look at values, pause the process, then
     // look.
-    error.SetErrorString("process must be stopped.");
+    error = Status("process must be stopped.");
     return lldb::ValueObjectSP();
   }
 
@@ -66,7 +66,7 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
   }
 
   if (!value_sp)
-    error.SetErrorString("invalid value object");
+    error= Status("invalid value object");
 
   return value_sp;
 }

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DILEval.h"
+#include "lldb/ValueObject/DILEval.h"
 
 #include <memory>
 
 #include "clang/Basic/TokenKinds.h"
-#include "lldb/Core/DILAST.h"
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -314,8 +314,7 @@ void SetUbStatus(Status& error, ErrorCode code) {
       err_str ="Error: Unknown undefined behavior error.";
       break;
   }
-  error.SetError((lldb::ValueType)code, lldb::ErrorType::eErrorTypeGeneric);
-  error.SetErrorString(err_str);
+  error = Status(err_str.str());
 }
 
 DILInterpreter::DILInterpreter(lldb::TargetSP target,
@@ -360,7 +359,7 @@ lldb::ValueObjectSP DILInterpreter::DILEval(const DILASTNode* tree,
   // Evaluate an AST.
   DILEvalNode(tree);
   // Set the error.
-  error = m_error;
+  error = std::move(m_error);
   // Return the computed result. If there was an error, it will be invalid.
   return m_result;
 }
@@ -381,7 +380,7 @@ lldb::ValueObjectSP DILInterpreter::DILEvalNode(const DILASTNode* node,
 void DILInterpreter::SetError(ErrorCode code, std::string error,
                               clang::SourceLocation loc) {
   assert(m_error.Success() && "interpreter can error only once");
-  m_error.SetErrorString(
+  m_error = Status(
       FormatDiagnostics(m_sm->GetSourceManager(), error, loc, code));
 }
 

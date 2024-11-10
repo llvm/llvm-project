@@ -519,10 +519,8 @@ protected:
     }
     VariableSP var_sp;
     ValueObjectSP valobj_sp;
-    // Temporary variable, used to control whether to use DIL parser/evaluator
-    // or not for 'frame variable' command.
     TargetSP target_sp = frame->CalculateTarget();
-    // bool use_DIL = target_sp->GetUseDIL(&m_exe_ctx);
+    //bool use_DIL = target_sp->GetUseDIL(&m_exe_ctx);
     bool use_DIL = true;
 
     TypeSummaryImplSP summary_format_sp;
@@ -600,7 +598,7 @@ protected:
           } else // No regex, either exact variable names or variable
                  // expressions.
           {
-            Status error, error2;
+            Status error;
             uint32_t expr_path_options =
                 StackFrame::eExpressionPathOptionCheckPtrVsMember |
                 StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
