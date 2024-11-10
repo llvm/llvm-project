@@ -3247,13 +3247,14 @@ struct FunctionReference {
 
 // R1521 call-stmt -> CALL procedure-designator [ chevrons ]
 //         [( [actual-arg-spec-list] )]
-// (CUDA) chevrons -> <<< scalar-expr, scalar-expr [,
+// (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
 //          scalar-int-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
   BOILERPLATE(CallStmt);
+  WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
-    std::tuple<ScalarExpr, ScalarExpr, std::optional<ScalarIntExpr>,
+    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarIntExpr>,
         std::optional<ScalarIntExpr>>
         t;
   };
@@ -3694,9 +3695,8 @@ struct OmpMapClause {
 
 // 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
 struct OmpOrderModifier {
-  UNION_CLASS_BOILERPLATE(OmpOrderModifier);
   ENUM_CLASS(Kind, Reproducible, Unconstrained)
-  std::variant<Kind> u;
+  WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Kind);
 };
 
 struct OmpOrderClause {

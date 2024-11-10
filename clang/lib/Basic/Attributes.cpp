@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
 
@@ -155,26 +156,17 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
-// Sorted list of attribute scope names
-static constexpr std::pair<StringRef, AttributeCommonInfo::Scope> ScopeList[] =
-    {{"", AttributeCommonInfo::Scope::NONE},
-     {"clang", AttributeCommonInfo::Scope::CLANG},
-     {"gnu", AttributeCommonInfo::Scope::GNU},
-     {"gsl", AttributeCommonInfo::Scope::GSL},
-     {"hlsl", AttributeCommonInfo::Scope::HLSL},
-     {"msvc", AttributeCommonInfo::Scope::MSVC},
-     {"omp", AttributeCommonInfo::Scope::OMP},
-     {"riscv", AttributeCommonInfo::Scope::RISCV}};
-
 AttributeCommonInfo::Scope
 getScopeFromNormalizedScopeName(StringRef ScopeName) {
-  auto It = std::lower_bound(
-      std::begin(ScopeList), std::end(ScopeList), ScopeName,
-      [](const std::pair<StringRef, AttributeCommonInfo::Scope> &Element,
-         StringRef Value) { return Element.first < Value; });
-  assert(It != std::end(ScopeList) && It->first == ScopeName);
-
-  return It->second;
+  return llvm::StringSwitch<AttributeCommonInfo::Scope>(ScopeName)
+      .Case("", AttributeCommonInfo::Scope::NONE)
+      .Case("clang", AttributeCommonInfo::Scope::CLANG)
+      .Case("gnu", AttributeCommonInfo::Scope::GNU)
+      .Case("gsl", AttributeCommonInfo::Scope::GSL)
+      .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
+      .Case("msvc", AttributeCommonInfo::Scope::MSVC)
+      .Case("omp", AttributeCommonInfo::Scope::OMP)
+      .Case("riscv", AttributeCommonInfo::Scope::RISCV);
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {

@@ -106,15 +106,6 @@ def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,
 def gi_zexti8  : GIComplexOperandMatcher<s32, "selectZExtBits<8>">,
                  GIComplexPatternEquiv<zexti8>;
 
-// FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
-def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
-          (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
-
-let Predicates = [IsRV64] in {
-def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-}
-
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
 
@@ -255,13 +246,6 @@ let Predicates = [HasStdExtZmmul, IsRV64] in {
 def : PatGprGpr<mul, MULW, i32, i32>;
 }
 
-let Predicates = [HasStdExtM, IsRV64] in {
-def : PatGprGpr<sdiv, DIVW, i32, i32>;
-def : PatGprGpr<udiv, DIVUW, i32, i32>;
-def : PatGprGpr<srem, REMW, i32, i32>;
-def : PatGprGpr<urem, REMUW, i32, i32>;
-}
-
 //===----------------------------------------------------------------------===//
 // Zb* RV64 i32 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
@@ -280,7 +264,7 @@ def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
+def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
 
 def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
