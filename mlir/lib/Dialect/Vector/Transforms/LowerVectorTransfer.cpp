@@ -97,9 +97,6 @@ struct TransferReadPermutationLowering
   matchAndRewriteMaskableOp(vector::TransferReadOp op,
                             MaskingOpInterface maskOp,
                             PatternRewriter &rewriter) const override {
-    // TODO: support 0-d corner case.
-    if (op.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
     // TODO: Support transfer_read inside MaskOp case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
@@ -326,9 +323,6 @@ struct TransferOpReduceRank
   matchAndRewriteMaskableOp(vector::TransferReadOp op,
                             MaskingOpInterface maskOp,
                             PatternRewriter &rewriter) const override {
-    // TODO: support 0-d corner case.
-    if (op.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
     // TODO: support masked case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
@@ -518,7 +512,7 @@ struct VectorLoadToMemrefLoadLowering
   }
 };
 
-/// Replace a vector.store with a vector.extractelement + memref.store.
+/// Replace a 0-d vector.store with a vector.extractelement + memref.store.
 struct VectorStoreToMemrefStoreLowering
     : public OpRewritePattern<vector::StoreOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -530,9 +524,15 @@ struct VectorStoreToMemrefStoreLowering
       return rewriter.notifyMatchFailure(storeOp, "not single element vector");
 
     Value extracted;
-    SmallVector<int64_t> indices(vecType.getRank(), 0);
-    extracted = rewriter.create<vector::ExtractOp>(
-        storeOp.getLoc(), storeOp.getValueToStore(), indices);
+    if (vecType.getRank() == 0) {
+      // TODO: Unifiy once ExtractOp supports 0-d vectors.
+      extracted = rewriter.create<vector::ExtractElementOp>(
+          storeOp.getLoc(), storeOp.getValueToStore());
+    } else {
+      SmallVector<int64_t> indices(vecType.getRank(), 0);
+      extracted = rewriter.create<vector::ExtractOp>(
+          storeOp.getLoc(), storeOp.getValueToStore(), indices);
+    }
 
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
         storeOp, extracted, storeOp.getBase(), storeOp.getIndices());
