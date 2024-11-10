@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DIL_PARSER_H_
-#define LLDB_DIL_PARSER_H_
+#ifndef LLDB_VALUEOBJECT_DILPARSER_H_
+#define LLDB_VALUEOBJECT_DILPARSER_H_
 
 #include <memory>
 #include <optional>
@@ -28,6 +28,28 @@
 #include "lldb/ValueObject/DILAST.h"
 
 namespace lldb_private {
+
+namespace dil {
+
+/// Finds the member field with the given name and type, stores the child index
+/// corresponding to the field in the idx vector and returns a MemberInfo
+/// struct with appropriate information about the field.
+std::optional<MemberInfo>
+GetFieldWithNameIndexPath(lldb::ValueObjectSP lhs_val_sp,
+                          CompilerType type,
+                          const std::string &name,
+                          std::vector<uint32_t> *idx,
+                          CompilerType empty_type,
+                          bool use_synthetic, bool is_dynamic, bool is_arrow);
+
+/// Checks to see if the CompilerType is a Smart Pointer (shared, unique, weak)
+/// or not. Only applicable for C++, which is why this is here and not part of
+/// the CompilerType class.
+//bool IsSmartPtrType(CompilerType type);
+
+std::tuple<std::optional<MemberInfo>, std::vector<uint32_t>>
+GetMemberInfo(lldb::ValueObjectSP lhs_val_sp, CompilerType type,
+              const std::string &name, bool use_synthetic, bool is_arrow);
 
 std::string TypeDescription(CompilerType type);
 
@@ -154,7 +176,7 @@ class DILParser {
                      lldb::DynamicValueType use_dynamic,
                      bool use_synthetic);
 
-  ParseResult Run(Status& error);
+  DILASTNodeUP Run(Status& error);
 
   ~DILParser() { m_ctx_scope.reset(); }
 
@@ -165,22 +187,22 @@ class DILParser {
   using PtrOperator = std::tuple<clang::tok::TokenKind, clang::SourceLocation>;
 
  private:
-  ParseResult ParseExpression();
-  ParseResult ParseAssignmentExpression();
-  ParseResult ParseLogicalOrExpression();
-  ParseResult ParseLogicalAndExpression();
-  ParseResult ParseInclusiveOrExpression();
-  ParseResult ParseExclusiveOrExpression();
-  ParseResult ParseAndExpression();
-  ParseResult ParseEqualityExpression();
-  ParseResult ParseRelationalExpression();
-  ParseResult ParseShiftExpression();
-  ParseResult ParseAdditiveExpression();
-  ParseResult ParseMultiplicativeExpression();
-  ParseResult ParseCastExpression();
-  ParseResult ParseUnaryExpression();
-  ParseResult ParsePostfixExpression();
-  ParseResult ParsePrimaryExpression();
+  DILASTNodeUP ParseExpression();
+  DILASTNodeUP ParseAssignmentExpression();
+  DILASTNodeUP ParseLogicalOrExpression();
+  DILASTNodeUP ParseLogicalAndExpression();
+  DILASTNodeUP ParseInclusiveOrExpression();
+  DILASTNodeUP ParseExclusiveOrExpression();
+  DILASTNodeUP ParseAndExpression();
+  DILASTNodeUP ParseEqualityExpression();
+  DILASTNodeUP ParseRelationalExpression();
+  DILASTNodeUP ParseShiftExpression();
+  DILASTNodeUP ParseAdditiveExpression();
+  DILASTNodeUP ParseMultiplicativeExpression();
+  DILASTNodeUP ParseCastExpression();
+  DILASTNodeUP ParseUnaryExpression();
+  DILASTNodeUP ParsePostfixExpression();
+  DILASTNodeUP ParsePrimaryExpression();
 
   std::optional<CompilerType> ParseTypeId(bool must_be_type_id = false);
   void ParseTypeSpecifierSeq(TypeDeclaration* type_decl);
@@ -203,22 +225,22 @@ class DILParser {
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
-  ParseResult ParseNumericLiteral();
-  ParseResult ParseBooleanLiteral();
-  ParseResult ParseCharLiteral();
-  ParseResult ParseStringLiteral();
-  ParseResult ParsePointerLiteral();
-  ParseResult ParseNumericConstant(clang::Token token);
-  ParseResult ParseFloatingLiteral(clang::NumericLiteralParser& literal,
+  DILASTNodeUP ParseNumericLiteral();
+  DILASTNodeUP ParseBooleanLiteral();
+  DILASTNodeUP ParseCharLiteral();
+  DILASTNodeUP ParseStringLiteral();
+  DILASTNodeUP ParsePointerLiteral();
+  DILASTNodeUP ParseNumericConstant(clang::Token token);
+  DILASTNodeUP ParseFloatingLiteral(clang::NumericLiteralParser& literal,
                                   clang::Token token);
-  ParseResult ParseIntegerLiteral(clang::NumericLiteralParser& literal,
+  DILASTNodeUP ParseIntegerLiteral(clang::NumericLiteralParser& literal,
                                  clang::Token token);
-  ParseResult ParseBuiltinFunction(clang::SourceLocation loc,
+  DILASTNodeUP ParseBuiltinFunction(clang::SourceLocation loc,
                                   std::unique_ptr<BuiltinFunctionDef> func_def);
 
   bool ImplicitConversionIsAllowed(CompilerType src, CompilerType dst,
                                    bool is_src_literal_zero = false);
-  ParseResult InsertImplicitConversion(ParseResult expr, CompilerType type);
+  DILASTNodeUP InsertImplicitConversion(DILASTNodeUP expr, CompilerType type);
 
   void ConsumeToken();
 
@@ -235,61 +257,61 @@ class DILParser {
   template <typename... Ts>
   void ExpectOneOf(clang::tok::TokenKind k, Ts... ks);
 
-  ParseResult BuildCStyleCast(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCStyleCast(CompilerType type, DILASTNodeUP rhs,
                              clang::SourceLocation location);
-  ParseResult BuildCxxCast(clang::tok::TokenKind kind, CompilerType type,
-                          ParseResult rhs, clang::SourceLocation location);
-  ParseResult BuildCxxDynamicCast(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxCast(clang::tok::TokenKind kind, CompilerType type,
+                          DILASTNodeUP rhs, clang::SourceLocation location);
+  DILASTNodeUP BuildCxxDynamicCast(CompilerType type, DILASTNodeUP rhs,
                                  clang::SourceLocation location);
-  ParseResult BuildCxxStaticCast(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCast(CompilerType type, DILASTNodeUP rhs,
                                 clang::SourceLocation location);
-  ParseResult BuildCxxStaticCastToScalar(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCastToScalar(CompilerType type, DILASTNodeUP rhs,
                                         clang::SourceLocation location);
-  ParseResult BuildCxxStaticCastToEnum(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCastToEnum(CompilerType type, DILASTNodeUP rhs,
                                       clang::SourceLocation location);
-  ParseResult BuildCxxStaticCastToPointer(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCastToPointer(CompilerType type, DILASTNodeUP rhs,
                                          clang::SourceLocation location);
-  ParseResult BuildCxxStaticCastToNullPtr(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCastToNullPtr(CompilerType type, DILASTNodeUP rhs,
                                          clang::SourceLocation location);
-  ParseResult BuildCxxStaticCastToReference(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCastToReference(CompilerType type, DILASTNodeUP rhs,
                                            clang::SourceLocation location);
-  ParseResult BuildCxxStaticCastForInheritedTypes(
-      CompilerType type, ParseResult rhs, clang::SourceLocation location);
-  ParseResult BuildCxxReinterpretCast(CompilerType type, ParseResult rhs,
+  DILASTNodeUP BuildCxxStaticCastForInheritedTypes(
+      CompilerType type, DILASTNodeUP rhs, clang::SourceLocation location);
+  DILASTNodeUP BuildCxxReinterpretCast(CompilerType type, DILASTNodeUP rhs,
                                      clang::SourceLocation location);
-  ParseResult BuildUnaryOp(UnaryOpKind kind, ParseResult rhs,
+  DILASTNodeUP BuildUnaryOp(UnaryOpKind kind, DILASTNodeUP rhs,
                           clang::SourceLocation location);
-  ParseResult BuildIncrementDecrement(UnaryOpKind kind, ParseResult rhs,
+  DILASTNodeUP BuildIncrementDecrement(UnaryOpKind kind, DILASTNodeUP rhs,
                                      clang::SourceLocation location);
-  ParseResult BuildBinaryOp(BinaryOpKind kind, ParseResult lhs, ParseResult rhs,
+  DILASTNodeUP BuildBinaryOp(BinaryOpKind kind, DILASTNodeUP lhs, DILASTNodeUP rhs,
                            clang::SourceLocation location);
-  CompilerType PrepareBinaryAddition(ParseResult& lhs, ParseResult& rhs,
+  CompilerType PrepareBinaryAddition(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                      clang::SourceLocation location,
                                      bool is_comp_assign);
-  CompilerType PrepareBinarySubtraction(ParseResult& lhs, ParseResult& rhs,
+  CompilerType PrepareBinarySubtraction(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                         clang::SourceLocation location,
                                         bool is_comp_assign);
-  CompilerType PrepareBinaryMulDiv(ParseResult& lhs, ParseResult& rhs,
+  CompilerType PrepareBinaryMulDiv(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                    bool is_comp_assign);
-  CompilerType PrepareBinaryRemainder(ParseResult& lhs, ParseResult& rhs,
+  CompilerType PrepareBinaryRemainder(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                       bool is_comp_assign);
-  CompilerType PrepareBinaryBitwise(ParseResult& lhs, ParseResult& rhs,
+  CompilerType PrepareBinaryBitwise(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                     bool is_comp_assign);
-  CompilerType PrepareBinaryShift(ParseResult& lhs, ParseResult& rhs,
+  CompilerType PrepareBinaryShift(DILASTNodeUP& lhs, DILASTNodeUP& rhs,
                                   bool is_comp_assign);
-  CompilerType PrepareBinaryComparison(BinaryOpKind kind, ParseResult& lhs,
-                                 ParseResult& rhs,
+  CompilerType PrepareBinaryComparison(BinaryOpKind kind, DILASTNodeUP& lhs,
+                                 DILASTNodeUP& rhs,
                                  clang::SourceLocation location);
-  CompilerType PrepareBinaryLogical(const ParseResult& lhs,
-                                    const ParseResult& rhs);
-  ParseResult BuildBinarySubscript(ParseResult lhs, ParseResult rhs,
+  CompilerType PrepareBinaryLogical(const DILASTNodeUP& lhs,
+                                    const DILASTNodeUP& rhs);
+  DILASTNodeUP BuildBinarySubscript(DILASTNodeUP lhs, DILASTNodeUP rhs,
                                   clang::SourceLocation location);
   CompilerType PrepareCompositeAssignment(CompilerType comp_assign_type,
-                                          const ParseResult& lhs,
+                                          const DILASTNodeUP& lhs,
                                           clang::SourceLocation location);
-  ParseResult BuildTernaryOp(ParseResult cond, ParseResult lhs, ParseResult rhs,
+  DILASTNodeUP BuildTernaryOp(DILASTNodeUP cond, DILASTNodeUP lhs, DILASTNodeUP rhs,
                             clang::SourceLocation location);
-  ParseResult BuildMemberOf(ParseResult lhs, std::string member_id,
+  DILASTNodeUP BuildMemberOf(DILASTNodeUP lhs, std::string member_id,
                             bool is_arrow,
                             clang::SourceLocation location);
 
@@ -319,7 +341,7 @@ class DILParser {
   // Holds an error if it occures during parsing.
   Status m_error;
 
-  bool m_allow_side_effects;
+  bool m_allow_side_effects = true;
 
   std::unique_ptr<clang::TargetInfo> m_ti;
   std::unique_ptr<clang::LangOptions> m_lang_opts;
@@ -366,6 +388,8 @@ class TentativeParsingAction {
   bool m_enabled;
 }; // class TentativeParsingAction
 
+}  // namespace dil
+
 }  // namespace lldb_private
 
-#endif  // LLDB_DIL_PARSER_H_
+#endif  // LLDB_VALUEOBJECT_DILPARSER_H_

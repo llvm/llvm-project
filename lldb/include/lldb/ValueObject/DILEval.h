@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DIL_EVAL_H_
-#define LLDB_DIL_EVAL_H_
+#ifndef LLDB_VALUEOBJECT_DILEVAL_H_
+#define LLDB_VALUEOBJECT_DILEVAL_H_
 
 #include <memory>
 #include <vector>
@@ -18,6 +18,8 @@
 #include "lldb/ValueObject/DILParser.h"
 
 namespace lldb_private {
+
+namespace dil {
 
 class FlowAnalysis {
  public:
@@ -31,7 +33,7 @@ class FlowAnalysis {
   bool m_address_of_is_pending;
 };
 
-class DILInterpreter : DILVisitor {
+class DILInterpreter : Visitor {
  public:
   DILInterpreter(lldb::TargetSP target,
                  std::shared_ptr<DILSourceManager> sm);
@@ -53,8 +55,9 @@ class DILInterpreter : DILVisitor {
   void SetError(ErrorCode error_code, std::string error,
                 clang::SourceLocation loc);
 
-  void Visit(const DILErrorNode* node) override;
-  void Visit(const LiteralNode* node) override;
+  void Visit(const ErrorNode* node) override;
+  void Visit(const ScalarLiteralNode* node) override;
+  void Visit(const StringLiteralNode* node) override;
   void Visit(const IdentifierNode* node) override;
   void Visit(const SizeOfNode* node) override;
   void Visit(const BuiltinFunctionCallNode* node) override;
@@ -66,7 +69,7 @@ class DILInterpreter : DILVisitor {
   void Visit(const BinaryOpNode* node) override;
   void Visit(const UnaryOpNode* node) override;
   void Visit(const TernaryOpNode* node) override;
-  void Visit(const SmartPtrToPtrDecay* node) override;
+  // void Visit(const SmartPtrToPtrDecay* node) override;
 
   lldb::ValueObjectSP DILEvalNode(const DILASTNode* node,
                                   FlowAnalysis* flow = nullptr);
@@ -153,6 +156,8 @@ class DILInterpreter : DILVisitor {
   Status m_error;
 };
 
+}  // namespace dil
+
 }  // namespace lldb_private
 
-#endif  // LLDB_DIL_EVAL_H_
+#endif  // LLDB_VALUEOBJECT_DILEVAL_H_

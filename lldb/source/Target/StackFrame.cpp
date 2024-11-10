@@ -512,7 +512,7 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
       uint32_t options, lldb::VariableSP &var_sp, Status &error)
 {
   ValueObjectSP ret_val;
-  auto source = DILSourceManager::Create(var_expr.data());
+  auto source = dil::DILSourceManager::Create(var_expr.data());
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -523,8 +523,8 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
 
   // Parse the expression.
   Status parse_error, eval_error;
-  DILParser parser(source, shared_from_this(), use_dynamic, !no_synth_child);
-  ParseResult tree = parser.Run(parse_error);
+  dil::DILParser parser(source, shared_from_this(), use_dynamic, !no_synth_child);
+  dil::DILASTNodeUP tree = parser.Run(parse_error);
   if (parse_error.Fail()) {
     error = std::move(parse_error);
     return ValueObjectSP();
@@ -532,7 +532,7 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
-  DILInterpreter interpreter(target, source, use_dynamic);
+  dil::DILInterpreter interpreter(target, source, use_dynamic);
 
   ret_val = interpreter.DILEval(tree.get(), target, eval_error);
   if (eval_error.Fail()) {

@@ -20,6 +20,8 @@
 
 namespace lldb_private {
 
+namespace dil {
+
 template <typename T>
 bool Compare(BinaryOpKind kind, const T& l, const T& r) {
   switch (kind) {
@@ -47,10 +49,9 @@ static uint64_t GetUInt64(lldb::ValueObjectSP value_sp) {
 r
   // example, if the underlying type is `int32_t` and the value is `-1`,
   // GetValueAsUnsigned will return 4294967295.
-  lldb::ValueObjectSP value(DILGetSPWithLock(value_sp));
-  return value->GetCompilerType().IsSigned()
-      ? value->GetValueAsSigned(0)
-      : value->GetValueAsUnsigned(0);
+  return value_sp->GetCompilerType().IsSigned()
+      ? value_sp->GetValueAsSigned(0)
+      : value_sp->GetValueAsUnsigned(0);
 }
 
 static lldb::ValueObjectSP EvaluateArithmeticOpInteger(lldb::TargetSP target,
@@ -174,27 +175,25 @@ static bool IsInvalidDivisionByMinusOne(lldb::ValueObjectSP lhs_sp,
   assert(lhs_sp->GetCompilerType().IsInteger() &&
          rhs_sp->GetCompilerType().IsInteger() && "operands should be integers");
 
-  lldb::ValueObjectSP rhs(DILGetSPWithLock(rhs_sp));
-  lldb::ValueObjectSP lhs(DILGetSPWithLock(lhs_sp));
   // The result type should be signed integer.
   auto basic_type =
-      rhs->GetCompilerType().GetCanonicalType().GetBasicTypeEnumeration();
+      rhs_sp->GetCompilerType().GetCanonicalType().GetBasicTypeEnumeration();
   if (basic_type != lldb::eBasicTypeInt && basic_type != lldb::eBasicTypeLong &&
       basic_type != lldb::eBasicTypeLongLong) {
     return false;
   }
 
   // The RHS should be equal to -1.
-  if (rhs->GetValueAsSigned(0) != -1) {
+  if (rhs_sp->GetValueAsSigned(0) != -1) {
     return false;
   }
 
   // The LHS should be equal to the minimum value the result type can hold.
   uint64_t byte_size = 0;
-  if (auto temp = rhs->GetCompilerType().GetByteSize(rhs->GetTargetSP().get()))
+  if (auto temp = rhs_sp->GetCompilerType().GetByteSize(rhs_sp->GetTargetSP().get()))
     byte_size = temp.value();
   auto bit_size = byte_size * CHAR_BIT;
-  return lhs->GetValueAsSigned(0) + (1LLU << (bit_size - 1)) == 0;
+  return lhs_sp->GetValueAsSigned(0) + (1LLU << (bit_size - 1)) == 0;
 }
 
 static lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
@@ -213,35 +212,30 @@ static lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
   lldb::DynamicValueType use_dynamic = (!is_dynamic)
                                        ? lldb::eNoDynamicValues
                                        : lldb::eDynamicDontRunTarget;
-  lldb::ValueObjectSP member_val(DILGetSPWithLock(member_val_sp, use_dynamic,
-                                                  use_synthetic));
   for (uint32_t idx : path) {
     // Force static value, otherwise we can end up with the "real" type.
-    member_val = member_val->GetChildAtIndex(idx, /*can_create*/ true);
+    member_val_sp = member_val_sp->GetChildAtIndex(idx, /*can_create*/ true);
   }
-  if (!member_val && is_dynamic) {
+  if (!member_val_sp && is_dynamic) {
     lldb::ValueObjectSP dyn_val_sp = value->GetDynamicValue(use_dynamic);
     if (dyn_val_sp) {
-      lldb::ValueObjectSP dyn_member_val(DILGetSPWithLock(dyn_val_sp,
-                                                          use_dynamic,
-                                                          use_synthetic));
       for (uint32_t idx : path) {
-        dyn_member_val = dyn_member_val->GetChildAtIndex(idx, true);
+        dyn_val_sp = dyn_val_sp->GetChildAtIndex(idx, true);
       }
-      member_val = dyn_member_val;
+      member_val_sp = dyn_val_sp;
     }
   }
-  assert(member_val && "invalid ast: invalid member access");
+  assert(member_val_sp && "invalid ast: invalid member access");
 
   // If value is a reference, derefernce it to get to the underlying type. All
   // operations on a reference should be actually operations on the referent.
   Status error;
-  if (member_val->GetCompilerType().IsReferenceType()) {
-    member_val = member_val->Dereference(error);
-    assert(member_val && error.Success() && "unable to dereference member val");
+  if (member_val_sp->GetCompilerType().IsReferenceType()) {
+    member_val_sp = member_val_sp->Dereference(error);
+    assert(member_val_sp && error.Success() && "unable to dereference member val");
   }
 
-  return member_val;
+  return member_val_sp;
 }
 
 static std::string FormatDiagnostics(clang::SourceManager& sm,
@@ -314,7 +308,8 @@ void SetUbStatus(Status& error, ErrorCode code) {
       err_str ="Error: Unknown undefined behavior error.";
       break;
   }
-  error = Status(err_str.str());
+  error = Status((lldb::ValueType)code, lldb::ErrorType::eErrorTypeGeneric,
+                 err_str.str());
 }
 
 DILInterpreter::DILInterpreter(lldb::TargetSP target,
@@ -380,44 +375,55 @@ lldb::ValueObjectSP DILInterpreter::DILEvalNode(const DILASTNode* node,
 void DILInterpreter::SetError(ErrorCode code, std::string error,
                               clang::SourceLocation loc) {
   assert(m_error.Success() && "interpreter can error only once");
-  m_error = Status(
-      FormatDiagnostics(m_sm->GetSourceManager(), error, loc, code));
+  m_error= Status(FormatDiagnostics(m_sm->GetSourceManager(), error, loc,
+                                    code));
 }
 
-void DILInterpreter::Visit(const DILErrorNode* node) {
+void DILInterpreter::Visit(const ErrorNode* node) {
   // The AST is not valid.
   m_result = lldb::ValueObjectSP();
 }
 
-void DILInterpreter::Visit(const LiteralNode* node) {
-  struct {
-    lldb::ValueObjectSP operator()(llvm::APInt val) {
-      return ValueObject::CreateValueObjectFromAPInt(target, val, type, "result");
-    }
-    lldb::ValueObjectSP operator()(llvm::APFloat val) {
-      return ValueObject::CreateValueObjectFromAPFloat(target, val, type, "result");
-    }
-    lldb::ValueObjectSP operator()(bool val) {
-      return ValueObject::CreateValueObjectFromBool(target, val, "result");
-    }
-    lldb::ValueObjectSP operator()(const std::vector<char>& val) {
-      ExecutionContext exe_ctx(target.get(), false);
-      uint64_t byte_size = 0;
-      if (auto temp = type.GetByteSize(target.get()))
-        byte_size = temp.value();
-      lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
-          reinterpret_cast<const void*>(val.data()), byte_size,
-          exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
-      return ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
-                                                    type);
-      //return ValueObject::CreateValueObjectFromBytes(
-      //    target, reinterpret_cast<const void*>(val.data()), type);
-    }
+void DILInterpreter::Visit(const ScalarLiteralNode* node) {
+  CompilerType result_type = node->result_type();
+  Scalar value = node->GetValue();
+  if (result_type.IsBoolean()) {
+    unsigned int int_val = value.UInt();
+    bool b_val = false;
+    if (int_val == 1)
+      b_val = true;
+    m_result = ValueObject::CreateValueObjectFromBool(m_target, b_val,
+                                                      "result");
+  } else if (result_type.IsFloat()) {
+    llvm::APFloat val = value.GetAPFloat();
+    m_result = ValueObject::CreateValueObjectFromAPFloat(m_target, val,
+                                                     result_type,
+                                                     "result");
+  } else if (result_type.IsInteger() ||
+             result_type.IsNullPtrType() ||
+             result_type.IsPointerType()) {
+    llvm::APInt val = value.GetAPSInt();
+    m_result = ValueObject::CreateValueObjectFromAPInt(m_target, val,
+                                                       result_type,
+                                                       "result");
+  } else {
+    m_result =  lldb::ValueObjectSP();
+  }
+}
 
-    lldb::TargetSP target;
-    CompilerType type;
-  } visitor{m_target, node->result_type()};
-  m_result = std::visit(visitor, node->value());
+void DILInterpreter::Visit(const StringLiteralNode* node) {
+  CompilerType result_type = node->result_type();
+  std::string val = node->GetValue();
+  ExecutionContext exe_ctx(m_target.get(), false);
+  uint64_t byte_size = 0;
+  if (auto temp = result_type.GetByteSize(m_target.get()))
+    byte_size = temp.value();
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      reinterpret_cast<const void*>(val.data()), byte_size,
+      exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+  m_result = ValueObject::CreateValueObjectFromData("result", *data_sp,
+                                                    exe_ctx,
+                                                    result_type);
 }
 
 void DILInterpreter::Visit(const IdentifierNode* node) {
@@ -426,16 +432,16 @@ void DILInterpreter::Visit(const IdentifierNode* node) {
   lldb::ValueObjectSP val;
   lldb::TargetSP target_sp;
   Status error;
-  switch (identifier.kind()) {
+  switch (identifier.GetKind()) {
     using Kind = IdentifierInfo::Kind;
-    case Kind::kValue:
-      val = identifier.value();
+    case Kind::eValue:
+      val = identifier.GetValue();
       target_sp = val->GetTargetSP();
       assert(target_sp && target_sp->IsValid()
              && "invalid ast: invalid identifier value");
       break;
 
-    case Kind::kContextArg:
+    case Kind::eContextArg:
       assert(node->is_context_var() && "invalid ast: context var expected");
       val = ResolveContextVar(node->name());
       target_sp = val->GetTargetSP();
@@ -443,24 +449,24 @@ void DILInterpreter::Visit(const IdentifierNode* node) {
         SetError(
             ErrorCode::kUndeclaredIdentifier,
             llvm::formatv("use of undeclared identifier '{0}'", node->name()),
-            node->location());
+            node->GetLocation());
         m_result = lldb::ValueObjectSP();
         return;
       }
-      if (!node->result_type_deref().CompareTypes(val->GetCompilerType())) {
+      if (!node->GetDereferencedResultType().CompareTypes(val->GetCompilerType())) {
         SetError(ErrorCode::kInvalidOperandType,
                  llvm::formatv("unexpected type of context variable '{0}' "
                                "(expected {1}, got {2})",
                                node->name(),
-                               node->result_type_deref().TypeDescription(),
+                               node->GetDereferencedResultType().TypeDescription(),
                                val->GetCompilerType().TypeDescription()),
-                 node->location());
+                 node->GetLocation());
         m_result = lldb::ValueObjectSP();
         return;
       }
       break;
 
-    case Kind::kMemberPath:
+    case Kind::eMemberPath:
       target_sp = m_scope->GetTargetSP();
       if (!target_sp || !target_sp->IsValid()) {
         SetError(
@@ -468,24 +474,11 @@ void DILInterpreter::Visit(const IdentifierNode* node) {
             llvm::formatv(
                 "unable to resolve '{0}', evaluation requires a value context",
                 node->name()),
-            node->location());
+            node->GetLocation());
         m_result = lldb::ValueObjectSP();
         return;
       }
-      val = EvaluateMemberOf(m_scope, identifier.path(), false, false);
-      break;
-
-    case Kind::kThisKeyword:
-      target_sp = m_scope->GetTargetSP();
-      if (!target_sp || !target_sp->IsValid()) {
-        SetError(
-            ErrorCode::kUnknown,
-            "unable to resolve 'this', evaluation requires a value context",
-            node->location());
-        m_result = lldb::ValueObjectSP();
-        return;
-      }
-      val = m_scope->AddressOf(error);
+      val = EvaluateMemberOf(m_scope, identifier.GetPath(), false, false);
       break;
 
     default:
@@ -512,7 +505,7 @@ void DILInterpreter::Visit(const SizeOfNode* node) {
   size_t size = operand.IsReferenceType()
                 ? deref_byte_size
                 : other_byte_size;
-  CompilerType type = node->result_type_deref();
+  CompilerType type = node->GetDereferencedResultType();
   ExecutionContext exe_ctx(m_target.get(), false);
   uint64_t byte_size = 0;
   if (auto temp = type.GetByteSize(m_target.get()))
@@ -522,7 +515,6 @@ void DILInterpreter::Visit(const SizeOfNode* node) {
       exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
   m_result = ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
                                                     type);
-  //m_result = ValueObject::CreateValueObjectFromBytes(m_target, &size, type);
 }
 
 void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
@@ -559,8 +551,6 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
     m_result =
         ValueObject::CreateValueObjectFromData("result", *data_sp,
                                                exe_ctx, target_type);
-    //m_result = ValueObject::CreateValueObjectFromBytes(
-    //    m_target, &ret, lldb::eBasicTypeUnsignedInt);
     return;
   }
 
@@ -574,29 +564,27 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
       return;
     }
 
-    lldb::ValueObjectSP val1(DILGetSPWithLock(val1_sp));
     // Resolve data address for the first argument.
     uint64_t addr;
 
-    if (val1->GetCompilerType().IsPointerType()) {
-      addr = val1->GetValueAsUnsigned(0);
-    } else if (val1->GetCompilerType().IsArrayType()) {
-      addr = val1->GetLoadAddress();
+    if (val1_sp->GetCompilerType().IsPointerType()) {
+      addr = val1_sp->GetValueAsUnsigned(0);
+    } else if (val1_sp->GetCompilerType().IsArrayType()) {
+      addr = val1_sp->GetLoadAddress();
     } else {
       SetError(ErrorCode::kInvalidOperandType,
                llvm::formatv("no known conversion from '{0}' to 'T*' for 1st "
                              "argument of __findnonnull()",
-                             val1->GetCompilerType().GetTypeName()),
-               arg1->location());
+                             val1_sp->GetCompilerType().GetTypeName()),
+               arg1->GetLocation());
       return;
     }
 
     auto& arg2 = node->arguments()[1];
-    lldb::ValueObjectSP val2 = DILEvalNode(arg2.get());
-    if (!val2) {
+    lldb::ValueObjectSP val2_sp = DILEvalNode(arg2.get());
+    if (!val2_sp) {
       return;
     }
-    lldb::ValueObjectSP val2_sp(DILGetSPWithLock(val2));
     int64_t size = val2_sp->GetValueAsSigned(0);
 
     if (size < 0 || size > 100000000) {
@@ -605,7 +593,7 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
                    "passing in a buffer size ('{0}') that is negative or in "
                    "excess of 100 million to __findnonnull() is not allowed.",
                    size),
-               arg2->location());
+               arg2->GetLocation());
       return;
     }
 
@@ -636,7 +624,7 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
                  llvm::formatv("error calling __findnonnull(): {0}",
                                error.AsCString() ? error.AsCString()
                                                  : "cannot read memory"),
-                 node->location());
+                 node->GetLocation());
         return;
       }
 
@@ -647,8 +635,6 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
         m_result = ValueObject::CreateValueObjectFromData("result", *data_sp,
                                                           exe_ctx,
                                                           target_type);
-        //m_result = ValueObject::CreateValueObjectFromBytes(
-        //    m_target, &i, lldb::eBasicTypeInt);
         return;
       }
     }
@@ -661,8 +647,6 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
     m_result = ValueObject::CreateValueObjectFromData("result", *data_sp,
                                                       exe_ctx,
                                                       target_type);
-    //m_result = ValueObject::CreateValueObjectFromBytes(
-    //    m_target, &ret, lldb::eBasicTypeInt);
     return;
   }
 
@@ -673,7 +657,7 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
 void DILInterpreter::Visit(const CStyleCastNode* node) {
   // Get the type and the value we need to cast.
   auto type = node->type();
-  auto rhs = DILEvalNode(node->rhs());
+  auto rhs = DILEvalNode(node->operand());
   if (!rhs) {
     return;
   }
@@ -683,27 +667,8 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
     rhs = rhs->Dereference(error);
   }
 
-  switch (node->kind()) {
-    case CStyleCastKind::kArithmetic: {
-      assert((type.GetCanonicalType().GetBasicTypeEnumeration() !=
-              lldb::eBasicTypeInvalid) &&
-             "invalid ast: target type should be a basic type.");
-      // Pick an appropriate cast.
-      if (rhs->GetCompilerType().IsPointerType()
-          || rhs->GetCompilerType().IsNullPtrType()) {
-        m_result = rhs->CastToBasicType(type);
-      } else if (rhs->GetCompilerType().IsScalarType()) {
-        m_result = rhs->CastToBasicType(type);
-        //m_result = rhs->CastScalarToBasicType(type, m_error);
-      } else if (rhs->GetCompilerType().IsEnumerationType()) {
-        m_result = rhs->CastToBasicType(type);
-      } else {
-        assert(false &&
-               "invalid ast: operand is not convertible to arithmetic type");
-      }
-      return;
-    }
-    case CStyleCastKind::kEnumeration: {
+  switch (node->cast_kind()) {
+    case CStyleCastKind::eEnumeration: {
       assert(type.IsEnumerationType() &&
              "invalid ast: target type should be an enumeration.");
 
@@ -718,23 +683,7 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
       }
       return;
     }
-    case CStyleCastKind::kPointer: {
-      assert(type.IsPointerType() &&
-             "invalid ast: target type should be a pointer.");
-      uint64_t addr = rhs->GetCompilerType().IsArrayType()
-                          ? rhs->GetLoadAddress()
-                          : GetUInt64(rhs);
-      //                    : rhs->GetValueAsUnsigned(0);
-      //m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
-      llvm::StringRef name = "result";
-      ExecutionContext exe_ctx(m_target.get(), false);
-      m_result =
-          ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                    type,
-                                                    /* do_deref */ false);
-      return;
-    }
-    case CStyleCastKind::kNullptr: {
+    case CStyleCastKind::eNullptr: {
       assert(
           (type.GetCanonicalType().GetBasicTypeEnumeration() ==
            lldb::eBasicTypeNullPtr)
@@ -742,11 +691,50 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
       m_result = ValueObject::CreateValueObjectFromNullptr(m_target, type, "result");
       return;
     }
-    case CStyleCastKind::kReference: {
-      lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
+    case CStyleCastKind::eReference: {
+      lldb::ValueObjectSP rhs_sp(GetDynamicOrSyntheticValue(rhs));
       m_result =
           lldb::ValueObjectSP(rhs_sp->Cast(type.GetNonReferenceType()));
       return;
+    }
+    case CStyleCastKind::eNone: {
+
+      switch (node->promo_kind()) {
+
+        case TypePromotionCastKind::eArithmetic: {
+          assert((type.GetCanonicalType().GetBasicTypeEnumeration() !=
+                  lldb::eBasicTypeInvalid) &&
+                 "invalid ast: target type should be a basic type.");
+          // Pick an appropriate cast.
+          if (rhs->GetCompilerType().IsPointerType()
+              || rhs->GetCompilerType().IsNullPtrType()) {
+            m_result = rhs->CastToBasicType(type);
+          } else if (rhs->GetCompilerType().IsScalarType()) {
+            m_result = rhs->CastToBasicType(type);
+            //m_result = rhs->CastScalarToBasicType(type, m_error);
+          } else if (rhs->GetCompilerType().IsEnumerationType()) {
+            m_result = rhs->CastToBasicType(type);
+          } else {
+            assert(false &&
+                   "invalid ast: operand is not convertible to arithmetic type");
+          }
+          return;
+        }
+        case TypePromotionCastKind::ePointer: {
+          assert(type.IsPointerType() &&
+                 "invalid ast: target type should be a pointer.");
+          uint64_t addr = rhs->GetCompilerType().IsArrayType()
+                          ? rhs->GetLoadAddress()
+                          : GetUInt64(rhs);
+          llvm::StringRef name = "result";
+          ExecutionContext exe_ctx(m_target.get(), false);
+          m_result =
+              ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                        type,
+                                                        /* do_deref */ false);
+          return;
+        }
+      }
     }
   }
 
@@ -757,7 +745,7 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
 void DILInterpreter::Visit(const CxxStaticCastNode* node) {
   // Get the type and the value we need to cast.
   auto type = node->type();
-  auto rhs = DILEvalNode(node->rhs());
+  auto rhs = DILEvalNode(node->operand());
   if (!rhs) {
     return;
   }
@@ -767,34 +755,16 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
     rhs = rhs->Dereference(error);
   }
 
-  switch (node->kind()) {
-    case CxxStaticCastKind::kNoOp: {
+  switch (node->cast_kind()) {
+    case CxxStaticCastKind::eNoOp: {
       assert(type.CompareTypes(rhs->GetCompilerType()) &&
              "invalid ast: types should be the same");
-      lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
+      lldb::ValueObjectSP rhs_sp(GetDynamicOrSyntheticValue(rhs));
       m_result = lldb::ValueObjectSP(rhs_sp->Cast(type));
       return;
     }
 
-    case CxxStaticCastKind::kArithmetic: {
-      assert(type.IsScalarType());
-      if (rhs->GetCompilerType().IsPointerType()
-          || rhs->GetCompilerType().IsNullPtrType()) {
-        assert(type.IsBoolean() && "invalid ast: target type should be bool");
-        m_result = rhs->CastToBasicType(type);
-      } else if (rhs->GetCompilerType().IsScalarType()) {
-        //m_result = rhs->CastScalarToBasicType(type, m_error);
-        m_result = rhs->CastToBasicType(type);
-      } else if (rhs->GetCompilerType().IsEnumerationType()) {
-        m_result = rhs->CastToBasicType(type);
-      } else {
-        assert(false &&
-               "invalid ast: operand is not convertible to arithmetic type");
-      }
-      return;
-    }
-
-    case CxxStaticCastKind::kEnumeration: {
+    case CxxStaticCastKind::eEnumeration: {
       if (rhs->GetCompilerType().IsFloat()) {
         m_result = rhs->CastToEnumType(type);
       } else if (rhs->GetCompilerType().IsInteger() ||
@@ -807,29 +777,12 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
       return;
     }
 
-    case CxxStaticCastKind::kPointer: {
-      assert(type.IsPointerType() &&
-             "invalid ast: target type should be a pointer.");
-
-      uint64_t addr = rhs->GetCompilerType().IsArrayType()
-                          ? rhs-> GetLoadAddress()
-                          : rhs->GetValueAsUnsigned(0);
-      //m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
-      llvm::StringRef name = "result";
-      ExecutionContext exe_ctx(m_target.get(), false);
-      m_result =
-          ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                    type,
-                                                    /* do_deref */ false);
-      return;
-    }
-
-    case CxxStaticCastKind::kNullptr: {
+    case CxxStaticCastKind::eNullptr: {
       m_result = ValueObject::CreateValueObjectFromNullptr(m_target, type, "result");
       return;
     }
 
-    case CxxStaticCastKind::kDerivedToBase: {
+    case CxxStaticCastKind::eDerivedToBase: {
       llvm::Expected<lldb::ValueObjectSP> result =
           rhs->CastDerivedToBaseType(type, node->idx());
       if (result)
@@ -837,12 +790,51 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
       return;
     }
 
-    case CxxStaticCastKind::kBaseToDerived: {
+    case CxxStaticCastKind::eBaseToDerived: {
       llvm::Expected<lldb::ValueObjectSP> result =
           rhs->CastBaseToDerivedType(type, node->offset());
       if (result)
         m_result = *result;
       return;
+    }
+    case CxxStaticCastKind::eNone: {
+
+      switch (node->promo_kind()) {
+
+        case TypePromotionCastKind::eArithmetic: {
+          assert(type.IsScalarType());
+          if (rhs->GetCompilerType().IsPointerType()
+              || rhs->GetCompilerType().IsNullPtrType()) {
+            assert(type.IsBoolean() && "invalid ast: target type should be bool");
+            m_result = rhs->CastToBasicType(type);
+          } else if (rhs->GetCompilerType().IsScalarType()) {
+            //m_result = rhs->CastScalarToBasicType(type, m_error);
+            m_result = rhs->CastToBasicType(type);
+          } else if (rhs->GetCompilerType().IsEnumerationType()) {
+            m_result = rhs->CastToBasicType(type);
+          } else {
+            assert(false &&
+                   "invalid ast: operand is not convertible to arithmetic type");
+          }
+          return;
+        }
+
+        case TypePromotionCastKind::ePointer: {
+          assert(type.IsPointerType() &&
+                 "invalid ast: target type should be a pointer.");
+
+          uint64_t addr = rhs->GetCompilerType().IsArrayType()
+                          ? rhs-> GetLoadAddress()
+                          : rhs->GetValueAsUnsigned(0);
+          llvm::StringRef name = "result";
+          ExecutionContext exe_ctx(m_target.get(), false);
+          m_result =
+              ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                        type,
+                                                        /* do_deref */ false);
+          return;
+        }
+      }
     }
   }
 }
@@ -850,7 +842,7 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
 void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
   // Get the type and the value we need to cast.
   auto type = node->type();
-  auto rhs = DILEvalNode(node->rhs());
+  auto rhs = DILEvalNode(node->operand());
   if (!rhs) {
     return;
   }
@@ -873,7 +865,7 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
       assert(base_type.CompareTypes(rhs_base_type) &&
              "invalid ast: operands should have the same type");
       // Cast value to handle type aliases.
-      lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
+      lldb::ValueObjectSP rhs_sp(GetDynamicOrSyntheticValue(rhs));
       m_result = lldb::ValueObjectSP(rhs_sp->Cast(type));
     }
   } else if (type.IsEnumerationType()) {
@@ -885,7 +877,7 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
     assert(base_type.CompareTypes(rhs_base_type) &&
            "invalid ast: operands should have the same type");
     // Cast value to handle type aliases.
-    lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
+    lldb::ValueObjectSP rhs_sp(GetDynamicOrSyntheticValue(rhs));
     m_result = lldb::ValueObjectSP(rhs_sp->Cast(type));
   } else if (type.IsPointerType()) {
     assert((rhs->GetCompilerType().IsInteger() ||
@@ -896,7 +888,6 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
     uint64_t addr = rhs->GetCompilerType().IsArrayType()
                     ? rhs->GetLoadAddress()
                     : rhs->GetValueAsUnsigned(0);
-    //m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
     llvm::StringRef name = "result";
     ExecutionContext exe_ctx(m_target.get(), false);
     m_result =
@@ -904,7 +895,7 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
                                                   type,
                                                   /* do_deref */ false);
   } else if (type.IsReferenceType()) {
-    lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
+    lldb::ValueObjectSP rhs_sp(GetDynamicOrSyntheticValue(rhs));
     m_result =
         lldb::ValueObjectSP(rhs_sp->Cast(type.GetNonReferenceType()));
   } else {
@@ -925,15 +916,20 @@ void DILInterpreter::Visit(const MemberOfNode* node) {
   // for members from non-virtual bases.
 
   Status error;
-  lldb::ValueObjectSP lhs = DILEvalNode(node->lhs());
-  if (!lhs) {
+  lldb::ValueObjectSP base = DILEvalNode(node->base());
+  if (!base) {
     return;
   }
 
-  if (lhs->GetCompilerType().IsReferenceType())
-    lhs = lhs->Dereference(error);
-  m_result = EvaluateMemberOf(lhs, node->member_index(), node->is_synthetic(),
-                              node->is_dynamic());
+  if (node->valobj()) {
+    m_result = node->valobj()->GetSP();
+  } else {
+    if (base->GetCompilerType().IsReferenceType())
+      base = base->Dereference(error);
+    m_result = EvaluateMemberOf(base, node->member_index(),
+                                node->is_synthetic(),
+                                node->is_dynamic());
+  }
 }
 
 void DILInterpreter::Visit(const ArraySubscriptNode* node) {
@@ -982,7 +978,7 @@ void DILInterpreter::Visit(const ArraySubscriptNode* node) {
                              index->GetValueAsSigned(0),
                              base->GetTypeName().AsCString("<invalid type>"),
                              base->GetName().AsCString()),
-               node->location());
+               node->GetLocation());
       m_result = lldb::ValueObjectSP();
       return;
     }
@@ -1002,22 +998,19 @@ void DILInterpreter::Visit(const ArraySubscriptNode* node) {
   ExecutionContext exe_ctx(m_target.get(), false);
   // Create a pointer and add the index, i.e. "base + index".
   lldb::ValueObjectSP value =
-      //PointerAdd(ValueObject::CreateValueObjectFromPointer(m_target, base_addr,
-      //                                                      item_type.GetPointerType()),
       PointerAdd(ValueObject::CreateValueObjectFromAddress(
           name, base_addr, exe_ctx, item_type.GetPointerType(),
           /* do_deref */ false),
                  index->GetValueAsSigned(0));
 
-  lldb::ValueObjectSP value_sp(DILGetSPWithLock(value));
   // If we're in the address-of context, skip the dereference and cancel the
   // pending address-of operation as well.
   if (flow_analysis() && flow_analysis()->AddressOfIsPending()) {
     flow_analysis()->DiscardAddressOf();
-    m_result = value_sp;
+    m_result = value;
   } else {
     Status error;
-    m_result = value_sp->Dereference(error);
+    m_result = value->Dereference(error);
   }
 }
 
@@ -1098,7 +1091,7 @@ void DILInterpreter::Visit(const BinaryOpNode* node) {
     case BinaryOpKind::Sub:
       // The result type of subtraction is required because it holds the
       // correct "ptrdiff_t" type in the case of subtracting two pointers.
-      m_result = EvaluateBinarySubtraction(lhs, rhs, node->result_type_deref());
+      m_result = EvaluateBinarySubtraction(lhs, rhs, node->GetDereferencedResultType());
       return;
     case BinaryOpKind::Mul:
       m_result = EvaluateBinaryMultiplication(lhs, rhs);
@@ -1190,16 +1183,23 @@ void DILInterpreter::Visit(const UnaryOpNode* node) {
         if (dynamic_rhs)
           rhs = dynamic_rhs;
       }
-      m_result = EvaluateDereference(rhs);
+      if (rhs->GetCompilerType().IsPointerType())
+        m_result = EvaluateDereference(rhs);
+      else {
+        lldb::ValueObjectSP child_sp = rhs->Dereference(error);
+        if (error.Success())
+          rhs = child_sp;
+        m_result = rhs;
+      }
       return;
+
     case UnaryOpKind::AddrOf:
       // If the address-of operation wasn't cancelled during the evaluation of
       // RHS (e.g. because of the address-of-a-dereference elision), apply it
       // here.
       if (rhs_flow.AddressOfIsPending()) {
         Status error;
-        lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
-        m_result = rhs_sp->AddressOf(error);
+        m_result = rhs->AddressOf(error);
       } else {
         m_result = rhs;
       }
@@ -1262,54 +1262,16 @@ void DILInterpreter::Visit(const TernaryOpNode* node) {
   }
 }
 
-void DILInterpreter::Visit(const SmartPtrToPtrDecay* node) {
-  auto ptr = DILEvalNode(node->ptr());
-  if (!ptr) {
-    return;
-  }
-
-  assert(IsSmartPtrType(ptr->GetCompilerType()) &&
-         "invalid ast: must be a smart pointer");
-
-  // Prefer synthetic value because we need LLDB machinery to "dereference" the
-  // pointer for us. This is usually the default, but if the value was obtained
-  // as a field of some other object, it will inherit the value from parent.
-  lldb::ValueObjectSP ptr_value = ptr;
-  bool prefer_synthetic_value = true;
-  lldb::DynamicValueType use_dynamic = lldb::eNoDynamicValues;
-  lldb::TargetSP target_sp  = ptr_value->GetTargetSP();
-  if (target_sp)
-    use_dynamic = target_sp->GetPreferDynamicValue();
-  lldb::ValueObjectSP value_sp(DILGetSPWithLock(ptr_value, use_dynamic,
-                                                prefer_synthetic_value));
-  ptr_value = value_sp->GetChildAtIndex(0);
-
-  lldb::addr_t base_addr = ptr_value->GetValueAsUnsigned(0);
-  CompilerType pointer_type = ptr_value->GetCompilerType();
-
-  if (value_sp->GetCompilerType().IsTemplateType()
-      && value_sp->GetCompilerType().GetNumTemplateArguments() == 1)
-    pointer_type =
-        value_sp->GetCompilerType().GetTypeTemplateArgument(0).GetPointerType();
-
-  //m_result = ValueObject::CreateValueObjectFromPointer(m_target, base_addr,
-  //                                                     pointer_type);
-  llvm::StringRef name = "result";
-  ExecutionContext exe_ctx(m_target.get(), false);
-  m_result =
-      ValueObject::CreateValueObjectFromAddress(name, base_addr, exe_ctx,
-                                                pointer_type,
-                                                /* do_deref */ false);
-
-  ValueObject *deref_valobj = nullptr;
-  if (ptr->HasSyntheticValue())
-    deref_valobj =
-        ptr->GetSyntheticValue()->GetChildMemberWithName("$$dereference$$").get();
-  else if (ptr->IsSynthetic())
-    deref_valobj = ptr->GetChildMemberWithName("$$dereference$$").get();
-  if (deref_valobj)
-    m_result->SetDerefValobj(deref_valobj);
-}
+//void DILInterpreter::Visit(const SmartPtrToPtrDecay* node) {
+//  auto ptr = DILEvalNode(node->ptr());
+//  if (!ptr) {
+//    return;
+//  }
+//
+//  Status deref_error;
+//  m_result = ptr->Dereference(deref_error);
+//  return;
+//}
 
 lldb::ValueObjectSP DILInterpreter::EvaluateComparison(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
@@ -1383,18 +1345,15 @@ lldb::ValueObjectSP DILInterpreter::EvaluateDereference(lldb::ValueObjectSP rhs)
           ValueObject::CreateValueObjectFromAddress(name, base_addr, exe_ctx,
                                                     pointer_type,
                                                     /* do_deref */ false);
-  //lldb::ValueObjectSP value = ValueObject::CreateValueObjectFromPointer(
-  //    m_target, base_addr,  pointer_type);
 
-  lldb::ValueObjectSP value_sp(DILGetSPWithLock(value));
   // If we're in the address-of context, skip the dereference and cancel the
   // pending address-of operation as well.
   if (flow_analysis() && flow_analysis()->AddressOfIsPending()) {
     flow_analysis()->DiscardAddressOf();
-    return value_sp;
+    return value;
   }
 
-  return value_sp->Dereference(error);
+  return value->Dereference(error);
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateUnaryMinus(lldb::ValueObjectSP rhs)
@@ -1650,7 +1609,6 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubtraction(
       exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
   return ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
                                                 result_type);
-  //return ValueObject::CreateValueObjectFromBytes(m_target, &diff, result_type);
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryMultiplication(
@@ -1976,8 +1934,6 @@ lldb::ValueObjectSP DILInterpreter::PointerAdd(lldb::ValueObjectSP lhs,
   return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
                                                    lhs->GetCompilerType(),
                                                     /* do_deref */ false);
-  //return ValueObject::CreateValueObjectFromPointer(m_target, addr,
-  //                                                 lhs->GetCompilerType());
 }
 
 lldb::ValueObjectSP DILInterpreter::ResolveContextVar(
@@ -1986,5 +1942,7 @@ lldb::ValueObjectSP DILInterpreter::ResolveContextVar(
   auto it = m_context_vars.find(name);
   return it != m_context_vars.end() ? it->second : lldb::ValueObjectSP();
 }
+
+}  // namespace dil
 
 }  // namespace lldb_private
