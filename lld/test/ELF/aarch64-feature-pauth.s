@@ -45,7 +45,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func2.s -o func2.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3.s -o func3.o
 # RUN: ld.lld func3.o --shared -o func3.so
-# RUN: ld.lld tag1.o     func2.o func3.so -z pac-plt --shared -o pacplt-nowarn --fatal-warnings
+# RUN: ld.lld tag1.o func2.o func3.so -z pac-plt --shared -o pacplt-nowarn --fatal-warnings
 # RUN: ld.lld tag-zero.o func2.o func3.so -z pac-plt --shared -o pacplt-warn 2>&1 | FileCheck --check-prefix WARN2 %s
 
 # WARN2:      warning: tag-zero.o: -z pac-plt: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_PAC property and no valid PAuth core info present for this link job
