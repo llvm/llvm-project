@@ -15,7 +15,7 @@ FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, "include/clang/Format/Format.h")
 INCLUDE_STYLE_FILE = os.path.join(
     CLANG_DIR, "include/clang/Tooling/Inclusions/IncludeStyle.h"
 )
-DOC_FILE = "ClangFormatStyleOptions.rst"
+DOC_FILE = "ClangFormatStyleOptions.rst.template"
 
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
@@ -487,5 +487,5 @@ with open(DOC_FILE, encoding="utf-8") as f:
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-with open(DOC_FILE, "wb") as output:
+with open(sys.argv[1], "wb") as output:
     output.write(contents.encode())
