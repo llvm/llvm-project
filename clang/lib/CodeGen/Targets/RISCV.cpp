@@ -421,7 +421,7 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty,
     }
 
     // Generic vector
-    // The number of element need to be at least 1.
+    // The number of elements needs to be at least 1.
     ResType = llvm::ScalableVectorType::get(
         EltType,
         llvm::divideCeil(NumElts * llvm::RISCV::RVVBitsPerBlock, ArgABIVLen));

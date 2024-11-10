@@ -5152,7 +5152,7 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   }
 
   if (Attrs.getKind() == ParsedAttr::AT_RISCVVLSCC) {
-    // riscv_vls_cc only accept 0 or 1 argument.
+    // riscv_vls_cc only accepts 0 or 1 argument.
     if (!Attrs.checkAtLeastNumArgs(*this, 0) ||
         !Attrs.checkAtMostNumArgs(*this, 1)) {
       Attrs.setInvalid();
