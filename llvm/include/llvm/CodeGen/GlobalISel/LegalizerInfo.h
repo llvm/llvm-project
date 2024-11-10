@@ -1118,7 +1118,7 @@ public:
   /// Widen the scalar to match the size of another.
   LegalizeRuleSet &minScalarSameAs(unsigned TypeIdx, unsigned LargeTypeIdx) {
     typeIdx(TypeIdx);
-    return widenScalarIf(
+    return actionIf(LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
                  Query.Types[TypeIdx].getSizeInBits();
@@ -1129,7 +1129,7 @@ public:
   /// Narrow the scalar to match the size of another.
   LegalizeRuleSet &maxScalarSameAs(unsigned TypeIdx, unsigned NarrowTypeIdx) {
     typeIdx(TypeIdx);
-    return narrowScalarIf(
+    return actionIf(LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
                  Query.Types[TypeIdx].getSizeInBits();
