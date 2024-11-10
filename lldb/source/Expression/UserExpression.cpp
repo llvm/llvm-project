@@ -110,13 +110,28 @@ lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
   lldb::VariableSP var_sp;
   lldb::ValueObjectSP valobj_sp;
 
-  return frame_sp->GetValueForVariableExpressionPath(
-      object_name, lldb::eNoDynamicValues,
-      StackFrame::eExpressionPathOptionCheckPtrVsMember |
-          StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
-          StackFrame::eExpressionPathOptionsNoSyntheticChildren |
-          StackFrame::eExpressionPathOptionsNoSyntheticArrayRange,
-      var_sp, err);
+  lldb::TargetSP target_sp = frame_sp->CalculateTarget();
+  ExecutionContext exe_ctx;
+  frame_sp->CalculateExecutionContext(exe_ctx);
+  bool use_DIL = target_sp->GetUseDIL(&exe_ctx);
+
+  if (use_DIL) {
+    return frame_sp->DILEvaluateVariableExpression(
+        object_name, lldb::eNoDynamicValues,
+        StackFrame::eExpressionPathOptionCheckPtrVsMember |
+            StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
+            StackFrame::eExpressionPathOptionsNoSyntheticChildren |
+            StackFrame::eExpressionPathOptionsNoSyntheticArrayRange,
+        var_sp, err);
+  } else {
+    return frame_sp->GetValueForVariableExpressionPath(
+        object_name, lldb::eNoDynamicValues,
+        StackFrame::eExpressionPathOptionCheckPtrVsMember |
+            StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
+            StackFrame::eExpressionPathOptionsNoSyntheticChildren |
+            StackFrame::eExpressionPathOptionsNoSyntheticArrayRange,
+        var_sp, err);
+  }
 }
 
 lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,

@@ -56,8 +56,19 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
                 if (auto frame = exe_ctx->GetFrameSP()) {
                   Status error;
                   lldb::VariableSP var_sp;
-                  auto valobj_sp = frame->GetValueForVariableExpressionPath(
-                      var_die.GetName(), eNoDynamicValues, 0, var_sp, error);
+                  lldb::TargetSP target_sp = frame->CalculateTarget();
+                  bool use_DIL = target_sp->GetUseDIL(
+                      (lldb_private::ExecutionContext *)exe_ctx);
+                  lldb::ValueObjectSP valobj_sp;
+                  if (use_DIL) {
+                    // Use the DIL parser/evaluator.
+                    valobj_sp = frame->DILEvaluateVariableExpression(
+                        var_die.GetName(), eNoDynamicValues, 0, var_sp, error);
+                  } else {
+                    // Use the original frame function.
+                    valobj_sp = frame->GetValueForVariableExpressionPath(
+                        var_die.GetName(), eNoDynamicValues, 0, var_sp, error);
+                  }
                   if (valobj_sp) {
                     num_elements = valobj_sp->GetValueAsUnsigned(0);
                     break;

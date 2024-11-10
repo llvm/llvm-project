@@ -472,6 +472,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
   StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
+  bool use_DIL = target->GetUseDIL(&exe_ctx);
   if (target && process) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
@@ -479,11 +480,22 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
       if (frame) {
         VariableSP var_sp;
         Status error;
-        ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
-            var_path, eNoDynamicValues,
-            StackFrame::eExpressionPathOptionCheckPtrVsMember |
-                StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
-            var_sp, error));
+        ValueObjectSP value_sp;
+        if (use_DIL) {
+          // Use DIL parser/evaluator.
+          value_sp = frame->DILEvaluateVariableExpression(
+              var_path, eNoDynamicValues,
+              StackFrame::eExpressionPathOptionCheckPtrVsMember |
+                  StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+              var_sp, error);
+        } else {
+          // Use original frame function.
+          value_sp = frame->GetValueForVariableExpressionPath(
+              var_path, eNoDynamicValues,
+              StackFrame::eExpressionPathOptionCheckPtrVsMember |
+                  StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+              var_sp, error);
+        }
         sb_value.SetSP(value_sp, use_dynamic);
       }
     }

@@ -806,6 +806,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
+    bool use_DIL = target.GetUseDIL(&m_exe_ctx);
 
     // If no argument is present, issue an error message.  There's no way to
     // set a watchpoint.
@@ -840,9 +841,16 @@ protected:
     uint32_t expr_path_options =
         StackFrame::eExpressionPathOptionCheckPtrVsMember |
         StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
-    valobj_sp = frame->GetValueForVariableExpressionPath(
-        command.GetArgumentAtIndex(0), eNoDynamicValues, expr_path_options,
-        var_sp, error);
+    if (use_DIL)
+      // Use the DIL parser/evaluator.
+      valobj_sp = frame->DILEvaluateVariableExpression(
+          command.GetArgumentAtIndex(0), eNoDynamicValues, expr_path_options,
+          var_sp, error);
+    else
+      // Use the original frame function.
+      valobj_sp = frame->GetValueForVariableExpressionPath(
+          command.GetArgumentAtIndex(0), eNoDynamicValues, expr_path_options,
+          var_sp, error);
 
     if (!valobj_sp) {
       // Not in the frame; let's check the globals.
