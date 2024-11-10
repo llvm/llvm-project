@@ -63,12 +63,10 @@ module std_core [system] {
   }
 
   module type_traits {
-    module add_const                                  { header "__type_traits/add_const.h" }
-    module add_cv                                     { header "__type_traits/add_cv.h" }
+    module add_cv_quals                               { header "__type_traits/add_cv_quals.h" }
     module add_lvalue_reference                       { header "__type_traits/add_lvalue_reference.h" }
     module add_pointer                                { header "__type_traits/add_pointer.h" }
     module add_rvalue_reference                       { header "__type_traits/add_rvalue_reference.h" }
-    module add_volatile                               { header "__type_traits/add_volatile.h" }
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
