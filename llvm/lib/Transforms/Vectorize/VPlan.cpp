@@ -1023,8 +1023,8 @@ void VPlan::execute(VPTransformState *State) {
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
-  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" <<State->VF
-                    << ", UF=" << getUF()<< '\n');
+  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
+                    << ", UF=" << getUF() << '\n');
   setName("Final VPlan");
   LLVM_DEBUG(dump());
 
