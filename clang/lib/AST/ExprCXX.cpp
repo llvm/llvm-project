@@ -247,8 +247,8 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
   CXXNewExprBits.IsArray = ArraySize.has_value();
-  CXXNewExprBits.ShouldPassAlignment = IAP.PassAlignment;
-  CXXNewExprBits.ShouldPassTypeIdentity = IAP.PassTypeIdentity;
+  CXXNewExprBits.ShouldPassAlignment = IAP.passAlignment();
+  CXXNewExprBits.ShouldPassTypeIdentity = IAP.passTypeIdentity();
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.HasInitializer = Initializer != nullptr;
   CXXNewExprBits.StoredInitializationStyle =

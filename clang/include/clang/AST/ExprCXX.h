@@ -2234,15 +2234,42 @@ enum class CXXNewInitializationStyle {
   Braces
 };
 
+enum class TypeAwareAllocation { Yes, No };
+
+inline TypeAwareAllocation typeAwareAllocation(bool IsTypeAware) {
+  return IsTypeAware ? TypeAwareAllocation::Yes : TypeAwareAllocation::No;
+}
+
+enum class AlignedAllocation { Yes, No };
+
+inline AlignedAllocation alignedAllocation(bool IsAligned) {
+  return IsAligned ? AlignedAllocation::Yes : AlignedAllocation::No;
+}
+
+enum class SizedDeallocation { Yes, No };
+
+inline SizedDeallocation sizedDeallocation(bool IsSized) {
+  return IsSized ? SizedDeallocation::Yes : SizedDeallocation::No;
+}
+
 struct ImplicitAllocationParameters {
-  bool PassTypeIdentity;
-  bool PassAlignment;
+  TypeAwareAllocation PassTypeIdentity;
+  AlignedAllocation PassAlignment;
+  bool passTypeIdentity() const {
+    return PassTypeIdentity == TypeAwareAllocation::Yes;
+  }
+  bool passAlignment() const { return PassAlignment == AlignedAllocation::Yes; }
 };
 
 struct ImplicitDeallocationParameters {
-  bool PassTypeIdentity;
-  bool PassAlignment;
-  bool PassSize;
+  TypeAwareAllocation PassTypeIdentity;
+  AlignedAllocation PassAlignment;
+  SizedDeallocation PassSize;
+  bool passTypeIdentity() const {
+    return PassTypeIdentity == TypeAwareAllocation::Yes;
+  }
+  bool passAlignment() const { return PassAlignment == AlignedAllocation::Yes; }
+  bool passSize() const { return PassSize == SizedDeallocation::Yes; }
 };
 
 /// Represents a new-expression for memory allocation and constructor
@@ -2465,8 +2492,8 @@ public:
   /// Provides the full set of information about expected implicit
   /// parameters in this call
   ImplicitAllocationParameters implicitAllocationParameters() const {
-    return ImplicitAllocationParameters{.PassTypeIdentity = passTypeIdentity(),
-                                        .PassAlignment = passAlignment()};
+    return ImplicitAllocationParameters{typeAwareAllocation(passTypeIdentity()),
+                                        alignedAllocation(passAlignment())};
   }
 
   using arg_iterator = ExprIterator;
