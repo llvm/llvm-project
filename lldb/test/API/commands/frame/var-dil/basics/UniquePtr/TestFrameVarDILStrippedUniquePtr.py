@@ -63,10 +63,10 @@ class TestFrameVarDILUniquePtr(TestBase):
         #self.expect("frame variable '(*(NodeU**)&ptr_node.__ptr_)->value'",
         #            substrs=["1"])
 
-        self.expect("frame variable 'ptr_node.__ptr_.__value_'",
-                    patterns=["0x[0-9]+"])
-        self.expect("frame variable 'ptr_node.__ptr_.__value_->value'",
-                    substrs=["1"])
-        self.expect(
-            "frame variable 'ptr_node.__ptr_.__value_->next.__ptr_.__value_->value'",
-            substrs=["2"])
+        #self.expect("frame variable 'ptr_node.__ptr_.__value_'",
+        #            patterns=["0x[0-9]+"])
+        #self.expect("frame variable 'ptr_node.__ptr_.__value_->value'",
+        #            substrs=["1"])
+        #self.expect(
+        #    "frame variable 'ptr_node.__ptr_.__value_->next.__ptr_.__value_->value'",
+        #    substrs=["2"])

@@ -58,8 +58,8 @@ class TestFrameVarDILSharedPtrDeref(TestBase):
 
 
 
-        #self.expect("settings set target.experimental.use-DIL true",
-        #            substrs=[""])
+        self.expect("settings set target.experimental.use-DIL true",
+                    substrs=[""])
 
         # Test member-of dereference.
         self.expect("frame variable 'ptr_node->value'", substrs=["1"])

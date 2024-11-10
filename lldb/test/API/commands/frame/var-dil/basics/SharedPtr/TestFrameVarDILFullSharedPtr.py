@@ -56,8 +56,8 @@ class TestFrameVarDILSharedPtr(TestBase):
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
 
-        #self.expect("settings set target.experimental.use-DIL true",
-        #            substrs=[""])
+        self.expect("settings set target.experimental.use-DIL true",
+                    substrs=[""])
         self.expect("frame variable '*(NodeS**)&ptr_node.__ptr_'",
                     patterns=["0x[0-9]+"])
         self.expect("frame variable '(*(NodeS**)&ptr_node.__ptr_)->value'",
