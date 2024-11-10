@@ -12,7 +12,7 @@
 
 #ifndef __AMX_AVX512INTRIN_H
 #define __AMX_AVX512INTRIN_H
-#ifdef __x86_64__
+#if defined(__x86_64__) && defined(__SSE2__)
 
 #define __DEFAULT_FN_ATTRS_AVX512                                              \
   __attribute__((__always_inline__, __nodebug__,                               \
@@ -378,5 +378,5 @@ static __m512i __tile_movrow(__tile1024i src0, unsigned src1) {
   return (__m512i)_tile_movrow_internal(src0.row, src0.col, src0.tile, src1);
 }
 
-#endif // __x86_64__
+#endif // __x86_64__ && __SSE2__
 #endif // __AMX_AVX512INTRIN_H

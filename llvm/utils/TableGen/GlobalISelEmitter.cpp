@@ -1015,6 +1015,15 @@ Error GlobalISelEmitter::importChildMatcher(
         return Error::success();
       }
     }
+  } else if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild.getLeafValue())) {
+    auto *ChildRec = ChildDefInit->getDef();
+    if (ChildRec->isSubClassOf("ValueType") && !SrcChild.hasName()) {
+      // An unnamed ValueType as in (sext_inreg GPR:$foo, i8). GISel represents
+      // this as a literal constant with the scalar size.
+      MVT::SimpleValueType VT = llvm::getValueType(ChildRec);
+      OM.addPredicate<LiteralIntOperandMatcher>(MVT(VT).getScalarSizeInBits());
+      return Error::success();
+    }
   }
 
   // Immediate arguments have no meaningful type to check as they don't have
