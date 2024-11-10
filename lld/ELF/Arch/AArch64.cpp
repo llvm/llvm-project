@@ -1018,6 +1018,9 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
+  // By default we only use hint-space instructions, but if we detect the
+  // PAuthABI, which requires v8.3-A, we can use the non-hint space
+  // instructions.
 
   if (ctx.arg.zPacPlt) {
     if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
