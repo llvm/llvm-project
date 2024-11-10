@@ -79,8 +79,8 @@ struct increasing_allocator {
     min_bytes += 1000;
     return {static_cast<T*>(::operator new(allocation_amount)), allocation_amount / sizeof(T)};
   }
-  T* allocate(std::size_t n) { return allocate_at_least(n).ptr; }
-  void deallocate(T* p, std::size_t) noexcept { ::operator delete(static_cast<void*>(p)); }
+  T* allocate(std::size_t n) { return std::allocator<T>{}.allocate(n); }
+  void deallocate(T* p, std::size_t n) noexcept { std::allocator<T>{}.deallocate(p, n); }
 };
 
 template <typename T, typename U>

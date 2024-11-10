@@ -55,7 +55,7 @@ struct increasing_allocator {
     min_elements += 1000;
     return std::allocator<T>{}.allocate_at_least(n);
   }
-  constexpr T* allocate(std::size_t n) { return allocate_at_least(n).ptr; }
+  constexpr T* allocate(std::size_t n) { return std::allocator<T>{}.allocate(n); }
   constexpr void deallocate(T* p, std::size_t n) noexcept { std::allocator<T>{}.deallocate(p, n); }
 };
 
