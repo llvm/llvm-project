@@ -218,6 +218,7 @@ In order to use this "local testing" mode:
        BUILDMASTER_TEST=1 buildbot checkconfig
 
 * Start the buildmaster.
+
     .. code-block:: bash
 
        BUILDMASTER_TEST=1 buildbot start --nodaemon .
@@ -230,6 +231,7 @@ In order to use this "local testing" mode:
 * You can now create and start a buildbot worker. Ensure you pick the correct
   name for the worker associated with the build configuration you want to test
   in ``buildbot/osuosl/master/config/builders.py``.
+
     .. code-block:: bash
 
        buildbot-worker create-worker <buildbot-worker-root-directory> \
