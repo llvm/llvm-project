@@ -294,9 +294,9 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   bool Changed = false;
 
   ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                                 /*UndefAllowed=*/ false),
+                                                 /*UndefAllowed=*/false),
                 CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                                 /*UndefAllowed=*/ false);
+                                                 /*UndefAllowed=*/false);
 
   if (Cmp->isSigned()) {
     ICmpInst::Predicate UnsignedPred =
