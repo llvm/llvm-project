@@ -1754,7 +1754,7 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
     return false;
 
   unsigned UsualParams = 1;
-  if (S.AllowTypeAwareAllocators() && UsualParams < FD->getNumParams() &&
+  if (S.AllowTypeAwareAllocatorsInCurrentContext() && UsualParams < FD->getNumParams() &&
       S.isTypeAwareOperatorNewOrDelete(FD))
     ++UsualParams;
 
@@ -1795,7 +1795,7 @@ namespace {
         FD = *InstantiatedDecl;
       }
       unsigned NumBaseParams = 1;
-      if (S.AllowTypeAwareAllocators() &&
+      if (S.AllowTypeAwareAllocatorsInCurrentContext() &&
           S.isTypeAwareOperatorNewOrDelete(FD)) {
         QualType TypeIdentityTag = FD->getParamDecl(0)->getType();
         std::optional<QualType> ExpectedTypeIdentityTag =
@@ -2432,7 +2432,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       AllocType->isDependentType() ? 0 : Context.getTypeAlign(AllocType);
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
   ImplicitAllocationParameters IAP = {
-      typeAwareAllocation(AllowTypeAwareAllocators()),
+      typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()),
       alignedAllocation(getLangOpts().AlignedAllocation &&
                         Alignment > NewAlignment)};
 
@@ -3509,7 +3509,7 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(
   DeclareGlobalNewDelete();
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
-  DeallocLookupMode LookupMode = AllowTypeAwareAllocators()
+  DeallocLookupMode LookupMode = AllowTypeAwareAllocatorsInCurrentContext()
                                      ? DeallocLookupMode::OptionallyTyped
                                      : DeallocLookupMode::Untyped;
   LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
@@ -3540,7 +3540,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
   ImplicitDeallocationParameters IDP = {
-      typeAwareAllocation(AllowTypeAwareAllocators()), AlignedAllocation::No,
+      typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()), AlignedAllocation::No,
       SizedDeallocation::No};
 
   if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, DeallocType, IDP))
@@ -4012,7 +4012,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {
-          typeAwareAllocation(AllowTypeAwareAllocators()),
+          typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()),
           AlignedAllocation::No, SizedDeallocation::No};
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
@@ -4066,7 +4066,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
       // Look for a global declaration.
       ImplicitDeallocationParameters IDP = {
-          typeAwareAllocation(AllowTypeAwareAllocators()),
+          typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()),
           alignedAllocation(Overaligned), sizedDeallocation(CanProvideSize)};
       OperatorDelete =
           FindUsualDeallocationFunction(Pointee, StartLoc, IDP, DeleteName);

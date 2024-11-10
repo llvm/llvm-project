@@ -2135,7 +2135,7 @@ public:
            isConstantEvaluatedOverride;
   }
 
-  bool AllowTypeAwareAllocators() const {
+  bool AllowTypeAwareAllocatorsInCurrentContext() const {
     return getLangOpts().TypeAwareAllocators && !isConstantEvaluatedContext();
   }
 
