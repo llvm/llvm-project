@@ -111,7 +111,6 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
           llvm::inconvertibleErrorCode());
   }
 
-
   // Out-of-process executors require the ORC runtime.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
                                  OOPExecutorConnect.getNumOccurrences())) {
@@ -130,7 +129,7 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
       return llvm::make_error<llvm::StringError>(
           "Out-of-process execution is not supported on non-unix platforms",
           llvm::inconvertibleErrorCode());
-    }
+  }
 
   // If -oop-executor was used but no value was specified then use a sensible
   // default.
