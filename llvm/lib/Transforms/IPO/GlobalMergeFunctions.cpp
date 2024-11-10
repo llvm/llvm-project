@@ -6,19 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass defines the implementation of a function merging mechanism
-// that utilizes a stable function hash to track differences in constants and
-// create potential merge candidates. The process involves two rounds:
-// 1. The first round collects stable function hashes and identifies merge
-//    candidates with matching hashes. It also computes the set of parameters
-//    that point to different constants during the stable function merge.
-// 2. The second round leverages this collected global function information to
-//    optimistically create a merged function in each module context, ensuring
-//    correct transformation.
-// Similar to the global outliner, this approach uses the linker's deduplication
-// (ICF) to fold identical merged functions, thereby reducing the final binary
-// size. The work is inspired by the concepts discussed in the following paper:
-// https://dl.acm.org/doi/pdf/10.1145/3652032.3657575.
+// This pass implements the global merge function pass.
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,15 +58,15 @@ static cl::opt<unsigned> GlobalMergingExtraThreshold(
 
 extern cl::opt<bool> EnableGlobalMergeFunc;
 
-STATISTIC(NumMismatchedFunctionHashGlobalMergeFunction,
+STATISTIC(NumMismatchedFunctionHash,
           "Number of mismatched function hash for global merge function");
-STATISTIC(NumMismatchedInstCountGlobalMergeFunction,
+STATISTIC(NumMismatchedInstCount,
           "Number of mismatched instruction count for global merge function");
-STATISTIC(NumMismatchedConstHashGlobalMergeFunction,
+STATISTIC(NumMismatchedConstHash,
           "Number of mismatched const hash for global merge function");
-STATISTIC(NumMismatchedModuleIdGlobalMergeFunction,
+STATISTIC(NumMismatchedModuleId,
           "Number of mismatched Module Id for global merge function");
-STATISTIC(NumGlobalMergeFunctions,
+STATISTIC(NumMergedFunctions,
           "Number of functions that are actually merged using function hash");
 STATISTIC(NumAnalyzedModues, "Number of modules that are analyzed");
 STATISTIC(NumAnalyzedFunctions, "Number of functions that are analyzed");
@@ -109,34 +97,6 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
     // because we cannot add another ptrauth bundle to the call instruction.
     return false;
   }
-  return true;
-}
-
-bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
-  switch (I->getOpcode()) {
-  case Instruction::Load:
-  case Instruction::Store:
-  case Instruction::Call:
-  case Instruction::Invoke:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isEligibleOperandForConstantSharing(const Instruction *I, unsigned OpIdx) {
-  assert(OpIdx < I->getNumOperands() && "Invalid operand index");
-
-  if (!isEligibleInstrunctionForConstantSharing(I))
-    return false;
-
-  auto Opnd = I->getOperand(OpIdx);
-  if (!isa<Constant>(Opnd))
-    return false;
-
-  if (const auto *CI = dyn_cast<CallBase>(I))
-    return canParameterizeCallOperand(CI, OpIdx);
-
   return true;
 }
 
@@ -172,8 +132,7 @@ bool isEligibleFunction(Function *F) {
   return true;
 }
 
-static bool
-isEligibleInstrunctionForConstantSharingLocal(const Instruction *I) {
+static bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Load:
   case Instruction::Store:
@@ -188,7 +147,7 @@ isEligibleInstrunctionForConstantSharingLocal(const Instruction *I) {
 static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
   assert(OpIdx < I->getNumOperands() && "Invalid operand index");
 
-  if (!isEligibleInstrunctionForConstantSharingLocal(I))
+  if (!isEligibleInstrunctionForConstantSharing(I))
     return false;
 
   if (!isa<Constant>(I->getOperand(OpIdx)))
@@ -233,10 +192,9 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
   assert(!DestTy->isArrayTy());
   if (SrcTy->isIntegerTy() && DestTy->isPointerTy())
     return Builder.CreateIntToPtr(V, DestTy);
-  else if (SrcTy->isPointerTy() && DestTy->isIntegerTy())
+  if (SrcTy->isPointerTy() && DestTy->isIntegerTy())
     return Builder.CreatePtrToInt(V, DestTy);
-  else
-    return Builder.CreateBitCast(V, DestTy);
+  return Builder.CreateBitCast(V, DestTy);
 }
 
 void GlobalMergeFunc::analyze(Module &M) {
@@ -268,6 +226,9 @@ struct FuncMergeInfo {
   StableFunctionMap::StableFunctionEntry *SF;
   Function *F;
   std::unique_ptr<IndexInstrMap> IndexInstruction;
+  FuncMergeInfo(StableFunctionMap::StableFunctionEntry *SF, Function *F,
+                std::unique_ptr<IndexInstrMap> IndexInstruction)
+      : SF(SF), F(F), IndexInstruction(std::move(IndexInstruction)) {}
 };
 
 // Given the func info, and the parameterized locations, create and return
@@ -279,7 +240,8 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
   // Synthesize a new merged function name by appending ".Tgm" to the root
   // function's name.
   auto *MergedFunc = FI.F;
-  auto NewFunctionName = MergedFunc->getName().str() + ".Tgm";
+  std::string NewFunctionName =
+      MergedFunc->getName().str() + GlobalMergeFunc::MergingInstanceSuffix;
   auto *M = MergedFunc->getParent();
   assert(!M->getFunction(NewFunctionName));
 
@@ -288,8 +250,8 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
   SmallVector<Type *> ParamTypes(OrigTy->param_begin(), OrigTy->param_end());
   // Append const parameter types that are passed in.
   ParamTypes.append(ConstParamTypes.begin(), ConstParamTypes.end());
-  FunctionType *FuncType =
-      FunctionType::get(OrigTy->getReturnType(), ParamTypes, false);
+  FunctionType *FuncType = FunctionType::get(OrigTy->getReturnType(),
+                                             ParamTypes, /*isVarArg=*/false);
 
   // Declare a new function
   Function *NewFunction =
@@ -326,8 +288,9 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
         IRBuilder<> Builder(Inst->getParent(), Inst->getIterator());
         Inst->setOperand(OpndIndex,
                          createCast(Builder, NewArg, OrigC->getType()));
-      } else
+      } else {
         Inst->setOperand(OpndIndex, NewArg);
+      }
     }
   }
 
@@ -336,7 +299,6 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
 
 // Given the original function (Thunk) and the merged function (ToFunc), create
 // a thunk to the merged function.
-
 static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
                         Function *ToFunc) {
   auto *Thunk = FI.F;
@@ -361,7 +323,6 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
   // Add new arguments defined by Params.
   for (auto *Param : Params) {
     assert(ParamIdx < ToFuncTy->getNumParams());
-    // FIXME: do not support signing
     Args.push_back(
         createCast(Builder, Param, ToFuncTy->getParamType(ParamIdx)));
     ++ParamIdx;
@@ -431,8 +392,9 @@ checkConstLocationCompatible(const StableFunctionMap::StableFunctionEntry &SF,
       if (!OldHash) {
         OldHash = CurrHash;
         OldConst = CurrConst;
-      } else if (CurrConst != *OldConst || CurrHash != *OldHash)
+      } else if (CurrConst != *OldConst || CurrHash != *OldHash) {
         return false;
+      }
     }
   }
   return true;
@@ -454,8 +416,7 @@ static ParamLocsVecTy computeParamInfo(
     bool Identical = true;
     for (unsigned J = 1; J < StableFunctionCount; ++J) {
       auto &SF = SFS[J];
-      assert(SF->IndexOperandHashMap->count(IndexPair));
-      auto SHash = (*SF->IndexOperandHashMap)[IndexPair];
+      auto SHash = SF->IndexOperandHashMap->at(IndexPair);
       if (Hash != SHash)
         Identical = false;
       ConstHashSeq.push_back(SHash);
@@ -471,9 +432,9 @@ static ParamLocsVecTy computeParamInfo(
   ParamLocsVecTy ParamLocsVec;
   for (auto &[HashSeq, Locs] : HashSeqToLocs) {
     ParamLocsVec.push_back(std::move(Locs));
-    std::sort(
-        ParamLocsVec.begin(), ParamLocsVec.end(),
-        [&](const ParamLocs &L, const ParamLocs &R) { return L[0] < R[0]; });
+    llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
+      return L[0] < R[0];
+    });
   }
   return ParamLocsVec;
 }
@@ -527,10 +488,8 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
     // Compute the parameter locations based on the unique hash sequences
     // across the candidates.
     auto ParamLocsVec = computeParamInfo(SFS);
-    LLVM_DEBUG({
-      dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash << " with Params "
-             << ParamLocsVec.size() << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash
+                      << " with Params " << ParamLocsVec.size() << "\n");
 
     Function *MergedFunc = nullptr;
     std::string MergedModId;
@@ -553,12 +512,12 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
       auto FI = llvm::StructuralHashWithDifferences(*F, ignoreOp);
       uint64_t FuncHash = FI.FunctionHash;
       if (Hash != FuncHash) {
-        ++NumMismatchedFunctionHashGlobalMergeFunction;
+        ++NumMismatchedFunctionHash;
         continue;
       }
 
       if (SF->InstCount != FI.IndexInstruction->size()) {
-        ++NumMismatchedInstCountGlobalMergeFunction;
+        ++NumMismatchedInstCount;
         continue;
       }
       bool HasValidSharedConst = true;
@@ -566,23 +525,23 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         auto [InstIndex, OpndIndex] = Index;
         assert(InstIndex < FI.IndexInstruction->size());
         auto *Inst = FI.IndexInstruction->lookup(InstIndex);
-        if (!isEligibleOperandForConstantSharing(Inst, OpndIndex)) {
+        if (!ignoreOp(Inst, OpndIndex)) {
           HasValidSharedConst = false;
           break;
         }
       }
       if (!HasValidSharedConst) {
-        ++NumMismatchedConstHashGlobalMergeFunction;
+        ++NumMismatchedConstHash;
         continue;
       }
       if (!checkConstHashCompatible(*SF->IndexOperandHashMap,
                                     *FI.IndexOperandHashMap)) {
-        ++NumMismatchedConstHashGlobalMergeFunction;
+        ++NumMismatchedConstHash;
         continue;
       }
       if (!checkConstLocationCompatible(*SF, *FI.IndexInstruction,
                                         ParamLocsVec)) {
-        ++NumMismatchedConstHashGlobalMergeFunction;
+        ++NumMismatchedConstHash;
         continue;
       }
 
@@ -596,7 +555,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         // modules than the first one in the functon map, as they may not end up
         // with not being ICFed by the linker.
         if (MergedModId != *FunctionMap->getNameForId(SF->ModuleNameId)) {
-          ++NumMismatchedModuleIdGlobalMergeFunction;
+          ++NumMismatchedModuleId;
           continue;
         }
       } else {
@@ -604,17 +563,15 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         MergedModId = *FunctionMap->getNameForId(SF->ModuleNameId);
       }
 
-      FuncMergeInfos.push_back({SF.get(), F, std::move(FI.IndexInstruction)});
+      FuncMergeInfos.emplace_back(SF.get(), F, std::move(FI.IndexInstruction));
       MergedFunctions.insert(F);
     }
     unsigned FuncMergeInfoSize = FuncMergeInfos.size();
     if (FuncMergeInfoSize == 0)
       continue;
 
-    LLVM_DEBUG({
-      dbgs() << "[GlobalMergeFunc] Merging function count " << FuncMergeInfoSize
-             << " in  " << ModId << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging function count "
+                      << FuncMergeInfoSize << " in  " << ModId << "\n");
 
     for (auto &FMI : FuncMergeInfos) {
       Changed = true;
@@ -650,7 +607,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         dbgs() << "[GlobalMergeFunc] Thunk generated: \n";
         FMI.F->dump();
       });
-      ++NumGlobalMergeFunctions;
+      ++NumMergedFunctions;
     }
   }
 
@@ -682,8 +639,10 @@ Pass *createGlobalMergeFuncPass() { return new GlobalMergeFunc(); }
 } // namespace llvm
 
 void GlobalMergeFunc::initializeMergerMode(const Module &M) {
+  // Initialize the local function map regardless of the merger mode.
   LocalFunctionMap = std::make_unique<StableFunctionMap>();
 
+  // Skip the global merge mode. The local merge is still enabled.
   if (DisableGlobalMerging)
     return;
 
@@ -703,9 +662,8 @@ void GlobalMergeFunc::initializeMergerMode(const Module &M) {
 }
 
 void GlobalMergeFunc::emitFunctionMap(Module &M) {
-  LLVM_DEBUG({
-    dbgs() << "Emit function map. Size: " << LocalFunctionMap->size() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Emit function map. Size: " << LocalFunctionMap->size()
+                    << "\n");
   // No need to emit the function map if it is empty.
   if (LocalFunctionMap->empty())
     return;

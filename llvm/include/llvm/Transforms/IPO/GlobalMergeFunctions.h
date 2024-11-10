@@ -54,6 +54,11 @@ class GlobalMergeFunc : public ModulePass {
 public:
   static char ID;
 
+  /// The suffix used to identify the merged function that parameterizes
+  /// the constant values. Note that the original function, without this suffix,
+  /// becomes a thunk supplying contexts to the merged function via parameters.
+  static constexpr const char MergingInstanceSuffix[] = ".Tgm";
+
   GlobalMergeFunc();
 
   StringRef getPassName() const override;
