@@ -761,7 +761,8 @@ with a given unsigned step.
 
 The type of the operand must be equal to the vector element type. Arithmetic
 is performed modulo the bitwidth of the element. The step must be > 0.
-Otherwise the vector is zero. The canonical is splat vector of zeros.
+Otherwise the vector is zero. The canonical representation is a splat vector
+of zeros.
 
 .. code-block::
 
