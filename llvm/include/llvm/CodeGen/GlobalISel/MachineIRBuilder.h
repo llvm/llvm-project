@@ -1181,19 +1181,7 @@ public:
   /// \pre \p Res must be a generic virtual register with scalar type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildStepVector(const DstOp &Res,
-                                      const ConstantInt &Step);
-
-  /// Build and insert \p Res = G_STEP_VECTOR \p Step
-  ///
-  /// G_STEP_VECTOR returns a scalable vector of linear sequence of step \p Step
-  /// into \p Res.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p Res must be a generic virtual register with scalar type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildStepVector(const DstOp &Res, const APInt &Step);
+  MachineInstrBuilder buildStepVector(const DstOp &Res, unsigned Step);
 
   /// Build and insert \p Res = G_VSCALE \p MinElts
   ///

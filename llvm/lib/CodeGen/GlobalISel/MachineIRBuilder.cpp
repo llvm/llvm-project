@@ -810,17 +810,14 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildStepVector(const DstOp &Res,
-                                                      const APInt &Step) {
-  ConstantInt *CI = ConstantInt::get(getMF().getFunction().getContext(), Step);
-  return buildStepVector(Res, *CI);
-}
+                                                      unsigned Step) {
+  ConstantInt *CI =
+      ConstantInt::get(getMF().getFunction().getContext(), APInt(64, Step));
 
-MachineInstrBuilder MachineIRBuilder::buildStepVector(const DstOp &Res,
-                                                      const ConstantInt &Step) {
   auto StepVector = buildInstr(TargetOpcode::G_STEP_VECTOR);
   StepVector->setDebugLoc(DebugLoc());
   Res.addDefToMIB(*getMRI(), StepVector);
-  StepVector.addCImm(&Step);
+  StepVector.addCImm(CI);
   return StepVector;
 }
 
