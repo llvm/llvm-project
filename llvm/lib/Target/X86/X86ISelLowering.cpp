@@ -27328,8 +27328,6 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     case Intrinsic::x86_t2rpntlvwz0t1_internal:
     case Intrinsic::x86_t2rpntlvwz1_internal:
     case Intrinsic::x86_t2rpntlvwz1t1_internal: {
-      if (!Subtarget.hasAMXTILE())
-        break;
       auto *X86MFI = DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
       X86MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
       unsigned IntNo = Op.getConstantOperandVal(1);
