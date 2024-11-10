@@ -5502,7 +5502,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         }
         if (CT->getSize().ugt(e)) {
           // Need an init from empty {}, is there one?
-          InitListExpr EmptyList(S.Context, From->getEndLoc(), std::nullopt,
+          InitListExpr EmptyList(S.Context, From->getEndLoc(), {},
                                  From->getEndLoc());
           EmptyList.setType(S.Context.VoidTy);
           DfltElt = TryListConversion(
@@ -7479,7 +7479,7 @@ void Sema::AddMethodCandidate(DeclAccessPair FoundDecl, QualType ObjectType,
   } else {
     AddMethodCandidate(cast<CXXMethodDecl>(Decl), FoundDecl, ActingContext,
                        ObjectType, ObjectClassification, Args, CandidateSet,
-                       SuppressUserConversions, false, std::nullopt, PO);
+                       SuppressUserConversions, false, {}, PO);
   }
 }
 
@@ -8125,7 +8125,7 @@ void Sema::AddConversionCandidate(
   }
 
   if (EnableIfAttr *FailedAttr =
-          CheckEnableIf(Conversion, CandidateSet.getLocation(), std::nullopt)) {
+          CheckEnableIf(Conversion, CandidateSet.getLocation(), {})) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
     Candidate.DeductionFailure.Data = FailedAttr;
@@ -8306,7 +8306,7 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
   }
 
   if (EnableIfAttr *FailedAttr =
-          CheckEnableIf(Conversion, CandidateSet.getLocation(), std::nullopt)) {
+          CheckEnableIf(Conversion, CandidateSet.getLocation(), {})) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
     Candidate.DeductionFailure.Data = FailedAttr;
@@ -8346,10 +8346,10 @@ void Sema::AddNonMemberOperatorCandidates(
         continue;
       AddOverloadCandidate(FD, F.getPair(), FunctionArgs, CandidateSet);
       if (CandidateSet.getRewriteInfo().shouldAddReversed(*this, Args, FD))
-        AddOverloadCandidate(
-            FD, F.getPair(), {FunctionArgs[1], FunctionArgs[0]}, CandidateSet,
-            false, false, true, false, ADLCallKind::NotADL, std::nullopt,
-            OverloadCandidateParamOrder::Reversed);
+        AddOverloadCandidate(FD, F.getPair(),
+                             {FunctionArgs[1], FunctionArgs[0]}, CandidateSet,
+                             false, false, true, false, ADLCallKind::NotADL, {},
+                             OverloadCandidateParamOrder::Reversed);
     }
   }
 }
@@ -10102,8 +10102,7 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
             FD, FoundDecl, {Args[1], Args[0]}, CandidateSet,
             /*SuppressUserConversions=*/false, PartialOverloading,
             /*AllowExplicit=*/true, /*AllowExplicitConversion=*/false,
-            ADLCallKind::UsesADL, std::nullopt,
-            OverloadCandidateParamOrder::Reversed);
+            ADLCallKind::UsesADL, {}, OverloadCandidateParamOrder::Reversed);
       }
     } else {
       auto *FTD = cast<FunctionTemplateDecl>(*I);
@@ -15954,7 +15953,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
     AddMethodCandidate(Oper.getPair(), Base->getType(), Base->Classify(Context),
-                       std::nullopt, CandidateSet,
+                       {}, CandidateSet,
                        /*SuppressUserConversion=*/false);
   }
 
@@ -16149,8 +16148,7 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;
     }
-    *CallExpr =
-        BuildCallExpr(S, MemberRef.get(), Loc, std::nullopt, Loc, nullptr);
+    *CallExpr = BuildCallExpr(S, MemberRef.get(), Loc, {}, Loc, nullptr);
     if (CallExpr->isInvalid()) {
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;

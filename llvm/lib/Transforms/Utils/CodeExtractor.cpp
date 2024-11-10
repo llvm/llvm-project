@@ -823,17 +823,22 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
 
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
+  std::vector<std::tuple<unsigned, Value *>> NumberedInputs;
+  std::vector<std::tuple<unsigned, Value *>> NumberedOutputs;
   ValueSet StructValues;
   const DataLayout &DL = M->getDataLayout();
 
   // Add the types of the input values to the function's argument list
+  unsigned ArgNum = 0;
   for (Value *value : inputs) {
     LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
     if (AggregateArgs && !ExcludeArgsFromAggregate.contains(value)) {
       AggParamTy.push_back(value->getType());
       StructValues.insert(value);
-    } else
+    } else {
       ParamTy.push_back(value->getType());
+      NumberedInputs.emplace_back(ArgNum++, value);
+    }
   }
 
   // Add the types of the output values to the function's argument list.
@@ -842,9 +847,11 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     if (AggregateArgs && !ExcludeArgsFromAggregate.contains(output)) {
       AggParamTy.push_back(output->getType());
       StructValues.insert(output);
-    } else
+    } else {
       ParamTy.push_back(
           PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
+      NumberedOutputs.emplace_back(ArgNum++, output);
+    }
   }
 
   assert(
@@ -953,7 +960,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
-      case Attribute::SanitizeRealtimeUnsafe:
+      case Attribute::SanitizeRealtimeBlocking:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:
@@ -1053,15 +1060,10 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   }
 
   // Set names for input and output arguments.
-  if (NumScalarParams) {
-    ScalarAI = newFunction->arg_begin();
-    for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++ScalarAI)
-      if (!StructValues.contains(inputs[i]))
-        ScalarAI->setName(inputs[i]->getName());
-    for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++ScalarAI)
-      if (!StructValues.contains(outputs[i]))
-        ScalarAI->setName(outputs[i]->getName() + ".out");
-  }
+  for (auto [i, argVal] : NumberedInputs)
+    newFunction->getArg(i)->setName(argVal->getName());
+  for (auto [i, argVal] : NumberedOutputs)
+    newFunction->getArg(i)->setName(argVal->getName() + ".out");
 
   // Rewrite branches to basic blocks outside of the loop to new dummy blocks
   // within the new function. This must be done before we lose track of which
@@ -1076,6 +1078,29 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
         I->replaceUsesOfWith(header, newHeader);
 
   return newFunction;
+}
+
+/// If the original function has debug info, we have to add a debug location
+/// to the new branch instruction from the artificial entry block.
+/// We use the debug location of the first instruction in the extracted
+/// blocks, as there is no other equivalent line in the source code.
+static void applyFirstDebugLoc(Function *oldFunction,
+                               ArrayRef<BasicBlock *> Blocks,
+                               Instruction *BranchI) {
+  if (oldFunction->getSubprogram()) {
+    any_of(Blocks, [&BranchI](const BasicBlock *BB) {
+      return any_of(*BB, [&BranchI](const Instruction &I) {
+        if (!I.getDebugLoc())
+          return false;
+        // Don't use source locations attached to debug-intrinsics: they could
+        // be from completely unrelated scopes.
+        if (isa<DbgInfoIntrinsic>(I))
+          return false;
+        BranchI->setDebugLoc(I.getDebugLoc());
+        return true;
+      });
+    });
+  }
 }
 
 /// Erase lifetime.start markers which reference inputs to the extraction
@@ -1790,24 +1815,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   newFuncRoot->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
 
   auto *BranchI = BranchInst::Create(header);
-  // If the original function has debug info, we have to add a debug location
-  // to the new branch instruction from the artificial entry block.
-  // We use the debug location of the first instruction in the extracted
-  // blocks, as there is no other equivalent line in the source code.
-  if (oldFunction->getSubprogram()) {
-    any_of(Blocks, [&BranchI](const BasicBlock *BB) {
-      return any_of(*BB, [&BranchI](const Instruction &I) {
-        if (!I.getDebugLoc())
-          return false;
-        // Don't use source locations attached to debug-intrinsics: they could
-        // be from completely unrelated scopes.
-        if (isa<DbgInfoIntrinsic>(I))
-          return false;
-        BranchI->setDebugLoc(I.getDebugLoc());
-        return true;
-      });
-    });
-  }
+  applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
   BranchI->insertInto(newFuncRoot, newFuncRoot->end());
 
   ValueSet SinkingCands, HoistingCands;

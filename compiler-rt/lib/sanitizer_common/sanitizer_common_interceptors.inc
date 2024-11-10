@@ -2289,24 +2289,6 @@ INTERCEPTOR(int, pthread_getcpuclockid, uptr thread,
 #define INIT_CLOCK_GETCPUCLOCKID
 #endif
 
-#if SANITIZER_INTERCEPT_TIMER_CREATE
-INTERCEPTOR(int, timer_create, __sanitizer_clockid_t clockid, void *sevp,
-            __sanitizer_timer_t *timer) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, timer_create, clockid, sevp, timer);
-  int res = REAL(timer_create)(clockid, sevp, timer);
-  if (!res && timer) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, timer, sizeof *timer);
-  }
-  return res;
-}
-
-#  define INIT_TIMER_CREATE \
-    COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(timer_create, "GLIBC_2.3.3");
-#else
-#  define INIT_TIMER_CREATE
-#endif
-
 #if SANITIZER_INTERCEPT_GETITIMER
 INTERCEPTOR(int, getitimer, int which, void *curr_value) {
   void *ctx;
@@ -10284,7 +10266,6 @@ static void InitializeCommonInterceptors() {
   INIT_SETPWENT;
   INIT_CLOCK_GETTIME;
   INIT_CLOCK_GETCPUCLOCKID;
-  INIT_TIMER_CREATE;
   INIT_GETITIMER;
   INIT_TIME;
   INIT_GLOB;

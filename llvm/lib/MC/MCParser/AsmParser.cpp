@@ -264,7 +264,7 @@ public:
                         SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
                         SmallVectorImpl<std::string> &Constraints,
                         SmallVectorImpl<std::string> &Clobbers,
-                        const MCInstrInfo *MII, const MCInstPrinter *IP,
+                        const MCInstrInfo *MII, MCInstPrinter *IP,
                         MCAsmParserSemaCallback &SI) override;
 
   bool parseExpression(const MCExpr *&Res);
@@ -6006,7 +6006,7 @@ bool AsmParser::parseMSInlineAsm(
     SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
     SmallVectorImpl<std::string> &Constraints,
     SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
-    const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) {
+    MCInstPrinter *IP, MCAsmParserSemaCallback &SI) {
   SmallVector<void *, 4> InputDecls;
   SmallVector<void *, 4> OutputDecls;
   SmallVector<bool, 4> InputDeclsAddressOf;

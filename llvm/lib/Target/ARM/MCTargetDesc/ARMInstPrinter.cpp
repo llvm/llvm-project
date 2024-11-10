@@ -50,7 +50,7 @@ static unsigned translateShiftImm(unsigned imm) {
 }
 
 static void printRegImmShift(raw_ostream &O, ARM_AM::ShiftOpc ShOpc,
-                             unsigned ShImm, const ARMInstPrinter &printer) {
+                             unsigned ShImm, ARMInstPrinter &printer) {
   if (ShOpc == ARM_AM::no_shift || (ShOpc == ARM_AM::lsl && !ShImm))
     return;
   O << ", ";
@@ -81,7 +81,7 @@ bool ARMInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void ARMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void ARMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg, DefaultAltIdx);
 }
 

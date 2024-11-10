@@ -1201,7 +1201,7 @@ void Session::modifyPassConfig(const Triple &TT,
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
-  auto It = DynLibJDs.find(LibPath.str());
+  auto It = DynLibJDs.find(LibPath);
   if (It != DynLibJDs.end()) {
     return It->second;
   }
@@ -1740,7 +1740,7 @@ static Error addSectCreates(Session &S,
 
     StringRef SCArg(*SCItr);
 
-    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.rsplit('@');
     auto [SectName, FileName] = SectAndFileName.rsplit(',');
     if (SectName.empty())
       return make_error<StringError>("In -sectcreate=" + SCArg +

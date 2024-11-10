@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZTargetStreamer.h"
@@ -721,7 +721,7 @@ void SystemZOperand::print(raw_ostream &OS) const {
     OS << "Token:" << getToken();
     break;
   case KindReg:
-    OS << "Reg:" << SystemZInstPrinter::getRegisterName(getReg());
+    OS << "Reg:" << SystemZGNUInstPrinter::getRegisterName(getReg());
     break;
   case KindImm:
     OS << "Imm:";
@@ -743,10 +743,10 @@ void SystemZOperand::print(raw_ostream &OS) const {
       if (Op.MemKind == BDLMem)
         OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
       else if (Op.MemKind == BDRMem)
-        OS << SystemZInstPrinter::getRegisterName(Op.Length.Reg) << ",";
+        OS << SystemZGNUInstPrinter::getRegisterName(Op.Length.Reg) << ",";
       if (Op.Index)
-        OS << SystemZInstPrinter::getRegisterName(Op.Index) << ",";
-      OS << SystemZInstPrinter::getRegisterName(Op.Base);
+        OS << SystemZGNUInstPrinter::getRegisterName(Op.Index) << ",";
+      OS << SystemZGNUInstPrinter::getRegisterName(Op.Base);
       OS << ")";
     }
     break;

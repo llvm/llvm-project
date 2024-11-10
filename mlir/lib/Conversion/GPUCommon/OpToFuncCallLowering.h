@@ -61,6 +61,11 @@ public:
                                   SourceOp>::value,
                   "expected op with same operand and result types");
 
+    if (!op->template getParentOfType<FunctionOpInterface>()) {
+      return rewriter.notifyMatchFailure(
+          op, "expected op to be within a function region");
+    }
+
     SmallVector<Value, 1> castedOperands;
     for (Value operand : adaptor.getOperands())
       castedOperands.push_back(maybeCast(operand, rewriter));
