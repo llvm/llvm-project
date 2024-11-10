@@ -11,7 +11,7 @@ body: |
   ; CHECK: operand must be cimm
   %1:_(s32) = G_STEP_VECTOR %0
 
-  ; CHECK: step must be >= 0
+  ; CHECK: step must be > 0
   %2:_(s32) = G_STEP_VECTOR i32 -1
 
   ; CHECK: Destination type must be a scalable vector

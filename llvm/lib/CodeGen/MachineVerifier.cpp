@@ -1738,7 +1738,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     if (!MI->getOperand(1).getCImm()->getValue().isStrictlyPositive()) {
-      report("step must be >= 0", MI);
+      report("step must be > 0", MI);
       break;
     }
 
