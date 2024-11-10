@@ -37,9 +37,9 @@ a:
 // CHECK-NEXT: add     x0, x0, #[[A]]
 // CHECK-NEXT: blraa   x16, x0
 
-// Create relocation against local TLS symbols where linker should
-// create target specific dynamic TLSDESC relocation where addend is
-// the symbol VMA in tls block.
+/// Create relocation against local TLS symbols where linker should
+/// create target specific dynamic TLSDESC relocation where addend is
+/// the symbol VMA in tls block.
 
         adrp    x0, :tlsdesc_auth:local1
         ldr     x16, [x0, :tlsdesc_auth_lo12:local1]
@@ -92,10 +92,10 @@ local2:
 // REL-NEXT: 0x00[[P2]][[A2]] 00000000 00000080 00000000 000000a0
 // REL-NEXT: 0x00[[P2]][[B2]] 00000000 00000080 00000000 000000a0
 // REL-NEXT: 0x00[[P2]][[C2]] 00000000 00000080 00000000 000000a0
-//                                           ^^
-//                                           0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
-//                                                             ^^
-//                                                             0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
+///                                          ^^
+///                                          0b10000000 bit 63 address diversity = true, bits 61..60 key = IA
+///                                                            ^^
+///                                                            0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
 //--- err1.s
 
