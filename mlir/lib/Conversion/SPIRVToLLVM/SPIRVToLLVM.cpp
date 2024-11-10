@@ -706,7 +706,7 @@ public:
     Block *block = rewriter.createBlock(&region);
 
     // Initialize the struct and set the execution mode value.
-    rewriter.setInsertionPoint(block, block->begin());
+    rewriter.setInsertionPointToStart(block);
     Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
     Value executionMode = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type,
@@ -1147,6 +1147,12 @@ public:
     // There is no support of loop control at the moment.
     if (loopOp.getLoopControl() != spirv::LoopControl::None)
       return failure();
+
+    // `spirv.mlir.loop` with empty region is redundant and should be erased.
+    if (loopOp.getBody().empty()) {
+      rewriter.eraseOp(loopOp);
+      return success();
+    }
 
     Location loc = loopOp.getLoc();
 

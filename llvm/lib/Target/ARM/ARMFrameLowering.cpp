@@ -3003,6 +3003,17 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
       // on the stack.
       CSI.insert(CSI.begin(), CalleeSavedInfo(ARM::R12));
       break;
+    case ARMSubtarget::NoSplit:
+      assert(!MF.getTarget().Options.DisableFramePointerElim(MF) &&
+             "ABI-required frame pointers need a CSR split when signing return "
+             "address.");
+      CSI.insert(find_if(CSI,
+                         [=](const auto &CS) {
+                           Register Reg = CS.getReg();
+                           return Reg != ARM::LR;
+                         }),
+                 CalleeSavedInfo(ARM::R12));
+      break;
     default:
       llvm_unreachable("Unexpected CSR split with return address signing");
     }

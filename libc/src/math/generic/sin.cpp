@@ -50,7 +50,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
       if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 26)) {
         // Signed zeros.
         if (LIBC_UNLIKELY(x == 0.0))
-          return x;
+          return x + x; // Make sure it works with FTZ/DAZ.
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
         return fputil::multiply_add(x, -0x1.0p-54, x);

@@ -321,6 +321,12 @@
 .attribute arch, "rv32i_sscsrind1p0"
 # CHECK: attribute      5, "rv32i2p1_sscsrind1p0"
 
+.attribute arch, "rv32i_smdbltrp1p0"
+# CHECK: attribute      5, "rv32i2p1_smdbltrp1p0"
+
+.attribute arch, "rv32i_ssdbltrp1p0"
+# CHECK: attribute      5, "rv32i2p1_ssdbltrp1p0"
+
 .attribute arch, "rv32i_smcdeleg1p0"
 # CHECK: attribute      5, "rv32i2p1_smcdeleg1p0"
 
@@ -374,6 +380,9 @@
 
 .attribute arch, "rv32i_svbare1p0"
 # CHECK: attribute      5, "rv32i2p1_svbare1p0"
+
+.attribute arch, "rv32i_svvptc1p0"
+# CHECK: attribute      5, "rv32i2p1_svvptc1p0"
 
 .attribute arch, "rv32i_zfbfmin1p0"
 # CHECK: .attribute     5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"

@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___ITERATOR_PERMUTABLE_H
 #define _LIBCPP___ITERATOR_PERMUTABLE_H
 
-#include <__config>
-#include <__iterator/concepts.h>
-#include <__iterator/iter_swap.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iter_swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

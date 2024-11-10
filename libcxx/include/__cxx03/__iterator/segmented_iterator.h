@@ -40,9 +40,9 @@
 // - static It Traits::__compose(__segment_iterator, __local_iterator)
 //   Returns the iterator composed of the segment iterator and local iterator.
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

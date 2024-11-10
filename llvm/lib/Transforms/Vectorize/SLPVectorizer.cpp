@@ -832,6 +832,7 @@ struct InstructionsState {
   InstructionsState() = delete;
   InstructionsState(Value *OpValue, Instruction *MainOp, Instruction *AltOp)
       : OpValue(OpValue), MainOp(MainOp), AltOp(AltOp) {}
+  static InstructionsState invalid() { return {nullptr, nullptr, nullptr}; }
 };
 
 } // end anonymous namespace
@@ -891,20 +892,19 @@ static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
 /// could be vectorized even if its structure is diverse.
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI) {
-  constexpr unsigned BaseIndex = 0;
   // Make sure these are all Instructions.
-  if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
-    return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+  if (!all_of(VL, IsaPred<Instruction>))
+    return InstructionsState::invalid();
 
-  bool IsCastOp = isa<CastInst>(VL[BaseIndex]);
-  bool IsBinOp = isa<BinaryOperator>(VL[BaseIndex]);
-  bool IsCmpOp = isa<CmpInst>(VL[BaseIndex]);
+  Value *V = VL.front();
+  bool IsCastOp = isa<CastInst>(V);
+  bool IsBinOp = isa<BinaryOperator>(V);
+  bool IsCmpOp = isa<CmpInst>(V);
   CmpInst::Predicate BasePred =
-      IsCmpOp ? cast<CmpInst>(VL[BaseIndex])->getPredicate()
-              : CmpInst::BAD_ICMP_PREDICATE;
-  unsigned Opcode = cast<Instruction>(VL[BaseIndex])->getOpcode();
+      IsCmpOp ? cast<CmpInst>(V)->getPredicate() : CmpInst::BAD_ICMP_PREDICATE;
+  unsigned Opcode = cast<Instruction>(V)->getOpcode();
   unsigned AltOpcode = Opcode;
-  unsigned AltIndex = BaseIndex;
+  unsigned AltIndex = 0;
 
   bool SwappedPredsCompatible = [&]() {
     if (!IsCmpOp)
@@ -931,14 +931,14 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }();
   // Check for one alternate opcode from another BinaryOperator.
   // TODO - generalize to support all operators (types, calls etc.).
-  auto *IBase = cast<Instruction>(VL[BaseIndex]);
+  auto *IBase = cast<Instruction>(V);
   Intrinsic::ID BaseID = 0;
   SmallVector<VFInfo> BaseMappings;
   if (auto *CallBase = dyn_cast<CallInst>(IBase)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
     if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
-      return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+      return InstructionsState::invalid();
   }
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
     auto *I = cast<Instruction>(VL[Cnt]);
@@ -970,7 +970,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         }
       }
     } else if (auto *Inst = dyn_cast<CmpInst>(VL[Cnt]); Inst && IsCmpOp) {
-      auto *BaseInst = cast<CmpInst>(VL[BaseIndex]);
+      auto *BaseInst = cast<CmpInst>(V);
       Type *Ty0 = BaseInst->getOperand(0)->getType();
       Type *Ty1 = Inst->getOperand(0)->getType();
       if (Ty0 == Ty1) {
@@ -988,7 +988,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         if (isCmpSameOrSwapped(BaseInst, Inst, TLI))
           continue;
         auto *AltInst = cast<CmpInst>(VL[AltIndex]);
-        if (AltIndex != BaseIndex) {
+        if (AltIndex) {
           if (isCmpSameOrSwapped(AltInst, Inst, TLI))
             continue;
         } else if (BasePred != CurrentPred) {
@@ -1007,27 +1007,28 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
         if (Gep->getNumOperands() != 2 ||
             Gep->getOperand(0)->getType() != IBase->getOperand(0)->getType())
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+          return InstructionsState::invalid();
       } else if (auto *EI = dyn_cast<ExtractElementInst>(I)) {
         if (!isVectorLikeInstWithConstOps(EI))
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+          return InstructionsState::invalid();
       } else if (auto *LI = dyn_cast<LoadInst>(I)) {
         auto *BaseLI = cast<LoadInst>(IBase);
         if (!LI->isSimple() || !BaseLI->isSimple())
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+          return InstructionsState::invalid();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
         auto *CallBase = cast<CallInst>(IBase);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
-        if (Call->hasOperandBundles() && (!CallBase->hasOperandBundles() ||
-            !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
-                        Call->op_begin() + Call->getBundleOperandsEndIndex(),
-                        CallBase->op_begin() +
-                            CallBase->getBundleOperandsStartIndex())))
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+          return InstructionsState::invalid();
+        if (Call->hasOperandBundles() &&
+            (!CallBase->hasOperandBundles() ||
+             !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
+                         Call->op_begin() + Call->getBundleOperandsEndIndex(),
+                         CallBase->op_begin() +
+                             CallBase->getBundleOperandsStartIndex())))
+          return InstructionsState::invalid();
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
         if (ID != BaseID)
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+          return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
           if (Mappings.size() != BaseMappings.size() ||
@@ -1037,15 +1038,15 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
               Mappings.front().Shape.VF != BaseMappings.front().Shape.VF ||
               Mappings.front().Shape.Parameters !=
                   BaseMappings.front().Shape.Parameters)
-            return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+            return InstructionsState::invalid();
         }
       }
       continue;
     }
-    return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+    return InstructionsState::invalid();
   }
 
-  return InstructionsState(VL[BaseIndex], cast<Instruction>(VL[BaseIndex]),
+  return InstructionsState(V, cast<Instruction>(V),
                            cast<Instruction>(VL[AltIndex]));
 }
 
@@ -2241,10 +2242,9 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          auto *It = HashMap.find(NumFreeOpsHash.Hash);
-          if (It == HashMap.end())
-            HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
-          else
+          auto [It, Inserted] =
+              HashMap.try_emplace(NumFreeOpsHash.Hash, 1, Lane);
+          if (!Inserted)
             ++It->second.first;
         }
       }
@@ -3088,6 +3088,10 @@ private:
   SmallVector<OrdersType, 1>
   findExternalStoreUsersReorderIndices(TreeEntry *TE) const;
 
+  /// Tries to reorder the gathering node for better vectorization
+  /// opportunities.
+  void reorderGatherNode(TreeEntry &TE);
+
   struct TreeEntry {
     using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
     TreeEntry(VecTreeTy &Container) : Container(Container) {}
@@ -3391,6 +3395,15 @@ private:
       assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
              "Reshuffling not supported with non-power-of-2 vectors yet.");
       return IsNonPowerOf2;
+    }
+
+    Value *getOrdered(unsigned Idx) const {
+      assert(isGather() && "Must be used only for buildvectors/gathers.");
+      if (ReorderIndices.empty())
+        return Scalars[Idx];
+      SmallVector<int> Mask;
+      inversePermutation(ReorderIndices, Mask);
+      return Scalars[Mask[Idx]];
     }
 
 #ifndef NDEBUG
@@ -5086,6 +5099,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
             VecLdCost +=
                 TTI.getInstructionCost(cast<Instruction>(VL[Idx]), CostKind);
       }
+      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
       auto *SubVecTy = getWidenedType(ScalarTy, VF);
       for (auto [I, LS] : enumerate(States)) {
         auto *LI0 = cast<LoadInst>(VL[I * VF]);
@@ -5109,11 +5123,12 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                 SubVecTy, APInt::getAllOnes(VF),
                 /*Insert=*/true, /*Extract=*/false, CostKind);
           else
-            VectorGEPCost += TTI.getScalarizationOverhead(
-                                 SubVecTy, APInt::getOneBitSet(VF, 0),
-                                 /*Insert=*/true, /*Extract=*/false, CostKind) +
-                             ::getShuffleCost(TTI, TTI::SK_Broadcast, SubVecTy,
-                                              {}, CostKind);
+            VectorGEPCost +=
+                TTI.getScalarizationOverhead(
+                    SubVecTy, APInt::getOneBitSet(ScalarTyNumElements * VF, 0),
+                    /*Insert=*/true, /*Extract=*/false, CostKind) +
+                ::getShuffleCost(TTI, TTI::SK_Broadcast, SubVecTy, {},
+                                 CostKind);
         }
         switch (LS) {
         case LoadsState::Vectorize:
@@ -7044,7 +7059,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 OrdersType Order;
                 SmallVector<Value *> PointerOps;
                 // Segmented load detected - vectorize at maximum vector factor.
-                if (TTI.isLegalInterleavedAccessType(
+                if (InterleaveFactor <= Slice.size() &&
+                    TTI.isLegalInterleavedAccessType(
                         getWidenedType(Slice.front()->getType(), VF),
                         InterleaveFactor,
                         cast<LoadInst>(Slice.front())->getAlign(),
@@ -7947,8 +7963,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Nodes.insert(E);
         SmallPtrSet<Value *, 8> Values(VL.begin(), VL.end());
         if (any_of(Nodes, [&](const TreeEntry *E) {
-              return all_of(E->Scalars,
-                            [&](Value *V) { return Values.contains(V); });
+              if (all_of(E->Scalars,
+                         [&](Value *V) { return Values.contains(V); }))
+                return true;
+              SmallPtrSet<Value *, 8> EValues(E->Scalars.begin(),
+                                              E->Scalars.end());
+              return (
+                  all_of(VL, [&](Value *V) { return EValues.contains(V); }));
             })) {
           LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
           if (TryToFindDuplicates(S))
@@ -7999,7 +8020,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Don't handle vectors.
-  if (!SLPReVec && getValueType(S.OpValue)->isVectorTy()) {
+  if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
     return;
@@ -8068,7 +8089,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
   bool AreAllSameBlock = S.getOpcode() && allSameBlock(VL);
   bool AreScatterAllGEPSameBlock =
-      (IsScatterVectorizeUserTE && S.OpValue->getType()->isPointerTy() &&
+      (IsScatterVectorizeUserTE && VL.front()->getType()->isPointerTy() &&
        VL.size() > 2 &&
        all_of(VL,
               [&BB](Value *V) {
@@ -8084,7 +8105,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                        SortedIndices));
   bool AreAllSameInsts = AreAllSameBlock || AreScatterAllGEPSameBlock;
   if (!AreAllSameInsts || (!S.getOpcode() && allConstant(VL)) || isSplat(VL) ||
-      (isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(
+      (isa_and_present<InsertElementInst, ExtractValueInst, ExtractElementInst>(
            S.OpValue) &&
        !all_of(VL, isVectorLikeInstWithConstOps)) ||
       NotProfitableForVectorization(VL)) {
@@ -8141,7 +8162,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   // Special processing for sorted pointers for ScatterVectorize node with
   // constant indeces only.
   if (!AreAllSameBlock && AreScatterAllGEPSameBlock) {
-    assert(S.OpValue->getType()->isPointerTy() &&
+    assert(VL.front()->getType()->isPointerTy() &&
            count_if(VL, IsaPred<GetElementPtrInst>) >= 2 &&
            "Expected pointers only.");
     // Reset S to make it GetElementPtr kind of node.
@@ -8155,9 +8176,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   auto *VL0 = cast<Instruction>(S.OpValue);
   BB = VL0->getParent();
 
-  if (S.MainOp && !DT->isReachableFromEntry(BB)) {
+  if (S.MainOp &&
+      (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+       !DT->isReachableFromEntry(BB))) {
     // Don't go into unreachable blocks. They may contain instructions with
     // dependency cycles which confuse the final scheduling.
+    // Do not vectorize EH and non-returning blocks, not profitable in most
+    // cases.
     LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
     return;
@@ -9331,6 +9356,166 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
   return std::make_pair(ScalarCost, VecCost);
 }
 
+void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
+  assert(TE.isGather() && TE.ReorderIndices.empty() &&
+         "Expected gather node without reordering.");
+  DenseMap<std::pair<size_t, Value *>, SmallVector<LoadInst *>> LoadsMap;
+  SmallSet<size_t, 2> LoadKeyUsed;
+
+  // Do not reorder nodes if it small (just 2 elements), all-constant or all
+  // instructions have same opcode already.
+  if (TE.Scalars.size() == 2 || (TE.getOpcode() && !TE.isAltShuffle()) ||
+      all_of(TE.Scalars, isConstant))
+    return;
+
+  if (any_of(seq<unsigned>(TE.Idx), [&](unsigned Idx) {
+        return VectorizableTree[Idx]->isSame(TE.Scalars);
+      }))
+    return;
+
+  auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
+    Key = hash_combine(hash_value(LI->getParent()), Key);
+    Value *Ptr =
+        getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
+    if (LoadKeyUsed.contains(Key)) {
+      auto LIt = LoadsMap.find(std::make_pair(Key, Ptr));
+      if (LIt != LoadsMap.end()) {
+        for (LoadInst *RLI : LIt->second) {
+          if (getPointersDiff(RLI->getType(), RLI->getPointerOperand(),
+                              LI->getType(), LI->getPointerOperand(), *DL, *SE,
+                              /*StrictCheck=*/true))
+            return hash_value(RLI->getPointerOperand());
+        }
+        for (LoadInst *RLI : LIt->second) {
+          if (arePointersCompatible(RLI->getPointerOperand(),
+                                    LI->getPointerOperand(), *TLI)) {
+            hash_code SubKey = hash_value(RLI->getPointerOperand());
+            return SubKey;
+          }
+        }
+        if (LIt->second.size() > 2) {
+          hash_code SubKey =
+              hash_value(LIt->second.back()->getPointerOperand());
+          return SubKey;
+        }
+      }
+    }
+    LoadKeyUsed.insert(Key);
+    LoadsMap.try_emplace(std::make_pair(Key, Ptr)).first->second.push_back(LI);
+    return hash_value(LI->getPointerOperand());
+  };
+  MapVector<size_t, MapVector<size_t, SmallVector<Value *>>> SortedValues;
+  SmallDenseMap<Value *, SmallVector<unsigned>, 8> KeyToIndex;
+  bool IsOrdered = true;
+  unsigned NumInstructions = 0;
+  // Try to "cluster" scalar instructions, to be able to build extra vectorized
+  // nodes.
+  for (auto [I, V] : enumerate(TE.Scalars)) {
+    size_t Key = 1, Idx = 1;
+    if (auto *Inst = dyn_cast<Instruction>(V);
+        Inst && !isa<ExtractElementInst, LoadInst, CastInst>(V) &&
+        !isDeleted(Inst) && !isVectorized(V)) {
+      std::tie(Key, Idx) = generateKeySubkey(V, TLI, GenerateLoadsSubkey,
+                                             /*AllowAlternate=*/false);
+      ++NumInstructions;
+    }
+    auto &Container = SortedValues[Key];
+    if (IsOrdered && !KeyToIndex.contains(V) &&
+        !(isa<Constant, ExtractElementInst>(V) ||
+          isVectorLikeInstWithConstOps(V)) &&
+        ((Container.contains(Idx) &&
+          KeyToIndex.at(Container[Idx].back()).back() != I - 1) ||
+         (!Container.empty() && !Container.contains(Idx) &&
+          KeyToIndex.at(Container.back().second.back()).back() != I - 1)))
+      IsOrdered = false;
+    auto &KTI = KeyToIndex[V];
+    if (KTI.empty())
+      Container[Idx].push_back(V);
+    KTI.push_back(I);
+  }
+  SmallVector<std::pair<unsigned, unsigned>> SubVectors;
+  APInt DemandedElts = APInt::getAllOnes(TE.Scalars.size());
+  if (!IsOrdered && NumInstructions > 1) {
+    unsigned Cnt = 0;
+    TE.ReorderIndices.resize(TE.Scalars.size(), TE.Scalars.size());
+    for (const auto &D : SortedValues) {
+      for (const auto &P : D.second) {
+        unsigned Sz = 0;
+        for (Value *V : P.second) {
+          ArrayRef<unsigned> Indices = KeyToIndex.at(V);
+          for (auto [K, Idx] : enumerate(Indices)) {
+            TE.ReorderIndices[Cnt + K] = Idx;
+            TE.Scalars[Cnt + K] = V;
+          }
+          Sz += Indices.size();
+          Cnt += Indices.size();
+        }
+        if (Sz > 1 && isa<Instruction>(P.second.front())) {
+          const unsigned SubVF = getFloorFullVectorNumberOfElements(
+              *TTI, TE.Scalars.front()->getType(), Sz);
+          SubVectors.emplace_back(Cnt - Sz, SubVF);
+          for (unsigned I : seq<unsigned>(Cnt - Sz, Cnt - Sz + SubVF))
+            DemandedElts.clearBit(I);
+        } else if (!P.second.empty() && isConstant(P.second.front())) {
+          for (unsigned I : seq<unsigned>(Cnt - Sz, Cnt))
+            DemandedElts.clearBit(I);
+        }
+      }
+    }
+  }
+  // Reuses always require shuffles, so consider it as profitable.
+  if (!TE.ReuseShuffleIndices.empty() || TE.ReorderIndices.empty())
+    return;
+  // Do simple cost estimation.
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost Cost = 0;
+  auto *ScalarTy = TE.Scalars.front()->getType();
+  auto *VecTy = getWidenedType(ScalarTy, TE.Scalars.size());
+  for (auto [Idx, Sz] : SubVectors) {
+    Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+                             Idx, getWidenedType(ScalarTy, Sz));
+  }
+  Cost += TTI->getScalarizationOverhead(VecTy, DemandedElts, /*Insert=*/true,
+                                        /*Extract=*/false, CostKind);
+  int Sz = TE.Scalars.size();
+  SmallVector<int> ReorderMask(TE.ReorderIndices.begin(),
+                               TE.ReorderIndices.end());
+  for (unsigned I : seq<unsigned>(Sz)) {
+    Value *V = TE.getOrdered(I);
+    if (isa<PoisonValue>(V)) {
+      ReorderMask[I] = PoisonMaskElem;
+    } else if (isConstant(V) || DemandedElts[I]) {
+      ReorderMask[I] = I + TE.ReorderIndices.size();
+    }
+  }
+  Cost += ::getShuffleCost(*TTI,
+                           any_of(ReorderMask, [&](int I) { return I >= Sz; })
+                               ? TTI::SK_PermuteTwoSrc
+                               : TTI::SK_PermuteSingleSrc,
+                           VecTy, ReorderMask);
+  DemandedElts = APInt::getAllOnes(VecTy->getNumElements());
+  ReorderMask.assign(Sz, PoisonMaskElem);
+  for (unsigned I : seq<unsigned>(Sz)) {
+    Value *V = TE.getOrdered(I);
+    if (isConstant(V)) {
+      DemandedElts.clearBit(I);
+      if (!isa<PoisonValue>(V))
+        ReorderMask[I] = I;
+    } else {
+      ReorderMask[I] = I + Sz;
+    }
+  }
+  InstructionCost BVCost = TTI->getScalarizationOverhead(
+      VecTy, DemandedElts, /*Insert=*/true, /*Extract=*/false, CostKind);
+  if (!DemandedElts.isAllOnes())
+    BVCost += ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, ReorderMask);
+  if (Cost >= BVCost) {
+    SmallVector<int> Mask(TE.ReorderIndices.begin(), TE.ReorderIndices.end());
+    reorderScalars(TE.Scalars, Mask);
+    TE.ReorderIndices.clear();
+  }
+}
+
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   BaseGraphSize = VectorizableTree.size();
@@ -9368,6 +9553,14 @@ void BoUpSLP::transformNodes() {
                  findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
         });
   };
+
+  // Try to reorder gather nodes for better vectorization opportunities.
+  for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
+    TreeEntry &E = *VectorizableTree[Idx];
+    if (E.isGather())
+      reorderGatherNode(E);
+  }
+
   // The tree may grow here, so iterate over nodes, built before.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
@@ -9509,6 +9702,12 @@ void BoUpSLP::transformNodes() {
           }
           AddCombinedNode(PrevSize, Cnt, Sz);
         }
+      }
+      // Restore ordering, if no extra vectorization happened.
+      if (E.CombinedEntriesWithIndices.empty() && !E.ReorderIndices.empty()) {
+        SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
+        reorderScalars(E.Scalars, Mask);
+        E.ReorderIndices.clear();
       }
     }
     switch (E.getOpcode()) {
@@ -10197,7 +10396,12 @@ public:
     if (Mask.empty())
       return nullptr;
     Value *VecBase = nullptr;
-    ArrayRef<Value *> VL = E->Scalars;
+    SmallVector<Value *> VL(E->Scalars.begin(), E->Scalars.end());
+    if (!E->ReorderIndices.empty()) {
+      SmallVector<int> ReorderMask(E->ReorderIndices.begin(),
+                                   E->ReorderIndices.end());
+      reorderScalars(VL, ReorderMask);
+    }
     // Check if it can be considered reused if same extractelements were
     // vectorized already.
     bool PrevNodeFound = any_of(
@@ -10218,7 +10422,8 @@ public:
     for (unsigned Part : seq<unsigned>(NumParts)) {
       unsigned Limit = getNumElems(VL.size(), SliceSize, Part);
       ArrayRef<int> SubMask = Mask.slice(Part * SliceSize, Limit);
-      for (auto [I, V] : enumerate(VL.slice(Part * SliceSize, Limit))) {
+      for (auto [I, V] :
+           enumerate(ArrayRef(VL).slice(Part * SliceSize, Limit))) {
         // Ignore non-extractelement scalars.
         if (isa<UndefValue>(V) ||
             (!SubMask.empty() && SubMask[I] == PoisonMaskElem))
@@ -10355,10 +10560,9 @@ public:
                   [&](auto P) {
                     if (P.value() == PoisonMaskElem)
                       return Mask[P.index()] == PoisonMaskElem;
-                    auto *EI =
-                        cast<ExtractElementInst>(InVectors.front()
-                                                     .get<const TreeEntry *>()
-                                                     ->Scalars[P.index()]);
+                    auto *EI = cast<ExtractElementInst>(
+                        InVectors.front().get<const TreeEntry *>()->getOrdered(
+                            P.index()));
                     return EI->getVectorOperand() == V1 ||
                            EI->getVectorOperand() == V2;
                   }) &&
@@ -10375,22 +10579,23 @@ public:
     }
     if (ForExtracts) {
       // No need to add vectors here, already handled them in adjustExtracts.
-      assert(InVectors.size() == 1 &&
-             InVectors.front().is<const TreeEntry *>() && !CommonMask.empty() &&
-             all_of(enumerate(CommonMask),
-                    [&](auto P) {
-                      Value *Scalar = InVectors.front()
-                                          .get<const TreeEntry *>()
-                                          ->Scalars[P.index()];
-                      if (P.value() == PoisonMaskElem)
-                        return P.value() == Mask[P.index()] ||
-                               isa<UndefValue>(Scalar);
-                      if (isa<Constant>(V1))
-                        return true;
-                      auto *EI = cast<ExtractElementInst>(Scalar);
-                      return EI->getVectorOperand() == V1;
-                    }) &&
-             "Expected only tree entry for extractelement vectors.");
+      assert(
+          InVectors.size() == 1 && InVectors.front().is<const TreeEntry *>() &&
+          !CommonMask.empty() &&
+          all_of(enumerate(CommonMask),
+                 [&](auto P) {
+                   Value *Scalar =
+                       InVectors.front().get<const TreeEntry *>()->getOrdered(
+                           P.index());
+                   if (P.value() == PoisonMaskElem)
+                     return P.value() == Mask[P.index()] ||
+                            isa<UndefValue>(Scalar);
+                   if (isa<Constant>(V1))
+                     return true;
+                   auto *EI = cast<ExtractElementInst>(Scalar);
+                   return EI->getVectorOperand() == V1;
+                 }) &&
+          "Expected only tree entry for extractelement vectors.");
       return;
     }
     assert(!InVectors.empty() && !CommonMask.empty() &&
@@ -10461,7 +10666,7 @@ public:
   InstructionCost
   finalize(ArrayRef<int> ExtMask,
            ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
-           unsigned VF = 0,
+           ArrayRef<int> SubVectorsMask, unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
     IsFinalized = true;
     if (Action) {
@@ -10488,6 +10693,21 @@ public:
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
+      // Add subvectors permutation cost.
+      if (!SubVectorsMask.empty()) {
+        assert(SubVectorsMask.size() == CommonMask.size() &&
+               "Expected same size of masks for subvectors and common mask.");
+        SmallVector<int> SVMask(SubVectorsMask.begin(), SubVectorsMask.end());
+        for (auto [I1, I2] : zip(SVMask, CommonMask)) {
+          if (I2 != PoisonMaskElem) {
+            assert(I1 == PoisonMaskElem && "Expected unused subvectors mask");
+            I1 = I2 + CommonMask.size();
+          }
+        }
+        Cost += ::getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
+                                 getWidenedType(ScalarTy, CommonMask.size()),
+                                 SVMask, CostKind);
+      }
       for (auto [E, Idx] : SubVectors) {
         Type *EScalarTy = E->Scalars.front()->getType();
         bool IsSigned = true;
@@ -10766,7 +10986,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // If the selects are the only uses of the compares, they will be
     // dead and we can adjust the cost by removing their cost.
     if (VI && SelectOnly) {
-      assert(!Ty->isVectorTy() && "Expected only for scalar type.");
+      assert((!Ty->isVectorTy() || SLPReVec) &&
+             "Expected only for scalar type.");
       auto *CI = cast<CmpInst>(VI->getOperand(0));
       IntrinsicCost -= TTI->getCmpSelInstrCost(
           CI->getOpcode(), Ty, Builder.getInt1Ty(), CI->getPredicate(),
@@ -11534,6 +11755,13 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (!DebugCounter::shouldExecute(VectorizedGraphs))
     return true;
 
+  // Graph is empty - do nothing.
+  if (VectorizableTree.empty()) {
+    assert(ExternalUses.empty() && "We shouldn't have any external users");
+
+    return true;
+  }
+
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -11592,10 +11820,6 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       VectorizableTree.back()->getVectorFactor() > 2 &&
       allSameBlock(VectorizableTree.back()->Scalars))
     return false;
-
-  assert(VectorizableTree.empty()
-             ? ExternalUses.empty()
-             : true && "We shouldn't have any external users");
 
   // Otherwise, we can't vectorize the tree. It is both tiny and not fully
   // vectorizable.
@@ -11972,11 +12196,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (EphValues.count(EU.User))
       continue;
 
-    // Used in unreachable blocks or in landing pads (rarely executed).
+    // Used in unreachable blocks or in EH pads (rarely executed) or is
+    // terminated with unreachable instruction.
     if (BasicBlock *UserParent =
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
-        (!DT->isReachableFromEntry(UserParent) || UserParent->isLandingPad()))
+        (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
+         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // We only add extract cost once for the same scalar.
@@ -13173,7 +13399,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // scheduled, and the last instruction is VL.back(). So we start with
   // VL.back() and iterate over schedule data until we reach the end of the
   // bundle. The end of the bundle is marked by null ScheduleData.
-  if (BlocksSchedules.count(BB)) {
+  if (BlocksSchedules.count(BB) && !E->isGather()) {
     Value *V = E->isOneOf(E->Scalars.back());
     if (doesNotNeedToBeScheduled(V))
       V = *find_if_not(E->Scalars, doesNotNeedToBeScheduled);
@@ -13528,11 +13754,17 @@ public:
     UseVecBaseAsInput = false;
     SmallPtrSet<Value *, 4> UniqueBases;
     Value *VecBase = nullptr;
+    SmallVector<Value *> VL(E->Scalars.begin(), E->Scalars.end());
+    if (!E->ReorderIndices.empty()) {
+      SmallVector<int> ReorderMask(E->ReorderIndices.begin(),
+                                   E->ReorderIndices.end());
+      reorderScalars(VL, ReorderMask);
+    }
     for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
       int Idx = Mask[I];
       if (Idx == PoisonMaskElem)
         continue;
-      auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+      auto *EI = cast<ExtractElementInst>(VL[I]);
       VecBase = EI->getVectorOperand();
       if (const TreeEntry *TE = R.getTreeEntry(VecBase))
         VecBase = TE->VectorizedValue;
@@ -13541,7 +13773,7 @@ public:
       // If the only one use is vectorized - can delete the extractelement
       // itself.
       if (!EI->hasOneUse() || R.ExternalUsesAsOriginalScalar.contains(EI) ||
-          (NumParts != 1 && count(E->Scalars, EI) > 1) ||
+          (NumParts != 1 && count(VL, EI) > 1) ||
           any_of(EI->users(), [&](User *U) {
             const TreeEntry *UTE = R.getTreeEntry(U);
             return !UTE || R.MultiNodeScalars.contains(U) ||
@@ -13553,7 +13785,7 @@ public:
                                             [&](const EdgeInfo &Edge) {
                                               return Edge.UserTE == UTE;
                                             }) &&
-                                     is_contained(TE->Scalars, EI);
+                                     is_contained(VL, EI);
                             }) != 1;
           }))
         continue;
@@ -13575,15 +13807,14 @@ public:
     // into a long virtual vector register, forming the original vector.
     Value *Vec = nullptr;
     SmallVector<int> VecMask(Mask.size(), PoisonMaskElem);
-    unsigned SliceSize = getPartNumElems(E->Scalars.size(), NumParts);
+    unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
     for (unsigned Part : seq<unsigned>(NumParts)) {
-      unsigned Limit = getNumElems(E->Scalars.size(), SliceSize, Part);
-      ArrayRef<Value *> VL =
-          ArrayRef(E->Scalars).slice(Part * SliceSize, Limit);
+      unsigned Limit = getNumElems(VL.size(), SliceSize, Part);
+      ArrayRef<Value *> SubVL = ArrayRef(VL).slice(Part * SliceSize, Limit);
       MutableArrayRef<int> SubMask = Mask.slice(Part * SliceSize, Limit);
       constexpr int MaxBases = 2;
       SmallVector<Value *, MaxBases> Bases(MaxBases);
-      auto VLMask = zip(VL, SubMask);
+      auto VLMask = zip(SubVL, SubMask);
       const unsigned VF = std::accumulate(
           VLMask.begin(), VLMask.end(), 0U, [&](unsigned S, const auto &D) {
             if (std::get<1>(D) == PoisonMaskElem)
@@ -13800,16 +14031,15 @@ public:
   Value *
   finalize(ArrayRef<int> ExtMask,
            ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
-           unsigned VF = 0,
+           ArrayRef<int> SubVectorsMask, unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
     IsFinalized = true;
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewExtMask(ExtMask);
-    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    if (ScalarTyNumElements != 1) {
       assert(SLPReVec && "FixedVectorType is not expected.");
-      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
-                                             CommonMask);
-      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
-                                             NewExtMask);
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements, CommonMask);
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements, NewExtMask);
       ExtMask = NewExtMask;
     }
     if (Action) {
@@ -13845,19 +14075,59 @@ public:
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
-      for (auto [E, Idx] : SubVectors) {
-        Value *V = E->VectorizedValue;
-        if (V->getType()->isIntOrIntVectorTy())
-          V = castToScalarTyElem(V, any_of(E->Scalars, [&](Value *V) {
-                                   return !isKnownNonNegative(
-                                       V, SimplifyQuery(*R.DL));
-                                 }));
-        Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
-                                         Builder.getInt64(Idx));
-        if (!CommonMask.empty()) {
-          std::iota(std::next(CommonMask.begin(), Idx),
-                    std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
-                    Idx);
+      auto CreateSubVectors = [&](Value *Vec,
+                                  SmallVectorImpl<int> &CommonMask) {
+        for (auto [E, Idx] : SubVectors) {
+          Value *V = E->VectorizedValue;
+          if (V->getType()->isIntOrIntVectorTy())
+            V = castToScalarTyElem(V, any_of(E->Scalars, [&](Value *V) {
+                                     return !isKnownNonNegative(
+                                         V, SimplifyQuery(*R.DL));
+                                   }));
+          unsigned InsertionIndex = Idx * ScalarTyNumElements;
+          const unsigned SubVecVF =
+              cast<FixedVectorType>(V->getType())->getNumElements();
+          if (InsertionIndex % SubVecVF == 0) {
+            Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
+                                             Builder.getInt64(InsertionIndex));
+          } else {
+            // Create shuffle, insertvector requires that index is multiple of
+            // the subvectors length.
+            const unsigned VecVF =
+                cast<FixedVectorType>(Vec->getType())->getNumElements();
+            SmallVector<int> Mask(VecVF, PoisonMaskElem);
+            std::iota(Mask.begin(), Mask.end(), 0);
+            for (unsigned I : seq<unsigned>(
+                     InsertionIndex, (Idx + SubVecVF) * ScalarTyNumElements))
+              Mask[I] = I - Idx + VecVF;
+            Vec = createShuffle(Vec, V, Mask);
+          }
+          if (!CommonMask.empty()) {
+            std::iota(
+                std::next(CommonMask.begin(), InsertionIndex),
+                std::next(CommonMask.begin(),
+                          (Idx + E->getVectorFactor()) * ScalarTyNumElements),
+                InsertionIndex);
+          }
+        }
+        return Vec;
+      };
+      if (SubVectorsMask.empty()) {
+        Vec = CreateSubVectors(Vec, CommonMask);
+      } else {
+        SmallVector<int> SVMask(SubVectorsMask.begin(), SubVectorsMask.end());
+        for (auto [I1, I2] : zip(SVMask, CommonMask)) {
+          if (I2 != PoisonMaskElem) {
+            assert(I1 == PoisonMaskElem && "Expected unused subvectors mask");
+            I1 = I2 + CommonMask.size();
+          }
+        }
+        Value *InsertVec =
+            CreateSubVectors(PoisonValue::get(Vec->getType()), CommonMask);
+        Vec = createShuffle(InsertVec, Vec, SVMask);
+        for (unsigned I : seq<unsigned>(CommonMask.size())) {
+          if (SVMask[I] != PoisonMaskElem)
+            CommonMask[I] = I;
         }
       }
       InVectors.front() = Vec;
@@ -13953,7 +14223,10 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
                   return std::make_pair(VectorizableTree[P.first].get(),
                                         P.second);
                 });
-      return ShuffleBuilder.finalize({}, SubVectors);
+      assert((E->CombinedEntriesWithIndices.empty() ||
+              E->ReorderIndices.empty()) &&
+             "Expected either combined subnodes or reordering");
+      return ShuffleBuilder.finalize({}, SubVectors, {});
     };
     Value *V = vectorizeTree(VE, PostponedPHIs);
     if (VF * getNumElements(VL[0]->getType()) !=
@@ -14047,10 +14320,22 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             });
   // Build a mask out of the reorder indices and reorder scalars per this
   // mask.
-  SmallVector<int> ReorderMask;
-  inversePermutation(E->ReorderIndices, ReorderMask);
+  SmallVector<int> ReorderMask(E->ReorderIndices.begin(),
+                               E->ReorderIndices.end());
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
+  SmallVector<int> SubVectorsMask;
+  inversePermutation(E->ReorderIndices, SubVectorsMask);
+  // Transform non-clustered elements in the mask to poison (-1).
+  // "Clustered" operations will be reordered using this mask later.
+  if (!SubVectors.empty() && !SubVectorsMask.empty()) {
+    for (unsigned I : seq<unsigned>(GatheredScalars.size()))
+      if (E->Scalars[I] == GatheredScalars[ReorderMask[I]])
+        SubVectorsMask[ReorderMask[I]] = PoisonMaskElem;
+  } else {
+    SubVectorsMask.clear();
+  }
+  SmallVector<Value *> StoredGS(GatheredScalars);
   auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
                              unsigned I, unsigned SliceSize,
                              bool IsNotPoisonous) {
@@ -14135,7 +14420,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         if (I == PoisonMaskElem)
           continue;
         if (const auto *TE = getTreeEntry(
-                cast<ExtractElementInst>(E->Scalars[Idx])->getVectorOperand()))
+                cast<ExtractElementInst>(StoredGS[Idx])->getVectorOperand()))
           ExtractEntries.push_back(TE);
       }
       if (std::optional<ResTy> Delayed =
@@ -14207,7 +14492,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           }
         }
         ShuffleBuilder.add(*FrontTE, Mask);
-        Res = ShuffleBuilder.finalize(E->getCommonMask(), SubVectors);
+        Res = ShuffleBuilder.finalize(E->getCommonMask(), SubVectors,
+                                      SubVectorsMask);
         return Res;
       }
       if (!Resized) {
@@ -14337,7 +14623,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             continue;
           if (isa<UndefValue>(E->Scalars[I]))
             continue;
-          auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+          auto *EI = cast<ExtractElementInst>(StoredGS[I]);
           Value *VecOp = EI->getVectorOperand();
           if (const auto *TE = getTreeEntry(VecOp))
             if (TE->VectorizedValue)
@@ -14468,10 +14754,11 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                  (IsSingleShuffle && ((IsIdentityShuffle &&
                   IsNonPoisoned) || IsUsedInExpr) && isa<UndefValue>(V));
         }))
-      Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors);
+      Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
+                                    SubVectorsMask);
     else
       Res = ShuffleBuilder.finalize(
-          E->ReuseShuffleIndices, SubVectors, E->Scalars.size(),
+          E->ReuseShuffleIndices, SubVectors, SubVectorsMask, E->Scalars.size(),
           [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
             TryPackScalars(NonConstants, Mask, /*IsRootPoison=*/false);
             Vec = ShuffleBuilder.gather(NonConstants, Mask.size(), Vec);
@@ -14482,7 +14769,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size());
     ShuffleBuilder.add(BV, ReuseMask);
-    Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors);
+    Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
+                                  SubVectorsMask);
   } else {
     // Gather all constants.
     SmallVector<int> Mask(GatheredScalars.size(), PoisonMaskElem);
@@ -14492,7 +14780,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
     Value *BV = ShuffleBuilder.gather(GatheredScalars);
     ShuffleBuilder.add(BV, Mask);
-    Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors);
+    Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
+                                  SubVectorsMask);
   }
 
   if (NeedFreeze)
@@ -14559,7 +14848,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
           return std::make_pair(VectorizableTree[P.first].get(), P.second);
         });
-    return ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors);
+    assert(
+        (E->CombinedEntriesWithIndices.empty() || E->ReorderIndices.empty()) &&
+        "Expected either combined subnodes or reordering");
+    return ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors, {});
   };
 
   assert(!E->isGather() && "Unhandled state");
@@ -15360,9 +15652,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::ShuffleVector: {
       Value *V;
       if (SLPReVec && !E->isAltShuffle()) {
-        assert(E->ReuseShuffleIndices.empty() &&
-               "Not support ReuseShuffleIndices yet.");
-        assert(E->ReorderIndices.empty() && "Not support ReorderIndices yet.");
         setInsertPointAfterBundle(E);
         Value *Src = vectorizeOperand(E, 0, PostponedPHIs);
         if (E->VectorizedValue) {
@@ -15380,6 +15669,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                   [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
         V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
         propagateIRFlags(V, E->Scalars, VL0);
+        if (auto *I = dyn_cast<Instruction>(V))
+          V = propagateMetadata(I, E->Scalars);
+        V = FinalShuffle(V, E);
       } else {
         assert(E->isAltShuffle() &&
                ((Instruction::isBinaryOp(E->getOpcode()) &&
@@ -15510,11 +15802,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           transformScalarShuffleIndiciesToVector(VecTy->getNumElements(), Mask);
         }
         V = Builder.CreateShuffleVector(V0, V1, Mask);
-      }
-      if (auto *I = dyn_cast<Instruction>(V)) {
-        V = propagateMetadata(I, E->Scalars);
-        GatherShuffleExtractSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          V = propagateMetadata(I, E->Scalars);
+          GatherShuffleExtractSeq.insert(I);
+          CSEBlocks.insert(I->getParent());
+        }
       }
 
       E->VectorizedValue = V;
@@ -15977,7 +16269,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     ShuffleBuilder.add(V1, CombinedMask1);
     if (V2)
       ShuffleBuilder.add(V2, CombinedMask2);
-    return ShuffleBuilder.finalize({}, {});
+    return ShuffleBuilder.finalize({}, {}, {});
   };
 
   auto &&ResizeToVF = [&CreateShuffle](Value *Vec, ArrayRef<int> Mask,
@@ -16122,11 +16414,13 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() &&
             !IE->UserTreeIndices.empty() &&
-            any_of(IE->UserTreeIndices,
-                   [&](const EdgeInfo &EI) {
-                     return EI.UserTE == VectorizableTree.front().get() &&
-                            EI.EdgeIdx == UINT_MAX;
-                   })) &&
+            (ValueToGatherNodes.lookup(I).contains(
+                 VectorizableTree.front().get()) ||
+             any_of(IE->UserTreeIndices,
+                    [&](const EdgeInfo &EI) {
+                      return EI.UserTE == VectorizableTree.front().get() &&
+                             EI.EdgeIdx == UINT_MAX;
+                    }))) &&
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
@@ -17723,6 +18017,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   // Scan the blocks in the function in post order.
   for (auto *BB : post_order(&F.getEntryBlock())) {
+    if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
+      continue;
+
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);
@@ -18219,25 +18516,30 @@ bool SLPVectorizerPass::vectorizeStores(
       }
       // Try to vectorize the first found set to avoid duplicate analysis.
       TryToVectorize(Set.second);
+      unsigned ItIdx = It->first;
+      int ItDist = It->second;
       StoreIndexToDistSet PrevSet;
-      PrevSet.swap(Set.second);
+      copy_if(Set.second, std::inserter(PrevSet, PrevSet.end()),
+              [&](const std::pair<unsigned, int> &Pair) {
+                return Pair.first > ItIdx;
+              });
+      Set.second.clear();
       Set.first = Idx;
       Set.second.emplace(Idx, 0);
       // Insert stores that followed previous match to try to vectorize them
       // with this store.
-      unsigned StartIdx = It->first + 1;
+      unsigned StartIdx = ItIdx + 1;
       SmallBitVector UsedStores(Idx - StartIdx);
       // Distances to previously found dup store (or this store, since they
       // store to the same addresses).
       SmallVector<int> Dists(Idx - StartIdx, 0);
       for (const std::pair<unsigned, int> &Pair : reverse(PrevSet)) {
         // Do not try to vectorize sequences, we already tried.
-        if (Pair.first <= It->first ||
-            VectorizedStores.contains(Stores[Pair.first]))
+        if (VectorizedStores.contains(Stores[Pair.first]))
           break;
         unsigned BI = Pair.first - StartIdx;
         UsedStores.set(BI);
-        Dists[BI] = Pair.second - It->second;
+        Dists[BI] = Pair.second - ItDist;
       }
       for (unsigned I = StartIdx; I < Idx; ++I) {
         unsigned BI = I - StartIdx;
@@ -19471,9 +19773,7 @@ public:
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
-        if ((isBoolLogicOp(RdxRootInst) ||
-             (AnyBoolLogicOp && VL.size() != TrackedVals.size())) &&
-            !isGuaranteedNotToBePoison(VectorizedRoot))
+        if (AnyBoolLogicOp && !isGuaranteedNotToBePoison(VectorizedRoot))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.

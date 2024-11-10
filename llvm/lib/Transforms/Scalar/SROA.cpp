@@ -55,7 +55,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -5591,12 +5590,11 @@ bool SROA::promoteAllocas(Function &F) {
   if (PromotableAllocas.empty())
     return false;
 
-  NumPromoted += PromotableAllocas.size();
-
   if (SROASkipMem2Reg) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
+    NumPromoted += PromotableAllocas.size();
     PromoteMemToReg(PromotableAllocas.getArrayRef(), DTU->getDomTree(), AC);
   }
 

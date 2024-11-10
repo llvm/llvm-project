@@ -831,6 +831,15 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   return CanonTTP;
 }
 
+/// Check if a type can have its sanitizer instrumentation elided based on its
+/// presence within an ignorelist.
+bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
+                                          const QualType &Ty) const {
+  std::string TyName = Ty.getUnqualifiedType().getAsString(getPrintingPolicy());
+  return NoSanitizeL->containsType(Mask, TyName) &&
+         !NoSanitizeL->containsType(Mask, TyName, "sanitize");
+}
+
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
   auto Kind = getTargetInfo().getCXXABI().getKind();
   return getLangOpts().CXXABI.value_or(Kind);
@@ -1583,14 +1592,17 @@ ASTContext::setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
   InstantiatedFromUsingShadowDecl[Inst] = Pattern;
 }
 
-FieldDecl *ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) {
+FieldDecl *
+ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) const {
   return InstantiatedFromUnnamedFieldDecl.lookup(Field);
 }
 
 void ASTContext::setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst,
                                                      FieldDecl *Tmpl) {
-  assert(!Inst->getDeclName() && "Instantiated field decl is not unnamed");
-  assert(!Tmpl->getDeclName() && "Template field decl is not unnamed");
+  assert((!Inst->getDeclName() || Inst->isPlaceholderVar(getLangOpts())) &&
+         "Instantiated field decl is not unnamed");
+  assert((!Inst->getDeclName() || Inst->isPlaceholderVar(getLangOpts())) &&
+         "Template field decl is not unnamed");
   assert(!InstantiatedFromUnnamedFieldDecl[Inst] &&
          "Already noted what unnamed field was instantiated from");
 
@@ -3552,7 +3564,8 @@ ASTContext::adjustType(QualType Orig,
     const auto *AT = dyn_cast<AttributedType>(Orig);
     return getAttributedType(AT->getAttrKind(),
                              adjustType(AT->getModifiedType(), Adjust),
-                             adjustType(AT->getEquivalentType(), Adjust));
+                             adjustType(AT->getEquivalentType(), Adjust),
+                             AT->getAttr());
   }
 
   case Type::BTFTagAttributed: {
@@ -5197,22 +5210,52 @@ QualType ASTContext::getUnresolvedUsingType(
 
 QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType modifiedType,
-                                       QualType equivalentType) const {
+                                       QualType equivalentType,
+                                       const Attr *attr) const {
   llvm::FoldingSetNodeID id;
-  AttributedType::Profile(id, attrKind, modifiedType, equivalentType);
+  AttributedType::Profile(id, attrKind, modifiedType, equivalentType, attr);
 
   void *insertPos = nullptr;
   AttributedType *type = AttributedTypes.FindNodeOrInsertPos(id, insertPos);
   if (type) return QualType(type, 0);
 
+  assert(!attr || attr->getKind() == attrKind);
+
   QualType canon = getCanonicalType(equivalentType);
-  type = new (*this, alignof(AttributedType))
-      AttributedType(canon, attrKind, modifiedType, equivalentType);
+	type = new (*this, alignof(AttributedType))
+      AttributedType(canon, attrKind, attr, modifiedType, equivalentType);
 
   Types.push_back(type);
   AttributedTypes.InsertNode(type, insertPos);
 
   return QualType(type, 0);
+}
+
+QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
+                                       QualType equivalentType) const {
+  return getAttributedType(attr->getKind(), modifiedType, equivalentType, attr);
+}
+
+QualType ASTContext::getAttributedType(NullabilityKind nullability,
+                                       QualType modifiedType,
+                                       QualType equivalentType) {
+  switch (nullability) {
+  case NullabilityKind::NonNull:
+    return getAttributedType(attr::TypeNonNull, modifiedType, equivalentType);
+
+  case NullabilityKind::Nullable:
+    return getAttributedType(attr::TypeNullable, modifiedType, equivalentType);
+
+  case NullabilityKind::NullableResult:
+    return getAttributedType(attr::TypeNullableResult, modifiedType,
+                             equivalentType);
+
+  case NullabilityKind::Unspecified:
+    return getAttributedType(attr::TypeNullUnspecified, modifiedType,
+                             equivalentType);
+  }
+
+  llvm_unreachable("Unknown nullability kind");
 }
 
 QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
@@ -5260,10 +5303,11 @@ QualType ASTContext::getHLSLAttributedResourceType(
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex) const {
+    std::optional<unsigned> PackIndex,
+    SubstTemplateTypeParmTypeFlag Flag) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
-                                     PackIndex);
+                                     PackIndex, Flag);
   void *InsertPos = nullptr;
   SubstTemplateTypeParmType *SubstParm =
       SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -5273,7 +5317,7 @@ QualType ASTContext::getSubstTemplateTypeParmType(
                              !Replacement.isCanonical()),
                          alignof(SubstTemplateTypeParmType));
     SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
-                                                    Index, PackIndex);
+                                                    Index, PackIndex, Flag);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
@@ -5634,7 +5678,7 @@ ASTContext::getDependentTemplateSpecializationType(
   return QualType(T, 0);
 }
 
-TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
+TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
   TemplateArgument Arg;
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
     QualType ArgType = getTypeDeclType(TTP);
@@ -5678,23 +5722,15 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   }
 
   if (Param->isTemplateParameterPack())
-    Arg = TemplateArgument::CreatePackCopy(*this, Arg);
+    Arg =
+        TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this), Arg);
 
   return Arg;
 }
 
-void
-ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
-                                    SmallVectorImpl<TemplateArgument> &Args) {
-  Args.reserve(Args.size() + Params->size());
-
-  for (NamedDecl *Param : *Params)
-    Args.push_back(getInjectedTemplateArg(Param));
-}
-
 QualType ASTContext::getPackExpansionType(QualType Pattern,
                                           std::optional<unsigned> NumExpansions,
-                                          bool ExpectPackInType) {
+                                          bool ExpectPackInType) const {
   assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
          "Pack expansions must expand one or more parameter packs");
 
@@ -7545,8 +7581,8 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
 
   // int x[_Nullable] -> int * _Nullable
   if (auto Nullability = Ty->getNullability()) {
-    Result = const_cast<ASTContext *>(this)->getAttributedType(
-        AttributedType::getNullabilityAttrKind(*Nullability), Result, Result);
+    Result = const_cast<ASTContext *>(this)->getAttributedType(*Nullability,
+                                                               Result, Result);
   }
   return Result;
 }
@@ -13781,7 +13817,8 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     // FIXME: It's inefficient to have to unify the modified types.
     return Ctx.getAttributedType(Kind, Ctx.getCommonSugaredType(MX, MY),
-                                 Ctx.getQualifiedType(Underlying));
+                                 Ctx.getQualifiedType(Underlying),
+                                 AX->getAttr());
   }
   case Type::BTFTagAttributed: {
     const auto *BX = cast<BTFTagAttributedType>(X);
@@ -14376,6 +14413,33 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;
   }
+}
+
+static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
+                                          const FunctionDecl *FD) {
+  return {KernelNameType, FD};
+}
+
+void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
+  // If the function declaration to register is invalid or dependent, the
+  // registration attempt is ignored.
+  if (FD->isInvalidDecl() || FD->isTemplated())
+    return;
+
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+
+  // Be tolerant of multiple registration attempts so long as each attempt
+  // is for the same entity. Callers are obligated to detect and diagnose
+  // conflicting kernel names prior to calling this function.
+  CanQualType KernelNameType = getCanonicalType(SKEPAttr->getKernelName());
+  auto IT = SYCLKernels.find(KernelNameType);
+  assert((IT == SYCLKernels.end() ||
+          declaresSameEntity(FD, IT->second.getKernelEntryPointDecl())) &&
+         "SYCL kernel name conflict");
+  (void)IT;
+  SYCLKernels.insert(
+      std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
 }
 
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {

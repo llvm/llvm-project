@@ -20,6 +20,7 @@
 ! RUN:     -fversion-loops-for-stride \
 ! RUN:     -flang-experimental-hlfir \
 ! RUN:     -flang-deprecated-no-hlfir \
+! RUN:     -flang-experimental-integer-overflow \
 ! RUN:     -fno-ppc-native-vector-element-order \
 ! RUN:     -fppc-native-vector-element-order \
 ! RUN:     -mllvm -print-before-all \
@@ -51,6 +52,7 @@
 ! CHECK: "-fversion-loops-for-stride"
 ! CHECK: "-flang-experimental-hlfir"
 ! CHECK: "-flang-deprecated-no-hlfir"
+! CHECK: "-flang-experimental-integer-overflow"
 ! CHECK: "-fno-ppc-native-vector-element-order"
 ! CHECK: "-fppc-native-vector-element-order"
 ! CHECK: "-Rpass"

@@ -3305,6 +3305,10 @@ public:
                                         const FieldDecl *FAMDecl,
                                         uint64_t &Offset);
 
+  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
+
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
                                         const FieldDecl *FAMDecl,
@@ -4296,8 +4300,11 @@ public:
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
   LValue EmitHLSLArrayAssignLValue(const BinaryOperator *E);
-  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                          QualType Ty);
+
+  std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
+                                                  QualType Ty);
+  LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
+                            QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -5146,6 +5153,9 @@ public:
   void EmitNonNullArgCheck(Address Addr, QualType ArgType,
                            SourceLocation ArgLoc, AbstractCallee AC,
                            unsigned ParmNum);
+
+  /// EmitWriteback - Emit callbacks for function.
+  void EmitWritebacks(const CallArgList &Args);
 
   /// EmitCallArg - Emit a single call argument.
   void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType);

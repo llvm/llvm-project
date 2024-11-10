@@ -34,7 +34,8 @@ DominanceInfoBase<IsPostDom>::~DominanceInfoBase() {
     delete entry.second.getPointer();
 }
 
-template <bool IsPostDom> void DominanceInfoBase<IsPostDom>::invalidate() {
+template <bool IsPostDom>
+void DominanceInfoBase<IsPostDom>::invalidate() {
   for (auto entry : dominanceInfos)
     delete entry.second.getPointer();
   dominanceInfos.clear();
@@ -217,9 +218,10 @@ template <bool IsPostDom>
 bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
   assert(a && b && "null blocks not allowed");
 
-  // A block dominates itself but does not properly dominate itself.
+  // A block dominates, but does not properly dominate, itself unless this
+  // is a graph region.
   if (a == b)
-    return false;
+    return !hasSSADominance(a);
 
   // If both blocks are not in the same region, `a` properly dominates `b` if
   // `b` is defined in an operation region that (recursively) ends up being
@@ -269,7 +271,7 @@ bool DominanceInfo::properlyDominatesImpl(Operation *a, Operation *b,
   Block *aBlock = a->getBlock(), *bBlock = b->getBlock();
   assert(aBlock && bBlock && "operations must be in a block");
 
-  // An instruction dominates, but does not properlyDominate, itself unless this
+  // An operation dominates, but does not properly dominate, itself unless this
   // is a graph region.
   if (a == b)
     return !hasSSADominance(aBlock);
