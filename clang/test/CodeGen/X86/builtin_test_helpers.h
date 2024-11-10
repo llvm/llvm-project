@@ -9,6 +9,25 @@ constexpr bool match_m64(__m64 _v, unsigned long long a) {
   return v[0] == a;
 }
 
+constexpr bool match_v1di(__m64 v, long long a) {
+  return v[0] == a;
+}
+
+constexpr bool match_v2si(__m64 _v, int a, int b) {
+  __v2si v = (__v2si)_v;
+  return v[0] == a && v[1] == b;
+}
+
+constexpr bool match_v4hi(__m64 _v, short a, short b, short c, short d) {
+  __v4hi v = (__v4hi)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
+}
+
+constexpr bool match_v8qi(__m64 _v, char a, char b, char c, char d, char e, char f, char g, char h) {
+  __v8qi v = (__v8qi)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
+}
+
 constexpr bool match_m128(__m128 v, float a, float b, float c, float d) {
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }

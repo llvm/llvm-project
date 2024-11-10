@@ -14,7 +14,6 @@
 
 #include "X86.h"
 #include "X86FrameLowering.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -559,12 +558,68 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return true;
   }
   case X86::PTILELOADDV:
-  case X86::PTILELOADDT1V: {
+  case X86::PTILELOADDT1V:
+  case X86::PTCVTROWD2PSrreV:
+  case X86::PTCVTROWD2PSrriV:
+  case X86::PTCVTROWPS2PBF16HrreV:
+  case X86::PTCVTROWPS2PBF16HrriV:
+  case X86::PTCVTROWPS2PBF16LrreV:
+  case X86::PTCVTROWPS2PBF16LrriV:
+  case X86::PTCVTROWPS2PHHrreV:
+  case X86::PTCVTROWPS2PHHrriV:
+  case X86::PTCVTROWPS2PHLrreV:
+  case X86::PTCVTROWPS2PHLrriV:
+  case X86::PTILEMOVROWrreV:
+  case X86::PTILEMOVROWrriV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
-    unsigned Opc = Opcode == X86::PTILELOADDV
-                       ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
-                       : GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+    unsigned Opc;
+    switch (Opcode) {
+    case X86::PTILELOADDV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+      break;
+    case X86::PTILELOADDT1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTCVTROWD2PSrreV:
+      Opc = X86::TCVTROWD2PSrre;
+      break;
+    case X86::PTCVTROWD2PSrriV:
+      Opc = X86::TCVTROWD2PSrri;
+      break;
+    case X86::PTCVTROWPS2PBF16HrreV:
+      Opc = X86::TCVTROWPS2PBF16Hrre;
+      break;
+    case X86::PTCVTROWPS2PBF16HrriV:
+      Opc = X86::TCVTROWPS2PBF16Hrri;
+      break;
+    case X86::PTCVTROWPS2PBF16LrreV:
+      Opc = X86::TCVTROWPS2PBF16Lrre;
+      break;
+    case X86::PTCVTROWPS2PBF16LrriV:
+      Opc = X86::TCVTROWPS2PBF16Lrri;
+      break;
+    case X86::PTCVTROWPS2PHHrreV:
+      Opc = X86::TCVTROWPS2PHHrre;
+      break;
+    case X86::PTCVTROWPS2PHHrriV:
+      Opc = X86::TCVTROWPS2PHHrri;
+      break;
+    case X86::PTCVTROWPS2PHLrreV:
+      Opc = X86::TCVTROWPS2PHLrre;
+      break;
+    case X86::PTCVTROWPS2PHLrriV:
+      Opc = X86::TCVTROWPS2PHLrri;
+      break;
+    case X86::PTILEMOVROWrreV:
+      Opc = X86::TILEMOVROWrre;
+      break;
+    case X86::PTILEMOVROWrriV:
+      Opc = X86::TILEMOVROWrri;
+      break;
+    default:
+      llvm_unreachable("Unexpected Opcode");
+    }
     MI.setDesc(TII->get(Opc));
     return true;
   }
@@ -714,7 +769,8 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    default: llvm_unreachable("Impossible Opcode!");
+    default:
+      llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);

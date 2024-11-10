@@ -7,7 +7,7 @@ int check_all_feature() {
     return 2;
   else if (__builtin_cpu_supports("aes+pmull+fp16+dit+dpb+dpb2+jscvt"))
     return 3;
-  else if (__builtin_cpu_supports("fcma+rcpc+rcpc2+rcpc3+frintts+dgh"))
+  else if (__builtin_cpu_supports("fcma+rcpc+rcpc2+rcpc3+frintts"))
     return 4;
   else if (__builtin_cpu_supports("i8mm+bf16+sve"))
     return 5;
