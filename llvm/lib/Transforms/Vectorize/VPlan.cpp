@@ -58,7 +58,7 @@ static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
-#define DEBUG_TYPE "vplan"
+#define DEBUG_TYPE "loop-vectorize"
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
