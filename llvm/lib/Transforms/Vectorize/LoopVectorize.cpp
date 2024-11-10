@@ -7639,9 +7639,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::unrollByUF(BestVPlan, BestUF,
-                              OrigLoop->getHeader()->getContext());
-
   TailFoldingStyle Style = CM.getTailFoldingStyle(
       !isIndvarOverflowCheckKnownFalse(&CM, BestVF, BestUF));
   // When not folding the tail, we know that the induction increment will not
@@ -7650,6 +7647,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   bool WithoutRuntimeCheck =
       Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
   VPlanTransforms::lowerCanonicalIV(BestVPlan, HasNUW, WithoutRuntimeCheck);
+  VPlanTransforms::unrollByUF(BestVPlan, BestUF,
+                              OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
@@ -8770,6 +8769,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL() && !VPlanTransforms::tryAddExplicitVectorLength(
                                       *Plan, CM.getMaxSafeElements()))
         break;
+      assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
     VF = SubRange.End;

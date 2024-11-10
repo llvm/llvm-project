@@ -1809,11 +1809,9 @@ void VPlanTransforms::lowerCanonicalIV(
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
   Builder.setInsertPoint(EB);
-  auto *InLoopIncrement = Plan.getUF() > 1
-                              ? Builder.createOverflowingOp(
-                                    VPInstruction::CanonicalIVIncrementForPart,
-                                    {IncrementValue}, {false, false}, DL)
-                              : IncrementValue;
+  auto *InLoopIncrement =
+      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
+                                  {IncrementValue}, {false, false}, DL);
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                    {InLoopIncrement, TripCount}, DL,
                                    "active.lane.mask.next");
