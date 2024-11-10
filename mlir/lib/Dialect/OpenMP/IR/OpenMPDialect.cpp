@@ -1760,6 +1760,18 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
 }
 
 LogicalResult ParallelOp::verify() {
+  if (getAllocateVars().size() != getAllocatorVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
+                                getReductionByref());
+}
+
+LogicalResult ParallelOp::verifyRegions() {
   auto distributeChildOps = getOps<DistributeOp>();
   if (!distributeChildOps.empty()) {
     if (!isComposite())
@@ -1780,16 +1792,7 @@ LogicalResult ParallelOp::verify() {
     return emitError()
            << "'omp.composite' attribute present in non-composite operation";
   }
-
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
-
-  if (failed(verifyPrivateVarList(*this)))
-    return failure();
-
-  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1946,6 +1949,23 @@ LogicalResult LoopWrapperInterface::verifyImpl() {
 }
 
 //===----------------------------------------------------------------------===//
+// LoopOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult LoopOp::verify() {
+  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
+                                getReductionByref());
+}
+
+LogicalResult LoopOp::verifyRegions() {
+  if (llvm::isa_and_nonnull<LoopWrapperInterface>((*this)->getParentOp()) ||
+      getNestedWrapper())
+    return emitError() << "`omp.loop` expected to be a standalone loop wrapper";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WsloopOp
 //===----------------------------------------------------------------------===//
 
@@ -1979,6 +1999,11 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult WsloopOp::verify() {
+  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
+                                getReductionByref());
+}
+
+LogicalResult WsloopOp::verifyRegions() {
   bool isCompositeChildLeaf =
       llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
 
@@ -2000,8 +2025,7 @@ LogicalResult WsloopOp::verify() {
            << "'omp.composite' attribute missing from composite wrapper";
   }
 
-  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2037,9 +2061,6 @@ LogicalResult SimdOp::verify() {
   if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
     return failure();
 
-  if (getNestedWrapper())
-    return emitOpError() << "must wrap an 'omp.loop_nest' directly";
-
   bool isCompositeChildLeaf =
       llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
 
@@ -2050,6 +2071,13 @@ LogicalResult SimdOp::verify() {
   if (isComposite() && !isCompositeChildLeaf)
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
+
+  return success();
+}
+
+LogicalResult SimdOp::verifyRegions() {
+  if (getNestedWrapper())
+    return emitOpError() << "must wrap an 'omp.loop_nest' directly";
 
   return success();
 }
@@ -2076,6 +2104,10 @@ LogicalResult DistributeOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
+  return success();
+}
+
+LogicalResult DistributeOp::verifyRegions() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -2281,6 +2313,10 @@ LogicalResult TaskloopOp::verify() {
         "may not appear on the same taskloop directive");
   }
 
+  return success();
+}
+
+LogicalResult TaskloopOp::verifyRegions() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -2480,13 +2516,7 @@ void OrderedRegionOp::build(OpBuilder &builder, OperationState &state,
   OrderedRegionOp::build(builder, state, clauses.parLevelSimd);
 }
 
-LogicalResult OrderedRegionOp::verify() {
-  // TODO: The code generation for ordered simd directive is not supported yet.
-  if (getParLevelSimd())
-    return failure();
-
-  return verifyOrderedParent(**this);
-}
+LogicalResult OrderedRegionOp::verify() { return verifyOrderedParent(**this); }
 
 //===----------------------------------------------------------------------===//
 // TaskwaitOp
@@ -2725,7 +2755,7 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                                      DataSharingClauseType::Private));
 }
 
-LogicalResult PrivateClauseOp::verify() {
+LogicalResult PrivateClauseOp::verifyRegions() {
   Type symType = getType();
 
   auto verifyTerminator = [&](Operation *terminator,

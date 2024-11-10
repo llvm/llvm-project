@@ -1055,9 +1055,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
 
-  Function *Decl = Intrinsic::getOrInsertDeclaration(
-      &M, Intrinsic::amdgcn_lds_kernel_id, {});
-  auto *KernelId = IRB.CreateCall(Decl, {});
+  auto *KernelId = IRB.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
   GlobalVariable *LDSBaseTable = NKLDSParams.LDSBaseTable;
   GlobalVariable *LDSOffsetTable = NKLDSParams.LDSOffsetTable;
   auto &OrdereLDSGlobals = NKLDSParams.OrdereLDSGlobals;

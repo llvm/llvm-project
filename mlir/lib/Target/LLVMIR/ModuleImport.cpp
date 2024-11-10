@@ -683,6 +683,12 @@ void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
   iface.setOverflowFlags(value);
 }
 
+void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
+  auto iface = cast<ExactFlagInterface>(op);
+
+  iface.setIsExact(inst->isExact());
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
@@ -2041,7 +2047,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   // Insert the function at the end of the module.
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+  builder.setInsertionPointToEnd(mlirModule.getBody());
 
   Location loc = debugImporter->translateFuncLocation(func);
   LLVMFuncOp funcOp = builder.create<LLVMFuncOp>(
@@ -2180,7 +2186,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
                           << diag(*dbgIntr);
 
-  // Ensure that the debug instrinsic is inserted right after its operand is
+  // Ensure that the debug intrinsic is inserted right after its operand is
   // defined. Otherwise, the operand might not necessarily dominate the
   // intrinsic. If the defining operation is a terminator, insert the intrinsic
   // into a dominated block.

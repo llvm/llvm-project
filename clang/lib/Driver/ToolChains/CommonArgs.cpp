@@ -1293,6 +1293,7 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     }
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
+    addArchSpecificRPath(TC, Args, CmdArgs);
   }
 
   // libomp needs libatomic for atomic operations if using libgcc
@@ -1623,10 +1624,14 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 }
 
 bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_shared))
-    return false;
-
-  if (TC.getXRayArgs().needsXRayRt()) {
+  if (Args.hasArg(options::OPT_shared)) {
+    if (TC.getXRayArgs().needsXRayDSORt()) {
+      CmdArgs.push_back("--whole-archive");
+      CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray-dso"));
+      CmdArgs.push_back("--no-whole-archive");
+      return true;
+    }
+  } else if (TC.getXRayArgs().needsXRayRt()) {
     CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray"));
     for (const auto &Mode : TC.getXRayArgs().modeList())
@@ -3047,4 +3052,18 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
         << TripleStr;
 
   return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
+}
+
+void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
+                                               ArgStringList &CmdArgs) {
+  // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
+  // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
+  if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
+    if (A->getOption().matches(options::OPT_fwrapv))
+      CmdArgs.push_back("-fwrapv");
+  } else if (Arg *A = Args.getLastArg(options::OPT_fstrict_overflow,
+                                      options::OPT_fno_strict_overflow)) {
+    if (A->getOption().matches(options::OPT_fno_strict_overflow))
+      CmdArgs.push_back("-fwrapv");
+  }
 }

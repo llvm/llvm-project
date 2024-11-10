@@ -788,7 +788,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
               B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
           // Have to drop any nofpclass attributes on the original call site.
           Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType()));
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                                  Call->getParamAttributes(1)));
           Call->setCalledFunction(PownFunc);
           Call->setArgOperand(1, CastedArg);
           return fold_pow(FPOp, B, PownInfo) || true;

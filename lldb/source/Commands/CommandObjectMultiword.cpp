@@ -32,7 +32,7 @@ CommandObjectMultiword::GetSubcommandSPExact(llvm::StringRef sub_cmd) {
   if (m_subcommand_dict.empty())
     return {};
 
-  auto pos = m_subcommand_dict.find(std::string(sub_cmd));
+  auto pos = m_subcommand_dict.find(sub_cmd);
   if (pos == m_subcommand_dict.end())
     return {};
 
@@ -64,7 +64,7 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
     // function, since I now know I have an exact match...
 
     sub_cmd = matches->GetStringAtIndex(0);
-    pos = m_subcommand_dict.find(std::string(sub_cmd));
+    pos = m_subcommand_dict.find(sub_cmd);
     if (pos != m_subcommand_dict.end())
       return_cmd_sp = pos->second;
   }
@@ -102,11 +102,9 @@ llvm::Error CommandObjectMultiword::LoadUserSubcommand(
 
   std::string str_name(name);
 
-  auto pos = m_subcommand_dict.find(str_name);
-  if (pos == m_subcommand_dict.end()) {
-    m_subcommand_dict[str_name] = cmd_obj_sp;
+  auto [pos, inserted] = m_subcommand_dict.try_emplace(str_name, cmd_obj_sp);
+  if (inserted)
     return llvm::Error::success();
-  }
 
   const char *error_str = nullptr;
   if (!can_replace)
@@ -117,7 +115,7 @@ llvm::Error CommandObjectMultiword::LoadUserSubcommand(
   if (error_str) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(), error_str);
   }
-  m_subcommand_dict[str_name] = cmd_obj_sp;
+  pos->second = cmd_obj_sp;
   return llvm::Error::success();
 }
 

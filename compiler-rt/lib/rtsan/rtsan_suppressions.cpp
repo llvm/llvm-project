@@ -56,7 +56,7 @@ void __rtsan::InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
 
   // We will use suppression_ctx == nullptr as an early out
-  if (flags().suppressions[0] == '\0')
+  if (!flags().ContainsSuppresionFile())
     return;
 
   suppression_ctx = new (suppression_placeholder)

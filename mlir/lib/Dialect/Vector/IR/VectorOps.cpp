@@ -1221,6 +1221,11 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
+void ExtractElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source) {
   result.addOperands({source});
@@ -1272,6 +1277,11 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
+
+void ExtractOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                  SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
 
 void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
                               Value source, int64_t position) {
@@ -1695,6 +1705,47 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   return extractOp.getResult();
 }
 
+/// Fold extractOp coming from ShuffleOp.
+///
+/// Example:
+///
+///   %shuffle = vector.shuffle %a, %b [0, 8, 7, 15]
+///     : vector<8xf32>, vector<8xf32>
+///   %extract = vector.extract %shuffle[3] : f32 from vector<4xf32>
+/// ->
+///   %extract = vector.extract %b[7] : f32 from vector<8xf32>
+///
+static Value foldExtractFromShuffle(ExtractOp extractOp) {
+  // Dynamic positions are not folded as the resulting code would be more
+  // complex than the input code.
+  if (extractOp.hasDynamicPosition())
+    return Value();
+
+  auto shuffleOp = extractOp.getVector().getDefiningOp<ShuffleOp>();
+  if (!shuffleOp)
+    return Value();
+
+  // TODO: 0-D or multi-dimensional vectors not supported yet.
+  if (shuffleOp.getResultVectorType().getRank() != 1)
+    return Value();
+
+  int64_t inputVecSize = shuffleOp.getV1().getType().getShape()[0];
+  auto shuffleMask = shuffleOp.getMask();
+  int64_t extractIdx = extractOp.getStaticPosition()[0];
+  int64_t shuffleIdx = shuffleMask[extractIdx];
+
+  // Find the shuffled vector to extract from based on the shuffle index.
+  if (shuffleIdx < inputVecSize) {
+    extractOp.setOperand(0, shuffleOp.getV1());
+    extractOp.setStaticPosition({shuffleIdx});
+  } else {
+    extractOp.setOperand(0, shuffleOp.getV2());
+    extractOp.setStaticPosition({shuffleIdx - inputVecSize});
+  }
+
+  return extractOp.getResult();
+}
+
 // Fold extractOp with source coming from ShapeCast op.
 static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   // TODO: Canonicalization for dynamic position not implemented yet.
@@ -1942,6 +1993,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
   if (auto res = ExtractFromInsertTransposeChainState(*this).fold())
     return res;
   if (auto res = foldExtractFromBroadcast(*this))
+    return res;
+  if (auto res = foldExtractFromShuffle(*this))
     return res;
   if (auto res = foldExtractFromShapeCast(*this))
     return res;
@@ -2251,6 +2304,11 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
+
+void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
 
 /// Return the dimensions of the result vector that were formerly ones in the
 /// source tensor and thus correspond to "dim-1" broadcasting.
@@ -2713,6 +2771,11 @@ void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // InsertElementOp
 //===----------------------------------------------------------------------===//
 
+void InsertElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                        SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
+}
+
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest) {
   build(builder, result, source, dest, {});
@@ -2761,6 +2824,11 @@ OpFoldResult vector::InsertElementOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // InsertOp
 //===----------------------------------------------------------------------===//
+
+void vector::InsertOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
+}
 
 void vector::InsertOp::build(OpBuilder &builder, OperationState &result,
                              Value source, Value dest, int64_t position) {
@@ -2951,11 +3019,11 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
               InsertOpConstantFolder>(context);
 }
 
-// Eliminates insert operations that produce values identical to their source
-// value. This happens when the source and destination vectors have identical
-// sizes.
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
-  if (getNumIndices() == 0)
+  // Fold "vector.insert %v, %dest [] : vector<2x2xf32> from vector<2x2xf32>" to
+  // %v. Note: Do not fold "vector.insert %v, %dest [] : f32 into vector<f32>"
+  // (type mismatch).
+  if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
   return {};
 }
@@ -4977,8 +5045,8 @@ LogicalResult MaskedLoadOp::verify() {
     return emitOpError("base and result element type should match");
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected result dim to match mask dim");
+  if (resVType.getShape() != maskVType.getShape())
+    return emitOpError("expected result shape to match mask shape");
   if (resVType != passVType)
     return emitOpError("expected pass_thru of same type as result type");
   return success();
@@ -5030,8 +5098,8 @@ LogicalResult MaskedStoreOp::verify() {
     return emitOpError("base and valueToStore element type should match");
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected valueToStore dim to match mask dim");
+  if (valueVType.getShape() != maskVType.getShape())
+    return emitOpError("expected valueToStore shape to match mask shape");
   return success();
 }
 
@@ -5276,6 +5344,11 @@ void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 // ShapeCastOp
 //===----------------------------------------------------------------------===//
+
+void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
 
 /// Returns true if each element of 'a' is equal to the product of a contiguous
 /// sequence of the elements of 'b'. Returns false otherwise.
@@ -6423,18 +6496,9 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   return SplatElementsAttr::get(getType(), {constOperand});
 }
 
-//===----------------------------------------------------------------------===//
-// StepOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult StepOp::fold(FoldAdaptor adaptor) {
-  auto resultType = cast<VectorType>(getType());
-  if (resultType.isScalable())
-    return nullptr;
-  SmallVector<APInt> indices;
-  for (unsigned i = 0; i < resultType.getNumElements(); i++)
-    indices.push_back(APInt(/*width=*/64, i));
-  return DenseElementsAttr::get(resultType, indices);
+void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
 }
 
 //===----------------------------------------------------------------------===//

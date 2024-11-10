@@ -23,7 +23,7 @@ entry:
 define amdgpu_kernel void @fcmp_test(half %x, half %y) {
 ; CHECK-LABEL: fcmp_test:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_lshr_b32 s1, s0, 16
@@ -46,7 +46,7 @@ entry:
 define amdgpu_kernel void @ballot_test(half %x, half %y) {
 ; CHECK-LABEL: ballot_test:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_lshr_b32 s1, s0, 16

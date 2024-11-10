@@ -441,6 +441,8 @@ void CommandInterpreter::Initialize() {
 
   cmd_obj_sp = GetCommandSPExact("expression");
   if (cmd_obj_sp) {
+    // Ensure `e` runs `expression`.
+    AddAlias("e", cmd_obj_sp);
     AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
@@ -839,7 +841,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "argument displays at most that many frames. The argument 'all' "
           "displays all threads. Use 'settings set frame-format' to customize "
           "the printing of individual frames and 'settings set thread-format' "
-          "to customize the thread header. Frame recognizers may filter the"
+          "to customize the thread header. Frame recognizers may filter the "
           "list. Use 'thread backtrace -u (--unfiltered)' to see them all.",
           "bt [<digit> | all]", 0, false));
   if (bt_regex_cmd_up) {

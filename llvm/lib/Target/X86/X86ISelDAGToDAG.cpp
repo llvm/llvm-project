@@ -14,7 +14,6 @@
 #include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
-#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
@@ -321,6 +320,35 @@ namespace {
         Segment = AM.Segment;
       else
         Segment = CurDAG->getRegister(0, MVT::i16);
+    }
+
+    // Utility function to determine whether it is AMX SDNode right after
+    // lowering but before ISEL.
+    bool isAMXSDNode(SDNode *N) const {
+      // Check if N is AMX SDNode:
+      // 1. check specific opcode since these carry MVT::Untyped instead of
+      // x86amx_type;
+      // 2. check result type;
+      // 3. check operand type;
+      switch (N->getOpcode()) {
+      default:
+        break;
+      case X86::PT2RPNTLVWZ0V:
+      case X86::PT2RPNTLVWZ0T1V:
+      case X86::PT2RPNTLVWZ1V:
+      case X86::PT2RPNTLVWZ1T1V:
+        return true;
+      }
+      for (unsigned Idx = 0, E = N->getNumValues(); Idx != E; ++Idx) {
+        if (N->getValueType(Idx) == MVT::x86amx)
+          return true;
+      }
+      for (unsigned Idx = 0, E = N->getNumOperands(); Idx != E; ++Idx) {
+        SDValue Op = N->getOperand(Idx);
+        if (Op.getValueType() == MVT::x86amx)
+          return true;
+      }
+      return false;
     }
 
     // Utility function to determine whether we should avoid selecting
@@ -3556,11 +3584,10 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
 // be transferred from a node in the pattern to the result node, probably with
 // a new keyword. For example, we have this
 // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
-//  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
-//   (implicit EFLAGS)]>;
+//  [(store (add (loadi64 addr:$dst), -1), addr:$dst)]>;
 // but maybe need something like this
 // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
-//  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
+//  [(store (X86add_flag (loadi64 addr:$dst), -1), addr:$dst),
 //   (transferrable EFLAGS)]>;
 //
 // Until then, we manually fold these and instruction select the operation
@@ -5275,6 +5302,47 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         SDValue Ops[] = { TReg, Base, Scale, Index, Disp, Segment, Chain };
         CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
       }
+      ReplaceNode(Node, CNode);
+      return;
+    }
+    case Intrinsic::x86_t2rpntlvwz0:
+    case Intrinsic::x86_t2rpntlvwz0t1:
+    case Intrinsic::x86_t2rpntlvwz1:
+    case Intrinsic::x86_t2rpntlvwz1t1: {
+      if (!Subtarget->hasAMXTRANSPOSE())
+        break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+      unsigned Opc;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unexpected intrinsic!");
+      case Intrinsic::x86_t2rpntlvwz0:
+        Opc = X86::PT2RPNTLVWZ0;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0t1:
+        Opc = X86::PT2RPNTLVWZ0T1;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1:
+        Opc = X86::PT2RPNTLVWZ1;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1t1:
+        Opc = X86::PT2RPNTLVWZ1T1;
+        break;
+      }
+      // FIXME: Match displacement and scale.
+      unsigned TIndex = Node->getConstantOperandVal(2);
+      SDValue TReg = getI8Imm(TIndex, dl);
+      SDValue Base = Node->getOperand(3);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(4);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue Chain = Node->getOperand(0);
+      MachineSDNode *CNode;
+      SDValue Ops[] = {TReg, Base, Scale, Index, Disp, Segment, Chain};
+      CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
       ReplaceNode(Node, CNode);
       return;
     }

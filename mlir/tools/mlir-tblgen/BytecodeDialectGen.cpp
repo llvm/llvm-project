@@ -258,8 +258,7 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
     SmallVector<std::string> argNames;
     if (def->isSubClassOf("CompositeBytecode")) {
       const DagInit *members = def->getValueAsDag("members");
-      args = llvm::to_vector(map_range(
-          members->getArgs(), [](Init *init) { return (const Init *)init; }));
+      args = llvm::to_vector(members->getArgs());
       argNames = llvm::to_vector(
           map_range(members->getArgNames(), [](const StringInit *init) {
             return init->getAsUnquotedString();
