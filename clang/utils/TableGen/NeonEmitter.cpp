@@ -578,7 +578,7 @@ private:
 class NeonEmitter {
   const RecordKeeper &Records;
   DenseMap<const Record *, ClassKind> ClassMap;
-  std::map<std::string, std::deque<Intrinsic>> IntrinsicMap;
+  std::map<std::string, std::deque<Intrinsic>, std::less<>> IntrinsicMap;
   unsigned UniqueNumber;
 
   void createIntrinsic(const Record *R, SmallVectorImpl<Intrinsic *> &Out);
@@ -1937,9 +1937,9 @@ void Intrinsic::indexBody() {
 Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types,
                                      std::optional<std::string> MangledName) {
   // First, look up the name in the intrinsic map.
-  assert_with_loc(IntrinsicMap.find(Name.str()) != IntrinsicMap.end(),
+  assert_with_loc(IntrinsicMap.find(Name) != IntrinsicMap.end(),
                   ("Intrinsic '" + Name + "' not found!").str());
-  auto &V = IntrinsicMap.find(Name.str())->second;
+  auto &V = IntrinsicMap.find(Name)->second;
   std::vector<Intrinsic *> GoodVec;
 
   // Create a string to print if we end up failing.
