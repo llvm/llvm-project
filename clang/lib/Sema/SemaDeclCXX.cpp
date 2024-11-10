@@ -16163,7 +16163,8 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   if (!AllowTypeAwareAllocators())
     return std::nullopt;
 
-  TemplateParameterList *TemplateParameters = FnTemplateDecl->getTemplateParameters();
+  TemplateParameterList *TemplateParameters =
+      FnTemplateDecl->getTemplateParameters();
   if (TemplateParameters->hasParameterPack())
     return std::nullopt;
 

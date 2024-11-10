@@ -1863,7 +1863,8 @@ namespace {
         // Type aware allocation involves templates so we need to choose
         // the best type
         FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
-        FunctionTemplateDecl *OtherPrimaryTemplate = Other.FD->getPrimaryTemplate();
+        FunctionTemplateDecl *OtherPrimaryTemplate =
+            Other.FD->getPrimaryTemplate();
         if ((!PrimaryTemplate) != (!OtherPrimaryTemplate))
           return OtherPrimaryTemplate ? 1 : -1;
 
@@ -1914,7 +1915,8 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
                                 CXXRecordDecl *NamingClass, DeclAccessPair Decl,
                                 FunctionDecl *Operator) {
   if (S.isTypeAwareOperatorNewOrDelete(Operator)) {
-    QualType SelectedTypeIdentityParameter = Operator->getParamDecl(0)->getType();
+    QualType SelectedTypeIdentityParameter =
+        Operator->getParamDecl(0)->getType();
     if (S.RequireCompleteType(StartLoc, SelectedTypeIdentityParameter,
                               diag::err_incomplete_type))
       return true;
@@ -3046,8 +3048,8 @@ bool Sema::FindAllocationFunctions(
 
     DeclareGlobalNewDelete();
     DeallocLookupMode LookupMode = OriginalTypeAwareState
-                          ? DeallocLookupMode::OptionallyTyped
-                          : DeallocLookupMode::Untyped;
+                                       ? DeallocLookupMode::OptionallyTyped
+                                       : DeallocLookupMode::Untyped;
     LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
                                       DeleteName, AllocElemType);
   }
@@ -3179,8 +3181,7 @@ bool Sema::FindAllocationFunctions(
         OperatorDelete->getDeclContext() != OperatorNew->getDeclContext()) {
       Diag(StartLoc,
            diag::err_no_matching_type_aware_cleanup_deallocator_mismatch)
-          << OperatorNew << DeleteName
-          << OperatorNew->getDeclContext();
+          << OperatorNew << DeleteName << OperatorNew->getDeclContext();
       Diag(OperatorNew->getLocation(), diag::err_type_aware_operator_found)
           << OperatorNew << OperatorNew->getDeclContext();
       Diag(OperatorDelete->getLocation(), diag::err_type_aware_operator_found)
@@ -3498,8 +3499,8 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
   DeallocLookupMode LookupMode = AllowTypeAwareAllocators()
-                        ? DeallocLookupMode::OptionallyTyped
-                        : DeallocLookupMode::Untyped;
+                                     ? DeallocLookupMode::OptionallyTyped
+                                     : DeallocLookupMode::Untyped;
   LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
                                     Name, DeallocType);
 

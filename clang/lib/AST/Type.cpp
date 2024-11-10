@@ -3100,7 +3100,8 @@ bool Type::isStdByteType() const {
 
 const TemplateDecl *Type::getSpecializedTemplateDecl() const {
   const Type *DesugaredType = getUnqualifiedDesugaredType();
-  if (const auto *Specialization = DesugaredType->getAs<TemplateSpecializationType>())
+  if (const auto *Specialization =
+          DesugaredType->getAs<TemplateSpecializationType>())
     return Specialization->getTemplateName().getAsTemplateDecl();
   if (const auto *Record = DesugaredType->getAsCXXRecordDecl()) {
     if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Record))
