@@ -167,6 +167,18 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
 
+/// A function is unreachable if its entry block ends with 'unreachable' IR
+/// instruction. In some cases, the program intends to run such functions and
+/// terminate, for instance, a unit test may run a death test. A non-test
+/// program might (or allowed to) invoke such functions to report failures
+/// (whether/when it's a good practice or not is a different topic). Regard
+/// unreachable function as possible devirtualize targets to keep the program
+/// behavior.
+static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
+    "wholeprogramdevirt-keep-unreachable-function",
+    cl::desc("Regard unreachable functions as possible devirtualize targets."),
+    cl::Hidden, cl::init(true));
+
 /// If explicitly specified, the devirt module pass will stop transformation
 /// once the total number of devirtualizations reach the cutoff value. Setting
 /// this option to 0 explicitly will do 0 devirtualization.
@@ -386,6 +398,9 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
 //   2) All function summaries indicate it's unreachable
 //   3) There is no non-function with the same GUID (which is rare)
 static bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
+  if (WholeProgramDevirtKeepUnreachableFunction)
+    return false;
+
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
     // (e.g., function declarations).
@@ -2241,6 +2256,8 @@ DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
 
 bool DevirtModule::mustBeUnreachableFunction(
     Function *const F, ModuleSummaryIndex *ExportSummary) {
+  if (WholeProgramDevirtKeepUnreachableFunction)
+    return false;
   // First, learn unreachability by analyzing function IR.
   if (!F->isDeclaration()) {
     // A function must be unreachable if its entry block ends with an
