@@ -60,7 +60,7 @@ public:
   /// becomes a thunk supplying contexts to the merged function via parameters.
   static constexpr const char MergingInstanceSuffix[] = ".Tgm";
 
-  GlobalMergeFunc(const ModuleSummaryIndex *Index) : Index(Index){};
+  GlobalMergeFunc(const ModuleSummaryIndex *Index) : Index(Index) {};
 
   void initializeMergerMode(const Module &M);
 
