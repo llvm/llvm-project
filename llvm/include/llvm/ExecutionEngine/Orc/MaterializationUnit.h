@@ -17,8 +17,7 @@
 #include "llvm/ExecutionEngine/Orc/CoreContainers.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 
-namespace llvm {
-namespace orc {
+namespace llvm::orc {
 
 class MaterializationResponsibility;
 
@@ -99,7 +98,6 @@ private:
   virtual void discard(const JITDylib &JD, const SymbolStringPtr &Name) = 0;
 };
 
-} // End namespace orc
-} // End namespace llvm
+} // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_MATERIALIZATIONUNIT_H
