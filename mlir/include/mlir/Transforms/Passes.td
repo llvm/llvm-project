@@ -81,12 +81,25 @@ def CSE : Pass<"cse"> {
   let summary = "Eliminate common sub-expressions";
   let description = [{
     This pass implements a generalized algorithm for common sub-expression
-    elimination. This pass relies on information provided by the
-    `Memory SideEffect` interface to identify when it is safe to eliminate
+    elimination. The pass also eliminates dead operation (DCE). The pass
+    relies on information provided by the `MemoryEffectOpInterface`
+    interface and on `DominanceInfo` to identify when it is safe to eliminate
     operations. See [Common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination)
     for more general details on this optimization.
+
+    The types of ops that are subject to elimination can be configured with
+    `eliminate-op-filter`. If set, only those ops are CSE'd or DCE'd.
+
+    Ops are never CSE'd across IsolatedFromAbove ops. Additional CSE'ing
+    barrier ops can be specified with `barrier-op-filter`.
   }];
   let constructor = "mlir::createCSEPass()";
+  let options = [
+    ListOption<"barrierOpFilter", "barrier-op-filter", "std::string",
+               "Names of ops that act as CSE'ing barriers">,
+    ListOption<"eliminateOpFilter", "eliminate-op-filter", "std::string",
+               "If non-empty, list of ops that are subject to elimination">,
+  ];
   let statistics = [
     Statistic<"numCSE", "num-cse'd", "Number of operations CSE'd">,
     Statistic<"numDCE", "num-dce'd", "Number of operations DCE'd">

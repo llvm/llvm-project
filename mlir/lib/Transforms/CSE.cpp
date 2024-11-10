@@ -23,8 +23,9 @@
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
-#include <deque>
 
+#include <deque>
+#include <unordered_set>
 namespace mlir {
 #define GEN_PASS_DEF_CSE
 #include "mlir/Transforms/Passes.h.inc"
@@ -60,8 +61,9 @@ namespace {
 /// Simple common sub-expression elimination.
 class CSEDriver {
 public:
-  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo)
-      : rewriter(rewriter), domInfo(domInfo) {}
+  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo,
+            const CSEConfig &config)
+      : rewriter(rewriter), domInfo(domInfo), config(config) {}
 
   /// Simplify all operations within the given op.
   void simplify(Operation *op, bool *changed = nullptr);
@@ -125,6 +127,9 @@ private:
   // Various statistics.
   int64_t numCSE = 0;
   int64_t numDCE = 0;
+
+  /// CSE configuration.
+  CSEConfig config;
 };
 } // namespace
 
@@ -226,6 +231,10 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
                                            Operation *op,
                                            bool hasSSADominance) {
+  // Don't simplify operations that are filtered out.
+  if (config.eliminateOpFilter && !config.eliminateOpFilter(op))
+    return failure();
+
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -288,8 +297,11 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
     if (op.getNumRegions() != 0) {
       // If this operation is isolated above, we can't process nested regions
       // with the given 'knownValues' map. This would cause the insertion of
-      // implicit captures in explicit capture only regions.
-      if (op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
+      // implicit captures in explicit capture only regions. Additional barrier
+      // ops can be specified by the user.
+      bool isBarrier = op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>() ||
+                       (config.barrierOpFilter && config.barrierOpFilter(&op));
+      if (isBarrier) {
         ScopedMapTy nestedKnownValues;
         for (auto &region : op.getRegions())
           simplifyRegion(nestedKnownValues, region);
@@ -381,8 +393,8 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
 
 void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
                                          DominanceInfo &domInfo, Operation *op,
-                                         bool *changed) {
-  CSEDriver driver(rewriter, &domInfo);
+                                         bool *changed, CSEConfig config) {
+  CSEDriver driver(rewriter, &domInfo, config);
   driver.simplify(op, changed);
 }
 
@@ -394,9 +406,28 @@ struct CSE : public impl::CSEBase<CSE> {
 } // namespace
 
 void CSE::runOnOperation() {
+  // Set up CSE configuration from pass options.
+  CSEConfig config;
+  std::unordered_set<std::string> barrierOpNames;
+  for (std::string opName : barrierOpFilter)
+    barrierOpNames.insert(opName);
+  std::unordered_set<std::string> eliminateOpNames;
+  for (std::string opName : eliminateOpFilter)
+    eliminateOpNames.insert(opName);
+  if (!barrierOpNames.empty()) {
+    config.barrierOpFilter = [&](Operation *op) -> bool {
+      return barrierOpNames.count(op->getName().getStringRef().str());
+    };
+  }
+  if (!eliminateOpNames.empty()) {
+    config.eliminateOpFilter = [&](Operation *op) -> bool {
+      return eliminateOpNames.count(op->getName().getStringRef().str());
+    };
+  }
+
   // Simplify the IR.
   IRRewriter rewriter(&getContext());
-  CSEDriver driver(rewriter, &getAnalysis<DominanceInfo>());
+  CSEDriver driver(rewriter, &getAnalysis<DominanceInfo>(), config);
   bool changed = false;
   driver.simplify(getOperation(), &changed);
 
