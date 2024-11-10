@@ -194,8 +194,12 @@ F (extracted();)
   ExtraArgs.push_back("-std=c++14");
   // FIXME: Expressions are currently not extracted
   EXPECT_EQ(apply(R"cpp(
-                void sink(int);
-                void call() { sink([[1+1]]); }
+                void call() { [[1+1]]; }
+            )cpp"),
+            "unavailable");
+  // FIXME: Expression are currently not extracted
+  EXPECT_EQ(apply(R"cpp(
+                void call() { [[1+1;]] }
             )cpp"),
             "unavailable");
 }
