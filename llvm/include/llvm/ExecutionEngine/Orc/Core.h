@@ -19,6 +19,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/CoreContainers.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
@@ -108,23 +109,6 @@ public:
   virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                        ResourceKey SrcK) = 0;
 };
-
-/// A set of symbol names (represented by SymbolStringPtrs for
-//         efficiency).
-using SymbolNameSet = DenseSet<SymbolStringPtr>;
-
-/// A vector of symbol names.
-using SymbolNameVector = std::vector<SymbolStringPtr>;
-
-/// A map from symbol names (as SymbolStringPtrs) to JITSymbols
-/// (address/flags pairs).
-using SymbolMap = DenseMap<SymbolStringPtr, ExecutorSymbolDef>;
-
-/// A map from symbol names (as SymbolStringPtrs) to JITSymbolFlags.
-using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
-
-/// A map from JITDylibs to sets of symbols.
-using SymbolDependenceMap = DenseMap<JITDylib *, SymbolNameSet>;
 
 /// Lookup flags that apply to each dylib in the search order for a lookup.
 ///
