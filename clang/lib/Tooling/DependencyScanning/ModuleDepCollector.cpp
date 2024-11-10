@@ -599,14 +599,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        // The __inferred_module.map file is an insignificant implementation
-        // detail of implicitly-built modules. The PCM will also report the
-        // actual on-disk module map file that allowed inferring the module,
-        // which is what we need for building the module explicitly
-        // Let's ignore this file.
-        if (StringRef(IFI.Filename).ends_with("__inferred_module.map"))
-          return;
-        MDC.addFileDep(MD, IFI.Filename);
+        if (!IFI.Overridden)
+          MDC.addFileDep(MD, IFI.Filename);
       });
 
   llvm::DenseSet<const Module *> SeenDeps;
@@ -617,12 +611,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        if (!(IFI.TopLevel && IFI.ModuleMap))
-          return;
-        if (StringRef(IFI.FilenameAsRequested)
-                .ends_with("__inferred_module.map"))
-          return;
-        MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
+        if (IFI.TopLevel && IFI.ModuleMap && !IFI.Overridden)
+          MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });
 
   CowCompilerInvocation CI =
