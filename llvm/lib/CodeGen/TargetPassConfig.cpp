@@ -492,6 +492,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
   SET_BOOLEAN_OPTION(EarlyLiveIntervals)
   SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
+  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
   SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
   SET_BOOLEAN_OPTION(EnableMachineOutliner)
   SET_BOOLEAN_OPTION(MISchedPostRA)
@@ -890,6 +891,9 @@ void TargetPassConfig::addIRPasses() {
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
+
+  if (EnableGlobalMergeFunc)
+    addPass(createGlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can

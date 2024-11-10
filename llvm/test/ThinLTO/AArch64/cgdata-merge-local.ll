@@ -1,36 +1,51 @@
 ; This test checks if two similar functions, f1 and f2, can be merged locally within a single module
 ; while parameterizing a difference in their global variables, g1 and g2.
 ; To achieve this, we create two instances of the global merging function, f1.Tgm and f2.Tgm,
-; which are tail-called from thunks g1 and g2 respectively.
+; which are tail-called from thunks f1 and f2 respectively.
 ; These identical functions, f1.Tgm and f2.Tgm, will be folded by the linker via Identical Code Folding (IFC).
 
-; RUN: opt -module-summary -module-hash %s -o %t
+; RUN: opt -S --passes=global-merge-func %s | FileCheck %s
 
-; RUN: llvm-lto2 run -enable-global-merge-func=false %t -o %tout-nomerge \
-; RUN:    -r %t,_f1,px \
-; RUN:    -r %t,_f2,px \
-; RUN:    -r %t,_g,l -r %t,_g1,l -r %t,_g2,l
-; RUN: llvm-nm %tout-nomerge.1 | FileCheck %s --check-prefix=NOMERGE
-; RUN: llvm-lto2 run -enable-global-merge-func=true %t -o %tout-merge \
-; RUN:    -r %t,_f1,px \
-; RUN:    -r %t,_f2,px \
-; RUN:    -r %t,_g,l -r %t,_g1,l -r %t,_g2,l
-; RUN: llvm-nm %tout-merge.1 | FileCheck %s --check-prefix=GLOBALMERGE
-; RUN: llvm-objdump -d %tout-merge.1 | FileCheck %s --check-prefix=THUNK
+; A merging instance is created with additional parameter.
+; CHECK: define internal i32 @f1.Tgm(i32 %0, ptr %1)
+; CHECK-NEXT: entry:
+; CHECK-NEXT:  %idxprom = sext i32 %0 to i64
+; CHECK-NEXT:  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i64 0, i64 %idxprom
+; CHECK-NEXT:  %2 = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:  %3 = load volatile i32, ptr %1, align 4
+; CHECK-NEXT:  %mul = mul nsw i32 %3, %2
+; CHECK-NEXT:  %add = add nsw i32 %mul, 1
+; CHECK-NEXT:  ret i32 %add
+
+; The original function becomes a thunk passing g1.
+; CHECK: define i32 @f1(i32 %a)
+; CHECK-NEXT:  %1 = tail call i32 @f1.Tgm(i32 %a, ptr @g1)
+; CHECK-NEXT:  ret i32 %1
+
+; A same sequence is produced for f2.Tgm.
+; CHECK: define internal i32 @f2.Tgm(i32 %0, ptr %1)
+; CHECK-NEXT: entry:
+; CHECK-NEXT:  %idxprom = sext i32 %0 to i64
+; CHECK-NEXT:  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i64 0, i64 %idxprom
+; CHECK-NEXT:  %2 = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:  %3 = load volatile i32, ptr %1, align 4
+; CHECK-NEXT:  %mul = mul nsw i32 %3, %2
+; CHECK-NEXT:  %add = add nsw i32 %mul, 1
+; CHECK-NEXT:  ret i32 %add
+
+; The original function becomes a thunk passing g2.
+; CHECK: define i32 @f2(i32 %a)
+; CHECK-NEXT:  %1 = tail call i32 @f2.Tgm(i32 %a, ptr @g2)
+; CHECK-NEXT:  ret i32 %1
+
+; RUN: llc -enable-global-merge-func=true < %s | FileCheck %s --check-prefix=MERGE
+; RUN: llc -enable-global-merge-func=false < %s | FileCheck %s --check-prefix=NOMERGE
+
+; MERGE: _f1.Tgm
+; MERGE: _f2.Tgm
 
 ; NOMERGE-NOT: _f1.Tgm
-; GLOBALMERGE: _f1.Tgm
-; GLOBALMERGE: _f2.Tgm
-
-; THUNK: <_f1>:
-; THUNK-NEXT: adrp x1,
-; THUNK-NEXT: ldr x1, [x1]
-; THUNK-NEXT: b
-
-; THUNK: <_f2>:
-; THUNK-NEXT: adrp x1,
-; THUNK-NEXT: ldr x1, [x1]
-; THUNK-NEXT: b
+; NOMERGE-NOT: _f2.Tgm
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-unknown-ios12.0.0"

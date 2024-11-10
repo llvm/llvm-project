@@ -22,11 +22,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_IPO_GLOBALMERGEFUNCTIONS_H
-#define LLVM_TRANSFORMS_IPO_GLOBALMERGEFUNCTIONS_H
+#ifndef LLVM_CODEGEN_GLOBALMERGEFUNCTIONS_H
+#define LLVM_CODEGEN_GLOBALMERGEFUNCTIONS_H
 
 #include "llvm/CGData/StableFunctionMap.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 enum class HashFunctionMode {
@@ -46,28 +47,24 @@ using ParamLocsVecTy = SmallVector<ParamLocs, 8>;
 /// GlobalMergeFunc is a ModulePass that implements a function merging mechanism
 /// using stable function hashes. It identifies and merges functions with
 /// matching hashes across modules to optimize binary size.
-class GlobalMergeFunc : public ModulePass {
+class GlobalMergeFunc {
   HashFunctionMode MergerMode = HashFunctionMode::Local;
 
   std::unique_ptr<StableFunctionMap> LocalFunctionMap;
 
-public:
-  static char ID;
+  const ModuleSummaryIndex *Index;
 
+public:
   /// The suffix used to identify the merged function that parameterizes
   /// the constant values. Note that the original function, without this suffix,
   /// becomes a thunk supplying contexts to the merged function via parameters.
   static constexpr const char MergingInstanceSuffix[] = ".Tgm";
 
-  GlobalMergeFunc();
-
-  StringRef getPassName() const override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  GlobalMergeFunc(const ModuleSummaryIndex *Index) : Index(Index){};
 
   void initializeMergerMode(const Module &M);
 
-  bool runOnModule(Module &M) override;
+  bool run(Module &M);
 
   /// Analyze module to create stable function into LocalFunctionMap.
   void analyze(Module &M);
@@ -79,5 +76,10 @@ public:
   bool merge(Module &M, const StableFunctionMap *FunctionMap);
 };
 
+/// Global function merging pass for new pass manager.
+struct GlobalMergeFuncPass : public PassInfoMixin<GlobalMergeFuncPass> {
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
+};
+
 } // end namespace llvm
-#endif // LLVM_TRANSFORMS_IPO_GLOBALMERGEFUNCTIONS_H
+#endif // LLVM_CODEGEN_GLOBALMERGEFUNCTIONS_H

@@ -21,7 +21,6 @@ add_llvm_component_library(LLVMipo
   GlobalDCE.cpp
   GlobalOpt.cpp
   GlobalSplit.cpp
-  GlobalMergeFunctions.cpp
   HotColdSplitting.cpp
   IPO.cpp
   IROutliner.cpp
@@ -61,7 +60,6 @@ add_llvm_component_library(LLVMipo
   Analysis
   BitReader
   BitWriter
-  CGData
   Core
   FrontendOpenMP
   InstCombine

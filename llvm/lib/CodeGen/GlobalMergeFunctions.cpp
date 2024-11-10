@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO/GlobalMergeFunctions.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
@@ -56,8 +56,6 @@ static cl::opt<unsigned> GlobalMergingExtraThreshold(
              "to be considered beneficial."),
     cl::init(0), cl::Hidden);
 
-extern cl::opt<bool> EnableGlobalMergeFunc;
-
 STATISTIC(NumMismatchedFunctionHash,
           "Number of mismatched function hash for global merge function");
 STATISTIC(NumMismatchedInstCount,
@@ -87,8 +85,12 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
   if (Callee) {
     if (Callee->isIntrinsic())
       return false;
+    auto Name = Callee->getName();
     // objc_msgSend stubs must be called, and can't have their address taken.
-    if (Callee->getName().starts_with("objc_msgSend$"))
+    if (Name.starts_with("objc_msgSend$"))
+      return false;
+    // Calls to dtrace probes must generate unique patchpoints.
+    if (Name.starts_with("__dtrace"))
       return false;
   }
   if (isCalleeOperand(CI, OpIdx) &&
@@ -105,7 +107,8 @@ bool isEligibleFunction(Function *F) {
   if (F->isDeclaration())
     return false;
 
-  if (F->hasFnAttribute(llvm::Attribute::NoMerge))
+  if (F->hasFnAttribute(llvm::Attribute::NoMerge) ||
+      F->hasFnAttribute(llvm::Attribute::AlwaysInline))
     return false;
 
   if (F->hasAvailableExternallyLinkage())
@@ -552,8 +555,8 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         // Check if the matched functions fall into the same (first) module.
         // This module check is not strictly necessary as the functions can move
         // around. We just want to avoid merging functions from different
-        // modules than the first one in the functon map, as they may not end up
-        // with not being ICFed by the linker.
+        // modules than the first one in the function map, as they may not end
+        // up with being ICFed by the linker.
         if (MergedModId != *FunctionMap->getNameForId(SF->ModuleNameId)) {
           ++NumMismatchedModuleId;
           continue;
@@ -614,30 +617,6 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   return Changed;
 }
 
-char GlobalMergeFunc::ID = 0;
-INITIALIZE_PASS_BEGIN(GlobalMergeFunc, "global-merge-func",
-                      "Global merge function pass", false, false)
-INITIALIZE_PASS_END(GlobalMergeFunc, "global-merge-func",
-                    "Global merge function pass", false, false)
-
-StringRef GlobalMergeFunc::getPassName() const {
-  return "Global Merge Functions";
-}
-
-void GlobalMergeFunc::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
-  AU.setPreservesAll();
-  ModulePass::getAnalysisUsage(AU);
-}
-
-GlobalMergeFunc::GlobalMergeFunc() : ModulePass(ID) {
-  initializeGlobalMergeFuncPass(*llvm::PassRegistry::getPassRegistry());
-}
-
-namespace llvm {
-Pass *createGlobalMergeFuncPass() { return new GlobalMergeFunc(); }
-} // namespace llvm
-
 void GlobalMergeFunc::initializeMergerMode(const Module &M) {
   // Initialize the local function map regardless of the merger mode.
   LocalFunctionMap = std::make_unique<StableFunctionMap>();
@@ -646,14 +625,10 @@ void GlobalMergeFunc::initializeMergerMode(const Module &M) {
   if (DisableGlobalMerging)
     return;
 
-  if (auto *IndexWrapperPass =
-          getAnalysisIfAvailable<ImmutableModuleSummaryIndexWrapperPass>()) {
-    auto *TheIndex = IndexWrapperPass->getIndex();
-    // (Full)LTO module does not have functions added to the index.
-    // In this case, we run a local merger without using codegen data.
-    if (TheIndex && !TheIndex->hasExportedFunctions(M))
-      return;
-  }
+  // (Full)LTO module does not have functions added to the index.
+  // In this case, we run a local merger without using codegen data.
+  if (Index && !Index->hasExportedFunctions(M))
+    return;
 
   if (cgdata::emitCGData())
     MergerMode = HashFunctionMode::BuildingHashFuncion;
@@ -681,7 +656,7 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
                       Align(4));
 }
 
-bool GlobalMergeFunc::runOnModule(Module &M) {
+bool GlobalMergeFunc::run(Module &M) {
   initializeMergerMode(M);
 
   const StableFunctionMap *FuncMap;
@@ -699,4 +674,59 @@ bool GlobalMergeFunc::runOnModule(Module &M) {
   }
 
   return merge(M, FuncMap);
+}
+
+namespace {
+
+class GlobalMergeFuncPassWrapper : public ModulePass {
+
+public:
+  static char ID;
+
+  GlobalMergeFuncPassWrapper();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
+    AU.setPreservesAll();
+    ModulePass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override { return "Global Merge Functions"; }
+
+  bool runOnModule(Module &M) override;
+};
+
+} // namespace
+
+char GlobalMergeFuncPassWrapper::ID = 0;
+INITIALIZE_PASS_BEGIN(GlobalMergeFuncPassWrapper, "global-merge-func",
+                      "Global merge function pass", false, false)
+INITIALIZE_PASS_END(GlobalMergeFuncPassWrapper, "global-merge-func",
+                    "Global merge function pass", false, false)
+
+namespace llvm {
+ModulePass *createGlobalMergeFuncPass() {
+  return new GlobalMergeFuncPassWrapper();
+}
+} // namespace llvm
+
+GlobalMergeFuncPassWrapper::GlobalMergeFuncPassWrapper() : ModulePass(ID) {
+  initializeGlobalMergeFuncPassWrapperPass(
+      *llvm::PassRegistry::getPassRegistry());
+}
+
+bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {
+  const ModuleSummaryIndex *Index = nullptr;
+  if (auto *IndexWrapperPass =
+          getAnalysisIfAvailable<ImmutableModuleSummaryIndexWrapperPass>())
+    Index = IndexWrapperPass->getIndex();
+
+  return GlobalMergeFunc(Index).run(M);
+}
+
+PreservedAnalyses GlobalMergeFuncPass::run(Module &M,
+                                           AnalysisManager<Module> &AM) {
+  ModuleSummaryIndex *Index = &(AM.getResult<ModuleSummaryIndexAnalysis>(M));
+  bool Changed = GlobalMergeFunc(Index).run(M);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
