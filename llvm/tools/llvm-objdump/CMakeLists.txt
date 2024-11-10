@@ -30,6 +30,7 @@ add_llvm_tool(llvm-objdump
   ELFDump.cpp
   MachODump.cpp
   OffloadDump.cpp
+  BinaryDump.cpp
   WasmDump.cpp
   XCOFFDump.cpp
   DEPENDS

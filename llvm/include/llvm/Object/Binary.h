@@ -71,6 +71,7 @@ protected:
 
     ID_GOFF,
     ID_Wasm,
+    ID_Binary,
 
     ID_EndObjects
   };
@@ -191,7 +192,8 @@ DEFINE_ISA_CONVERSION_FUNCTIONS(Binary, LLVMBinaryRef)
 /// @param Source The data to create the Binary from.
 Expected<std::unique_ptr<Binary>> createBinary(MemoryBufferRef Source,
                                                LLVMContext *Context = nullptr,
-                                               bool InitContent = true);
+                                               bool InitContent = true,
+                                               bool RawBinary = false);
 
 template <typename T> class OwningBinary {
   std::unique_ptr<T> Bin;
@@ -243,7 +245,8 @@ template <typename T> const T* OwningBinary<T>::getBinary() const {
 
 Expected<OwningBinary<Binary>> createBinary(StringRef Path,
                                             LLVMContext *Context = nullptr,
-                                            bool InitContent = true);
+                                            bool InitContent = true,
+                                            bool RawBinary = false);
 
 } // end namespace object
 
