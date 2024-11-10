@@ -9708,9 +9708,9 @@ def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
 def err_type_aware_destroying_operator_delete : Error<
-  "type aware destroying delete is not permitted">;
+  "type aware destroying delete is not permitted, enable with '-fexperimental-cxx-type-aware-destroying-delete'">;
 def err_unsupported_type_aware_allocator : Error<
-  "type aware allocation operators are disabled">;
+  "type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'">;
 def err_no_matching_type_aware_cleanup_deallocator_mismatch : Error<
   "type aware %0 requires matching %1 in %2">;
 def err_type_aware_operator_found : Note<
