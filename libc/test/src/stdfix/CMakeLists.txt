@@ -57,6 +57,39 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       libc.src.stdfix.round${suffix}
       libc.src.__support.fixed_point.fx_bits
   )
+
+  add_libc_test(
+    countls${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      CountlsTest.h
+    SRCS
+      countls${suffix}_test.cpp
+    COMPILE_OPTIONS
+      -O3
+    DEPENDS
+      libc.src.stdfix.countls${suffix}
+      libc.src.__support.fixed_point.fx_rep
+  )
+
+  if(LIBC_COMPILER_HAS_PADDING_ON_UNSIGNED_FIXED_POINT)
+    add_libc_test(
+      countls${suffix}_padding_on_unsigned_fixed_point_test
+      SUITE
+        libc-stdfix-tests
+      HDRS
+        CountlsTest.h
+      SRCS
+        countls${suffix}_test.cpp
+      COMPILE_OPTIONS
+        -O3
+        -Xclang=-fpadding-on-unsigned-fixed-point
+      DEPENDS
+        libc.src.stdfix.countls${suffix}_padding_on_unsigned_fixed_point
+        libc.src.__support.fixed_point.fx_rep
+    )
+  endif()
 endforeach()
 
 add_libc_test(

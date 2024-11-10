@@ -422,6 +422,18 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints
+    libc.src.stdfix.countlshk
+    libc.src.stdfix.countlshr
+    libc.src.stdfix.countlsk
+    libc.src.stdfix.countlslk
+    libc.src.stdfix.countlslr
+    libc.src.stdfix.countlsr
+    libc.src.stdfix.countlsuhk
+    libc.src.stdfix.countlsuhr
+    libc.src.stdfix.countlsuk
+    libc.src.stdfix.countlsulk
+    libc.src.stdfix.countlsulr
+    libc.src.stdfix.countlsur
     libc.src.stdfix.abshk
     libc.src.stdfix.abshr
     libc.src.stdfix.absk
