@@ -2967,8 +2967,10 @@ bool Sema::FindAllocationFunctions(
     if (R.empty()) {
       if (NewScope == AFS_Class)
         return true;
+
       LookupQualifiedName(R, Context.getTranslationUnitDecl());
     }
+
     if (getLangOpts().OpenCLCPlusPlus && R.empty()) {
       if (PlaceArgs.empty()) {
         Diag(StartLoc, diag::err_openclcxx_not_supported) << "default new";
@@ -3171,7 +3173,7 @@ bool Sema::FindAllocationFunctions(
           << NewDiagIndex << OperatorNew;
       Diag(OperatorDelete->getLocation(),
            diag::note_type_aware_operator_declared)
-          << DeleteDiagIndex << OperatorDelete->getDeclName();
+          << DeleteDiagIndex << OperatorDelete;
     }
     if (IAP.PassTypeIdentity &&
         OperatorDelete->getDeclContext() != OperatorNew->getDeclContext()) {
@@ -3182,7 +3184,7 @@ bool Sema::FindAllocationFunctions(
       Diag(OperatorNew->getLocation(), diag::err_type_aware_operator_found)
           << OperatorNew << OperatorNew->getDeclContext();
       Diag(OperatorDelete->getLocation(), diag::err_type_aware_operator_found)
-          << OperatorDelete->getDeclName() << OperatorDelete->getDeclContext();
+          << OperatorDelete << OperatorDelete->getDeclContext();
     }
 
     // C++1z [expr.new]p23:

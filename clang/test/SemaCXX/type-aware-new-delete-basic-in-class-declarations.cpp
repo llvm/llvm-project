@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++17    -fexperimental-cxx-type-aware-allocators
-// RUN: %clang_cc1 -fsyntax-only -verify %s           -std=c++17    -fexperimental-cxx-type-aware-allocators -fcxx-type-aware-destroying-delete
+// RUN: %clang_cc1 -fsyntax-only -verify %s           -std=c++17    -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TAA  -std=c++17 -fno-experimental-cxx-type-aware-allocators
 
 namespace std {

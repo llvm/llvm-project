@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++2c -fexperimental-cxx-type-aware-allocators -fexceptions
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DTADD -std=c++2c -fexperimental-cxx-type-aware-allocators -fcxx-type-aware-destroying-delete -fexceptions
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DTADD -std=c++2c -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete -fexceptions
 
 namespace std {
   template <class T> struct type_identity {};
@@ -355,12 +355,12 @@ void test() {
   SubClass6_1 *O22 = new SubClass6_1;
   // expected-error@-1 {{type aware 'operator new<SubClass6_1>' requires matching 'operator delete' in 'SubClass6_1'}}
   // expected-note@#62 {{type aware 'operator new<SubClass6_1>' found in 'SubClass6_1'}}
-  // expected-note@#61 {{type aware 'operator delete' found in 'BaseClass6'}}
+  // expected-note@#61 {{type aware 'operator delete<SubClass6_1>' found in 'BaseClass6'}}
   delete O22;
 
   SubClass6_2 *O23 = new SubClass6_2;
   // expected-error@-1 {{type aware 'operator new<SubClass6_2>' requires matching 'operator delete' in 'BaseClass6'}}
   // expected-note@#60 {{type aware 'operator new<SubClass6_2>' found in 'BaseClass6'}}
-  // expected-note@#63 {{type aware 'operator delete' found in 'SubClass6_2'}}
+  // expected-note@#63 {{type aware 'operator delete<SubClass6_2>' found in 'SubClass6_2'}}
   delete O23;
 }
