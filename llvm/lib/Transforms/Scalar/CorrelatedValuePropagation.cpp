@@ -39,6 +39,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
@@ -289,24 +290,37 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Cmp->getOperand(0)->getType()->isIntOrIntVectorTy())
     return false;
 
-  if (!Cmp->isSigned())
+  if (!(Cmp->isSigned() || (Cmp->isUnsigned() && !Cmp->hasSameSign())))
     return false;
 
-  ICmpInst::Predicate UnsignedPred =
-      ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                     /*UndefAllowed*/ true),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                     /*UndefAllowed*/ true));
+  bool Changed = false;
 
-  if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
-    return false;
+  ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                                 /*UndefAllowed*/ true),
+                CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                                 /*UndefAllowed*/ true);
 
-  ++NumSICmps;
-  Cmp->setPredicate(UnsignedPred);
+  if (Cmp->isSigned()) {
+    ICmpInst::Predicate UnsignedPred =
+        ConstantRange::getEquivalentPredWithFlippedSignedness(
+            Cmp->getPredicate(), CR1, CR2);
 
-  return true;
+    if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+      return false;
+
+    ++NumSICmps;
+    Cmp->setPredicate(UnsignedPred);
+    Changed = true;
+  }
+
+  auto Op0Known = CR1.toKnownBits(), Op1Known = CR2.toKnownBits();
+  if ((Op0Known.Zero.isNegative() && Op1Known.Zero.isNegative()) ||
+      (Op0Known.One.isNegative() && Op1Known.One.isNegative())) {
+    Cmp->setSameSign();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 /// See if LazyValueInfo's ability to exploit edge conditions or range
