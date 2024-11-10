@@ -239,6 +239,7 @@ def use_support_substitutions(config):
         host_flags += [
             "-L{}".format(config.libcxx_libs_dir),
             "-lc++",
+            "-lc++abi",
         ]
 
     host_flags = " ".join(host_flags)

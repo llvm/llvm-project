@@ -4,6 +4,7 @@
 
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -211,7 +212,7 @@ if is_configured("llvm_tools_dir"):
 
 # If we have a just-built libcxx, prefer it over the system one.
 if is_configured("has_libcxx") and config.has_libcxx:
-    if platform.system() != "Windows":
+    if platform.system() != "Windows" or re.match(r".*-linux.*", config.target_triple):
         if is_configured("libcxx_include_dir") and is_configured("libcxx_libs_dir"):
             dotest_cmd += ["--libcxx-include-dir", config.libcxx_include_dir]
             if is_configured("libcxx_include_target_dir"):
