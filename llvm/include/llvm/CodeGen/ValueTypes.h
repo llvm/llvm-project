@@ -185,8 +185,7 @@ namespace llvm {
 
     /// Return true if the type is a scalable type.
     bool isScalableVT() const {
-      return isScalableVector() || isScalableTargetExtVT() ||
-             isRISCVVectorTuple();
+      return isScalableVector() || isScalableTargetExtVT();
     }
 
     /// Return true if this is a 16-bit vector type.

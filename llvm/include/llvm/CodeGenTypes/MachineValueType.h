@@ -124,7 +124,7 @@ namespace llvm {
 
     /// Return true if this is a custom target type that has a scalable size.
     bool isScalableTargetExtVT() const {
-      return SimpleTy == MVT::aarch64svcount;
+      return SimpleTy == MVT::aarch64svcount || isRISCVVectorTuple();
     }
 
     /// Return true if the type is a scalable type.
