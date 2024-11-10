@@ -104,6 +104,12 @@ local2:
 // ERR1:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
 // ERR1-NEXT: >>> defined in err1.o
 // ERR1-NEXT: >>> referenced by err1.o:(.text+0x10)
+// ERR1:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR1-NEXT: >>> defined in err1.o
+// ERR1-NEXT: >>> referenced by err1.o:(.text+0x14)
+// ERR1:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR1-NEXT: >>> defined in err1.o
+// ERR1-NEXT: >>> referenced by err1.o:(.text+0x18)
         .text
         adrp    x0, :tlsdesc_auth:a
         ldr     x16, [x0, :tlsdesc_auth_lo12:a]
@@ -124,6 +130,12 @@ local2:
 // ERR2:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
 // ERR2-NEXT: >>> defined in err2.o
 // ERR2-NEXT: >>> referenced by err2.o:(.text+0x10)
+// ERR2:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR2-NEXT: >>> defined in err2.o
+// ERR2-NEXT: >>> referenced by err2.o:(.text+0x14)
+// ERR2:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR2-NEXT: >>> defined in err2.o
+// ERR2-NEXT: >>> referenced by err2.o:(.text+0x18)
         .text
         adrp    x0, :tlsdesc:a
         ldr     x1, [x0, :tlsdesc_lo12:a]
