@@ -613,6 +613,28 @@ class CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, string mode> {
         ImmArg<ArgIndex<FlagsStartIdx>>];
 }
 
+class CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_ptr_ty],     // tensormap_ptr
+                           TensorDimsTy,     // actual tensor dims
+                           Im2ColOffsetsTy,  // im2col offsets
+                          [llvm_i64_ty,      // cache_hint
+                           llvm_i1_ty]       // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 2);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -4902,6 +4924,8 @@ foreach dim = [1, 2, 3, 4, 5] in {
       def g2s.Name : DefaultAttrsIntrinsic<[], g2s.ArgsTy, g2s.IntrProp>;
     foreach s2g = [CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, mode>] in
       def s2g.Name : DefaultAttrsIntrinsic<[], s2g.ArgsTy, s2g.IntrProp>;
+    foreach prefetch = [CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>] in
+      def prefetch.Name : DefaultAttrsIntrinsic<[], prefetch.ArgsTy, prefetch.IntrProp>;
   }
 }
 
