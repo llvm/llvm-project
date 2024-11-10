@@ -1328,10 +1328,11 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  auto fatalBothAuthAndNonAuth = [&sym]() {
-    fatal("both AUTH and non-AUTH TLSDESC entries for '" + sym.getName() +
-          "' requested, but only one type of TLSDESC entry per symbol is "
-          "supported");
+  auto errBothAuthAndNonAuth = [this, &sym, offset]() {
+    Err(ctx) << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
+             << "' requested, but only one type of TLSDESC entry per symbol is "
+                "supported"
+             << getLocation(ctx, *sec, sym, offset);
   };
 
   // Do not optimize signed TLSDESC (as described in pauthabielf64 to LE/IE).
@@ -1340,10 +1341,12 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(
           expr)) {
     assert(ctx.arg.emachine == EM_AARCH64);
-    if (!sym.hasFlag(NEEDS_TLSDESC))
+    if (!sym.hasFlag(NEEDS_TLSDESC)) {
       sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-    else if (!sym.hasFlag(NEEDS_TLSDESC_AUTH))
-      fatalBothAuthAndNonAuth();
+    } else if (!sym.hasFlag(NEEDS_TLSDESC_AUTH)) {
+      errBothAuthAndNonAuth();
+      return 1;
+    }
     sec->addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1354,7 +1357,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // with signed TLSDESC enabled since it does not give any value, but leave a
     // check against that just in case someone uses it.
     if (expr != R_TLSDESC_CALL)
-      fatalBothAuthAndNonAuth();
+      errBothAuthAndNonAuth();
     return 1;
   }
 

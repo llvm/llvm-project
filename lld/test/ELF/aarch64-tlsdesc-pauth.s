@@ -101,7 +101,9 @@ local2:
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err1.s -o err1.o
 // RUN: not ld.lld -shared err1.o -o err1.so 2>&1 | FileCheck --check-prefix=ERR1 %s
-// ERR1: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR1:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR1-NEXT: >>> defined in err1.o
+// ERR1-NEXT: >>> referenced by err1.o:(.text+0x10)
         .text
         adrp    x0, :tlsdesc_auth:a
         ldr     x16, [x0, :tlsdesc_auth_lo12:a]
@@ -119,7 +121,9 @@ local2:
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err2.s -o err2.o
 // RUN: not ld.lld -shared err2.o -o err2.so 2>&1 | FileCheck --check-prefix=ERR2 %s
-// ERR2: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR2:      error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
+// ERR2-NEXT: >>> defined in err2.o
+// ERR2-NEXT: >>> referenced by err2.o:(.text+0x10)
         .text
         adrp    x0, :tlsdesc:a
         ldr     x1, [x0, :tlsdesc_lo12:a]
