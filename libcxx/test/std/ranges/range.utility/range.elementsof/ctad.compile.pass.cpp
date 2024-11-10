@@ -41,15 +41,11 @@ constexpr bool test() {
           static_assert(std::same_as<decltype(std::ranges::elements_of(Range<Iterator>(), Allocator())),
                                      std::ranges::elements_of<Range<Iterator>&&, Allocator>>);
 
-// AppleClang 15 hasn't implemented P0960R3 and P1816R0
-#if defined(__cpp_aggregate_paren_init) && __cpp_aggregate_paren_init >= 201902L && defined(__cpp_deduction_guides) && \
-    __cpp_deduction_guides >= 201907L
           static_assert(std::same_as<decltype(std::ranges::elements_of{.range = r, .allocator = a}),
                                      std::ranges::elements_of<Range<Iterator>&, Allocator>>);
           static_assert(
               std::same_as<decltype(std::ranges::elements_of{.range = Range<Iterator>(), .allocator = Allocator()}),
                            std::ranges::elements_of<Range<Iterator>&&, Allocator>>);
-#endif
         });
       });
 

@@ -48,10 +48,7 @@ constexpr bool test_range() {
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
   }
   {
-// designated initializer
-// AppleClang 15 hasn't implemented P0960R3 and P1816R0
-#if defined(__cpp_aggregate_paren_init) && __cpp_aggregate_paren_init >= 201902L && defined(__cpp_deduction_guides) && \
-    __cpp_deduction_guides >= 201907L
+    // designated initializer
     std::same_as<elements_of_t> decltype(auto) elements_of = std::ranges::elements_of{
         .range     = r,
         .allocator = Allocator(),
@@ -61,7 +58,6 @@ constexpr bool test_range() {
       assert(std::ranges::distance(elements_of_range) == 4);
     }
     [[maybe_unused]] std::same_as<Allocator> decltype(auto) elements_of_allocator = elements_of.allocator;
-#endif
   }
   {
     // copy constructor

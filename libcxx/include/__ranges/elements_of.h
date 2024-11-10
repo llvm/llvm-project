@@ -33,22 +33,9 @@ template <range _Range, class _Allocator = allocator<byte>>
 struct elements_of {
   _LIBCPP_NO_UNIQUE_ADDRESS _Range range;
   _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator = _Allocator();
-
-#  if !defined(__cpp_aggregate_paren_init)
-  // This explicit constructor is required because AppleClang 15 hasn't
-  // implemented P0960R3.
-  template <std::ranges::range _Range2, class _Allocator2 = std::allocator<byte>>
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range2&& __range, _Allocator2&& __alloc = _Allocator())
-      : range(std::forward<_Range2>(__range)), allocator(std::forward<_Allocator2>(__alloc)) {}
-#  endif
 };
 
 template <class _Range, class _Allocator = allocator<byte>>
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
-// This explicit constraint is required because AppleClang 15 might not deduce
-// the correct type for `_Range` without it.
-  requires range<_Range&&>
-#  endif
 elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Allocator>;
 
 } // namespace ranges
