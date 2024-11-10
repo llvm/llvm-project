@@ -2882,9 +2882,10 @@ void request_setBreakpoints(const llvm::json::Object &request) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         SourceBreakpoint src_bp(g_dap, *bp_obj);
-        request_bps.try_emplace(src_bp.line, src_bp);
+        std::pair<uint32_t, uint32_t> bp_pos(src_bp.line, src_bp.column);
+        request_bps.try_emplace(bp_pos, src_bp);
         const auto [iv, inserted] =
-            g_dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
+            g_dap.source_breakpoints[path].try_emplace(bp_pos, src_bp);
         // We check if this breakpoint already exists to update it
         if (inserted)
           iv->getSecond().SetBreakpoint(path.data());
