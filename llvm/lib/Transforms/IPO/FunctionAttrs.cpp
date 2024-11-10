@@ -583,42 +583,39 @@ struct ArgumentUsesTracker : public CaptureTracker {
   const SCCNodeSet &SCCNodes;
 };
 
-// A struct of argument use: a Use and the offset it accesses. This struct
-// is to track uses inside function via GEP. If GEP has a non-constant index,
-// the Offset field is nullopt.
+/// A struct of argument use: a Use and the offset it accesses. This struct
+/// is to track uses inside function via GEP. If GEP has a non-constant index,
+/// the Offset field is nullopt.
 struct ArgumentUse {
   Use *U;
   std::optional<int64_t> Offset;
 };
 
-// A struct of argument access info. "Unknown" accesses are the cases like
-// unrecognized instructions, instructions that have more than one use of
-// the argument, or volatile memory accesses. "Unknown" implies "IsClobber"
-// and an empty access range.
-// Write or Read accesses can be clobbers as well for example, a Load with
-// scalable type.
+/// A struct of argument access info. "Unknown" accesses are the cases like
+/// unrecognized instructions, instructions that have more than one use of
+/// the argument, or volatile memory accesses. "WriteWithSideEffect" are call
+/// instructions that not only write an argument but also capture it.
 struct ArgumentAccessInfo {
-  enum class AccessType : uint8_t { Write, Read, Unknown };
+  enum class AccessType : uint8_t { Write, WriteWithSideEffect, Read, Unknown };
   AccessType ArgAccessType;
-  bool IsClobber = false;
   ConstantRangeList AccessRanges;
 };
 
-// A struct to wrap the argument use info per block.
+/// A struct to wrap the argument use info per block.
 struct UsesPerBlockInfo {
   SmallDenseMap<Instruction *, ArgumentAccessInfo, 4> Insts;
   bool HasWrites = false;
-  bool HasClobber = false;
+  bool HasUnknownAccess = false;
 };
 
-// A struct to summarize the argument use info in a function.
+/// A struct to summarize the argument use info in a function.
 struct ArgumentUsesSummary {
   bool HasAnyWrite = false;
   bool HasWriteOutsideEntryBB = false;
   SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
 };
 
-ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
+ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
                                         const ArgumentUse &ArgUse,
                                         const DataLayout &DL) {
   auto GetTypeAccessRange =
@@ -643,7 +640,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
     return std::nullopt;
   };
   if (auto *SI = dyn_cast<StoreInst>(I)) {
-    if (!SI->isVolatile() && &SI->getOperandUse(1) == ArgUse.U) {
+    if (SI->isSimple() && &SI->getOperandUse(1) == ArgUse.U) {
       // Get the fixed type size of "SI". Since the access range of a write
       // will be unioned, if "SI" doesn't have a fixed type size, we just set
       // the access range to empty.
@@ -651,21 +648,17 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
       if (auto TypeAccessRange =
               GetTypeAccessRange(SI->getAccessType(), ArgUse.Offset))
         AccessRanges.insert(*TypeAccessRange);
-      return {ArgumentAccessInfo::AccessType::Write,
-              /*IsClobber=*/false, AccessRanges};
+      return {ArgumentAccessInfo::AccessType::Write, std::move(AccessRanges)};
     }
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-    if (!LI->isVolatile()) {
+    if (LI->isSimple()) {
       assert(&LI->getOperandUse(0) == ArgUse.U);
       // Get the fixed type size of "LI". Different from Write, if "LI"
       // doesn't have a fixed type size, we conservatively set as a clobber
       // with an empty access range.
       if (auto TypeAccessRange =
               GetTypeAccessRange(LI->getAccessType(), ArgUse.Offset))
-        return {ArgumentAccessInfo::AccessType::Read,
-                /*IsClobber=*/false,
-                {*TypeAccessRange}};
-      return {ArgumentAccessInfo::AccessType::Read, /*IsClobber=*/true, {}};
+        return {ArgumentAccessInfo::AccessType::Read, {*TypeAccessRange}};
     }
   } else if (auto *MemSet = dyn_cast<MemSetInst>(I)) {
     if (!MemSet->isVolatile()) {
@@ -673,8 +666,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
       if (auto AccessRange =
               GetConstantIntRange(MemSet->getLength(), ArgUse.Offset))
         AccessRanges.insert(*AccessRange);
-      return {ArgumentAccessInfo::AccessType::Write,
-              /*IsClobber=*/false, AccessRanges};
+      return {ArgumentAccessInfo::AccessType::Write, AccessRanges};
     }
   } else if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
     if (!MTI->isVolatile()) {
@@ -683,25 +675,23 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
         if (auto AccessRange =
                 GetConstantIntRange(MTI->getLength(), ArgUse.Offset))
           AccessRanges.insert(*AccessRange);
-        return {ArgumentAccessInfo::AccessType::Write,
-                /*IsClobber=*/false, AccessRanges};
+        return {ArgumentAccessInfo::AccessType::Write, AccessRanges};
       } else if (&MTI->getOperandUse(1) == ArgUse.U) {
         if (auto AccessRange =
                 GetConstantIntRange(MTI->getLength(), ArgUse.Offset))
-          return {ArgumentAccessInfo::AccessType::Read,
-                  /*IsClobber=*/false,
-                  {*AccessRange}};
-        return {ArgumentAccessInfo::AccessType::Read, /*IsClobber=*/true, {}};
+          return {ArgumentAccessInfo::AccessType::Read, {*AccessRange}};
       }
     }
   } else if (auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->isArgOperand(ArgUse.U)) {
       unsigned ArgNo = CB->getArgOperandNo(ArgUse.U);
       bool IsInitialize = CB->paramHasAttr(ArgNo, Attribute::Initializes);
-      // Argument is only not clobbered when parameter is writeonly/readnone
-      // and nocapture.
-      bool IsClobber = !(CB->onlyWritesMemory(ArgNo) &&
-                         CB->paramHasAttr(ArgNo, Attribute::NoCapture));
+      // Argument is a Write when parameter is writeonly/readnone
+      // and nocapture. Otherwise, it's a WriteWithSideEffect.
+      auto Access = CB->onlyWritesMemory(ArgNo) &&
+                            CB->paramHasAttr(ArgNo, Attribute::NoCapture)
+                        ? ArgumentAccessInfo::AccessType::Write
+                        : ArgumentAccessInfo::AccessType::WriteWithSideEffect;
       ConstantRangeList AccessRanges;
       if (IsInitialize && ArgUse.Offset) {
         Attribute Attr = CB->getParamAttr(ArgNo, Attribute::Initializes);
@@ -709,18 +699,18 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
         for (ConstantRange &CR : CBCRL)
           AccessRanges.insert(ConstantRange(CR.getLower() + *ArgUse.Offset,
                                             CR.getUpper() + *ArgUse.Offset));
-        return {ArgumentAccessInfo::AccessType::Write, IsClobber, AccessRanges};
+        return {Access, AccessRanges};
       }
     }
   }
-  // Unrecognized instructions are considered clobbers.
-  return {ArgumentAccessInfo::AccessType::Unknown, /*IsClobber=*/true, {}};
+  // Other unrecognized instructions are considered as unknown.
+  return {ArgumentAccessInfo::AccessType::Unknown, {}};
 }
 
 // Collect the uses of argument "A" in "F".
-ArgumentUsesSummary CollectArgumentUsesPerBlock(Argument &A, Function &F) {
+ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
   auto &DL = F.getParent()->getDataLayout();
-  auto PointerSize =
+  unsigned PointerSize =
       DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
   ArgumentUsesSummary Result;
 
@@ -733,22 +723,25 @@ ArgumentUsesSummary CollectArgumentUsesPerBlock(Argument &A, Function &F) {
   // Return true if the block of "I" has write accesses after updating.
   auto UpdateUseInfo = [&Result](Instruction *I, ArgumentAccessInfo Info) {
     auto *BB = I->getParent();
-    auto &BBInfo = Result.UsesPerBlock.getOrInsertDefault(BB);
+    auto &BBInfo = Result.UsesPerBlock[BB];
     bool AlreadyVisitedInst = BBInfo.Insts.contains(I);
     auto &IInfo = BBInfo.Insts[I];
 
     // Instructions that have more than one use of the argument are considered
     // as clobbers.
     if (AlreadyVisitedInst) {
-      IInfo = {ArgumentAccessInfo::AccessType::Unknown, /*IsClobber=*/true, {}};
-      BBInfo.HasClobber = true;
+      IInfo = {ArgumentAccessInfo::AccessType::Unknown, {}};
+      BBInfo.HasUnknownAccess = true;
       return false;
     }
 
-    IInfo = Info;
-    BBInfo.HasClobber |= IInfo.IsClobber;
+    IInfo = std::move(Info);
+    BBInfo.HasUnknownAccess |=
+        IInfo.ArgAccessType == ArgumentAccessInfo::AccessType::Unknown;
     bool InfoHasWrites =
-        IInfo.ArgAccessType == ArgumentAccessInfo::AccessType::Write &&
+        (IInfo.ArgAccessType == ArgumentAccessInfo::AccessType::Write ||
+         IInfo.ArgAccessType ==
+             ArgumentAccessInfo::AccessType::WriteWithSideEffect) &&
         !IInfo.AccessRanges.empty();
     BBInfo.HasWrites |= InfoHasWrites;
     return InfoHasWrites;
@@ -762,18 +755,19 @@ ArgumentUsesSummary CollectArgumentUsesPerBlock(Argument &A, Function &F) {
     // Add GEP uses to worklist.
     // If the GEP is not a constant GEP, set the ArgumentUse::Offset to nullopt.
     if (auto *GEP = dyn_cast<GEPOperator>(U)) {
-      APInt Offset(PointerSize, 0, /*isSigned=*/true);
-      bool IsConstGEP = GEP->accumulateConstantOffset(DL, Offset);
       std::optional<int64_t> NewOffset = std::nullopt;
-      if (IsConstGEP && ArgUse.Offset)
-        NewOffset = *ArgUse.Offset + Offset.getSExtValue();
+      if (ArgUse.Offset) {
+        APInt Offset(PointerSize, 0);
+        if (GEP->accumulateConstantOffset(DL, Offset))
+          NewOffset = *ArgUse.Offset + Offset.getSExtValue();
+      }
       for (Use &U : GEP->uses())
         Worklist.push_back({&U, NewOffset});
       continue;
     }
 
     auto *I = cast<Instruction>(U);
-    bool HasWrite = UpdateUseInfo(I, GetArgmentAccessInfo(I, ArgUse, DL));
+    bool HasWrite = UpdateUseInfo(I, getArgmentAccessInfo(I, ArgUse, DL));
 
     Result.HasAnyWrite |= HasWrite;
 
@@ -1070,7 +1064,7 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
 }
 
 static bool inferInitializes(Argument &A, Function &F) {
-  auto ArgumentUses = CollectArgumentUsesPerBlock(A, F);
+  auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
   // No write anywhere in the function, bail.
   if (!ArgumentUses.HasAnyWrite)
     return false;
@@ -1091,7 +1085,7 @@ static bool inferInitializes(Argument &A, Function &F) {
     // If this block has any clobbering use, we're going to clear out the
     // ranges at some point in this block anyway, so don't bother looking at
     // successors.
-    if (UPB == UsesPerBlock.end() || !UPB->second.HasClobber) {
+    if (UPB == UsesPerBlock.end() || !UPB->second.HasUnknownAccess) {
       bool HasAddedSuccessor = false;
       for (auto *Succ : successors(BB)) {
         if (auto SuccI = Initialized.find(Succ); SuccI != Initialized.end()) {
@@ -1120,10 +1114,14 @@ static bool inferInitializes(Argument &A, Function &F) {
       // From the end of the block to the beginning of the block, set
       // initializes ranges.
       for (auto &[_, Info] : reverse(Insts)) {
-        if (Info.IsClobber)
+        if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Unknown ||
+            Info.ArgAccessType ==
+                ArgumentAccessInfo::AccessType::WriteWithSideEffect)
           CRL = ConstantRangeList();
         if (!Info.AccessRanges.empty()) {
-          if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Write) {
+          if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Write ||
+              Info.ArgAccessType ==
+                  ArgumentAccessInfo::AccessType::WriteWithSideEffect) {
             CRL = CRL.unionWith(Info.AccessRanges);
           } else {
             assert(Info.ArgAccessType == ArgumentAccessInfo::AccessType::Read);
@@ -1143,7 +1141,7 @@ static bool inferInitializes(Argument &A, Function &F) {
   if (!OnlyScanEntryBlock)
     if (auto EntryUPB = UsesPerBlock.find(&EntryBB);
         EntryUPB != UsesPerBlock.end())
-      OnlyScanEntryBlock = EntryUPB->second.HasClobber;
+      OnlyScanEntryBlock = EntryUPB->second.HasUnknownAccess;
   if (OnlyScanEntryBlock) {
     EntryCRL = VisitBlock(&EntryBB);
     if (EntryCRL.empty())
