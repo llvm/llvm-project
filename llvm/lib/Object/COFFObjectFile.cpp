@@ -1132,6 +1132,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM64EC";
   case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return "COFF-ARM64X";
+  case COFF::IMAGE_FILE_MACHINE_R4000:
+    return "COFF-MIPS";
   default:
     return "COFF-<unknown arch>";
   }

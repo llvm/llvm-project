@@ -23,6 +23,7 @@
 #include "flang/Runtime/allocatable.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -336,6 +337,13 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
                                                  seqTy.getConstantArraySize());
         }
         bytes = rewriter.create<mlir::arith::MulIOp>(loc, nbElem, width);
+      } else if (fir::isa_derived(op.getInType())) {
+        mlir::Type structTy = typeConverter->convertType(op.getInType());
+        std::size_t structSize = dl->getTypeSizeInBits(structTy) / 8;
+        bytes = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                              structSize);
+      } else {
+        mlir::emitError(loc, "unsupported type in cuf.alloc\n");
       }
       mlir::func::FuncOp func =
           fir::runtime::getRuntimeFunc<mkRTKey(CUFMemAlloc)>(loc, builder);
@@ -429,6 +437,71 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   }
 };
 
+static bool isDstGlobal(cuf::DataTransferOp op) {
+  if (auto declareOp = op.getDst().getDefiningOp<fir::DeclareOp>())
+    if (declareOp.getMemref().getDefiningOp<fir::AddrOfOp>())
+      return true;
+  if (auto declareOp = op.getDst().getDefiningOp<hlfir::DeclareOp>())
+    if (declareOp.getMemref().getDefiningOp<fir::AddrOfOp>())
+      return true;
+  return false;
+}
+
+static mlir::Value getShapeFromDecl(mlir::Value src) {
+  if (auto declareOp = src.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getShape();
+  if (auto declareOp = src.getDefiningOp<hlfir::DeclareOp>())
+    return declareOp.getShape();
+  return mlir::Value{};
+}
+
+static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
+                            cuf::DataTransferOp op,
+                            const mlir::SymbolTable &symtab) {
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  mlir::Location loc = op.getLoc();
+  fir::FirOpBuilder builder(rewriter, mod);
+  mlir::Value addr;
+  mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
+  if (fir::isa_trivial(srcTy) &&
+      mlir::matchPattern(op.getSrc().getDefiningOp(), mlir::m_Constant())) {
+    // Put constant in memory if it is not.
+    mlir::Value alloc = builder.createTemporary(loc, srcTy);
+    builder.create<fir::StoreOp>(loc, op.getSrc(), alloc);
+    addr = alloc;
+  } else {
+    addr = getDeviceAddress(rewriter, op.getSrcMutable(), symtab);
+  }
+  llvm::SmallVector<mlir::Value> lenParams;
+  mlir::Type boxTy = fir::BoxType::get(srcTy);
+  mlir::Value box =
+      builder.createBox(loc, boxTy, addr, getShapeFromDecl(op.getSrc()),
+                        /*slice=*/nullptr, lenParams,
+                        /*tdesc=*/nullptr);
+  mlir::Value src = builder.createTemporary(loc, box.getType());
+  builder.create<fir::StoreOp>(loc, box, src);
+  return src;
+}
+
+static mlir::Value emboxDst(mlir::PatternRewriter &rewriter,
+                            cuf::DataTransferOp op,
+                            const mlir::SymbolTable &symtab) {
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  mlir::Location loc = op.getLoc();
+  fir::FirOpBuilder builder(rewriter, mod);
+  mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
+  mlir::Value dstAddr = getDeviceAddress(rewriter, op.getDstMutable(), symtab);
+  mlir::Type dstBoxTy = fir::BoxType::get(dstTy);
+  llvm::SmallVector<mlir::Value> lenParams;
+  mlir::Value dstBox =
+      builder.createBox(loc, dstBoxTy, dstAddr, getShapeFromDecl(op.getDst()),
+                        /*slice=*/nullptr, lenParams,
+                        /*tdesc=*/nullptr);
+  mlir::Value dst = builder.createTemporary(loc, dstBox.getType());
+  builder.create<fir::StoreOp>(loc, dstBox, dst);
+  return dst;
+}
+
 struct CUFDataTransferOpConversion
     : public mlir::OpRewritePattern<cuf::DataTransferOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -467,10 +540,22 @@ struct CUFDataTransferOpConversion
         !mlir::isa<fir::BaseBoxType>(dstTy)) {
 
       if (fir::isa_trivial(srcTy) && !fir::isa_trivial(dstTy)) {
-        // TODO: scalar to array data transfer.
-        mlir::emitError(loc,
-                        "not yet implemented: scalar to array data transfer\n");
-        return mlir::failure();
+        // Initialization of an array from a scalar value should be implemented
+        // via a kernel launch. Use the flan runtime via the Assign function
+        // until we have more infrastructure.
+        mlir::Value src = emboxSrc(rewriter, op, symtab);
+        mlir::Value dst = emboxDst(rewriter, op, symtab);
+        mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
+            CUFDataTransferDescDescNoRealloc)>(loc, builder);
+        auto fTy = func.getFunctionType();
+        mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+        mlir::Value sourceLine =
+            fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+        llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+            builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
+        builder.create<fir::CallOp>(loc, func, args);
+        rewriter.eraseOp(op);
+        return mlir::success();
       }
 
       mlir::Type i64Ty = builder.getI64Type();
@@ -518,94 +603,41 @@ struct CUFDataTransferOpConversion
     }
 
     // Conversion of data transfer involving at least one descriptor.
-    if (mlir::isa<fir::BaseBoxType>(srcTy) &&
-        mlir::isa<fir::BaseBoxType>(dstTy)) {
-      // Transfer between two descriptor.
+    if (mlir::isa<fir::BaseBoxType>(dstTy)) {
+      // Transfer to a descriptor.
       mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
-              loc, builder);
+          isDstGlobal(op)
+              ? fir::runtime::getRuntimeFunc<mkRTKey(
+                    CUFDataTransferGlobalDescDesc)>(loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
+                    loc, builder);
+      mlir::Value dst = op.getDst();
+      mlir::Value src = op.getSrc();
+
+      if (!mlir::isa<fir::BaseBoxType>(srcTy))
+        src = emboxSrc(rewriter, op, symtab);
 
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-      mlir::Value dst = op.getDst();
-      mlir::Value src = op.getSrc();
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
-    } else if (mlir::isa<fir::BaseBoxType>(dstTy) && fir::isa_trivial(srcTy)) {
-      // Scalar to descriptor transfer.
-      mlir::Value val = op.getSrc();
-      if (op.getSrc().getDefiningOp() &&
-          mlir::isa<mlir::arith::ConstantOp>(op.getSrc().getDefiningOp())) {
-        mlir::Value alloc = builder.createTemporary(loc, srcTy);
-        builder.create<fir::StoreOp>(loc, op.getSrc(), alloc);
-        val = alloc;
-      }
-
-      mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFMemsetDescriptor)>(loc,
-                                                                     builder);
-      auto fTy = func.getFunctionType();
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
-          fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
-      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-          builder, loc, fTy, op.getDst(), val, sourceFile, sourceLine)};
-      builder.create<fir::CallOp>(loc, func, args);
-      rewriter.eraseOp(op);
     } else {
-      // Type used to compute the width.
-      mlir::Type computeType = dstTy;
-      auto seqTy = mlir::dyn_cast<fir::SequenceType>(dstTy);
-      bool dstIsDesc = false;
-      if (mlir::isa<fir::BaseBoxType>(dstTy)) {
-        dstIsDesc = true;
-        computeType = srcTy;
-        seqTy = mlir::dyn_cast<fir::SequenceType>(srcTy);
-      }
-      int width = computeWidth(loc, computeType, kindMap);
+      // Transfer from a descriptor.
+      mlir::Value dst = emboxDst(rewriter, op, symtab);
 
-      mlir::Value nbElement;
-      mlir::Type idxTy = rewriter.getIndexType();
-      if (!op.getShape()) {
-        nbElement = rewriter.create<mlir::arith::ConstantOp>(
-            loc, idxTy,
-            rewriter.getIntegerAttr(idxTy, seqTy.getConstantArraySize()));
-      } else {
-        auto shapeOp =
-            mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp());
-        nbElement =
-            createConvertOp(rewriter, loc, idxTy, shapeOp.getExtents()[0]);
-        for (unsigned i = 1; i < shapeOp.getExtents().size(); ++i) {
-          auto operand =
-              createConvertOp(rewriter, loc, idxTy, shapeOp.getExtents()[i]);
-          nbElement =
-              rewriter.create<mlir::arith::MulIOp>(loc, nbElement, operand);
-        }
-      }
+      mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
+          CUFDataTransferDescDescNoRealloc)>(loc, builder);
 
-      mlir::Value widthValue = rewriter.create<mlir::arith::ConstantOp>(
-          loc, idxTy, rewriter.getIntegerAttr(idxTy, width));
-      mlir::Value bytes =
-          rewriter.create<mlir::arith::MulIOp>(loc, nbElement, widthValue);
-
-      mlir::func::FuncOp func =
-          dstIsDesc
-              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescPtr)>(
-                    loc, builder)
-              : fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferPtrDesc)>(
-                    loc, builder);
       auto fTy = func.getFunctionType();
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
-          fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
-      mlir::Value dst = op.getDst();
-      mlir::Value src = op.getSrc();
+          fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
       llvm::SmallVector<mlir::Value> args{
-          fir::runtime::createArguments(builder, loc, fTy, dst, src, bytes,
+          fir::runtime::createArguments(builder, loc, fTy, dst, op.getSrc(),
                                         modeValue, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);

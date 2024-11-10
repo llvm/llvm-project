@@ -179,7 +179,6 @@ add_entrypoint_object(
   HDRS
     ../getcwd.h
   DEPENDS
-    libc.include.stdlib
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -323,6 +322,19 @@ add_entrypoint_object(
     pipe.cpp
   HDRS
     ../pipe.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pipe2
+  SRCS
+    pipe2.cpp
+  HDRS
+    ../pipe2.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall

@@ -1056,7 +1056,7 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   // Strictness of the comparison is irrelevant.
   X = Cmp0;
   Y = Cmp1;
-  if (match(FVal, m_c_Add(m_Not(m_Specific(X)), m_Specific(Y)))) {
+  if (match(FVal, m_c_Add(m_NotForbidPoison(m_Specific(X)), m_Specific(Y)))) {
     // (X u< Y) ? -1 : (~X + Y) --> uadd.sat(~X, Y)
     // (X u< Y) ? -1 : (Y + ~X) --> uadd.sat(Y, ~X)
     BinaryOperator *BO = cast<BinaryOperator>(FVal);

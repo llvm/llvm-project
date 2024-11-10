@@ -534,7 +534,22 @@ void ObjFile::initializeSymbols() {
 
 Symbol *ObjFile::createUndefined(COFFSymbolRef sym, bool overrideLazy) {
   StringRef name = check(coffObj->getSymbolName(sym));
-  return ctx.symtab.addUndefined(name, this, overrideLazy);
+  Symbol *s = ctx.symtab.addUndefined(name, this, overrideLazy);
+
+  // Add an anti-dependency alias for undefined AMD64 symbols on the ARM64EC
+  // target.
+  if (isArm64EC(ctx.config.machine) && getMachineType() == AMD64) {
+    auto u = dyn_cast<Undefined>(s);
+    if (u && !u->weakAlias) {
+      if (std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name)) {
+        Symbol *m = ctx.symtab.addUndefined(saver().save(*mangledName), this,
+                                            /*overrideLazy=*/false);
+        u->setWeakAlias(m, /*antiDep=*/true);
+      }
+    }
+  }
+  return s;
 }
 
 static const coff_aux_section_definition *findSectionDef(COFFObjectFile *obj,
@@ -1264,7 +1279,8 @@ void BitcodeFile::parseLazy() {
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
-  switch (Triple(obj->getTargetTriple()).getArch()) {
+  Triple t(obj->getTargetTriple());
+  switch (t.getArch()) {
   case Triple::x86_64:
     return AMD64;
   case Triple::x86:
@@ -1273,7 +1289,7 @@ MachineTypes BitcodeFile::getMachineType() const {
   case Triple::thumb:
     return ARMNT;
   case Triple::aarch64:
-    return ARM64;
+    return t.isWindowsArm64EC() ? ARM64EC : ARM64;
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }

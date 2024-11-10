@@ -74,7 +74,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -1690,6 +1689,23 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
     auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
+
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForFixedLengthSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
+    // options are removed.
+    if (auto *SplatVal = CV->getSplatValue()) {
+      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+        Out << "splat (";
+        WriterCtx.TypePrinter->print(ETy, Out);
+        Out << ' ';
+        WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+        Out << ')';
+        return;
+      }
+    }
+
     Out << '<';
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
@@ -2132,6 +2148,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2200,6 +2217,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),

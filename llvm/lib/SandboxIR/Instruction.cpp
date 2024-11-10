@@ -124,10 +124,6 @@ void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
 
 void Instruction::insertBefore(Instruction *BeforeI) {
   llvm::Instruction *BeforeTopI = BeforeI->getTopmostLLVMInstruction();
-  // TODO: Move this to the verifier of sandboxir::Instruction.
-  assert(is_sorted(getLLVMInstrs(),
-                   [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
-         "Expected program order!");
 
   Ctx.getTracker().emplaceIfTracking<InsertIntoBB>(this);
 

@@ -98,7 +98,7 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- Added `set enable-profile true/false` command for basic matcher profiling.
 
 Improvements to clang-tidy
 --------------------------
@@ -147,6 +147,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`altera-id-dependent-backward-branch
+  <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
+  crashes from invalid code.
+
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
@@ -172,6 +176,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
   subtracting from a pointer directly or when used to scale a numeric value.
+
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` by fixing a false positive
+  when using non-static member initializers and a constructor.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support

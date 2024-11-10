@@ -3247,13 +3247,14 @@ struct FunctionReference {
 
 // R1521 call-stmt -> CALL procedure-designator [ chevrons ]
 //         [( [actual-arg-spec-list] )]
-// (CUDA) chevrons -> <<< scalar-expr, scalar-expr [,
+// (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
 //          scalar-int-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
   BOILERPLATE(CallStmt);
+  WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
-    std::tuple<ScalarExpr, ScalarExpr, std::optional<ScalarIntExpr>,
+    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarIntExpr>,
         std::optional<ScalarIntExpr>>
         t;
   };
@@ -3447,7 +3448,8 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 //    MUTEXINOUTSET | DEPOBJ |  // since 5.0
 //    INOUTSET                  // since 5.2
 struct OmpTaskDependenceType {
-  ENUM_CLASS(Type, In, Out, Inout, Source, Sink, Depobj)
+  ENUM_CLASS(
+      Type, In, Out, Inout, Inoutset, Mutexinoutset, Source, Sink, Depobj)
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Type);
 };
 
@@ -3582,6 +3584,26 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
 };
 
+// Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
+//
+// from-clause ->
+//    FROM(locator-list) |
+//    FROM(mapper-modifier: locator-list) |             // since 5.0
+//    FROM(motion-modifier[,] ...: locator-list)        // since 5.1
+//  motion-modifier ->
+//    PRESENT | mapper-modifier | iterator-modifier
+struct OmpFromClause {
+  ENUM_CLASS(Expectation, Present);
+  TUPLE_CLASS_BOILERPLATE(OmpFromClause);
+
+  // As in the case of MAP, modifiers are parsed as lists, even if they
+  // are unique. These restrictions will be checked in semantic checks.
+  std::tuple<std::optional<std::list<Expectation>>,
+      std::optional<std::list<OmpIteratorModifier>>, OmpObjectList,
+      bool> // were the modifiers comma-separated?
+      t;
+};
+
 // OMP 5.2 12.6.1 grainsize-clause -> grainsize ([prescriptiveness :] value)
 struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
@@ -3595,6 +3617,11 @@ struct OmpIfClause {
   ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
       TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
   std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
+};
+
+// OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
+struct OmpDetachClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDetachClause, OmpObject);
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
@@ -3668,9 +3695,8 @@ struct OmpMapClause {
 
 // 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
 struct OmpOrderModifier {
-  UNION_CLASS_BOILERPLATE(OmpOrderModifier);
   ENUM_CLASS(Kind, Reproducible, Unconstrained)
-  std::variant<Kind> u;
+  WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Kind);
 };
 
 struct OmpOrderClause {
@@ -3718,6 +3744,28 @@ struct OmpScheduleClause {
       t;
 };
 
+// Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
+//
+// to-clause (in DECLARE TARGET) ->
+//    TO(extended-list) |                               // until 5.1
+// to-clause (in TARGET UPDATE) ->
+//    TO(locator-list) |
+//    TO(mapper-modifier: locator-list) |               // since 5.0
+//    TO(motion-modifier[,] ...: locator-list)          // since 5.1
+//  motion-modifier ->
+//    PRESENT | mapper-modifier | iterator-modifier
+struct OmpToClause {
+  using Expectation = OmpFromClause::Expectation;
+  TUPLE_CLASS_BOILERPLATE(OmpToClause);
+
+  // As in the case of MAP, modifiers are parsed as lists, even if they
+  // are unique. These restrictions will be checked in semantic checks.
+  std::tuple<std::optional<std::list<Expectation>>,
+      std::optional<std::list<OmpIteratorModifier>>, OmpObjectList,
+      bool> // were the modifiers comma-separated?
+      t;
+};
+
 // OMP 5.2 12.6.2 num_tasks-clause -> num_tasks ([prescriptiveness :] value)
 struct OmpNumTasksClause {
   TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
@@ -3729,6 +3777,13 @@ struct OmpNumTasksClause {
 //
 // update-clause -> UPDATE(task-dependence-type)    // since 5.0
 WRAPPER_CLASS(OmpUpdateClause, OmpTaskDependenceType);
+
+// OMP 5.2 11.7.1 bind-clause ->
+//                  BIND( PARALLEL | TEAMS | THREAD )
+struct OmpBindClause {
+  ENUM_CLASS(Type, Parallel, Teams, Thread)
+  WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Type);
+};
 
 // OpenMP Clauses
 struct OmpClause {

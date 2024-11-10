@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -104,8 +103,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
-#include <deque>
-#include <iterator>
 #include <limits>
 #include <optional>
 #include <tuple>
@@ -2154,8 +2151,10 @@ void SelectionDAGBuilder::visitCleanupRet(const CleanupReturnInst &I) {
   FuncInfo.MBB->normalizeSuccProbs();
 
   // Create the terminator node.
-  SDValue Ret =
-      DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other, getControlRoot());
+  MachineBasicBlock *CleanupPadMBB =
+      FuncInfo.getMBB(I.getCleanupPad()->getParent());
+  SDValue Ret = DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other,
+                            getControlRoot(), DAG.getBasicBlock(CleanupPadMBB));
   DAG.setRoot(Ret);
 }
 
@@ -3778,7 +3777,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     }
 
     if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
-        (TLI.isOperationLegalOrCustomOrPromote(Opc, VT) ||
+        (TLI.isOperationLegalOrCustom(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
         // If the underlying comparison instruction is used by any other
@@ -3827,7 +3826,13 @@ void SelectionDAGBuilder::visitTrunc(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
+    Flags.setNoSignedWrap(Trunc->hasNoSignedWrap());
+    Flags.setNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
+  }
+
+  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitZExt(const User &I) {
@@ -4119,61 +4124,61 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     return;
   }
 
-  if (SrcNumElts > MaskNumElts) {
-    // Analyze the access pattern of the vector to see if we can extract
-    // two subvectors and do the shuffle.
-    int StartIdx[2] = { -1, -1 };  // StartIdx to extract from
-    bool CanExtract = true;
-    for (int Idx : Mask) {
-      unsigned Input = 0;
-      if (Idx < 0)
-        continue;
+  assert(SrcNumElts > MaskNumElts);
 
-      if (Idx >= (int)SrcNumElts) {
-        Input = 1;
-        Idx -= SrcNumElts;
-      }
+  // Analyze the access pattern of the vector to see if we can extract
+  // two subvectors and do the shuffle.
+  int StartIdx[2] = {-1, -1}; // StartIdx to extract from
+  bool CanExtract = true;
+  for (int Idx : Mask) {
+    unsigned Input = 0;
+    if (Idx < 0)
+      continue;
 
-      // If all the indices come from the same MaskNumElts sized portion of
-      // the sources we can use extract. Also make sure the extract wouldn't
-      // extract past the end of the source.
-      int NewStartIdx = alignDown(Idx, MaskNumElts);
-      if (NewStartIdx + MaskNumElts > SrcNumElts ||
-          (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
-        CanExtract = false;
-      // Make sure we always update StartIdx as we use it to track if all
-      // elements are undef.
-      StartIdx[Input] = NewStartIdx;
+    if (Idx >= (int)SrcNumElts) {
+      Input = 1;
+      Idx -= SrcNumElts;
     }
 
-    if (StartIdx[0] < 0 && StartIdx[1] < 0) {
-      setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
-      return;
-    }
-    if (CanExtract) {
-      // Extract appropriate subvector and generate a vector shuffle
-      for (unsigned Input = 0; Input < 2; ++Input) {
-        SDValue &Src = Input == 0 ? Src1 : Src2;
-        if (StartIdx[Input] < 0)
-          Src = DAG.getUNDEF(VT);
-        else {
-          Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
-                            DAG.getVectorIdxConstant(StartIdx[Input], DL));
-        }
-      }
+    // If all the indices come from the same MaskNumElts sized portion of
+    // the sources we can use extract. Also make sure the extract wouldn't
+    // extract past the end of the source.
+    int NewStartIdx = alignDown(Idx, MaskNumElts);
+    if (NewStartIdx + MaskNumElts > SrcNumElts ||
+        (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
+      CanExtract = false;
+    // Make sure we always update StartIdx as we use it to track if all
+    // elements are undef.
+    StartIdx[Input] = NewStartIdx;
+  }
 
-      // Calculate new mask.
-      SmallVector<int, 8> MappedOps(Mask);
-      for (int &Idx : MappedOps) {
-        if (Idx >= (int)SrcNumElts)
-          Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
-        else if (Idx >= 0)
-          Idx -= StartIdx[0];
+  if (StartIdx[0] < 0 && StartIdx[1] < 0) {
+    setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
+    return;
+  }
+  if (CanExtract) {
+    // Extract appropriate subvector and generate a vector shuffle
+    for (unsigned Input = 0; Input < 2; ++Input) {
+      SDValue &Src = Input == 0 ? Src1 : Src2;
+      if (StartIdx[Input] < 0)
+        Src = DAG.getUNDEF(VT);
+      else {
+        Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
+                          DAG.getVectorIdxConstant(StartIdx[Input], DL));
       }
-
-      setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
-      return;
     }
+
+    // Calculate new mask.
+    SmallVector<int, 8> MappedOps(Mask);
+    for (int &Idx : MappedOps) {
+      if (Idx >= (int)SrcNumElts)
+        Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
+      else if (Idx >= 0)
+        Idx -= StartIdx[0];
+    }
+
+    setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
+    return;
   }
 
   // We can't use either concat vectors or extract subvectors so fall back to

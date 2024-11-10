@@ -2771,6 +2771,14 @@ void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
     MCPhysReg Cand = CSRegs[i];
     if (!SavedRegs.test(Cand))
       continue;
+    // When R2/X2 is a CSR and not used for passing arguments, it is allocated
+    // earlier than other volatile registers. R2/X2 is not contiguous with
+    // R13/X13 to R31/X31.
+    if (Cand == PPC::X2 || Cand == PPC::R2) {
+      SavedRegs.set(Cand);
+      continue;
+    }
+
     if (PPC::GPRCRegClass.contains(Cand) && Cand < LowestGPR)
       LowestGPR = Cand;
     else if (PPC::G8RCRegClass.contains(Cand) && Cand < LowestG8R)
