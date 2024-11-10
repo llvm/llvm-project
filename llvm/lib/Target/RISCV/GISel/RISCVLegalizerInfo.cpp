@@ -158,7 +158,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
       .lower();
 
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
+  getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
       .legalFor({{s32, s32}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
@@ -202,7 +202,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
-  getActionDefinitionsBuilder({G_ROTL, G_ROTR})
+  getActionDefinitionsBuilder({G_ROTR, G_ROTL})
       .legalFor(ST.hasStdExtZbb() || ST.hasStdExtZbkb(), {{sXLen, sXLen}})
       .customFor(ST.is64Bit() && (ST.hasStdExtZbb() || ST.hasStdExtZbkb()),
                  {{s32, s32}})
@@ -456,7 +456,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   if (ST.hasStdExtM()) {
-    getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM})
+    getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_UREM})
         .legalFor({sXLen})
         .customFor({s32})
         .libcallFor({sDoubleXLen})
@@ -475,7 +475,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   // TODO: Use libcall for sDoubleXLen.
-  getActionDefinitionsBuilder({G_UDIVREM, G_SDIVREM}).lower();
+  getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM}).lower();
 
   getActionDefinitionsBuilder(G_ABS)
       .customFor(ST.hasStdExtZbb(), {sXLen})
@@ -632,6 +632,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
   getLegacyLegalizerInfo().computeTables();
+  verify(*ST.getInstrInfo());
 }
 
 bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
