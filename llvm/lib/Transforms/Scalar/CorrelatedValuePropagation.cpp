@@ -38,7 +38,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
@@ -295,9 +294,9 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   bool Changed = false;
 
   ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                                 /*UndefAllowed*/ true),
+                                                 /*UndefAllowed=*/ true),
                 CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                                 /*UndefAllowed*/ true);
+                                                 /*UndefAllowed=*/ true);
 
   if (Cmp->isSigned()) {
     ICmpInst::Predicate UnsignedPred =
@@ -312,9 +311,8 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
     Changed = true;
   }
 
-  auto Op0Known = CR1.toKnownBits(), Op1Known = CR2.toKnownBits();
-  if ((Op0Known.Zero.isNegative() && Op1Known.Zero.isNegative()) ||
-      (Op0Known.One.isNegative() && Op1Known.One.isNegative())) {
+  if ((CR1.isAllNonNegative() && CR2.isAllNonNegative()) ||
+      (CR1.isAllNegative() && CR2.isAllNegative())) {
     Cmp->setSameSign();
     Changed = true;
   }
