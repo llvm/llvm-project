@@ -90,7 +90,7 @@ std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
 
   // Use APInt to handle overflow when calculating expected element.
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1);
+  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, false, true);
 
   // The following shuffle indices must be the successive elements after the
   // first real element.
