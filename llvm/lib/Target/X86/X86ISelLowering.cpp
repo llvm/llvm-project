@@ -37470,7 +37470,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBF8PS:
   case X86::PTDPBHF8PS:
   case X86::PTDPHBF8PS:
-  case X86::PTDPHF8PS: {
+  case X86::PTDPHF8PS:
+  case X86::PTMMULTF32PS:
+  case X86::PTTMMULTF32PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     // clang-format off
@@ -37485,7 +37487,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
     case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
-    // clang-format on
+    case X86::PTMMULTF32PS: Opc = X86::TMMULTF32PS; break;
+    case X86::PTTMMULTF32PS: Opc = X86::TTMMULTF32PS; break;
+      // clang-format on
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
@@ -37684,28 +37688,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.add(MI.getOperand(2));
 
     MI.eraseFromParent(); // The pseudo is gone now.
-    return BB;
-  }
-  case X86::PTMMULTF32PS:
-  case X86::PTTMMULTF32PS: {
-    const DebugLoc &DL = MI.getDebugLoc();
-    unsigned Opc;
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected instruction!");
-    case X86::PTMMULTF32PS:
-      Opc = X86::TMMULTF32PS;
-      break;
-    case X86::PTTMMULTF32PS:
-      Opc = X86::TTMMULTF32PS;
-      break;
-    }
-    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
-    MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
-    MI.eraseFromParent();
     return BB;
   }
   }

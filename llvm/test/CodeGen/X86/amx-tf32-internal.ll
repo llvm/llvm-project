@@ -39,7 +39,6 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
 
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
-declare x86_amx @llvm.x86.tileloaddt164.internal(i16, i16, i8*, i64)
 declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
 
 
