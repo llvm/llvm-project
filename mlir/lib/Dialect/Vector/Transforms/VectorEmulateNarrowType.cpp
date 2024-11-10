@@ -217,6 +217,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
     if (op.getValueToStore().getType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,
                                          "only 1-D vectors are supported ATM");
@@ -287,6 +288,7 @@ struct ConvertVectorMaskedStore final
   matchAndRewrite(vector::MaskedStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
     if (op.getValueToStore().getType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,
                                          "only 1-D vectors are supported ATM");
@@ -380,6 +382,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
   matchAndRewrite(vector::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
     if (op.getVectorType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,
                                          "only 1-D vectors are supported ATM");
@@ -485,6 +488,7 @@ struct ConvertVectorMaskedLoad final
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
     if (op.getVectorType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,
                                          "only 1-D vectors are supported ATM");
@@ -640,6 +644,7 @@ struct ConvertVectorTransferRead final
   matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
     if (op.getVectorType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,
                                          "only 1-D vectors are supported ATM");

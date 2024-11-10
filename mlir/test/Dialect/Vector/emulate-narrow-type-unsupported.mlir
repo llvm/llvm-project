@@ -65,12 +65,11 @@ func.func @vector_extract_maskedload_2d_i4_negative(%arg1: index) -> vector<8x8x
     %c16 = arith.constant 16 : index
     %c8 = arith.constant 8 : index
     %cst_1 = arith.constant dense<0> : vector<8x8x16xi4>
-    %cst_2 = arith.constant dense<0> : vector<16xi4>
+    %cst_2 = arith.constant dense<0> : vector<8x16xi4>
     %27 = vector.create_mask %c8, %arg1, %c16 : vector<8x8x16xi1>
     %48 = vector.extract %27[0] : vector<8x16xi1> from vector<8x8x16xi1>
-    %49 = vector.extract %48[0] : vector<16xi1> from vector<8x16xi1>
-    %50 = vector.maskedload %0[%c0, %c0, %c0], %49, %cst_2 : memref<8x8x16xi4>, vector<16xi1>, vector<16xi4> into vector<16xi4>
-    %63 = vector.insert %50, %cst_1 [0, 0] : vector<16xi4> into vector<8x8x16xi4>
+    %50 = vector.maskedload %0[%c0, %c0, %c0], %48, %cst_2 : memref<8x8x16xi4>, vector<8x16xi1>, vector<8x16xi4> into vector<8x16xi4>
+    %63 = vector.insert %50, %cst_1 [0] : vector<8x16xi4> into vector<8x8x16xi4>
     return %63 : vector<8x8x16xi4>
 }
 
@@ -84,9 +83,9 @@ func.func @vector_extract_maskedload_2d_i4_negative(%arg1: index) -> vector<8x8x
 /// vector.store
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_store_2d_i8_negative(%arg0: vector<8xi8>, %arg1: index, %arg2: index) {
+func.func @vector_store_2d_i8_negative(%arg0: vector<2x8xi8>, %arg1: index, %arg2: index) {
     %0 = memref.alloc() : memref<4x8xi8>
-    vector.store %arg0, %0[%arg1, %arg2] :memref<4x8xi8>, vector<8xi8>
+    vector.store %arg0, %0[%arg1, %arg2] :memref<4x8xi8>, vector<2x8xi8>
     return
 }
 
@@ -100,10 +99,10 @@ func.func @vector_store_2d_i8_negative(%arg0: vector<8xi8>, %arg1: index, %arg2:
 /// vector.maskedstore
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_maskedstore_2d_i8_negative(%arg0: index, %arg1: index, %arg2: index, %value: vector<8xi8>) {
+func.func @vector_maskedstore_2d_i8_negative(%arg0: index, %arg1: index, %arg2: index, %value: vector<2x8xi8>) {
   %0 = memref.alloc() : memref<3x8xi8>
-  %mask = vector.create_mask %arg2 : vector<8xi1>
-  vector.maskedstore %0[%arg0, %arg1], %mask, %value : memref<3x8xi8>, vector<8xi1>, vector<8xi8>
+  %mask = vector.create_mask %arg2, %arg2 : vector<2x8xi1>
+  vector.maskedstore %0[%arg0, %arg1], %mask, %value : memref<3x8xi8>, vector<2x8xi1>, vector<2x8xi8>
   return
 }
 
