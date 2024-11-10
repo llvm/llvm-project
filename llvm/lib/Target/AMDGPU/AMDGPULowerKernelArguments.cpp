@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -252,11 +253,21 @@ public:
 };
 
 class AMDGPULowerKernelArguments {
-  const TargetMachine &TM;
-  SmallVector<Function *> FunctionsToErase;
+private:
+  SmallVector<Function *, 4> FunctionsToErase;
 
 public:
-  AMDGPULowerKernelArguments(const TargetMachine &TM) : TM(TM) {}
+  AMDGPULowerKernelArguments() {}
+
+  bool eraseTaggedFunctions() {
+    if (FunctionsToErase.empty())
+      return false;
+
+    for (Function *F : FunctionsToErase)
+      F->eraseFromParent();
+
+    return true;
+  }
 
   // skip allocas
   static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
@@ -273,7 +284,7 @@ public:
     return InsPt;
   }
 
-  bool lowerKernelArguments(Function &F) {
+  bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     CallingConv::ID CC = F.getCallingConv();
     if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
       return false;
@@ -474,34 +485,53 @@ public:
     return true;
   }
 
-  bool runOnModule(Module &M) {
+  bool runOnSCC(CallGraphSCC &SCC, const TargetMachine &TM) {
+    bool Changed = false;
+    for (CallGraphNode *I : SCC) {
+      Function *F = I->getFunction();
+      if (!F || F->isDeclaration())
+        continue;
+
+      Changed |= lowerKernelArguments(*F, TM);
+    }
+
+    return Changed;
+  }
+
+  bool runOnModule(Module &M, const TargetMachine &TM) {
     bool Changed = false;
 
     for (Function &F : M)
-      Changed |= lowerKernelArguments(F);
+      Changed |= lowerKernelArguments(F, TM);
 
-    for (Function *F : FunctionsToErase)
-      F->eraseFromParent();
+    Changed |= eraseTaggedFunctions();
 
     return Changed;
   }
 };
 
-class AMDGPULowerKernelArgumentsLegacy : public ModulePass {
+class AMDGPULowerKernelArgumentsLegacy : public CallGraphSCCPass {
+private:
+  AMDGPULowerKernelArguments Impl;
+
 public:
   static char ID;
   const TargetMachine *TM;
 
   AMDGPULowerKernelArgumentsLegacy(const TargetMachine *TM = nullptr)
-      : ModulePass(ID), TM(TM) {}
+      : CallGraphSCCPass(ID), TM(TM) {}
 
-  bool runOnModule(Module &M) override {
+  bool runOnSCC(CallGraphSCC &SCC) override {
     if (!TM) {
       auto &TPC = getAnalysis<TargetPassConfig>();
       TM = &TPC.getTM<TargetMachine>();
     }
 
-    return AMDGPULowerKernelArguments(*TM).runOnModule(M);
+    return Impl.runOnSCC(SCC, *TM);
+  }
+
+  bool doFinalization(CallGraph &CG) override {
+    return Impl.eraseTaggedFunctions();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -521,14 +551,14 @@ INITIALIZE_PASS_END(AMDGPULowerKernelArgumentsLegacy, DEBUG_TYPE,
 
 char AMDGPULowerKernelArgumentsLegacy::ID = 0;
 
-ModulePass *
+CallGraphSCCPass *
 llvm::createAMDGPULowerKernelArgumentsLegacyPass(const TargetMachine *TM) {
   return new AMDGPULowerKernelArgumentsLegacy(TM);
 }
 
 PreservedAnalyses
 AMDGPULowerKernelArgumentsPass::run(Module &M, ModuleAnalysisManager &AM) {
-  return AMDGPULowerKernelArguments(TM).runOnModule(M)
+  return AMDGPULowerKernelArguments().runOnModule(M, TM)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }

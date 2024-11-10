@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 
@@ -111,7 +112,7 @@ ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
 void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUCtorDtorLoweringLegacyPassID;
 
-ModulePass *createAMDGPULowerKernelArgumentsLegacyPass(const TargetMachine *TM);
+CallGraphSCCPass *createAMDGPULowerKernelArgumentsLegacyPass(const TargetMachine *TM);
 void initializeAMDGPULowerKernelArgumentsLegacyPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsLegacyPassID;
 
