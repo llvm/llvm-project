@@ -2647,8 +2647,9 @@ void InnerLoopVectorizer::createInductionResumeValue(
     }
   }
 
-  InductionBypassValues[OrigPhi] = {AdditionalBypass.first,
-                                    EndValueFromAdditionalBypass};
+  if (AdditionalBypass.first)
+    InductionBypassValues[OrigPhi] = {AdditionalBypass.first,
+                                      EndValueFromAdditionalBypass};
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
