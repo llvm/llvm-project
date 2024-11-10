@@ -1178,7 +1178,7 @@ public:
   /// into \p Res.
   ///
   /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p Res must be a generic virtual register with scalar type.
+  /// \pre \p Res must be a generic virtual register with scalable vector type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildStepVector(const DstOp &Res, unsigned Step);
