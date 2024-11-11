@@ -3959,6 +3959,11 @@ def NVPTX_fma_oneuse : PatFrag<(ops node:$a, node:$b, node:$c),
                                   (fma node:$a, node:$b, node:$c), [{
   return N->hasOneUse();
 }]>;
+// We can use the instruction flag nnan instead of relying on a function attribute
+def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
+                                  (fma node:$a, node:$b, node:$c), [{
+  return N->hasOneUse() && N->getFlags().hasNoNaNs();
+}]>;
 
 def FMARELU_F16 :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
@@ -3986,7 +3991,25 @@ def FMARELU_F16X2_FTZ :
     "fma.rn.ftz.relu.f16x2 \t$dst, $a, $b, $c;", []>,
     Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
 
+// Don't use function attributes, use instruction flag instead
 // FTZ variants are only supported by fp16, not bf16
+def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
+  (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
+  Requires<[doF32FTZ]>;
+def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
+  (FMARELU_F16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
+  Requires<[doF32FTZ]>;
+// No FTZ
+def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
+  (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>;
+def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
+  (FMARELU_BF16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>;
+def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
+  (FMARELU_F16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>;
+def : Pat<(v2bf16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2bf16)),
+  (FMARELU_BF16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>;
+
+// Use function attributes for noNaNsFPMath, instead of instruction flag
 def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
   (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[doF32FTZ, noNaNsFPMath]>;
