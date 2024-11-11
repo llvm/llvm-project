@@ -65,7 +65,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <map>
