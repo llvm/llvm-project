@@ -109,9 +109,12 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopUnrollPass(
 std::unique_ptr<OperationPass<func::FuncOp>>
 createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 
-std::unique_ptr<OperationPass<func::FuncOp>> createParallelUnrollPass(
+/// Creates a memory banking pass to explicitly partition the memories used
+/// inside affine parallel operations
+std::unique_ptr<OperationPass<func::FuncOp>> createParallelBankingPass(
     int unrollFactor = -1,
-    const std::function<unsigned(AffineParallelOp)> &getUnrollFactor = nullptr);
+    const std::function<unsigned(AffineParallelOp)> &getBankingFactor =
+        nullptr);
 
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.

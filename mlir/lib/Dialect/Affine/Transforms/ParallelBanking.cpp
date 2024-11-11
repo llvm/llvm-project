@@ -1,4 +1,4 @@
-//===- ParallelUnroll.cpp - Code to perform parallel loop unrolling
+//===- ParallelBanking.cpp - Code to perform memory bnaking in parallel loops
 //--------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements parallel loop unrolling.
+// This file implements parallel loop memory banking.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,46 +22,41 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
 namespace mlir {
 namespace affine {
-#define GEN_PASS_DEF_AFFINEPARALLELUNROLL
+#define GEN_PASS_DEF_AFFINEPARALLELBANKING
 #include "mlir/Dialect/Affine/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
-#define DEBUG_TYPE "affine-parallel-unroll"
+#define DEBUG_TYPE "affine-parallel-banking"
 
 using namespace mlir;
 using namespace mlir::affine;
 
 namespace {
 
-/// Unroll an `affine.parallel` operation by the `unrollFactor` specified in the
-/// attribute. Evenly splitting `memref`s that are present in the `parallel`
-/// region into smaller banks.
-struct ParallelUnroll
-    : public affine::impl::AffineParallelUnrollBase<ParallelUnroll> {
-  const std::function<unsigned(AffineParallelOp)> getUnrollFactor;
-  ParallelUnroll() : getUnrollFactor(nullptr) {}
-  ParallelUnroll(const ParallelUnroll &other) = default;
-  explicit ParallelUnroll(std::optional<unsigned> unrollFactor = std::nullopt,
-                          const std::function<unsigned(AffineParallelOp)>
-                              &getUnrollFactor = nullptr)
-      : getUnrollFactor(getUnrollFactor) {
-    if (unrollFactor)
-      this->unrollFactor = *unrollFactor;
+/// Partition memories used in `affine.parallel` operation by the
+/// `bankingFactor` throughout the program.
+struct ParallelBanking
+    : public affine::impl::AffineParallelBankingBase<ParallelBanking> {
+  const std::function<unsigned(AffineParallelOp)> getBankingFactor;
+  ParallelBanking() : getBankingFactor(nullptr) {}
+  ParallelBanking(const ParallelBanking &other) = default;
+  explicit ParallelBanking(std::optional<unsigned> bankingFactor = std::nullopt,
+                           const std::function<unsigned(AffineParallelOp)>
+                               &getBankingFactor = nullptr)
+      : getBankingFactor(getBankingFactor) {
+    if (bankingFactor)
+      this->bankingFactor = *bankingFactor;
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -69,8 +64,8 @@ struct ParallelUnroll
   }
 
   void runOnOperation() override;
-  LogicalResult parallelUnrollByFactor(AffineParallelOp parOp,
-                                       uint64_t unrollFactor);
+  LogicalResult parallelBankingByFactor(AffineParallelOp parOp,
+                                        uint64_t bankingFactor);
 
 private:
   // map from original memory definition to newly allocated banks
@@ -108,22 +103,23 @@ MemRefType computeBankedMemRefType(MemRefType originalType,
   return newMemRefType;
 }
 
-SmallVector<Value> createBanks(Value originalMem, uint64_t unrollFactor) {
+SmallVector<Value> createBanks(Value originalMem, uint64_t bankingFactor) {
   MemRefType originalMemRefType = cast<MemRefType>(originalMem.getType());
   MemRefType newMemRefType =
-      computeBankedMemRefType(originalMemRefType, unrollFactor);
+      computeBankedMemRefType(originalMemRefType, bankingFactor);
   SmallVector<Value, 4> banks;
   if (auto blockArgMem = dyn_cast<BlockArgument>(originalMem)) {
     Block *block = blockArgMem.getOwner();
     unsigned blockArgNum = blockArgMem.getArgNumber();
 
     SmallVector<Type> banksType;
-    for (unsigned i = 0; i < unrollFactor; ++i) {
+    for (unsigned i = 0; i < bankingFactor; ++i) {
       block->insertArgument(blockArgNum + 1 + i, newMemRefType,
                             blockArgMem.getLoc());
     }
 
-    auto blockArgs = block->getArguments().slice(blockArgNum + 1, unrollFactor);
+    auto blockArgs =
+        block->getArguments().slice(blockArgNum + 1, bankingFactor);
     banks.append(blockArgs.begin(), blockArgs.end());
   } else {
     Operation *originalDef = originalMem.getDefiningOp();
@@ -132,14 +128,14 @@ SmallVector<Value> createBanks(Value originalMem, uint64_t unrollFactor) {
     builder.setInsertionPointAfter(originalDef);
     TypeSwitch<Operation *>(originalDef)
         .Case<memref::AllocOp>([&](memref::AllocOp allocOp) {
-          for (uint bankCnt = 0; bankCnt < unrollFactor; bankCnt++) {
+          for (uint bankCnt = 0; bankCnt < bankingFactor; bankCnt++) {
             auto bankAllocOp =
                 builder.create<memref::AllocOp>(loc, newMemRefType);
             banks.push_back(bankAllocOp);
           }
         })
         .Case<memref::AllocaOp>([&](memref::AllocaOp allocaOp) {
-          for (uint bankCnt = 0; bankCnt < unrollFactor; bankCnt++) {
+          for (uint bankCnt = 0; bankCnt < bankingFactor; bankCnt++) {
             auto bankAllocaOp =
                 builder.create<memref::AllocaOp>(loc, newMemRefType);
             banks.push_back(bankAllocaOp);
@@ -153,9 +149,9 @@ SmallVector<Value> createBanks(Value originalMem, uint64_t unrollFactor) {
 }
 
 struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
-  BankAffineLoadPattern(MLIRContext *context, uint64_t unrollFactor,
+  BankAffineLoadPattern(MLIRContext *context, uint64_t bankingFactor,
                         DenseMap<Value, SmallVector<Value>> &memoryToBanks)
-      : OpRewritePattern<AffineLoadOp>(context), unrollFactor(unrollFactor),
+      : OpRewritePattern<AffineLoadOp>(context), bankingFactor(bankingFactor),
         memoryToBanks(memoryToBanks) {}
 
   LogicalResult matchAndRewrite(AffineLoadOp loadOp,
@@ -164,9 +160,9 @@ struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
     auto banks = memoryToBanks[loadOp.getMemref()];
     Value loadIndex = loadOp.getIndices().front();
     auto modMap =
-        AffineMap::get(1, 0, {rewriter.getAffineDimExpr(0) % unrollFactor});
+        AffineMap::get(1, 0, {rewriter.getAffineDimExpr(0) % bankingFactor});
     auto divMap = AffineMap::get(
-        1, 0, {rewriter.getAffineDimExpr(0).floorDiv(unrollFactor)});
+        1, 0, {rewriter.getAffineDimExpr(0).floorDiv(bankingFactor)});
 
     Value bankIndex = rewriter.create<AffineApplyOp>(
         loc, modMap, loadIndex); // assuming one-dim
@@ -175,15 +171,15 @@ struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
     SmallVector<Type> resultTypes = {loadOp.getResult().getType()};
 
     SmallVector<int64_t, 4> caseValues;
-    for (unsigned i = 0; i < unrollFactor; ++i)
+    for (unsigned i = 0; i < bankingFactor; ++i)
       caseValues.push_back(i);
 
     rewriter.setInsertionPoint(loadOp);
     scf::IndexSwitchOp switchOp = rewriter.create<scf::IndexSwitchOp>(
         loc, resultTypes, bankIndex, caseValues,
-        /*numRegions=*/unrollFactor);
+        /*numRegions=*/bankingFactor);
 
-    for (unsigned i = 0; i < unrollFactor; ++i) {
+    for (unsigned i = 0; i < bankingFactor; ++i) {
       Region &caseRegion = switchOp.getCaseRegions()[i];
       rewriter.setInsertionPointToStart(&caseRegion.emplaceBlock());
       Value bankedLoad = rewriter.create<AffineLoadOp>(loc, banks[i], offset);
@@ -206,14 +202,14 @@ struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
   }
 
 private:
-  uint64_t unrollFactor;
+  uint64_t bankingFactor;
   DenseMap<Value, SmallVector<Value>> &memoryToBanks;
 };
 
 struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
-  BankAffineStorePattern(MLIRContext *context, uint64_t unrollFactor,
+  BankAffineStorePattern(MLIRContext *context, uint64_t bankingFactor,
                          DenseMap<Value, SmallVector<Value>> &memoryToBanks)
-      : OpRewritePattern<AffineStoreOp>(context), unrollFactor(unrollFactor),
+      : OpRewritePattern<AffineStoreOp>(context), bankingFactor(bankingFactor),
         memoryToBanks(memoryToBanks) {}
 
   LogicalResult matchAndRewrite(AffineStoreOp storeOp,
@@ -223,9 +219,9 @@ struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
     Value storeIndex = storeOp.getIndices().front();
 
     auto modMap =
-        AffineMap::get(1, 0, {rewriter.getAffineDimExpr(0) % unrollFactor});
+        AffineMap::get(1, 0, {rewriter.getAffineDimExpr(0) % bankingFactor});
     auto divMap = AffineMap::get(
-        1, 0, {rewriter.getAffineDimExpr(0).floorDiv(unrollFactor)});
+        1, 0, {rewriter.getAffineDimExpr(0).floorDiv(bankingFactor)});
 
     Value bankIndex = rewriter.create<AffineApplyOp>(
         loc, modMap, storeIndex); // assuming one-dim
@@ -234,15 +230,15 @@ struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
     SmallVector<Type> resultTypes = {};
 
     SmallVector<int64_t, 4> caseValues;
-    for (unsigned i = 0; i < unrollFactor; ++i)
+    for (unsigned i = 0; i < bankingFactor; ++i)
       caseValues.push_back(i);
 
     rewriter.setInsertionPoint(storeOp);
     scf::IndexSwitchOp switchOp = rewriter.create<scf::IndexSwitchOp>(
         loc, resultTypes, bankIndex, caseValues,
-        /*numRegions=*/unrollFactor);
+        /*numRegions=*/bankingFactor);
 
-    for (unsigned i = 0; i < unrollFactor; ++i) {
+    for (unsigned i = 0; i < bankingFactor; ++i) {
       Region &caseRegion = switchOp.getCaseRegions()[i];
       rewriter.setInsertionPointToStart(&caseRegion.emplaceBlock());
       rewriter.create<AffineStoreOp>(loc, storeOp.getValueToStore(), banks[i],
@@ -261,7 +257,7 @@ struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
   }
 
 private:
-  uint64_t unrollFactor;
+  uint64_t bankingFactor;
   DenseMap<Value, SmallVector<Value>> &memoryToBanks;
 };
 
@@ -335,7 +331,7 @@ LogicalResult cleanUpOldMemRefs(DenseSet<Value> &oldMemRefVals) {
   return success();
 }
 
-void ParallelUnroll::runOnOperation() {
+void ParallelBanking::runOnOperation() {
   if (getOperation().isExternal()) {
     return;
   }
@@ -344,7 +340,7 @@ void ParallelUnroll::runOnOperation() {
     DenseSet<Value> memrefsInPar = collectMemRefs(parOp);
 
     for (auto memrefVal : memrefsInPar) {
-      SmallVector<Value> banks = createBanks(memrefVal, unrollFactor);
+      SmallVector<Value> banks = createBanks(memrefVal, bankingFactor);
       memoryToBanks[memrefVal] = banks;
     }
   });
@@ -352,8 +348,8 @@ void ParallelUnroll::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
 
-  patterns.add<BankAffineLoadPattern>(ctx, unrollFactor, memoryToBanks);
-  patterns.add<BankAffineStorePattern>(ctx, unrollFactor, memoryToBanks);
+  patterns.add<BankAffineLoadPattern>(ctx, bankingFactor, memoryToBanks);
+  patterns.add<BankAffineStorePattern>(ctx, bankingFactor, memoryToBanks);
   patterns.add<BankReturnPattern>(ctx, memoryToBanks);
 
   GreedyRewriteConfig config;
@@ -375,10 +371,11 @@ void ParallelUnroll::runOnOperation() {
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::affine::createParallelUnrollPass(
-    int unrollFactor,
-    const std::function<unsigned(AffineParallelOp)> &getUnrollFactor) {
-  return std::make_unique<ParallelUnroll>(
-      unrollFactor == -1 ? std::nullopt : std::optional<unsigned>(unrollFactor),
-      getUnrollFactor);
+mlir::affine::createParallelBankingPass(
+    int bankingFactor,
+    const std::function<unsigned(AffineParallelOp)> &getBankingFactor) {
+  return std::make_unique<ParallelBanking>(
+      bankingFactor == -1 ? std::nullopt
+                          : std::optional<unsigned>(bankingFactor),
+      getBankingFactor);
 }

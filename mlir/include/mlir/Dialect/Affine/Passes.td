@@ -381,12 +381,12 @@ def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
   ];
 }
 
-def AffineParallelUnroll : Pass<"affine-parallel-unroll", "func::FuncOp"> {
-  let summary = "Unroll affine parallel loops";
-  let constructor = "mlir::affine::createParallelUnrollPass()";
+def AffineParallelBanking : Pass<"affine-parallel-banking", "func::FuncOp"> {
+  let summary = "Partition the memories used in affine parallel loops into banks";
+  let constructor = "mlir::affine::createParallelBankingPass()";
   let options = [
-    Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"1",
-           "Use this unroll factor for all loops being unrolled">
+    Option<"bankingFactor", "banking-factor", "unsigned", /*default=*/"1",
+           "Use this banking factor for all memories being partitioned">
   ];
 }
 
