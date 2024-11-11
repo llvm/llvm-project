@@ -5831,10 +5831,15 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
 
-  assert((!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
-          EvaluatedGEP.OffsetOverflows == Builder.getFalse()) &&
-         "If the offset got constant-folded, we don't expect that there was an "
-         "overflow.");
+  if (!(!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
+        EvaluatedGEP.OffsetOverflows == Builder.getFalse())) {
+    DiagnosticsEngine &Diags = CGM.getDiags();
+    unsigned DiagID = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "Expression caused pointer calculation "
+                                  "overflow during code generation");
+    Diags.Report(Loc, DiagID);
+    return GEPVal;
+  }
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
