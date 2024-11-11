@@ -44,7 +44,7 @@
 #include "test_iterators.h"
 
 // We don't check number of operations in Debug mode because they are not stable enough due to additional validations.
-#ifdef _LIBCPP_HARDENING_MODE_DEBUG
+#if defined(_LIBCPP_HARDENING_MODE_DEBUG) && _LIBCPP_HARDENING_MODE_DEBUG
 #  define ASSERT_COMPLEXITY(expression) (void)(expression)
 #else
 #  define ASSERT_COMPLEXITY(expression) assert(expression)
