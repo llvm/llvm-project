@@ -5818,6 +5818,15 @@ them if they use them.
  }];
 }
 
+def RISCVNoRelaxDocs : Documentation {
+ let Category = DocCatFunction;
+ let Content = [{
+The ``riscv_norelax`` attribute can be applied to a function to disable the 
+relax optimization for that specific function.
+ }];
+}
+
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

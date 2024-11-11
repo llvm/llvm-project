@@ -1494,6 +1494,17 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
   return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
 
+void SemaRISCV::handleRISCVNoRelaxAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+
+  if (!isa<FunctionDecl>(D)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) RISCVNoRelaxAttr(S.Context, AL));
+}
+
 SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}
 
 } // namespace clang

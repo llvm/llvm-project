@@ -3220,6 +3220,14 @@ def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
  let Documentation = [RISCVVectorCCDocs];
 }
 
+def RISCVNoRelax: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "norelax">,
+                  C23<"riscv", "norelax">,
+                  Clang<"norelax">];
+ let Documentation = [RISCVNoRelaxDocs];
+}
+
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];

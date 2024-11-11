@@ -599,6 +599,11 @@ public:
     if (CGM.getCodeGenOpts().CFProtectionReturn)
       Fn->addFnAttr("hw-shadow-stack");
 
+    const auto *NoRelaxAttr = FD->getAttr<RISCVNoRelaxAttr>();
+
+    if (NoRelaxAttr)
+      Fn->addFnAttr("norelax");
+
     const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
     if (!Attr)
       return;

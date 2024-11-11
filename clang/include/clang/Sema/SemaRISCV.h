@@ -44,6 +44,7 @@ public:
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
   bool isAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
   bool isValidFMVExtension(StringRef Ext);
+  void handleRISCVNoRelaxAttr(Sema &S, Decl *D, const ParsedAttr &AL);
 
   /// Indicate RISC-V vector builtin functions enabled or not.
   bool DeclareRVVBuiltins = false;
