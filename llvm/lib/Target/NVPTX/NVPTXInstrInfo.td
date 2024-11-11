@@ -1922,7 +1922,7 @@ def imem : Operand<iPTR> {
   let PrintMethod = "printOperand";
 }
 
-def imemAny : Operand<iPTRAny> {
+def imemAny : Operand<pAny> {
   let PrintMethod = "printOperand";
 }
 
@@ -3535,6 +3535,15 @@ let hasSideEffects = false in {
   defm SHF_R_WRAP  : ShfInst<"r.wrap", fshr>;
 }
 
+def : Pat<(i32 (int_nvvm_fshl_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt))),
+          (SHF_L_CLAMP_r (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt))>;
+def : Pat<(i32 (int_nvvm_fshl_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt))),
+          (SHF_L_CLAMP_i (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt))>;
+def : Pat<(i32 (int_nvvm_fshr_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt))),
+          (SHF_R_CLAMP_r (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt))>;
+def : Pat<(i32 (int_nvvm_fshr_clamp (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt))),
+          (SHF_R_CLAMP_i (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt))>;
+
 // Count leading zeros
 let hasSideEffects = false in {
   def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
@@ -3850,6 +3859,44 @@ foreach a_type = ["s", "u"] in {
     }
   }
 }
+
+//
+// Stack Manipulation
+//
+
+def SDTStackRestore : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
+def stackrestore :
+  SDNode<"NVPTXISD::STACKRESTORE", SDTStackRestore,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def stacksave :
+  SDNode<"NVPTXISD::STACKSAVE", SDTIntLeaf,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def STACKRESTORE_32 :
+  NVPTXInst<(outs), (ins Int32Regs:$ptr),
+            "stackrestore.u32 \t$ptr;",
+            [(stackrestore (i32 Int32Regs:$ptr))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def STACKSAVE_32 :
+  NVPTXInst<(outs Int32Regs:$dst), (ins),
+            "stacksave.u32 \t$dst;",
+            [(set Int32Regs:$dst, (i32 stacksave))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def STACKRESTORE_64 :
+  NVPTXInst<(outs), (ins Int64Regs:$ptr),
+            "stackrestore.u64 \t$ptr;",
+            [(stackrestore (i64 Int64Regs:$ptr))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def STACKSAVE_64 :
+  NVPTXInst<(outs Int64Regs:$dst), (ins),
+            "stacksave.u64 \t$dst;",
+            [(set Int64Regs:$dst, (i64 stacksave))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
 
 include "NVPTXIntrinsics.td"
 

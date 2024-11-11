@@ -37,23 +37,21 @@ GenerateStub(LinkGraph &G, size_t PointerSize, Edge::Kind PointerEdgeKind) {
   auto AnonymousPtrCreator = getAnonymousPointerCreator(G.getTargetTriple());
   EXPECT_TRUE(AnonymousPtrCreator);
 
-  auto PointerSym = AnonymousPtrCreator(G, PointersSec, &FuncSymbol, 0);
-  EXPECT_FALSE(errorToBool(PointerSym.takeError()));
-  EXPECT_EQ(std::distance(PointerSym->getBlock().edges().begin(),
-                          PointerSym->getBlock().edges().end()),
+  auto &PointerSym = AnonymousPtrCreator(G, PointersSec, &FuncSymbol, 0);
+  EXPECT_EQ(std::distance(PointerSym.getBlock().edges().begin(),
+                          PointerSym.getBlock().edges().end()),
             1U);
-  auto &DeltaEdge = *PointerSym->getBlock().edges().begin();
+  auto &DeltaEdge = *PointerSym.getBlock().edges().begin();
   EXPECT_EQ(DeltaEdge.getKind(), PointerEdgeKind);
   EXPECT_EQ(&DeltaEdge.getTarget(), &FuncSymbol);
-  EXPECT_EQ(PointerSym->getBlock().getSize(), PointerSize);
-  EXPECT_TRUE(all_of(PointerSym->getBlock().getContent(),
+  EXPECT_EQ(PointerSym.getBlock().getSize(), PointerSize);
+  EXPECT_TRUE(all_of(PointerSym.getBlock().getContent(),
                      [](char x) { return x == 0; }));
 
   auto PtrJumpStubCreator = getPointerJumpStubCreator(G.getTargetTriple());
   EXPECT_TRUE(PtrJumpStubCreator);
-  auto StubSym = PtrJumpStubCreator(G, StubsSec, *PointerSym);
-  EXPECT_FALSE(errorToBool(StubSym.takeError()));
-  return {*PointerSym, *StubSym};
+  auto &StubSym = PtrJumpStubCreator(G, StubsSec, PointerSym);
+  return {PointerSym, StubSym};
 }
 
 TEST(StubsTest, StubsGeneration_x86_64) {

@@ -40,13 +40,17 @@
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
 // CHECK-NEXT:     lsfe                FEAT_LSFE                                              Enable Armv9.6-A base Atomic floating-point in-memory instructions
+// CHECK-NEXT:     lsui                FEAT_LSUI                                              Enable Armv9.6-A unprivileged load/store instructions
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions
 // CHECK-NEXT:     mops                FEAT_MOPS                                              Enable Armv8.8-A memcpy and memset acceleration instructions
 // CHECK-NEXT:     memtag              FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
 // CHECK-NEXT:     simd                FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
+// CHECK-NEXT:     occmo               FEAT_OCCMO                                             Enable Armv9.6-A Outer cacheable cache maintenance operations
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements
+// CHECK-NEXT:     pcdphint            FEAT_PCDPHINT                                          Enable Armv9.6-A Producer Consumer Data Placement hints
 // CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
+// CHECK-NEXT:     pops                FEAT_PoPS                                              Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions
 // CHECK-NEXT:     predres             FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     rng                 FEAT_RNG                                               Enable Random Number generation instructions
 // CHECK-NEXT:     ras                 FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions

@@ -195,6 +195,7 @@ private:
   bool parseDirectiveReq(StringRef Name, SMLoc L);
   bool parseDirectiveUnreq(SMLoc L);
   bool parseDirectiveCFINegateRAState();
+  bool parseDirectiveCFINegateRAStateWithPC();
   bool parseDirectiveCFIBKeyFrame();
   bool parseDirectiveCFIMTETaggedFrame();
 
@@ -287,6 +288,7 @@ private:
   ParseStatus tryParseGPR64x8(OperandVector &Operands);
   ParseStatus tryParseImmRange(OperandVector &Operands);
   template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
+  ParseStatus tryParsePHintInstOperand(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -362,6 +364,7 @@ private:
     k_FPImm,
     k_Barrier,
     k_PSBHint,
+    k_PHint,
     k_BTIHint,
   } Kind;
 
@@ -482,7 +485,11 @@ private:
     unsigned Length;
     unsigned Val;
   };
-
+  struct PHintOp {
+    const char *Data;
+    unsigned Length;
+    unsigned Val;
+  };
   struct BTIHintOp {
     const char *Data;
     unsigned Length;
@@ -512,6 +519,7 @@ private:
     struct SysCRImmOp SysCRImm;
     struct PrefetchOp Prefetch;
     struct PSBHintOp PSBHint;
+    struct PHintOp PHint;
     struct BTIHintOp BTIHint;
     struct ShiftExtendOp ShiftExtend;
     struct SVCROp SVCR;
@@ -576,6 +584,9 @@ public:
       break;
     case k_PSBHint:
       PSBHint = o.PSBHint;
+      break;
+    case k_PHint:
+      PHint = o.PHint;
       break;
     case k_BTIHint:
       BTIHint = o.BTIHint;
@@ -729,9 +740,19 @@ public:
     return PSBHint.Val;
   }
 
+  unsigned getPHint() const {
+    assert(Kind == k_PHint && "Invalid access!");
+    return PHint.Val;
+  }
+
   StringRef getPSBHintName() const {
     assert(Kind == k_PSBHint && "Invalid access!");
     return StringRef(PSBHint.Data, PSBHint.Length);
+  }
+
+  StringRef getPHintName() const {
+    assert(Kind == k_PHint && "Invalid access!");
+    return StringRef(PHint.Data, PHint.Length);
   }
 
   unsigned getBTIHint() const {
@@ -876,6 +897,7 @@ public:
     if (DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
         ELFRefKind == AArch64MCExpr::VK_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_GOT_LO12 ||
+        ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
@@ -987,19 +1009,20 @@ public:
     int64_t Addend;
     if (AArch64AsmParser::classifySymbolRef(Expr, ELFRefKind,
                                           DarwinRefKind, Addend)) {
-      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF
-          || DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF
-          || (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0)
-          || ELFRefKind == AArch64MCExpr::VK_LO12
-          || ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12
-          || ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12
-          || ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC
-          || ELFRefKind == AArch64MCExpr::VK_TPREL_HI12
-          || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12
-          || ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC
-          || ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12
-          || ELFRefKind == AArch64MCExpr::VK_SECREL_HI12
-          || ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
+      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
+             DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF ||
+             (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0) ||
+             ELFRefKind == AArch64MCExpr::VK_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
+             ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
 
     // If it's a constant, it should be a real immediate in range.
@@ -1265,6 +1288,7 @@ public:
     case AArch64::ZPR_4bRegClassID:
     case AArch64::ZPRMul2_LoRegClassID:
     case AArch64::ZPRMul2_HiRegClassID:
+    case AArch64::ZPR_KRegClassID:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
@@ -1487,6 +1511,7 @@ public:
   bool isSysCR() const { return Kind == k_SysCR; }
   bool isPrefetch() const { return Kind == k_Prefetch; }
   bool isPSBHint() const { return Kind == k_PSBHint; }
+  bool isPHint() const { return Kind == k_PHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
@@ -2160,6 +2185,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getPSBHint()));
   }
 
+  void addPHintOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getPHint()));
+  }
+
   void addBTIHintOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getBTIHint()));
@@ -2457,6 +2487,17 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<AArch64Operand>
+  CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_PHint, Ctx);
+    Op->PHint.Val = Val;
+    Op->PHint.Data = Str.data();
+    Op->PHint.Length = Str.size();
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
                                                      SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_SysCR, Ctx);
@@ -2608,6 +2649,9 @@ void AArch64Operand::print(raw_ostream &OS) const {
   }
   case k_PSBHint:
     OS << getPSBHintName();
+    break;
+  case k_PHint:
+    OS << getPHintName();
     break;
   case k_BTIHint:
     OS << getBTIHintName();
@@ -3267,6 +3311,7 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
                DarwinRefKind != MCSymbolRefExpr::VK_TLVPPAGE &&
                ELFRefKind != AArch64MCExpr::VK_ABS_PAGE_NC &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE &&
+               ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
                ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE) {
@@ -3753,6 +3798,7 @@ static const struct Extension {
     {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
+    {"pops", {AArch64::FeaturePoPS}},
     {"cmpbr", {AArch64::FeatureCMPBR}},
     {"f8f32mm", {AArch64::FeatureF8F32MM}},
     {"f8f16mm", {AArch64::FeatureF8F16MM}},
@@ -3764,6 +3810,9 @@ static const struct Extension {
     {"sve-aes2", {AArch64::FeatureSVEAES2}},
     {"sve-bfscale", {AArch64::FeatureSVEBFSCALE}},
     {"sve-f16f32mm", {AArch64::FeatureSVE_F16F32MM}},
+    {"lsui", {AArch64::FeatureLSUI}},
+    {"occmo", {AArch64::FeatureOCCMO}},
+    {"pcdphint", {AArch64::FeaturePCDPHINT}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4140,6 +4189,23 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+ParseStatus
+AArch64AsmParser::tryParsePHintInstOperand(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("invalid operand for instruction");
+
+  auto PH = AArch64PHint::lookupPHintByName(Tok.getString());
+  if (!PH)
+    return TokError("invalid operand for instruction");
+
+  Operands.push_back(AArch64Operand::CreatePHintInst(
+      PH->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
+  return ParseStatus::Success;
+}
+
 /// tryParseNeonVectorRegister - Parse a vector register operand.
 bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
   if (getTok().isNot(AsmToken::Identifier))
@@ -4365,6 +4431,8 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("got", AArch64MCExpr::VK_GOT_PAGE)
                   .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
                   .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
+                  .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
+                  .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
                   .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
                   .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
                   .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
@@ -5738,6 +5806,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
 
         // Only allow these with ADDXri/ADDWri
         if ((ELFRefKind == AArch64MCExpr::VK_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
@@ -6135,6 +6204,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPRMul2_Hi64:
     return Error(Loc, "Invalid restricted vector register, expected even "
                       "register in z16.d..z30.d");
+  case Match_InvalidZPR_K0:
+    return Error(Loc, "invalid restricted vector register, expected register "
+                      "in z20..z23 or z28..z31");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -6196,6 +6268,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidMatrixTileVectorV128:
     return Error(Loc,
                  "invalid matrix operand, expected za[0-15]h.q or za[0-15]v.q");
+  case Match_InvalidMatrixTile16:
+    return Error(Loc, "invalid matrix operand, expected za[0-1].h");
   case Match_InvalidMatrixTile32:
     return Error(Loc, "invalid matrix operand, expected za[0-3].s");
   case Match_InvalidMatrixTile64:
@@ -6816,6 +6890,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEExactFPImmOperandHalfOne:
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
   case Match_InvalidSVEExactFPImmOperandZeroOne:
+  case Match_InvalidMatrixTile16:
   case Match_InvalidMatrixTile32:
   case Match_InvalidMatrixTile64:
   case Match_InvalidMatrix:
@@ -6845,6 +6920,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPRMul2_Hi32:
   case Match_InvalidZPRMul2_Lo64:
   case Match_InvalidZPRMul2_Hi64:
+  case Match_InvalidZPR_K0:
   case Match_InvalidSVEVectorList2x8Mul2:
   case Match_InvalidSVEVectorList2x16Mul2:
   case Match_InvalidSVEVectorList2x32Mul2:
@@ -6909,6 +6985,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveInst(Loc);
   else if (IDVal == ".cfi_negate_ra_state")
     parseDirectiveCFINegateRAState();
+  else if (IDVal == ".cfi_negate_ra_state_with_pc")
+    parseDirectiveCFINegateRAStateWithPC();
   else if (IDVal == ".cfi_b_key_frame")
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".cfi_mte_tagged_frame")
@@ -7356,6 +7434,13 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAState() {
   if (parseEOL())
     return true;
   getStreamer().emitCFINegateRAState();
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveCFINegateRAStateWithPC() {
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFINegateRAStateWithPC();
   return false;
 }
 

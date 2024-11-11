@@ -583,7 +583,6 @@ public:
         lldb::addr_t pc = m_address.GetFileAddress();
         m_using_file_addr = true;
 
-        const bool data_from_file = disasm->m_data_from_file;
         bool use_hex_immediates = true;
         Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
 
@@ -593,12 +592,10 @@ public:
             use_hex_immediates = target->GetUseHexImmediates();
             hex_style = target->GetHexImmediateStyle();
 
-            if (!data_from_file) {
-              const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
-              if (load_addr != LLDB_INVALID_ADDRESS) {
-                pc = load_addr;
-                m_using_file_addr = false;
-              }
+            const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
+            if (load_addr != LLDB_INVALID_ADDRESS) {
+              pc = load_addr;
+              m_using_file_addr = false;
             }
           }
         }
