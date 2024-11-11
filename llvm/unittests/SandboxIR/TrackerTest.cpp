@@ -963,7 +963,6 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getNumCases(), 2u);
   EXPECT_EQ(Switch->findCaseDest(BB0), Zero);
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
-
 }
 
 TEST_F(TrackerTest, SwitchInstPreservesSuccesorOrder) {
