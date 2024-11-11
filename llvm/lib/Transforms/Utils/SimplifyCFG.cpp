@@ -7437,31 +7437,34 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
   return true;
 }
 
-/// Checking whether two CaseHandle.getCaseSuccessor() are equal depends on
-/// the BasicBlock and the incoming values of their successor PHINodes.
+/// Checking whether two cases of SI are equal depends on the contents of the
+/// BasicBlock and the incoming values of their successor PHINodes.
 /// PHINode::getIncomingValueForBlock is O(|Preds|), so we'd like to avoid
 /// calling this function on each BasicBlock every time isEqual is called,
 /// especially since the same BasicBlock may be passed as an argument multiple
 /// times. To do this, we can precompute a map of PHINode -> Pred BasicBlock ->
 /// IncomingValue and add it in the Wrapper so isEqual can do O(1) checking
 /// of the incoming values.
-struct CaseHandleWrapper {
-  const SwitchInst::CaseHandle Case;
+struct SwitchSuccWrapper {
+  // Keep so we can use SwitchInst::setSuccessor to do the replacement. It won't
+  // be important to equality though.
+  unsigned SuccNum;
+  BasicBlock *Dest;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> *PhiPredIVs;
 };
 
 namespace llvm {
-template <> struct DenseMapInfo<const CaseHandleWrapper *> {
-  static const CaseHandleWrapper *getEmptyKey() {
-    return static_cast<CaseHandleWrapper *>(
+template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
+  static const SwitchSuccWrapper *getEmptyKey() {
+    return static_cast<SwitchSuccWrapper *>(
         DenseMapInfo<void *>::getEmptyKey());
   }
-  static const CaseHandleWrapper *getTombstoneKey() {
-    return static_cast<CaseHandleWrapper *>(
+  static const SwitchSuccWrapper *getTombstoneKey() {
+    return static_cast<SwitchSuccWrapper *>(
         DenseMapInfo<void *>::getTombstoneKey());
   }
-  static unsigned getHashValue(const CaseHandleWrapper *CHW) {
-    BasicBlock *Succ = CHW->Case.getCaseSuccessor();
+  static unsigned getHashValue(const SwitchSuccWrapper *SSW) {
+    BasicBlock *Succ = SSW->Dest;
     BranchInst *BI = cast<BranchInst>(Succ->getTerminator());
     assert(BI->isUnconditional() &&
            "Only supporting unconditional branches for now");
@@ -7475,26 +7478,26 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     // this had poor performance. We find that the extra computation of getting
     // the incoming PHI values here leads to better performance on overall Set
     // performance. We also tried to build a map from BB -> Succs.IncomingValues
-    // ahead of time and passing it in CaseHandleWrapper, but this slowed down
+    // ahead of time and passing it in SwitchSuccWrapper, but this slowed down
     // the average compile time without having any impact on the worst case
     // compile time.
     BasicBlock *BB = BI->getSuccessor(0);
     SmallVector<Value *> PhiValsForBB;
     for (PHINode &Phi : BB->phis())
-      PhiValsForBB.emplace_back((*CHW->PhiPredIVs)[&Phi][BB]);
+      PhiValsForBB.emplace_back((*SSW->PhiPredIVs)[&Phi][BB]);
 
     return hash_combine(
         BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
   }
-  static bool isEqual(const CaseHandleWrapper *LHS,
-                      const CaseHandleWrapper *RHS) {
-    auto EKey = DenseMapInfo<CaseHandleWrapper *>::getEmptyKey();
-    auto TKey = DenseMapInfo<CaseHandleWrapper *>::getTombstoneKey();
+  static bool isEqual(const SwitchSuccWrapper *LHS,
+                      const SwitchSuccWrapper *RHS) {
+    auto EKey = DenseMapInfo<SwitchSuccWrapper *>::getEmptyKey();
+    auto TKey = DenseMapInfo<SwitchSuccWrapper *>::getTombstoneKey();
     if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
       return LHS == RHS;
 
-    BasicBlock *A = LHS->Case.getCaseSuccessor();
-    BasicBlock *B = RHS->Case.getCaseSuccessor();
+    BasicBlock *A = LHS->Dest;
+    BasicBlock *B = RHS->Dest;
 
     // FIXME: we checked that the size of A and B are both 1 in
     // simplifyDuplicateSwitchArms to make the Case list smaller to
@@ -7535,10 +7538,11 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
-  SmallVector<CaseHandleWrapper> Cases;
+  SmallVector<SwitchSuccWrapper> Cases;
   Cases.reserve(SI->getNumCases());
-  for (auto &Case : SI->cases()) {
-    BasicBlock *BB = Case.getCaseSuccessor();
+
+  for (unsigned I = 0; I < SI->getNumSuccessors(); ++I) {
+    BasicBlock *BB = SI->getSuccessor(I);
 
     // FIXME: Support more than just a single BranchInst. One way we could do
     // this is by taking a hashing approach of all insts in BB.
@@ -7567,11 +7571,11 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
         for (PHINode &Phi : Succ->phis())
           Phis.insert(&Phi);
     }
-    Cases.emplace_back(CaseHandleWrapper{Case, &PhiPredIVs});
+    Cases.emplace_back(SwitchSuccWrapper{I, BB, &PhiPredIVs});
   }
 
   // Precompute a data structure to improve performance of isEqual for
-  // CaseHandleWrapper.
+  // SwitchSuccWrapper.
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
     PhiPredIVs[Phi] =
@@ -7580,36 +7584,36 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
-  // Build a set such that if the CaseHandleWrapper exists in the set and
-  // another CaseHandleWrapper isEqual, then the equivalent CaseHandleWrapper
+  // Build a set such that if the SwitchSuccWrapper exists in the set and
+  // another SwitchSuccWrapper isEqual, then the equivalent SwitchSuccWrapper
   // which is not in the set should be replaced with the one in the set. If the
-  // CaseHandleWrapper is not in the set, then it should be added to the set so
-  // other CaseHandleWrappers can check against it in the same manner. We chose
-  // to use CaseHandleWrapper instead of BasicBlock since we'd need an extra
-  // nested loop since there is no O(1) lookup of BasicBlock -> Cases in
-  // SwichInst.
-  DenseSet<const CaseHandleWrapper *, DenseMapInfo<const CaseHandleWrapper *>>
+  // SwitchSuccWrapper is not in the set, then it should be added to the set so
+  // other SwitchSuccWrappers can check against it in the same manner. We use
+  // SwitchSuccWrapper instead of just BasicBlock because we'd like to pass
+  // around information to isEquality, getHashValue, and when doing the
+  // replacement with better performance.
+  DenseSet<const SwitchSuccWrapper *, DenseMapInfo<const SwitchSuccWrapper *>>
       ReplaceWith;
   ReplaceWith.reserve(Cases.size());
 
-  bool MadeChange = false;
   SmallVector<DominatorTree::UpdateType> Updates;
   Updates.reserve(ReplaceWith.size());
-  for (auto &CHW : Cases) {
-    // CHW is a candidate for simplification. If we find a duplicate BB,
+  bool MadeChange = false;
+  for (auto &SSW : Cases) {
+    // SSW is a candidate for simplification. If we find a duplicate BB,
     // replace it.
-    const auto [It, Inserted] = ReplaceWith.insert(&CHW);
+    const auto [It, Inserted] = ReplaceWith.insert(&SSW);
     if (!Inserted) {
       // We know that SI's parent BB no longer dominates the old case successor
       // since we are making it dead.
-      Updates.push_back({DominatorTree::Delete, SI->getParent(),
-                         CHW.Case.getCaseSuccessor()});
-      CHW.Case.setSuccessor((*It)->Case.getCaseSuccessor());
+      Updates.push_back({DominatorTree::Delete, SI->getParent(), SSW.Dest});
+      SI->setSuccessor(SSW.SuccNum, (*It)->Dest);
       MadeChange = true;
     } else {
-      ReplaceWith.insert(&CHW);
+      ReplaceWith.insert(&SSW);
     }
   }
+
   if (DTU)
     DTU->applyUpdates(Updates);
 
