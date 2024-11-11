@@ -1607,6 +1607,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
         int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
         assert(FrameIdx < 0);
         CS.setFrameIdx(FrameIdx);
+        if (RISCVRegisterInfo::isRVVRegClass(RC))
+          MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
         continue;
       }
     }
@@ -1623,6 +1625,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     if ((unsigned)FrameIdx > MaxCSFrameIndex)
       MaxCSFrameIndex = FrameIdx;
     CS.setFrameIdx(FrameIdx);
+    if (RISCVRegisterInfo::isRVVRegClass(RC))
+      MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
   }
 
   // Allocate a fixed object that covers the full push or libcall size.
