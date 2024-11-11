@@ -9,12 +9,15 @@
 #include "src/stdio/fflush.h"
 #include "file.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 #include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
+
+  LIBC_CRASH_ON_NULLPTR(stream);
   int ret;
   rpc::Client::Port port = rpc::client.open<LIBC_FFLUSH>();
   port.send_and_recv(
