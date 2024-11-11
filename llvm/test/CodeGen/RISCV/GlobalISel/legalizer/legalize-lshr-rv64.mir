@@ -8,14 +8,15 @@ body:             |
     ; CHECK-LABEL: name: lshr_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[AND]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[ANYEXT]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[ANYEXT]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC1]], [[TRUNC]](s32)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT1]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -34,14 +35,15 @@ body:             |
     ; CHECK-LABEL: name: lshr_i15
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32767
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[AND]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[ANYEXT]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[ANYEXT]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC1]], [[TRUNC]](s32)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT1]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -60,14 +62,15 @@ body:             |
     ; CHECK-LABEL: name: lshr_i16
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[AND]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[ANYEXT]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[ANYEXT]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC1]], [[TRUNC]](s32)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT1]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
