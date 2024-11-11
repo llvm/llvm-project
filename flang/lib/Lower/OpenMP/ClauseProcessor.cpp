@@ -122,28 +122,28 @@ genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
 
 static mlir::omp::ClauseTaskDependAttr
 genDependKindAttr(lower::AbstractConverter &converter,
-                  const omp::clause::Depend::TaskDependenceType kind) {
+                  const omp::clause::DependenceType kind) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
 
   mlir::omp::ClauseTaskDepend pbKind;
   switch (kind) {
-  case omp::clause::Depend::TaskDependenceType::In:
+  case omp::clause::DependenceType::In:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependin;
     break;
-  case omp::clause::Depend::TaskDependenceType::Out:
+  case omp::clause::DependenceType::Out:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependout;
     break;
-  case omp::clause::Depend::TaskDependenceType::Inout:
+  case omp::clause::DependenceType::Inout:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
-  case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
-  case omp::clause::Depend::TaskDependenceType::Inoutset:
+  case omp::clause::DependenceType::Mutexinoutset:
+  case omp::clause::DependenceType::Inoutset:
     TODO(currentLocation, "INOUTSET and MUTEXINOUTSET are not supported yet");
     break;
-  case omp::clause::Depend::TaskDependenceType::Depobj:
-  case omp::clause::Depend::TaskDependenceType::Sink:
-  case omp::clause::Depend::TaskDependenceType::Source:
+  case omp::clause::DependenceType::Depobj:
+  case omp::clause::DependenceType::Sink:
+  case omp::clause::DependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
     break;
   }
@@ -803,20 +803,20 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
     using Depend = omp::clause::Depend;
-    if (!std::holds_alternative<Depend::DepType>(clause.u)) {
+    if (!std::holds_alternative<Depend::TaskDep>(clause.u)) {
       TODO(converter.getCurrentLocation(),
            "DEPEND clause with SINK or SOURCE is not supported yet");
     }
-    auto &depType = std::get<Depend::DepType>(clause.u);
-    auto kind = std::get<Depend::TaskDependenceType>(depType.t);
-    auto &objects = std::get<omp::ObjectList>(depType.t);
+    auto &taskDep = std::get<Depend::TaskDep>(clause.u);
+    auto depType = std::get<clause::DependenceType>(taskDep.t);
+    auto &objects = std::get<omp::ObjectList>(taskDep.t);
 
-    if (std::get<std::optional<omp::clause::Iterator>>(depType.t)) {
+    if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
       TODO(converter.getCurrentLocation(),
            "Support for iterator modifiers is not implemented yet");
     }
     mlir::omp::ClauseTaskDependAttr dependTypeOperand =
-        genDependKindAttr(converter, kind);
+        genDependKindAttr(converter, depType);
     result.dependKinds.append(objects.size(), dependTypeOperand);
 
     for (const omp::Object &object : objects) {

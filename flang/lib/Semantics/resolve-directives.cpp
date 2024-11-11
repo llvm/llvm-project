@@ -553,7 +553,7 @@ public:
     return false;
   }
 
-  void Post(const parser::OmpDependSinkVec &x) {
+  void Post(const parser::OmpIteration &x) {
     const auto &name{std::get<parser::Name>(x.t)};
     ResolveName(&name);
   }
