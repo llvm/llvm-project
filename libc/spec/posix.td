@@ -100,6 +100,9 @@ def StructStatvfs : NamedType<"struct statvfs">;
 def StructStatvfsPtr : PtrType<StructStatvfs>;
 def RestrictedStructStatvfsPtr : RestrictedPtrType<StructStatvfs>;
 
+// The function pointer type for the predicate for lsearch, lfin
+def LSearchCompareT : NamedType<"__lsearchcompare_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -1574,7 +1577,6 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
-  NamedType LSearchCompareT = NamedType<"__lsearchcompare_t">;
   HeaderSpec Search = HeaderSpec<
     "search.h",
     [], // Macros
