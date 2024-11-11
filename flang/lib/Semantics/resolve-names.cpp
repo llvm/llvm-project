@@ -1616,14 +1616,18 @@ void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
 bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   AddOmpSourceRange(x.source);
   BeginDeclTypeSpec();
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
   const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  Symbol *mapperSym{nullptr};
   if (const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
-    Symbol *mapperSym{&MakeSymbol(*mapperName, Attrs{})};
+    mapperSym =
+        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
     mapperName->symbol = mapperSym;
-  } else if (0) {
-    Symbol *mapperSym{&MakeSymbol("default", Attrs{})};
+  } else {
+    mapperSym = &MakeSymbol(
+        "default", Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
   }
+
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
   const auto &varName{std::get<parser::ObjectName>(spec.t)};
   DeclareObjectEntity(varName);
