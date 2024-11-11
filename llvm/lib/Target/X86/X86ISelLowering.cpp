@@ -14907,6 +14907,7 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
     SmallVector<int, 16> InLaneMask(NumElts, SM_SentinelUndef);
     // CrossLaneMask but one entry == one sublane.
     SmallVector<int, 16> CrossLaneMaskLarge(NumSublanes, SM_SentinelUndef);
+    APInt DemandedCrossLane = APInt::getZero(NumElts);
 
     for (int i = 0; i != NumElts; ++i) {
       int M = Mask[i];
@@ -14929,6 +14930,7 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
         CrossLaneMaskLarge[DstSublane] = SrcSublane;
         int DstSublaneOffset = DstSublane * NumEltsPerSublane;
         InLaneMask[i] = DstSublaneOffset + M % NumEltsPerSublane;
+        DemandedCrossLane.setBit(InLaneMask[i]);
         break;
       }
       if (!Found)
@@ -14962,6 +14964,12 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
     //                             undef:v16i16
     if (CrossLaneMask == Mask || InLaneMask == Mask)
       return SDValue();
+
+    // Simplify CrossLaneMask based on the actual demanded elements.
+    if (V1.hasOneUse())
+      for (int i = 0; i != NumElts; ++i)
+        if (!DemandedCrossLane[i])
+          CrossLaneMask[i] = SM_SentinelUndef;
 
     SDValue CrossLane = DAG.getVectorShuffle(VT, DL, V1, V2, CrossLaneMask);
     return DAG.getVectorShuffle(VT, DL, CrossLane, DAG.getUNDEF(VT),
