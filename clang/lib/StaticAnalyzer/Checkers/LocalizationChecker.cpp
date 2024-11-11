@@ -131,9 +131,7 @@ public:
 
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
-      UIMethods.insert({&Ctx.Idents.get(#receiver),                            \
-                        llvm::DenseMap<Selector, uint8_t>()})                  \
-          .first->second;
+      UIMethods[&Ctx.Idents.get(#receiver)];
 #define ADD_NULLARY_METHOD(receiver, method, argument)                         \
   receiver##M.insert(                                                          \
       {Ctx.Selectors.getNullarySelector(&Ctx.Idents.get(#method)), argument});

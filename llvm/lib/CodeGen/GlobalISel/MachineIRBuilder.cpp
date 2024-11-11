@@ -772,13 +772,13 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   LLT Src1Ty = Src1.getLLTTy(*getMRI());
   LLT Src2Ty = Src2.getLLTTy(*getMRI());
-  assert((size_t)(Src1Ty.getNumElements() + Src2Ty.getNumElements()) >=
-         Mask.size());
-  assert(DstTy.getElementType() == Src1Ty.getElementType() &&
-         DstTy.getElementType() == Src2Ty.getElementType());
-  (void)DstTy;
-  (void)Src1Ty;
-  (void)Src2Ty;
+  const LLT DstElemTy = DstTy.isVector() ? DstTy.getElementType() : DstTy;
+  const LLT ElemTy1 = Src1Ty.isVector() ? Src1Ty.getElementType() : Src1Ty;
+  const LLT ElemTy2 = Src2Ty.isVector() ? Src2Ty.getElementType() : Src2Ty;
+  assert(DstElemTy == ElemTy1 && DstElemTy == ElemTy2);
+  (void)DstElemTy;
+  (void)ElemTy1;
+  (void)ElemTy2;
   ArrayRef<int> MaskAlloc = getMF().allocateShuffleMask(Mask);
   return buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {Res}, {Src1, Src2})
       .addShuffleMask(MaskAlloc);
@@ -898,8 +898,9 @@ MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
 MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
-                                                const SrcOp &Op1) {
-  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1});
+                                                const SrcOp &Op1,
+                                                std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,

@@ -280,6 +280,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp10m1f
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: exp10m1f16
     standards:
       - stdc
@@ -2404,6 +2410,13 @@ functions:
     arguments:
       - type: float
   - name: tanhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanpif16
     standards:
       - stdc
     return_type: _Float16

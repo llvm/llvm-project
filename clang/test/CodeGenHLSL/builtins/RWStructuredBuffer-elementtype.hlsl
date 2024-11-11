@@ -54,17 +54,3 @@ void main(int GI : SV_GroupIndex) {
   BufF16x2[GI] = 0;
   BufF32x3[GI] = 0;
 }
-
-// CHECK: !{{[0-9]+}} = !{ptr @BufI16, i32 10, i32 2,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU16, i32 10, i32 3,
-// CHECK: !{{[0-9]+}} = !{ptr @BufI32, i32 10, i32 4,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU32, i32 10, i32 5,
-// CHECK: !{{[0-9]+}} = !{ptr @BufI64, i32 10, i32 6,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU64, i32 10, i32 7,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF16, i32 10, i32 8,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF32, i32 10, i32 9,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF64, i32 10, i32 10,
-// CHECK: !{{[0-9]+}} = !{ptr @BufI16x4, i32 10, i32 2,
-// CHECK: !{{[0-9]+}} = !{ptr @BufU32x3, i32 10, i32 5,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF16x2, i32 10, i32 8,
-// CHECK: !{{[0-9]+}} = !{ptr @BufF32x3, i32 10, i32 9,

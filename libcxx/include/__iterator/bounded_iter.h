@@ -47,8 +47,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //    pointer, it is undefined at the language level (see [expr.add]). If
 //    bounded iterators exhibited this undefined behavior, we risk compiler
 //    optimizations deleting non-redundant bounds checks.
-template <class _Iterator, class = __enable_if_t< __libcpp_is_contiguous_iterator<_Iterator>::value > >
+template <class _Iterator>
 struct __bounded_iter {
+  static_assert(__libcpp_is_contiguous_iterator<_Iterator>::value,
+                "Only contiguous iterators can be adapted by __bounded_iter.");
+
   using value_type        = typename iterator_traits<_Iterator>::value_type;
   using difference_type   = typename iterator_traits<_Iterator>::difference_type;
   using pointer           = typename iterator_traits<_Iterator>::pointer;
@@ -60,8 +63,8 @@ struct __bounded_iter {
 
   // Create a singular iterator.
   //
-  // Such an iterator points past the end of an empty span, so it is not dereferenceable.
-  // Observing operations like comparison and assignment are valid.
+  // Such an iterator points past the end of an empty range, so it is not dereferenceable.
+  // Operations like comparison and assignment are valid.
   _LIBCPP_HIDE_FROM_ABI __bounded_iter() = default;
 
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter const&) = default;
@@ -247,7 +250,7 @@ public:
 private:
   template <class>
   friend struct pointer_traits;
-  template <class, class>
+  template <class>
   friend struct __bounded_iter;
   _Iterator __current_;       // current iterator
   _Iterator __begin_, __end_; // valid range represented as [begin, end]

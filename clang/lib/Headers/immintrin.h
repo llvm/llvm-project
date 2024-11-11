@@ -648,6 +648,27 @@ _storebe_i64(void * __P, long long __D) {
 #include <amxcomplexintrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_FP8__)
+#include <amxfp8intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_TRANSPOSE__)
+#include <amxtransposeintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_AVX512__)
+#include <amxavx512intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_TF32__)
+#include <amxtf32intrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AMX_TF32__) && defined(__AMX_TRANSPOSE__))
+#include <amxtf32transposeintrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) ||                             \
     defined(__AVX512VP2INTERSECT__)
 #include <avx512vp2intersectintrin.h>

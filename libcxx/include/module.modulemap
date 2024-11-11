@@ -13,7 +13,10 @@ module std_config [system] {
 module std_core [system] {
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
-    module max_align_t  { header "__cstddef/max_align_t.h" }
+    module max_align_t  {
+      header "__cstddef/max_align_t.h"
+      export *
+    }
     module nullptr_t    { header "__cstddef/nullptr_t.h" }
     module ptrdiff_t    { header "__cstddef/ptrdiff_t.h" }
     module size_t       { header "__cstddef/size_t.h" }
@@ -60,12 +63,10 @@ module std_core [system] {
   }
 
   module type_traits {
-    module add_const                                  { header "__type_traits/add_const.h" }
-    module add_cv                                     { header "__type_traits/add_cv.h" }
+    module add_cv_quals                               { header "__type_traits/add_cv_quals.h" }
     module add_lvalue_reference                       { header "__type_traits/add_lvalue_reference.h" }
     module add_pointer                                { header "__type_traits/add_pointer.h" }
     module add_rvalue_reference                       { header "__type_traits/add_rvalue_reference.h" }
-    module add_volatile                               { header "__type_traits/add_volatile.h" }
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
@@ -1408,7 +1409,10 @@ module std [system] {
     module indirectly_comparable      { header "__iterator/indirectly_comparable.h" }
     module insert_iterator            { header "__iterator/insert_iterator.h" }
     module istream_iterator           { header "__iterator/istream_iterator.h" }
-    module istreambuf_iterator        { header "__iterator/istreambuf_iterator.h" }
+    module istreambuf_iterator        {
+      header "__iterator/istreambuf_iterator.h"
+      export std.string.char_traits
+    }
     module iter_move                  { header "__iterator/iter_move.h" }
     module iter_swap                  { header "__iterator/iter_swap.h" }
     module iterator_traits {
@@ -1436,6 +1440,7 @@ module std [system] {
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
     module sortable                   { header "__iterator/sortable.h" }
+    module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
 
