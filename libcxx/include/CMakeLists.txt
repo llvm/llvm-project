@@ -738,12 +738,10 @@ set(files
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
-  __type_traits/add_const.h
-  __type_traits/add_cv.h
+  __type_traits/add_cv_quals.h
   __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
   __type_traits/add_rvalue_reference.h
-  __type_traits/add_volatile.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
@@ -1059,7 +1057,7 @@ endforeach()
 # "include" for dependency tracking.
 add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
-  DEPENDS ${_all_includes}
+  DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
 list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")

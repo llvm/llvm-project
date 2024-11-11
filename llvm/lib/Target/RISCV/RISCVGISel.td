@@ -246,13 +246,6 @@ let Predicates = [HasStdExtZmmul, IsRV64] in {
 def : PatGprGpr<mul, MULW, i32, i32>;
 }
 
-let Predicates = [HasStdExtM, IsRV64] in {
-def : PatGprGpr<sdiv, DIVW, i32, i32>;
-def : PatGprGpr<udiv, DIVUW, i32, i32>;
-def : PatGprGpr<srem, REMW, i32, i32>;
-def : PatGprGpr<urem, REMUW, i32, i32>;
-}
-
 //===----------------------------------------------------------------------===//
 // Zb* RV64 i32 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
@@ -271,7 +264,7 @@ def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
+def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
 
 def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),

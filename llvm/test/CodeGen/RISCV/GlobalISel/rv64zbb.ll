@@ -6,6 +6,7 @@
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 
+; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctlz_i32:
 ; RV64I:       # %bb.0:
@@ -126,6 +127,7 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
   ret i32 %2
 }
 
+; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: log2_ceil_i32:
 ; RV64I:       # %bb.0:
@@ -264,20 +266,21 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
   ret i32 %4
 }
 
+; FIXME: We don't need the shift pair before the beqz for RV64I.
 define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-LABEL: ctlz_lshr_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a0, a0, 1
-; RV64I-NEXT:    slli a1, a0, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    beqz a1, .LBB4_2
+; RV64I-NEXT:    srliw a1, a0, 1
+; RV64I-NEXT:    slli a2, a1, 32
+; RV64I-NEXT:    srli a2, a2, 32
+; RV64I-NEXT:    beqz a2, .LBB4_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    srliw a1, a0, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    srliw a0, a0, 2
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    srliw a1, a0, 2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srliw a1, a0, 4
@@ -995,6 +998,8 @@ define i64 @max_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
+; FIXME: We don't need the shift pairs. The inputs are sign extended, we can
+; compare them directly.
 define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: minu_i32:
 ; RV64I:       # %bb.0:
@@ -1041,6 +1046,8 @@ define i64 @minu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
+; FIXME: We don't need the shift pairs. The inputs are sign extended, we can
+; compare them directly.
 define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: maxu_i32:
 ; RV64I:       # %bb.0:

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ADD_VOLATILE_H
-#define _LIBCPP___TYPE_TRAITS_ADD_VOLATILE_H
+#ifndef _LIBCPP___TYPE_TRAITS_ADD_CV_H
+#define _LIBCPP___TYPE_TRAITS_ADD_CV_H
 
 #include <__config>
 
@@ -16,6 +16,26 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS add_const {
+  typedef _LIBCPP_NODEBUG const _Tp type;
+};
+
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp>
+using add_const_t = typename add_const<_Tp>::type;
+#endif
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS add_cv {
+  typedef _LIBCPP_NODEBUG const volatile _Tp type;
+};
+
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp>
+using add_cv_t = typename add_cv<_Tp>::type;
+#endif
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS add_volatile {
@@ -29,4 +49,4 @@ using add_volatile_t = typename add_volatile<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ADD_VOLATILE_H
+#endif // _LIBCPP___TYPE_TRAITS_ADD_CV_H
