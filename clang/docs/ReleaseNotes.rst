@@ -449,9 +449,6 @@ Attribute Changes in Clang
 - Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
   ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
 
-- Clang now supports ``[[clang::lifetime_capture_by(X)]]``. Similar to lifetimebound, this can be
-  used to specify when a reference to a function parameter is captured by another capturing entity ``X``.
-
 Improvements to Clang's diagnostics
 -----------------------------------
 
