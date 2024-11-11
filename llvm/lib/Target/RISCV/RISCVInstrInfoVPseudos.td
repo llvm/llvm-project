@@ -1983,6 +1983,7 @@ multiclass VPseudoVPOP_M {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMPopV", "ReadVMPopV", "ReadVMPopV", mx>;
     }
   }
@@ -1995,6 +1996,7 @@ multiclass VPseudoV1ST_M {
       def "_M_" #mti.BX : VPseudoUnaryNoMaskGPROut,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
+          RISCVMaskedPseudo<MaskIdx=1>,
           SchedBinary<"WriteVMFFSV", "ReadVMFFSV", "ReadVMFFSV", mx>;
     }
   }
@@ -4359,21 +4361,22 @@ class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   ValueType result_type,
                                   ValueType op1_type,
                                   ValueType op2_type,
-                                  int sew,
+                                  int log2sew,
                                   LMULInfo vlmul,
                                   VReg result_reg_class,
                                   RegisterClass op1_reg_class,
-                                  DAGOperand op2_kind> :
+                                  DAGOperand op2_kind,
+                                  bit isSEWAware = false> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic)
                     (result_type result_reg_class:$rs3),
                     (op1_type op1_reg_class:$rs1),
                     (op2_type op2_kind:$rs2),
                     VLOpFrag, (XLenVT timm:$policy))),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#!if(isSEWAware, "_E"#!shl(1, log2sew), ""))
                     result_reg_class:$rs3,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
-                    GPR:$vl, sew, (XLenVT timm:$policy))>;
+                    GPR:$vl, log2sew, (XLenVT timm:$policy))>;
 
 class VPatTernaryNoMaskWithPolicyRoundingMode<string intrinsic,
                                   string inst,

@@ -16,6 +16,13 @@
 !
 ! Test that -rpath is added
 !
+! Add LIBPATH, RPATH
+!
+! RUN: %flang %s -### --target=x86_64-linux \
+! RUN:     -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_arch_subdir \
+! RUN:     -frtlib-add-rpath 2>&1 \
+! RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,RPATH-X86_64 %s
+!
 ! Add LIBPATH, RPATH for OpenMP
 !
 ! RUN: %flang %s -### --target=x86_64-linux -fopenmp \

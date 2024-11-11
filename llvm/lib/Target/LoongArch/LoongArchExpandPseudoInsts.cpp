@@ -165,11 +165,9 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   case LoongArch::PseudoLA_TLS_DESC_LARGE:
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, /*Large=*/true);
   case LoongArch::PseudoCALL:
-  case LoongArch::PseudoCALL_MEDIUM:
   case LoongArch::PseudoCALL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
   case LoongArch::PseudoTAIL:
-  case LoongArch::PseudoTAIL_MEDIUM:
   case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
   case LoongArch::PseudoBRIND:
@@ -545,7 +543,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
 
   switch (MF->getTarget().getCodeModel()) {
   default:
-    report_fatal_error("Unsupported code model");
+    report_fatal_error("Unexpected code model");
     break;
   case CodeModel::Small: {
     // CALL:
@@ -554,31 +552,6 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
     // b func
     Opcode = IsTailCall ? LoongArch::PseudoB_TAIL : LoongArch::BL;
     CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).add(Func);
-    break;
-  }
-  case CodeModel::Medium: {
-    // CALL:
-    // pcaddu18i $ra, %call36(func)
-    // jirl      $ra, $ra, 0
-    // TAIL:
-    // pcaddu18i $scratch, %call36(func)
-    // jirl      $r0, $scratch, 0
-    Opcode =
-        IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
-    Register ScratchReg =
-        IsTailCall
-            ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
-            : LoongArch::R1;
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCADDU18I), ScratchReg);
-
-    CALL =
-        BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg).addImm(0);
-
-    if (Func.isSymbol())
-      MIB.addExternalSymbol(Func.getSymbolName(), LoongArchII::MO_CALL36);
-    else
-      MIB.addDisp(Func, 0, LoongArchII::MO_CALL36);
     break;
   }
   case CodeModel::Large: {
@@ -671,6 +644,10 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandCopyCFR(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineBasicBlock::iterator &NextMBBI);
+  bool expandFunctionCALL(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          bool IsTailCall);
 };
 
 char LoongArchExpandPseudo::ID = 0;
@@ -705,6 +682,10 @@ bool LoongArchExpandPseudo::expandMI(MachineBasicBlock &MBB,
   switch (MBBI->getOpcode()) {
   case LoongArch::PseudoCopyCFR:
     return expandCopyCFR(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoCALL_MEDIUM:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
+  case LoongArch::PseudoTAIL_MEDIUM:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
   }
 
   return false;
@@ -760,6 +741,54 @@ bool LoongArchExpandPseudo::expandCopyCFR(
   computeAndAddLiveIns(LiveRegs, *FalseBB);
   computeAndAddLiveIns(LiveRegs, *SinkBB);
 
+  return true;
+}
+
+bool LoongArchExpandPseudo::expandFunctionCALL(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  const MachineOperand &Func = MI.getOperand(0);
+  MachineInstrBuilder CALL;
+  unsigned Opcode;
+
+  switch (MF->getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unexpected code model");
+    break;
+  case CodeModel::Medium: {
+    // CALL:
+    // pcaddu18i $ra, %call36(func)
+    // jirl      $ra, $ra, 0
+    // TAIL:
+    // pcaddu18i $t8, %call36(func)
+    // jirl      $r0, $t8, 0
+    Opcode =
+        IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
+    Register ScratchReg = IsTailCall ? LoongArch::R20 : LoongArch::R1;
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCADDU18I), ScratchReg);
+
+    CALL =
+        BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg).addImm(0);
+
+    if (Func.isSymbol())
+      MIB.addExternalSymbol(Func.getSymbolName(), LoongArchII::MO_CALL36);
+    else
+      MIB.addDisp(Func, 0, LoongArchII::MO_CALL36);
+    break;
+  }
+  }
+
+  // Transfer implicit operands.
+  CALL.copyImplicitOps(MI);
+
+  // Transfer MI flags.
+  CALL.setMIFlags(MI.getFlags());
+
+  MI.eraseFromParent();
   return true;
 }
 

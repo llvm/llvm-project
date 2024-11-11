@@ -24393,6 +24393,8 @@ TEST_F(FormatTest, DisableRegions) {
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   format("? ) =");
   verifyNoCrash("#define a\\\n /**/}");
+  verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
+                "LY52:                   ! [internal]");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {

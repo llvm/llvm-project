@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -3227,8 +3226,10 @@ bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<FixedVectorType>(U.getOperand(0)->getType())->getNumElements() == 1)
-    return translateCopy(U, *U.getOperand(0), MIRBuilder);
+  if (const FixedVectorType *FVT =
+          dyn_cast<FixedVectorType>(U.getOperand(0)->getType()))
+    if (FVT->getNumElements() == 1)
+      return translateCopy(U, *U.getOperand(0), MIRBuilder);
 
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
