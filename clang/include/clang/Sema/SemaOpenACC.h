@@ -68,6 +68,7 @@ private:
     /// used to diagnose if there are multiple 'for' loops at any one level.
     LLVM_PREFERRED_TYPE(bool)
     unsigned CurLevelHasLoopAlready : 1;
+
   } LoopInfo{/*TopLevelLoopSeen=*/false, /*CurLevelHasLoopAlready=*/false};
 
   /// The 'collapse' clause requires quite a bit of checking while
@@ -109,6 +110,14 @@ private:
     bool TileDepthSatisfied = true;
   } TileInfo;
 
+  /// A list of the active reduction clauses, which allows us to check that all
+  /// vars on nested constructs for the same reduction var have the same
+  /// reduction operator. Currently this is enforced against all constructs
+  /// despite the rule being in the 'loop' section. By current reading, this
+  /// should apply to all anyway, but we may need to make this more like the
+  /// 'loop' clause enforcement, where this is 'blocked' by a compute construct.
+  llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
+
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
     return ActiveComputeConstructInfo;
@@ -118,6 +127,16 @@ public:
   /// 'kernel' construct, this will have the source location for it. This
   /// permits us to implement the restriction of no further 'gang' clauses.
   SourceLocation LoopGangClauseOnKernelLoc;
+  /// If there is a current 'active' loop construct with a 'worker' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang' or 'worker'
+  /// clauses.
+  SourceLocation LoopWorkerClauseLoc;
+  /// If there is a current 'active' loop construct with a 'vector' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang', 'vector', or
+  /// 'worker' clauses.
+  SourceLocation LoopVectorClauseLoc;
 
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
@@ -224,11 +243,15 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
       // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
       if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Worker ||
+           ClauseKind == OpenACCClauseKind::Vector ||
            ClauseKind == OpenACCClauseKind::Wait) &&
           std::holds_alternative<std::monostate>(Details))
         return 0;
@@ -260,7 +283,7 @@ public:
              "Parsed clause kind does not have a queue id expr list");
 
       if (std::holds_alternative<std::monostate>(Details))
-        return ArrayRef<Expr *>{std::nullopt};
+        return ArrayRef<Expr *>();
 
       return std::get<WaitDetails>(Details).QueueIdExprs;
     }
@@ -271,6 +294,8 @@ public:
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
@@ -401,6 +426,8 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -410,6 +437,8 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
@@ -595,7 +624,9 @@ public:
 
   /// Called while semantically analyzing the reduction clause, ensuring the var
   /// is the correct kind of reference.
-  ExprResult CheckReductionVar(Expr *VarExpr);
+  ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
+                               OpenACCReductionOperator ReductionOp,
+                               Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -613,6 +644,22 @@ public:
 
   // Check a single expression on a gang clause.
   ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
+
+  // Does the checking for a 'gang' clause that needs to be done in dependent
+  // and not dependent cases.
+  OpenACCClause *
+  CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                  SourceLocation BeginLoc, SourceLocation LParenLoc,
+                  ArrayRef<OpenACCGangKind> GangKinds,
+                  ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
+  // Does the checking for a 'reduction ' clause that needs to be done in
+  // dependent and not dependent cases.
+  OpenACCClause *
+  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                       OpenACCDirectiveKind DirectiveKind,
+                       SourceLocation BeginLoc, SourceLocation LParenLoc,
+                       OpenACCReductionOperator ReductionOp,
+                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
@@ -663,7 +710,10 @@ public:
     ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
     SourceLocation OldLoopGangClauseOnKernelLoc;
+    SourceLocation OldLoopWorkerClauseLoc;
+    SourceLocation OldLoopVectorClauseLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
+    llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
     LoopInConstructRAII LoopRAII;
 
   public:

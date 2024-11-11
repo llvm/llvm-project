@@ -391,12 +391,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
-  // FIXME: Remove this assignment or convert to an assert? (dead variable PreRegAlloc)
-  // MachineLICM and PostRAMachineLICM were distinguished by introducing
-  // EarlyMachineLICM and MachineLICM respectively to avoid "using an unreliable
-  // MRI::isSSA() check to determine whether register allocation has happened"
-  // (See 4a7c8e7).
-  PreRegAlloc = MRI->isSSA();
   HasProfileData = MF.getFunction().hasProfileData();
 
   if (PreRegAlloc)
@@ -1377,7 +1371,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),
-               [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               [&CurLoop, this, DefReg,
+                Cost = std::move(Cost)](MachineInstr &UseMI) {
                  if (!CurLoop->contains(&UseMI))
                    return false;
 

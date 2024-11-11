@@ -25,7 +25,7 @@ static int compare_hw_subset_places(const place_list_t *openmp_places,
     expected_per_place = nthreads_per_core;
   } else {
     expected_total = nsockets;
-    expected_per_place = ncores_per_socket;
+    expected_per_place = ncores_per_socket * nthreads_per_core;
   }
   if (openmp_places->num_places != expected_total) {
     fprintf(stderr, "error: KMP_HW_SUBSET did not half each resource layer!\n");

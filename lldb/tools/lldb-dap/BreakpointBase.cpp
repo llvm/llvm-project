@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BreakpointBase.h"
-#include "DAP.h"
-#include "llvm/ADT/StringExtras.h"
+#include "JSONUtils.h"
 
 using namespace lldb_dap;
 

@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "FifoFiles.h"
+#include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBStringList.h"
 #include "llvm/Support/Base64.h"
 
 #include <cassert>
@@ -43,17 +48,12 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
-#include <fstream>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <set>
-#include <sstream>
 #include <thread>
 #include <vector>
 
-#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1889,13 +1889,15 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", new StartDebuggingRequestHandler(),
+        "start-debugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
       "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("send-event", new SendEventRequestHandler(),
+                 "Sends an DAP event to the client.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
 

@@ -194,9 +194,6 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
     add_callback2.set_value();
   });
   Status error;
-  auto socket_handle = loop.RegisterReadObject(
-      socketpair[1], [](MainLoopBase &) {}, error);
-  ASSERT_TRUE(socket_handle);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   bool callback2_called = false;
   std::thread callback2_adder([&]() {
@@ -212,15 +209,18 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
   ASSERT_TRUE(callback2_called);
 }
 
-// Regression test for assertion failure if a lot of callbacks end up
-// being queued after loop exits.
-TEST_F(MainLoopTest, PendingCallbackAfterLoopExited) {
+TEST_F(MainLoopTest, ManyPendingCallbacks) {
   MainLoop loop;
   Status error;
-  ASSERT_TRUE(loop.Run().Success());
-  // Try to fill the pipe buffer in.
+  // Try to fill up the pipe buffer and make sure bad things don't happen. This
+  // is a regression test for the case where writing to the interrupt pipe
+  // caused a deadlock when the pipe filled up (either because the main loop was
+  // not running, because it was slow, or because it was busy/blocked doing
+  // something else).
   for (int i = 0; i < 65536; ++i)
-    loop.AddPendingCallback([&](MainLoopBase &loop) {});
+    loop.AddPendingCallback(
+        [&](MainLoopBase &loop) { loop.RequestTermination(); });
+  ASSERT_TRUE(loop.Run().Success());
 }
 
 #ifdef LLVM_ON_UNIX

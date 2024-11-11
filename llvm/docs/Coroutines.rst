@@ -1090,7 +1090,7 @@ The first and second arguments are identical to those of the `coro.begin`
 intrinsic.
 
 The third argument is an i32 index of the generator list given to the
-`CoroSplit` pass specifying the custom ABI generator lor this coroutine.
+`CoroSplit` pass specifying the custom ABI generator for this coroutine.
 
 Semantics:
 """"""""""

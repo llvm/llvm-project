@@ -867,6 +867,10 @@ public:
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+
+  /// Remove references to rhs if it is undef
+  bool matchShuffleUndefRHS(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
@@ -917,6 +921,10 @@ public:
 
   bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // unmerge_values(anyext(build vector)) -> build vector(anyext)
+  bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                           BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

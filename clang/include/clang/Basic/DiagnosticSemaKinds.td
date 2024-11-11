@@ -250,7 +250,12 @@ def ext_designated_init_brace_elision : ExtWarn<
 // Declarations.
 def ext_plain_complex : ExtWarn<
   "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def ext_imaginary_constant : Extension<
+def warn_c23_compat_imaginary_constant : Warning<
+  "imaginary constants are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_imaginary_constant : Extension<
+  "imaginary constants are a C2y extension">, InGroup<C2y>;
+def ext_gnu_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
   "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
@@ -789,6 +794,10 @@ def warn_cstruct_memaccess : Warning<
   "%select{destination for|source of|first operand of|second operand of}0 this "
   "%1 call is a pointer to record %2 that is not trivial to "
   "%select{primitive-default-initialize|primitive-copy}3">,
+  InGroup<NonTrivialMemaccess>;
+def warn_cxxstruct_memaccess : Warning<
+  "first argument in call to "
+  "%0 is a pointer to non-trivially copyable type %1">,
   InGroup<NonTrivialMemaccess>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
@@ -2177,10 +2186,10 @@ def err_covariant_return_incomplete : Error<
 def err_covariant_return_type_different_qualifications : Error<
   "return type of virtual function %0 is not covariant with the return type of "
   "the function it overrides (%1 has different qualifiers than %2)">;
-def err_covariant_return_type_class_type_more_qualified : Error<
+def err_covariant_return_type_class_type_not_same_or_less_qualified : Error<
   "return type of virtual function %0 is not covariant with the return type of "
-  "the function it overrides (class type %1 is more qualified than class "
-  "type %2">;
+  "the function it overrides (class type %1 does not have the same "
+  "cv-qualification as or less cv-qualification than class type %2)">;
 
 // C++ implicit special member functions
 def note_in_declaration_of_implicit_special_member : Note<
@@ -6643,6 +6652,18 @@ def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
+// __builtin_counted_by_ref diagnostics:
+def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
+  "'__builtin_counted_by_ref' argument must reference a flexible array member">;
+def err_builtin_counted_by_ref_cannot_leak_reference : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be assigned to a "
+  "variable, have its address taken, or passed into or returned from a function">;
+def err_builtin_counted_by_ref_invalid_lhs_use : Error<
+  "value returned by '__builtin_counted_by_ref' cannot be used in "
+  "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_has_side_effects : Error<
+  "'__builtin_counted_by_ref' argument cannot have side-effects">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.
@@ -9091,6 +9112,8 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_grid_constant_not_allowed : Error<
+  "__grid_constant__ is only allowed on const-qualified kernel parameters">;
 def err_cuda_ovl_target : Error<
   "%select{__device__|__global__|__host__|__host__ __device__}0 function %1 "
   "cannot overload %select{__device__|__global__|__host__|__host__ __device__}2 function %3">;
@@ -9225,6 +9248,8 @@ def err_typecheck_cond_incompatible_operands : Error<
 def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
+def err_typecheck_expect_any_scalar_or_vector : Error<
+  "invalid operand of type %0 where a scalar or vector is required">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -10090,6 +10115,12 @@ def err_lifetimebound_no_object_param : Error<
 def err_lifetimebound_ctor_dtor : Error<
   "'lifetimebound' attribute cannot be applied to a "
   "%select{constructor|destructor}0">;
+def err_lifetimebound_parameter_void_return_type : Error<
+  "'lifetimebound' attribute cannot be applied to a parameter of a function "
+  "that returns void">;
+def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
+  "'lifetimebound' attribute cannot be applied to an implicit object "
+  "parameter of a function that returns void">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10119,6 +10150,8 @@ def note_lambda_capture_initializer : Note<
   " via initialization of lambda capture %0}1">;
 def note_init_with_default_member_initializer : Note<
   "initializing field %0 with default member initializer">;
+def note_init_with_default_argument : Note<
+  "initializing parameter %0 with default argument">;
 
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.
@@ -10179,7 +10212,7 @@ def warn_new_dangling_initializer_list : Warning<
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
 def warn_dangling_pointer_assignment : Warning<
-   "object backing the pointer %0 "
+   "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
 
@@ -12490,7 +12523,7 @@ def warn_unsafe_buffer_variable : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data|"
+  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
   "field %1 prone to unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_libc_call : Warning<
@@ -12686,22 +12719,34 @@ def err_acc_intervening_code
 def err_acc_gang_multiple_elt
     : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
             "'num'|'dim'|'static'}0 argument">;
-def err_acc_gang_arg_invalid
-    : Error<"'%0' argument on 'gang' clause is not permitted on a%select{n "
-            "orphaned|||}1 'loop' construct %select{|associated with a "
+def err_acc_int_arg_invalid
+    : Error<"'%1' argument on '%0' clause is not permitted on a%select{n "
+            "orphaned|||}2 'loop' construct %select{|associated with a "
             "'parallel' compute construct|associated with a 'kernels' compute "
-            "construct|associated with a 'serial' compute construct}1">;
+            "construct|associated with a 'serial' compute construct}2">;
 def err_acc_gang_dim_value
     : Error<"argument to 'gang' clause dimension must be %select{a constant "
             "expression|1, 2, or 3: evaluated to %1}0">;
-def err_acc_gang_num_gangs_conflict
-    : Error<"'num' argument to 'gang' clause not allowed on a 'loop' construct "
-            "associated with a 'kernels' construct that has a 'num_gangs' "
+def err_acc_num_arg_conflict
+    : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
+            "associated with a 'kernels' construct that has a "
+            "'%select{num_gangs|num_workers|vector_length}1' "
             "clause">;
-def err_acc_gang_inside_gang
-    : Error<"loop with a 'gang' clause may not exist in the region of a 'gang' "
-            "clause on a 'kernels' compute construct">;
-
+def err_acc_clause_in_clause_region
+    : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
+            "clause%select{| on a 'kernels' compute construct}2">;
+def err_acc_gang_reduction_conflict
+    : Error<"%select{OpenACC 'gang' clause with a 'dim' value greater than "
+            "1|OpenACC 'reduction' clause}0 cannot "
+            "appear on the same 'loop' construct as a %select{'reduction' "
+            "clause|'gang' clause with a 'dim' value greater than 1}0">;
+def err_acc_gang_reduction_numgangs_conflict
+    : Error<"OpenACC '%0' clause cannot appear on the same 'loop' construct "
+            "as a '%1' clause inside a compute construct with a "
+            "'num_gangs' clause with more than one argument">;
+def err_reduction_op_mismatch
+    : Error<"OpenACC 'reduction' variable must have the same operator in all "
+            "nested constructs (%0 vs %1)">;
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;

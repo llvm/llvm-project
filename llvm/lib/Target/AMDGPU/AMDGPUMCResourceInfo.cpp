@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -95,10 +96,12 @@ void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
     MCContext &OutContext) {
+  const LLVMTargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   const MCConstantExpr *LocalConstExpr =
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
-  MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
+  MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
     SmallPtrSet<const Function *, 8> Seen;
@@ -108,7 +111,9 @@ void MCResourceInfo::assignResourceInfoExpr(
       if (!Seen.insert(Callee).second)
         continue;
 
-      MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
+      MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
+      MCSymbol *CalleeValSym =
+          getSymbol(CalleeFnSym->getName(), RIK, OutContext);
       if (!CalleeValSym->isVariable() ||
           !CalleeValSym->getVariableValue(/*isUsed=*/false)
                ->isSymbolUsedInExpression(Sym)) {
@@ -136,6 +141,9 @@ void MCResourceInfo::gatherResourceInfo(
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
   }
 
+  const LLVMTargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
+
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
@@ -143,7 +151,7 @@ void MCResourceInfo::gatherResourceInfo(
                              FRI.Callees, OutContext);
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
-      MCSymbol *LocalNumSym = getSymbol(MF.getName(), RIK, OutContext);
+      MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
@@ -158,7 +166,7 @@ void MCResourceInfo::gatherResourceInfo(
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
-    MCSymbol *Sym = getSymbol(MF.getName(), RIK_PrivateSegSize, OutContext);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
     if (FRI.CalleeSegmentSize)
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
@@ -169,8 +177,9 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
+        MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
         MCSymbol *CalleeValSym =
-            getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
+            getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext);
 
         if (!CalleeValSym->isVariable() ||
             !CalleeValSym->getVariableValue(/*isUsed=*/false)
@@ -191,7 +200,7 @@ void MCResourceInfo::gatherResourceInfo(
   }
 
   auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
     Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
   };
 
@@ -221,18 +230,23 @@ void MCResourceInfo::gatherResourceInfo(
 
 const MCExpr *MCResourceInfo::createTotalNumVGPRs(const MachineFunction &MF,
                                                   MCContext &Ctx) {
+  const LLVMTargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   return AMDGPUMCExpr::createTotalNumVGPR(
-      getSymRefExpr(MF.getName(), RIK_NumAGPR, Ctx),
-      getSymRefExpr(MF.getName(), RIK_NumVGPR, Ctx), Ctx);
+      getSymRefExpr(FnSym->getName(), RIK_NumAGPR, Ctx),
+      getSymRefExpr(FnSym->getName(), RIK_NumVGPR, Ctx), Ctx);
 }
 
 const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
                                                   bool hasXnack,
                                                   MCContext &Ctx) {
+  const LLVMTargetMachine &TM = MF.getTarget();
+  MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
   return MCBinaryExpr::createAdd(
-      getSymRefExpr(MF.getName(), RIK_NumSGPR, Ctx),
+      getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
       AMDGPUMCExpr::createExtraSGPRs(
-          getSymRefExpr(MF.getName(), RIK_UsesVCC, Ctx),
-          getSymRefExpr(MF.getName(), RIK_UsesFlatScratch, Ctx), hasXnack, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx), hasXnack,
+          Ctx),
       Ctx);
 }

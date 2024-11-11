@@ -43,10 +43,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc loop auto if_present
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc loop auto worker
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
 #pragma acc loop auto vector
   for(;;);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -135,7 +133,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop auto present_or_create(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop auto reduction(+:Var)
   for(;;);
 #pragma acc loop auto collapse(1)
@@ -180,10 +177,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc loop if_present auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc loop worker auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
 #pragma acc loop vector auto
   for(;;);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -272,7 +267,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(Var) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) auto
   for(;;);
 #pragma acc loop collapse(1) auto
@@ -318,10 +312,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc loop independent if_present
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc loop independent worker
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
 #pragma acc loop independent vector
   for(;;);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -410,7 +402,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop independent present_or_create(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop independent reduction(+:Var)
   for(;;);
 #pragma acc loop independent collapse(1)
@@ -455,10 +446,8 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc loop if_present independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc loop worker independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
 #pragma acc loop vector independent
   for(;;);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -547,7 +536,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(Var) independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) independent
   for(;;);
 #pragma acc loop collapse(1) independent
@@ -591,14 +579,12 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq gang
   for(;;);
-  // expected-error@+3{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq worker
   for(;;);
-  // expected-error@+3{{OpenACC clause 'vector' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq vector
   for(;;);
   // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
@@ -693,7 +679,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop seq present_or_create(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop seq reduction(+:Var)
   for(;;);
 #pragma acc loop seq collapse(1)
@@ -734,16 +719,12 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop gang seq
   for(;;);
-  // TODO OpenACC: when 'worker' is implemented and makes it to the AST, this should diagnose because of a conflict with 'seq'.
-  // TODOexpected-error@+3{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // TODOexpected-note@+2{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop worker seq
   for(;;);
-  // TODO OpenACC: when 'vector' is implemented and makes it to the AST, this should diagnose because of a conflict with 'seq'.
-  // TODOexpected-error@+3{{OpenACC clause 'vector' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // TODOexpected-note@+2{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'vector' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop vector seq
   for(;;);
   // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
@@ -838,7 +819,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(Var) seq
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) seq
   for(;;);
 #pragma acc loop collapse(1) seq

@@ -255,19 +255,14 @@ public:
     mpfr_cospi(result.value, value, mpfr_rounding);
     return result;
 #else
-    MPFRNumber value_frac(*this);
-    mpfr_frac(value_frac.value, value, MPFR_RNDN);
+    if (mpfr_integer_p(value)) {
+      mpz_t integer;
+      mpz_init(integer);
+      mpfr_get_z(integer, value, mpfr_rounding);
 
-    if (mpfr_cmp_si(value_frac.value, 0.0) == 0) {
-      mpz_t integer_part;
-      mpz_init(integer_part);
-      mpfr_get_z(integer_part, value, MPFR_RNDN);
-
-      if (mpz_tstbit(integer_part, 0)) {
-        mpfr_set_si(result.value, -1.0, MPFR_RNDN); // odd
-      } else {
-        mpfr_set_si(result.value, 1.0, MPFR_RNDN); // even
-      }
+      int d = mpz_tstbit(integer, 0);
+      mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
+      mpz_clear(integer);
       return result;
     }
 
@@ -332,6 +327,29 @@ public:
     MPFRNumber result(*this);
     mpfr_exp10(result.value, value, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber exp10m1() const {
+    // TODO: Only use mpfr_exp10m1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    MPFRNumber result(*this);
+    mpfr_exp10m1(result.value, value, mpfr_rounding);
+    return result;
+#else
+    unsigned int prec = mpfr_precision * 3;
+    MPFRNumber result(*this, prec);
+
+    MPFRNumber ln10(10.0f, prec);
+    // log(10)
+    mpfr_log(ln10.value, ln10.value, mpfr_rounding);
+    // x * log(10)
+    mpfr_mul(result.value, value, ln10.value, mpfr_rounding);
+    // e^(x * log(10)) - 1
+    int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
+    mpfr_subnormalize(result.value, ex, mpfr_rounding);
+    return result;
+#endif
   }
 
   MPFRNumber expm1() const {
@@ -488,14 +506,28 @@ public:
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
     mpfr_sinpi(result.value, value, mpfr_rounding);
+    return result;
 #else
+    if (mpfr_integer_p(value)) {
+      mpfr_set_si(result.value, 0, mpfr_rounding);
+      return result;
+    }
+
+    MPFRNumber value_mul_two(*this);
+    mpfr_mul_si(value_mul_two.value, value, 2, MPFR_RNDN);
+
+    if (mpfr_integer_p(value_mul_two.value)) {
+      auto d = mpfr_get_si(value, MPFR_RNDD);
+      mpfr_set_si(result.value, (d & 1) ? -1 : 1, mpfr_rounding);
+      return result;
+    }
+
     MPFRNumber value_pi(0.0, 1280);
     mpfr_const_pi(value_pi.value, MPFR_RNDN);
     mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
     mpfr_sin(result.value, value_pi.value, mpfr_rounding);
-#endif
-
     return result;
+#endif
   }
 
   MPFRNumber sinh() const {
@@ -730,6 +762,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.exp2m1();
   case Operation::Exp10:
     return mpfrInput.exp10();
+  case Operation::Exp10m1:
+    return mpfrInput.exp10m1();
   case Operation::Expm1:
     return mpfrInput.expm1();
   case Operation::Floor:

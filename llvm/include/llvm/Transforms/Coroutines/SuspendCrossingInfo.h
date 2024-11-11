@@ -25,6 +25,8 @@
 
 namespace llvm {
 
+class ModuleSlotTracker;
+
 // Provides two way mapping between the blocks and numbers.
 class BlockToIndexMapping {
   SmallVector<BasicBlock *, 32> V;
@@ -96,7 +98,8 @@ public:
   // Print order is in RPO
   void dump() const;
   void dump(StringRef Label, BitVector const &BV,
-            const ReversePostOrderTraversal<Function *> &RPOT) const;
+            const ReversePostOrderTraversal<Function *> &RPOT,
+            ModuleSlotTracker &MST) const;
 #endif
 
   SuspendCrossingInfo(Function &F,

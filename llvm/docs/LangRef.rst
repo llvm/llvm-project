@@ -122,13 +122,14 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           ; yields i32:%1
+    %1 = add i32 %0, %0           /* yields i32:%1 */
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
 lexical features of LLVM:
 
 #. Comments are delimited with a '``;``' and go until the end of line.
+   Alternatively, comments can start with ``/*`` and terminate with ``*/``.
 #. Unnamed temporaries are created when the result of a computation is
    not assigned to a named value.
 #. By default, unnamed temporaries are numbered sequentially (using a
@@ -1161,15 +1162,16 @@ parameters of a function. Parameter attributes are considered to be part
 of the function, not of the function type, so functions with different
 parameter attributes can have the same function type.
 
-Parameter attributes are simple keywords that follow the type specified.
-If multiple parameter attributes are needed, they are space separated.
-For example:
+Parameter attributes are either simple keywords or strings that follow the
+specified type. Multiple parameter attributes, when required, are separated by
+spaces. For example:
 
 .. code-block:: llvm
 
     declare i32 @printf(ptr noalias nocapture, ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
+    define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
 
 Note that any attributes for the function result (``nonnull``,
 ``signext``) come before the result type.
@@ -1309,11 +1311,13 @@ Currently, only the following parameter attributes are defined:
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
-    to trap and to be properly aligned. This is not a valid attribute
-    for return values.
+    to trap and to be properly aligned.
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+    A function that accepts an ``sret`` argument must return ``void``.
+    A return value may not be ``sret``.
 
 .. _attr_elementtype:
 
@@ -1841,9 +1845,9 @@ a function. Function attributes are considered to be part of the
 function, not of the function type, so functions with different function
 attributes can have the same function type.
 
-Function attributes are simple keywords that follow the type specified.
-If multiple attributes are needed, they are space separated. For
-example:
+Function attributes are simple keywords or strings that follow the specified
+type. Multiple attributes, when required, are separated by spaces.
+For example:
 
 .. code-block:: llvm
 
@@ -1851,6 +1855,7 @@ example:
     define void @f() alwaysinline { ... }
     define void @f() alwaysinline optsize { ... }
     define void @f() optsize { ... }
+    define void @f() "no-sse" { ... }
 
 ``alignstack(<n>)``
     This attribute indicates that, when emitting the prologue and
@@ -2082,6 +2087,12 @@ example:
     function call, use of ``longjmp``, or other means. It is a compiler hint that
     is used at module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
+``nodivergencesource``
+    A call to this function is not a source of divergence. In uniformity
+    analysis, a *source of divergence* is an instruction that generates
+    divergence even if its inputs are uniform. A call with no further information
+    would normally be considered a source of divergence; setting this attribute
+    on a function means that a call to it is not a source of divergence.
 ``noduplicate``
     This attribute indicates that calls to the function cannot be
     duplicated. A call to a ``noduplicate`` function may be moved
@@ -2326,7 +2337,7 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-``sanitize_realtime_unsafe``
+``sanitize_realtime_blocking``
     This attribute indicates that RealtimeSanitizer should error immediately
     if the attributed function is called during invocation of a function
     attributed with ``sanitize_realtime``.
@@ -2487,11 +2498,6 @@ example:
     function with a tail call. The prototype of a thunk should not be used for
     optimization purposes. The caller is expected to cast the thunk prototype to
     match the thunk target prototype.
-
-``"tls-load-hoist"``
-    This attribute indicates that the function will try to reduce redundant
-    tls address calculation by hoisting tls variable.
-
 ``uwtable[(sync|async)]``
     This attribute indicates that the ABI being targeted requires that
     an unwind table entry be produced for this function even if we can
@@ -4376,7 +4382,7 @@ is defined inline with other types (e.g. ``[2 x {i32, i32}]``) whereas
 identified types are always defined at the top level with a name.
 Literal types are uniqued by their contents and can never be recursive
 or opaque since there is no way to write one. Identified types can be
-recursive, can be opaqued, and are never uniqued.
+opaqued and are never uniqued. Identified types must not be recursive.
 
 :Syntax:
 
@@ -12323,6 +12329,7 @@ Syntax:
 ::
 
       <result> = icmp <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
+      <result> = icmp samesign <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
 
 Overview:
 """""""""
@@ -12391,6 +12398,9 @@ are compared as if they were integers.
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
 as the values being compared. Otherwise, the result is an ``i1``.
+
+If the ``samesign`` keyword is present and the operands are not of the
+same sign then the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -15500,6 +15510,8 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+.. _t_llvm_sin:
+
 '``llvm.sin.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15536,6 +15548,8 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _t_llvm_cos:
 
 '``llvm.cos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15866,6 +15880,50 @@ Semantics:
 
 Return the same value as a corresponding libm '``tanh``' function but without
 trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+
+'``llvm.sincos.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincos`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincos.f32(float  %Val)
+      declare { double, double }        @llvm.sincos.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincos.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincos.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincos.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincos.*``' intrinsics returns the sine and cosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This intrinsic is equivalent to a calling both :ref:`llvm.sin <t_llvm_sin>`
+and :ref:`llvm.cos <t_llvm_cos>` on the argument.
+
+The first result is the sine of the argument and the second result is the cosine
+of the argument.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -19913,8 +19971,8 @@ More update operation types may be added in the future.
 
 ::
 
-    declare <8 x i32> @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
-    declare <vscale x 2 x i64> @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
 
 Arguments:
 """"""""""
