@@ -1,5 +1,3 @@
-add_definitions("-D_ALL_SOURCE")
-
 add_lldb_library(lldbPluginDynamicLoaderAIXDYLD PLUGIN
   DynamicLoaderAIXDYLD.cpp
 
