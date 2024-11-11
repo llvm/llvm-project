@@ -29,7 +29,7 @@
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
-#else
+#elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
 #endif
 
