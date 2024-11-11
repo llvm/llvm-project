@@ -244,6 +244,7 @@ static Address checkAtomicAlignment(CIRGenFunction &CGF, const CallExpr *E) {
 /// and the expression node.
 static mlir::Value makeBinaryAtomicValue(
     CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
+    mlir::Value *neededValP = nullptr, mlir::Type *neededValT = nullptr,
     cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
 
   QualType typ = expr->getType();
@@ -263,7 +264,15 @@ static mlir::Value makeBinaryAtomicValue(
   mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
   mlir::Type valueType = val.getType();
   val = emitToInt(cgf, val, typ, intType);
-
+  // These output arguments are needed for post atomic fetch operations
+  // that calculate the result of the operation as return value of
+  // <binop>_and_fetch builtins. The `AtomicFetch` operation only updates the
+  // memory location and returns the old value.
+  if (neededValP) {
+    assert(neededValT);
+    *neededValP = val;
+    *neededValT = valueType;
+  }
   auto rmwi = builder.create<cir::AtomicFetch>(
       cgf.getLoc(expr->getSourceRange()), destAddr.emitRawPointer(), val, kind,
       ordering, false, /* is volatile */
@@ -274,6 +283,26 @@ static mlir::Value makeBinaryAtomicValue(
 static RValue emitBinaryAtomic(CIRGenFunction &CGF, cir::AtomicFetchKind kind,
                                const CallExpr *E) {
   return RValue::get(makeBinaryAtomicValue(CGF, kind, E));
+}
+
+static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
+                                   cir::AtomicFetchKind atomicOpkind,
+                                   const CallExpr *e,
+                                   cir::BinOpKind binopKind) {
+  mlir::Value val;
+  mlir::Type valueType;
+  clang::QualType typ = e->getType();
+  mlir::Value result =
+      makeBinaryAtomicValue(cgf, atomicOpkind, e, &val, &valueType);
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+  result = builder.create<cir::BinOp>(result.getLoc(), binopKind, result, val);
+  result = emitFromInt(cgf, result, typ, valueType);
+  // FIXME: Some callers of this function expect the result to be inverted,
+  // which would need invert flag passed in and do the inversion here like
+  // traditional clang code gen does. When we implment those caller builtins
+  // we should implement the inversion here.
+  assert(!MissingFeatures::emitBinaryAtomicPostHasInvert());
+  return RValue::get(result);
 }
 
 static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
@@ -1626,7 +1655,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_add_and_fetch_4:
   case Builtin::BI__sync_add_and_fetch_8:
   case Builtin::BI__sync_add_and_fetch_16:
-    llvm_unreachable("BI__sync_add_and_fetch like NYI");
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Add, E,
+                                cir::BinOpKind::Add);
 
   case Builtin::BI__sync_sub_and_fetch_1:
   case Builtin::BI__sync_sub_and_fetch_2:

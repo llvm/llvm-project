@@ -229,6 +229,7 @@ struct MissingFeatures {
   static bool emitConstrainedFPCall() { return false; }
   static bool emitEmptyRecordCheck() { return false; }
   static bool isPPC_FP128Ty() { return false; }
+  static bool emitBinaryAtomicPostHasInvert() { return false; }
 
   // Inline assembly
   static bool asmGoto() { return false; }
