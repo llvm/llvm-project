@@ -60684,8 +60684,8 @@ bool X86TargetLowering::isDesirableToCommuteWithShift(
   if (!ShiftLHS->hasOneUse())
     return false;
 
-  if ((ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
-       !ShiftLHS.getOperand(0)->hasOneUse()))
+  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+      !ShiftLHS.getOperand(0)->hasOneUse())
     return false;
 
   return true;
