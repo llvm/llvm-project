@@ -1469,12 +1469,12 @@ def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,
                PseudoInstExpansion<(B simm26_b:$imm26)>;
 
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
-def PseudoBRIND : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+def PseudoBRIND : Pseudo<(outs), (ins GPRJR:$rj, simm16_lsl2:$imm16)>,
                   PseudoInstExpansion<(JIRL R0, GPR:$rj, simm16_lsl2:$imm16)>;
 
-def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
-def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
-          (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
+def : Pat<(brind GPRJR:$rj), (PseudoBRIND GPRJR:$rj, 0)>;
+def : Pat<(brind (add GPRJR:$rj, simm16_lsl2:$imm16)),
+          (PseudoBRIND GPRJR:$rj, simm16_lsl2:$imm16)>;
 
 // Function call with 'Small' code model.
 let isCall = 1, Defs = [R1] in

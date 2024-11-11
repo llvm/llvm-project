@@ -44,7 +44,6 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    addi.w $s4, $zero, -41
 ; CHECK-NEXT:    ori $s3, $zero, 1
 ; CHECK-NEXT:    slli.d $s4, $s4, 3
-; CHECK-NEXT:    ori $s5, $zero, 50
 ; CHECK-NEXT:    ori $s6, $zero, 3
 ; CHECK-NEXT:    lu32i.d $s6, 262144
 ; CHECK-NEXT:    b .LBB0_4
@@ -54,8 +53,8 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    ori $s8, $zero, 1
 ; CHECK-NEXT:  .LBB0_2: # %if.else.i106
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    alsl.d $ra, $s0, $s0, 3
-; CHECK-NEXT:    alsl.d $s0, $ra, $s0, 1
+; CHECK-NEXT:    alsl.d $s5, $s0, $s0, 3
+; CHECK-NEXT:    alsl.d $s0, $s5, $s0, 1
 ; CHECK-NEXT:    add.d $s0, $t0, $s0
 ; CHECK-NEXT:    ldx.bu $s8, $s0, $s8
 ; CHECK-NEXT:  .LBB0_3: # %phy_tssi_get_ofdm_de.exit
@@ -92,6 +91,7 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:  .LBB0_9: # %if.end.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    andi $s7, $s7, 255
+; CHECK-NEXT:    ori $s5, $zero, 50
 ; CHECK-NEXT:    bltu $s5, $s7, .LBB0_15
 ; CHECK-NEXT:  # %bb.10: # %if.end.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
@@ -113,8 +113,8 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    pcalau12i $ra, %pc_hi20(.LJTI0_1)
 ; CHECK-NEXT:    addi.d $ra, $ra, %pc_lo12(.LJTI0_1)
-; CHECK-NEXT:    ldx.d $ra, $s4, $ra
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    ldx.d $s5, $s4, $ra
+; CHECK-NEXT:    jr $s5
 ; CHECK-NEXT:  .LBB0_13: # %phy_tssi_get_ofdm_trim_de.exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    bnez $s3, .LBB0_1
