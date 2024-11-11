@@ -1881,6 +1881,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
   Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
+  Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
 
   bool HasLeaf24 =

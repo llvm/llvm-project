@@ -153,6 +153,8 @@ set(x86_files
   amxintrin.h
   amxmovrsintrin.h
   amxmovrstransposeintrin.h
+  amxtf32intrin.h
+  amxtf32transposeintrin.h
   amxtransposeintrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h

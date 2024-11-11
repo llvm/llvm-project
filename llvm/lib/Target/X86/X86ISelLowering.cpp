@@ -14907,6 +14907,7 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
     SmallVector<int, 16> InLaneMask(NumElts, SM_SentinelUndef);
     // CrossLaneMask but one entry == one sublane.
     SmallVector<int, 16> CrossLaneMaskLarge(NumSublanes, SM_SentinelUndef);
+    APInt DemandedCrossLane = APInt::getZero(NumElts);
 
     for (int i = 0; i != NumElts; ++i) {
       int M = Mask[i];
@@ -14929,6 +14930,7 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
         CrossLaneMaskLarge[DstSublane] = SrcSublane;
         int DstSublaneOffset = DstSublane * NumEltsPerSublane;
         InLaneMask[i] = DstSublaneOffset + M % NumEltsPerSublane;
+        DemandedCrossLane.setBit(InLaneMask[i]);
         break;
       }
       if (!Found)
@@ -14962,6 +14964,12 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
     //                             undef:v16i16
     if (CrossLaneMask == Mask || InLaneMask == Mask)
       return SDValue();
+
+    // Simplify CrossLaneMask based on the actual demanded elements.
+    if (V1.hasOneUse())
+      for (int i = 0; i != NumElts; ++i)
+        if (!DemandedCrossLane[i])
+          CrossLaneMask[i] = SM_SentinelUndef;
 
     SDValue CrossLane = DAG.getVectorShuffle(VT, DL, V1, V2, CrossLaneMask);
     return DAG.getVectorShuffle(VT, DL, CrossLane, DAG.getUNDEF(VT),
@@ -37484,7 +37492,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBF8PS:
   case X86::PTDPBHF8PS:
   case X86::PTDPHBF8PS:
-  case X86::PTDPHF8PS: {
+  case X86::PTDPHF8PS:
+  case X86::PTMMULTF32PS:
+  case X86::PTTMMULTF32PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     // clang-format off
@@ -37499,6 +37509,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
     case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
+    case X86::PTMMULTF32PS: Opc = X86::TMMULTF32PS; break;
+    case X86::PTTMMULTF32PS: Opc = X86::TTMMULTF32PS; break;
     // clang-format on
     }
 

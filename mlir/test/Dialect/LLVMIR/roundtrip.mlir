@@ -325,6 +325,19 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: @nneg_casts
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
+func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+                %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
+// CHECK:  = llvm.zext nneg %[[I32]] : i32 to i64
+  %0 = llvm.zext nneg %arg0 : i32 to i64
+// CHECK:  = llvm.zext nneg %[[V4I32]] : vector<4xi32> to vector<4xi64>
+  %4 = llvm.zext nneg %arg2 : vector<4xi32> to vector<4xi64>
+// CHECK:  = llvm.uitofp nneg %[[I32]] : i32 to f32
+  %7 = llvm.uitofp nneg %arg0 : i32 to f32
+  llvm.return
+}
+
 // CHECK-LABEL: @vect
 func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: !llvm.vec<2 x ptr>) {
 // CHECK:  = llvm.extractelement {{.*}} : vector<4xf32>

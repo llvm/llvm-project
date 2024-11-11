@@ -603,6 +603,7 @@ constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2_512;
+constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
