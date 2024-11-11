@@ -64,8 +64,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Right.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Right.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Right"
 // CHECK:          }

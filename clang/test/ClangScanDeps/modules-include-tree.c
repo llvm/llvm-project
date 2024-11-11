@@ -124,8 +124,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Left.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Left.h"
 // CHECK:            ]
 // CHECK:            "name": "Left"
 // CHECK:          }
@@ -159,8 +159,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Right.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Right.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Right"
 // CHECK:          }
@@ -185,8 +185,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Top.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Top.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Top"
 // CHECK:          }
@@ -211,8 +211,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/AtImport.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/AtImport.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "ZAtImport"
 // CHECK:          }
@@ -237,8 +237,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/PragmaImport.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/PragmaImport.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "ZPragmaImport"
 // CHECK:          }

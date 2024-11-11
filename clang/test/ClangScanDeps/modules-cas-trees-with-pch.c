@@ -73,8 +73,8 @@
 // PCH:              "-fmodule-file={{(B=)?}}[[B_PCM]]"
 // PCH:            ]
 // PCH:            "file-deps": [
-// PCH-NEXT:         "[[PREFIX]]{{.}}A.h"
 // PCH-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
+// PCH-NEXT:         "[[PREFIX]]{{.}}A.h"
 // PCH-NEXT:       ]
 // PCH:            "name": "A"
 // PCH:          }
@@ -93,8 +93,8 @@
 // PCH:              "-emit-module"
 // PCH:            ]
 // PCH:            "file-deps": [
-// PCH-NEXT:         "[[PREFIX]]{{.}}B.h"
 // PCH-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
+// PCH-NEXT:         "[[PREFIX]]{{.}}B.h"
 // PCH-NEXT:       ]
 // PCH:            "name": "B"
 // PCH:          }
@@ -149,8 +149,8 @@
 // CHECK:              "[[B_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}C.h"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]{{.}}C.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "C"
 // CHECK:          }

@@ -200,8 +200,8 @@
 // CHECK-LIBCLANG-NEXT:     cache-key: [[M_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-LIBCLANG-NEXT:     module-deps:
 // CHECK-LIBCLANG-NEXT:     file-deps:
-// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/module.h
 // CHECK-LIBCLANG-NEXT:       [[PREFIX]]/module.modulemap
+// CHECK-LIBCLANG-NEXT:       [[PREFIX]]/module.h
 // CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -fcas-fs [[M_ROOT_ID]]
 // CHECK-LIBCLANG-NEXT: dependencies:
 // CHECK-LIBCLANG-NEXT:   command 0:
