@@ -3947,7 +3947,7 @@ def atomic_thread_fence_acq_rel_cta :
   NVPTXInst<(outs), (ins), "fence.acq_rel.cta;", []>,
   Requires<[hasPTX<60>, hasSM<70>]>;
 
-def fpimm_pos_neg_zero : FPImmLeaf<fAny, [{
+def fpimm_any_zero : FPImmLeaf<fAny, [{
   return Imm.isExactlyValue(+0.0) | Imm.isExactlyValue(-0.0);
 }]>;
 
@@ -3987,17 +3987,17 @@ def FMARELU_F16X2_FTZ :
     Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
 
 // FTZ variants are only supported by fp16, not bf16
-def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_pos_neg_zero)),
+def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
   (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[doF32FTZ, noNaNsFPMath]>;
 def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
   (FMARELU_F16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
   Requires<[doF32FTZ, noNaNsFPMath]>;
 // No FTZ
-def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_pos_neg_zero)),
+def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
   (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[noNaNsFPMath]>;
-def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_pos_neg_zero)),
+def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
   (FMARELU_BF16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[noNaNsFPMath]>;
 def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
