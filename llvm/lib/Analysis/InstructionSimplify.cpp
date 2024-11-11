@@ -4771,19 +4771,16 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
     return nullptr;
   FCmpInst *I = cast<FCmpInst>(Cond);
 
-  bool IsEquiv = I->isEquivalence(),
-       IsInverseEquiv = I->isEquivalence(/*Invert=*/true);
-
-  if (IsInverseEquiv)
+  bool IsEquiv = I->isEquivalence();
+  if (I->isEquivalence(/*Invert=*/true)) {
     std::swap(T, F);
-
-  // Canonicalize CmpLHS to be T, and CmpRHS to be F, if they're swapped.
-  if (CmpLHS == F && CmpRHS == T)
-    std::swap(CmpLHS, CmpRHS);
+    Pred = FCmpInst::getInversePredicate(Pred);
+    IsEquiv = true;
+  }
 
   // This transforms is safe if at least one operand is known to not be zero.
   // Otherwise, the select can change the sign of a zero operand.
-  if (IsEquiv || IsInverseEquiv) {
+  if (IsEquiv) {
     if (Value *V =
             simplifySelectWithEquivalence(CmpLHS, CmpRHS, T, F, Q, MaxRecurse))
       return V;
@@ -4792,13 +4789,15 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
       return V;
   }
 
+  // Canonicalize CmpLHS to be T, and CmpRHS to be F, if they're swapped.
+  if (CmpLHS == F && CmpRHS == T)
+    std::swap(CmpLHS, CmpRHS);
+
   if (CmpLHS != T || CmpRHS != F)
     return nullptr;
 
   // This transform is also safe if we do not have (do not care about) -0.0.
-  bool HasNoSignedZeros =
-      Q.CxtI && isa<FPMathOperator>(Q.CxtI) && Q.CxtI->hasNoSignedZeros();
-  if (HasNoSignedZeros) {
+  if (Q.CxtI && isa<FPMathOperator>(Q.CxtI) && Q.CxtI->hasNoSignedZeros()) {
     // (T == F) ? T : F --> F
     if (Pred == FCmpInst::FCMP_OEQ)
       return F;
