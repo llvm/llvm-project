@@ -4003,19 +4003,14 @@ def CopyOp : CIR_Op<"copy",
 // MemCpyOp && MemMoveOp
 //===----------------------------------------------------------------------===//
 
-class CIR_MemCpyOp<string mnemonic>: CIR_Op<mnemonic, [AllTypesMatch<["dst", "src"]>]> {
-  let arguments = (ins Arg<VoidPtr, "", [MemWrite]>:$dst,
-                       Arg<VoidPtr, "", [MemRead]>:$src,
-                       PrimitiveUInt:$len);
+class CIR_MemOp<string mnemonic>
+    : CIR_Op<mnemonic, [AllTypesMatch<["dst", "src"]>]> {
+  dag commonArgs = (ins Arg<VoidPtr, "", [MemWrite]>:$dst,
+      Arg<VoidPtr, "", [MemRead]>:$src);
   let hasVerifier = 0;
-
-  let extraClassDeclaration = [{
-    /// Returns the byte length type.
-    cir::IntType getLenTy() { return getLen().getType(); }
-  }];
 }
 
-def MemCpyOp : CIR_MemCpyOp<"libc.memcpy"> {
+def MemCpyOp : CIR_MemOp<"libc.memcpy"> {
   let summary = "Equivalent to libc's `memcpy`";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.libc.memcpy` will copy `len`
@@ -4034,13 +4029,20 @@ def MemCpyOp : CIR_MemCpyOp<"libc.memcpy"> {
     ```
   }];
 
+  let arguments = !con(commonArgs, (ins PrimitiveUInt:$len));
+
   let assemblyFormat = [{
     $len `bytes` `from` $src `to` $dst attr-dict
     `:` type($len) `` `,` qualified(type($src)) `->` qualified(type($dst))
   }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
 }
 
-def MemMoveOp : CIR_MemCpyOp<"libc.memmove"> {
+def MemMoveOp : CIR_MemOp<"libc.memmove"> {
   let summary = "Equivalent to libc's `memmove`";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.libc.memmove` will copy `len`
@@ -4057,12 +4059,49 @@ def MemMoveOp : CIR_MemCpyOp<"libc.memmove"> {
     ```
   }];
 
+  let arguments = !con(commonArgs, (ins PrimitiveUInt:$len));
 
   let assemblyFormat = [{
     $len `bytes` `from` $src `to` $dst attr-dict
     `:` qualified(type($dst)) `,` type($len)
   }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
 }
+
+//===----------------------------------------------------------------------===//
+// MemCpyInlineOp
+//===----------------------------------------------------------------------===//
+
+def MemCpyInlineOp : CIR_MemOp<"memcpy_inline"> {
+  let summary = "Memory copy with constant length without calling"
+                "any external function";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `memcpy_inline` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    Unlike `cir.libc.memcpy`,  this Op guarantees that no external functions 
+    are called, and length of copied bytes is a constant.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a struct:
+      cir.memcpy_inline 2 bytes from %arr to %struct : !cir.ptr<!arr> -> !cir.ptr<!struct>
+    ```
+  }];
+
+  let arguments = !con(commonArgs, (ins I64Attr:$len));
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` qualified(type($src)) `->` qualified(type($dst))
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // MemSetOp
 //===----------------------------------------------------------------------===//

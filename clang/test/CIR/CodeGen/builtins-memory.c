@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck %s --check-prefix=CIR --input-file=%t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu  -fclangir -emit-llvm %s -o - \
+// RUN:  | opt -S -passes=instcombine,mem2reg,simplifycfg -o %t.ll 
+// RUN: FileCheck  --check-prefix=LLVM --input-file=%t.ll %s
 
 typedef __SIZE_TYPE__ size_t;
 void test_memcpy_chk(void *dest, const void *src, size_t n) {
@@ -106,4 +109,39 @@ void test_memset_chk(void *dest, int ch, size_t n) {
   // CIR: %[[#N_LOAD2:]] = cir.load %[[#N]]
   // CIR: cir.call @__memset_chk(%[[#DEST_LOAD]], %[[#CH_LOAD]], %[[#N_LOAD1]], %[[#N_LOAD2]])
   __builtin___memset_chk(dest, ch, n, n);
+}
+
+// FIXME: The test should test intrinsic argument alignment, however, 
+// currently we lack support for argument attributes. 
+// Thus, added `COM: LLVM:` lines so we can easily flip the test 
+// when the support of argument attributes is in.
+void test_memcpy_inline(void *dst, const void *src, size_t n) {
+
+  // CIR-LABEL: test_memcpy_inline
+  // CIR: cir.memcpy_inline 0 bytes from {{%.*}} to {{%.*}} : !cir.ptr<!void> -> !cir.ptr<!void>
+
+  // LLVM-LABEL: test_memcpy_inline
+  // LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr {{%.*}}, ptr {{%.*}}, i64 0, i1 false)
+  // COM: LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 {{%.*}}, ptr align 1 {{%.*}}, i64 0, i1 false)
+  __builtin_memcpy_inline(dst, src, 0);
+
+  // CIR: cir.memcpy_inline 1 bytes from {{%.*}} to {{%.*}} : !cir.ptr<!void> -> !cir.ptr<!void>
+
+  // LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr {{%.*}}, ptr {{%.*}}, i64 1, i1 false)
+  // COM: LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 {{%.*}}, ptr align 1 {{%.*}}, i64 1, i1 false)
+  __builtin_memcpy_inline(dst, src, 1);
+
+  // CIR: cir.memcpy_inline 4 bytes from {{%.*}} to {{%.*}} : !cir.ptr<!void> -> !cir.ptr<!void>
+
+  // LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr {{%.*}}, ptr {{%.*}}, i64 4, i1 false)
+  // COM: LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 {{%.*}}, ptr align 1 {{%.*}}, i64 4, i1 false)
+  __builtin_memcpy_inline(dst, src, 4);
+}
+ 
+void test_memcpy_inline_aligned_buffers(unsigned long long *dst, const unsigned long long *src) {
+
+  // LLVM-LABEL: test_memcpy_inline_aligned_buffers
+  // LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr {{%.*}}, ptr {{%.*}}, i64 4, i1 false)
+  // COM: LLVM: call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 {{%.*}}, ptr align 8 {{%.*}}, i64 4, i1 false)
+  __builtin_memcpy_inline(dst, src, 4);
 }

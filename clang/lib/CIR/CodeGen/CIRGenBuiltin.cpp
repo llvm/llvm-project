@@ -1415,8 +1415,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(Dest.getPointer());
   }
 
-  case Builtin::BI__builtin_memcpy_inline:
-    llvm_unreachable("BI__builtin_memcpy_inline NYI");
+  case Builtin::BI__builtin_memcpy_inline: {
+    Address dest = emitPointerWithAlignment(E->getArg(0));
+    Address src = emitPointerWithAlignment(E->getArg(1));
+    emitNonNullArgCheck(RValue::get(dest.getPointer()), E->getArg(0)->getType(),
+                        E->getArg(0)->getExprLoc(), FD, 0);
+    emitNonNullArgCheck(RValue::get(src.getPointer()), E->getArg(1)->getType(),
+                        E->getArg(1)->getExprLoc(), FD, 1);
+    uint64_t size =
+        E->getArg(2)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    builder.create<cir::MemCpyInlineOp>(
+        getLoc(E->getSourceRange()), dest.getPointer(), src.getPointer(),
+        mlir::IntegerAttr::get(mlir::IntegerType::get(builder.getContext(), 64),
+                               size));
+    // __builtin_memcpy_inline has no return value
+    return RValue::get(nullptr);
+  }
 
   case Builtin::BI__builtin_char_memchr:
   case Builtin::BI__builtin_memchr: {
