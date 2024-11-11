@@ -1566,3 +1566,14 @@ func.func @linearize_all_zero_unit_basis() -> index {
   %ret = affine.linearize_index [%c0, %c0] by (1, 1) : index
   return %ret : index
 }
+
+// -----
+
+// CHECK-LABEL: @linearize_one_element_basis
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index)
+// CHECK-NOT: affine.linearize_index
+// CHECK: return %[[arg0]]
+func.func @linearize_one_element_basis(%arg0: index, %arg1: index) -> index {
+  %ret = affine.linearize_index [%arg0] by (%arg1) : index
+  return %ret : index
+}
