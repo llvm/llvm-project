@@ -21,7 +21,7 @@ void test() {
   static_assert(std::copy_constructible<decltype(copyable_view)>);
 
   const auto svc = std::ranges::stride_view<decltype(copyable_view)>(copyable_view, 2);
-  auto svm= std::ranges::stride_view<decltype(copyable_view)>(copyable_view, 2);
+  auto svm       = std::ranges::stride_view<decltype(copyable_view)>(copyable_view, 2);
 
   svc.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
