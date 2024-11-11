@@ -15,9 +15,7 @@
 #include "../../../../std/ranges/range.adaptors/range.stride.view/types.h"
 
 void test() {
-  const int range[] = {1, 2, 3};
-
-  const auto const_sv = std::views::stride(range, 2);
+  const auto const_sv = std::views::stride(SimpleCommonConstView{}, 2);
   auto unsimple_sv    = std::views::stride(UnsimpleConstView{}, 2);
 
   const_sv.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
