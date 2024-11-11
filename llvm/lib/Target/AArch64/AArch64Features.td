@@ -358,12 +358,9 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
-  "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
-
 def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
   "Enable Scalable Vector Extension 2 (SVE2) instructions",
-  [FeatureSVE, FeatureUseScalarIncVL]>;
+  [FeatureSVE]>;
 
 def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
   "FEAT_SVE_AES, FEAT_SVE_PMULL128",
@@ -403,7 +400,7 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
   "Enable Realm Management Extension">;
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16]>;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
