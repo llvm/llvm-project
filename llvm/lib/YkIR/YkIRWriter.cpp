@@ -699,6 +699,19 @@ private:
         if (Attr.getKindAsEnum() == Attribute::AllocSize) {
           continue;
         }
+
+        if (Attr.getKindAsEnum() == Attribute::Alignment) {
+          // Following what we do with loads/stores, we accept any alignment
+          // value greater-than or equal-to the size of the object.
+          //
+          // FIXME: explicitly encode the alignment requirements into the IR
+          // and let the JIT codegen deal with it.
+          if (I->getParamAlign(AI) >=
+              DL.getTypeAllocSize(I->getArgOperand(AI)->getType())) {
+            continue;
+          }
+        }
+
         serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
         return;
       }
