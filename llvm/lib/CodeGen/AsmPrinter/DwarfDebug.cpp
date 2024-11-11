@@ -2280,11 +2280,12 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
 
   // If the prolog is empty, no need to generate scope line for the proc.
   if (IsEmptyPrologue) {
-    // In degenerate cases, we can have functions with no source locations
-    // at all, or only empty ones. These want a scope line, to avoid a totally
-    // empty function. Thus, only skip the scope line if there's location to
-    // place prologue_end.
+    // If there's nowhere to put a prologue_end flag, emit a scope line in case
+    // there are simply no source locations anywhere in the function.
     if (PrologEndLoc) {
+      // Avoid trying to assign prologue_end to a line-zero location.
+      // Instructions with no DebugLoc at all are fine, they'll be given the
+      // scope line nuumber.
       const DebugLoc &DL = PrologEndLoc->getDebugLoc();
       if (!DL || DL->getLine() != 0)
         return PrologEndLoc;
