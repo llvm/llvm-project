@@ -739,6 +739,20 @@ let hasSideEffects = false in {
   def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
 }
 
+def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
+  return N->hasOneUse();
+}]>;
+
+def : Pat<(v2bf16 (build_vector (bf16 (fpround_oneuse Float32Regs:$a)),
+                                (bf16 (fpround_oneuse Float32Regs:$b)))),
+          (CVT_bf16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>,
+      Requires<[hasPTX<70>, hasSM<80>, hasBF16Math]>;
+
+def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse Float32Regs:$a)),
+                               (f16 (fpround_oneuse Float32Regs:$b)))),
+          (CVT_f16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>,
+      Requires<[hasPTX<70>, hasSM<80>, useFP16Math]>;
+
 //-----------------------------------
 // Selection instructions (selp)
 //-----------------------------------

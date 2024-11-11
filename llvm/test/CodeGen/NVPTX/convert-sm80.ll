@@ -135,3 +135,24 @@ ret i32 %val
 }
 
 declare i32 @llvm.nvvm.f2tf32.rna(float)
+
+
+define <2 x bfloat> @fold_ff2bf16x2(float %a, float %b) {
+; CHECK-LABEL: fold_ff2bf16x2
+; CHECK: cvt.rn.bf16x2.f32
+  %ah = fptrunc float %a to bfloat
+  %bh = fptrunc float %b to bfloat
+  %v0 = insertelement <2 x bfloat> poison, bfloat %ah, i64 0
+  %v1 = insertelement <2 x bfloat> %v0, bfloat %bh, i64 1
+  ret <2 x bfloat> %v1
+}
+
+define <2 x half> @fold_ff2f16x2(float %a, float %b) {
+; CHECK-LABEL: fold_ff2f16x2
+; CHECK: cvt.rn.f16x2.f32
+  %ah = fptrunc float %a to half
+  %bh = fptrunc float %b to half
+  %v0 = insertelement <2 x half> poison, half %ah, i64 0
+  %v1 = insertelement <2 x half> %v0, half %bh, i64 1
+  ret <2 x half> %v1
+}
