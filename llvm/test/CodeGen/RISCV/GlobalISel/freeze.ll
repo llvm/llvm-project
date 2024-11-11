@@ -3,30 +3,20 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d,+zfh,+m,+v -global-isel -global-isel-abort=1 -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,RV64
 
 define i32 @freeze_int(i32 %x) {
-; RV32-LABEL: freeze_int:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mul a0, a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_int:
-; RV64:       # %bb.0:
-; RV64-NEXT:    mulw a0, a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_int:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a0, a0, a0
+; CHECK-NEXT:    ret
   %y1 = freeze i32 %x
   %t1 = mul i32 %y1, %y1
   ret i32 %t1
 }
 
 define i5 @freeze_int2(i5 %x) {
-; RV32-LABEL: freeze_int2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mul a0, a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: freeze_int2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    mulw a0, a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: freeze_int2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a0, a0, a0
+; CHECK-NEXT:    ret
   %y1 = freeze i5 %x
   %t1 = mul i5 %y1, %y1
   ret i5 %t1
