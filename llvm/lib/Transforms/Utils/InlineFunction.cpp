@@ -1465,7 +1465,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
             }
           }
           AL = AL.addParamAttributes(Context, I, NewAB);
-        } else {
+        } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
           // Check if the underlying value for the parameter is an argument.
           const Value *UnderlyingV =
               getUnderlyingObject(InnerCB->getArgOperand(I));
@@ -1473,10 +1473,13 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
           if (!Arg)
             continue;
           ArgNo = Arg->getArgNo();
+        } else {
+          continue;
         }
 
         // If so, propagate its access attributes.
         AL = AL.addParamAttributes(Context, I, ValidObjParamAttrs[ArgNo]);
+
         // We can have conflicting attributes from the inner callsite and
         // to-be-inlined callsite. In that case, choose the most
         // restrictive.

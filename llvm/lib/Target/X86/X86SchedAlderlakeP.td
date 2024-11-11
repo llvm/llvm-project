@@ -60,7 +60,6 @@ def ADLPPort01_05_10       : ProcResGroup<[ADLPPort01, ADLPPort05, ADLPPort10]>;
 def ADLPPort02_03          : ProcResGroup<[ADLPPort02, ADLPPort03]>;
 def ADLPPort02_03_07       : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort07]>;
 def ADLPPort02_03_11       : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort11]>;
-def ADLPPort02_03_10       : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort10]>;
 def ADLPPort05_11          : ProcResGroup<[ADLPPort05, ADLPPort11]>;
 def ADLPPort07_08          : ProcResGroup<[ADLPPort07, ADLPPort08]>;
 

@@ -226,10 +226,8 @@ namespace std {
 #include <__memory/construct_at.h>
 #include <__tuple/find_index.h>
 #include <__tuple/sfinae_helpers.h>
-#include <__type_traits/add_const.h>
-#include <__type_traits/add_cv.h>
+#include <__type_traits/add_cv_quals.h>
 #include <__type_traits/add_pointer.h>
-#include <__type_traits/add_volatile.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>

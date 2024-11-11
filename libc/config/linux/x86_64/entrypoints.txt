@@ -702,6 +702,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.sinpif16
     libc.src.math.sqrtf16
     libc.src.math.tanhf16
+    libc.src.math.tanpif16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16
@@ -827,6 +828,18 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtulr
     libc.src.stdfix.uhksqrtus
     libc.src.stdfix.uksqrtui
+    libc.src.stdfix.hrbits
+    libc.src.stdfix.uhrbits
+    libc.src.stdfix.rbits
+    libc.src.stdfix.urbits
+    libc.src.stdfix.lrbits
+    libc.src.stdfix.ulrbits
+    libc.src.stdfix.hkbits
+    libc.src.stdfix.uhkbits
+    libc.src.stdfix.kbits
+    libc.src.stdfix.ukbits
+    libc.src.stdfix.lkbits
+    libc.src.stdfix.ulkbits
   )
 endif()
 
@@ -1024,6 +1037,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch
     libc.src.search.hsearch_r
     libc.src.search.insque
+    libc.src.search.lfind
     libc.src.search.remque
 
     # threads.h entrypoints
