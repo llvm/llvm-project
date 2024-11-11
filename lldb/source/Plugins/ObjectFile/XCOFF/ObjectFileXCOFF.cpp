@@ -130,11 +130,9 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
                                       lldb::addr_t data_length) {
   lldb_private::DataExtractor data;
   data.SetData(data_sp, data_offset, data_length);
+  data.SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
   uint16_t magic = data.GetU16(&offset);
-  if (magic == 0xF701)
-    magic = 0x01F7; /* Since AIX is big endian, and the host checking platform
-                       might be little endian. */
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 
