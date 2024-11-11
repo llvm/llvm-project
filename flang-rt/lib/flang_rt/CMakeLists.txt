@@ -84,13 +84,13 @@ set(host_sources
 )
 
 file(GLOB_RECURSE public_headers
-  "${FLANGRT_SOURCE_DIR}/include/flang/Runtime/*.h"
-  "${FLANGRT_SOURCE_DIR}/include/flang/Common/*.h"
+  "${FLANG_RT_SOURCE_DIR}/include/flang/Runtime/*.h"
+  "${FLANG_RT_SOURCE_DIR}/include/flang/Common/*.h"
   )
 
 file(GLOB_RECURSE private_headers
-  "${FLANGRT_SOURCE_DIR}/lib/Runtime/*.h"
-  "${FLANGRT_SOURCE_DIR}/lib/Common/*.h"
+  "${FLANG_RT_SOURCE_DIR}/lib/Runtime/*.h"
+  "${FLANG_RT_SOURCE_DIR}/lib/Common/*.h"
   )
 
 

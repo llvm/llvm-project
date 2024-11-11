@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_ISO_FORTRAN_UTIL_H_
-#define FLANGRT_ISO_FORTRAN_UTIL_H_
+#ifndef FLANG_RT_ISO_FORTRAN_UTIL_H_
+#define FLANG_RT_ISO_FORTRAN_UTIL_H_
 
 // Internal utils for establishing CFI_cdesc_t descriptors.
 
@@ -99,4 +99,4 @@ static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor,
   }
 }
 } // namespace Fortran::ISO
-#endif /* FLANGRT_ISO_FORTRAN_UTIL_H_ */
+#endif /* FLANG_RT_ISO_FORTRAN_UTIL_H_ */

@@ -10,8 +10,8 @@
 // It is a list based stack with dynamic allocation/deallocation
 // of the list nodes.
 
-#ifndef FLANGRT_STACK_H_
-#define FLANGRT_STACK_H_
+#ifndef FLANG_RT_STACK_H_
+#define FLANG_RT_STACK_H_
 
 #include "flang-rt/memory.h"
 #include "terminator.h"
@@ -133,4 +133,4 @@ private:
   Terminator &terminator_;
 };
 } // namespace Fortran::runtime
-#endif /* FLANGRT_STACK_H_ */
+#endif /* FLANG_RT_STACK_H_ */

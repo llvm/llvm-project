@@ -12,8 +12,8 @@
 #===------------------------------------------------------------------------===#
 
 set(LLVM_SUBPROJECT_TITLE "Fortran Runtime")
-set(FLANGRT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-set(FLANGRT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(FLANG_RT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 
 
@@ -53,7 +53,7 @@ enable_language(Fortran)
 
 
 list(APPEND CMAKE_MODULE_PATH
-    "${FLANGRT_SOURCE_DIR}/cmake/modules"
+    "${FLANG_RT_SOURCE_DIR}/cmake/modules"
     "${FLANG_SOURCE_DIR}/cmake/modules"
   )
 include(AddFlangRT)
@@ -76,19 +76,19 @@ if (LLVM_TREE_AVAILABLE)
   # Despite Clang in the name, get_clang_resource_dir does not depend on Clang being added to the build
   # flang-new uses the same resource dir as clang.
   include(GetClangResourceDir)
-  get_clang_resource_dir(FLANGRT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
-  get_clang_resource_dir(FLANGRT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself
+  get_clang_resource_dir(FLANG_RT_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
+  get_clang_resource_dir(FLANG_RT_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command finds the install prefix itself
 else ()
-  set(FLANGRT_BUILD_LIB_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
-  set(FLANGRT_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")
+  set(FLANG_RT_BUILD_LIB_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
+  set(FLANG_RT_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")
 endif ()
 
 if (DEFINED WIN32)
-  set(FLANGRT_BUILD_LIB_DIR "${FLANGRT_BUILD_LIB_DIR}/windows")
-  set(FLANGRT_INSTALL_LIB_DIR "${FLANGRT_INSTALL_LIB_DIR}/windows")
+  set(FLANG_RT_BUILD_LIB_DIR "${FLANG_RT_BUILD_LIB_DIR}/windows")
+  set(FLANG_RT_INSTALL_LIB_DIR "${FLANG_RT_INSTALL_LIB_DIR}/windows")
 elseif (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  set(FLANGRT_BUILD_LIB_DIR "${FLANGRT_BUILD_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
-  set(FLANGRT_INSTALL_LIB_DIR "${FLANGRT_INSTALL_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
+  set(FLANG_RT_BUILD_LIB_DIR "${FLANG_RT_BUILD_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
+  set(FLANG_RT_INSTALL_LIB_DIR "${FLANG_RT_INSTALL_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
 endif ()
 
 
@@ -153,9 +153,9 @@ if (WIN32)
       ERROR_QUIET
     )
   if (NOT CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE AND CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT)
-    string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FLANGRT_LIBCALL)
+    string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FLANG_RT_LIBCALL)
   else ()
-    set(FLANGRT_LIBCALL "")
+    set(FLANG_RT_LIBCALL "")
   endif ()
 endif ()
 

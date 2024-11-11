@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_UNITTESTS_RUNTIME_TOOLS_H_
-#define FLANGRT_UNITTESTS_RUNTIME_TOOLS_H_
+#ifndef FLANG_RT_UNITTESTS_RUNTIME_TOOLS_H_
+#define FLANG_RT_UNITTESTS_RUNTIME_TOOLS_H_
 
 #include "flang-rt/descriptor.h"
 #include "flang-rt/type-code.h"
@@ -54,4 +54,4 @@ static OwningPtr<Descriptor> MakeArray(const std::vector<int> &shape,
 }
 
 } // namespace Fortran::runtime
-#endif /* FLANGRT_UNITTESTS_RUNTIME_TOOLS_H_ */
+#endif /* FLANG_RT_UNITTESTS_RUNTIME_TOOLS_H_ */

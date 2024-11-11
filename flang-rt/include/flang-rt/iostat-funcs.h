@@ -9,8 +9,8 @@
 // Defines the values returned by the runtime for IOSTAT= specifiers
 // on I/O statements.
 
-#ifndef FLANGRT_IOSTAT_FUNCS_H_
-#define FLANGRT_IOSTAT_FUNCS_H_
+#ifndef FLANG_RT_IOSTAT_FUNCS_H_
+#define FLANG_RT_IOSTAT_FUNCS_H_
 
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/iostat.h"
@@ -20,4 +20,4 @@ namespace Fortran::runtime::io {
 RT_API_ATTRS const char *IostatErrorString(int);
 
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_IOSTAT_FUNCS_H_ */
+#endif /* FLANG_RT_IOSTAT_FUNCS_H_ */

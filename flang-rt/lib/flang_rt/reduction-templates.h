@@ -18,8 +18,8 @@
 // * Character-valued reductions (MAXVAL & MINVAL) return arbitrary
 //   length results, dynamically allocated in a caller-supplied descriptor
 
-#ifndef FLANGRT_REDUCTION_TEMPLATES_H_
-#define FLANGRT_REDUCTION_TEMPLATES_H_
+#ifndef FLANG_RT_REDUCTION_TEMPLATES_H_
+#define FLANG_RT_REDUCTION_TEMPLATES_H_
 
 #include "flang-rt/descriptor.h"
 #include "numeric-templates.h"
@@ -412,4 +412,4 @@ template <int KIND> struct Norm2Helper {
 };
 
 } // namespace Fortran::runtime
-#endif /* FLANGRT_REDUCTION_TEMPLATES_H_ */
+#endif /* FLANG_RT_REDUCTION_TEMPLATES_H_ */

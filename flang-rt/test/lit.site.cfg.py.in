@@ -4,9 +4,9 @@ import sys
 
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.flang_source_dir = "@FLANG_SOURCE_DIR@"
-config.flangrt_source_dir = "@FLANGRT_SOURCE_DIR@"
+config.flangrt_source_dir = "@FLANG_RT_SOURCE_DIR@"
 config.flangrt_binary_test_dir = os.path.dirname(__file__)
-config.flangrt_build_lib_dir = "@FLANGRT_BUILD_LIB_DIR@"
+config.flangrt_build_lib_dir = "@FLANG_RT_BUILD_LIB_DIR@"
 config.cc = "@CMAKE_C_COMPILER@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 

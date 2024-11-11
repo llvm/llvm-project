@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_TYPE_INFO_H_
-#define FLANGRT_TYPE_INFO_H_
+#ifndef FLANG_RT_TYPE_INFO_H_
+#define FLANG_RT_TYPE_INFO_H_
 
 // A C++ perspective of the derived type description schemata in
 // flang/module/__fortran_type_info.f90.
@@ -321,4 +321,4 @@ private:
 };
 
 } // namespace Fortran::runtime::typeInfo
-#endif /* FLANGRT_TYPE_INFO_H_ */
+#endif /* FLANG_RT_TYPE_INFO_H_ */

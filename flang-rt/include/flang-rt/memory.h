@@ -9,8 +9,8 @@
 // Thin wrapper around malloc()/free() to isolate the dependency,
 // ease porting, and provide an owning pointer.
 
-#ifndef FLANGRT_MEMORY_H_
-#define FLANGRT_MEMORY_H_
+#ifndef FLANG_RT_MEMORY_H_
+#define FLANG_RT_MEMORY_H_
 
 #include "flang/Common/api-attrs.h"
 #include <cassert>
@@ -170,4 +170,4 @@ template <typename A> struct Allocator {
 };
 } // namespace Fortran::runtime
 
-#endif /* FLANGRT_MEMORY_H_ */
+#endif /* FLANG_RT_MEMORY_H_ */

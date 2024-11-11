@@ -77,14 +77,14 @@ function (add_flangrt_library name)
   endif ()
 
   # Flang-rt's public headers
-  target_include_directories(${name} PRIVATE "${FLANGRT_SOURCE_DIR}/include")
+  target_include_directories(${name} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
 
   # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
   # User applications can use #include <ISO_Fortran_binding.h>
   target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
 
   # For flang-rt's configured config.h to be found
-  target_include_directories(${name} PRIVATE "${FLANGRT_BINARY_DIR}")
+  target_include_directories(${name} PRIVATE "${FLANG_RT_BINARY_DIR}")
 
   # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
   # build, to avoid an unwanted dependency on libstdc++/libc++.so.
@@ -98,8 +98,8 @@ function (add_flangrt_library name)
   # functions for 128-bit integer math (__udivti3, __modti3, __fixsfti,
   # __floattidf, ...) that msvc does not support. We are injecting a dependency
   # to Compiler-RT where these are implemented.
-  if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FLANGRT_LIBCALL)
-    target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANGRT_LIBCALL}")
+  if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FLANG_RT_LIBCALL)
+    target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_LIBCALL}")
   endif ()
 
   # Non-GTest unittests depend on LLVMSupport
@@ -119,15 +119,15 @@ function (add_flangrt_library name)
   if (ARG_INSTALL_WITH_TOOLCHAIN)
     set_target_properties(${name}
       PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${FLANGRT_BUILD_LIB_DIR}"
-        ARCHIVE_OUTPUT_DIRECTORY "${FLANGRT_BUILD_LIB_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY "${FLANGRT_BUILD_LIB_DIR}"
+        LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
+        ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
+        RUNTIME_OUTPUT_DIRECTORY "${FLANG_RT_BUILD_LIB_DIR}"
       )
 
     install(TARGETS ${name}
-        LIBRARY DESTINATION "${FLANGRT_INSTALL_LIB_DIR}"
-        ARCHIVE DESTINATION "${FLANGRT_INSTALL_LIB_DIR}"
-        RUNTIME DESTINATION "${FLANGRT_INSTALL_LIB_DIR}"
+        LIBRARY DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
+        ARCHIVE DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
+        RUNTIME DESTINATION "${FLANG_RT_INSTALL_LIB_DIR}"
       )
   endif ()
 

@@ -8,8 +8,8 @@
 
 // Fortran internal I/O "units"
 
-#ifndef FLANGRT_INTERNAL_UNIT_H_
-#define FLANGRT_INTERNAL_UNIT_H_
+#ifndef FLANG_RT_INTERNAL_UNIT_H_
+#define FLANG_RT_INTERNAL_UNIT_H_
 
 #include "connection.h"
 #include "flang-rt/descriptor.h"
@@ -56,4 +56,4 @@ private:
 extern template class InternalDescriptorUnit<Direction::Output>;
 extern template class InternalDescriptorUnit<Direction::Input>;
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_INTERNAL_UNIT_H_ */
+#endif /* FLANG_RT_INTERNAL_UNIT_H_ */

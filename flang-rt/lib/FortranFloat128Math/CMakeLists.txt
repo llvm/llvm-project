@@ -99,7 +99,7 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       ${sources})
    endif ()
    target_include_directories(FortranFloat128Math PRIVATE
-     "${FLANGRT_SOURCE_DIR}/lib/flang_rt"
+     "${FLANG_RT_SOURCE_DIR}/lib/flang_rt"
      )
 elseif (HAVE_LDBL_MANT_DIG_113)
   # We can use 'long double' versions from libc.
@@ -109,7 +109,7 @@ elseif (HAVE_LDBL_MANT_DIG_113)
       HAS_LIBM
       )
     target_include_directories(FortranFloat128MathILib INTERFACE
-      "${FLANGRT_SOURCE_DIR}/lib/flang_rt"
+      "${FLANG_RT_SOURCE_DIR}/lib/flang_rt"
       )
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
   else()
@@ -123,7 +123,7 @@ else()
       HAS_LIBMF128
       )
     target_include_directories(FortranFloat128MathILib INTERFACE
-      "${FLANGRT_SOURCE_DIR}/lib/flang_rt"
+      "${FLANG_RT_SOURCE_DIR}/lib/flang_rt"
       )
     # Enable this, when math-entries.h and complex-math.h is ready.
     # target_sources(FortranFloat128MathILib INTERFACE ${sources})

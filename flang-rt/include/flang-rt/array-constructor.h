@@ -9,8 +9,8 @@
 // External APIs to create temporary storage for array constructors when their
 // final extents or length parameters cannot be pre-computed.
 
-#ifndef FLANGRT_ARRAY_CONSTRUCTOR_H_
-#define FLANGRT_ARRAY_CONSTRUCTOR_H_
+#ifndef FLANG_RT_ARRAY_CONSTRUCTOR_H_
+#define FLANG_RT_ARRAY_CONSTRUCTOR_H_
 
 #include "flang-rt/descriptor.h"
 #include "flang/Runtime/array-constructor-consts.h"
@@ -45,4 +45,4 @@ private:
 };
 
 } // namespace Fortran::runtime
-#endif /* FLANGRT_ARRAY_CONSTRUCTOR_H_ */
+#endif /* FLANG_RT_ARRAY_CONSTRUCTOR_H_ */

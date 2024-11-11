@@ -54,7 +54,7 @@ macro(enable_cuda_compilation name files)
     set_property(TARGET ${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
     if (FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
       target_compile_definitions(${name}PTX
-        PRIVATE FLANGRT_NO_GLOBAL_VAR_DEFS
+        PRIVATE FLANG_RT_NO_GLOBAL_VAR_DEFS
         )
     endif()
   endif()

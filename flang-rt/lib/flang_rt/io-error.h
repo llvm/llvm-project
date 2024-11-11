@@ -12,8 +12,8 @@
 // IOSTAT error codes are raw errno values augmented with values for
 // Fortran-specific errors.
 
-#ifndef FLANGRT_IO_ERROR_H_
-#define FLANGRT_IO_ERROR_H_
+#ifndef FLANG_RT_IO_ERROR_H_
+#define FLANG_RT_IO_ERROR_H_
 
 #include "flang-rt/iostat-funcs.h"
 #include "flang-rt/memory.h"
@@ -78,4 +78,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_IO_ERROR_H_ */
+#endif /* FLANG_RT_IO_ERROR_H_ */
