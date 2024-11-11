@@ -2116,8 +2116,8 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // Don't allow the section to shrink; otherwise the size of the section can
   // oscillate infinitely. Trailing 1s do not decode to more relocations.
   if (relrRelocs.size() < oldSize) {
-    log(".relr.dyn needs " + Twine(oldSize - relrRelocs.size()) +
-        " padding word(s)");
+    Log(ctx) << ".relr.dyn needs " << Twine(oldSize - relrRelocs.size()) <<
+        " padding word(s)";
     relrRelocs.resize(oldSize, Elf_Relr(1));
   }
 

@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -4738,6 +4737,7 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
   case X86::PTILEPAIRLOAD:
+  case X86::PTILEPAIRSTORE:
     return true;
   }
 }
