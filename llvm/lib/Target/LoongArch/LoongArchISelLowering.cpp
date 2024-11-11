@@ -143,6 +143,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
     setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
+    setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
   // Set operations for LA32 only.
@@ -286,6 +287,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                         VT, Expand);
     }
     setOperationAction(ISD::CTPOP, GRLenVT, Legal);
+    setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FFLOOR, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FTRUNC, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FROUNDEVEN, {MVT::f32, MVT::f64}, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -3101,6 +3106,18 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     replaceINTRINSIC_WO_CHAINResults(N, Results, DAG, Subtarget);
+    break;
+  }
+  case ISD::LROUND: {
+    SDValue Op0 = N->getOperand(0);
+    EVT OpVT = Op0.getValueType();
+    RTLIB::Libcall LC =
+        OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    MakeLibCallOptions CallOptions;
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
+    Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+    Results.push_back(Result);
     break;
   }
   }

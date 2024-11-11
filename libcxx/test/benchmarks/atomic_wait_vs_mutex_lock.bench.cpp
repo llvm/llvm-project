@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// To run this test, build libcxx and cxx-benchmarks targets
-// cd third-party/benchmark/tools
-// ./compare.py filters ../../../build/libcxx/benchmarks/atomic_wait_vs_mutex_lock.libcxx.out BM_atomic_wait BM_mutex
-
 #include <atomic>
 #include <mutex>
 #include <numeric>

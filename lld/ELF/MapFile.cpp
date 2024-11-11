@@ -268,7 +268,7 @@ void elf::writeMapAndCref(Ctx &ctx) {
   StringRef mapFile = ctx.arg.mapFile.empty() ? "-" : ctx.arg.mapFile;
   raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
-    error("cannot open " + mapFile + ": " + ec.message());
+    ErrAlways(ctx) << "cannot open " << mapFile << ": " << ec.message();
     return;
   }
 
