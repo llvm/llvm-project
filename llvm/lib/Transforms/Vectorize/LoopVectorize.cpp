@@ -2491,17 +2491,20 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
 
     Value *Step = CreateStep();
-#ifndef NDEBUG
     ScalarEvolution &SE = *PSE.getSE();
     const SCEV *TC2OverflowSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
-    assert(
-        !isIndvarOverflowCheckKnownFalse(Cost, VF * UF) &&
-        !SE.isKnownPredicate(CmpInst::getInversePredicate(ICmpInst::ICMP_ULT),
-                             TC2OverflowSCEV, SE.getSCEV(Step)) &&
-        "unexpectedly proved overflow check to be known");
-#endif
-    // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
+    const SCEV *StepSCEV = SE.getSCEV(Step);
+
+    // Check if the tc + step is >= maxuint.
+    if (SE.isKnownPredicate(ICmpInst::ICMP_ULT, TC2OverflowSCEV, StepSCEV)) {
+      CheckMinIters = Builder.getTrue();
+    } else if (!SE.isKnownPredicate(
+                   CmpInst::getInversePredicate(CmpInst::ICMP_ULT),
+                   TC2OverflowSCEV, StepSCEV)) {
+      // Generate the IV overflow check only if we cannot prove the IV won't
+      // overflow, or known to always overflow.
+      CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
+    } // else tc + step known < maxuint, use CheckMinIters preset to false
   }
 
   // Create new preheader for vector loop.
