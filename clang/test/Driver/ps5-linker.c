@@ -131,7 +131,7 @@
 // CHECK-LD: {{ld(\.exe)?}}"
 // CHECK-MAIN-CRT-SAME: "crt1.o" "crti.o" "crtbegin.o"
 // CHECK-SHARED-CRT-SAME: "crti.o" "crtbeginS.o"
-// CHECK-STATIC-CRT-SAMW: "crt1.o" "crti.o" "crtbeginT.o"
+// CHECK-STATIC-CRT-SAME: "crt1.o" "crti.o" "crtbeginT.o"
 
 // CHECK-NO-LIBC-NOT: "-lc{{(_stub_weak)?}}"
 // CHECK-NO-LIBCPP-NOT: "-l{{c_stub_weak|stdc\+\+}}"
