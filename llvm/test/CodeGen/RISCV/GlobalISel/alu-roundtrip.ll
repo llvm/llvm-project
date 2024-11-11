@@ -333,7 +333,7 @@ define i32 @mul_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: mul_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    mulw a0, a0, a1
+; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = mul i32 %a, %b

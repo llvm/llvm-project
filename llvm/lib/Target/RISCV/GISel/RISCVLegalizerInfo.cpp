@@ -414,9 +414,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   if (ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
-        .legalFor({s32, sXLen})
+        .legalFor({sXLen})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, s32, sXLen);
+        .clampScalar(0, sXLen, sXLen);
 
     // clang-format off
     getActionDefinitionsBuilder({G_SMULH, G_UMULH})
