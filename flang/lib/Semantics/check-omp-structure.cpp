@@ -941,9 +941,9 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   dirContext_.pop_back();
 
   assert(!loopStack_.empty() && "Expecting non-empty loop stack");
-  const LoopConstruct &top = loopStack_.back();
+  const LoopConstruct &top{loopStack_.back()};
 #ifndef NDEBUG
-  auto *loopc = std::get_if<const parser::OpenMPLoopConstruct *>(&top);
+  auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&top)};
   assert(loopc != nullptr && *loopc == &x && "Mismatched loop constructs");
 #endif
   loopStack_.pop_back();
@@ -1633,8 +1633,8 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
   int dependSinkCount{0}, dependSourceCount{0};
   bool exclusiveShown{false}, duplicateSourceShown{false};
 
-  auto visitDoacross = [&](const parser::OmpDoacross &doa,
-                           const parser::CharBlock &src) {
+  auto visitDoacross{[&](const parser::OmpDoacross &doa,
+                         const parser::CharBlock &src) {
     common::visit(
         common::visitors{
             [&](const parser::OmpDoacross::Source &) { dependSourceCount++; },
@@ -1650,11 +1650,11 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
       context_.Say(src,
           "At most one SOURCE dependence type can appear on the ORDERED directive"_err_en_US);
     }
-  };
+  }};
 
   // Visit the DEPEND and DOACROSS clauses.
-  auto depClauses = FindClauses(llvm::omp::Clause::OMPC_depend);
-  for (auto itr = depClauses.first; itr != depClauses.second; ++itr) {
+  auto depClauses{FindClauses(llvm::omp::Clause::OMPC_depend)};
+  for (auto itr{depClauses.first}; itr != depClauses.second; ++itr) {
     const auto &dependClause{
         std::get<parser::OmpClause::Depend>(itr->second->u)};
     if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
@@ -1665,7 +1665,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     }
   }
   auto doaClauses{FindClauses(llvm::omp::Clause::OMPC_doacross)};
-  for (auto itr = doaClauses.first; itr != doaClauses.second; ++itr) {
+  for (auto itr{doaClauses.first}; itr != doaClauses.second; ++itr) {
     auto &doaClause{std::get<parser::OmpClause::Doacross>(itr->second->u)};
     visitDoacross(doaClause.v.v, itr->second->source);
   }
@@ -4405,7 +4405,7 @@ void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
   assert(!loopStack_.empty() && "Expecting non-empty loop stack");
   const LoopConstruct &top = loopStack_.back();
 #ifndef NDEBUG
-  auto *doc = std::get_if<const parser::DoConstruct *>(&top);
+  auto *doc{std::get_if<const parser::DoConstruct *>(&top)};
   assert(doc != nullptr && *doc == &x && "Mismatched loop constructs");
 #endif
   loopStack_.pop_back();
