@@ -200,9 +200,11 @@ public:
       if (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
         unsigned int Mask = MI->getOperand(0).getImm();
         if (AMDGPU::DepCtr::decodeFieldVaVcc(Mask) == 0)
-          State.VCCHazard = HazardState::None;
-        if (AMDGPU::DepCtr::decodeFieldSaSdst(Mask) == 0)
+          State.VCCHazard &= ~HazardState::VALU;
+        if (AMDGPU::DepCtr::decodeFieldSaSdst(Mask) == 0) {
           State.SALUHazards.reset();
+          State.VCCHazard &= ~HazardState::SALU;
+        }
         if (AMDGPU::DepCtr::decodeFieldVaSdst(Mask) == 0)
           State.VALUHazards.reset();
         continue;
@@ -283,8 +285,14 @@ public:
             Wait |= State.SALUHazards[RegN + RegIdx] ? WA_SALU : 0;
             Wait |= IsVALU && State.VALUHazards[RegN + RegIdx] ? WA_VALU : 0;
           }
-          if (IsVCC(Reg) && State.VCCHazard)
-            Wait |= WA_VCC;
+          if (IsVCC(Reg) && State.VCCHazard) {
+            // Note: it's possible for both SALU and VALU to exist if VCC
+            // was updated differently by merged predecessors.
+            if (State.VCCHazard & HazardState::SALU)
+              Wait |= WA_SALU;
+            if (State.VCCHazard & HazardState::VALU)
+              Wait |= WA_VCC;
+          }
         } else {
           // Update hazards
           if (IsVCC(Reg)) {
@@ -308,9 +316,9 @@ public:
       if (IsSetPC) {
         // All SGPR writes before a call/return must be flushed as the
         // callee/caller will not will not see the hazard chain.
-        if (State.VCCHazard)
+        if (State.VCCHazard & HazardState::VALU)
           Wait |= WA_VCC;
-        if (State.SALUHazards.any())
+        if (State.SALUHazards.any() || (State.VCCHazard & HazardState::SALU))
           Wait |= WA_SALU;
         if (State.VALUHazards.any())
           Wait |= WA_VALU;
@@ -330,11 +338,12 @@ public:
       if (Wait) {
         unsigned Mask = 0xffff;
         if (Wait & WA_VCC) {
-          State.VCCHazard = HazardState::None;
+          State.VCCHazard &= ~HazardState::VALU;
           Mask = AMDGPU::DepCtr::encodeFieldVaVcc(Mask, 0);
         }
         if (Wait & WA_SALU) {
           State.SALUHazards.reset();
+          State.VCCHazard &= ~HazardState::SALU;
           Mask = AMDGPU::DepCtr::encodeFieldSaSdst(Mask, 0);
         }
         if (Wait & WA_VALU) {

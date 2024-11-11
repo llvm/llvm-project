@@ -3226,7 +3226,7 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
 
   return Builder->removeBindings(
       [this, MemberName](const BoundNodesMap &Nodes) {
-        const auto &BN = Nodes.getNode(this->BindingID);
+        const DynTypedNode &BN = Nodes.getNode(this->BindingID);
         if (const auto *ND = BN.get<NamedDecl>()) {
           if (!isa<FieldDecl, CXXMethodDecl, VarDecl>(ND))
             return true;

@@ -678,8 +678,7 @@ define double @fabs_f64(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fabs_f64:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    slli a1, a1, 1
-; RV32IZFINXZDINX-NEXT:    srli a1, a1, 1
+; RV32IZFINXZDINX-NEXT:    fabs.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fabs_f64:

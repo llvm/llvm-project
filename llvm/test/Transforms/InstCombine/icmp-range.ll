@@ -238,7 +238,7 @@ define <2 x i1> @test_two_ranges_vec_false(ptr nocapture readonly %arg1, ptr noc
 ; Values' ranges do not overlap each other, so it can simplified to true.
 define <2 x i1> @test_two_ranges_vec_true(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
 ; CHECK-LABEL: @test_two_ranges_vec_true(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %val1 = load <2 x i32>, ptr %arg1, !range !0
   %val2 = load <2 x i32>, ptr %arg2, !range !6
@@ -268,7 +268,7 @@ define <2 x i1> @test_two_argument_ranges_vec_false(<2 x i32> range(i32 1, 6) %a
 ; Values' ranges do not overlap each other, so it can simplified to true.
 define <2 x i1> @test_two_argument_ranges_vec_true(<2 x i32> range(i32 1, 6) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_argument_ranges_vec_true(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %rval = icmp ugt <2 x i32> %arg2, %arg1
   ret <2 x i1> %rval
@@ -545,7 +545,7 @@ define i1 @sub_ule_zext(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @sub_ult_and(<2 x i8> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_ult_and(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[B:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[S]], [[A]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -775,7 +775,7 @@ define i1 @sub_ult_sext(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @sub_ule_ashr(<2 x i8> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_ule_ashr(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[B:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[B:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[S]], [[A]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -1017,7 +1017,7 @@ define i1 @zext_sext_add_icmp_ugt_1(i1 %a, i1 %b) {
 
 define <2 x i1> @vector_zext_sext_add_icmp_slt_1(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @vector_zext_sext_add_icmp_slt_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -1335,7 +1335,7 @@ define i1 @icmp_eq_zext_ne_non_boolean(i32 %a) {
 
 define <2 x i1> @icmp_ne_zext_eq_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_eq_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>
   %conv = zext <2 x i1> %cmp to <2 x i32>
@@ -1345,7 +1345,7 @@ define <2 x i1> @icmp_ne_zext_eq_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_zext_ne_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_ne_zero_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 0, i32 0>
@@ -1356,7 +1356,7 @@ define <2 x i1> @icmp_ne_zext_ne_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_zext_eq_one_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_eq_one_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 1, i32 1>
@@ -1367,7 +1367,7 @@ define <2 x i1> @icmp_ne_zext_eq_one_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_zext_ne_one_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_ne_one_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 1, i32 1>
   %conv = zext <2 x i1> %cmp to <2 x i32>
@@ -1520,7 +1520,7 @@ define i1 @icmp_eq_sext_ne_otherwise(i32 %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>
   %conv = sext <2 x i1> %cmp to <2 x i32>
@@ -1530,8 +1530,8 @@ define <2 x i1> @icmp_ne_sext_eq_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_zero_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 -2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 0, i32 0>
@@ -1542,8 +1542,8 @@ define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_allones_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 -2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 -1, i32 -1>
@@ -1554,7 +1554,7 @@ define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_ne_allones_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_allones_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 -1, i32 -1>
   %conv = sext <2 x i1> %cmp to <2 x i32>

@@ -8,7 +8,7 @@
 define amdgpu_kernel void @private_volatile_load_0(i32 addrspace(4)* %in, i32 addrspace(1)* %out) {
 ; GFX6-LABEL: private_volatile_load_0:
 ; GFX6:       ; %bb.0: ; %entry
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22,7 +22,7 @@ define amdgpu_kernel void @private_volatile_load_0(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX90A-LABEL: private_volatile_load_0:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_load_dword s0, s[0:1], 0x0 glc slc
@@ -33,7 +33,7 @@ define amdgpu_kernel void @private_volatile_load_0(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX940-LABEL: private_volatile_load_0:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
+; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    s_load_dword s0, s[0:1], 0x0 nt
@@ -44,7 +44,7 @@ define amdgpu_kernel void @private_volatile_load_0(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX10-LABEL: private_volatile_load_0:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x0 slc
@@ -55,7 +55,7 @@ define amdgpu_kernel void @private_volatile_load_0(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX11-LABEL: private_volatile_load_0:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0 slc dlc
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -71,7 +71,7 @@ entry:
 define amdgpu_kernel void @private_volatile_load_1(i32 addrspace(4)* %in, i32 addrspace(1)* %out) {
 ; GFX6-LABEL: private_volatile_load_1:
 ; GFX6:       ; %bb.0: ; %entry
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
@@ -88,7 +88,7 @@ define amdgpu_kernel void @private_volatile_load_1(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX90A-LABEL: private_volatile_load_1:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX90A-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
@@ -100,7 +100,7 @@ define amdgpu_kernel void @private_volatile_load_1(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX940-LABEL: private_volatile_load_1:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
+; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX940-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX940-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-NEXT:    v_mov_b32_e32 v1, 0
@@ -112,7 +112,7 @@ define amdgpu_kernel void @private_volatile_load_1(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX10-LABEL: private_volatile_load_1:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -123,7 +123,7 @@ define amdgpu_kernel void @private_volatile_load_1(i32 addrspace(4)* %in, i32 ad
 ;
 ; GFX11-LABEL: private_volatile_load_1:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0

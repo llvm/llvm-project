@@ -132,6 +132,11 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
 cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
+
+cl::opt<bool> MemProfRequireDefinitionForPromotion(
+    "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Require target function definition when promoting indirect calls"));
 } // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
@@ -4143,7 +4148,17 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
     Module &M) {
   ICallAnalysis = std::make_unique<ICallPromotionAnalysis>();
   Symtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Symtab->create(M, /*InLTO=*/true)) {
+  // Don't add canonical names, to avoid multiple functions to the symtab
+  // when they both have the same root name with "." suffixes stripped.
+  // If we pick the wrong one then this could lead to incorrect ICP and calling
+  // a memprof clone that we don't actually create (resulting in linker unsats).
+  // What this means is that the GUID of the function (or its PGOFuncName
+  // metadata) *must* match that in the VP metadata to allow promotion.
+  // In practice this should not be a limitation, since local functions should
+  // have PGOFuncName metadata and global function names shouldn't need any
+  // special handling (they should not get the ".llvm.*" suffix that the
+  // canonicalization handling is attempting to strip).
+  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
@@ -4592,7 +4607,13 @@ void MemProfContextDisambiguation::performICP(
       // target (or version of the code), and we need to be conservative
       // (similar to what is done in the ICP pass).
       Function *TargetFunction = Symtab->getFunction(Candidate.Value);
-      if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
+      if (TargetFunction == nullptr ||
+          // Any ThinLTO global dead symbol removal should have already
+          // occurred, so it should be safe to promote when the target is a
+          // declaration.
+          // TODO: Remove internal option once more fully tested.
+          (MemProfRequireDefinitionForPromotion &&
+           TargetFunction->isDeclaration())) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", CB)
                  << "Memprof cannot promote indirect call: target with md5sum "
