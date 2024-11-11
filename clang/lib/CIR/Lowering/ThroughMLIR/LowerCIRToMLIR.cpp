@@ -787,7 +787,9 @@ class CIRScopeOpLowering : public mlir::OpConversionPattern<cir::ScopeOp> {
   matchAndRewrite(cir::ScopeOp scopeOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Empty scope: just remove it.
-    if (scopeOp.getRegion().empty()) {
+    // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
+    // trivially dead operations
+    if (scopeOp.isEmpty()) {
       rewriter.eraseOp(scopeOp);
       return mlir::success();
     }

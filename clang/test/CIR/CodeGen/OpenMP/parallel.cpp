@@ -4,8 +4,6 @@
 // CHECK: cir.func
 void omp_parallel_1() {
 // CHECK: omp.parallel {
-// CHECK-NEXT: cir.scope {
-// CHECK-NEXT: }
 // CHECK-NEXT: omp.terminator
 // CHECK-NEXT: }
 #pragma omp parallel

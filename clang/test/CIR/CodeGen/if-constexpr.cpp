@@ -75,9 +75,6 @@ void if0() {
 // CHECK-NEXT:   cir.store %3, %2 : !s32i, !cir.ptr<!s32i> loc({{.*}})
 // CHECK-NEXT: } loc({{.*}})
 // CHECK-NEXT: cir.scope {
-// Note that Clang does not even emit a block in this case
-// CHECK-NEXT: } loc({{.*}})
-// CHECK-NEXT: cir.scope {
 // CHECK-NEXT:   %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {{.*}}
 // CHECK-NEXT:   %3 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {{.*}}
 // CHECK-NEXT:   %4 = cir.const #cir.int<70> : !s32i loc({{.*}})

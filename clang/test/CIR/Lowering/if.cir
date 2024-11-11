@@ -62,4 +62,38 @@ module {
   // MLIR-NEXT: ^bb2:  // pred: ^bb0
   // MLIR-NEXT:   llvm.return %arg0 : i32
   // MLIR-NEXT: }
+
+  // Verify empty if clause is properly lowered to empty block
+  cir.func @emptyIfClause(%arg0: !s32i) -> !s32i {
+    // MLIR-LABEL: llvm.func @emptyIfClause
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    // MLIR: llvm.cond_br {{%.*}}, ^[[T:.*]], ^[[PHI:.*]]
+    cir.if %4 {
+      // MLIR-NEXT: ^[[T]]:
+      // MLIR-NEXT:   llvm.br ^[[PHI]]
+    }
+    // MLIR-NEXT: ^[[PHI]]:
+    // MLIR-NEXT:   llvm.return
+    cir.return %arg0 : !s32i
+  }
+
+  // Verify empty if-else clauses are properly lowered to empty blocks
+  // TODO: Fix reversed order of blocks in the test once Issue clangir/#1094 is
+  // addressed
+  cir.func @emptyIfElseClause(%arg0: !s32i) -> !s32i {
+    // MLIR-LABEL: llvm.func @emptyIfElseClause
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    // MLIR: llvm.cond_br {{%.*}}, ^[[T:.*]], ^[[F:.*]]
+    cir.if %4 {
+    } else {
+    }
+    // MLIR-NEXT: ^[[F]]:
+    // MLIR-NEXT:   llvm.br ^[[PHI:.*]]
+    // MLIR-NEXT: ^[[T]]:
+    // MLIR-NEXT:   llvm.br ^[[PHI]]
+    // MLIR-NEXT: ^[[PHI]]:
+    // MLIR-NEXT:   llvm.return
+    cir.return %arg0 : !s32i
+  }
+
 }

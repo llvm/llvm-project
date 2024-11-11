@@ -66,7 +66,7 @@ struct CIRIfFlattening : public OpRewritePattern<IfOp> {
     auto *remainingOpsBlock =
         rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
     mlir::Block *continueBlock;
-    if (ifOp->getResults().size() == 0)
+    if (ifOp->getResults().empty())
       continueBlock = remainingOpsBlock;
     else
       llvm_unreachable("NYI");
@@ -125,7 +125,9 @@ public:
     auto loc = scopeOp.getLoc();
 
     // Empty scope: just remove it.
-    if (scopeOp.getRegion().empty()) {
+    // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
+    // trivially dead operations
+    if (scopeOp.isEmpty()) {
       rewriter.eraseOp(scopeOp);
       return mlir::success();
     }

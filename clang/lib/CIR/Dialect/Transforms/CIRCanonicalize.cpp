@@ -60,9 +60,9 @@ struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
   using OpRewritePattern<ScopeOp>::OpRewritePattern;
 
   LogicalResult match(ScopeOp op) const final {
-    return success(op.getRegion().empty() ||
-                   (op.getRegion().getBlocks().size() == 1 &&
-                    op.getRegion().front().empty()));
+    // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
+    // trivially dead operations
+    return success(op.isEmpty());
   }
 
   void rewrite(ScopeOp op, PatternRewriter &rewriter) const final {

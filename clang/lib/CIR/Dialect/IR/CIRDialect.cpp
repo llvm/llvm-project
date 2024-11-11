@@ -208,20 +208,24 @@ LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
   Location eLoc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
   OpBuilder builder(parser.getBuilder().getContext());
 
-  // Region is empty or properly terminated: nothing to do.
-  if (region.empty() ||
-      (region.back().mightHaveTerminator() && region.back().getTerminator()))
+  // Insert empty block in case the region is empty to ensure the terminator
+  // will be inserted
+  if (region.empty())
+    builder.createBlock(&region);
+
+  Block &block = region.back();
+  // Region is properly terminated: nothing to do.
+  if (!block.empty() && block.back().hasTrait<OpTrait::IsTerminator>())
     return success();
 
   // Check for invalid terminator omissions.
   if (!region.hasOneBlock())
     return parser.emitError(errLoc,
                             "multi-block region must not omit terminator");
-  if (region.back().empty())
-    return parser.emitError(errLoc, "empty region must not omit terminator");
 
-  // Terminator was omited correctly: recreate it.
-  region.back().push_back(builder.create<cir::YieldOp>(eLoc));
+  // Terminator was omitted correctly: recreate it.
+  builder.setInsertionPointToEnd(&block);
+  builder.create<cir::YieldOp>(eLoc);
   return success();
 }
 
@@ -1113,8 +1117,11 @@ void cir::IfOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(getOperation()->getAttrs());
 }
 
-/// Default callback for IfOp builders. Inserts nothing for now.
-void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {}
+/// Default callback for IfOp builders.
+void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {
+  // add cir.yield to the end of the block
+  builder.create<cir::YieldOp>(loc);
+}
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
@@ -1223,7 +1230,17 @@ void cir::ScopeOp::build(
   scopeBuilder(builder, result.location);
 }
 
-LogicalResult cir::ScopeOp::verify() { return success(); }
+LogicalResult cir::ScopeOp::verify() {
+  if (getRegion().empty()) {
+    return emitOpError() << "cir.scope must not be empty since it should "
+                            "include at least an implicit cir.yield ";
+  }
+
+  if (getRegion().back().empty() ||
+      !getRegion().back().getTerminator()->hasTrait<OpTrait::IsTerminator>())
+    return emitOpError() << "last block of cir.scope must be terminated";
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // TryOp

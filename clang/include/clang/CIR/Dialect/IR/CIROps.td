@@ -750,8 +750,10 @@ def IfOp : CIR_Op<"if",
     }
     ```
 
-    `cir.if` defines no values and the 'else' can be omitted. `cir.yield` must
-    explicitly terminate the region if it has more than one block.
+    `cir.if` defines no values and the 'else' can be omitted. The if/else
+    regions must be terminated. If the region has only one block, the terminator
+    can be left out, and `cir.yield` terminator will be inserted implictly.
+    Otherwise, the region must be explicitly terminated.
   }];
   let arguments = (ins CIR_BoolType:$condition);
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
@@ -1070,6 +1072,16 @@ def ScopeOp : CIR_Op<"scope", [
     custom<OmittedTerminatorRegion>($scopeRegion) (`:` type($results)^)? attr-dict
   }];
 
+  let extraClassDeclaration = [{
+    /// Determine whether the scope is empty, meaning it contains a single block
+    /// terminated by a cir.yield.
+    bool isEmpty() {
+      auto &entry = getRegion().front();
+      return getRegion().hasOneBlock() &&
+        llvm::isa<YieldOp>(entry.front());
+      }
+    }];
+
   let builders = [
     // Scopes for yielding values.
     OpBuilder<(ins
@@ -1200,7 +1212,7 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     be either integer type or vector of integer type. However, they must be
     either all vector of integer type, or all integer type. If they are vectors,
     each vector element of the shift target is shifted by the corresponding
-    shift amount in the shift amount vector. 
+    shift amount in the shift amount vector.
 
     ```mlir
     %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
@@ -1879,17 +1891,17 @@ def SwitchOp : CIR_Op<"switch",
     is an integral condition value.
 
     The set of `cir.case` operations and their enclosing `cir.switch`
-    represents the semantics of a C/C++ switch statement. Users can use 
+    represents the semantics of a C/C++ switch statement. Users can use
     `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
     operation in the `cir.switch` operation easily.
 
     The `cir.case` operations doesn't have to be in the region of `cir.switch`
     directly. However, when all the `cir.case` operations lives in the region
     of `cir.switch` directly and there is no other operations except the ending
-    `cir.yield` operation in the region of `cir.switch` directly, we call the 
-    `cir.switch` operation is in a simple form. Users can use 
+    `cir.yield` operation in the region of `cir.switch` directly, we call the
+    `cir.switch` operation is in a simple form. Users can use
     `bool isSimpleForm(llvm::SmallVector<CaseOp> &cases)` member function to
-    detect if the `cir.switch` operation is in a simple form. The simple form 
+    detect if the `cir.switch` operation is in a simple form. The simple form
     makes analysis easier to handle the `cir.switch` operation
     and makes the boundary to give up pretty clear.
 
@@ -1976,7 +1988,7 @@ def SwitchOp : CIR_Op<"switch",
     switch(int cond) {
       l:
         b++;
-  
+
       case 4:
         a++;
         break;
@@ -4178,13 +4190,13 @@ def ReturnAddrOp : CIR_Op<"return_address"> {
   let results = (outs Res<VoidPtr, "">:$result);
 
   let description = [{
-    Represents call to builtin function ` __builtin_return_address` in CIR. 
-    This builtin function returns the return address of the current function, 
-    or of one of its callers. 
+    Represents call to builtin function ` __builtin_return_address` in CIR.
+    This builtin function returns the return address of the current function,
+    or of one of its callers.
     The `level` argument is number of frames to scan up the call stack.
-    For instance, value of 0 yields the return address of the current function, 
-    value of 1 yields the return address of the caller of the current function, 
-    and so forth. 
+    For instance, value of 0 yields the return address of the current function,
+    value of 1 yields the return address of the caller of the current function,
+    and so forth.
 
     Examples:
 
@@ -4324,8 +4336,8 @@ def AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let summary = [{
     libc builtin equivalent abs, labs, llabs
 
-    The `poison` argument indicate whether the result value 
-    is a poison value if the first argument is statically or 
+    The `poison` argument indicate whether the result value
+    is a poison value if the first argument is statically or
     dynamically an INT_MIN value.
 
     Example:
