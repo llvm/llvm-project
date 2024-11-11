@@ -3899,19 +3899,26 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                       unsigned NumRegionInstrs) {
   const MachineFunction &MF = *Begin->getMF();
 
+  // Default to top-down because it was implemented first and existing targets
+  // expect that behavior by default.
+  RegionPolicy.OnlyTopDown = true;
+  RegionPolicy.OnlyBottomUp = false;
+
   // Allow the subtarget to override default policy.
   MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, NumRegionInstrs);
 
   // After subtarget overrides, apply command line options.
-  if (PostRADirection == MISchedPostRASched::TopDown) {
-    RegionPolicy.OnlyTopDown = true;
-    RegionPolicy.OnlyBottomUp = false;
-  } else if (PostRADirection == MISchedPostRASched::BottomUp) {
-    RegionPolicy.OnlyTopDown = false;
-    RegionPolicy.OnlyBottomUp = true;
-  } else if (PostRADirection == MISchedPostRASched::Bidirectional) {
-    RegionPolicy.OnlyBottomUp = false;
-    RegionPolicy.OnlyTopDown = false;
+  if (PostRADirection.getNumOccurrences() > 0) {
+    if (PostRADirection == MISchedPostRASched::TopDown) {
+      RegionPolicy.OnlyTopDown = true;
+      RegionPolicy.OnlyBottomUp = false;
+    } else if (PostRADirection == MISchedPostRASched::BottomUp) {
+      RegionPolicy.OnlyTopDown = false;
+      RegionPolicy.OnlyBottomUp = true;
+    } else if (PostRADirection == MISchedPostRASched::Bidirectional) {
+      RegionPolicy.OnlyBottomUp = false;
+      RegionPolicy.OnlyTopDown = false;
+    }
   }
 }
 
