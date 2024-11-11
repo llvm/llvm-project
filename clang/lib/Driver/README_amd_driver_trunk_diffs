@@ -1,0 +1,59 @@
+
+README_amd_driver_trunk_diffs
+=============================
+
+There is an effort to minimize the differences between the upstream LLVM trunk
+Driver code and the Driver code for the downstream amd-staging branch.
+This readme discusses the Driver differences found in these directories:
+
+   llvm-project/clang/lib/Driver 
+   llvm-project/clang/include/clang/Driver 
+
+Efforts should be made to minimize trunk differences in upstream files by
+putting non-upstream functions in different filenames, if that is possible.
+Some effort to do this has already started in some of the below listed
+subsystems. 
+
+These are the areas where amd-staging differs from the trunk:
+
+- Support for legacy/classic flang driver.  This will eventually go away
+  when llvm flang (flang-new) is in production. 
+
+- Support for the generation of parallel jobs. Unless someone upstreams 
+  this support, this difference will remain.
+
+- Support for --opaque-offload-linker. This using the same offload driver, actions
+  and phases. It is only an alternative command generator in ToolChains/Clang.cpp 
+  LinerWrapper:ConstructJob. Instead of the driver generating four commands
+  (unpackage, clang-linker-wrapper, clang driver, and ld.lld), this option generates 
+  a debugable set of 9 commands that allows the developer to intercept, analyze, insert 
+  changes, and test changes to the various steps that are managed in memory 
+  by clang-linker-wrapper. The file ToolChains/OpaqueOffloadLinker.cpp contains
+  the driver support for this option. 
+ 
+- Support for the old Driver and bundle/unbundle in HIP toolchain.  This difference
+  may be removed when HIP supports the new driver which includes packager and
+  clang-linker-wrapper.
+
+- Support for openmp bolt runtime.  See https://github.com/pmodels/bolt
+
+- Support for OMPT and OMPD that is not yet upstream. AMD participates in the 
+  development of these two OpenMP subsystems. 
+
+- Support for certain optimizations such as cross team reductions and  
+   -plugin-opt=-amdgpu-spill-cfi-saved-regs
+
+- Deprecation of ProprietaryToolChain. Currently warnings are generated when
+  these options are used.  These differences will eventually go away.
+
+- Support for AMDGPU Code object version. 
+
+- Support for Static Device Libs (SDL).  This support was introduced by amd
+  many years ago. Its definition of sdl and corresponding search methods
+  is more generic than the introduction of static device libs by the "new"
+  driver in recent years. Both techniques extend host library management
+  to support heterogeneous libraries. However, the definition of SDL and 
+  library search methods is much broader with the amd implementation. 
+  There is a detailed document to describe SDL.  
+
+

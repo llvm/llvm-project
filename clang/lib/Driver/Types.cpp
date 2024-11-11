@@ -97,12 +97,6 @@ const char *types::getTypeTempSuffix(ID Id, bool CLStyle) {
   return getInfo(Id).TempSuffix;
 }
 
-bool types::onlyAssembleType(ID Id) {
-  return getInfo(Id).Phases.contains(phases::Assemble) &&
-         !getInfo(Id).Phases.contains(phases::Compile) &&
-         !getInfo(Id).Phases.contains(phases::Backend);
-}
-
 bool types::onlyPrecompileType(ID Id) {
   return getInfo(Id).Phases.contains(phases::Precompile) &&
          !isPreprocessedModuleType(Id);
@@ -186,6 +180,7 @@ bool types::isDerivedFromC(ID Id) {
   switch (Id) {
   default:
     return false;
+
   case TY_PP_C:
   case TY_C:
   case TY_CL:
@@ -301,7 +296,7 @@ bool types::isHIP(ID Id) {
 bool types::isHLSL(ID Id) { return Id == TY_HLSL; }
 
 bool types::isSrcFile(ID Id) {
-   return Id != TY_Object && getPreprocessedType(Id) != TY_INVALID;
+  return Id != TY_Object && getPreprocessedType(Id) != TY_INVALID;
 }
 
 types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
@@ -393,7 +388,6 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(ID Id, phases::ID LastPhase) {
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> P;
-
   const auto &Info = getInfo(Id);
   for (int I = 0; I <= LastPhase; ++I)
     if (Info.Phases.contains(static_cast<phases::ID>(I)))
