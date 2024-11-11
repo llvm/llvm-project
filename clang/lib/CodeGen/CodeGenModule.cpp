@@ -4597,8 +4597,6 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   assert(isa<llvm::GlobalValue>(Resolver) &&
          "Resolver should be created for the first time");
   SetCommonAttributes(FD, cast<llvm::GlobalValue>(Resolver));
-  if (ResolverGV)
-    replaceDeclarationWith(ResolverGV, Resolver);
   return Resolver;
 }
 
