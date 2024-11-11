@@ -445,7 +445,13 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
 
 void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
                                                SmallVector<Register> &Ops) {
-  LLT SrcTy = MRI.getType(Ops[0]);
+  LLT SrcTy;
+  for (Register &Reg : Ops) {
+    if (Reg != 0)
+      SrcTy = MRI.getType(Reg);
+  }
+  assert(SrcTy.isValid() && "Unexpected full undef vector in concat combine");
+
   Register UndefReg = 0;
 
   for (Register &Reg : Ops) {
