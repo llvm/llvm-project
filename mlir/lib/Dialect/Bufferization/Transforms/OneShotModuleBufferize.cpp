@@ -306,8 +306,8 @@ static LogicalResult getFuncOpsOrderedByCalls(
       func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
       if (!returnOp)
         return funcOp->emitError()
-               << "cannot bufferize a FuncOp with tensors and "
-                  "without a unique ReturnOp";
+               << "cannot bufferize a FunctionOpInterface with tensors and "
+                  "without a unique ReturnLike";
     }
 
     // Collect function calls and populate the caller map.
