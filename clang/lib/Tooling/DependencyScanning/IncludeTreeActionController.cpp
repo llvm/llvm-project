@@ -430,7 +430,7 @@ Error IncludeTreeActionController::finalizeModuleBuild(
   if (!Tree)
     return Tree.takeError();
 
-  ModuleScanInstance.getASTContext().setCASIncludeTreeID(
+  ModuleScanInstance.getPreprocessor().setCASIncludeTreeID(
       Tree->getID().toString());
 
   return Error::success();

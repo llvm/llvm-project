@@ -2433,6 +2433,28 @@ public:
            !IsAtImport;
   }
 
+private:
+  /// The include tree that is being built, if any.
+  /// See \c FrontendOptions::CASIncludeTreeID.
+  std::optional<std::string> CASIncludeTreeID;
+
+  /// The cas-fs tree that is being built, if any.
+  /// See \c FileSystemOptions::CASFileSystemRootID.
+  std::optional<std::string> CASFileSystemRootID;
+
+public:
+  std::optional<std::string> getCASIncludeTreeID() const {
+    return CASIncludeTreeID;
+  }
+  void setCASIncludeTreeID(std::string ID) { CASIncludeTreeID = std::move(ID); }
+
+  std::optional<std::string> getCASFileSystemRootID() const {
+    return CASFileSystemRootID;
+  }
+  void setCASFileSystemRootID(std::string ID) {
+    CASFileSystemRootID = std::move(ID);
+  }
+
   /// Allocate a new MacroInfo object with the provided SourceLocation.
   MacroInfo *AllocateMacroInfo(SourceLocation L);
 
