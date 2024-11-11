@@ -554,8 +554,16 @@ public:
   }
 
   void Post(const parser::OmpIteration &x) {
-    const auto &name{std::get<parser::Name>(x.t)};
-    ResolveName(&name);
+    if (const auto &name{std::get<parser::Name>(x.t)}; !name.symbol) {
+      auto *symbol{currScope().FindSymbol(name.source)};
+      if (!symbol) {
+        // OmpIteration must use an existing object. If there isn't one,
+        // create a fake one and flag an error later.
+        symbol = &currScope().MakeSymbol(
+            name.source, Attrs{}, EntityDetails(/*isDummy=*/true));
+      }
+      Resolve(name, symbol);
+    }
   }
 
   bool Pre(const parser::OmpClause::UseDevicePtr &x) {
