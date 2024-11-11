@@ -3,7 +3,7 @@
 #
 ## When picking a "backup" location of the first non-trivial instruction in
 ## a function, don't select a location outside of the entry block. We have to
-## give it the functions scope-line, and installing that outside of the entry
+## give it the function's scope-line, and installing that outside of the entry
 ## block is liable to be misleading.
 ##
 ## Produced from the C below with "clang -O2 -g -mllvm

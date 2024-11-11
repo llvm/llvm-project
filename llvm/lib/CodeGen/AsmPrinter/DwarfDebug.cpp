@@ -2141,12 +2141,12 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
-std::pair<const MachineInstr *, bool>
+static std::pair<const MachineInstr *, bool>
 findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
   const auto &TII = *MF->getSubtarget().getInstrInfo();
-  const MachineInstr *LineZeroLoc = nullptr, *NonTrivialInst = nullptr;
+  const MachineInstr *NonTrivialInst = nullptr;
   const Function &F = MF->getFunction();
 
   // Some instructions may be inserted into prologue after this function. Must
@@ -2171,8 +2171,6 @@ findPrologueEndLoc(const MachineFunction *MF) {
       // location after the frame setup.
       if (MI.getDebugLoc().getLine())
         return std::make_pair(&MI, IsEmptyPrologue);
-
-      LineZeroLoc = &MI;
     }
 
     // Keep track of the first "non-trivial" instruction seen, i.e. anything
@@ -2209,38 +2207,32 @@ findPrologueEndLoc(const MachineFunction *MF) {
     // Try to continue searching, but use a backup-location if substantive
     // computation is happening.
     auto NextInst = std::next(CurInst);
-    if (NextInst == CurInst->getParent()->end()) {
-      // We've reached the end of the block. Did we just look at a terminator?
-      if (CurInst->isTerminator())
-        // Some kind of "real" control flow is occurring. At the very least
-        // we would have to start exploring the CFG, a good signal that the
-        // prologue is over.
-        break;
-
-      // If we've already fallen through into a loop, don't fall through
-      // further, use a backup-location.
-      if (CurBlock->pred_size() > 1)
-        break;
-
-      // Fall-through from entry to the next block. This is common at -O0 when
-      // there's no initialisation in the function.
-      auto NextBBIter = std::next(CurInst->getParent()->getIterator());
-      // Bail if we're also at the end of the function.
-      if (NextBBIter == MF->end())
-        break;
-      CurBlock = NextBBIter;
-      CurInst = NextBBIter->begin();
-    } else {
+    if (NextInst != CurInst->getParent()->end()) {
       // Continue examining the current block.
       CurInst = NextInst;
+      continue;
     }
-  }
 
-  // We didn't find a "good" prologue_end, so consider backup locations.
-  // Was there an empty-line location? Return that, and it'll have the
-  // scope-line "flow" into it when it becomes the prologue_end position.
-  if (LineZeroLoc)
-    return std::make_pair(LineZeroLoc, IsEmptyPrologue);
+    // We've reached the end of the block. Did we just look at a terminator?
+    if (CurInst->isTerminator()) {
+      // Some kind of "real" control flow is occurring. At the very least
+      // we would have to start exploring the CFG, a good signal that the
+      // prologue is over.
+      break;
+    }
+
+    // If we've already fallen through into a loop, don't fall through
+    // further, use a backup-location.
+    if (CurBlock->pred_size() > 1)
+      break;
+
+    // Fall-through from entry to the next block. This is common at -O0 when
+    // there's no initialisation in the function. Bail if we're also at the
+    // end of the function.
+    if (++CurBlock == MF->end())
+      break;
+    CurInst = CurBlock->begin();
+  }
 
   // We couldn't find any source-location, suggesting all meaningful information
   // got optimised away. Set the prologue_end to be the first non-trivial
@@ -2287,12 +2279,20 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   bool IsEmptyPrologue = PrologEnd.second;
 
   // If the prolog is empty, no need to generate scope line for the proc.
-  if (IsEmptyPrologue)
+  if (IsEmptyPrologue) {
     // In degenerate cases, we can have functions with no source locations
-    // at all. These want a scope line, to avoid a totally empty function.
-    // Thus, only skip scope line if there's location to place prologue_end.
-    if (PrologEndLoc)
-      return PrologEndLoc;
+    // at all, or only empty ones. These want a scope line, to avoid a totally
+    // empty function. Thus, only skip the scope line if there's location to
+    // place prologue_end.
+    if (PrologEndLoc) {
+      const DebugLoc &DL = PrologEndLoc->getDebugLoc();
+      if (!DL || DL->getLine() != 0)
+        return PrologEndLoc;
+
+      // Later, don't place the prologue_end flag on this line-zero location.
+      PrologEndLoc = nullptr;
+    }
+  }
 
   // Ensure the compile unit is created if the function is called before
   // beginFunction().
