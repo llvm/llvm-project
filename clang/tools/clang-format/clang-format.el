@@ -158,21 +158,6 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
            (delete-file (pop ,bind-files-to-delete)))))))
 
 
-(defun clang-format--vc-diff-match-diff-line (line)
-  ;; We are matching something like:
-  ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
-  ;; Return as "<LineStart>:<LineEnd>"
-  (when (string-match "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$" line)
-    ;; If we have multi-line diff
-    (if (match-string 3 line)
-        (concat (match-string 1 line)
-                ":"
-                (number-to-string
-                 (+ (string-to-number (match-string 1 line))
-                    (string-to-number (match-string 3 line)))))
-      (concat (match-string 1 line) ":" (match-string 1 line)))))
-
-
 (defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
 FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the
@@ -206,20 +191,30 @@ which can be passed directly to ‘clang-format’."
        ((= status 0) nil)
        ;; Return of 1 indicates found diffs and no error.
        ((= status 1)
-        ;; Iterate through all lines in diff buffer and collect all
-        ;; lines in current buffer that have a diff.
-        (goto-char (point-min))
-        (while (not (eobp))
-          (let ((diff-line (clang-format--vc-diff-match-diff-line
-                            (buffer-substring-no-properties
-                             (line-beginning-position)
-                             (line-end-position)))))
-            (when diff-line
-              ;; Create list line regions with diffs to pass to
-              ;; clang-format.
-              (push (concat "--lines=" diff-line) diff-lines)))
-          (forward-line 1))
-        (reverse diff-lines))
+        ;; Find and collect all diff lines.
+        ;; We are matching something like:
+        ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
+        (let ((diff-lines-re
+               "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$")
+              (index 0)
+              (all-lines
+               (buffer-substring-no-properties (point-min) (point-max))))
+          ;; We are essentially doing (while (re-search-forward ...) ...)
+          ;; here. We are doing it by hand with (string-match ...) as it
+          ;; is notably faster (about 50%).
+          (setq index (string-match diff-lines-re all-lines))
+          (while index
+            (let ((match1 (string-to-number (match-string 1 all-lines)))
+                  (match3 (if (match-string 3 all-lines)
+                              (string-to-number (match-string 3 all-lines))
+                            nil)))
+              (push (format
+                     "--lines=%d:%d"
+                     match1
+                     (if match3 (+ match1 match3) match1))
+                    diff-lines))
+            (setq index (string-match diff-lines-re all-lines (+ index 1)))))
+        (nreverse diff-lines))
        ;; Any return != 0 && != 1 indicates some level of error.
        (t
         (error "(diff returned unsuccessfully %s%s)" status stderr))))))
