@@ -405,7 +405,7 @@ void test_va_arg(int n, ...) {
 
 // CHECK-AAPCS-NEXT:   %new_reg_offs = add nsw i32 %gr_offs, 8
 // CHECK-AAPCS-NEXT:   store i32 %new_reg_offs, ptr %gr_offs_p, align 8
-// CHECK-AAPCS-NEXT:   %inreg = icmp ult i32 %gr_offs, -7
+// CHECK-AAPCS-NEXT:   %inreg = icmp samesign ult i32 %gr_offs, -7
 // CHECK-AAPCS-NEXT:   br i1 %inreg, label %vaarg.in_reg, label %vaarg.on_stack
 // CHECK-AAPCS-EMPTY:
 // CHECK-AAPCS-NEXT: vaarg.in_reg:                                     ; preds = %vaarg.maybe_reg

@@ -51,7 +51,7 @@ define <2 x i1> @cmp_signedness(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i1> @cmp_signedness(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i16> [[ZEXT]], splat (i16 5)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult <2 x i16> [[ZEXT]], splat (i16 5)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
