@@ -338,6 +338,23 @@ func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: @casts_overflow
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
+func.func @casts_overflow(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+            %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
+// CHECK:  = llvm.trunc %[[I64]] overflow<nsw> : i64 to i56
+  %0 = llvm.trunc %arg1 overflow<nsw> : i64 to i56
+// CHECK:  = llvm.trunc %[[I64]] overflow<nuw> : i64 to i56
+  %1 = llvm.trunc %arg1 overflow<nuw> : i64 to i56
+// CHECK:  = llvm.trunc %[[I64]] overflow<nsw, nuw> : i64 to i56
+  %2 = llvm.trunc %arg1 overflow<nsw, nuw> : i64 to i56
+// CHECK:  = llvm.trunc %[[I64]] overflow<nsw, nuw> : i64 to i56
+  %3 = llvm.trunc %arg1 overflow<nuw, nsw> : i64 to i56
+// CHECK:  = llvm.trunc %[[V4I64]] overflow<nsw> : vector<4xi64> to vector<4xi56>
+  %4 = llvm.trunc %arg3 overflow<nsw> : vector<4xi64> to vector<4xi56>
+  llvm.return
+}
+
 // CHECK-LABEL: @vect
 func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: !llvm.vec<2 x ptr>) {
 // CHECK:  = llvm.extractelement {{.*}} : vector<4xf32>
