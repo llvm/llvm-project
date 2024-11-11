@@ -1110,6 +1110,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -1179,6 +1180,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
