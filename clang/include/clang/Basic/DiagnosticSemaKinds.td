@@ -3414,6 +3414,20 @@ def err_callback_callee_is_variadic : Error<
   "'callback' attribute callee may not be variadic">;
 def err_callback_implicit_this_not_available : Error<
   "'callback' argument at position %0 references unavailable implicit 'this'">;
+
+def err_capture_by_attribute_multiple : Error<
+  "multiple 'lifetime_capture' attributes specified">;
+def err_capture_by_attribute_no_entity : Error<
+  "'lifetime_capture_by' attribute specifies no capturing entity">;
+def err_capture_by_implicit_this_not_available : Error<
+  "'lifetime_capture_by' argument references unavailable implicit 'this'">;
+def err_capture_by_attribute_argument_unknown : Error<
+  "'lifetime_capture_by' attribute argument %0 is not a known function parameter"
+  "; must be a function parameter, 'this', 'global' or 'unknown'">;
+def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
+def err_capture_by_param_uses_reserved_name : Error<
+  "parameter cannot be named '%select{global|unknown}0' while using 'lifetime_capture_by(%select{global|unknown}0)'">;
+
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
