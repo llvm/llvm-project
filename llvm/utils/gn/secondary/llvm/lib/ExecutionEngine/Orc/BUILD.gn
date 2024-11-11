@@ -15,6 +15,7 @@ static_library("Orc") {
     "//llvm/lib/WindowsDriver",
   ]
   sources = [
+    "AbsoluteSymbols.cpp",
     "COFFPlatform.cpp",
     "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
