@@ -112,6 +112,11 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   if (!EnableEVLIndVarSimplify)
     return false;
 
+  BasicBlock *LatchBlock = L.getLoopLatch();
+  ICmpInst *OrigLatchCmp = L.getLatchCmpInst();
+  if (!LatchBlock || !OrigLatchCmp)
+    return false;
+
   InductionDescriptor IVD;
   PHINode *IndVar = L.getInductionVariable(SE);
   if (!IndVar || !L.getInductionDescriptor(SE, IVD)) {
@@ -153,6 +158,7 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
 
   Value *EVLIndVar = nullptr;
   Value *RemTC = nullptr;
+  Value *TC = nullptr;
   auto IntrinsicMatch = m_Intrinsic<Intrinsic::experimental_get_vector_length>(
       m_Value(RemTC), m_SpecificInt(VF),
       /*Scalable=*/m_SpecificInt(1));
@@ -192,43 +198,37 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
     LLVM_DEBUG(dbgs() << "Found candidate PN of EVL-based IndVar: " << PN
                       << "\n");
 
-    // Check 3: Pattern match to find the EVL-based index.
+    // Check 3: Pattern match to find the EVL-based index and total trip count
+    // (TC).
     if (match(RecValue,
               m_c_Add(m_ZExtOrSelf(IntrinsicMatch), m_Specific(&PN))) &&
-        match(RemTC, m_Sub(m_Value(), m_Specific(&PN)))) {
+        match(RemTC, m_Sub(m_Value(TC), m_Specific(&PN)))) {
       EVLIndVar = RecValue;
       break;
     }
   }
 
-  if (!EVLIndVar)
-    return false;
-
-  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  LLVM_DEBUG(dbgs() << "BTC: " << *BTC << "\n");
-  if (isa<SCEVCouldNotCompute>(BTC))
-    return false;
-
-  const SCEV *VFV = SE.getConstant(BTC->getType(), VF);
-  VFV = SE.getMulExpr(VFV, SE.getVScale(VFV->getType()));
-  const SCEV *ExitValV = SE.getMulExpr(BTC, VFV);
-  LLVM_DEBUG(dbgs() << "ExitVal: " << *ExitValV << "\n");
-
-  // Create an EVL-based comparison and replace the branch to use it as
-  // predicate.
-  ICmpInst *OrigLatchCmp = L.getLatchCmpInst();
-  const DataLayout &DL = L.getHeader()->getDataLayout();
-  SCEVExpander Expander(SE, DL, "evl.iv.exitcondition");
-  if (!Expander.isSafeToExpandAt(ExitValV, OrigLatchCmp))
+  if (!EVLIndVar || !TC)
     return false;
 
   LLVM_DEBUG(dbgs() << "Using " << *EVLIndVar << " for EVL-based IndVar\n");
 
-  Value *ExitVal =
-      Expander.expandCodeFor(ExitValV, EVLIndVar->getType(), OrigLatchCmp);
+  // Create an EVL-based comparison and replace the branch to use it as
+  // predicate.
+
+  // Loop::getLatchCmpInst check at the beginning of this function has ensured
+  // that latch block ends in a conditional branch.
+  auto *LatchBranch = cast<BranchInst>(LatchBlock->getTerminator());
+  assert(LatchBranch->getNumSuccessors() == 2);
+  ICmpInst::Predicate Pred;
+  if (LatchBranch->getSuccessor(0) == L.getHeader())
+    Pred = ICmpInst::ICMP_ULT;
+  else
+    Pred = ICmpInst::ICMP_UGE;
+
   IRBuilder<> Builder(OrigLatchCmp);
-  auto *NewPred = Builder.CreateICmp(ICmpInst::ICMP_UGT, EVLIndVar, ExitVal);
-  OrigLatchCmp->replaceAllUsesWith(NewPred);
+  auto *NewLatchCmp = Builder.CreateICmp(Pred, EVLIndVar, TC);
+  OrigLatchCmp->replaceAllUsesWith(NewLatchCmp);
 
   // llvm::RecursivelyDeleteDeadPHINode only deletes cycles whose values are
   // not used outside the cycles. However, in this case the now-RAUW-ed
