@@ -141,8 +141,8 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 private:
-  inline llvm::iterator_range<typename ClauseMapTy::iterator>
-  GetClauses(llvm::omp::Clause clauseId);
+  inline llvm::iterator_range<typename ClauseMapTy::iterator> GetClauses(
+      llvm::omp::Clause clauseId);
 
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
