@@ -574,20 +574,17 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
                      /*VariableCategory=*/maybeApply(convert2, t1)}};
 }
 
-Depend make(const parser::OmpClause::Depend &inp,
-            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpDependClause
-  using wrapped = parser::OmpDependClause;
-  using Variant = decltype(Depend::u);
+Doacross makeDoacross(const parser::OmpDoacross &doa,
+                      semantics::SemanticsContext &semaCtx) {
   // Iteration is the equivalent of parser::OmpIteration
   using Iteration = Doacross::Vector::value_type; // LoopIterationT
 
-  auto visitSource = [&](const parser::OmpDoacross::Source &) -> Variant {
+  auto visitSource = [&](const parser::OmpDoacross::Source &) {
     return Doacross{{/*DependenceType=*/Doacross::DependenceType::Source,
                      /*Vector=*/{}}};
   };
 
-  auto visitSink = [&](const parser::OmpDoacross::Sink &s) -> Variant {
+  auto visitSink = [&](const parser::OmpDoacross::Sink &s) {
     using IterOffset = parser::OmpIterationOffset;
     auto convert2 = [&](const parser::OmpIteration &v) {
       auto &t0 = std::get<parser::Name>(v.t);
@@ -605,6 +602,15 @@ Depend make(const parser::OmpClause::Depend &inp,
                      /*Vector=*/makeList(s.v.v, convert2)}};
   };
 
+  return common::visit(common::visitors{visitSink, visitSource}, doa.u);
+}
+
+Depend make(const parser::OmpClause::Depend &inp,
+            semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpDependClause
+  using wrapped = parser::OmpDependClause;
+  using Variant = decltype(Depend::u);
+
   auto visitTaskDep = [&](const wrapped::TaskDep &s) -> Variant {
     auto &t0 = std::get<std::optional<parser::OmpIteratorModifier>>(s.t);
     auto &t1 = std::get<parser::OmpTaskDependenceType>(s.t);
@@ -617,11 +623,11 @@ Depend make(const parser::OmpClause::Depend &inp,
                             /*LocatorList=*/makeObjects(t2, semaCtx)}};
   };
 
-  return Depend{Fortran::common::visit( //
+  return Depend{common::visit( //
       common::visitors{
           // Doacross
           [&](const parser::OmpDoacross &s) -> Variant {
-            return common::visit(common::visitors{visitSink, visitSource}, s.u);
+            return makeDoacross(s, semaCtx);
           },
           // Depend::TaskDep
           visitTaskDep,
@@ -692,8 +698,8 @@ DistSchedule make(const parser::OmpClause::DistSchedule &inp,
 
 Doacross make(const parser::OmpClause::Doacross &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: doacross");
+  // inp.v -> OmpDoacrossClause
+  return makeDoacross(inp.v.v, semaCtx);
 }
 
 // DynamicAllocators: empty

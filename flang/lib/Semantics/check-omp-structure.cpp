@@ -575,6 +575,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
+  loopStack_.push_back(&x);
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
 
@@ -968,11 +969,19 @@ void OmpStructureChecker::CheckDistLinear(
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &) {
+void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   if (llvm::omp::allSimdSet.test(GetContext().directive)) {
     ExitDirectiveNest(SIMDNest);
   }
   dirContext_.pop_back();
+
+  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
+  const LoopConstruct &top{loopStack_.back()};
+#ifndef NDEBUG
+  auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&top)};
+  assert(loopc != nullptr && *loopc == &x && "Mismatched loop constructs");
+#endif
+  loopStack_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpEndLoopDirective &x) {
@@ -1103,8 +1112,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
 void OmpStructureChecker::ChecksOnOrderedAsBlock() {
   if (FindClause(llvm::omp::Clause::OMPC_depend)) {
     context_.Say(GetContext().clauseSource,
-        "DEPEND(*) clauses are not allowed when ORDERED construct is a block"
-        " construct with an ORDERED region"_err_en_US);
+        "DEPEND clauses are not allowed when ORDERED construct is a block construct with an ORDERED region"_err_en_US);
     return;
   }
 
@@ -1654,15 +1662,14 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
   if (FindClause(llvm::omp::Clause::OMPC_threads) ||
       FindClause(llvm::omp::Clause::OMPC_simd)) {
     context_.Say(GetContext().clauseSource,
-        "THREADS, SIMD clauses are not allowed when ORDERED construct is a "
-        "standalone construct with no ORDERED region"_err_en_US);
+        "THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
   }
 
   int dependSinkCount{0}, dependSourceCount{0};
   bool exclusiveShown{false}, duplicateSourceShown{false};
 
-  auto visitDoacross = [&](const parser::OmpDoacross &doa,
-                           const parser::CharBlock &src) {
+  auto visitDoacross{[&](const parser::OmpDoacross &doa,
+                         const parser::CharBlock &src) {
     common::visit(
         common::visitors{
             [&](const parser::OmpDoacross::Source &) { dependSourceCount++; },
@@ -1678,10 +1685,11 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
       context_.Say(src,
           "At most one SOURCE dependence type can appear on the ORDERED directive"_err_en_US);
     }
-  };
+  }};
 
-  auto clauseAll = FindClauses(llvm::omp::Clause::OMPC_depend);
-  for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
+  // Visit the DEPEND and DOACROSS clauses.
+  auto depClauses{FindClauses(llvm::omp::Clause::OMPC_depend)};
+  for (auto itr{depClauses.first}; itr != depClauses.second; ++itr) {
     const auto &dependClause{
         std::get<parser::OmpClause::Depend>(itr->second->u)};
     if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
@@ -1690,6 +1698,11 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
       context_.Say(itr->second->source,
           "Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
     }
+  }
+  auto doaClauses{FindClauses(llvm::omp::Clause::OMPC_doacross)};
+  for (auto itr{doaClauses.first}; itr != doaClauses.second; ++itr) {
+    auto &doaClause{std::get<parser::OmpClause::Doacross>(itr->second->u)};
+    visitDoacross(doaClause.v.v, itr->second->source);
   }
 
   bool isNestedInDoOrderedWithPara{false};
@@ -1718,8 +1731,8 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
 
 void OmpStructureChecker::CheckOrderedDependClause(
     std::optional<int64_t> orderedValue) {
-  auto visitDoacross = [&](const parser::OmpDoacross &doa,
-                           const parser::CharBlock &src) {
+  auto visitDoacross{[&](const parser::OmpDoacross &doa,
+                         const parser::CharBlock &src) {
     if (auto *sinkVector{std::get_if<parser::OmpDoacross::Sink>(&doa.u)}) {
       int64_t numVar = sinkVector->v.v.size();
       if (orderedValue != numVar) {
@@ -1727,13 +1740,18 @@ void OmpStructureChecker::CheckOrderedDependClause(
             "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
       }
     }
-  };
-  auto clauseAll{FindClauses(llvm::omp::Clause::OMPC_depend)};
-  for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
+  }};
+  auto depClauses{FindClauses(llvm::omp::Clause::OMPC_depend)};
+  for (auto itr{depClauses.first}; itr != depClauses.second; ++itr) {
     auto &dependClause{std::get<parser::OmpClause::Depend>(itr->second->u)};
     if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
       visitDoacross(*doAcross, itr->second->source);
     }
+  }
+  auto doaClauses = FindClauses(llvm::omp::Clause::OMPC_doacross);
+  for (auto itr{doaClauses.first}; itr != doaClauses.second; ++itr) {
+    auto &doaClause{std::get<parser::OmpClause::Doacross>(itr->second->u)};
+    visitDoacross(doaClause.v.v, itr->second->source);
   }
 }
 
@@ -2712,7 +2730,6 @@ CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
-CHECK_SIMPLE_CLAUSE(Doacross, OMPC_doacross)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(OmpxBare, OMPC_ompx_bare)
 CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
@@ -3493,6 +3510,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       "Unexpected alternative in update clause");
 
   if (doaDep) {
+    CheckDoacross(*doaDep);
     CheckDependenceType(doaDep->GetDepType());
   } else {
     CheckTaskDependenceType(taskDep->GetTaskDepType());
@@ -3568,6 +3586,93 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
               "one locator"_warn_en_US);
         }
       }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Doacross &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_doacross);
+  CheckDoacross(x.v.v);
+}
+
+void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
+  if (std::holds_alternative<parser::OmpDoacross::Source>(doa.u)) {
+    // Nothing to check here.
+    return;
+  }
+
+  // Process SINK dependence type. SINK may only appear in an ORDER construct,
+  // which references a prior ORDERED(n) clause on a DO or SIMD construct
+  // that marks the top of the loop nest.
+
+  auto &sink{std::get<parser::OmpDoacross::Sink>(doa.u)};
+  const std::list<parser::OmpIteration> &vec{sink.v.v};
+
+  // Check if the variables in the iteration vector are unique.
+  struct Less {
+    bool operator()(
+        const parser::OmpIteration *a, const parser::OmpIteration *b) const {
+      auto namea{std::get<parser::Name>(a->t)};
+      auto nameb{std::get<parser::Name>(b->t)};
+      assert(namea.symbol && nameb.symbol && "Unresolved symbols");
+      // The non-determinism of the "<" doesn't matter, we only care about
+      // equality, i.e.  a == b  <=>  !(a < b) && !(b < a)
+      return reinterpret_cast<uintptr_t>(namea.symbol) <
+          reinterpret_cast<uintptr_t>(nameb.symbol);
+    }
+  };
+  if (auto *duplicate{FindDuplicateEntry<parser::OmpIteration, Less>(vec)}) {
+    auto name{std::get<parser::Name>(duplicate->t)};
+    context_.Say(name.source,
+        "Duplicate variable '%s' in the iteration vector"_err_en_US,
+        name.ToString());
+  }
+
+  // Check if the variables in the iteration vector are induction variables.
+  // Ignore any mismatch between the size of the iteration vector and the
+  // number of DO constructs on the stack. This is checked elsewhere.
+
+  auto GetLoopDirective{[](const parser::OpenMPLoopConstruct &x) {
+    auto &begin{std::get<parser::OmpBeginLoopDirective>(x.t)};
+    return std::get<parser::OmpLoopDirective>(begin.t).v;
+  }};
+  auto GetLoopClauses{[](const parser::OpenMPLoopConstruct &x)
+                          -> const std::list<parser::OmpClause> & {
+    auto &begin{std::get<parser::OmpBeginLoopDirective>(x.t)};
+    return std::get<parser::OmpClauseList>(begin.t).v;
+  }};
+
+  std::set<const Symbol *> inductionVars;
+  for (const LoopConstruct &loop : llvm::reverse(loopStack_)) {
+    if (auto *doc{std::get_if<const parser::DoConstruct *>(&loop)}) {
+      // Do-construct, collect the induction variable.
+      if (auto &control{(*doc)->GetLoopControl()}) {
+        if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
+          inductionVars.insert(b->name.thing.symbol);
+        }
+      }
+    } else {
+      // Omp-loop-construct, check if it's do/simd with an ORDERED clause.
+      auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&loop)};
+      assert(loopc && "Expecting OpenMPLoopConstruct");
+      llvm::omp::Directive loopDir{GetLoopDirective(**loopc)};
+      if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
+        auto IsOrdered{[](const parser::OmpClause &c) {
+          return c.Id() == llvm::omp::OMPC_ordered;
+        }};
+        // If it has ORDERED clause, stop the traversal.
+        if (llvm::any_of(GetLoopClauses(**loopc), IsOrdered)) {
+          break;
+        }
+      }
+    }
+  }
+  for (const parser::OmpIteration &iter : vec) {
+    auto &name{std::get<parser::Name>(iter.t)};
+    if (!inductionVars.count(name.symbol)) {
+      context_.Say(name.source,
+          "The iteration vector element '%s' is not an induction variable within the ORDERED loop nest"_err_en_US,
+          name.ToString());
     }
   }
 }
@@ -4324,6 +4429,22 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UnifiedAddress &x) {
 void OmpStructureChecker::Enter(
     const parser::OmpClause::UnifiedSharedMemory &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_unified_shared_memory);
+}
+
+void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
+  Base::Enter(x);
+  loopStack_.push_back(&x);
+}
+
+void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
+  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
+  const LoopConstruct &top = loopStack_.back();
+#ifndef NDEBUG
+  auto *doc{std::get_if<const parser::DoConstruct *>(&top)};
+  assert(doc != nullptr && *doc == &x && "Mismatched loop constructs");
+#endif
+  loopStack_.pop_back();
+  Base::Leave(x);
 }
 
 void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
