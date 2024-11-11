@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
 #include "llvm/TableGen/Record.h"
@@ -62,8 +61,7 @@ static std::string escapeForRST(StringRef Str) {
 }
 
 static void EmitInstrDocs(const RecordKeeper &RK, raw_ostream &OS) {
-  const CodeGenDAGPatterns CDP(RK);
-  const CodeGenTarget &Target = CDP.getTargetInfo();
+  const CodeGenTarget Target(RK);
   unsigned VariantCount = Target.getAsmParserVariantCount();
 
   // Page title.

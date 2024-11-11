@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Basic/SequenceToOffsetTable.h"
-#include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenSchedule.h"
 #include "Common/CodeGenTarget.h"
@@ -50,12 +49,12 @@ namespace {
 
 class InstrInfoEmitter {
   const RecordKeeper &Records;
-  const CodeGenDAGPatterns CDP;
+  const CodeGenTarget Target;
   const CodeGenSchedModels &SchedModels;
 
 public:
-  InstrInfoEmitter(const RecordKeeper &R)
-      : Records(R), CDP(R), SchedModels(CDP.getTargetInfo().getSchedModels()) {}
+  explicit InstrInfoEmitter(const RecordKeeper &R)
+      : Records(R), Target(R), SchedModels(Target.getSchedModels()) {}
 
   // run - Output the instruction set description.
   void run(raw_ostream &OS);
@@ -87,13 +86,13 @@ private:
   void emitMCIIHelperMethods(raw_ostream &OS, StringRef TargetName);
 
   /// Write verifyInstructionPredicates methods.
-  void emitFeatureVerifier(raw_ostream &OS, const CodeGenTarget &Target);
+  void emitFeatureVerifier(raw_ostream &OS);
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
                   const Record *InstrInfo,
                   std::map<std::vector<const Record *>, unsigned> &EL,
                   const OperandInfoMapTy &OperandInfo, raw_ostream &OS);
   void emitOperandTypeMappings(
-      raw_ostream &OS, const CodeGenTarget &Target,
+      raw_ostream &OS,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
   void
   initOperandMapData(ArrayRef<const CodeGenInstruction *> NumberedInstructions,
@@ -101,7 +100,7 @@ private:
                      std::map<std::string, unsigned> &Operands,
                      OpNameMapTy &OperandMap);
   void emitOperandNameMappings(
-      raw_ostream &OS, const CodeGenTarget &Target,
+      raw_ostream &OS,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
 
   void emitLogicalOperandSizeMappings(
@@ -215,7 +214,6 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
 unsigned
 InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
                                      OperandInfoMapTy &OperandInfoMap) {
-  const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
@@ -281,7 +279,7 @@ void InstrInfoEmitter::initOperandMapData(
 ///   for looking up the operand index for an instruction, given a value from
 ///   OpName enum
 void InstrInfoEmitter::emitOperandNameMappings(
-    raw_ostream &OS, const CodeGenTarget &Target,
+    raw_ostream &OS,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
   StringRef Namespace = Target.getInstNamespace();
   std::string OpNameNS = "OpName";
@@ -353,7 +351,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
 /// llvm::TargetNamespace::OpTypes namespace.
 /// Operand types are all definitions derived of the Operand Target.td class.
 void InstrInfoEmitter::emitOperandTypeMappings(
-    raw_ostream &OS, const CodeGenTarget &Target,
+    raw_ostream &OS,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
 
   StringRef Namespace = Target.getInstNamespace();
@@ -731,8 +729,7 @@ getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   return Name;
 }
 
-void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
-                                           const CodeGenTarget &Target) {
+void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS) {
   const auto &All = SubtargetFeatureInfo::getAll(Records);
   SubtargetFeatureInfoMap SubtargetFeatures;
   SubtargetFeatures.insert(All.begin(), All.end());
@@ -930,7 +927,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Target Instruction Enum Values and Descriptors", OS);
   emitEnums(OS);
 
-  const CodeGenTarget &Target = CDP.getTargetInfo();
   const std::string &TargetName = std::string(Target.getName());
   const Record *InstrInfo = Target.getInstructionSet();
 
@@ -1159,10 +1155,10 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "#endif // GET_INSTRINFO_CTOR_DTOR\n\n";
 
   Timer.startTimer("Emit operand name mappings");
-  emitOperandNameMappings(OS, Target, NumberedInstructions);
+  emitOperandNameMappings(OS, NumberedInstructions);
 
   Timer.startTimer("Emit operand type mappings");
-  emitOperandTypeMappings(OS, Target, NumberedInstructions);
+  emitOperandTypeMappings(OS, NumberedInstructions);
 
   Timer.startTimer("Emit logical operand size mappings");
   emitLogicalOperandSizeMappings(OS, TargetName, NumberedInstructions);
@@ -1174,7 +1170,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   emitMCIIHelperMethods(OS, TargetName);
 
   Timer.startTimer("Emit verifier methods");
-  emitFeatureVerifier(OS, Target);
+  emitFeatureVerifier(OS);
 }
 
 void InstrInfoEmitter::emitRecord(
@@ -1197,8 +1193,6 @@ void InstrInfoEmitter::emitRecord(
   OS << Num << ",\t" << MinOperands << ",\t" << DefOperands << ",\t"
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
      << SchedModels.getSchedClassIdx(Inst) << ",\t";
-
-  const CodeGenTarget &Target = CDP.getTargetInfo();
 
   // Emit the implicit use/def list...
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
@@ -1320,8 +1314,6 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "#undef GET_INSTRINFO_ENUM\n";
 
   OS << "namespace llvm {\n\n";
-
-  const CodeGenTarget &Target = CDP.getTargetInfo();
 
   // We must emit the PHI opcode first...
   StringRef Namespace = Target.getInstNamespace();
