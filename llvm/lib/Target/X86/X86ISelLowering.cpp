@@ -12637,6 +12637,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
   assert(BroadcastIdx < (int)Mask.size() && "We only expect to be called with "
                                             "a sorted mask where the broadcast "
                                             "comes from V1.");
+  int NumActiveElts = count_if(Mask, [](int M) { return M >= 0; });
 
   // Go up the chain of (vector) values to find a scalar load that we can
   // combine with the broadcast.
@@ -12756,16 +12757,28 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     if (VT == MVT::v4f64 || VT == MVT::v4i64)
       return SDValue();
 
-    // Only broadcast the zero-element of a 128-bit subvector.
-    if ((BitOffset % 128) != 0)
-      return SDValue();
+    // If we are broadcasting an element from the lowest 128-bit subvector, try
+    // to move the element in position.
+    if (BitOffset < 128 && NumActiveElts > 1 &&
+        V.getScalarValueSizeInBits() == NumEltBits) {
+      assert((BitOffset % V.getScalarValueSizeInBits()) == 0 &&
+             "Unexpected bit-offset");
+      SmallVector<int, 16> ExtractMask(128 / NumEltBits, SM_SentinelUndef);
+      ExtractMask[0] = BitOffset / V.getScalarValueSizeInBits();
+      V = extractSubVector(V, 0, DAG, DL, 128);
+      V = DAG.getVectorShuffle(V.getValueType(), DL, V, V, ExtractMask);
+    } else {
+      // Only broadcast the zero-element of a 128-bit subvector.
+      if ((BitOffset % 128) != 0)
+        return SDValue();
 
-    assert((BitOffset % V.getScalarValueSizeInBits()) == 0 &&
-           "Unexpected bit-offset");
-    assert((V.getValueSizeInBits() == 256 || V.getValueSizeInBits() == 512) &&
-           "Unexpected vector size");
-    unsigned ExtractIdx = BitOffset / V.getScalarValueSizeInBits();
-    V = extract128BitVector(V, ExtractIdx, DAG, DL);
+      assert((BitOffset % V.getScalarValueSizeInBits()) == 0 &&
+             "Unexpected bit-offset");
+      assert((V.getValueSizeInBits() == 256 || V.getValueSizeInBits() == 512) &&
+             "Unexpected vector size");
+      unsigned ExtractIdx = BitOffset / V.getScalarValueSizeInBits();
+      V = extract128BitVector(V, ExtractIdx, DAG, DL);
+    }
   }
 
   // On AVX we can use VBROADCAST directly for scalar sources.
