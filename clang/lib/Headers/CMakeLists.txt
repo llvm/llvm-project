@@ -151,8 +151,9 @@ set(x86_files
   amxfp16intrin.h
   amxfp8intrin.h
   amxintrin.h
-  amxtransposeintrin.h
   amxmovrsintrin.h
+  amxmovrstransposeintrin.h
+  amxtransposeintrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
