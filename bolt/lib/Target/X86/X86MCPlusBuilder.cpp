@@ -2127,29 +2127,6 @@ public:
     return Type;
   }
 
-  /// Analyze a series of insns that match the PLT header of the mold linker
-  /// (https://github.com/rui314/mold/blob/v2.34.1/src/arch-x86-64.cc#L50).
-  /// The size of the header is 32 bytes and the format is as follows:
-  ///   endbr64
-  ///   push %r11
-  ///   push GOTPLT+8(%rip)
-  ///   jmp *GOTPLT+16(%rip)
-  ///   padding （14 bytes）
-  ///
-  bool isMoldPLTHeader(std::vector<MCInst *> &Insns) const override {
-    if (Insns.size() != 18)
-      return false;
-      
-    if (!isTerminateBranch(*Insns[0]) || !isPush(*Insns[1])
-        || !isPush(*Insns[2]) || !isIndirectBranch(*Insns[3]))
-      return false;
-      
-    for (unsigned int i = 4; i < 18; ++i)
-      if (Insns[i]->getOpcode() != X86::INT3)
-        return false;
-    return true;
-  }
-
   /// Analyze a callsite to see if it could be a virtual method call.  This only
   /// checks to see if the overall pattern is satisfied, it does not guarantee
   /// that the callsite is a true virtual method call.
