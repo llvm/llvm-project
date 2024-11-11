@@ -1664,7 +1664,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
           "Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
     }
   }
-  auto doaClauses = FindClauses(llvm::omp::Clause::OMPC_doacross);
+  auto doaClauses{FindClauses(llvm::omp::Clause::OMPC_doacross)};
   for (auto itr = doaClauses.first; itr != doaClauses.second; ++itr) {
     auto &doaClause{std::get<parser::OmpClause::Doacross>(itr->second->u)};
     visitDoacross(doaClause.v.v, itr->second->source);
