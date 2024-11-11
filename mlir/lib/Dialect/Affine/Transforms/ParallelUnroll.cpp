@@ -100,7 +100,6 @@ MemRefType computeBankedMemRefType(MemRefType originalType,
   SmallVector<int64_t, 4> newShape(originalShape.begin(), originalShape.end());
   assert(newShape.front() % bankingFactor == 0 &&
          "memref shape must be divided by the banking factor");
-  // Now assuming banking the last dimension
   newShape.front() /= bankingFactor;
   MemRefType newMemRefType =
       MemRefType::get(newShape, originalType.getElementType(),
@@ -153,17 +152,6 @@ SmallVector<Value> createBanks(Value originalMem, uint64_t unrollFactor) {
   return banks;
 }
 
-Value computeIntraBankingOffset(OpBuilder &builder, Location loc, Value address,
-                                uint availableBanks) {
-  Value availBanksVal =
-      builder
-          .create<arith::ConstantOp>(loc, builder.getIndexAttr(availableBanks))
-          .getResult();
-  Value offset =
-      builder.create<arith::DivUIOp>(loc, address, availBanksVal).getResult();
-  return offset;
-}
-
 struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
   BankAffineLoadPattern(MLIRContext *context, uint64_t unrollFactor,
                         DenseMap<Value, SmallVector<Value>> &memoryToBanks)
@@ -172,7 +160,6 @@ struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
 
   LogicalResult matchAndRewrite(AffineLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    llvm::errs() << "load pattern matchAndRewrite\n";
     Location loc = loadOp.getLoc();
     auto banks = memoryToBanks[loadOp.getMemref()];
     Value loadIndex = loadOp.getIndices().front();
@@ -231,7 +218,6 @@ struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
 
   LogicalResult matchAndRewrite(AffineStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
-    llvm::errs() << "store pattern matchAndRewrite\n";
     Location loc = storeOp.getLoc();
     auto banks = memoryToBanks[storeOp.getMemref()];
     Value storeIndex = storeOp.getIndices().front();
@@ -300,6 +286,7 @@ struct BankReturnPattern : public OpRewritePattern<func::ReturnOp> {
       auto banks = memoryToBanks[operand];
       newReturnOperands.append(banks.begin(), banks.end());
     }
+
     func::FuncOp funcOp = returnOp.getParentOp();
     rewriter.setInsertionPointToEnd(&funcOp.getBlocks().front());
     auto newReturnOp =
@@ -310,15 +297,43 @@ struct BankReturnPattern : public OpRewritePattern<func::ReturnOp> {
                           funcOp.getFunctionType().getInputs(), newReturnType);
     funcOp.setType(newFuncType);
 
-    if (allOrigMemsUsedByReturn) {
+    if (allOrigMemsUsedByReturn)
       rewriter.replaceOp(returnOp, newReturnOp);
-    }
+
     return success();
   }
 
 private:
   DenseMap<Value, SmallVector<Value>> &memoryToBanks;
 };
+
+LogicalResult cleanUpOldMemRefs(DenseSet<Value> &oldMemRefVals) {
+  DenseSet<func::FuncOp> funcsToModify;
+  for (auto &memrefVal : oldMemRefVals) {
+    if (!memrefVal.use_empty())
+      continue;
+    if (auto blockArg = dyn_cast<BlockArgument>(memrefVal)) {
+      Block *block = blockArg.getOwner();
+      block->eraseArgument(blockArg.getArgNumber());
+      if (auto funcOp = dyn_cast<func::FuncOp>(block->getParentOp()))
+        funcsToModify.insert(funcOp);
+    } else
+      memrefVal.getDefiningOp()->erase();
+  }
+
+  // Modify the function type accordingly
+  for (auto funcOp : funcsToModify) {
+    SmallVector<Type, 4> newArgTypes;
+    for (BlockArgument arg : funcOp.getArguments()) {
+      newArgTypes.push_back(arg.getType());
+    }
+    FunctionType newFuncType =
+        FunctionType::get(funcOp.getContext(), newArgTypes,
+                          funcOp.getFunctionType().getResults());
+    funcOp.setType(newFuncType);
+  }
+  return success();
+}
 
 void ParallelUnroll::runOnOperation() {
   if (getOperation().isExternal()) {
@@ -335,7 +350,6 @@ void ParallelUnroll::runOnOperation() {
   });
 
   auto *ctx = &getContext();
-
   RewritePatternSet patterns(ctx);
 
   patterns.add<BankAffineLoadPattern>(ctx, unrollFactor, memoryToBanks);
@@ -350,33 +364,14 @@ void ParallelUnroll::runOnOperation() {
     signalPassFailure();
   }
 
-  DenseSet<Block *> blocksToModify;
-  for (auto &[memrefVal, banks] : memoryToBanks) {
-    if (memrefVal.use_empty()) {
-      if (auto blockArg = dyn_cast<BlockArgument>(memrefVal)) {
-        blockArg.getOwner()->eraseArgument(blockArg.getArgNumber());
-        blocksToModify.insert(blockArg.getOwner());
-      } else {
-        memrefVal.getDefiningOp()->erase();
-      }
-    }
-  }
+  // Clean up the old memref values
+  DenseSet<Value> oldMemRefVals;
+  for (const auto &pair : memoryToBanks)
+    oldMemRefVals.insert(pair.first);
 
-  for (auto *block : blocksToModify) {
-    if (!isa<func::FuncOp>(block->getParentOp()))
-      continue;
-    func::FuncOp funcOp = cast<func::FuncOp>(block->getParentOp());
-    SmallVector<Type, 4> newArgTypes;
-    for (BlockArgument arg : funcOp.getArguments()) {
-      newArgTypes.push_back(arg.getType());
-    }
-    FunctionType newFuncType =
-        FunctionType::get(funcOp.getContext(), newArgTypes,
-                          funcOp.getFunctionType().getResults());
-    funcOp.setType(newFuncType);
+  if (failed(cleanUpOldMemRefs(oldMemRefVals))) {
+    signalPassFailure();
   }
-
-  getOperation().dump();
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>>
