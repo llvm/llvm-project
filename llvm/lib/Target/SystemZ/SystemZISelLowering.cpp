@@ -7232,7 +7232,7 @@ SDValue SystemZTargetLowering::combineSTORE(
         Val = Val.trunc(TotBytes * 8);
       }
 
-      SystemZVectorConstantInfo VCI(Val);
+      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, Val.getZExtValue()));
       if (VCI.isVectorConstantLegal(Subtarget) &&
           VCI.Opcode == SystemZISD::REPLICATE) {
         Word = DAG.getConstant(VCI.OpVals[0], SDLoc(SN), MVT::i32);
