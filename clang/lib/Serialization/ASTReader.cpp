@@ -3522,6 +3522,9 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         break;
       }
 
+      if (Record.empty())
+        break;
+
       if (SpecialTypes.size() != Record.size())
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "invalid special-types record");
