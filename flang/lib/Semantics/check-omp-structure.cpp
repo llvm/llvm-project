@@ -1658,36 +1658,37 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
         "standalone construct with no ORDERED region"_err_en_US);
   }
 
-  bool isSinkPresent{false};
-  int dependSourceCount{0};
+  int dependSinkCount{0}, dependSourceCount{0};
+  bool exclusiveShown{false}, duplicateSourceShown{false};
+
+  auto visitDoacross = [&](const parser::OmpDoacross &doa,
+                           const parser::CharBlock &src) {
+    common::visit(
+        common::visitors{
+            [&](const parser::OmpDoacross::Source &) { dependSourceCount++; },
+            [&](const parser::OmpDoacross::Sink &) { dependSinkCount++; }},
+        doa.u);
+    if (!exclusiveShown && dependSinkCount > 0 && dependSourceCount > 0) {
+      exclusiveShown = true;
+      context_.Say(src,
+          "The SINK and SOURCE dependence types are mutually exclusive"_err_en_US);
+    }
+    if (!duplicateSourceShown && dependSourceCount > 1) {
+      duplicateSourceShown = true;
+      context_.Say(src,
+          "At most one SOURCE dependence type can appear on the ORDERED directive"_err_en_US);
+    }
+  };
+
   auto clauseAll = FindClauses(llvm::omp::Clause::OMPC_depend);
   for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
     const auto &dependClause{
         std::get<parser::OmpClause::Depend>(itr->second->u)};
-    if (std::get_if<parser::OmpDependClause::Source>(&dependClause.v.u)) {
-      dependSourceCount++;
-      if (isSinkPresent) {
-        context_.Say(itr->second->source,
-            "DEPEND(SOURCE) is not allowed when DEPEND(SINK: vec) is present "
-            "on ORDERED directive"_err_en_US);
-      }
-      if (dependSourceCount > 1) {
-        context_.Say(itr->second->source,
-            "At most one DEPEND(SOURCE) clause can appear on the ORDERED "
-            "directive"_err_en_US);
-      }
-    } else if (std::get_if<parser::OmpDependClause::Sink>(&dependClause.v.u)) {
-      isSinkPresent = true;
-      if (dependSourceCount > 0) {
-        context_.Say(itr->second->source,
-            "DEPEND(SINK: vec) is not allowed when DEPEND(SOURCE) is present "
-            "on ORDERED directive"_err_en_US);
-      }
+    if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
+      visitDoacross(*doAcross, itr->second->source);
     } else {
       context_.Say(itr->second->source,
-          "Only DEPEND(SOURCE) or DEPEND(SINK: vec) are allowed when ORDERED "
-          "construct is a standalone construct with no ORDERED "
-          "region"_err_en_US);
+          "Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
     }
   }
 
@@ -1716,19 +1717,22 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
 }
 
 void OmpStructureChecker::CheckOrderedDependClause(
-    std::optional<std::int64_t> orderedValue) {
+    std::optional<int64_t> orderedValue) {
+  auto visitDoacross = [&](const parser::OmpDoacross &doa,
+                           const parser::CharBlock &src) {
+    if (auto *sinkVector{std::get_if<parser::OmpDoacross::Sink>(&doa.u)}) {
+      int64_t numVar = sinkVector->v.v.size();
+      if (orderedValue != numVar) {
+        context_.Say(src,
+            "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
+      }
+    }
+  };
   auto clauseAll{FindClauses(llvm::omp::Clause::OMPC_depend)};
   for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
-    const auto &dependClause{
-        std::get<parser::OmpClause::Depend>(itr->second->u)};
-    if (const auto *sinkVectors{
-            std::get_if<parser::OmpDependClause::Sink>(&dependClause.v.u)}) {
-      std::int64_t numVar = sinkVectors->v.size();
-      if (orderedValue != numVar) {
-        context_.Say(itr->second->source,
-            "The number of variables in DEPEND(SINK: vec) clause does not "
-            "match the parameter specified in ORDERED clause"_err_en_US);
-      }
+    auto &dependClause{std::get<parser::OmpClause::Depend>(itr->second->u)};
+    if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
+      visitDoacross(*doAcross, itr->second->source);
     }
   }
 }
@@ -1771,16 +1775,12 @@ void OmpStructureChecker::CheckTaskDependenceType(
     const parser::OmpTaskDependenceType::Type &x) {
   // Common checks for task-dependence-type (DEPEND and UPDATE clauses).
   unsigned version{context_.langOptions().OpenMPVersion};
-  unsigned since{0}, deprecatedIn{~0u};
+  unsigned since{0};
 
   switch (x) {
   case parser::OmpTaskDependenceType::Type::In:
   case parser::OmpTaskDependenceType::Type::Out:
   case parser::OmpTaskDependenceType::Type::Inout:
-    break;
-  case parser::OmpTaskDependenceType::Type::Source:
-  case parser::OmpTaskDependenceType::Type::Sink:
-    deprecatedIn = 52;
     break;
   case parser::OmpTaskDependenceType::Type::Mutexinoutset:
   case parser::OmpTaskDependenceType::Type::Depobj:
@@ -1791,18 +1791,33 @@ void OmpStructureChecker::CheckTaskDependenceType(
     break;
   }
 
-  if (version >= deprecatedIn) {
+  if (version < since) {
     context_.Say(GetContext().clauseSource,
-        "%s task-dependence-type is deprecated in %s"_warn_en_US,
-        parser::ToUpperCaseLetters(
-            parser::OmpTaskDependenceType::EnumToString(x)),
-        ThisVersion(deprecatedIn));
-  } else if (version < since) {
-    context_.Say(GetContext().clauseSource,
-        "%s task-dependence-type is not supported in %s, %s"_warn_en_US,
+        "%s task dependence type is not supported in %s, %s"_warn_en_US,
         parser::ToUpperCaseLetters(
             parser::OmpTaskDependenceType::EnumToString(x)),
         ThisVersion(version), TryVersion(since));
+  }
+}
+
+void OmpStructureChecker::CheckDependenceType(
+    const parser::OmpDependenceType::Type &x) {
+  // Common checks for dependence-type (DEPEND and UPDATE clauses).
+  unsigned version{context_.langOptions().OpenMPVersion};
+  unsigned deprecatedIn{~0u};
+
+  switch (x) {
+  case parser::OmpDependenceType::Type::Source:
+  case parser::OmpDependenceType::Type::Sink:
+    deprecatedIn = 52;
+    break;
+  }
+
+  if (version >= deprecatedIn) {
+    context_.Say(GetContext().clauseSource,
+        "%s dependence type is deprecated in %s"_warn_en_US,
+        parser::ToUpperCaseLetters(parser::OmpDependenceType::EnumToString(x)),
+        ThisVersion(deprecatedIn));
   }
 }
 
@@ -3469,41 +3484,50 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_depend);
-  llvm::omp::Directive directive{GetContext().directive};
+  llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  using DepType = parser::OmpTaskDependenceType::Type;
-  DepType depType = x.v.GetDepType();
+  auto *doaDep{std::get_if<parser::OmpDoacross>(&x.v.u)};
+  auto *taskDep{std::get_if<parser::OmpDependClause::TaskDep>(&x.v.u)};
+  assert(((doaDep == nullptr) != (taskDep == nullptr)) &&
+      "Unexpected alternative in update clause");
 
-  CheckTaskDependenceType(depType);
+  if (doaDep) {
+    CheckDependenceType(doaDep->GetDepType());
+  } else {
+    CheckTaskDependenceType(taskDep->GetTaskDepType());
+  }
 
-  if (directive == llvm::omp::OMPD_depobj) {
+  if (dir == llvm::omp::OMPD_depobj) {
     // [5.0:255:11], [5.1:288:3]
     // A depend clause on a depobj construct must not have source, sink [or
     // depobj](5.0) as dependence-type.
     if (version >= 50) {
-      bool invalidDep{depType == DepType::Source || depType == DepType::Sink};
-      if (version == 50) {
-        invalidDep = invalidDep || depType == DepType::Depobj;
+      bool invalidDep{false};
+      if (taskDep) {
+        if (version == 50) {
+          invalidDep = taskDep->GetTaskDepType() ==
+              parser::OmpTaskDependenceType::Type::Depobj;
+        }
+      } else {
+        invalidDep = true;
       }
       if (invalidDep) {
         context_.Say(GetContext().clauseSource,
-            "A DEPEND clause on a DEPOBJ construct must not have SOURCE%s "
-            "as dependence-type"_err_en_US,
-            version == 50 ? ", SINK or DEPOBJ" : " or SINK");
+            "A DEPEND clause on a DEPOBJ construct must not have %s as dependence type"_err_en_US,
+            version == 50 ? "SINK, SOURCE or DEPOBJ" : "SINK or SOURCE");
       }
     }
-  } else if (directive != llvm::omp::OMPD_ordered) {
-    if (depType == DepType::Source || depType == DepType::Sink) {
+  } else if (dir != llvm::omp::OMPD_ordered) {
+    if (doaDep) {
       context_.Say(GetContext().clauseSource,
-          "DEPEND(SOURCE) or DEPEND(SINK : vec) can be used only with the "
-          "ordered directive. Used here in the %s construct."_err_en_US,
-          parser::ToUpperCaseLetters(getDirectiveName(directive)));
+          "The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the %s construct"_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(dir)));
     }
   }
-  if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.v.u)}) {
-    auto &objList{std::get<parser::OmpObjectList>(inOut->t)};
-    if (directive == llvm::omp::OMPD_depobj) {
+  if (taskDep) {
+    auto &objList{std::get<parser::OmpObjectList>(taskDep->t)};
+    if (dir == llvm::omp::OMPD_depobj) {
       // [5.0:255:13], [5.1:288:6], [5.2:322:26]
       // A depend clause on a depobj construct must only specify one locator.
       if (objList.v.size() != 1) {
@@ -3530,14 +3554,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         }
       }
     }
-    if (std::get<std::optional<parser::OmpIteratorModifier>>(inOut->t)) {
+    if (std::get<std::optional<parser::OmpIteratorModifier>>(taskDep->t)) {
       unsigned allowedInVersion{50};
       if (version < allowedInVersion) {
         context_.Say(GetContext().clauseSource,
             "Iterator modifiers are not supported in %s, %s"_warn_en_US,
             ThisVersion(version), TryVersion(allowedInVersion));
       } else {
-        if (directive == llvm::omp::OMPD_depobj) {
+        if (dir == llvm::omp::OMPD_depobj) {
           context_.Say(GetContext().clauseSource,
               "An iterator-modifier may specify multiple locators, "
               "a DEPEND clause on a DEPOBJ construct must only specify "
@@ -3659,29 +3683,36 @@ void OmpStructureChecker::CheckStructureElement(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_update);
-  llvm::omp::Directive directive{GetContext().directive};
+  llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  CheckTaskDependenceType(x.v.v.v);
+  auto *depType{std::get_if<parser::OmpDependenceType>(&x.v.u)};
+  auto *taskType{std::get_if<parser::OmpTaskDependenceType>(&x.v.u)};
+  assert(((depType == nullptr) != (taskType == nullptr)) &&
+      "Unexpected alternative in update clause");
+
+  if (depType) {
+    CheckDependenceType(depType->v);
+  } else if (taskType) {
+    CheckTaskDependenceType(taskType->v);
+  }
 
   // [5.1:288:4-5]
   // An update clause on a depobj construct must not have source, sink or depobj
   // as dependence-type.
   // [5.2:322:3]
   // task-dependence-type must not be depobj.
-  if (directive == llvm::omp::OMPD_depobj) {
+  if (dir == llvm::omp::OMPD_depobj) {
     if (version >= 51) {
-      // Update -> OmpUpdateClause -> OmpTaskDependenceType -> Type
-      switch (x.v.v.v) {
-      case parser::OmpTaskDependenceType::Type::Source:
-      case parser::OmpTaskDependenceType::Type::Sink:
-      case parser::OmpTaskDependenceType::Type::Depobj:
+      bool invalidDep{false};
+      if (taskType) {
+        invalidDep = taskType->v == parser::OmpTaskDependenceType::Type::Depobj;
+      } else {
+        invalidDep = true;
+      }
+      if (invalidDep) {
         context_.Say(GetContext().clauseSource,
-            "An UPDATE clause on a DEPOBJ construct must not have SOURCE, "
-            "SINK or DEPOBJ as dependence-type"_err_en_US);
-        break;
-      default:
-        break;
+            "An UPDATE clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type"_err_en_US);
       }
     }
   }
