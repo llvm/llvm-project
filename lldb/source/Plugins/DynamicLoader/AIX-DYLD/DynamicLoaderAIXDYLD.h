@@ -24,7 +24,7 @@ public:
 
   static void Initialize();
   static void Terminate();
-  static llvm::StringRef GetPluginNameStatic() { return "windows-dyld"; }
+  static llvm::StringRef GetPluginNameStatic() { return "aix-dyld"; }
   static llvm::StringRef GetPluginDescriptionStatic();
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
@@ -40,8 +40,6 @@ public:
                                                   bool stop) override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  static bool NotifyBreakpointHit(void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
 protected:
   lldb::addr_t GetLoadAddress(lldb::ModuleSP executable);

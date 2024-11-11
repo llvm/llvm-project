@@ -18,12 +18,6 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#if defined(_AIX)
-#include <sys/ldr.h>
-#endif
-
-/*#include "llvm/ADT/Triple.h"
-*/
 
 using namespace lldb;
 using namespace lldb_private;
@@ -48,7 +42,7 @@ llvm::StringRef DynamicLoaderAIXDYLD::GetPluginDescriptionStatic() {
 }
 
 DynamicLoader *DynamicLoaderAIXDYLD::CreateInstance(Process *process,
-                                                        bool force) {
+                                                    bool force) {
   bool should_create = force;
   if (!should_create) {
     const llvm::Triple &triple_ref =
@@ -64,14 +58,14 @@ DynamicLoader *DynamicLoaderAIXDYLD::CreateInstance(Process *process,
 }
 
 void DynamicLoaderAIXDYLD::OnLoadModule(lldb::ModuleSP module_sp,
-                                            const ModuleSpec module_spec,
-                                            lldb::addr_t module_addr) {
+                                        const ModuleSpec module_spec,
+                                        lldb::addr_t module_addr) {
 
   // Resolve the module unless we already have one.
   if (!module_sp) {
     Status error;
-    module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, 
-                                             true /* notify */, &error);
+    module_sp = m_process->GetTarget().GetOrCreateModule(
+        module_spec, true /* notify */, &error);
     if (error.Fail())
       return;
   }
@@ -117,19 +111,10 @@ lldb::addr_t DynamicLoaderAIXDYLD::GetLoadAddress(ModuleSP executable) {
     m_loaded_modules[executable] = load_addr;
     return load_addr;
   }
-
-  //// Hack to try set breakpoint
-  //Breakpoint *dyld_break = m_process->GetTarget().CreateBreakpoint(0x100000638, true, false).get();
-  //dyld_break->SetCallback(DynamicLoaderAIXDYLD::NotifyBreakpointHit, this, true);
-  //dyld_break->SetBreakpointKind("hack-debug");
-
   return LLDB_INVALID_ADDRESS;
 }
 
-bool DynamicLoaderAIXDYLD::NotifyBreakpointHit(
-    void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
-    lldb::user_id_t break_loc_id) {
-}
+void DynamicLoaderAIXDYLD::DidAttach() {}
 
 void DynamicLoaderAIXDYLD::DidLaunch() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
@@ -150,4 +135,12 @@ void DynamicLoaderAIXDYLD::DidLaunch() {
     auto error = m_process->LoadModules();
     LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
   }
+}
+
+Status DynamicLoaderAIXDYLD::CanLoadImage() { return Status(); }
+
+ThreadPlanSP DynamicLoaderAIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
+                                                                bool stop) {
+  // FIXME
+  return ThreadPlanSP();
 }
