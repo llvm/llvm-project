@@ -157,6 +157,22 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
          (with-demoted-errors "failed to remove file: %S"
            (delete-file (pop ,bind-files-to-delete)))))))
 
+
+(defun clang-format--vc-diff-match-diff-line (line)
+  ;; We are matching something like:
+  ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
+  ;; Return as "<LineStart>:<LineEnd>"
+  (when (string-match "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$" line)
+    ;; If we have multi-line diff
+    (if (match-string 3 line)
+        (concat (match-string 1 line)
+                ":"
+                (number-to-string
+                 (+ (string-to-number (match-string 1 line))
+                    (string-to-number (match-string 3 line)))))
+      (concat (match-string 1 line) ":" (match-string 1 line)))))
+
+
 (defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
 FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the
@@ -175,16 +191,14 @@ which can be passed directly to ‘clang-format’."
                    ;; Binary diff has different behaviors that we
                    ;; aren't interested in.
                    "-a"
-                   ;; Print new lines in file-new formatted as
-                   ;; "--lines=<StartDiff:EndDiff> "
-                   "--changed-group-format=%(N=0?:--lines=%dF:%dM )"
-                   ;; Don't print anything for unchanged lines
-                   "--unchanged-group-format="
+                   ;; Get minimal diff (copy diff config for git-clang-format).
+                   "-U0"
                    file-orig
                    file-new))
           (stderr (concat (if (zerop (buffer-size)) "" ": ")
                           (buffer-substring-no-properties
-                           (point-min) (line-end-position)))))
+                           (point-min) (line-end-position))))
+          (diff-lines '()))
       (cond
        ((stringp status)
         (error "(diff killed by signal %s%s)" status stderr))
@@ -192,15 +206,20 @@ which can be passed directly to ‘clang-format’."
        ((= status 0) nil)
        ;; Return of 1 indicates found diffs and no error.
        ((= status 1)
-        ;; We had our diff command printout all diffs as
-        ;; "--lines=S0:E0 --lines=S1:E1 ... --lines=SN:EN " so just
-        ;; split the output into a list to pass to clang-format.
-        (split-string
-         (buffer-substring-no-properties (point-min) (point-max))
-         ;; All whitespace (practically only spaces).
-         "[ \f\t\n\r\v]"
-         ;; Don't create empty entries.
-         t))
+        ;; Iterate through all lines in diff buffer and collect all
+        ;; lines in current buffer that have a diff.
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let ((diff-line (clang-format--vc-diff-match-diff-line
+                            (buffer-substring-no-properties
+                             (line-beginning-position)
+                             (line-end-position)))))
+            (when diff-line
+              ;; Create list line regions with diffs to pass to
+              ;; clang-format.
+              (push (concat "--lines=" diff-line) diff-lines)))
+          (forward-line 1))
+        (reverse diff-lines))
        ;; Any return != 0 && != 1 indicates some level of error.
        (t
         (error "(diff returned unsuccessfully %s%s)" status stderr))))))
