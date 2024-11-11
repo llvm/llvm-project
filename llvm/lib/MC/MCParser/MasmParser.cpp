@@ -6750,6 +6750,7 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".cfi_register"] = DK_CFI_REGISTER;
   // DirectiveKindMap[".cfi_window_save"] = DK_CFI_WINDOW_SAVE;
   // DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
+  // DirectiveKindMap[".cfi_val_offset"] = DK_CFI_VAL_OFFSET;
   DirectiveKindMap["macro"] = DK_MACRO;
   DirectiveKindMap["exitm"] = DK_EXITM;
   DirectiveKindMap["endm"] = DK_ENDM;
