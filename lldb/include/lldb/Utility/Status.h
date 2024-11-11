@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_STATUS_H
 #define LLDB_UTILITY_STATUS_H
 
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,8 +26,6 @@ class raw_ostream;
 }
 
 namespace lldb_private {
-
-const char *ExpressionResultAsCString(lldb::ExpressionResults result);
 
 /// Going a bit against the spirit of llvm::Error,
 /// lldb_private::Status need to store errors long-term and sometimes
@@ -75,16 +74,6 @@ public:
   Win32Error(std::error_code ec, const llvm::Twine &msg = {}) : ErrorInfo(ec) {}
   std::string message() const override;
   std::unique_ptr<CloneableError> Clone() const override;
-  lldb::ErrorType GetErrorType() const override;
-  static char ID;
-};
-
-class ExpressionErrorBase
-    : public llvm::ErrorInfo<ExpressionErrorBase, CloneableECError> {
-public:
-  using llvm::ErrorInfo<ExpressionErrorBase, CloneableECError>::ErrorInfo;
-  ExpressionErrorBase(std::error_code ec, std::string msg = {})
-      : ErrorInfo(ec) {}
   lldb::ErrorType GetErrorType() const override;
   static char ID;
 };

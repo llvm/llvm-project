@@ -51,10 +51,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.generic_error_number_macros
 )
 
+add_header_library(fcntl_overlay HDRS fcntl_overlay.h)
 add_proxy_header_library(
   fcntl_macros
   HDRS
     fcntl_macros.h
+  DEPENDS
+    .fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fcntl_macros
     libc.include.fcntl
@@ -78,10 +81,27 @@ add_proxy_header_library(
     libc.include.signal
 )
 
+add_header_library(stdlib_overlay HDRS stdlib_overlay.h)
+
+add_proxy_header_library(
+  stdlib_macros
+  HDRS
+    stdlib_macros.h
+  DEPENDS
+    .stdlib_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
+    libc.include.llvm-libc-macros.stdlib_macros
+)
+
+add_header_library(stdio_overlay HDRS stdio_overlay.h)
+
 add_proxy_header_library(
   stdio_macros
   HDRS
     stdio_macros.h
+  DEPENDS
+    .stdio_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdio
     libc.include.llvm-libc-macros.stdio_macros
@@ -175,3 +195,4 @@ add_proxy_header_library(
 )
 
 add_subdirectory(types)
+add_subdirectory(func)

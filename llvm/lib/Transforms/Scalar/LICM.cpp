@@ -77,7 +77,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -2820,18 +2819,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (!BO || !BO->isAssociative())
     return false;
 
-  // TODO: Only hoist ADDs, MULs, FADDs, and FMULs for now.
   Instruction::BinaryOps Opcode = BO->getOpcode();
-  switch (Opcode) {
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::FAdd:
-  case Instruction::FMul:
-    break;
-  default:
-    return false;
-  }
-
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||

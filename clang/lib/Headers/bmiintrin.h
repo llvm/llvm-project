@@ -17,7 +17,12 @@
 /* Allow using the tzcnt intrinsics even for non-BMI targets. Since the TZCNT
    instruction behaves as BSF on non-BMI targets, there is code that expects
    to use it as a potentially faster version of BSF. */
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __RELAXED_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__)) constexpr
+#else
 #define __RELAXED_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+#endif
 
 /// Counts the number of trailing zero bits in the operand.
 ///
@@ -31,8 +36,7 @@
 ///    bits in the operand.
 /// \see _tzcnt_u16
 static __inline__ unsigned short __RELAXED_FN_ATTRS
-__tzcnt_u16(unsigned short __X)
-{
+__tzcnt_u16(unsigned short __X) {
   return __builtin_ia32_tzcnt_u16(__X);
 }
 
@@ -65,8 +69,7 @@ __tzcnt_u16(unsigned short __X)
 ///    bits in the operand.
 /// \see { _mm_tzcnt_32 _tzcnt_u32 }
 static __inline__ unsigned int __RELAXED_FN_ATTRS
-__tzcnt_u32(unsigned int __X)
-{
+__tzcnt_u32(unsigned int __X) {
   return __builtin_ia32_tzcnt_u32(__X);
 }
 
@@ -82,8 +85,7 @@ __tzcnt_u32(unsigned int __X)
 ///    the operand.
 /// \see { __tzcnt_u32 _tzcnt_u32 }
 static __inline__ int __RELAXED_FN_ATTRS
-_mm_tzcnt_32(unsigned int __X)
-{
+_mm_tzcnt_32(unsigned int __X) {
   return (int)__builtin_ia32_tzcnt_u32(__X);
 }
 
@@ -118,8 +120,7 @@ _mm_tzcnt_32(unsigned int __X)
 ///    bits in the operand.
 /// \see { _mm_tzcnt_64 _tzcnt_u64 }
 static __inline__ unsigned long long __RELAXED_FN_ATTRS
-__tzcnt_u64(unsigned long long __X)
-{
+__tzcnt_u64(unsigned long long __X) {
   return __builtin_ia32_tzcnt_u64(__X);
 }
 
@@ -135,8 +136,7 @@ __tzcnt_u64(unsigned long long __X)
 ///    the operand.
 /// \see { __tzcnt_u64 _tzcnt_u64 }
 static __inline__ long long __RELAXED_FN_ATTRS
-_mm_tzcnt_64(unsigned long long __X)
-{
+_mm_tzcnt_64(unsigned long long __X) {
   return (long long)__builtin_ia32_tzcnt_u64(__X);
 }
 
@@ -164,12 +164,12 @@ _mm_tzcnt_64(unsigned long long __X)
 #if !defined(__SCE__) || __has_feature(modules) || defined(__BMI__)
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("bmi")))
-
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("bmi"))) constexpr
 #else
-#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("bmi")))
 #endif
 
 /// Performs a bitwise AND of the second operand with the one's
@@ -187,8 +187,7 @@ _mm_tzcnt_64(unsigned long long __X)
 ///    operand with the one's complement of the first operand.
 /// \see _andn_u32
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__andn_u32(unsigned int __X, unsigned int __Y)
-{
+__andn_u32(unsigned int __X, unsigned int __Y) {
   return ~__X & __Y;
 }
 
@@ -229,7 +228,7 @@ __andn_u32(unsigned int __X, unsigned int __Y)
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
 /// \see _bextr_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __bextr_u32(unsigned int __X, unsigned int __Y) {
   return __builtin_ia32_bextr_u32(__X, __Y);
 }
@@ -253,7 +252,7 @@ __bextr_u32(unsigned int __X, unsigned int __Y) {
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z) {
   return __builtin_ia32_bextr_u32(__X, ((__Y & 0xff) | ((__Z & 0xff) << 8)));
 }
@@ -275,7 +274,7 @@ _bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z) {
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _bextr2_u32(unsigned int __X, unsigned int __Y) {
   return __builtin_ia32_bextr_u32(__X, __Y);
 }
@@ -293,8 +292,7 @@ _bextr2_u32(unsigned int __X, unsigned int __Y) {
 ///    the source operand.
 /// \see _blsi_u32
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__blsi_u32(unsigned int __X)
-{
+__blsi_u32(unsigned int __X) {
   return __X & -__X;
 }
 
@@ -329,8 +327,7 @@ __blsi_u32(unsigned int __X)
 /// \returns An unsigned integer containing the newly created mask.
 /// \see _blsmsk_u32
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__blsmsk_u32(unsigned int __X)
-{
+__blsmsk_u32(unsigned int __X) {
   return __X ^ (__X - 1);
 }
 
@@ -365,8 +362,7 @@ __blsmsk_u32(unsigned int __X)
 ///    operand.
 /// \see _blsr_u32
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__blsr_u32(unsigned int __X)
-{
+__blsr_u32(unsigned int __X) {
   return __X & (__X - 1);
 }
 
@@ -405,8 +401,7 @@ __blsr_u32(unsigned int __X)
 ///    operand with the one's complement of the first operand.
 /// \see _andn_u64
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-__andn_u64 (unsigned long long __X, unsigned long long __Y)
-{
+__andn_u64 (unsigned long long __X, unsigned long long __Y) {
   return ~__X & __Y;
 }
 
@@ -448,7 +443,7 @@ __andn_u64 (unsigned long long __X, unsigned long long __Y)
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
 /// \see _bextr_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __bextr_u64(unsigned long long __X, unsigned long long __Y) {
   return __builtin_ia32_bextr_u64(__X, __Y);
 }
@@ -472,7 +467,7 @@ __bextr_u64(unsigned long long __X, unsigned long long __Y) {
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z) {
   return __builtin_ia32_bextr_u64(__X, ((__Y & 0xff) | ((__Z & 0xff) << 8)));
 }
@@ -494,7 +489,7 @@ _bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z) {
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _bextr2_u64(unsigned long long __X, unsigned long long __Y) {
   return __builtin_ia32_bextr_u64(__X, __Y);
 }
@@ -512,8 +507,7 @@ _bextr2_u64(unsigned long long __X, unsigned long long __Y) {
 ///    bits from the source operand.
 /// \see _blsi_u64
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-__blsi_u64(unsigned long long __X)
-{
+__blsi_u64(unsigned long long __X) {
   return __X & -__X;
 }
 
@@ -548,8 +542,7 @@ __blsi_u64(unsigned long long __X)
 /// \returns An unsigned 64-bit integer containing the newly created mask.
 /// \see _blsmsk_u64
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-__blsmsk_u64(unsigned long long __X)
-{
+__blsmsk_u64(unsigned long long __X) {
   return __X ^ (__X - 1);
 }
 
@@ -584,8 +577,7 @@ __blsmsk_u64(unsigned long long __X)
 ///    source operand.
 /// \see _blsr_u64
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-__blsr_u64(unsigned long long __X)
-{
+__blsr_u64(unsigned long long __X) {
   return __X & (__X - 1);
 }
 

@@ -79,11 +79,11 @@ define void @lsr_crash_preserve_addrspace_unknown_type2(ptr addrspace(5) %array,
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[ADD:%.*]], %[[FOR_INC:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[ARRAY2]], i32 [[J]]
-; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i8, ptr addrspace(3) [[ARRAY2]], i32 [[J]]
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
 ; CHECK-NEXT:    [[N8:%.*]] = load i8, ptr addrspace(5) [[T]], align 4
-; CHECK-NEXT:    [[N7:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[T]], i32 42
+; CHECK-NEXT:    [[N7:%.*]] = getelementptr i8, ptr addrspace(5) [[T]], i32 42
 ; CHECK-NEXT:    [[N9:%.*]] = load i8, ptr addrspace(5) [[N7]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[J]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN17:.*]], label %[[FOR_INC]]

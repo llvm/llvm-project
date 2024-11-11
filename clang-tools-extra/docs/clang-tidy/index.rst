@@ -287,7 +287,7 @@ An overview of all the command-line options:
     FormatStyle                  - Same as '--format-style'.
     HeaderFileExtensions         - File extensions to consider to determine if a
                                    given diagnostic is located in a header file.
-    HeaderFilterRegex            - Same as '--header-filter-regex'.
+    HeaderFilterRegex            - Same as '--header-filter'.
     ImplementationFileExtensions - File extensions to consider to determine if a
                                    given diagnostic is located in an
                                    implementation file.

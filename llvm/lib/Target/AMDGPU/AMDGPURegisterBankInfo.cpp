@@ -2357,8 +2357,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildSelect(DefRegs[0], CondRegs[0], Src1Regs[0], Src2Regs[0]);
-    B.buildSelect(DefRegs[1], CondRegs[0], Src1Regs[1], Src2Regs[1]);
+    auto Flags = MI.getFlags();
+    B.buildSelect(DefRegs[0], CondRegs[0], Src1Regs[0], Src2Regs[0], Flags);
+    B.buildSelect(DefRegs[1], CondRegs[0], Src1Regs[1], Src2Regs[1], Flags);
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
@@ -2440,8 +2441,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]});
-    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]});
+    auto Flags = MI.getFlags();
+    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]}, Flags);
+    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]}, Flags);
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
@@ -3274,19 +3276,17 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       assert(OpdMapper.getVRegs(1).empty());
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
-    case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_wakeup_barrier:
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
-    case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
-      constrainOpWithReadfirstlane(B, MI, 2);
-      return;
     case Intrinsic::amdgcn_s_barrier_init:
+    case Intrinsic::amdgcn_s_barrier_signal_var:
       constrainOpWithReadfirstlane(B, MI, 1);
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
-    case Intrinsic::amdgcn_s_get_barrier_state: {
+    case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_get_named_barrier_state: {
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
@@ -4911,12 +4911,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_global_atomic_csub:
-    case Intrinsic::amdgcn_global_atomic_fmin:
-    case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
-    case Intrinsic::amdgcn_flat_atomic_fmin:
-    case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmin_num:
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:
@@ -5136,30 +5132,23 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_s_sleep_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
-    case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_wakeup_barrier:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_init:
+    case Intrinsic::amdgcn_s_barrier_signal_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
-    case Intrinsic::amdgcn_s_barrier_signal_isfirst_var: {
-      const unsigned ResultSize = 1;
-      OpdsMapping[0] =
-          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_s_barrier_signal_isfirst:
-    case Intrinsic::amdgcn_s_barrier_leave: {
+    case Intrinsic::amdgcn_s_barrier_signal_isfirst: {
       const unsigned ResultSize = 1;
       OpdsMapping[0] =
           AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
       break;
     }
-    case Intrinsic::amdgcn_s_get_barrier_state: {
+    case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_get_named_barrier_state: {
       OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;

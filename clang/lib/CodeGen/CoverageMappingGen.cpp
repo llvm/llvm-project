@@ -649,7 +649,7 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
     if (MappingRegions.empty())
       return;
 
-    CoverageMappingWriter Writer(FileIDMapping, std::nullopt, MappingRegions);
+    CoverageMappingWriter Writer(FileIDMapping, {}, MappingRegions);
     Writer.write(OS);
   }
 };
@@ -1098,12 +1098,6 @@ struct CounterCoverageMappingBuilder
     return ExitCount;
   }
 
-  /// Determine whether the given condition can be constant folded.
-  bool ConditionFoldsToBool(const Expr *Cond) {
-    Expr::EvalResult Result;
-    return (Cond->EvaluateAsInt(Result, CVM.getCodeGenModule().getContext()));
-  }
-
   /// Create a Branch Region around an instrumentable condition for coverage
   /// and add it to the function's SourceRegions.  A branch region tracks a
   /// "True" counter and a "False" counter for boolean expressions that
@@ -1133,13 +1127,15 @@ struct CounterCoverageMappingBuilder
       // Alternatively, we can prevent any optimization done via
       // constant-folding by ensuring that ConstantFoldsToSimpleInteger() in
       // CodeGenFunction.c always returns false, but that is very heavy-handed.
-      if (ConditionFoldsToBool(C))
-        popRegions(pushRegion(Counter::getZero(), getStart(C), getEnd(C),
-                              Counter::getZero(), BranchParams));
-      else
-        // Otherwise, create a region with the True counter and False counter.
-        popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt,
-                              BranchParams));
+      Expr::EvalResult Result;
+      if (C->EvaluateAsInt(Result, CVM.getCodeGenModule().getContext())) {
+        if (Result.Val.getInt().getBoolValue())
+          FalseCnt = Counter::getZero();
+        else
+          TrueCnt = Counter::getZero();
+      }
+      popRegions(
+          pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt, BranchParams));
     }
   }
 
@@ -1153,12 +1149,12 @@ struct CounterCoverageMappingBuilder
 
   /// Create a Branch Region around a SwitchCase for code coverage
   /// and add it to the function's SourceRegions.
-  void createSwitchCaseRegion(const SwitchCase *SC, Counter TrueCnt,
-                              Counter FalseCnt) {
+  void createSwitchCaseRegion(const SwitchCase *SC, Counter TrueCnt) {
     // Push region onto RegionStack but immediately pop it (which adds it to
     // the function's SourceRegions) because it doesn't apply to any other
     // source other than the SwitchCase.
-    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(), FalseCnt));
+    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(),
+                          Counter::getZero()));
   }
 
   /// Check whether a region with bounds \c StartLoc and \c EndLoc
@@ -1870,24 +1866,16 @@ struct CounterCoverageMappingBuilder
     const SwitchCase *Case = S->getSwitchCaseList();
     for (; Case; Case = Case->getNextSwitchCase()) {
       HasDefaultCase = HasDefaultCase || isa<DefaultStmt>(Case);
-      CaseCountSum =
-          addCounters(CaseCountSum, getRegionCounter(Case), /*Simplify=*/false);
-      createSwitchCaseRegion(
-          Case, getRegionCounter(Case),
-          subtractCounters(ParentCount, getRegionCounter(Case)));
+      auto CaseCount = getRegionCounter(Case);
+      CaseCountSum = addCounters(CaseCountSum, CaseCount, /*Simplify=*/false);
+      createSwitchCaseRegion(Case, CaseCount);
     }
-    // Simplify is skipped while building the counters above: it can get really
-    // slow on top of switches with thousands of cases. Instead, trigger
-    // simplification by adding zero to the last counter.
-    CaseCountSum = addCounters(CaseCountSum, Counter::getZero());
-
     // If no explicit default case exists, create a branch region to represent
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      Counter DefaultTrue = subtractCounters(ParentCount, CaseCountSum);
-      Counter DefaultFalse = subtractCounters(ParentCount, DefaultTrue);
-      createBranchRegion(S->getCond(), DefaultTrue, DefaultFalse);
+      Counter DefaultCount = subtractCounters(ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), Counter::getZero(), DefaultCount);
     }
   }
 
@@ -2066,7 +2054,7 @@ struct CounterCoverageMappingBuilder
       GapRegionCounter = OutCount;
     }
 
-    if (!S->isConsteval() && !llvm::EnableSingleByteCoverage)
+    if (!llvm::EnableSingleByteCoverage)
       // Create Branch Region around condition.
       createBranchRegion(S->getCond(), ThenCount,
                          subtractCounters(ParentCount, ThenCount));

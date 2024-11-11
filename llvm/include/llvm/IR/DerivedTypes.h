@@ -33,6 +33,7 @@ class Value;
 class APInt;
 class LLVMContext;
 template <typename T> class Expected;
+class Error;
 
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
@@ -290,8 +291,8 @@ public:
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
-  bool
-  containsScalableVectorType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::isScalableTy;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
@@ -300,6 +301,10 @@ public:
   /// {{<vscale x 2 x i32>, <vscale x 4 x i64>},
   ///  {<vscale x 2 x i32>, <vscale x 4 x i64>}}
   bool containsHomogeneousScalableVectorTypes() const;
+
+  /// Return true if this struct is non-empty and all element types are the
+  /// same.
+  bool containsHomogeneousTypes() const;
 
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
@@ -313,15 +318,17 @@ public:
   /// suffix if there is a collision. Do not call this on an literal type.
   void setName(StringRef Name);
 
-  /// Specify a body for an opaque identified type.
+  /// Specify a body for an opaque identified type, which must not make the type
+  /// recursive.
   void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
 
-  template <typename... Tys>
-  std::enable_if_t<are_base_of<Type, Tys...>::value, void>
-  setBody(Type *elt1, Tys *... elts) {
-    assert(elt1 && "Cannot create a struct type with no elements with this");
-    setBody(ArrayRef<Type *>({elt1, elts...}));
-  }
+  /// Specify a body for an opaque identified type or return an error if it
+  /// would make the type recursive.
+  Error setBodyOrError(ArrayRef<Type *> Elements, bool isPacked = false);
+
+  /// Return an error if the body for an opaque identified type would make it
+  /// recursive.
+  Error checkBody(ArrayRef<Type *> Elements);
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);

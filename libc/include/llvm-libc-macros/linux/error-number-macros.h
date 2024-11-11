@@ -21,4 +21,12 @@
 #define EHWPOISON 133
 #endif // EHWPOISON
 
+#ifndef EOPNOTSUPP
+#define EOPNOTSUPP 95
+#endif
+
+#ifndef ENOTSUP
+#define ENOTSUP EOPNOTSUPP
+#endif
+
 #endif // LLVM_LIBC_MACROS_LINUX_ERROR_NUMBER_MACROS_H

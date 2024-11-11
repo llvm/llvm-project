@@ -200,7 +200,7 @@ func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi3
   affine.for %arg3 = 0 to 64 {
     affine.for %arg4 = 0 to 64 step 16 {
       affine.for %arg5 = 0 to 64 {
-        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {in_bounds = [true], permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
+        %0 = vector.transfer_read %memref0[%arg3, %arg5], %c0_i32 {permutation_map = affine_map<(d0, d1) -> (0)>} : memref<64x64xi32>, vector<16xi32>
         %1 = vector.transfer_read %memref1[%arg5, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
         %2 = vector.transfer_read %memref2[%arg3, %arg4], %c0_i32 : memref<64x64xi32>, vector<16xi32>
         %3 = arith.muli %0, %1 : vector<16xi32>
@@ -308,6 +308,134 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL:  func.func @no_hoisting_unknown_bound_loop
+func.func @no_hoisting_unknown_bound_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb and %ub are unbounded, so do not hoist.
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb to %ub step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @no_hoisting_possibly_zero_trip_loop
+func.func @no_hoisting_possibly_zero_trip_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 8], and %ub_0 is in range [4, %ub].
+  // Since %lb_0 could be greater than %ub_0, do not hoist.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 8)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 4)>(%ub)
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @no_hoisting_possibly_zero_trip_loop_eq_lb_and_ub
+func.func @no_hoisting_possibly_zero_trip_loop_eq_lb_and_ub(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 8], and %ub_0 is in range [8, %ub].
+  // Since %lb_0 could be equal to %ub_0, do not hoist.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 8)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @hoisting_non_zero_trip_loop
+func.func @hoisting_non_zero_trip_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 4], and %ub_0 is in range [8, %ub].
+  // Since %lb_0 is guaranteed to be less than %ub_0, hoisting is possible.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 4)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
+
+  // CHECK:       vector.transfer_read
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // Regression test - `vector.transfer_read` below should not be hoisted.
 // Indeed, %collapse_shape (written to by `vector.transfer_write`) and %alloca
 // (read by `vector.transfer_read`) alias.
@@ -366,7 +494,7 @@ func.func @no_hoisting_collapse_shape_2(%vec: vector<1x12x1xi32>) {
     %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x12x1xi32> into memref<12xi32>
     vector.transfer_write %vec, %alloca[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x12x1xi32>, memref<1x12x1xi32>
     %read = vector.transfer_read %collapse_shape[%c0], %c0_i32 {in_bounds = [true]} : memref<12xi32>, vector<12xi32>
-    "prevent.dce"(%read) : (vector<12xi32>) ->()
+    "test.some_use"(%read) : (vector<12xi32>) ->()
   }
   return
 }

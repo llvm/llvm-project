@@ -591,18 +591,14 @@ struct WasmSym {
   // Function that calls the libc/etc. cleanup function.
   static DefinedFunction *callDtors;
 
-  // __wasm_apply_data_relocs
-  // Function that applies relocations to data segment post-instantiation.
-  static DefinedFunction *applyDataRelocs;
-
   // __wasm_apply_global_relocs
   // Function that applies relocations to wasm globals post-instantiation.
   // Unlike __wasm_apply_data_relocs this needs to run on every thread.
   static DefinedFunction *applyGlobalRelocs;
 
   // __wasm_apply_tls_relocs
-  // Like applyDataRelocs but for TLS section.  These must be delayed until
-  // __wasm_init_tls.
+  // Like __wasm_apply_data_relocs but for TLS section.  These must be
+  // delayed until __wasm_init_tls.
   static DefinedFunction *applyTLSRelocs;
 
   // __wasm_apply_global_tls_relocs

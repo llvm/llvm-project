@@ -693,7 +693,7 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
 
   // The constants that can be encoded in the THeadMemIdx instructions
   // are of the form (sign_extend(imm5) << imm2).
-  int64_t Shift;
+  unsigned Shift;
   for (Shift = 0; Shift < 4; Shift++)
     if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
       break;
@@ -931,6 +931,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY) {
       Res =
           CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
+    } else if (VT.SimpleTy == MVT::f32 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_32, DL, VT, Imm).getNode();
     } else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
       Res = CurDAG->getMachineNode(
           Opc, DL, VT, Imm,
@@ -2935,6 +2938,14 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                     0);
       return true;
     }
+    if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::BINVI, DL, N->getValueType(0), LHS,
+              CurDAG->getTargetConstant(Log2_64(CVal), DL, N->getValueType(0))),
+          0);
+      return true;
+    }
   }
 
   // If nothing else we can XOR the LHS and RHS to produce zero if they are
@@ -3355,7 +3366,7 @@ bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
                                         SDValue &Shl2) {
   if (auto *C = dyn_cast<ConstantSDNode>(N)) {
     int64_t Offset = C->getSExtValue();
-    int64_t Shift;
+    unsigned Shift;
     for (Shift = 0; Shift < 4; Shift++)
       if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
         break;
@@ -3697,6 +3708,15 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
+static bool hasGPROut(unsigned Opc) {
+  switch (RISCV::getRVVMCOpcode(Opc)) {
+  case RISCV::VCPOP_M:
+  case RISCV::VFIRST_M:
+    return true;
+  }
+  return false;
+}
+
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3726,8 +3746,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 #endif
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo.
-  for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
+  // Skip the passthru operand at index 0 if !UseTUPseudo and no GPR out.
+  bool ShouldSkip = !UseTUPseudo && !hasGPROut(Opc);
+  for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx || Op.getValueType() == MVT::Glue)

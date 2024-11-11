@@ -136,28 +136,30 @@ public:
   Directive(const Record *Def) : BaseRecord(Def) {}
 
   std::vector<const Record *> getAllowedClauses() const {
-    return Def->getValueAsListOfConstDefs("allowedClauses");
+    return Def->getValueAsListOfDefs("allowedClauses");
   }
 
   std::vector<const Record *> getAllowedOnceClauses() const {
-    return Def->getValueAsListOfConstDefs("allowedOnceClauses");
+    return Def->getValueAsListOfDefs("allowedOnceClauses");
   }
 
   std::vector<const Record *> getAllowedExclusiveClauses() const {
-    return Def->getValueAsListOfConstDefs("allowedExclusiveClauses");
+    return Def->getValueAsListOfDefs("allowedExclusiveClauses");
   }
 
   std::vector<const Record *> getRequiredClauses() const {
-    return Def->getValueAsListOfConstDefs("requiredClauses");
+    return Def->getValueAsListOfDefs("requiredClauses");
   }
 
   std::vector<const Record *> getLeafConstructs() const {
-    return Def->getValueAsListOfConstDefs("leafConstructs");
+    return Def->getValueAsListOfDefs("leafConstructs");
   }
 
-  Record *getAssociation() const { return Def->getValueAsDef("association"); }
+  const Record *getAssociation() const {
+    return Def->getValueAsDef("association");
+  }
 
-  Record *getCategory() const { return Def->getValueAsDef("category"); }
+  const Record *getCategory() const { return Def->getValueAsDef("category"); }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td
@@ -204,7 +206,7 @@ public:
   }
 
   std::vector<const Record *> getClauseVals() const {
-    return Def->getValueAsListOfConstDefs("allowedClauseValues");
+    return Def->getValueAsListOfDefs("allowedClauseValues");
   }
 
   bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }
@@ -247,7 +249,7 @@ private:
 
 class ClauseVal : public BaseRecord {
 public:
-  explicit ClauseVal(const Record *Def) : BaseRecord(Def) {}
+  ClauseVal(const Record *Def) : BaseRecord(Def) {}
 
   int getValue() const { return Def->getValueAsInt("value"); }
 

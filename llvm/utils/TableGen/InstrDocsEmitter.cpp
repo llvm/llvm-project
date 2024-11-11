@@ -214,7 +214,7 @@ static void EmitInstrDocs(const RecordKeeper &RK, raw_ostream &OS) {
 
     // Predicates.
     std::vector<const Record *> Predicates =
-        II->TheDef->getValueAsListOfConstDefs("Predicates");
+        II->TheDef->getValueAsListOfDefs("Predicates");
     if (!Predicates.empty()) {
       OS << "Predicates: ";
       ListSeparator LS;

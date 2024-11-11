@@ -49,6 +49,9 @@ bool Type::isFloat8E4M3FNUZ() const {
 bool Type::isFloat8E4M3B11FNUZ() const {
   return llvm::isa<Float8E4M3B11FNUZType>(*this);
 }
+bool Type::isFloat8E8M0FNU() const {
+  return llvm::isa<Float8E8M0FNUType>(*this);
+}
 bool Type::isFloat8E3M4() const { return llvm::isa<Float8E3M4Type>(*this); }
 bool Type::isBF16() const { return llvm::isa<BFloat16Type>(*this); }
 bool Type::isF16() const { return llvm::isa<Float16Type>(*this); }

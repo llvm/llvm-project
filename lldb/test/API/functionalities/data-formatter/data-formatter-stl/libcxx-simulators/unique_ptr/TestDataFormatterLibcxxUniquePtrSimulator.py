@@ -29,7 +29,9 @@ class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
 for r in range(3):
     name = "test_r%d" % r
     defines = ["COMPRESSED_PAIR_REV=%d" % r]
-    f = functools.partialmethod(
-        LibcxxUniquePtrDataFormatterSimulatorTestCase._run_test, defines
-    )
-    setattr(LibcxxUniquePtrDataFormatterSimulatorTestCase, name, f)
+
+    @functools.wraps(LibcxxUniquePtrDataFormatterSimulatorTestCase._run_test)
+    def test_method(self, defines=defines):
+        LibcxxUniquePtrDataFormatterSimulatorTestCase._run_test(self, defines)
+
+    setattr(LibcxxUniquePtrDataFormatterSimulatorTestCase, name, test_method)

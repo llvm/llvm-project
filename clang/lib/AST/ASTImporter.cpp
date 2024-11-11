@@ -362,24 +362,24 @@ namespace clang {
     template <typename TemplateParmDeclT>
     Error importTemplateParameterDefaultArgument(const TemplateParmDeclT *D,
                                                  TemplateParmDeclT *ToD) {
-      Error Err = Error::success();
       if (D->hasDefaultArgument()) {
         if (D->defaultArgumentWasInherited()) {
-          auto *ToInheritedFrom = const_cast<TemplateParmDeclT *>(
-              importChecked(Err, D->getDefaultArgStorage().getInheritedFrom()));
-          if (Err)
-            return Err;
+          Expected<TemplateParmDeclT *> ToInheritedFromOrErr =
+              import(D->getDefaultArgStorage().getInheritedFrom());
+          if (!ToInheritedFromOrErr)
+            return ToInheritedFromOrErr.takeError();
+          TemplateParmDeclT *ToInheritedFrom = *ToInheritedFromOrErr;
           if (!ToInheritedFrom->hasDefaultArgument()) {
             // Resolve possible circular dependency between default value of the
             // template argument and the template declaration.
-            const auto ToInheritedDefaultArg =
-                importChecked(Err, D->getDefaultArgStorage()
-                                       .getInheritedFrom()
-                                       ->getDefaultArgument());
-            if (Err)
-              return Err;
+            Expected<TemplateArgumentLoc> ToInheritedDefaultArgOrErr =
+                import(D->getDefaultArgStorage()
+                           .getInheritedFrom()
+                           ->getDefaultArgument());
+            if (!ToInheritedDefaultArgOrErr)
+              return ToInheritedDefaultArgOrErr.takeError();
             ToInheritedFrom->setDefaultArgument(Importer.getToContext(),
-                                                ToInheritedDefaultArg);
+                                                *ToInheritedDefaultArgOrErr);
           }
           ToD->setInheritedDefaultArgument(ToD->getASTContext(),
                                            ToInheritedFrom);
@@ -395,7 +395,7 @@ namespace clang {
                                     *ToDefaultArgOrErr);
         }
       }
-      return Err;
+      return Error::success();
     }
 
   public:
@@ -1138,7 +1138,7 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/AMDGPUTypes.def"
@@ -1580,8 +1580,9 @@ ExpectedType ASTNodeImporter::VisitAttributedType(const AttributedType *T) {
   if (!ToEquivalentTypeOrErr)
     return ToEquivalentTypeOrErr.takeError();
 
-  return Importer.getToContext().getAttributedType(T->getAttrKind(),
-      *ToModifiedTypeOrErr, *ToEquivalentTypeOrErr);
+  return Importer.getToContext().getAttributedType(
+      T->getAttrKind(), *ToModifiedTypeOrErr, *ToEquivalentTypeOrErr,
+      T->getAttr());
 }
 
 ExpectedType
@@ -1627,8 +1628,8 @@ ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmType(
     return ToReplacementTypeOrErr.takeError();
 
   return Importer.getToContext().getSubstTemplateTypeParmType(
-      *ToReplacementTypeOrErr, *ReplacedOrErr, T->getIndex(),
-      T->getPackIndex());
+      *ToReplacementTypeOrErr, *ReplacedOrErr, T->getIndex(), T->getPackIndex(),
+      T->getSubstitutionFlag());
 }
 
 ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(

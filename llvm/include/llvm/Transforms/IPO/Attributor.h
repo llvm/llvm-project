@@ -5786,6 +5786,53 @@ struct AAPointerInfo : public AbstractAttribute {
     AK_MUST_READ_WRITE = AK_MUST | AK_R | AK_W,
   };
 
+  /// A helper containing a list of offsets computed for a Use. Ideally this
+  /// list should be strictly ascending, but we ensure that only when we
+  /// actually translate the list of offsets to a RangeList.
+  struct OffsetInfo {
+    using VecTy = SmallSet<int64_t, 4>;
+    using const_iterator = VecTy::const_iterator;
+    VecTy Offsets;
+
+    const_iterator begin() const { return Offsets.begin(); }
+    const_iterator end() const { return Offsets.end(); }
+
+    bool operator==(const OffsetInfo &RHS) const {
+      return Offsets == RHS.Offsets;
+    }
+
+    bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+
+    bool insert(int64_t Offset) { return Offsets.insert(Offset).second; }
+    bool isUnassigned() const { return Offsets.size() == 0; }
+
+    bool isUnknown() const {
+      if (isUnassigned())
+        return false;
+      if (Offsets.size() == 1)
+        return *Offsets.begin() == AA::RangeTy::Unknown;
+      return false;
+    }
+
+    void setUnknown() {
+      Offsets.clear();
+      Offsets.insert(AA::RangeTy::Unknown);
+    }
+
+    void addToAll(int64_t Inc) {
+      VecTy NewOffsets;
+      for (auto &Offset : Offsets)
+        NewOffsets.insert(Offset + Inc);
+      Offsets = std::move(NewOffsets);
+    }
+
+    /// Copy offsets from \p R into the current list.
+    ///
+    /// Ideally all lists should be strictly ascending, but we defer that to the
+    /// actual use of the list. So we just blindly append here.
+    bool merge(const OffsetInfo &R) { return set_union(Offsets, R.Offsets); }
+  };
+
   /// A container for a list of ranges.
   struct RangeList {
     // The set of ranges rarely contains more than one element, and is unlikely
@@ -6123,6 +6170,7 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
   virtual bool reachesReturn() const = 0;
+  virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for

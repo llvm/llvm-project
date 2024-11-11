@@ -13,6 +13,7 @@
 
 #include "XtensaISelLowering.h"
 #include "XtensaConstantPoolValue.h"
+#include "XtensaInstrInfo.h"
 #include "XtensaSubtarget.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -1104,10 +1105,26 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
 MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   DebugLoc DL = MI.getDebugLoc();
+  const XtensaInstrInfo &TII = *Subtarget.getInstrInfo();
 
   switch (MI.getOpcode()) {
   case Xtensa::SELECT:
     return emitSelectCC(MI, MBB);
+  case Xtensa::S8I:
+  case Xtensa::S16I:
+  case Xtensa::S32I:
+  case Xtensa::L8UI:
+  case Xtensa::L16SI:
+  case Xtensa::L16UI:
+  case Xtensa::L32I: {
+    // Insert memory wait instruction "memw" before volatile load/store as it is
+    // implemented in gcc. If memoperands is empty then assume that it aslo
+    // maybe volatile load/store and insert "memw".
+    if (MI.memoperands_empty() || (*MI.memoperands_begin())->isVolatile()) {
+      BuildMI(*MBB, MI, DL, TII.get(Xtensa::MEMW));
+    }
+    return MBB;
+  }
   default:
     llvm_unreachable("Unexpected instr type to insert");
   }

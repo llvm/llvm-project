@@ -379,10 +379,10 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; FIXEDLEN:       vector.body:
 ; FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXEDLEN-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], <i64 10, i64 10, i64 10, i64 10>
-; FIXEDLEN-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], <i64 10, i64 10, i64 10, i64 10>
+; FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], splat (i64 10)
+; FIXEDLEN-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], splat (i64 10)
 ; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP1]], <4 x i64> poison)
 ; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP2]], <4 x i64> poison)
 ; FIXEDLEN-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[WIDE_MASKED_GATHER]], <4 x i64> zeroinitializer
@@ -393,7 +393,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; FIXEDLEN-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
 ; FIXEDLEN-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
 ; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], <i64 4, i64 4, i64 4, i64 4>
+; FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXEDLEN:       middle.block:
@@ -490,7 +490,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-FIXEDLEN-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TF-FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; TF-FIXEDLEN-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP0]], i64 1025)
-; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], <i64 10, i64 10, i64 10, i64 10>
+; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], splat (i64 10)
 ; TF-FIXEDLEN-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
 ; TF-FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP2]], <4 x i64> poison)
 ; TF-FIXEDLEN-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> [[WIDE_MASKED_GATHER]], <4 x i64> zeroinitializer
@@ -498,7 +498,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-FIXEDLEN-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
 ; TF-FIXEDLEN-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[PREDPHI]], ptr [[TMP4]], i32 8, <4 x i1> [[ACTIVE_LANE_MASK]])
 ; TF-FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; TF-FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; TF-FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-FIXEDLEN-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1028
 ; TF-FIXEDLEN-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TF-FIXEDLEN:       middle.block:
@@ -1184,10 +1184,10 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; FIXEDLEN:       vector.body:
 ; FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXEDLEN-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], <i64 10, i64 10, i64 10, i64 10>
-; FIXEDLEN-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], <i64 10, i64 10, i64 10, i64 10>
+; FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], splat (i64 10)
+; FIXEDLEN-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], splat (i64 10)
 ; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]], i32 8, <4 x i1> [[TMP1]])
 ; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]], i32 8, <4 x i1> [[TMP2]])
 ; FIXEDLEN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
@@ -1196,7 +1196,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; FIXEDLEN-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP4]], align 8
 ; FIXEDLEN-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 8
 ; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], <i64 4, i64 4, i64 4, i64 4>
+; FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXEDLEN:       middle.block:
@@ -1294,14 +1294,14 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; TF-FIXEDLEN-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TF-FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; TF-FIXEDLEN-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP0]], i64 1025)
-; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], <i64 10, i64 10, i64 10, i64 10>
+; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], splat (i64 10)
 ; TF-FIXEDLEN-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
 ; TF-FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]], i32 8, <4 x i1> [[TMP2]])
 ; TF-FIXEDLEN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; TF-FIXEDLEN-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
 ; TF-FIXEDLEN-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP4]], i32 8, <4 x i1> [[ACTIVE_LANE_MASK]])
 ; TF-FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; TF-FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; TF-FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; TF-FIXEDLEN-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1028
 ; TF-FIXEDLEN-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; TF-FIXEDLEN:       middle.block:

@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPUMemoryUtils.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -512,18 +513,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   for (MVT VT : VectorIntTypes) {
     // Expand the following operations for the current type by default.
-    setOperationAction({ISD::ADD,        ISD::AND,     ISD::FP_TO_SINT,
-                        ISD::FP_TO_UINT, ISD::MUL,     ISD::MULHU,
-                        ISD::MULHS,      ISD::OR,      ISD::SHL,
-                        ISD::SRA,        ISD::SRL,     ISD::ROTL,
-                        ISD::ROTR,       ISD::SUB,     ISD::SINT_TO_FP,
-                        ISD::UINT_TO_FP, ISD::SDIV,    ISD::UDIV,
-                        ISD::SREM,       ISD::UREM,    ISD::SMUL_LOHI,
-                        ISD::UMUL_LOHI,  ISD::SDIVREM, ISD::UDIVREM,
-                        ISD::SELECT,     ISD::VSELECT, ISD::SELECT_CC,
-                        ISD::XOR,        ISD::BSWAP,   ISD::CTPOP,
-                        ISD::CTTZ,       ISD::CTLZ,    ISD::VECTOR_SHUFFLE,
-                        ISD::SETCC},
+    setOperationAction({ISD::ADD,        ISD::AND,          ISD::FP_TO_SINT,
+                        ISD::FP_TO_UINT, ISD::MUL,          ISD::MULHU,
+                        ISD::MULHS,      ISD::OR,           ISD::SHL,
+                        ISD::SRA,        ISD::SRL,          ISD::ROTL,
+                        ISD::ROTR,       ISD::SUB,          ISD::SINT_TO_FP,
+                        ISD::UINT_TO_FP, ISD::SDIV,         ISD::UDIV,
+                        ISD::SREM,       ISD::UREM,         ISD::SMUL_LOHI,
+                        ISD::UMUL_LOHI,  ISD::SDIVREM,      ISD::UDIVREM,
+                        ISD::SELECT,     ISD::VSELECT,      ISD::SELECT_CC,
+                        ISD::XOR,        ISD::BSWAP,        ISD::CTPOP,
+                        ISD::CTTZ,       ISD::CTLZ,         ISD::VECTOR_SHUFFLE,
+                        ISD::SETCC,      ISD::ADDRSPACECAST},
                        VT, Expand);
   }
 
@@ -1508,7 +1509,8 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        GV->getName() != "llvm.amdgcn.module.lds") {
+        GV->getName() != "llvm.amdgcn.module.lds" &&
+        !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
@@ -4202,7 +4204,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
   // integer operation.
   // trunc (srl (bitcast (build_vector x, y))), 16 -> trunc (bitcast y)
   if (Src.getOpcode() == ISD::SRL && !VT.isVector()) {
-    if (auto K = isConstOrConstSplat(Src.getOperand(1))) {
+    if (auto *K = isConstOrConstSplat(Src.getOperand(1))) {
       if (2 * K->getZExtValue() == Src.getValueType().getScalarSizeInBits()) {
         SDValue BV = stripBitcast(Src.getOperand(0));
         if (BV.getOpcode() == ISD::BUILD_VECTOR &&
@@ -5779,7 +5781,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case AMDGPUISD::LDS: {
-    auto GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
+    auto *GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
     Align Alignment = GA->getGlobal()->getPointerAlignment(DAG.getDataLayout());
 
     Known.Zero.setHighBits(16);
@@ -6042,23 +6044,4 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
-}
-
-/// Whether it is profitable to sink the operands of an
-/// Instruction I to the basic block of I.
-/// This helps using several modifiers (like abs and neg) more often.
-bool AMDGPUTargetLowering::shouldSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
-  using namespace PatternMatch;
-
-  for (auto &Op : I->operands()) {
-    // Ensure we are not already sinking this operand.
-    if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
-      continue;
-
-    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value())))
-      Ops.push_back(&Op);
-  }
-
-  return !Ops.empty();
 }

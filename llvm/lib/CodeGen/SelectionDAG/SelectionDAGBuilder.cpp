@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -104,8 +103,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
-#include <deque>
-#include <iterator>
 #include <limits>
 #include <optional>
 #include <tuple>
@@ -2154,8 +2151,10 @@ void SelectionDAGBuilder::visitCleanupRet(const CleanupReturnInst &I) {
   FuncInfo.MBB->normalizeSuccProbs();
 
   // Create the terminator node.
-  SDValue Ret =
-      DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other, getControlRoot());
+  MachineBasicBlock *CleanupPadMBB =
+      FuncInfo.getMBB(I.getCleanupPad()->getParent());
+  SDValue Ret = DAG.getNode(ISD::CLEANUPRET, getCurSDLoc(), MVT::Other,
+                            getControlRoot(), DAG.getBasicBlock(CleanupPadMBB));
   DAG.setRoot(Ret);
 }
 
@@ -3138,7 +3137,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   SDValue Chain = DAG.getEntryNode();
-  if (TLI.useLoadStackGuardNode()) {
+  if (TLI.useLoadStackGuardNode(M)) {
     Guard = getLoadStackGuard(DAG, dl, Chain);
   } else {
     const Value *IRGuard = TLI.getSDagStackGuard(M);
@@ -3183,15 +3182,10 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   SDValue Chain = TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL,
                                   MVT::isVoid, {}, CallOptions, getCurSDLoc())
                       .second;
-  // On PS4/PS5, the "return address" must still be within the calling
-  // function, even if it's at the very end, so emit an explicit TRAP here.
-  // Passing 'true' for doesNotReturn above won't generate the trap for us.
-  if (TM.getTargetTriple().isPS())
-    Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
-  // WebAssembly needs an unreachable instruction after a non-returning call,
-  // because the function return type can be different from __stack_chk_fail's
-  // return type (void).
-  if (TM.getTargetTriple().isWasm())
+
+  // Emit a trap instruction if we are required to do so.
+  const TargetOptions &TargetOpts = DAG.getTarget().Options;
+  if (TargetOpts.TrapUnreachable && !TargetOpts.NoTrapAfterNoreturn)
     Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
 
   DAG.setRoot(Chain);
@@ -3657,6 +3651,10 @@ void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
     Op2 = DAG.getPtrExtOrTrunc(Op2, getCurSDLoc(), MemVT);
   }
 
+  SDNodeFlags Flags;
+  Flags.setSameSign(I.hasSameSign());
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
+
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
@@ -3779,7 +3777,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     }
 
     if (!IsUnaryAbs && Opc != ISD::DELETED_NODE &&
-        (TLI.isOperationLegalOrCustomOrPromote(Opc, VT) ||
+        (TLI.isOperationLegalOrCustom(Opc, VT) ||
          (UseScalarMinMax &&
           TLI.isOperationLegalOrCustom(Opc, VT.getScalarType()))) &&
         // If the underlying comparison instruction is used by any other
@@ -3828,7 +3826,13 @@ void SelectionDAGBuilder::visitTrunc(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
+    Flags.setNoSignedWrap(Trunc->hasNoSignedWrap());
+    Flags.setNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
+  }
+
+  setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitZExt(const User &I) {
@@ -4120,61 +4124,61 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     return;
   }
 
-  if (SrcNumElts > MaskNumElts) {
-    // Analyze the access pattern of the vector to see if we can extract
-    // two subvectors and do the shuffle.
-    int StartIdx[2] = { -1, -1 };  // StartIdx to extract from
-    bool CanExtract = true;
-    for (int Idx : Mask) {
-      unsigned Input = 0;
-      if (Idx < 0)
-        continue;
+  assert(SrcNumElts > MaskNumElts);
 
-      if (Idx >= (int)SrcNumElts) {
-        Input = 1;
-        Idx -= SrcNumElts;
-      }
+  // Analyze the access pattern of the vector to see if we can extract
+  // two subvectors and do the shuffle.
+  int StartIdx[2] = {-1, -1}; // StartIdx to extract from
+  bool CanExtract = true;
+  for (int Idx : Mask) {
+    unsigned Input = 0;
+    if (Idx < 0)
+      continue;
 
-      // If all the indices come from the same MaskNumElts sized portion of
-      // the sources we can use extract. Also make sure the extract wouldn't
-      // extract past the end of the source.
-      int NewStartIdx = alignDown(Idx, MaskNumElts);
-      if (NewStartIdx + MaskNumElts > SrcNumElts ||
-          (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
-        CanExtract = false;
-      // Make sure we always update StartIdx as we use it to track if all
-      // elements are undef.
-      StartIdx[Input] = NewStartIdx;
+    if (Idx >= (int)SrcNumElts) {
+      Input = 1;
+      Idx -= SrcNumElts;
     }
 
-    if (StartIdx[0] < 0 && StartIdx[1] < 0) {
-      setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
-      return;
-    }
-    if (CanExtract) {
-      // Extract appropriate subvector and generate a vector shuffle
-      for (unsigned Input = 0; Input < 2; ++Input) {
-        SDValue &Src = Input == 0 ? Src1 : Src2;
-        if (StartIdx[Input] < 0)
-          Src = DAG.getUNDEF(VT);
-        else {
-          Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
-                            DAG.getVectorIdxConstant(StartIdx[Input], DL));
-        }
-      }
+    // If all the indices come from the same MaskNumElts sized portion of
+    // the sources we can use extract. Also make sure the extract wouldn't
+    // extract past the end of the source.
+    int NewStartIdx = alignDown(Idx, MaskNumElts);
+    if (NewStartIdx + MaskNumElts > SrcNumElts ||
+        (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
+      CanExtract = false;
+    // Make sure we always update StartIdx as we use it to track if all
+    // elements are undef.
+    StartIdx[Input] = NewStartIdx;
+  }
 
-      // Calculate new mask.
-      SmallVector<int, 8> MappedOps(Mask);
-      for (int &Idx : MappedOps) {
-        if (Idx >= (int)SrcNumElts)
-          Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
-        else if (Idx >= 0)
-          Idx -= StartIdx[0];
+  if (StartIdx[0] < 0 && StartIdx[1] < 0) {
+    setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
+    return;
+  }
+  if (CanExtract) {
+    // Extract appropriate subvector and generate a vector shuffle
+    for (unsigned Input = 0; Input < 2; ++Input) {
+      SDValue &Src = Input == 0 ? Src1 : Src2;
+      if (StartIdx[Input] < 0)
+        Src = DAG.getUNDEF(VT);
+      else {
+        Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
+                          DAG.getVectorIdxConstant(StartIdx[Input], DL));
       }
-
-      setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
-      return;
     }
+
+    // Calculate new mask.
+    SmallVector<int, 8> MappedOps(Mask);
+    for (int &Idx : MappedOps) {
+      if (Idx >= (int)SrcNumElts)
+        Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
+      else if (Idx >= 0)
+        Idx -= StartIdx[0];
+    }
+
+    setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
+    return;
   }
 
   // We can't use either concat vectors or extract subvectors so fall back to
@@ -4323,7 +4327,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         SDNodeFlags Flags;
         if (NW.hasNoUnsignedWrap() ||
             (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
-          Flags.setNoUnsignedWrap(true);
+          Flags |= SDNodeFlags::NoUnsignedWrap;
 
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
                         DAG.getConstant(Offset, dl, N.getValueType()), Flags);
@@ -4338,7 +4342,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
           GTI.getSequentialElementStride(DAG.getDataLayout());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
-      APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());
+      APInt ElementMul(IdxSize, ElementSize.getKnownMinValue(),
+                       /*isSigned=*/false, /*implicitTrunc=*/true);
       bool ElementScalable = ElementSize.isScalable();
 
       // If this is a scalar constant or a splat vector of constants,
@@ -4386,6 +4391,15 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       // it.
       IdxN = DAG.getSExtOrTrunc(IdxN, dl, N.getValueType());
 
+      SDNodeFlags ScaleFlags;
+      // The multiplication of an index by the type size does not wrap the
+      // pointer index type in a signed sense (mul nsw).
+      ScaleFlags.setNoSignedWrap(NW.hasNoUnsignedSignedWrap());
+
+      // The multiplication of an index by the type size does not wrap the
+      // pointer index type in an unsigned sense (mul nuw).
+      ScaleFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
+
       if (ElementScalable) {
         EVT VScaleTy = N.getValueType().getScalarType();
         SDValue VScale = DAG.getNode(
@@ -4393,27 +4407,34 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
             DAG.getConstant(ElementMul.getZExtValue(), dl, VScaleTy));
         if (IsVectorGEP)
           VScale = DAG.getSplatVector(N.getValueType(), dl, VScale);
-        IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, VScale);
+        IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, VScale,
+                           ScaleFlags);
       } else {
         // If this is a multiply by a power of two, turn it into a shl
         // immediately.  This is a very common case.
         if (ElementMul != 1) {
           if (ElementMul.isPowerOf2()) {
             unsigned Amt = ElementMul.logBase2();
-            IdxN = DAG.getNode(ISD::SHL, dl,
-                               N.getValueType(), IdxN,
-                               DAG.getConstant(Amt, dl, IdxN.getValueType()));
+            IdxN = DAG.getNode(ISD::SHL, dl, N.getValueType(), IdxN,
+                               DAG.getConstant(Amt, dl, IdxN.getValueType()),
+                               ScaleFlags);
           } else {
             SDValue Scale = DAG.getConstant(ElementMul.getZExtValue(), dl,
                                             IdxN.getValueType());
-            IdxN = DAG.getNode(ISD::MUL, dl,
-                               N.getValueType(), IdxN, Scale);
+            IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, Scale,
+                               ScaleFlags);
           }
         }
       }
 
-      N = DAG.getNode(ISD::ADD, dl,
-                      N.getValueType(), N, IdxN);
+      // The successive addition of the current address, truncated to the
+      // pointer index type and interpreted as an unsigned number, and each
+      // offset, also interpreted as an unsigned number, does not wrap the
+      // pointer index type (add nuw).
+      SDNodeFlags AddFlags;
+      AddFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
+
+      N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, IdxN, AddFlags);
     }
   }
 
@@ -4472,10 +4493,9 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing
   // an address inside an alloca.
-  SDNodeFlags Flags;
-  Flags.setNoUnsignedWrap(true);
   AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(StackAlignMask, dl, IntPtr), Flags);
+                          DAG.getConstant(StackAlignMask, dl, IntPtr),
+                          SDNodeFlags::NoUnsignedWrap);
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
@@ -6850,6 +6870,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)), Flags));
     return;
   }
+  case Intrinsic::atan2:
+    setValue(&I, DAG.getNode(ISD::FATAN2, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::lround:
   case Intrinsic::llround:
   case Intrinsic::lrint:
@@ -6918,12 +6944,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::sincos:
   case Intrinsic::frexp: {
+    unsigned Opcode;
+    switch (Intrinsic) {
+    default:
+      llvm_unreachable("unexpected intrinsic");
+    case Intrinsic::sincos:
+      Opcode = ISD::FSINCOS;
+      break;
+    case Intrinsic::frexp:
+      Opcode = ISD::FFREXP;
+      break;
+    }
     SmallVector<EVT, 2> ValueVTs;
     ComputeValueVTs(TLI, DAG.getDataLayout(), I.getType(), ValueVTs);
     SDVTList VTs = DAG.getVTList(ValueVTs);
-    setValue(&I,
-             DAG.getNode(ISD::FFREXP, sdl, VTs, getValue(I.getArgOperand(0))));
+    setValue(
+        &I, DAG.getNode(Opcode, sdl, VTs, getValue(I.getArgOperand(0)), Flags));
     return;
   }
   case Intrinsic::arithmetic_fence: {
@@ -7331,7 +7369,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const Module &M = *MF.getFunction().getParent();
     EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Chain = getRoot();
-    if (TLI.useLoadStackGuardNode()) {
+    if (TLI.useLoadStackGuardNode(M)) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
       Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
@@ -7351,9 +7389,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineFrameInfo &MFI = MF.getFrameInfo();
+    const Module &M = *MF.getFunction().getParent();
     SDValue Src, Chain = getRoot();
 
-    if (TLI.useLoadStackGuardNode())
+    if (TLI.useLoadStackGuardNode(M))
       Src = getLoadStackGuard(DAG, sdl, Chain);
     else
       Src = getValue(I.getArgOperand(0));   // The guard's value.
@@ -9342,6 +9381,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FATAN))
           return;
         break;
+      case LibFunc_atan2:
+      case LibFunc_atan2f:
+      case LibFunc_atan2l:
+        if (visitBinaryFloatCall(I, ISD::FATAN2))
+          return;
+        break;
       case LibFunc_sinh:
       case LibFunc_sinhf:
       case LibFunc_sinhl:
@@ -11187,15 +11232,13 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
     // An aggregate return value cannot wrap around the address space, so
     // offsets to its parts don't wrap either.
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     Align HiddenSRetAlign = MF.getFrameInfo().getObjectAlign(DemoteStackIdx);
     for (unsigned i = 0; i < NumValues; ++i) {
-      SDValue Add = CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
-                                    CLI.DAG.getConstant(Offsets[i], CLI.DL,
-                                                        PtrVT), Flags);
+      SDValue Add =
+          CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
+                          CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
+                          SDNodeFlags::NoUnsignedWrap);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),

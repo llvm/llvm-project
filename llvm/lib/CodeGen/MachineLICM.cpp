@@ -148,13 +148,13 @@ namespace {
     DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
 
     bool isExitBlock(MachineLoop *CurLoop, const MachineBasicBlock *MBB) {
-      if (ExitBlockMap.contains(CurLoop))
-        return is_contained(ExitBlockMap[CurLoop], MBB);
-
-      SmallVector<MachineBasicBlock *, 8> ExitBlocks;
-      CurLoop->getExitBlocks(ExitBlocks);
-      ExitBlockMap[CurLoop] = ExitBlocks;
-      return is_contained(ExitBlocks, MBB);
+      auto [It, Inserted] = ExitBlockMap.try_emplace(CurLoop);
+      if (Inserted) {
+        SmallVector<MachineBasicBlock *, 8> ExitBlocks;
+        CurLoop->getExitBlocks(ExitBlocks);
+        It->second = ExitBlocks;
+      }
+      return is_contained(It->second, MBB);
     }
 
     // Track 'estimated' register pressure.
@@ -391,12 +391,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
-  // FIXME: Remove this assignment or convert to an assert? (dead variable PreRegAlloc)
-  // MachineLICM and PostRAMachineLICM were distinguished by introducing
-  // EarlyMachineLICM and MachineLICM respectively to avoid "using an unreliable
-  // MRI::isSSA() check to determine whether register allocation has happened"
-  // (See 4a7c8e7).
-  PreRegAlloc = MRI->isSSA();
   HasProfileData = MF.getFunction().hasProfileData();
 
   if (PreRegAlloc)
@@ -1010,12 +1004,8 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (RCCost == 0)
       continue;
     const int *PS = TRI->getRegClassPressureSets(RC);
-    for (; *PS != -1; ++PS) {
-      if (!Cost.contains(*PS))
-        Cost[*PS] = RCCost;
-      else
-        Cost[*PS] += RCCost;
-    }
+    for (; *PS != -1; ++PS)
+      Cost[*PS] += RCCost;
   }
   return Cost;
 }
@@ -1381,7 +1371,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),
-               [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               [&CurLoop, this, DefReg,
+                Cost = std::move(Cost)](MachineInstr &UseMI) {
                  if (!CurLoop->contains(&UseMI))
                    return false;
 
@@ -1773,9 +1764,6 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

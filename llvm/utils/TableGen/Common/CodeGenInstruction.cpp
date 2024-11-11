@@ -27,9 +27,9 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
   hasOptionalDef = false;
   isVariadic = false;
 
-  DagInit *OutDI = R->getValueAsDag("OutOperandList");
+  const DagInit *OutDI = R->getValueAsDag("OutOperandList");
 
-  if (DefInit *Init = dyn_cast<DefInit>(OutDI->getOperator())) {
+  if (const DefInit *Init = dyn_cast<DefInit>(OutDI->getOperator())) {
     if (Init->getDef()->getName() != "outs")
       PrintFatalError(R->getLoc(),
                       R->getName() +
@@ -40,8 +40,8 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
 
   NumDefs = OutDI->getNumArgs();
 
-  DagInit *InDI = R->getValueAsDag("InOperandList");
-  if (DefInit *Init = dyn_cast<DefInit>(InDI->getOperator())) {
+  const DagInit *InDI = R->getValueAsDag("InOperandList");
+  if (const DefInit *Init = dyn_cast<DefInit>(InDI->getOperator())) {
     if (Init->getDef()->getName() != "ins")
       PrintFatalError(R->getLoc(),
                       R->getName() +
@@ -56,7 +56,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
   OperandList.reserve(e);
   bool VariadicOuts = false;
   for (unsigned i = 0; i != e; ++i) {
-    Init *ArgInit;
+    const Init *ArgInit;
     StringRef ArgName;
     if (i < NumDefs) {
       ArgInit = OutDI->getArg(i);
@@ -66,11 +66,11 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       ArgName = InDI->getArgNameStr(i - NumDefs);
     }
 
-    DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
+    const DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
     if (SubArgDag)
       ArgInit = SubArgDag->getOperator();
 
-    DefInit *Arg = dyn_cast<DefInit>(ArgInit);
+    const DefInit *Arg = dyn_cast<DefInit>(ArgInit);
     if (!Arg)
       PrintFatalError(R->getLoc(), "Illegal operand for the '" + R->getName() +
                                        "' instruction!");
@@ -81,7 +81,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
     std::string OperandType = "OPERAND_UNKNOWN";
     std::string OperandNamespace = "MCOI";
     unsigned NumOps = 1;
-    DagInit *MIOpInfo = nullptr;
+    const DagInit *MIOpInfo = nullptr;
     if (Rec->isSubClassOf("RegisterOperand")) {
       PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
       OperandType = std::string(Rec->getValueAsString("OperandType"));
@@ -280,7 +280,7 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   }
 
   // Find the suboperand number involved.
-  DagInit *MIOpInfo = OperandList[OpIdx].MIOperandInfo;
+  const DagInit *MIOpInfo = OperandList[OpIdx].MIOperandInfo;
   if (!MIOpInfo)
     PrintFatalError(TheDef->getLoc(), TheDef->getName() +
                                           ": unknown suboperand name in '" +
@@ -485,8 +485,8 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
   isCodeGenOnly = R->getValueAsBit("isCodeGenOnly");
   isPseudo = R->getValueAsBit("isPseudo");
   isMeta = R->getValueAsBit("isMeta");
-  ImplicitDefs = R->getValueAsListOfConstDefs("Defs");
-  ImplicitUses = R->getValueAsListOfConstDefs("Uses");
+  ImplicitDefs = R->getValueAsListOfDefs("Defs");
+  ImplicitUses = R->getValueAsListOfDefs("Uses");
 
   // This flag is only inferred from the pattern.
   hasChain = false;
@@ -566,7 +566,8 @@ std::string CodeGenInstruction::FlattenAsmStringVariants(StringRef Cur,
     }
 
     // Select the Nth variant (or empty).
-    StringRef Selection = Cur.slice(VariantsStart, VariantsEnd);
+    StringRef Selection =
+        Cur.substr(VariantsStart, VariantsEnd - VariantsStart);
     for (unsigned i = 0; i != Variant; ++i)
       Selection = Selection.split('|').second;
     Res += Selection.split('|').first;
@@ -581,11 +582,11 @@ std::string CodeGenInstruction::FlattenAsmStringVariants(StringRef Cur,
 
 bool CodeGenInstruction::isOperandImpl(StringRef OpListName, unsigned i,
                                        StringRef PropertyName) const {
-  DagInit *ConstraintList = TheDef->getValueAsDag(OpListName);
+  const DagInit *ConstraintList = TheDef->getValueAsDag(OpListName);
   if (!ConstraintList || i >= ConstraintList->getNumArgs())
     return false;
 
-  DefInit *Constraint = dyn_cast<DefInit>(ConstraintList->getArg(i));
+  const DefInit *Constraint = dyn_cast<DefInit>(ConstraintList->getArg(i));
   if (!Constraint)
     return false;
 

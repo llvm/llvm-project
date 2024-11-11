@@ -45,41 +45,50 @@ std::string lld::toString(RelType type) {
   return std::string(s);
 }
 
-TargetInfo *elf::getTarget(Ctx &ctx) {
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s, RelType type) {
+  StringRef buf = getELFRelocationTypeName(s.ctx.arg.emachine, type);
+  if (buf == "Unknown")
+    s << "Unknown (" << type << ')';
+  else
+    s << buf;
+  return s;
+}
+
+void elf::setTarget(Ctx &ctx) {
   switch (ctx.arg.emachine) {
   case EM_386:
   case EM_IAMCU:
-    return getX86TargetInfo(ctx);
+    return setX86TargetInfo(ctx);
   case EM_AARCH64:
-    return getAArch64TargetInfo(ctx);
+    return setAArch64TargetInfo(ctx);
   case EM_AMDGPU:
-    return getAMDGPUTargetInfo(ctx);
+    return setAMDGPUTargetInfo(ctx);
   case EM_ARM:
-    return getARMTargetInfo(ctx);
+    return setARMTargetInfo(ctx);
   case EM_AVR:
-    return getAVRTargetInfo(ctx);
+    return setAVRTargetInfo(ctx);
   case EM_HEXAGON:
-    return getHexagonTargetInfo(ctx);
+    return setHexagonTargetInfo(ctx);
   case EM_LOONGARCH:
-    return getLoongArchTargetInfo(ctx);
+    return setLoongArchTargetInfo(ctx);
   case EM_MIPS:
-    return getMipsTargetInfo(ctx);
+    return setMipsTargetInfo(ctx);
   case EM_MSP430:
-    return getMSP430TargetInfo(ctx);
+    return setMSP430TargetInfo(ctx);
   case EM_PPC:
-    return getPPCTargetInfo(ctx);
+    return setPPCTargetInfo(ctx);
   case EM_PPC64:
-    return getPPC64TargetInfo(ctx);
+    return setPPC64TargetInfo(ctx);
   case EM_RISCV:
-    return getRISCVTargetInfo(ctx);
+    return setRISCVTargetInfo(ctx);
   case EM_SPARCV9:
-    return getSPARCV9TargetInfo(ctx);
+    return setSPARCV9TargetInfo(ctx);
   case EM_S390:
-    return getSystemZTargetInfo(ctx);
+    return setSystemZTargetInfo(ctx);
   case EM_X86_64:
-    return getX86_64TargetInfo(ctx);
+    return setX86_64TargetInfo(ctx);
   default:
-    fatal("unsupported e_machine value: " + Twine(ctx.arg.emachine));
+    Fatal(ctx) << "unsupported e_machine value: " << Twine(ctx.arg.emachine);
   }
 }
 
@@ -113,7 +122,7 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
 TargetInfo::~TargetInfo() {}
 
 int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
-  internalLinkerError(getErrorLocation(buf),
+  internalLinkerError(getErrorLoc(ctx, buf),
                       "cannot read addend for relocation " + toString(type));
   return 0;
 }
@@ -128,7 +137,8 @@ bool TargetInfo::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
 bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                                   uint8_t stOther) const {
-  fatal("target doesn't support split stacks");
+  Err(ctx) << "target doesn't support split stacks";
+  return false;
 }
 
 bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
@@ -154,9 +164,7 @@ void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr),
-        bits);
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
     if (rel.expr != R_RELAX_HINT)
       relocate(loc, rel, val);
   }

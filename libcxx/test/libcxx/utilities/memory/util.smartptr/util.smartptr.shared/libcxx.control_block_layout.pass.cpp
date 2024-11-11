@@ -195,10 +195,12 @@ int main(int, char**) {
   test<TrivialEmptyType, FinalEmptyAlloc>();
   test<TrivialEmptyType, NonTrivialAlloc>();
 
+#if !defined(TEST_HAS_NO_ALIGNED_ALLOCATION)
   test<OveralignedEmptyType, TrivialEmptyAlloc>();
   test<OveralignedEmptyType, TrivialNonEmptyAlloc>();
   test<OveralignedEmptyType, FinalEmptyAlloc>();
   test<OveralignedEmptyType, NonTrivialAlloc>();
+#endif
 
   test<TrivialNonEmptyType, TrivialEmptyAlloc>();
   test<TrivialNonEmptyType, TrivialNonEmptyAlloc>();

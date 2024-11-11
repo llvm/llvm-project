@@ -2168,6 +2168,9 @@ private:
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
 
+  /// Returns true if \p Op is guaranteed to not be poison.
+  static bool isGuaranteedNotToBePoison(const SCEV *Op);
+
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
   /// SCEV commons expressions across control flow, and you can have cases
@@ -2376,6 +2379,10 @@ public:
   /// Get the (predicated) symbolic max backedge count for the analyzed loop.
   const SCEV *getSymbolicMaxBackedgeTakenCount();
 
+  /// Returns the upper bound of the loop trip count as a normal unsigned
+  /// value, or 0 if the trip count is unknown.
+  unsigned getSmallConstantMaxTripCount();
+
   /// Adds a new predicate.
   void addPredicate(const SCEVPredicate &Pred);
 
@@ -2447,6 +2454,9 @@ private:
 
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
+
+  /// The constant max trip count for the loop.
+  std::optional<unsigned> SmallConstantMaxTripCount;
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {

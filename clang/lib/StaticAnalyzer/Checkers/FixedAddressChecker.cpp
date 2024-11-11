@@ -43,6 +43,12 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
   if (!T->isPointerType())
     return;
 
+  // Omit warning if the RHS has already pointer type. Without this passing
+  // around one fixed value in several pointer variables would produce several
+  // redundant warnings.
+  if (B->getRHS()->IgnoreParenCasts()->getType()->isPointerType())
+    return;
+
   SVal RV = C.getSVal(B->getRHS());
 
   if (!RV.isConstant() || RV.isZeroConstant())

@@ -28,7 +28,6 @@
 #include "VPlanAnalysis.h"
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +37,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -291,8 +291,7 @@ struct VPTransformState {
 
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
   void set(VPValue *Def, Value *V, const VPLane &Lane) {
-    auto Iter = Data.VPV2Scalars.insert({Def, {}});
-    auto &Scalars = Iter.first->second;
+    auto &Scalars = Data.VPV2Scalars[Def];
     unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
       Scalars.resize(CacheIdx + 1);
@@ -438,6 +437,26 @@ class VPBlockBase {
     auto Pos = find(Successors, Successor);
     assert(Pos && "Successor does not exist");
     Successors.erase(Pos);
+  }
+
+  /// This function replaces one predecessor with another, useful when
+  /// trying to replace an old block in the CFG with a new one.
+  void replacePredecessor(VPBlockBase *Old, VPBlockBase *New) {
+    auto I = find(Predecessors, Old);
+    assert(I != Predecessors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced predecessor must have the same parent");
+    *I = New;
+  }
+
+  /// This function replaces one successor with another, useful when
+  /// trying to replace an old block in the CFG with a new one.
+  void replaceSuccessor(VPBlockBase *Old, VPBlockBase *New) {
+    auto I = find(Successors, Old);
+    assert(I != Successors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced successor must have the same parent");
+    *I = New;
   }
 
 protected:
@@ -655,48 +674,6 @@ public:
   virtual VPBlockBase *clone() = 0;
 };
 
-/// A value that is used outside the VPlan. The operand of the user needs to be
-/// added to the associated phi node. The incoming block from VPlan is
-/// determined by where the VPValue is defined: if it is defined by a recipe
-/// outside a region, its parent block is used, otherwise the middle block is
-/// used.
-class VPLiveOut : public VPUser {
-  PHINode *Phi;
-
-public:
-  VPLiveOut(PHINode *Phi, VPValue *Op)
-      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
-
-  static inline bool classof(const VPUser *U) {
-    return U->getVPUserID() == VPUser::VPUserID::LiveOut;
-  }
-
-  /// Fix the wrapped phi node. This means adding an incoming value to exit
-  /// block phi's from the vector loop via middle block (values from scalar loop
-  /// already reach these phi's), and updating the value to scalar header phi's
-  /// from the scalar preheader.
-  void fixPhi(VPlan &Plan, VPTransformState &State);
-
-  /// Returns true if the VPLiveOut uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-
-  PHINode *getPhi() const { return Phi; }
-
-  /// Live-outs are marked as only using the first part during the transition
-  /// to unrolling directly on VPlan.
-  /// TODO: Remove after unroller transition.
-  bool onlyFirstPartUsed(const VPValue *Op) const override { return true; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the VPLiveOut to \p O.
-  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
-#endif
-};
-
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
@@ -718,6 +695,9 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Returns the OperandInfo for \p V, if it is a live-in.
+  TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -740,12 +720,12 @@ class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
 public:
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
                DebugLoc DL = {})
-      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe), DL(DL) {}
+      : VPDef(SC), VPUser(Operands), DL(DL) {}
 
   template <typename IterT>
   VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands,
                DebugLoc DL = {})
-      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe), DL(DL) {}
+      : VPDef(SC), VPUser(Operands), DL(DL) {}
   virtual ~VPRecipeBase() = default;
 
   /// Clone the current recipe.
@@ -799,9 +779,7 @@ public:
     return true;
   }
 
-  static inline bool classof(const VPUser *U) {
-    return U->getVPUserID() == VPUser::VPUserID::Recipe;
-  }
+  static inline bool classof(const VPUser *U) { return true; }
 
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
@@ -882,10 +860,12 @@ public:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
+    case VPRecipeBase::VPReverseVectorPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
+    case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPWidenEVLSC:
     case VPRecipeBase::VPWidenSelectSC:
@@ -929,6 +909,11 @@ public:
   const Instruction *getUnderlyingInstr() const {
     return cast<Instruction>(getUnderlyingValue());
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print this VPSingleDefRecipe to dbgs() (for debugging).
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 /// Class to record LLVM IR flag for a recipe along with it.
@@ -957,7 +942,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
     GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
@@ -1078,6 +1062,7 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
+           R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
 
@@ -1308,6 +1293,12 @@ public:
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
+                            ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
+        Opcode(VPInstruction::PtrAdd), Name(Name.str()) {}
+
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
@@ -1326,6 +1317,13 @@ public:
   /// TODO: We currently execute only per-part unless a specific instance is
   /// provided.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPInstruction to \p O.
@@ -1379,6 +1377,9 @@ public:
   /// Returns true if this VPInstruction's operands are single scalars and the
   /// result is also a single scalar.
   bool isSingleScalar() const;
+
+  /// Returns the symbolic name assigned to the VPInstruction.
+  StringRef getName() const { return Name; }
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -1405,6 +1406,10 @@ public:
 
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPIRInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   Instruction &getInstruction() { return I; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1414,6 +1419,12 @@ public:
 #endif
 
   bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1557,6 +1568,10 @@ public:
   /// Produce widened copies of the cast.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenCastRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -1592,6 +1607,13 @@ public:
 
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPScalarCastRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
@@ -1608,24 +1630,108 @@ public:
   }
 };
 
-/// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPSingleDefRecipe {
-  /// ID of the vector intrinsic to call when widening the call. If set the
-  /// Intrinsic::not_intrinsic, a library call will be used instead.
+/// A recipe for widening vector intrinsics.
+class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
+  /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
-  /// If this recipe represents a library call, Variant stores a pointer to
-  /// the chosen function. There is a 1:1 mapping between a given VF and the
-  /// chosen vectorized variant, so there will be a different vplan for each
-  /// VF with a valid variant.
+
+  /// Scalar return type of the intrinsic.
+  Type *ResultTy;
+
+  /// True if the intrinsic may read from memory.
+  bool MayReadFromMemory;
+
+  /// True if the intrinsic may read write to memory.
+  bool MayWriteToMemory;
+
+  /// True if the intrinsic may have side-effects.
+  bool MayHaveSideEffects;
+
+public:
+  VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(CI.mayReadFromMemory()),
+        MayWriteToMemory(CI.mayWriteToMemory()),
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
+
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+    LLVMContext &Ctx = Ty->getContext();
+    AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
+    MemoryEffects ME = Attrs.getMemoryEffects();
+    MayReadFromMemory = ME.onlyWritesMemory();
+    MayWriteToMemory = ME.onlyReadsMemory();
+    MayHaveSideEffects = MayWriteToMemory ||
+                         !Attrs.hasFnAttr(Attribute::NoUnwind) ||
+                         !Attrs.hasFnAttr(Attribute::WillReturn);
+  }
+
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         std::initializer_list<VPValue *> CallArguments,
+                         Type *Ty, DebugLoc DL = {})
+      : VPWidenIntrinsicRecipe(VectorIntrinsicID,
+                               ArrayRef<VPValue *>(CallArguments), Ty, DL) {}
+
+  ~VPWidenIntrinsicRecipe() override = default;
+
+  VPWidenIntrinsicRecipe *clone() override {
+    return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
+                                      VectorIntrinsicID, {op_begin(), op_end()},
+                                      ResultTy, getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
+
+  /// Produce a widened version of the vector intrinsic.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this vector intrinsic.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Return the scalar return type of the intrinsic.
+  Type *getResultType() const { return ResultTy; }
+
+  /// Return to name of the intrinsic as string.
+  StringRef getIntrinsicName() const;
+
+  /// Returns true if the intrinsic may read from memory.
+  bool mayReadFromMemory() const { return MayReadFromMemory; }
+
+  /// Returns true if the intrinsic may write to memory.
+  bool mayWriteToMemory() const { return MayWriteToMemory; }
+
+  /// Returns true if the intrinsic may have side-effects.
+  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+};
+
+/// A recipe for widening Call instructions using library calls.
+class VPWidenCallRecipe : public VPRecipeWithIRFlags {
+  /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
+  /// between a given VF and the chosen vectorized variant, so there will be a
+  /// different VPlan for each VF with a valid variant.
   Function *Variant;
 
 public:
-  template <typename IterT>
-  VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
-                    Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
-                    Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
-        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
+  VPWidenCallRecipe(Value *UV, Function *Variant,
+                    ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
+                            *cast<Instruction>(UV)),
+        Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1634,8 +1740,8 @@ public:
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), operands(),
-                                 VectorIntrinsicID, getDebugLoc(), Variant);
+    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
+                                 {op_begin(), op_end()}, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1729,6 +1835,10 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
   /// Produce a widened version of the select instruction.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenSelectRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -1777,6 +1887,13 @@ public:
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenGEPRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -1784,20 +1901,71 @@ public:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy for
-/// all parts. If IsReverse is true, compute pointers for accessing the input in
-/// reverse order per part.
+/// A recipe to compute the pointers for widened memory accesses of IndexTy
+/// in reverse order.
+class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
+                                     public VPUnrollPartAccessor<2> {
+  Type *IndexedTy;
+
+public:
+  VPReverseVectorPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
+                               bool IsInBounds, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, VF}),
+                            GEPFlagsTy(IsInBounds), DL),
+        IndexedTy(IndexedTy) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPReverseVectorPointerSC)
+
+  VPValue *getVFValue() { return getOperand(1); }
+  const VPValue *getVFValue() const { return getOperand(1); }
+
+  void execute(VPTransformState &State) override;
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Return the cost of this VPVectorPointerRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    assert(getNumOperands() <= 2 && "must have at most two operands");
+    return true;
+  }
+
+  VPReverseVectorPointerRecipe *clone() override {
+    return new VPReverseVectorPointerRecipe(
+        getOperand(0), getVFValue(), IndexedTy, isInBounds(), getDebugLoc());
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe to compute the pointers for widened memory accesses of IndexTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
   Type *IndexedTy;
-  bool IsReverse;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsReverse,
-                        bool IsInBounds, DebugLoc DL)
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsInBounds,
+                        DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
                             GEPFlagsTy(IsInBounds), DL),
-        IndexedTy(IndexedTy), IsReverse(IsReverse) {}
+        IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
@@ -1818,8 +1986,15 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
-                                     isInBounds(), getDebugLoc());
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, isInBounds(),
+                                     getDebugLoc());
+  }
+
+  /// Return the cost of this VPHeaderPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1877,6 +2052,10 @@ public:
 
   /// Generate the phi nodes.
   void execute(VPTransformState &State) override = 0;
+
+  /// Return the cost of this header phi recipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2123,6 +2302,10 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this first-order recurrence phi recipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2235,6 +2418,10 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenMemoryRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2320,6 +2507,10 @@ public:
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPInterleaveRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2392,6 +2583,10 @@ public:
 
   /// Generate the reduction in the loop
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of VPReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2496,6 +2691,10 @@ public:
   /// the \p State.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPReplicateRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2553,6 +2752,10 @@ public:
   /// conditional branch.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPBranchOnMaskRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2600,8 +2803,16 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPPredInstPHISC)
 
-  /// Generates phi nodes for live-outs as needed to retain SSA form.
+  /// Generates phi nodes for live-outs (from a replicate region) as needed to
+  /// retain SSA form.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPPredInstPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2882,6 +3093,13 @@ public:
   /// Generate a canonical vector induction variable of the vector loop, with
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPExpandSCEVRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2946,6 +3164,13 @@ public:
   /// canonical, i.e.  has the same start and step (of 1) as the canonical IV.
   bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
                    VPValue *Step) const;
+
+  /// Return the cost of this VPCanonicalIVPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // For now, match the behavior of the legacy cost model.
+    return 0;
+  }
 };
 
 /// A recipe for generating the active lane mask for the vector loop that is
@@ -3008,6 +3233,13 @@ public:
   /// TODO: investigate if it can share the code with VPCanonicalIVPHIRecipe.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPEVLBasedIVPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // For now, match the behavior of the legacy cost model.
+    return 0;
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3042,6 +3274,13 @@ public:
   /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
   /// step = <VF*UF, VF*UF, ..., VF*UF>.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenCanonicalIVPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3086,6 +3325,13 @@ public:
   /// Generate the transformed value of the induction at offset StartValue (1.
   /// operand) + IV (2. operand) * StepValue (3, operand).
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPDerivedIVRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3141,6 +3387,13 @@ public:
 
   /// Generate the scalarized versions of the phi node as needed by their users.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPScalarIVStepsRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3292,6 +3545,10 @@ protected:
   /// Execute the recipes in the IR basic block \p BB.
   void executeRecipes(VPTransformState *State, BasicBlock *BB);
 
+  /// Connect the VPBBs predecessors' in the VPlan CFG to the IR basic block
+  /// generated for this VPBB.
+  void connectToPredecessors(VPTransformState::CFGState &CFG);
+
 private:
   /// Create an IR BasicBlock to hold the output instructions generated by this
   /// VPBasicBlock, and return it. Update the CFGState accordingly.
@@ -3317,6 +3574,10 @@ public:
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
+
+  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
+  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  static VPIRBasicBlock *fromBasicBlock(BasicBlock *IRBB);
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
@@ -3457,6 +3718,9 @@ class VPlan {
   /// rest of VPlan execution.
   VPBasicBlock *Preheader;
 
+  /// VPIRBasicBlock wrapping the header of the original scalar loop.
+  VPIRBasicBlock *ScalarHeader;
+
   /// Holds the VFs applicable to this VPlan.
   SmallSetVector<ElementCount, 2> VFs;
 
@@ -3492,37 +3756,38 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Values used outside the plan. It contains live-outs that need fixing. Any
-  /// live-out that is fixed outside VPlan needs to be removed. The remaining
-  /// live-outs are fixed via VPLiveOut::fixPhi.
-  MapVector<PHINode *, VPLiveOut *> LiveOuts;
-
   /// Mapping from SCEVs to the VPValues representing their expansions.
   /// NOTE: This mapping is temporary and will be removed once all users have
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
 public:
-  /// Construct a VPlan with original preheader \p Preheader, trip count \p TC
-  /// and \p Entry to the plan. At the moment, \p Preheader and \p Entry need to
-  /// be disconnected, as the bypass blocks between them are not yet modeled in
+  /// Construct a VPlan with original preheader \p Preheader, trip count \p TC,
+  /// \p Entry to the plan and with \p ScalarHeader wrapping the original header
+  /// of the scalar loop. At the moment, \p Preheader and \p Entry need to be
+  /// disconnected, as the bypass blocks between them are not yet modeled in
   /// VPlan.
-  VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry)
-      : VPlan(Preheader, Entry) {
+  VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
+        VPIRBasicBlock *ScalarHeader)
+      : VPlan(Preheader, Entry, ScalarHeader) {
     TripCount = TC;
   }
 
-  /// Construct a VPlan with original preheader \p Preheader and \p Entry to
-  /// the plan. At the moment, \p Preheader and \p Entry need to be
+  /// Construct a VPlan with original preheader \p Preheader, \p Entry to
+  /// the plan and with \p ScalarHeader wrapping the original header of the
+  /// scalar loop. At the moment, \p Preheader and \p Entry need to be
   /// disconnected, as the bypass blocks between them are not yet modeled in
   /// VPlan.
-  VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry)
-      : Entry(Entry), Preheader(Preheader) {
+  VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
+        VPIRBasicBlock *ScalarHeader)
+      : Entry(Entry), Preheader(Preheader), ScalarHeader(ScalarHeader) {
     Entry->setPlan(this);
     Preheader->setPlan(this);
     assert(Preheader->getNumSuccessors() == 0 &&
            Preheader->getNumPredecessors() == 0 &&
            "preheader must be disconnected");
+    assert(ScalarHeader->getNumSuccessors() == 0 &&
+           "scalar header must be a leaf node");
   }
 
   ~VPlan();
@@ -3553,6 +3818,24 @@ public:
 
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
+
+  /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
+  VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
+
+  /// Return the VPBasicBlock for the preheader of the scalar loop.
+  VPBasicBlock *getScalarPreheader() const {
+    return cast<VPBasicBlock>(ScalarHeader->getSinglePredecessor());
+  }
+
+  /// Returns the 'middle' block of the plan, that is the block that selects
+  /// whether to execute the scalar tail loop or the exit block from the loop
+  /// latch.
+  const VPBasicBlock *getMiddleBlock() const {
+    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+  }
+  VPBasicBlock *getMiddleBlock() {
+    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+  }
 
   /// The trip count of the original loop.
   VPValue *getTripCount() const {
@@ -3666,6 +3949,11 @@ public:
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 
+  /// Returns the preheader of the vector loop region.
+  VPBasicBlock *getVectorPreheader() {
+    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+  }
+
   /// Returns the canonical induction recipe of the vector loop.
   VPCanonicalIVPHIRecipe *getCanonicalIV() {
     VPBasicBlock *EntryVPBB = getVectorLoopRegion()->getEntryBasicBlock();
@@ -3674,12 +3962,6 @@ public:
       EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
     }
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
-  }
-
-  void addLiveOut(PHINode *PN, VPValue *V);
-
-  const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
-    return LiveOuts;
   }
 
   VPValue *getSCEVExpansion(const SCEV *S) const {
@@ -3831,17 +4113,29 @@ public:
     IfFalse->setParent(BlockPtr->getParent());
   }
 
-  /// Connect VPBlockBases \p From and \p To bi-directionally. Append \p To to
-  /// the successors of \p From and \p From to the predecessors of \p To. Both
-  /// VPBlockBases must have the same parent, which can be null. Both
-  /// VPBlockBases can be already connected to other VPBlockBases.
-  static void connectBlocks(VPBlockBase *From, VPBlockBase *To) {
+  /// Connect VPBlockBases \p From and \p To bi-directionally. If \p PredIdx is
+  /// -1, append \p From to the predecessors of \p To, otherwise set \p To's
+  /// predecessor at \p PredIdx to \p From. If \p SuccIdx is -1, append \p To to
+  /// the successors of \p From, otherwise set \p From's successor at \p SuccIdx
+  /// to \p To. Both VPBlockBases must have the same parent, which can be null.
+  /// Both VPBlockBases can be already connected to other VPBlockBases.
+  static void connectBlocks(VPBlockBase *From, VPBlockBase *To,
+                            unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert(From->getNumSuccessors() < 2 &&
+    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
            "Blocks can't have more than two successors.");
-    From->appendSuccessor(To);
-    To->appendPredecessor(From);
+    assert((PredIdx != -1u || To->getNumPredecessors() < 2) &&
+           "Blocks can't have more than two predecessors.");
+    if (SuccIdx == -1u)
+      From->appendSuccessor(To);
+    else
+      From->getSuccessors()[SuccIdx] = To;
+
+    if (PredIdx == -1u)
+      To->appendPredecessor(From);
+    else
+      To->getPredecessors()[PredIdx] = From;
   }
 
   /// Disconnect VPBlockBases \p From and \p To bi-directionally. Remove \p To
@@ -3850,6 +4144,19 @@ public:
     assert(To && "Successor to disconnect is null.");
     From->removeSuccessor(To);
     To->removePredecessor(From);
+  }
+
+  /// Reassociate all the blocks connected to \p Old so that they now point to
+  /// \p New.
+  static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Pred : to_vector(Old->getPredecessors()))
+      Pred->replaceSuccessor(Old, New);
+    for (auto *Succ : to_vector(Old->getSuccessors()))
+      Succ->replacePredecessor(Old, New);
+    New->setPredecessors(Old->getPredecessors());
+    New->setSuccessors(Old->getSuccessors());
+    Old->clearPredecessors();
+    Old->clearSuccessors();
   }
 
   /// Return an iterator range over \p Range which only includes \p BlockTy
@@ -3869,6 +4176,24 @@ public:
     return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
       return cast<BlockTy>(&Block);
     });
+  }
+
+  /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
+  /// \p From's successor to \p To to point to \p BlockPtr and \p To's
+  /// predecessor from \p From to \p BlockPtr. \p From and \p To are added to \p
+  /// BlockPtr's predecessors and successors respectively. There must be a
+  /// single edge between \p From and \p To.
+  static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
+                           VPBlockBase *BlockPtr) {
+    auto &Successors = From->getSuccessors();
+    auto &Predecessors = To->getPredecessors();
+    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
+           "must have single between From and To");
+    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
+    unsigned PredIx =
+        std::distance(Predecessors.begin(), find(Predecessors, From));
+    VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
+    VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
 };
 

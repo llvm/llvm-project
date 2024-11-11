@@ -171,7 +171,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 }
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
-  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+  if (auto *Ver = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
@@ -563,8 +563,8 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11 ||
-         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
@@ -649,8 +649,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  auto OpX = getVOPDBaseFromComponent(Info->OpX);
-  auto OpY = getVOPDBaseFromComponent(Info->OpY);
+  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
+  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
@@ -1307,15 +1307,16 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 }
 
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size) {
+                                             unsigned Size,
+                                             unsigned DefaultVal) {
   assert(Size > 2);
-  SmallVector<unsigned> Default(Size, 0);
+  SmallVector<unsigned> Default(Size, DefaultVal);
 
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
-  SmallVector<unsigned> Vals(Size, 0);
+  SmallVector<unsigned> Vals(Size, DefaultVal);
 
   LLVMContext &Ctx = F.getContext();
 
@@ -1789,7 +1790,7 @@ static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
 }
 
 int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI) {
-  auto lookupTable = getNfmtLookupTable(STI);
+  const auto *lookupTable = getNfmtLookupTable(STI);
   for (int Id = NFMT_MIN; Id <= NFMT_MAX; ++Id) {
     if (Name == lookupTable[Id])
       return Id;

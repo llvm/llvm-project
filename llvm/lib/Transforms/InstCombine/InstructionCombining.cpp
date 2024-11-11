@@ -47,6 +47,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -2084,8 +2085,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
-    Function *F =
-        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 
@@ -2349,12 +2350,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
 /// transform.
 static GEPNoWrapFlags getMergedGEPNoWrapFlags(GEPOperator &GEP1,
                                               GEPOperator &GEP2) {
-  GEPNoWrapFlags NW = GEP1.getNoWrapFlags() & GEP2.getNoWrapFlags();
-  // Without inbounds, we could only preserve nusw if we know that x + y does
-  // not wrap.
-  if (!NW.isInBounds())
-    NW = NW.withoutNoUnsignedSignedWrap();
-  return NW;
+  return GEP1.getNoWrapFlags().intersectForOffsetAdd(GEP2.getNoWrapFlags());
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
@@ -2736,6 +2732,36 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   return nullptr;
 }
 
+/// Return true if we should canonicalize the gep to an i8 ptradd.
+static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
+  Value *PtrOp = GEP.getOperand(0);
+  Type *GEPEltType = GEP.getSourceElementType();
+  if (GEPEltType->isIntegerTy(8))
+    return false;
+
+  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
+  // intrinsic. This has better support in BasicAA.
+  if (GEPEltType->isScalableTy())
+    return true;
+
+  // gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two multiplies
+  // together.
+  if (GEP.getNumIndices() == 1 &&
+      match(GEP.getOperand(1),
+            m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                 m_Shl(m_Value(), m_ConstantInt())))))
+    return true;
+
+  // gep (gep %p, C1), %x, C2 is expanded so the two constants can
+  // possibly be merged together.
+  auto PtrOpGep = dyn_cast<GEPOperator>(PtrOp);
+  return PtrOpGep && PtrOpGep->hasAllConstantIndices() &&
+         any_of(GEP.indices(), [](Value *V) {
+           const APInt *C;
+           return match(V, m_APInt(C)) && !C->isZero();
+         });
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2817,19 +2843,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  // Canonicalize
-  //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
-  //    This has better support in BasicAA.
-  //  - gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two
-  //    multiplies together.
-  if (GEPEltType->isScalableTy() ||
-      (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
-       match(GEP.getOperand(1),
-             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
-                                  m_Shl(m_Value(), m_ConstantInt())))))) {
+  if (shouldCanonicalizeGEPToPtrAdd(GEP)) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
-    return replaceInstUsesWith(
-        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags()));
+    Value *NewGEP =
+        Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
+    return replaceInstUsesWith(GEP, NewGEP);
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -3338,7 +3356,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(&MI)) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
       Module *M = II->getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
+      Function *F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::donothing);
       InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(), {}, "",
                          II->getParent());
     }
@@ -3736,7 +3754,9 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   }
 
   // Replace all dominated uses of the condition with true/false
-  if (BI.getSuccessor(0) != BI.getSuccessor(1)) {
+  // Ignore constant expressions to avoid iterating over uses on other
+  // functions.
+  if (!isa<Constant>(Cond) && BI.getSuccessor(0) != BI.getSuccessor(1)) {
     for (auto &U : make_early_inc_range(Cond->uses())) {
       BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
       if (DT.dominates(Edge0, U)) {
@@ -4070,7 +4090,7 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   if (LoadInst *L = dyn_cast<LoadInst>(Agg)) {
     // Bail out if the aggregate contains scalable vector type
     if (auto *STy = dyn_cast<StructType>(Agg->getType());
-        STy && STy->containsScalableVectorType())
+        STy && STy->isScalableTy())
       return nullptr;
 
     // If the (non-volatile) load only has one use, we can rewrite this to a
@@ -4805,7 +4825,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
-  if (I->mayReadFromMemory()) {
+  if (I->mayReadFromMemory() &&
+      !I->hasMetadata(LLVMContext::MD_invariant_load)) {
     // We don't want to do any sophisticated alias analysis, so we only check
     // the instructions after I in I's parent block if we try to sink to its
     // successor block.
@@ -5175,8 +5196,13 @@ bool InstCombinerImpl::run() {
         LLVM_DEBUG(dbgs() << "IC: Old = " << *I << '\n'
                           << "    New = " << *Result << '\n');
 
-        Result->copyMetadata(*I,
-                             {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+        // We copy the old instruction's DebugLoc to the new instruction, unless
+        // InstCombine already assigned a DebugLoc to it, in which case we
+        // should trust the more specifically selected DebugLoc.
+        if (!Result->getDebugLoc())
+          Result->setDebugLoc(I->getDebugLoc());
+        // We also copy annotation metadata to the new instruction.
+        Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
         I->replaceAllUsesWith(Result);
 
@@ -5439,6 +5465,8 @@ static bool combineInstructionsOverFunction(
     BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
     const InstCombineOptions &Opts) {
   auto &DL = F.getDataLayout();
+  bool VerifyFixpoint = Opts.VerifyFixpoint &&
+                        !F.hasFnAttribute("instcombine-no-verify-fixpoint");
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
@@ -5463,7 +5491,7 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+    if (Iteration > Opts.MaxIterations && !VerifyFixpoint) {
       LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
@@ -5485,9 +5513,11 @@ static bool combineInstructionsOverFunction(
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
-          "Instruction Combining did not reach a fixpoint after " +
-              Twine(Opts.MaxIterations) + " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' to suppress this error.",
+          "Instruction Combining on " + Twine(F.getName()) +
+              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+              " iterations. " +
+              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+              "'instcombine-no-verify-fixpoint' to suppress this error.",
           /*GenCrashDiag=*/false);
     }
   }
@@ -5516,8 +5546,15 @@ void InstCombinePass::printPipeline(
   OS << '>';
 }
 
+char InstCombinePass::ID = 0;
+
 PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
+  auto &LRT = AM.getResult<LastRunTrackingAnalysis>(F);
+  // No changes since last InstCombine pass, exit early.
+  if (LRT.shouldSkip(&ID))
+    return PreservedAnalyses::all();
+
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
@@ -5533,12 +5570,16 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, BPI, PSI, Options))
+                                       BFI, BPI, PSI, Options)) {
     // No changes, all analyses are preserved.
+    LRT.update(&ID, /*Changed=*/false);
     return PreservedAnalyses::all();
+  }
 
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
+  LRT.update(&ID, /*Changed=*/true);
+  PA.preserve<LastRunTrackingAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

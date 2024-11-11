@@ -407,11 +407,11 @@ def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
 def HIP : LangOpt<"HIP">;
-def SYCL : LangOpt<"SYCLIsDevice">;
+def SYCLHost : LangOpt<"SYCLIsHost">;
+def SYCLDevice : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
-def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
@@ -759,6 +759,11 @@ class TargetSpecificAttr<TargetSpec target> {
 /// redeclarations, even when it's written on a parameter.
 class InheritableParamAttr : InheritableAttr;
 
+/// A attribute that is either a declaration attribute or a statement attribute,
+/// and if used as a declaration attribute, is inherited by later
+/// redeclarations, even when it's written on a parameter.
+class InheritableParamOrStmtAttr : InheritableParamAttr;
+
 /// An attribute which changes the ABI rules for a specific parameter.
 class ParameterABIAttr : InheritableParamAttr {
   let Subjects = SubjectList<[ParmVar]>;
@@ -928,7 +933,7 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def Annotate : InheritableParamAttr {
+def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
   // Ensure that the annotate attribute can be used with
@@ -1446,6 +1451,13 @@ def CUDAHost : InheritableAttr {
 }
 def : MutualExclusions<[CUDAGlobal, CUDAHost]>;
 
+def CUDAGridConstant : InheritableAttr {
+  let Spellings = [GNU<"grid_constant">, Declspec<"__grid_constant__">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDAGridConstantAttrDocs];
+}
+
 def NVPTXKernel : InheritableAttr, TargetSpecificAttr<TargetNVPTX> {
   let Spellings = [Clang<"nvptx_kernel">];
   let Subjects = SubjectList<[Function]>;
@@ -1489,14 +1501,23 @@ def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 def SYCLKernel : InheritableAttr {
   let Spellings = [Clang<"sycl_kernel">];
   let Subjects = SubjectList<[FunctionTmpl]>;
-  let LangOpts = [SYCL];
+  let LangOpts = [SYCLDevice];
   let Documentation = [SYCLKernelDocs];
+}
+
+def SYCLKernelEntryPoint : InheritableAttr {
+  let Spellings = [Clang<"sycl_kernel_entry_point">];
+  let Args = [TypeArgument<"KernelName">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let TemplateDependent = 1;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLKernelEntryPointDocs];
 }
 
 def SYCLSpecialClass: InheritableAttr {
   let Spellings = [Clang<"sycl_special_class">];
   let Subjects = SubjectList<[CXXRecord]>;
-  let LangOpts = [SYCL];
+  let LangOpts = [SYCLDevice];
   let Documentation = [SYCLSpecialClassDocs];
 }
 
@@ -1622,14 +1643,6 @@ def OpenCLNoSVM : Attr {
   let Documentation = [OpenCLNoSVMDocs];
   let LangOpts = [OpenCL];
   let ASTNode = 0;
-}
-
-def RenderScriptKernel : Attr {
-  let Spellings = [GNU<"kernel">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [RenderScriptKernelAttributeDocs];
-  let LangOpts = [RenderScript];
-  let SimpleHandler = 1;
 }
 
 def Deprecated : InheritableAttr {
@@ -1873,8 +1886,40 @@ def LifetimeBound : DeclOrTypeAttr {
   let Spellings = [Clang<"lifetimebound", 0>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
-  let LangOpts = [CPlusPlus];
   let SimpleHandler = 1;
+}
+
+def LifetimeCaptureBy : DeclOrTypeAttr {
+  let Spellings = [Clang<"lifetime_capture_by", 0>];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  let Args = [VariadicParamOrParamIdxArgument<"Params">];
+  let Documentation = [LifetimeCaptureByDocs];
+  let AdditionalMembers = [{
+private:
+  SmallVector<IdentifierInfo*, 1> ArgIdents;
+  SmallVector<SourceLocation, 1> ArgLocs;
+
+public:
+  static constexpr int THIS = 0;
+  static constexpr int INVALID = -1;
+  static constexpr int UNKNOWN = -2;
+  static constexpr int GLOBAL = -3;
+
+  void setArgs(SmallVector<IdentifierInfo*>&& Idents,
+               SmallVector<SourceLocation>&& Locs) { 
+    assert(Idents.size() == Locs.size());
+    assert(Idents.size() == params_Size);
+    ArgIdents = std::move(Idents);
+    ArgLocs = std::move(Locs);
+  }
+  
+  ArrayRef<IdentifierInfo*> getArgIdents() const { return ArgIdents; }
+  ArrayRef<SourceLocation> getArgLocs() const { return ArgLocs; }
+  void setParamIdx(size_t Idx, int Val) { 
+    assert(Idx < params_Size);
+    params_[Idx] = Val;
+  }
+}];
 }
 
 def TrivialABI : InheritableAttr {
@@ -2842,7 +2887,7 @@ def SwiftAsyncName : InheritableAttr {
   let Documentation = [SwiftAsyncNameDocs];
 }
 
-def SwiftAttr : InheritableAttr {
+def SwiftAttr : DeclOrTypeAttr {
   let Spellings = [GNU<"swift_attr">];
   let Args = [StringArgument<"Attribute">];
   let Documentation = [SwiftAttrDocs];
@@ -4588,6 +4633,31 @@ def HLSLResourceBinding: InheritableAttr {
   let LangOpts = [HLSL];
   let Args = [StringArgument<"Slot">, StringArgument<"Space", 1>];
   let Documentation = [HLSLResourceBindingDocs];
+  let AdditionalMembers = [{
+  public:
+      enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I };
+  
+  private:
+      RegisterType RegType;
+      unsigned SlotNumber;
+      unsigned SpaceNumber;
+
+  public:
+      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+        RegType = RT;
+        SlotNumber = SlotNum;
+        SpaceNumber = SpaceNum;
+      }
+      RegisterType getRegisterType() const {
+        return RegType;
+      }
+      unsigned getSlotNumber() const {
+        return SlotNumber;
+      }
+      unsigned getSpaceNumber() const {
+        return SpaceNumber;
+      }
+  }];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {

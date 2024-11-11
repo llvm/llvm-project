@@ -1102,6 +1102,12 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasNoFPExcept())
       MI->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+    if (Flags.hasDisjoint())
+      MI->setFlag(MachineInstr::MIFlag::Disjoint);
+
+    if (Flags.hasSameSign())
+      MI->setFlag(MachineInstr::MIFlag::SameSign);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the

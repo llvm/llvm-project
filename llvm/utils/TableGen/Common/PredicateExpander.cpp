@@ -297,7 +297,7 @@ void PredicateExpander::expandOpcodeSwitchStatement(
 void PredicateExpander::expandStatement(raw_ostream &OS, const Record *Rec) {
   // Assume that padding has been added by the caller.
   if (Rec->isSubClassOf("MCOpcodeSwitchStatement")) {
-    expandOpcodeSwitchStatement(OS, Rec->getValueAsListOfConstDefs("Cases"),
+    expandOpcodeSwitchStatement(OS, Rec->getValueAsListOfDefs("Cases"),
                                 Rec->getValueAsDef("DefaultCase"));
     return;
   }

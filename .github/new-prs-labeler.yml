@@ -69,7 +69,7 @@ PGO:
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
 
-vectorization:
+vectorizers:
   - llvm/lib/Transforms/Vectorize/**/*
   - llvm/include/llvm/Transforms/Vectorize/**/*
 

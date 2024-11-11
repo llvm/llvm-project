@@ -1095,6 +1095,8 @@ public:
     return Visit(E->getBase());
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return IsExpectedRecordDecl(E) ? E : nullptr;
     return Visit(E->getSubExpr());
   }
   const Expr *VisitParenExpr(const ParenExpr *E) {
@@ -1143,15 +1145,7 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
   return false;
 }
 
-/// This method is typically called in contexts where we can't generate
-/// side-effects, like in __builtin_dynamic_object_size. When finding
-/// expressions, only choose those that have either already been emitted or can
-/// be loaded without side-effects.
-///
-/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
-///   within the top-level struct.
-/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
-llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
+llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
 
@@ -1161,18 +1155,14 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
-    Res = EmitDeclRefLValue(DRE).getPointer(*this);
-    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
-                                    getPointerAlign(), "dre.load");
-  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
-    LValue LV = EmitMemberExpr(ME);
-    Address Addr = LV.getAddress();
-    Res = Addr.emitRawPointer(*this);
-  } else if (StructBase->getType()->isPointerType()) {
+  if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    Res = Addr.emitRawPointer(*this);
+  } else if (StructBase->isLValue()) {
+    LValue LV = EmitLValue(StructBase);
+    Address Addr = LV.getAddress();
     Res = Addr.emitRawPointer(*this);
   } else {
     return nullptr;
@@ -1184,12 +1174,25 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   Indices.push_back(Builder.getInt32(0));
-  Res = Builder.CreateInBoundsGEP(
+  return Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
       RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
+}
 
-  return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), Res,
-                                   getIntAlign(), "..counted_by.load");
+/// This method is typically called in contexts where we can't generate
+/// side-effects, like in __builtin_dynamic_object_size. When finding
+/// expressions, only choose those that have either already been emitted or can
+/// be loaded without side-effects.
+///
+/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
+///   within the top-level struct.
+/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
+llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
+    const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
+  if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
+    return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
+                                     getIntAlign(), "..counted_by.load");
+  return nullptr;
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
@@ -1530,7 +1533,12 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
                                    KnownNonNull_t IsKnownNonNull) {
-  LValue LV = EmitLValueHelper(E, IsKnownNonNull);
+  // Running with sufficient stack space to avoid deeply nested expressions
+  // cause a stack overflow.
+  LValue LV;
+  CGM.runWithSufficientStackSpace(
+      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
+
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
   return LV;
@@ -1938,6 +1946,10 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
       cast<llvm::IntegerType>(Value->getType())->getBitWidth() == 1)
     return false;
 
+  if (NeedsEnumCheck &&
+      getContext().isTypeIgnoredBySanitizer(SanitizerKind::Enum, Ty))
+    return false;
+
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
     return true;
@@ -2039,7 +2051,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
       Load->setMetadata(llvm::LLVMContext::MD_noundef,
-                        llvm::MDNode::get(getLLVMContext(), std::nullopt));
+                        llvm::MDNode::get(getLLVMContext(), {}));
     }
 
   return EmitFromMemory(Load, Ty);
@@ -2368,7 +2380,7 @@ Address CodeGenFunction::EmitExtVectorElementLValue(LValue LV) {
   return VectorBasePtrPlusIx;
 }
 
-/// Load of global gamed gegisters are always calls to intrinsics.
+/// Load of global named registers are always calls to intrinsics.
 RValue CodeGenFunction::EmitLoadOfGlobalRegLValue(LValue LV) {
   assert((LV.getType()->isIntegerType() || LV.getType()->isPointerType()) &&
          "Bad type for register variable");
@@ -3372,9 +3384,9 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // Format the type name as if for a diagnostic, including quotes and
   // optionally an 'aka'.
   SmallString<32> Buffer;
-  CGM.getDiags().ConvertArgToString(
-      DiagnosticsEngine::ak_qualtype, (intptr_t)T.getAsOpaquePtr(), StringRef(),
-      StringRef(), std::nullopt, Buffer, std::nullopt);
+  CGM.getDiags().ConvertArgToString(DiagnosticsEngine::ak_qualtype,
+                                    (intptr_t)T.getAsOpaquePtr(), StringRef(),
+                                    StringRef(), {}, Buffer, {});
 
   if (IsBitInt) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
@@ -3881,7 +3893,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
     EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
                              SanitizerKind::Unreachable),
               SanitizerHandler::BuiltinUnreachable,
-              EmitCheckSourceLocation(Loc), std::nullopt);
+              EmitCheckSourceLocation(Loc), {});
   }
   Builder.CreateUnreachable();
 }
@@ -5457,9 +5469,8 @@ LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
   return getOrCreateOpaqueLValueMapping(e);
 }
 
-void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
-                                         CallArgList &Args, QualType Ty) {
-
+std::pair<LValue, LValue>
+CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   // Emitting the casted temporary through an opaque value.
   LValue BaseLV = EmitLValue(E->getArgLValue());
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
@@ -5473,6 +5484,13 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
                                TempLV);
 
   OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
+  return std::make_pair(BaseLV, TempLV);
+}
+
+LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                           CallArgList &Args, QualType Ty) {
+
+  auto [BaseLV, TempLV] = EmitHLSLOutArgLValues(E, Ty);
 
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
@@ -5485,6 +5503,7 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast(),
                     LifetimeSize);
   Args.add(RValue::get(TmpAddr, *this), Ty);
+  return TempLV;
 }
 
 LValue
@@ -5797,9 +5816,24 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     return EmitComplexAssignmentLValue(E);
 
   case TEK_Aggregate:
+    // If the lang opt is HLSL and the LHS is a constant array
+    // then we are performing a copy assignment and call a special
+    // function because EmitAggExprToLValue emits to a temporary LValue
+    if (getLangOpts().HLSL && E->getLHS()->getType()->isConstantArrayType())
+      return EmitHLSLArrayAssignLValue(E);
+
     return EmitAggExprToLValue(E);
   }
   llvm_unreachable("bad evaluation kind");
+}
+
+// This function implements trivial copy assignment for HLSL's
+// assignable constant arrays.
+LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
+  LValue TrivialAssignmentRHS = EmitLValue(E->getRHS());
+  LValue LHS = EmitLValue(E->getLHS());
+  EmitAggregateAssign(LHS, TrivialAssignmentRHS, E->getLHS()->getType());
+  return LHS;
 }
 
 LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E,

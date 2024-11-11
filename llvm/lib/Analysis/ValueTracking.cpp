@@ -31,7 +31,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Analysis/WithCache.h"
@@ -369,9 +368,9 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
-                                const APInt &DemandedElts, KnownBits &Known,
-                                KnownBits &Known2, unsigned Depth,
-                                const SimplifyQuery &Q) {
+                                bool NUW, const APInt &DemandedElts,
+                                KnownBits &Known, KnownBits &Known2,
+                                unsigned Depth, const SimplifyQuery &Q) {
   computeKnownBits(Op1, DemandedElts, Known, Depth + 1, Q);
   computeKnownBits(Op0, DemandedElts, Known2, Depth + 1, Q);
 
@@ -390,6 +389,13 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
       // The product of two numbers with the same sign is non-negative.
       isKnownNonNegative = (isKnownNegativeOp1 && isKnownNegativeOp0) ||
                            (isKnownNonNegativeOp1 && isKnownNonNegativeOp0);
+      if (!isKnownNonNegative && NUW) {
+        // mul nuw nsw with a factor > 1 is non-negative.
+        KnownBits One = KnownBits::makeConstant(APInt(Known.getBitWidth(), 1));
+        isKnownNonNegative = KnownBits::sgt(Known, One).value_or(false) ||
+                             KnownBits::sgt(Known2, One).value_or(false);
+      }
+
       // The product of a negative number and a non-negative number is either
       // negative or zero.
       if (!isKnownNonNegative)
@@ -821,9 +827,12 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
         continue;
       if (RetainedKnowledge RK = getKnowledgeFromBundle(
               *I, I->bundle_op_info_begin()[Elem.Index])) {
+        // Allow AllowEphemerals in isValidAssumeForContext, as the CxtI might
+        // be the producer of the pointer in the bundle. At the moment, align
+        // assumptions aren't optimized away.
         if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
             isPowerOf2_64(RK.ArgValue) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+            isValidAssumeForContext(I, Q.CxtI, Q.DT, /*AllowEphemerals*/ true))
           Known.Zero.setLowBits(Log2_64(RK.ArgValue));
       }
       continue;
@@ -1090,8 +1099,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
-                        Known, Known2, Depth, Q);
+    bool NUW = Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(I));
+    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, NUW,
+                        DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::UDiv: {
@@ -1416,13 +1426,23 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // this is sufficient to catch some interesting cases.
       unsigned Opcode = BO->getOpcode();
 
-      // If this is a shift recurrence, we know the bits being shifted in.
-      // We can combine that with information about the start value of the
-      // recurrence to conclude facts about the result.
-      if ((Opcode == Instruction::LShr || Opcode == Instruction::AShr ||
-           Opcode == Instruction::Shl) &&
-          BO->getOperand(0) == I) {
+      switch (Opcode) {
+      // If this is a shift recurrence, we know the bits being shifted in. We
+      // can combine that with information about the start value of the
+      // recurrence to conclude facts about the result. If this is a udiv
+      // recurrence, we know that the result can never exceed either the
+      // numerator or the start value, whichever is greater.
+      case Instruction::LShr:
+      case Instruction::AShr:
+      case Instruction::Shl:
+      case Instruction::UDiv:
+        if (BO->getOperand(0) != I)
+          break;
+        [[fallthrough]];
 
+      // For a urem recurrence, the result can never exceed the start value. The
+      // phi could either be the numerator or the denominator.
+      case Instruction::URem: {
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
         // %iv.next = shift_op %iv, L
@@ -1440,8 +1460,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setLowBits(Known2.countMinTrailingZeros());
           break;
         case Instruction::LShr:
-          // A lshr recurrence will preserve the leading zeros of the
-          // start value
+        case Instruction::UDiv:
+        case Instruction::URem:
+          // lshr, udiv, and urem recurrences will preserve the leading zeros of
+          // the start value.
           Known.Zero.setHighBits(Known2.countMinLeadingZeros());
           break;
         case Instruction::AShr:
@@ -1449,17 +1471,18 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setHighBits(Known2.countMinLeadingZeros());
           Known.One.setHighBits(Known2.countMinLeadingOnes());
           break;
-        };
+        }
+        break;
       }
 
       // Check for operations that have the property that if
       // both their operands have low zero bits, the result
       // will have low zero bits.
-      if (Opcode == Instruction::Add ||
-          Opcode == Instruction::Sub ||
-          Opcode == Instruction::And ||
-          Opcode == Instruction::Or ||
-          Opcode == Instruction::Mul) {
+      case Instruction::Add:
+      case Instruction::Sub:
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Mul: {
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
@@ -1484,38 +1507,52 @@ static void computeKnownBitsFromOperator(const Operator *I,
                                        Known3.countMinTrailingZeros()));
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
-        if (OverflowOp && Q.IIQ.hasNoSignedWrap(OverflowOp)) {
-          // If initial value of recurrence is nonnegative, and we are adding
-          // a nonnegative number with nsw, the result can only be nonnegative
-          // or poison value regardless of the number of times we execute the
-          // add in phi recurrence. If initial value is negative and we are
-          // adding a negative number with nsw, the result can only be
-          // negative or poison value. Similar arguments apply to sub and mul.
-          //
-          // (add non-negative, non-negative) --> non-negative
-          // (add negative, negative) --> negative
-          if (Opcode == Instruction::Add) {
-            if (Known2.isNonNegative() && Known3.isNonNegative())
-              Known.makeNonNegative();
-            else if (Known2.isNegative() && Known3.isNegative())
-              Known.makeNegative();
-          }
+        if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
+          break;
 
-          // (sub nsw non-negative, negative) --> non-negative
-          // (sub nsw negative, non-negative) --> negative
-          else if (Opcode == Instruction::Sub && BO->getOperand(0) == I) {
-            if (Known2.isNonNegative() && Known3.isNegative())
-              Known.makeNonNegative();
-            else if (Known2.isNegative() && Known3.isNonNegative())
-              Known.makeNegative();
-          }
-
-          // (mul nsw non-negative, non-negative) --> non-negative
-          else if (Opcode == Instruction::Mul && Known2.isNonNegative() &&
-                   Known3.isNonNegative())
+        switch (Opcode) {
+        // If initial value of recurrence is nonnegative, and we are adding
+        // a nonnegative number with nsw, the result can only be nonnegative
+        // or poison value regardless of the number of times we execute the
+        // add in phi recurrence. If initial value is negative and we are
+        // adding a negative number with nsw, the result can only be
+        // negative or poison value. Similar arguments apply to sub and mul.
+        //
+        // (add non-negative, non-negative) --> non-negative
+        // (add negative, negative) --> negative
+        case Instruction::Add: {
+          if (Known2.isNonNegative() && Known3.isNonNegative())
             Known.makeNonNegative();
+          else if (Known2.isNegative() && Known3.isNegative())
+            Known.makeNegative();
+          break;
         }
 
+        // (sub nsw non-negative, negative) --> non-negative
+        // (sub nsw negative, non-negative) --> negative
+        case Instruction::Sub: {
+          if (BO->getOperand(0) != I)
+            break;
+          if (Known2.isNonNegative() && Known3.isNegative())
+            Known.makeNonNegative();
+          else if (Known2.isNegative() && Known3.isNonNegative())
+            Known.makeNegative();
+          break;
+        }
+
+        // (mul nsw non-negative, non-negative) --> non-negative
+        case Instruction::Mul:
+          if (Known2.isNonNegative() && Known3.isNonNegative())
+            Known.makeNonNegative();
+          break;
+
+        default:
+          break;
+        }
+        break;
+      }
+
+      default:
         break;
       }
     }
@@ -1537,6 +1574,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Value *IncValue = P->getIncomingValue(u);
         // Skip direct self references.
         if (IncValue == P) continue;
+
+        // If the Use is a select of this phi, use the knownbit of the other
+        // operand to break the recursion.
+        if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
+          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
+            IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
+                                               : SI->getTrueValue();
+        }
 
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
@@ -1961,7 +2006,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         case Intrinsic::umul_with_overflow:
         case Intrinsic::smul_with_overflow:
           computeKnownBitsMul(II->getArgOperand(0), II->getArgOperand(1), false,
-                              DemandedElts, Known, Known2, Depth, Q);
+                              false, DemandedElts, Known, Known2, Depth, Q);
           break;
         }
       }
@@ -4193,6 +4238,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_atanf:
   case LibFunc_atanl:
     return Intrinsic::atan;
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2l:
+    return Intrinsic::atan2;
   case LibFunc_sinh:
   case LibFunc_sinhf:
   case LibFunc_sinhl:
@@ -4213,6 +4262,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_exp2f:
   case LibFunc_exp2l:
     return Intrinsic::exp2;
+  case LibFunc_exp10:
+  case LibFunc_exp10f:
+  case LibFunc_exp10l:
+    return Intrinsic::exp10;
   case LibFunc_log:
   case LibFunc_logf:
   case LibFunc_logl:
@@ -5971,14 +6024,32 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (IncValue == P)
           continue;
 
+        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
+
+        // If the Use is a select of this phi, use the fp class of the other
+        // operand to break the recursion. Same around 2-operand phi nodes
+        Value *V;
+        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
+          IncValue = V;
+        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
+                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
+          for (int Idx = 0; Idx < 2; ++Idx) {
+            if (IncPhi->getIncomingValue(Idx) == P) {
+              IncValue = IncPhi->getIncomingValue(1 - Idx);
+              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+              break;
+            }
+          }
+        }
+
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
         computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
                             PhiRecursionLimit,
-                            Q.getWithoutCondContext().getWithInstruction(
-                                P->getIncomingBlock(U)->getTerminator()));
+                            Q.getWithoutCondContext().getWithInstruction(CxtI));
 
         if (First) {
           Known = KnownSrc;
@@ -6654,11 +6725,12 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
 }
 
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
-  if (!V->getType()->isPointerTy())
-    return V;
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-      V = GEP->getPointerOperand();
+      const Value *PtrOp = GEP->getPointerOperand();
+      if (!PtrOp->getType()->isPointerTy()) // Only handle scalar pointer base.
+        return V;
+      V = PtrOp;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       Value *NewV = cast<Operator>(V)->getOperand(0);
@@ -6917,6 +6989,14 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
 bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
   return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
+}
+
+bool llvm::isNotCrossLaneOperation(const Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return isTriviallyVectorizable(II->getIntrinsicID());
+  auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
+  return (!Shuffle || Shuffle->isSelect()) &&
+         !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
@@ -8212,9 +8292,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   case CmpInst::FCMP_OLE:
   case CmpInst::FCMP_ULT:
   case CmpInst::FCMP_ULE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMin(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMin(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+    if (match(FalseVal, m_OrdOrUnordFMin(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 < *FC2)
       return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
     break;
@@ -8222,9 +8300,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   case CmpInst::FCMP_OGE:
   case CmpInst::FCMP_UGT:
   case CmpInst::FCMP_UGE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMax(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMax(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+    if (match(FalseVal, m_OrdOrUnordFMax(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 > *FC2)
       return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
     break;
@@ -8490,12 +8566,21 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
       !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
     return false;
 
+  // They must both have samesign flag or not.
+  if (cast<ICmpInst>(X)->hasSameSign() != cast<ICmpInst>(Y)->hasSameSign())
+    return false;
+
   if (B == C)
     return Pred1 == ICmpInst::getInversePredicate(Pred2);
 
   // Try to infer the relationship from constant ranges.
   const APInt *RHSC1, *RHSC2;
   if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
+    return false;
+
+  // Sign bits of two RHSCs should match.
+  if (cast<ICmpInst>(X)->hasSameSign() &&
+      RHSC1->isNonNegative() != RHSC2->isNonNegative())
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
@@ -8969,12 +9054,14 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, div, gep, uaddo, etc..
+    // TODO: Expand list -- xor, gep, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
     case Instruction::Add:
     case Instruction::Sub:
+    case Instruction::UDiv:
+    case Instruction::URem:
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Mul:

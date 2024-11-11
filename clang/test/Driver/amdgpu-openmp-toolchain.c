@@ -64,7 +64,7 @@
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
 // CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-sramecc" "-target-feature" "+xnack"
-// CHECK-TARGET-ID: clang-offload-packager{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp,feature=-sramecc,feature=+xnack
+// CHECK-TARGET-ID: clang-offload-packager{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID-ERROR

@@ -51,7 +51,7 @@ using TypeSpec = std::string;
 
 namespace {
 class SVEType {
-  bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
+  bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat, MFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
       Svcount;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
@@ -61,10 +61,10 @@ public:
 
   SVEType(StringRef TS, char CharMod, unsigned NumVectors = 1)
       : Float(false), Signed(true), Immediate(false), Void(false),
-        Constant(false), Pointer(false), BFloat(false), DefaultType(false),
-        IsScalable(true), Predicate(false), PredicatePattern(false),
-        PrefetchOp(false), Svcount(false), Bitwidth(128), ElementBitwidth(~0U),
-        NumVectors(NumVectors) {
+        Constant(false), Pointer(false), BFloat(false), MFloat(false),
+        DefaultType(false), IsScalable(true), Predicate(false),
+        PredicatePattern(false), PrefetchOp(false), Svcount(false),
+        Bitwidth(128), ElementBitwidth(~0U), NumVectors(NumVectors) {
     if (!TS.empty())
       applyTypespec(TS);
     applyModifier(CharMod);
@@ -82,11 +82,14 @@ public:
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
-  bool isChar() const { return ElementBitwidth == 8; }
+  bool isChar() const { return ElementBitwidth == 8 && !MFloat; }
   bool isVoid() const { return Void && !Pointer; }
   bool isDefault() const { return DefaultType; }
-  bool isFloat() const { return Float && !BFloat; }
-  bool isBFloat() const { return BFloat && !Float; }
+  bool isFloat() const { return Float && !BFloat && !MFloat; }
+  bool isBFloat() const { return BFloat && !Float && !MFloat; }
+  bool isMFloat() const {
+    return MFloat && !BFloat && !Float;
+  }
   bool isFloatingPoint() const { return Float || BFloat; }
   bool isInteger() const {
     return !isFloatingPoint() && !Predicate && !Svcount;
@@ -454,6 +457,9 @@ std::string SVEType::builtin_str() const {
   else if (isBFloat()) {
     assert(ElementBitwidth == 16 && "Not a valid BFloat.");
     S += "y";
+  } else if (isMFloat()) {
+    assert(ElementBitwidth == 8 && "Not a valid MFloat.");
+    S += "m";
   }
 
   if (!isFloatingPoint()) {
@@ -509,6 +515,8 @@ std::string SVEType::str() const {
       S += "bool";
     else if (isBFloat())
       S += "bfloat";
+    else if (isMFloat())
+      S += "mfloat";
     else
       S += "int";
 
@@ -572,7 +580,15 @@ void SVEType::applyTypespec(StringRef TS) {
     case 'b':
       BFloat = true;
       Float = false;
+      MFloat = false;
       ElementBitwidth = 16;
+      break;
+    case 'm':
+      Signed = false;
+      MFloat = true;
+      Float = false;
+      BFloat = false;
+      ElementBitwidth = 8;
       break;
     default:
       llvm_unreachable("Unhandled type code!");
@@ -953,9 +969,20 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
                      SVEEmitter &Emitter, StringRef SVEGuard,
                      StringRef SMEGuard)
     : Name(Name.str()), LLVMName(LLVMName), Proto(Proto.str()),
-      BaseTypeSpec(BT), Class(Class), SVEGuard(SVEGuard.str()),
-      SMEGuard(SMEGuard.str()), MergeSuffix(MergeSuffix.str()),
+      BaseTypeSpec(BT), Class(Class), MergeSuffix(MergeSuffix.str()),
       BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
+
+  auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
+    if (Guard.contains('|'))
+      return Base.str() + ",(" + Guard.str() + ")";
+    if (Guard.empty() || Guard == Base || Guard.starts_with(Base.str() + ","))
+      return Guard.str();
+    return Base.str() + "," + Guard.str();
+  };
+
+  this->SVEGuard = FormatGuard(SVEGuard, "sve");
+  this->SMEGuard = FormatGuard(SMEGuard, "sme");
+
   // Types[0] is the return value.
   for (unsigned I = 0; I < (getNumParams() + 1); ++I) {
     char Mod;
@@ -1026,6 +1053,8 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
       TypeCode = 'b';
     else if (T.isBFloat())
       TypeCode = "bf";
+    else if (T.isMFloat())
+      TypeCode = "mfp";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1119,6 +1148,11 @@ uint64_t SVEEmitter::encodeTypeFlags(const SVEType &T) {
     return encodeEltType("EltTyBFloat16");
   }
 
+  if (T.isMFloat()) {
+    assert(T.getElementSizeInBits() == 8 && "Not a valid MFloat.");
+    return encodeEltType("EltTyMFloat8");
+  }
+
   if (T.isPredicateVector() || T.isSvcount()) {
     switch (T.getElementSizeInBits()) {
     case 8:
@@ -1161,11 +1195,9 @@ void SVEEmitter::createIntrinsic(
   uint64_t Merge = R->getValueAsInt("Merge");
   StringRef MergeSuffix = R->getValueAsString("MergeSuffix");
   uint64_t MemEltType = R->getValueAsInt("MemEltType");
-  std::vector<Record*> FlagsList = R->getValueAsListOfDefs("Flags");
-  std::vector<Record*> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
 
   int64_t Flags = 0;
-  for (auto FlagRec : FlagsList)
+  for (const Record *FlagRec : R->getValueAsListOfDefs("Flags"))
     Flags |= FlagRec->getValueAsInt("Value");
 
   // Create a dummy TypeSpec for non-overloaded builtins.
@@ -1195,10 +1227,10 @@ void SVEEmitter::createIntrinsic(
   for (auto TS : TypeSpecs) {
     // Collate a list of range/option checks for the immediates.
     SmallVector<ImmCheck, 2> ImmChecks;
-    for (auto *R : ImmCheckList) {
-      int64_t ArgIdx = R->getValueAsInt("ImmArgIdx");
-      int64_t EltSizeArgIdx = R->getValueAsInt("TypeContextArgIdx");
-      int64_t Kind = R->getValueAsDef("Kind")->getValueAsInt("Value");
+    for (const Record *ImmR : R->getValueAsListOfDefs("ImmChecks")) {
+      int64_t ArgIdx = ImmR->getValueAsInt("ImmArgIdx");
+      int64_t EltSizeArgIdx = ImmR->getValueAsInt("TypeContextArgIdx");
+      int64_t Kind = ImmR->getValueAsDef("Kind")->getValueAsInt("Value");
       assert(ArgIdx >= 0 && Kind >= 0 &&
              "ImmArgIdx and Kind must be nonnegative");
 
@@ -1296,6 +1328,8 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "#include <arm_bf16.h>\n";
   OS << "#include <arm_vector_types.h>\n";
 
+  OS << "typedef __SVMfloat8_t svmfloat8_t;\n\n";
+
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
   OS << "typedef __clang_svint8x2_t svint8x2_t;\n";
@@ -1338,6 +1372,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svbfloat16x2_t svbfloat16x2_t;\n";
   OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";
   OS << "typedef __clang_svbfloat16x4_t svbfloat16x4_t;\n";
+
+  OS << "typedef __clang_svmfloat8x2_t svmfloat8x2_t;\n";
+  OS << "typedef __clang_svmfloat8x3_t svmfloat8x3_t;\n";
+  OS << "typedef __clang_svmfloat8x4_t svmfloat8x4_t;\n";
 
   OS << "typedef __SVCount_t svcount_t;\n\n";
 

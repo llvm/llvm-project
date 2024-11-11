@@ -342,6 +342,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x63") { // Arm China.
+    return StringSwitch<const char *>(Part)
+        .Case("0x132", "star-mc1")
+        .Default("generic");
+  }
+
   if (Implementer == "0x6d") { // Microsoft Corporation.
     // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
     return StringSwitch<const char *>(Part)
@@ -814,6 +820,8 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake:
     case 0xc5:
+    // Arrowlake U:
+    case 0xb5:
       CPU = "arrowlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE;
@@ -1050,6 +1058,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
     CPU = "k8";
     break;
   case 16:
+  case 18:
     CPU = "amdfam10";
     *Type = X86::AMDFAM10H; // "amdfam10"
     switch (Model) {
@@ -1832,6 +1841,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["cmpccxadd"]  = HasLeaf7Subleaf1 && ((EAX >> 7) & 1);
   Features["hreset"]     = HasLeaf7Subleaf1 && ((EAX >> 22) & 1);
   Features["avxifma"]    = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
+  Features["movrs"] = HasLeaf7Subleaf1 && ((EAX >> 31) & 1);
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
@@ -1866,6 +1876,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   Features["widekl"] = HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1);
 
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
+  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
+  Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
+  Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
+
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
@@ -1898,7 +1915,8 @@ const StringMap<bool> sys::getHostCPUFeatures() {
     }
 
 #if defined(__aarch64__)
-  // Keep track of which crypto features we have seen
+  // All of these are "crypto" features, but we must sift out actual features
+  // as the former meaning of "crypto" as a single feature is no more.
   enum { CAP_AES = 0x1, CAP_PMULL = 0x2, CAP_SHA1 = 0x4, CAP_SHA2 = 0x8 };
   uint32_t crypto = 0;
 #endif
@@ -1941,9 +1959,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   }
 
 #if defined(__aarch64__)
-  // If we have all crypto bits we can add the feature
-  if (crypto == (CAP_AES | CAP_PMULL | CAP_SHA1 | CAP_SHA2))
-    Features["crypto"] = true;
+  // LLVM has decided some AArch64 CPUs have all the instructions they _may_
+  // have, as opposed to all the instructions they _must_ have, so allow runtime
+  // information to correct us on that.
+  uint32_t Aes = CAP_AES | CAP_PMULL;
+  uint32_t Sha2 = CAP_SHA1 | CAP_SHA2;
+  Features["aes"] = (crypto & Aes) == Aes;
+  Features["sha2"] = (crypto & Sha2) == Sha2;
 #endif
 
   return Features;
@@ -1952,12 +1974,17 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 const StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
-  if (IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
-    Features["neon"] = true;
-  if (IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE))
-    Features["crc"] = true;
-  if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE))
-    Features["crypto"] = true;
+  // If we're asking the OS at runtime, believe what the OS says
+  Features["neon"] =
+      IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
+  Features["crc"] =
+      IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE);
+
+  // Avoid inferring "crypto" means more than the traditional AES + SHA2
+  bool TradCrypto =
+      IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE);
+  Features["aes"] = TradCrypto;
+  Features["sha2"] = TradCrypto;
 
   return Features;
 }
@@ -1988,7 +2015,8 @@ struct RISCVHwProbe {
 };
 const StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
-                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2044,9 +2072,26 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
+  Features["zve32x"] = ExtMask & (1ULL << 37); // RISCV_HWPROBE_EXT_ZVE32X
+  Features["zve32f"] = ExtMask & (1ULL << 38); // RISCV_HWPROBE_EXT_ZVE32F
+  Features["zve64x"] = ExtMask & (1ULL << 39); // RISCV_HWPROBE_EXT_ZVE64X
+  Features["zve64f"] = ExtMask & (1ULL << 40); // RISCV_HWPROBE_EXT_ZVE64F
+  Features["zve64d"] = ExtMask & (1ULL << 41); // RISCV_HWPROBE_EXT_ZVE64D
+  Features["zimop"] = ExtMask & (1ULL << 42);  // RISCV_HWPROBE_EXT_ZIMOP
+  Features["zca"] = ExtMask & (1ULL << 43);    // RISCV_HWPROBE_EXT_ZCA
+  Features["zcb"] = ExtMask & (1ULL << 44);    // RISCV_HWPROBE_EXT_ZCB
+  Features["zcd"] = ExtMask & (1ULL << 45);    // RISCV_HWPROBE_EXT_ZCD
+  Features["zcf"] = ExtMask & (1ULL << 46);    // RISCV_HWPROBE_EXT_ZCF
+  Features["zcmop"] = ExtMask & (1ULL << 47);  // RISCV_HWPROBE_EXT_ZCMOP
+  Features["zawrs"] = ExtMask & (1ULL << 48);  // RISCV_HWPROBE_EXT_ZAWRS
 
-  // TODO: set unaligned-scalar-mem if RISCV_HWPROBE_KEY_MISALIGNED_PERF returns
-  // RISCV_HWPROBE_MISALIGNED_FAST.
+  // Check whether the processor supports fast misaligned scalar memory access.
+  // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on
+  // Linux 6.11 or later. If it is not recognized, the key field will be cleared
+  // to -1.
+  if (Query[2].Key != -1 &&
+      Query[2].Value == /*RISCV_HWPROBE_MISALIGNED_SCALAR_FAST=*/3)
+    Features["unaligned-scalar-mem"] = true;
 
   return Features;
 }

@@ -471,7 +471,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // by scanRelocations().
   if (ctx.arg.hasDynSymTab)
     for (Symbol *sym : ctx.symtab->getSymbols())
-      sym->isPreemptible = computeIsPreemptible(*sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
 
   // Two text sections may have identical content and relocations but different
   // LSDA, e.g. the two functions may have catch blocks of different types. If a
@@ -542,7 +542,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     });
   } while (repeat);
 
-  log("ICF needed " + Twine(cnt) + " iterations");
+  Log(ctx) << "ICF needed " << Twine(cnt) << " iterations";
 
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {

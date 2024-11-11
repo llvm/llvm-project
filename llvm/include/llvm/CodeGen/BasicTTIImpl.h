@@ -793,6 +793,11 @@ public:
     return false;
   }
 
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const {
+    return false;
+  }
+
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
   InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
                                            bool Extract,
@@ -1555,7 +1560,7 @@ public:
 
     // Assume that target intrinsics are cheap.
     Intrinsic::ID IID = ICA.getID();
-    if (Function::isTargetIntrinsic(IID))
+    if (Intrinsic::isTargetIntrinsic(IID))
       return TargetTransformInfo::TCC_Basic;
 
     if (ICA.isTypeBasedOnly())
@@ -1981,6 +1986,9 @@ public:
     case Intrinsic::cos:
       ISD = ISD::FCOS;
       break;
+    case Intrinsic::sincos:
+      ISD = ISD::FSINCOS;
+      break;
     case Intrinsic::tan:
       ISD = ISD::FTAN;
       break;
@@ -1992,6 +2000,9 @@ public:
       break;
     case Intrinsic::atan:
       ISD = ISD::FATAN;
+      break;
+    case Intrinsic::atan2:
+      ISD = ISD::FATAN2;
       break;
     case Intrinsic::sinh:
       ISD = ISD::FSINH;
