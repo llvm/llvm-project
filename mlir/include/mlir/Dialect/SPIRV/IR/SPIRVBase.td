@@ -4466,6 +4466,8 @@ def SPIRV_OC_OpAssumeTrueKHR                : I32EnumAttrCase<"OpAssumeTrueKHR",
 def SPIRV_OC_OpAtomicFAddEXT                : I32EnumAttrCase<"OpAtomicFAddEXT", 6035>;
 def SPIRV_OC_OpConvertFToBF16INTEL          : I32EnumAttrCase<"OpConvertFToBF16INTEL", 6116>;
 def SPIRV_OC_OpConvertBF16ToFINTEL          : I32EnumAttrCase<"OpConvertBF16ToFINTEL", 6117>;
+def SPIRV_OC_OpControlBarrierArriveINTEL    : I32EnumAttrCase<"OpControlBarrierArriveINTEL", 6142>;
+def SPIRV_OC_OpControlBarrierWaitINTEL      : I32EnumAttrCase<"OpControlBarrierWaitINTEL", 6143>;
 def SPIRV_OC_OpGroupIMulKHR                 : I32EnumAttrCase<"OpGroupIMulKHR", 6401>;
 def SPIRV_OC_OpGroupFMulKHR                 : I32EnumAttrCase<"OpGroupFMulKHR", 6402>;
 
@@ -4556,7 +4558,9 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpCooperativeMatrixLengthKHR, SPIRV_OC_OpSubgroupBlockReadINTEL,
       SPIRV_OC_OpSubgroupBlockWriteINTEL, SPIRV_OC_OpAssumeTrueKHR,
       SPIRV_OC_OpAtomicFAddEXT, SPIRV_OC_OpConvertFToBF16INTEL,
-      SPIRV_OC_OpConvertBF16ToFINTEL, SPIRV_OC_OpGroupIMulKHR,
+      SPIRV_OC_OpConvertBF16ToFINTEL,
+      SPIRV_OC_OpControlBarrierArriveINTEL, SPIRV_OC_OpControlBarrierWaitINTEL,
+      SPIRV_OC_OpGroupIMulKHR,
       SPIRV_OC_OpGroupFMulKHR
     ]>;
 
