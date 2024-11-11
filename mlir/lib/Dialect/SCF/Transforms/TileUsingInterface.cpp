@@ -1710,7 +1710,8 @@ static FailureOr<OpOperand *> getConsumerFromLoopUses(RewriterBase &rewriter,
   for (OpOperand &opOperand : val.getUses()) {
     Operation *consumerOp = opOperand.getOwner();
     // Step 1. Check if the user is tilable.
-    if (!isa<TilingInterface, DestinationStyleOpInterface>(consumerOp)) {
+    if (!isa<TilingInterface>(consumerOp) ||
+        !isa<DestinationStyleOpInterface>(consumerOp)) {
       // TODO: We have to init result of consumer before scf.for, use
       // DestinationStyleOpInterface to get result shape from init for now. Add
       // support for other op such as op has InferTypeOpInterface.
