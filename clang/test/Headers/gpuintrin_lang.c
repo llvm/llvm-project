@@ -13,7 +13,7 @@
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -cl-std=CL2.0 -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -cl-std=CL3.0 -triple amdgcn -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENCL
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
@@ -62,7 +62,7 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // OPENMP-NEXT:    ret i32 [[TMP0]]
 //
 // C89-LABEL: define dso_local i32 @foo(
-// C89-SAME: ) #[[ATTR0:[0-9]+]] {
+// C89-SAME: ) #[[ATTR2:[0-9]+]] {
 // C89-NEXT:  [[ENTRY:.*:]]
 // C89-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4, addrspace(5)
 // C89-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
