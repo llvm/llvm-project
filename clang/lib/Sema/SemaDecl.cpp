@@ -16687,7 +16687,6 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     }
   }
 
-  LazyProcessLifetimeCaptureByParams(FD);
   inferLifetimeBoundAttribute(FD);
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
 

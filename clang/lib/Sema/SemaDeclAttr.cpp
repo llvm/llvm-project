@@ -14,7 +14,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -3868,113 +3867,6 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Context, AL, EncodingIndices.data(), EncodingIndices.size()));
 }
 
-LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
-                                                        StringRef ParamName) {
-  // Atleast one capture by is required.
-  if (AL.getNumArgs() == 0) {
-    Diag(AL.getLoc(), diag::err_capture_by_attribute_no_entity)
-        << AL.getRange();
-    return nullptr;
-  }
-  SmallVector<IdentifierInfo *, 1> ParamIdents;
-  SmallVector<SourceLocation, 1> ParamLocs;
-  for (unsigned I = 0; I < AL.getNumArgs(); ++I) {
-    if (AL.isArgExpr(I)) {
-      Expr *E = AL.getArgAsExpr(I);
-      Diag(E->getExprLoc(), diag::err_capture_by_attribute_argument_unknown)
-          << E << E->getExprLoc();
-      continue;
-    }
-    assert(AL.isArgIdent(I));
-    IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
-    if (IdLoc->Ident->getName() == ParamName) {
-      Diag(IdLoc->Loc, diag::err_capture_by_references_itself) << IdLoc->Loc;
-      continue;
-    }
-    ParamIdents.push_back(IdLoc->Ident);
-    ParamLocs.push_back(IdLoc->Loc);
-  }
-  SmallVector<int, 1> FakeParamIndices(ParamIdents.size(),
-                                       LifetimeCaptureByAttr::INVALID);
-  LifetimeCaptureByAttr *CapturedBy = ::new (Context) LifetimeCaptureByAttr(
-      Context, AL, FakeParamIndices.data(), FakeParamIndices.size());
-  CapturedBy->setArgs(std::move(ParamIdents), std::move(ParamLocs));
-  return CapturedBy;
-}
-
-static void HandleLifetimeCaptureByAttr(Sema &S, Decl *D,
-                                        const ParsedAttr &AL) {
-  // Do not allow multiple attributes.
-  if (D->hasAttr<LifetimeCaptureByAttr>()) {
-    S.Diag(AL.getLoc(), diag::err_capture_by_attribute_multiple)
-        << AL.getRange();
-    return;
-  }
-  auto *PVD = dyn_cast<ParmVarDecl>(D);
-  assert(PVD);
-  auto *CaptureByAttr = S.ParseLifetimeCaptureByAttr(AL, PVD->getName());
-  if (CaptureByAttr)
-    D->addAttr(CaptureByAttr);
-}
-
-void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
-  bool HasImplicitThisParam = isInstanceMethod(FD);
-
-  llvm::StringMap<int> NameIdxMapping;
-  NameIdxMapping["global"] = LifetimeCaptureByAttr::GLOBAL;
-  NameIdxMapping["unknown"] = LifetimeCaptureByAttr::UNKNOWN;
-  int Idx = 0;
-  if (HasImplicitThisParam) {
-    NameIdxMapping["this"] = 0;
-    Idx++;
-  }
-  for (const ParmVarDecl *PVD : FD->parameters())
-    NameIdxMapping[PVD->getName()] = Idx++;
-  auto DisallowReservedParams = [&](StringRef Reserved) {
-    for (const ParmVarDecl *PVD : FD->parameters())
-      if (PVD->getName() == Reserved)
-        Diag(PVD->getLocation(), diag::err_capture_by_param_uses_reserved_name)
-            << (PVD->getName() == "unknown");
-  };
-  auto HandleCaptureBy = [&](LifetimeCaptureByAttr *CapturedBy) {
-    if (!CapturedBy)
-      return;
-    const auto &Entities = CapturedBy->getArgIdents();
-    for (size_t I = 0; I < Entities.size(); ++I) {
-      StringRef Name = Entities[I]->getName();
-      auto It = NameIdxMapping.find(Name);
-      if (It == NameIdxMapping.end()) {
-        auto Loc = CapturedBy->getArgLocs()[I];
-        if (!HasImplicitThisParam && Name == "this")
-          Diag(Loc, diag::err_capture_by_implicit_this_not_available) << Loc;
-        else
-          Diag(Loc, diag::err_capture_by_attribute_argument_unknown)
-              << Entities[I] << Loc;
-        continue;
-      }
-      if (Name == "unknown" || Name == "global")
-        DisallowReservedParams(Name);
-      CapturedBy->setParamIdx(I, It->second);
-    }
-  };
-  for (ParmVarDecl *PVD : FD->parameters())
-    HandleCaptureBy(PVD->getAttr<LifetimeCaptureByAttr>());
-  if (!HasImplicitThisParam)
-    return;
-  TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return;
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>();
-    if (!A)
-      continue;
-    HandleCaptureBy(const_cast<LifetimeCaptureByAttr *>(A));
-  }
-}
-
 static bool isFunctionLike(const Type &T) {
   // Check for explicit function types.
   // 'called_once' is only supported in Objective-C and it has
@@ -6751,9 +6643,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Callback:
     handleCallbackAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_LifetimeCaptureBy:
-    HandleLifetimeCaptureByAttr(S, D, AL);
     break;
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
