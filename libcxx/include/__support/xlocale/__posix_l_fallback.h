@@ -20,7 +20,7 @@
 #include <string.h>
 #include <time.h>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <wchar.h>
 #  include <wctype.h>
 #endif
@@ -37,7 +37,7 @@ inline _LIBCPP_HIDE_FROM_ABI int toupper_l(int __c, locale_t) { return ::toupper
 
 inline _LIBCPP_HIDE_FROM_ABI int tolower_l(int __c, locale_t) { return ::tolower(__c); }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI int iswalpha_l(wint_t __c, locale_t) { return ::iswalpha(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int iswblank_l(wint_t __c, locale_t) { return ::iswblank(__c); }
@@ -61,7 +61,7 @@ inline _LIBCPP_HIDE_FROM_ABI int iswxdigit_l(wint_t __c, locale_t) { return ::is
 inline _LIBCPP_HIDE_FROM_ABI wint_t towupper_l(wint_t __c, locale_t) { return ::towupper(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI wint_t towlower_l(wint_t __c, locale_t) { return ::towlower(__c); }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 inline _LIBCPP_HIDE_FROM_ABI int strcoll_l(const char* __s1, const char* __s2, locale_t) {
   return ::strcoll(__s1, __s2);
@@ -76,7 +76,7 @@ strftime_l(char* __s, size_t __max, const char* __format, const struct tm* __tm,
   return ::strftime(__s, __max, __format, __tm);
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI int wcscoll_l(const wchar_t* __ws1, const wchar_t* __ws2, locale_t) {
   return ::wcscoll(__ws1, __ws2);
 }
@@ -84,6 +84,6 @@ inline _LIBCPP_HIDE_FROM_ABI int wcscoll_l(const wchar_t* __ws1, const wchar_t* 
 inline _LIBCPP_HIDE_FROM_ABI size_t wcsxfrm_l(wchar_t* __dest, const wchar_t* __src, size_t __n, locale_t) {
   return ::wcsxfrm(__dest, __src, __n);
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 #endif // _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H

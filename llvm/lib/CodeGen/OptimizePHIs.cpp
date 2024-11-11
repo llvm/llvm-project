@@ -81,9 +81,6 @@ INITIALIZE_PASS(OptimizePHIsLegacy, DEBUG_TYPE,
 
 PreservedAnalyses OptimizePHIsPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   OptimizePHIs OP;
   if (!OP.run(MF))
     return PreservedAnalyses::all();

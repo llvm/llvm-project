@@ -1217,8 +1217,7 @@ void Writer::createMiscChunks() {
     createSEHTable();
 
   // Create /guard:cf tables if requested.
-  if (config->guardCF != GuardCFLevel::Off)
-    createGuardCFTables();
+  createGuardCFTables();
 
   if (isArm64EC(config->machine))
     createECChunks();
@@ -1978,6 +1977,20 @@ void Writer::markSymbolsWithRelocations(ObjFile *file,
 // table.
 void Writer::createGuardCFTables() {
   Configuration *config = &ctx.config;
+
+  if (config->guardCF == GuardCFLevel::Off) {
+    // MSVC marks the entire image as instrumented if any input object was built
+    // with /guard:cf.
+    for (ObjFile *file : ctx.objFileInstances) {
+      if (file->hasGuardCF()) {
+        Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
+        cast<DefinedAbsolute>(flagSym)->setVA(
+            uint32_t(GuardFlags::CF_INSTRUMENTED));
+        break;
+      }
+    }
+    return;
+  }
 
   SymbolRVASet addressTakenSyms;
   SymbolRVASet giatsRVASet;

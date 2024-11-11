@@ -240,7 +240,6 @@ public:
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
-
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -330,6 +329,12 @@ public:
 
     Type *Ty = RdxDesc.getRecurrenceType();
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
+      return false;
+
+    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+    // expanded.
+    // TODO: Promote f16/bf16 fmin/fmax reductions
+    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
       return false;
 
     switch (RdxDesc.getRecurrenceKind()) {
@@ -429,6 +434,9 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
+
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const;
 };
 
 } // end namespace llvm

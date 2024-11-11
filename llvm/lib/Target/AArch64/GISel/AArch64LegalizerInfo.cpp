@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64LegalizerInfo.h"
-#include "AArch64RegisterBankInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -24,7 +23,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -933,9 +931,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         });
   }
 
+  // TODO : nxv4s16, nxv2s16, nxv2s32
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+      .legalFor(HasSVE, {{s16, nxv16s8, s64},
+                         {s16, nxv8s16, s64},
+                         {s32, nxv4s32, s64},
+                         {s64, nxv2s64, s64}})
       .unsupportedIf([=](const LegalityQuery &Query) {
         const LLT &EltTy = Query.Types[1].getElementType();
+        if (Query.Types[1].isScalableVector())
+          return false;
         return Query.Types[0] != EltTy;
       })
       .minScalar(2, s64)
@@ -949,22 +954,26 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             // We want to promote to <M x s1> to <M x s64> if that wouldn't
             // cause the total vec size to be > 128b.
-            return Query.Types[1].getNumElements() <= 2;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 2;
           },
           0, s64)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[1].getNumElements() <= 4;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 4;
           },
           0, s32)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[1].getNumElements() <= 8;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 8;
           },
           0, s16)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[1].getNumElements() <= 16;
+            return Query.Types[1].isFixedVector() &&
+                   Query.Types[1].getNumElements() <= 16;
           },
           0, s8)
       .minScalarOrElt(0, s8) // Worst case, we need at least s8.
@@ -1711,6 +1720,14 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_UMULL);
   case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_SMULL);
+  case Intrinsic::aarch64_neon_abs: {
+    // Lower the intrinsic to G_ABS.
+    MachineIRBuilder MIB(MI);
+    MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  }
+
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
@@ -2170,10 +2187,13 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
 
 bool AArch64LegalizerInfo::legalizeExtractVectorElt(
     MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
-  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
+  const GExtractVectorElement *Element = cast<GExtractVectorElement>(&MI);
   auto VRegAndVal =
-      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      getIConstantVRegValWithLookThrough(Element->getIndexReg(), MRI);
   if (VRegAndVal)
+    return true;
+  LLT VecTy = MRI.getType(Element->getVectorReg());
+  if (VecTy.isScalableVector())
     return true;
   return Helper.lowerExtractInsertVectorElt(MI) !=
          LegalizerHelper::LegalizeResult::UnableToLegalize;

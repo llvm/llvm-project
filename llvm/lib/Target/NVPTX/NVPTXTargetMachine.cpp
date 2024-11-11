@@ -302,6 +302,8 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // be eliminated by SROA.
   addPass(createSROAPass());
   addPass(createNVPTXLowerAllocaPass());
+  // TODO: Consider running InferAddressSpaces during opt, earlier in the
+  // compilation flow.
   addPass(createInferAddressSpacesPass());
   addPass(createNVPTXAtomicLowerPass());
 }
