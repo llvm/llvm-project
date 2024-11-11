@@ -532,7 +532,7 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
   let arguments = (ins type:$arg, EnumProperty<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$arg attr-dict `` custom<OverflowFlags>($overflowFlags) `:` type($arg) `to` type($res)";
+  let assemblyFormat = "$arg `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($arg) `to` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>(
