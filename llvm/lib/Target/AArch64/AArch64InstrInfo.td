@@ -1870,7 +1870,7 @@ let Predicates = [HasPAuth] in {
   // This directly manipulates x16/x17, which are the only registers the OS
   // guarantees are safe to use for sensitive operations.
   def BRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                                GPR64:$AddrDisc), []>, Sched<[]> {
+                                GPR64noip:$AddrDisc), []>, Sched<[]> {
     let isCodeGenOnly = 1;
     let hasNoSchedulingInfo = 1;
     let hasSideEffects = 1;
@@ -1881,7 +1881,7 @@ let Predicates = [HasPAuth] in {
     let isBarrier = 1;
     let isIndirectBranch = 1;
     let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
-    let Defs = [X16,X17];
+    let Defs = [X17];
   }
 
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {

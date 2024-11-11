@@ -163,11 +163,23 @@ public:
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
   // Emit the sequence to compute the discriminator.
+  //
   // ScratchReg should be x16/x17.
+  //
   // The returned register is either unmodified AddrDisc or x16/x17.
+  //
   // If the expanded pseudo is allowed to clobber AddrDisc register, setting
   // MayUseAddrAsScratch may save one MOV instruction, provided the address
-  // is already in x16/x17.
+  // is already in x16/x17 (i.e. return x16/x17 which is the *modified* AddrDisc
+  // register at the same time):
+  //
+  //   mov   x17, x16
+  //   movk  x17, #1234, lsl #48
+  //   ; x16 is not used anymore
+  //
+  // can be replaced by
+  //
+  //   movk  x16, #1234, lsl #48
   Register emitPtrauthDiscriminator(uint16_t Disc, Register AddrDisc,
                                     Register ScratchReg,
                                     bool MayUseAddrAsScratch = false);
@@ -1737,6 +1749,7 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
                                                      bool MayUseAddrAsScratch) {
+  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17);
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -2062,10 +2075,13 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   if (BrTarget == AddrDisc)
     report_fatal_error("Branch target is signed with its own value");
 
-  // x16 and x17 are implicit-def'ed by MI, and AddrDisc is not used as any
-  // other input, so try to save one MOV by setting MayUseAddrAsScratch.
+  // If we are printing BLRA pseudo instruction, then x16 and x17 are
+  // implicit-def'ed by the MI and AddrDisc is not used as any other input, so
+  // try to save one MOV by setting MayUseAddrAsScratch.
+  // Unlike BLRA, BRA pseudo is used to perform computed goto, and thus not
+  // declared as clobbering x16/x17.
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
-                                              /*MayUseAddrAsScratch=*/true);
+                                              /*MayUseAddrAsScratch=*/IsCall);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
