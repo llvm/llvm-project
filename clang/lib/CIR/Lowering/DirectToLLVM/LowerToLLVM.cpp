@@ -4305,6 +4305,37 @@ public:
     return mlir::success();
   }
 };
+class CIRSignBitOpLowering : public mlir::OpConversionPattern<cir::SignBitOp> {
+public:
+  using OpConversionPattern<cir::SignBitOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SignBitOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    assert(!::cir::MissingFeatures::isPPC_FP128Ty());
+
+    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+    int width = layout.getTypeSizeInBits(op.getInput().getType());
+    if (auto longDoubleType =
+            mlir::dyn_cast<cir::LongDoubleType>(op.getInput().getType())) {
+      if (mlir::isa<cir::FP80Type>(longDoubleType.getUnderlying())) {
+        // see https://github.com/llvm/clangir/issues/1057
+        llvm_unreachable("NYI");
+      }
+    }
+    auto intTy = mlir::IntegerType::get(rewriter.getContext(), width);
+    auto bitcast = rewriter.create<mlir::LLVM::BitcastOp>(op->getLoc(), intTy,
+                                                          adaptor.getInput());
+    auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op->getLoc(), intTy, 0);
+    auto cmpResult = rewriter.create<mlir::LLVM::ICmpOp>(
+        op.getLoc(), mlir::LLVM::ICmpPredicate::slt, bitcast.getResult(), zero);
+    auto converted = rewriter.create<mlir::LLVM::ZExtOp>(
+        op.getLoc(), mlir::IntegerType::get(rewriter.getContext(), 32),
+        cmpResult);
+    rewriter.replaceOp(op, converted);
+    return mlir::success();
+  }
+};
 
 void populateCIRToLLVMConversionPatterns(
     mlir::RewritePatternSet &patterns, mlir::TypeConverter &converter,
@@ -4353,7 +4384,7 @@ void populateCIRToLLVMConversionPatterns(
       CIRAssumeLowering, CIRAssumeAlignedLowering, CIRAssumeSepStorageLowering,
       CIRBaseClassAddrOpLowering, CIRDerivedClassAddrOpLowering,
       CIRVTTAddrPointOpLowering, CIRIsFPClassOpLowering, CIRAbsOpLowering,
-      CIRMemMoveOpLowering, CIRMemsetOpLowering
+      CIRMemMoveOpLowering, CIRMemsetOpLowering, CIRSignBitOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST

@@ -216,6 +216,13 @@ static mlir::Value emitFromInt(CIRGenFunction &CGF, mlir::Value v, QualType t,
   return v;
 }
 
+static mlir::Value emitSignBit(mlir::Location loc, CIRGenFunction &CGF,
+                               mlir::Value val) {
+  assert(!::cir::MissingFeatures::isPPC_FP128Ty());
+  auto ret = CGF.getBuilder().createSignBit(loc, val);
+  return ret->getResult(0);
+}
+
 static Address checkAtomicAlignment(CIRGenFunction &CGF, const CallExpr *E) {
   ASTContext &ctx = CGF.getContext();
   Address ptr = CGF.emitPointerWithAlignment(E->getArg(0));
@@ -1700,8 +1707,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
-  case Builtin::BI__builtin_signbitl:
-    llvm_unreachable("BI__builtin_signbit like NYI");
+  case Builtin::BI__builtin_signbitl: {
+    auto loc = getLoc(E->getBeginLoc());
+    return RValue::get(builder.createZExtOrBitCast(
+        loc, emitSignBit(loc, *this, emitScalarExpr(E->getArg(0))),
+        ConvertType(E->getType())));
+  }
 
   case Builtin::BI__warn_memset_zero_len:
     llvm_unreachable("BI__warn_memset_zero_len NYI");

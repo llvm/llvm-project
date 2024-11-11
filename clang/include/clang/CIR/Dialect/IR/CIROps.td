@@ -5127,4 +5127,17 @@ def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg",
   let hasVerifier = 0;
 }
 
+def SignBitOp : CIR_Op<"signbit", [Pure]> {
+  let summary = "Checks the sign of a floating-point number";
+  let description = [{
+    It returns a non-zero value (true) if the number is negative
+    and zero (false) if the number is positive or zero.
+  }];
+  let arguments = (ins CIR_AnyFloat:$input);
+  let results = (outs SInt32:$res);
+  let assemblyFormat = [{
+      $input attr-dict `:` type($input) `->` qualified(type($res))
+  }];
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

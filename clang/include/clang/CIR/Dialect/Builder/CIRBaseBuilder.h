@@ -397,6 +397,11 @@ public:
     return create<cir::MemCpyOp>(loc, dst, src, len);
   }
 
+  cir::SignBitOp createSignBit(mlir::Location loc, mlir::Value val) {
+    auto resTy = cir::IntType::get(getContext(), 32, true);
+    return create<cir::SignBitOp>(loc, resTy, val);
+  }
+
   mlir::Value createSub(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
                         bool hasNSW = false) {
     auto op = create<cir::BinOp>(lhs.getLoc(), lhs.getType(),
