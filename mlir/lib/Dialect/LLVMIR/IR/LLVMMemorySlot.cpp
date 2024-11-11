@@ -904,6 +904,14 @@ std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemcpyInlineOp op) {
   return memIntrLen.getZExtValue();
 }
 
+template <>
+std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemsetInlineOp op) {
+  APInt memIntrLen = op.getLen();
+  if (memIntrLen.getBitWidth() > 64)
+    return {};
+  return memIntrLen.getZExtValue();
+}
+
 } // namespace
 
 /// Returns whether one can be sure the memory intrinsic does not write outside
@@ -931,23 +939,37 @@ static bool areAllIndicesI32(const DestructurableMemorySlot &slot) {
 }
 
 //===----------------------------------------------------------------------===//
-// Interfaces for memset
+// Interfaces for memset && memset.inline
 //===----------------------------------------------------------------------===//
 
-bool LLVM::MemsetOp::loadsFrom(const MemorySlot &slot) { return false; }
+template <class MemsetLike>
+static bool memsetCanRewire(MemsetLike op, const DestructurableMemorySlot &slot,
+                            SmallPtrSetImpl<Attribute> &usedIndices,
+                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                            const DataLayout &dataLayout) {
+  if (&slot.elemType.getDialect() != op.getOperation()->getDialect())
+    return false;
 
-bool LLVM::MemsetOp::storesTo(const MemorySlot &slot) {
-  return getDst() == slot.ptr;
+  if (op.getIsVolatile())
+    return false;
+
+  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
+    return false;
+
+  if (!areAllIndicesI32(slot))
+    return false;
+
+  return definitelyWritesOnlyWithinSlot(op, slot, dataLayout);
 }
 
-Value LLVM::MemsetOp::getStored(const MemorySlot &slot, OpBuilder &builder,
-                                Value reachingDef,
-                                const DataLayout &dataLayout) {
+template <class MemsetLike>
+static Value memsetGetStored(MemsetLike op, const MemorySlot &slot,
+                             OpBuilder &builder) {
   // TODO: Support non-integer types.
   return TypeSwitch<Type, Value>(slot.elemType)
       .Case([&](IntegerType intType) -> Value {
         if (intType.getWidth() == 8)
-          return getVal();
+          return op.getVal();
 
         assert(intType.getWidth() % 8 == 0);
 
@@ -955,14 +977,14 @@ Value LLVM::MemsetOp::getStored(const MemorySlot &slot, OpBuilder &builder,
         // or-ing it with the previous value.
         uint64_t coveredBits = 8;
         Value currentValue =
-            builder.create<LLVM::ZExtOp>(getLoc(), intType, getVal());
+            builder.create<LLVM::ZExtOp>(op.getLoc(), intType, op.getVal());
         while (coveredBits < intType.getWidth()) {
-          Value shiftBy =
-              builder.create<LLVM::ConstantOp>(getLoc(), intType, coveredBits);
+          Value shiftBy = builder.create<LLVM::ConstantOp>(op.getLoc(), intType,
+                                                           coveredBits);
           Value shifted =
-              builder.create<LLVM::ShlOp>(getLoc(), currentValue, shiftBy);
+              builder.create<LLVM::ShlOp>(op.getLoc(), currentValue, shiftBy);
           currentValue =
-              builder.create<LLVM::OrOp>(getLoc(), currentValue, shifted);
+              builder.create<LLVM::OrOp>(op.getLoc(), currentValue, shifted);
           coveredBits *= 2;
         }
 
@@ -974,10 +996,12 @@ Value LLVM::MemsetOp::getStored(const MemorySlot &slot, OpBuilder &builder,
       });
 }
 
-bool LLVM::MemsetOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses,
-    const DataLayout &dataLayout) {
+template <class MemsetLike>
+static bool
+memsetCanUsesBeRemoved(MemsetLike op, const MemorySlot &slot,
+                       const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                       SmallVectorImpl<OpOperand *> &newBlockingUses,
+                       const DataLayout &dataLayout) {
   // TODO: Support non-integer types.
   bool canConvertType =
       TypeSwitch<Type, bool>(slot.elemType)
@@ -988,62 +1012,74 @@ bool LLVM::MemsetOp::canUsesBeRemoved(
   if (!canConvertType)
     return false;
 
-  if (getIsVolatile())
+  if (op.getIsVolatile())
     return false;
 
-  return getStaticMemIntrLen(*this) == dataLayout.getTypeSize(slot.elemType);
+  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
 }
-
-DeletionKind LLVM::MemsetOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder, Value reachingDefinition,
-    const DataLayout &dataLayout) {
-  return DeletionKind::Delete;
+namespace {
+template <class MemsetLike>
+void createMemsetLenAttr(MemsetLike op, IntegerAttr &memsetLenAttr) {
+  bool successfulMatch =
+      matchPattern(op.getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
+  (void)successfulMatch;
+  assert(successfulMatch);
 }
-
-LogicalResult LLVM::MemsetOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
-    const DataLayout &dataLayout) {
-  return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
+template <>
+void createMemsetLenAttr(LLVM::MemsetInlineOp op, IntegerAttr &memsetLenAttr) {
+  memsetLenAttr = op.getLenAttr();
 }
+template <class MemsetLike>
+void createMemsetLikeToReplace(OpBuilder &builder, MemsetLike toReplace,
+                               IntegerAttr memsetLenAttr,
+                               uint64_t newMemsetSize,
+                               DenseMap<Attribute, MemorySlot> &subslots,
+                               Attribute index) {
 
-bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
-                               SmallPtrSetImpl<Attribute> &usedIndices,
-                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
-                               const DataLayout &dataLayout) {
-  if (&slot.elemType.getDialect() != getOperation()->getDialect())
-    return false;
+  Value newMemsetSizeValue =
+      builder
+          .create<LLVM::ConstantOp>(
+              toReplace.getLen().getLoc(),
+              IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize))
+          .getResult();
 
-  if (getIsVolatile())
-    return false;
-
-  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
-    return false;
-
-  if (!areAllIndicesI32(slot))
-    return false;
-
-  return definitelyWritesOnlyWithinSlot(*this, slot, dataLayout);
+  builder.create<LLVM::MemsetOp>(toReplace.getLoc(), subslots.at(index).ptr,
+                                 toReplace.getVal(), newMemsetSizeValue,
+                                 toReplace.getIsVolatile());
 }
+template <>
+void createMemsetLikeToReplace(OpBuilder &builder,
+                               LLVM::MemsetInlineOp toReplace,
+                               IntegerAttr memsetLenAttr,
+                               uint64_t newMemsetSize,
+                               DenseMap<Attribute, MemorySlot> &subslots,
+                               Attribute index) {
 
-DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
-                                    DenseMap<Attribute, MemorySlot> &subslots,
-                                    OpBuilder &builder,
-                                    const DataLayout &dataLayout) {
+  auto newMemsetSizeValue =
+      IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize);
+
+  builder.create<LLVM::MemsetInlineOp>(
+      toReplace.getLoc(), subslots.at(index).ptr, toReplace.getVal(),
+      newMemsetSizeValue, toReplace.getIsVolatile());
+}
+} // namespace
+template <class MemsetLike>
+static DeletionKind
+memsetRewire(MemsetLike op, const DestructurableMemorySlot &slot,
+             DenseMap<Attribute, MemorySlot> &subslots, OpBuilder &builder,
+             const DataLayout &dataLayout) {
+
   std::optional<DenseMap<Attribute, Type>> types =
       cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
 
   IntegerAttr memsetLenAttr;
-  bool successfulMatch =
-      matchPattern(getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
-  (void)successfulMatch;
-  assert(successfulMatch);
+  createMemsetLenAttr(op, memsetLenAttr);
 
   bool packed = false;
   if (auto structType = dyn_cast<LLVM::LLVMStructType>(slot.elemType))
     packed = structType.isPacked();
 
-  Type i32 = IntegerType::get(getContext(), 32);
+  Type i32 = IntegerType::get(op.getContext(), 32);
   uint64_t memsetLen = memsetLenAttr.getValue().getZExtValue();
   uint64_t covered = 0;
   for (size_t i = 0; i < types->size(); i++) {
@@ -1063,22 +1099,111 @@ DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
     // Otherwise, only compute its offset within the original memset.
     if (subslots.contains(index)) {
       uint64_t newMemsetSize = std::min(memsetLen - covered, typeSize);
-
-      Value newMemsetSizeValue =
-          builder
-              .create<LLVM::ConstantOp>(
-                  getLen().getLoc(),
-                  IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize))
-              .getResult();
-
-      builder.create<LLVM::MemsetOp>(getLoc(), subslots.at(index).ptr, getVal(),
-                                     newMemsetSizeValue, getIsVolatile());
+      createMemsetLikeToReplace(builder, op, memsetLenAttr, newMemsetSize,
+                                subslots, index);
     }
 
     covered += typeSize;
   }
 
   return DeletionKind::Delete;
+}
+
+bool LLVM::MemsetOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool LLVM::MemsetOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value LLVM::MemsetOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                                Value reachingDef,
+                                const DataLayout &dataLayout) {
+  return memsetGetStored(*this, slot, builder);
+}
+
+bool LLVM::MemsetOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memsetCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
+}
+
+DeletionKind LLVM::MemsetOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+LogicalResult LLVM::MemsetOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
+}
+
+bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
+                               SmallPtrSetImpl<Attribute> &usedIndices,
+                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                               const DataLayout &dataLayout) {
+  return memsetCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
+}
+
+DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
+                                    DenseMap<Attribute, MemorySlot> &subslots,
+                                    OpBuilder &builder,
+                                    const DataLayout &dataLayout) {
+  return memsetRewire(*this, slot, subslots, builder, dataLayout);
+}
+
+bool LLVM::MemsetInlineOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool LLVM::MemsetInlineOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value LLVM::MemsetInlineOp::getStored(const MemorySlot &slot,
+                                      OpBuilder &builder, Value reachingDef,
+                                      const DataLayout &dataLayout) {
+  return memsetGetStored(*this, slot, builder);
+}
+
+bool LLVM::MemsetInlineOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memsetCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
+}
+
+DeletionKind LLVM::MemsetInlineOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+LogicalResult LLVM::MemsetInlineOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
+}
+
+bool LLVM::MemsetInlineOp::canRewire(
+    const DestructurableMemorySlot &slot,
+    SmallPtrSetImpl<Attribute> &usedIndices,
+    SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return memsetCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
+}
+
+DeletionKind
+LLVM::MemsetInlineOp::rewire(const DestructurableMemorySlot &slot,
+                             DenseMap<Attribute, MemorySlot> &subslots,
+                             OpBuilder &builder, const DataLayout &dataLayout) {
+  return memsetRewire(*this, slot, subslots, builder, dataLayout);
 }
 
 //===----------------------------------------------------------------------===//
