@@ -972,6 +972,7 @@ private:
     CallableInfo &CurrentCaller;
     ViolationSite VSite;
     const Expr *TrailingRequiresClause = nullptr;
+    const Expr *NoexceptExpr = nullptr;
 
     FunctionBodyASTVisitor(Analyzer &Outer,
                            PendingFunctionAnalysis &CurrentFunction,
@@ -986,8 +987,21 @@ private:
       if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
         followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
 
-      if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl))
+      if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl)) {
         TrailingRequiresClause = FD->getTrailingRequiresClause();
+
+        // Note that FD->getType->getAs<FunctionProtoType>() can yield a
+        // noexcept Expr which has been boiled down to a constant expression.
+        // Going through the TypeSourceInfo obtains the actual expression which
+        // will be traversed as part of the function -- unless we capture it
+        // here and have TraverseStmt skip it.
+        if (TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
+          if (FunctionProtoTypeLoc TL =
+                  TSI->getTypeLoc().getAs<FunctionProtoTypeLoc>())
+            if (const FunctionProtoType *FPT = TL.getTypePtr())
+              NoexceptExpr = FPT->getNoexceptExpr();
+        }
+      }
 
       // Do an AST traversal of the function/block body
       TraverseDecl(const_cast<Decl *>(CurrentCaller.CDecl));
@@ -1269,7 +1283,8 @@ private:
       // We skip the traversal of lambdas (beyond their captures, see
       // TraverseLambdaExpr below), so just caching this from our constructor
       // should suffice.
-      if (Statement != TrailingRequiresClause)
+      // The exact same is true for a conditional `noexcept()` clause.
+      if (Statement != TrailingRequiresClause && Statement != NoexceptExpr)
         return Base::TraverseStmt(Statement);
       return true;
     }
