@@ -3,9 +3,9 @@
 
 # RUN: yaml2obj %t/blob.yaml -o %t/blob.o
 # RUN: yaml2obj %t/v0-lp64d.yaml -o %t/v0-lp64d.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnu %t/start.s -o %t/v1-lp64d.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnu --mattr=+d %t/start.s -o %t/v1-lp64d.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnusf %t/start.s -o %t/v1-lp64s.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnu %t/bar.s -o %t/v1-b-lp64d.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-gnu --mattr=+d %t/bar.s -o %t/v1-b-lp64d.o
 
 ## Check that binary input results in e_flags=0 output.
 # RUN: ld.lld -m elf64loongarch -b binary %t/blob.bin -o %t/blob.out

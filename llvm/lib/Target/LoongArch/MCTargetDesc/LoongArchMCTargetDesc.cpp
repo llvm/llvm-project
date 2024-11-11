@@ -55,7 +55,7 @@ static MCInstrInfo *createLoongArchMCInstrInfo() {
 static MCSubtargetInfo *
 createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty() || CPU == "generic")
-    CPU = TT.isArch64Bit() ? "la464" : "generic-la32";
+    CPU = TT.isArch64Bit() ? "generic-la64" : "generic-la32";
   return createLoongArchMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 

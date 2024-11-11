@@ -37,7 +37,7 @@
 # LA32-NEXT:   StringTableSectionIndex:
 # LA32-NEXT: }
 
-# RUN: llvm-mc -filetype=obj -triple=loongarch64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+d %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj --file-headers %t | FileCheck --check-prefix=LA64 %s
 # RUN: ld.lld -m elf64loongarch %t.o -o %t
