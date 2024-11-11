@@ -35,9 +35,9 @@ entry:
 !12 = !DILocation(line: 3, column: 3, scope: !8)
 
 ; ASM32:               .file   "1.c"
-; ASM32-NEXT:          .machine "PWR7"
 ; ASM32-NEXT:          .csect ..text..[PR],5
 ; ASM32-NEXT:          .rename ..text..[PR],""
+; ASM32-NEXT:          .machine "COM"
 ; ASM32-NEXT:          .globl  main[DS]                        # -- Begin function main
 ; ASM32-NEXT:          .globl  .main
 ; ASM32-NEXT:          .align  2
@@ -238,9 +238,9 @@ entry:
 ; ASM32-NEXT:  L..debug_line_end0:
 
 ; ASM64:               .file   "1.c"
-; ASM64-NEXT:          .machine "PWR7"
 ; ASM64-NEXT:          .csect ..text..[PR],5
 ; ASM64-NEXT:          .rename ..text..[PR],""
+; ASM64-NEXT:          .machine "COM"
 ; ASM64-NEXT:          .globl  main[DS]                        # -- Begin function main
 ; ASM64-NEXT:          .globl  .main
 ; ASM64-NEXT:          .align  2

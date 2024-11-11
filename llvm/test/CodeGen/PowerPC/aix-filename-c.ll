@@ -8,9 +8,9 @@
 source_filename = "1.c"
 
 ; ASM:      .file   "1.c",,"LLVM{{.*}}"
-; ASM-NEXT: .machine   "PWR9"
 ; ASM-NEXT: .csect ..text..[PR],5
 ; ASM-NEXT: .rename	..text..[PR],""
+; ASM-NEXT: .machine   "PWR9"
 
 ; OBJ32:      Symbol {
 ; OBJ32-NEXT:   Index: 0

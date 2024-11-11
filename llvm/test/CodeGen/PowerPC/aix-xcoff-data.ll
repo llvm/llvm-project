@@ -46,8 +46,9 @@
 ; CHECK-NOT: .toc
 
 ; CHECK:      .file
-; CHECK-NEXT: .machine "PWR7"
 ; CHECK-NEXT: .csect ..text..[PR],5
+; CHECK-NEXT: .rename ..text..[PR],""
+; CHECK-NEXT: .machine "PWR7"
 
 ; CHECK:      .csect .data[RW],5
 ; CHECK-NEXT: .globl  ivar

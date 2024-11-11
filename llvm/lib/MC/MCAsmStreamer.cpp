@@ -288,9 +288,6 @@ public:
   void emitFileDirective(StringRef Filename) override;
   void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                          StringRef TimeStamp, StringRef Description) override;
-
-  void emitMachineDirective(StringRef CPU) override;
-
   Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
       std::optional<MD5::MD5Result> Checksum = std::nullopt,
@@ -1630,12 +1627,6 @@ void MCAsmStreamer::emitFileDirective(StringRef Filename,
       }
     }
   }
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitMachineDirective(StringRef CPU) {
-  OS << "\t.machine\t";
-  PrintQuotedString(CPU, OS);
   EmitEOL();
 }
 
