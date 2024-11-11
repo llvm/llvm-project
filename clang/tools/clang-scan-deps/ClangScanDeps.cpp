@@ -593,13 +593,6 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   };
 }
 
-static auto toJSONSorted(llvm::json::OStream &JOS,
-                         const llvm::StringSet<> &Set) {
-  SmallVector<StringRef> Strings(Set.keys());
-  llvm::sort(Strings);
-  return toJSONStrings(JOS, std::move(Strings));
-}
-
 // Technically, we don't need to sort the dependency list to get determinism.
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
@@ -738,7 +731,9 @@ public:
             JOS.attributeArray("command-line",
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
-            JOS.attributeArray("file-deps", toJSONSorted(JOS, MD.FileDeps));
+            JOS.attributeArray("file-deps", [&] {
+              MD.forEachFileDep([&](StringRef FileDep) { JOS.value(FileDep); });
+            });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
             JOS.attribute("name", StringRef(MD.ID.ModuleName));
