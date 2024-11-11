@@ -489,6 +489,7 @@ set(files
   __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
+  __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
@@ -737,12 +738,10 @@ set(files
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
-  __type_traits/add_const.h
-  __type_traits/add_cv.h
+  __type_traits/add_cv_quals.h
   __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
   __type_traits/add_rvalue_reference.h
-  __type_traits/add_volatile.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h

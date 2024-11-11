@@ -400,7 +400,7 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-  return getOrCreateConstInt(Val->getUniqueInteger().getSExtValue(), I,
+  return getOrCreateConstInt(Val->getUniqueInteger().getZExtValue(), I,
                              SpvBaseType, TII, ZeroAsNull);
 }
 
@@ -424,7 +424,7 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     LLT LLTy = LLT::scalar(64);
     Register SpvVecConst =
         CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::iIDRegClass);
+    CurMF->getRegInfo().setRegClass(SpvVecConst, getRegClass(SpvType));
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     MachineInstrBuilder MIB;

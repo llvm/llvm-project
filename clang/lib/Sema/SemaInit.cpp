@@ -2253,6 +2253,10 @@ bool InitListChecker::CheckFlexibleArrayInit(const InitializedEntity &Entity,
   return FlexArrayDiag != diag::ext_flexible_array_init;
 }
 
+static bool isInitializedStructuredList(const InitListExpr *StructuredList) {
+  return StructuredList && StructuredList->getNumInits() == 1U;
+}
+
 void InitListChecker::CheckStructUnionTypes(
     const InitializedEntity &Entity, InitListExpr *IList, QualType DeclType,
     CXXRecordDecl::base_class_const_range Bases, RecordDecl::field_iterator Field,
@@ -2499,8 +2503,7 @@ void InitListChecker::CheckStructUnionTypes(
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
     InitializedFields.insert(*Field);
-
-    if (RD->isUnion() && StructuredList) {
+    if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
       // Initialize the first field within the union.
       StructuredList->setInitializedFieldInUnion(*Field);
     }
@@ -2585,7 +2588,7 @@ void InitListChecker::CheckStructUnionTypes(
     CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
                           StructuredList, StructuredIndex);
 
-  if (RD->isUnion() && StructuredList) {
+  if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
     // Initialize the first field within the union.
     StructuredList->setInitializedFieldInUnion(*Field);
   }

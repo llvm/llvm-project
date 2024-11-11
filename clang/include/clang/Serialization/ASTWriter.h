@@ -119,9 +119,6 @@ private:
   /// The PCM manager which manages memory buffers for pcm files.
   InMemoryModuleCache &ModuleCache;
 
-  /// The ASTContext we're writing.
-  ASTContext *Context = nullptr;
-
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
 
@@ -499,6 +496,9 @@ private:
 
   /// Mapping from a source location entry to whether it is affecting or not.
   llvm::BitVector IsSLocAffecting;
+  /// Mapping from a source location entry to whether it must be included as
+  /// input file.
+  llvm::BitVector IsSLocFileEntryAffecting;
 
   /// Mapping from \c FileID to an index into the FileID adjustment table.
   std::vector<FileID> NonAffectingFileIDs;
@@ -545,14 +545,13 @@ private:
   unsigned getSubmoduleID(Module *Mod);
 
   /// Write the given subexpression to the bitstream.
-  void WriteSubStmt(Stmt *S);
+  void WriteSubStmt(ASTContext &Context, Stmt *S);
 
   void WriteBlockInfoBlock();
-  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot);
+  void WriteControlBlock(Preprocessor &PP, StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
-  void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
+  void writeUnhashedControlBlock(Preprocessor &PP);
   ASTFileSignature backpatchSignature();
 
   /// Calculate hash of the pcm content.
@@ -560,31 +559,30 @@ private:
   ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
-  void WriteSourceManagerBlock(SourceManager &SourceMgr,
-                               const Preprocessor &PP);
+  void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec,
                                uint64_t MacroOffsetsBase);
-  void WriteSubmodules(Module *WritingModule);
+  void WriteSubmodules(Module *WritingModule, ASTContext &Context);
 
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
 
   unsigned TypeExtQualAbbrev = 0;
   void WriteTypeAbbrevs();
-  void WriteType(QualType T);
+  void WriteType(ASTContext &Context, QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
 
-  void GenerateNameLookupTable(const DeclContext *DC,
+  void GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
   uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
-  void WriteComments();
+  void WriteComments(ASTContext &Context);
   void WriteSelectors(Sema &SemaRef);
   void WriteReferencedSelectorsPool(Sema &SemaRef);
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
@@ -592,8 +590,10 @@ private:
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
   void WriteSpecialDeclRecords(Sema &SemaRef);
-  void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
-  void WriteDeclContextVisibleUpdate(const DeclContext *DC);
+  void WriteDeclUpdatesBlocks(ASTContext &Context,
+                              RecordDataImpl &OffsetsRecord);
+  void WriteDeclContextVisibleUpdate(ASTContext &Context,
+                                     const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
   void WriteOpenCLExtensions(Sema &SemaRef);
   void WriteCUDAPragmas(Sema &SemaRef);
@@ -654,11 +654,6 @@ public:
             bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
             bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
-
-  ASTContext &getASTContext() const {
-    assert(Context && "requested AST context when not writing AST");
-    return *Context;
-  }
 
   const LangOptions &getLangOpts() const;
 
@@ -725,10 +720,10 @@ public:
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 
   /// Emit a reference to a type.
-  void AddTypeRef(QualType T, RecordDataImpl &Record);
+  void AddTypeRef(ASTContext &Context, QualType T, RecordDataImpl &Record);
 
   /// Force a type to be emitted and get its ID.
-  serialization::TypeID GetOrCreateTypeID(QualType T);
+  serialization::TypeID GetOrCreateTypeID(ASTContext &Context, QualType T);
 
   /// Find the first local declaration of a given local redeclarable
   /// decl.

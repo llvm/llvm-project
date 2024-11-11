@@ -140,6 +140,12 @@ TARGET_BUILTIN(__builtin_ia32_t2rpntlvwz1t1_internal, "vUsUsUsV256i*V256i*vC*z",
 TARGET_BUILTIN(__builtin_ia32_t2rpntlvwz1rst1_internal, "vUsUsUsV256i*V256i*vC*z", "n", "amx-movrs,amx-transpose")
 TARGET_BUILTIN(__builtin_ia32_ttransposed_internal, "V256iUsUsV256i", "n", "amx-transpose")
 
+TARGET_BUILTIN(__builtin_ia32_tcvtrowd2ps_internal, "V16fUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2pbf16h_internal, "V32yUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2pbf16l_internal, "V32yUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2phh_internal, "V32xUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2phl_internal, "V32xUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tilemovrow_internal, "V16iUsUsV256iUi", "n", "amx-avx512,avx10.2-512")
 // AMX
 TARGET_BUILTIN(__builtin_ia32_tile_loadconfig, "vvC*", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tile_storeconfig, "vvC*", "n", "amx-tile")
@@ -172,6 +178,13 @@ TARGET_BUILTIN(__builtin_ia32_t2rpntlvwz0t1, "vIUcvC*z", "n","amx-transpose")
 TARGET_BUILTIN(__builtin_ia32_t2rpntlvwz1, "vIUcvC*z", "n", "amx-transpose")
 TARGET_BUILTIN(__builtin_ia32_t2rpntlvwz1t1, "vIUcvC*z", "n","amx-transpose")
 TARGET_BUILTIN(__builtin_ia32_ttransposed, "vIUcIUc", "n", "amx-transpose")
+
+TARGET_BUILTIN(__builtin_ia32_tcvtrowd2ps, "V16fIUcUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2pbf16h, "V32yIUcUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2pbf16l, "V32yIUcUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2phh, "V32xIUcUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tcvtrowps2phl, "V32xIUcUi", "n", "amx-avx512,avx10.2-512")
+TARGET_BUILTIN(__builtin_ia32_tilemovrow, "V16iIUcUi", "n", "amx-avx512,avx10.2-512")
 
 TARGET_BUILTIN(__builtin_ia32_prefetchi, "vvC*Ui", "nc", "prefetchi")
 TARGET_BUILTIN(__builtin_ia32_cmpccxadd32, "Siv*SiSiIi", "n", "cmpccxadd")

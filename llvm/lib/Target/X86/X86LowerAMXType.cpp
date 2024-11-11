@@ -41,8 +41,6 @@
 #include "X86.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -270,6 +268,17 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     assert((OpNo == 2) && "Illegal Operand Number.");
     Row = getRowFromCol(II, II->getArgOperand(1), 4);
     Col = getColFromRow(II, II->getArgOperand(0), 4);
+    break;
+  }
+  case Intrinsic::x86_tcvtrowd2ps_internal:
+  case Intrinsic::x86_tcvtrowps2pbf16h_internal:
+  case Intrinsic::x86_tcvtrowps2pbf16l_internal:
+  case Intrinsic::x86_tcvtrowps2phh_internal:
+  case Intrinsic::x86_tcvtrowps2phl_internal:
+  case Intrinsic::x86_tilemovrow_internal: {
+    assert(OpNo == 2 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
     break;
   }
   }

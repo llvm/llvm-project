@@ -1802,6 +1802,15 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
+enum class SubstTemplateTypeParmTypeFlag {
+  None,
+
+  /// Whether to expand the pack using the stored PackIndex in place. This is
+  /// useful for e.g. substituting into an atomic constraint expression, where
+  /// that expression is part of an unexpanded pack.
+  ExpandPacksInPlace,
+};
+
 enum class ArraySizeModifier;
 enum class ElaboratedTypeKeyword;
 enum class VectorKind;
@@ -2170,6 +2179,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasNonCanonicalUnderlyingType : 1;
+
+    LLVM_PREFERRED_TYPE(SubstTemplateTypeParmTypeFlag)
+    unsigned SubstitutionFlag : 1;
 
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
@@ -6387,7 +6399,8 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, std::optional<unsigned> PackIndex);
+                            unsigned Index, std::optional<unsigned> PackIndex,
+                            SubstTemplateTypeParmTypeFlag Flag);
 
 public:
   /// Gets the type that was substituted for the template
@@ -6416,21 +6429,31 @@ public:
     return SubstTemplateTypeParmTypeBits.PackIndex - 1;
   }
 
+  SubstTemplateTypeParmTypeFlag getSubstitutionFlag() const {
+    return static_cast<SubstTemplateTypeParmTypeFlag>(
+        SubstTemplateTypeParmTypeBits.SubstitutionFlag);
+  }
+
   bool isSugared() const { return true; }
   QualType desugar() const { return getReplacementType(); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex());
+            getPackIndex(), getSubstitutionFlag());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex) {
+                      std::optional<unsigned> PackIndex,
+                      SubstTemplateTypeParmTypeFlag Flag) {
     Replacement.Profile(ID);
     ID.AddPointer(AssociatedDecl);
     ID.AddInteger(Index);
     ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
+    ID.AddInteger(llvm::to_underlying(Flag));
+    assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
+            PackIndex) &&
+           "ExpandPacksInPlace needs a valid PackIndex");
   }
 
   static bool classof(const Type *T) {

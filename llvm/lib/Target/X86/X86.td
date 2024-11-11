@@ -279,6 +279,10 @@ def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
 def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
                                            "Support AMX amx-transpose instructions",
                                            [FeatureAMXTILE]>;
+def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
+                                        "HasAMXAVX512", "true",
+                                        "Support AMX-AVX512 instructions",
+                                        [FeatureAMXTILE]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",

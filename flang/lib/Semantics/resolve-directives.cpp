@@ -1671,6 +1671,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
   case llvm::omp::Directive::OMPD_teams_distribute_simd:
+  case llvm::omp::Directive::OMPD_teams_loop:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
     PushContext(beginDir.source, beginDir.v);
@@ -1930,7 +1931,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     for (const auto &clause : clauseList->v) {
       if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        ResolveOmpObjectList(toClause->v, Symbol::Flag::OmpDeclareTarget);
+        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
