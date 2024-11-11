@@ -32,15 +32,19 @@ void FreeTrie::remove(Node *node) {
     new_node = leaf;
   }
 
+  if (!is_head(node))
+    return;
+
   // Copy the trie links to the new head.
   new_node->lower = node->lower;
   new_node->upper = node->upper;
   new_node->parent = node->parent;
   replace_node(node, new_node);
-  return;
 }
 
 void FreeTrie::replace_node(Node *node, Node *new_node) {
+  LIBC_ASSERT(is_head(node) && "only head nodes contain trie links");
+
   if (node->parent) {
     Node *&parent_child =
         node->parent->lower == node ? node->parent->lower : node->parent->upper;

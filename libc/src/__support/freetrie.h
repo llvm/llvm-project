@@ -38,17 +38,20 @@ namespace LIBC_NAMESPACE_DECL {
 /// The trie refers to, but does not own, the Nodes that comprise it.
 class FreeTrie {
 public:
-  /// A trie node that is also a free list. The subtrie contains a continous
-  /// SizeRange of free lists. The lower and upper subtrie's contain the lower
-  /// and upper half of the subtries range. There is no direct relationship
-  /// between the size of this node's free list and the contents of the lower
-  /// and upper subtries.
+  /// A trie node that is also a free list. Only the head node of each list is
+  /// actually part of the trie. The subtrie contains a continous SizeRange of
+  /// free lists. The lower and upper subtrie's contain the lower and upper half
+  /// of the subtries range. There is no direct relationship between the size of
+  /// this node's free list and the contents of the lower and upper subtries.
   class Node : public FreeList::Node {
     /// The child subtrie covering the lower half of this subtrie's size range.
+    /// Undefined if this is not the head of the list.
     Node *lower;
     /// The child subtrie covering the upper half of this subtrie's size range.
+    /// Undefined if this is not the head of the list.
     Node *upper;
-    /// The parent subtrie or nullptr if this is the root.
+    /// The parent subtrie. nullptr if this is the root or not the head of the
+    /// list.
     Node *parent;
 
     friend class FreeTrie;
@@ -103,6 +106,9 @@ public:
   Node *find_best_fit(size_t size);
 
 private:
+  /// @returns Whether a node is the head of its containing freelist.
+  bool is_head(Node *node) const { return node->parent || node == root; }
+
   /// Replaces references to one node with another (or nullptr) in all adjacent
   /// parent and child nodes.
   void replace_node(Node *node, Node *new_node);
@@ -134,9 +140,13 @@ LIBC_INLINE void FreeTrie::push(Block<> *block) {
   }
 
   Node *node = new (block->usable_space()) Node;
-  node->lower = node->upper = nullptr;
-  node->parent = parent;
   FreeList list = *cur;
+  if (list.empty()) {
+    node->parent = parent;
+    node->lower = node->upper = nullptr;
+  } else {
+    node->parent = nullptr;
+  }
   list.push(node);
   *cur = static_cast<Node *>(list.begin());
 }

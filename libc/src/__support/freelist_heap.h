@@ -17,6 +17,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
@@ -90,7 +91,7 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
 
   size_t request_size = size;
   if (alignment > alignof(max_align_t)) {
-    if (add_overflow(size, alignment - 1, size))
+    if (add_overflow(size, alignment - 1, request_size))
       return nullptr;
   }
 

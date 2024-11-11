@@ -217,14 +217,11 @@ public:
 
   /// Attempts to split this block.
   ///
-  /// If successful, the block will have an inner size of `new_inner_size`,
-  /// rounded to ensure that the split point is on an ALIGNMENT boundary. The
-  /// remaining space will be returned as a new block. Note that the prev_ field
-  /// of the next block counts as part of the inner size of the returnd block.
-  ///
-  /// This method may fail if the remaining space is too small to hold a new
-  /// block. If this method fails for any reason, the original block is
-  /// unmodified.
+  /// If successful, the block will have an inner size of at least
+  /// `new_inner_size`, rounded to ensure that the split point is on an
+  /// ALIGNMENT boundary. The remaining space will be returned as a new block.
+  /// Note that the prev_ field of the next block counts as part of the inner
+  /// size of the returnd block.
   optional<Block *> split(size_t new_inner_size);
 
   /// Merges this block with the one that comes after it.
@@ -458,7 +455,7 @@ Block<OffsetType, kAlign>::split(size_t new_inner_size) {
   // The prev_ field of the next block is always available, so there is a
   // minimum size to a block created through splitting.
   if (new_inner_size < sizeof(prev_))
-    return {};
+    new_inner_size = sizeof(prev_);
 
   size_t old_inner_size = inner_size();
   new_inner_size =
