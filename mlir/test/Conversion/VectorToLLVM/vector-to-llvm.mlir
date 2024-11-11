@@ -1216,6 +1216,26 @@ func.func @extract_vec_1d_from_vec_3d_f32_scalable(%arg0: vector<4x3x[16]xf32>) 
 
 // -----
 
+func.func @extract_scalar_from_vec_2d_f32(%arg0: vector<4x1xf32>) -> f32 {
+  %0 = vector.extract %arg0[0]: f32 from vector<4x1xf32>
+  return %0 : f32
+}
+// CHECK-LABEL: @extract_scalar_from_vec_2d_f32
+//       CHECK:   %[[T0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<4 x vector<1xf32>>
+//       CHECK:   %[[T1:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<1xf32> to f32
+//       CHECK:   return %[[T1]] : f32
+
+func.func @extract_scalar_from_vec_2d_f32_scalable(%arg0: vector<4x[1]xf32>) -> f32 {
+  %0 = vector.extract %arg0[0]: f32 from vector<4x[1]xf32>
+  return %0 : f32
+}
+// CHECK-LABEL: @extract_scalar_from_vec_2d_f32_scalable
+//       CHECK:   %[[T0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<4 x vector<[1]xf32>>
+//       CHECK:   %[[T1:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<[1]xf32> to f32
+//       CHECK:   return %[[T1]] : f32
+
+// -----
+
 func.func @extract_scalar_from_vec_3d_f32(%arg0: vector<4x3x16xf32>) -> f32 {
   %0 = vector.extract %arg0[0, 0, 0]: f32 from vector<4x3x16xf32>
   return %0 : f32
