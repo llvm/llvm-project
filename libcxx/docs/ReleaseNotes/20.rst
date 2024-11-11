@@ -69,6 +69,10 @@ Improvements and New Features
 - The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
   in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
 
+- ``std::set_intersection`` and ``std::ranges::set_intersection`` will now validate that inputs are sorted when compiled
+  in :ref:`debug hardening mode mode <using-hardening-modes>`. Results from these functions were changed in LLVM 19
+  with this class of invalid inputs, the new validation helps identify the source of undefined behavior.
+
 Deprecations and Removals
 -------------------------
 
