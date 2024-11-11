@@ -30,7 +30,7 @@ class BottomUpVec final : public FunctionPass {
   /// \p Bndl. \p Operands are the already vectorized operands.
   Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
   Value *vectorizeRec(ArrayRef<Value *> Bndl);
-  void tryVectorize(ArrayRef<Value *> Seeds);
+  bool tryVectorize(ArrayRef<Value *> Seeds);
 
   // The PM containing the pipeline of region passes.
   RegionPassManager RPM;

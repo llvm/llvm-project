@@ -331,7 +331,7 @@ fixed_uint64m1_t xor_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-LABEL: @not_i8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <32 x i8> [[A]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <32 x i8> [[A]], splat (i8 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
@@ -342,7 +342,7 @@ fixed_int8m1_t not_i8(fixed_int8m1_t a) {
 // CHECK-LABEL: @not_i16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <16 x i16> [[A]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <16 x i16> [[A]], splat (i16 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
@@ -353,7 +353,7 @@ fixed_int16m1_t not_i16(fixed_int16m1_t a) {
 // CHECK-LABEL: @not_i32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <8 x i32> [[A]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <8 x i32> [[A]], splat (i32 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
@@ -364,7 +364,7 @@ fixed_int32m1_t not_i32(fixed_int32m1_t a) {
 // CHECK-LABEL: @not_i64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i64> [[A]], <i64 -1, i64 -1, i64 -1, i64 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i64> [[A]], splat (i64 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
@@ -375,7 +375,7 @@ fixed_int64m1_t not_i64(fixed_int64m1_t a) {
 // CHECK-LABEL: @not_u8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <32 x i8> [[A]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <32 x i8> [[A]], splat (i8 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
@@ -386,7 +386,7 @@ fixed_uint8m1_t not_u8(fixed_uint8m1_t a) {
 // CHECK-LABEL: @not_u16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <16 x i16> [[A]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <16 x i16> [[A]], splat (i16 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
@@ -397,7 +397,7 @@ fixed_uint16m1_t not_u16(fixed_uint16m1_t a) {
 // CHECK-LABEL: @not_u32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <8 x i32> [[A]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <8 x i32> [[A]], splat (i32 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
@@ -408,7 +408,7 @@ fixed_uint32m1_t not_u32(fixed_uint32m1_t a) {
 // CHECK-LABEL: @not_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[A_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i64> [[A]], <i64 -1, i64 -1, i64 -1, i64 -1>
+// CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i64> [[A]], splat (i64 -1)
 // CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[NOT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
