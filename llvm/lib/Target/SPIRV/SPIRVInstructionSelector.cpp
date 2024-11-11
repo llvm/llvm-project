@@ -230,6 +230,9 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveActiveAnyTrue(Register ResVReg, const SPIRVType *ResType,
+                               MachineInstr &I) const;
+
   bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
                             MachineInstr &I) const;
 
@@ -1762,6 +1765,25 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
+                                                    const SPIRVType *ResType,
+                                                    MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+
+  // IntTy is used to define the execution scope, set to 3 to denote a
+  // cross-lane interaction equivalent to a SPIR-V subgroup.
+  MachineBasicBlock &BB = *I.getParent();
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpGroupNonUniformAny))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII))
+      .addUse(I.getOperand(2).getReg());
+}
+
 bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
                                                     const SPIRVType *ResType,
                                                     MachineInstr &I) const {
@@ -2567,6 +2589,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
+  case Intrinsic::spv_wave_activeanytrue:
+    return selectWaveActiveAnyTrue(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:
     return selectWaveReadLaneAt(ResVReg, ResType, I);
   case Intrinsic::spv_step:
