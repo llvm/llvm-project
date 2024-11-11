@@ -1,10 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -fnative-half-type -finclude-default-header -fsyntax-only %s -verify
 
-void transpose() {
-  float3x4 a;
-  int3x2 b;
-  double3x3 c;
-  int e;
+void transpose(float3x4 a, int3x2 b, double3x3 c, int e) {
+
   a = __builtin_matrix_transpose(b);
   // expected-error@-1 {{assigning to 'float3x4' (aka 'matrix<float, 3, 4>') from incompatible type 'matrix<int, 2, 3>'}}
   b = __builtin_matrix_transpose(b);

@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -O0 -triple spirv-unknown-vulkan-compute -std=hlsl202y -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s --check-prefixes=CHECK,NOOPT
-// RUN: %clang_cc1 -O1 -triple spirv-unknown-vulkan-compute -std=hlsl202y -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s --check-prefixes=CHECK,OPT
+// RUN: %clang_cc1 -O0 -triple spirv-unknown-vulkan-compute -std=hlsl202y -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV,NOOPT -DIPTR_T=i64 -DALIGN=8
+// RUN: %clang_cc1 -O1 -triple spirv-unknown-vulkan-compute -std=hlsl202y -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV,OPT -DIPTR_T=i64 -DALIGN=8
+// RUN: %clang_cc1 -O0 -triple dxil-pc-shadermodel6.3-compute -std=hlsl202y -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s --check-prefixes=CHECK,NOOPT -DIPTR_T=i32 -DALIGN=4
+// RUN: %clang_cc1 -O1 -triple dxil-pc-shadermodel6.3-compute -std=hlsl202y -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s --check-prefixes=CHECK,OPT -DIPTR_T=i32 -DALIGN=4
 
 template <typename EltTy, unsigned Rows, unsigned Columns>
 struct MyMatrix {
@@ -174,17 +176,17 @@ typename MyMatrix<EltTy0, R0, C1>::matrix_t multiply(inout MyMatrix<EltTy0, R0, 
 MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 4> Mat1,
                                              MyMatrix<float, 4, 2> Mat2) {
   // CHECK-NEXT:  entry:
-  // CHECK-NEXT:    %0 = call token @llvm.experimental.convergence.entry()
+  // SPIRV-NEXT:    %0 = call token @llvm.experimental.convergence.entry()
   // CHECK-NEXT:    %tmp = alloca %struct.MyMatrix, align 4
   // CHECK-NEXT:    %tmp1 = alloca %struct.MyMatrix.2, align 4
-  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %Mat1, i64 32, i1 false)
+  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.[[IPTR_T]](ptr align 4 %tmp, ptr align 4 %Mat1, [[IPTR_T]] 32, i1 false)
   // OPT-NEXT:      call void @llvm.lifetime.start.p0(i64 32, ptr %tmp)
-  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp1, ptr align 4 %Mat2, i64 32, i1 false)
+  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.[[IPTR_T]](ptr align 4 %tmp1, ptr align 4 %Mat2, [[IPTR_T]] 32, i1 false)
   // OPT-NEXT:      call void @llvm.lifetime.start.p0(i64 32, ptr %tmp1)
   // CHECK-NEXT:    [[RES:%.*]] = call{{.*}} <4 x float> @_Z8multiplyIfLj2ELj4ELj2EEN8MyMatrixIT_XT0_EXT2_EE8matrix_tES0_IS1_XT0_EXT1_EES0_IS1_XT1_EXT2_EE(ptr noalias noundef nonnull align 4 dereferenceable(32) %tmp, ptr noalias noundef nonnull align 4 dereferenceable(32) %tmp1)
-  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %Mat1, ptr align 4 %tmp, i64 32, i1 false)
+  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.[[IPTR_T]](ptr align 4 %Mat1, ptr align 4 %tmp, [[IPTR_T]] 32, i1 false)
   // OPT-NEXT:      call void @llvm.lifetime.end.p0(i64 32, ptr %tmp)
-  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %Mat2, ptr align 4 %tmp1, i64 32, i1 false)
+  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.[[IPTR_T]](ptr align 4 %Mat2, ptr align 4 %tmp1, [[IPTR_T]] 32, i1 false)
   // OPT-NEXT:      call void @llvm.lifetime.end.p0(i64 32, ptr %tmp1)
   // CHECK-NEXT:    %value = getelementptr inbounds nuw %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
   // CHECK-NEXT:    store <4 x float> [[RES]], ptr %value, align 4
@@ -224,11 +226,11 @@ void insert(inout MyMatrix<EltTy, Rows, Columns> Mat, EltTy e, unsigned i, unsig
 
 // CHECK-LABEL: define {{.*}}test_insert_template1
 void test_insert_template1(inout MyMatrix<unsigned, 2, 2> Mat, unsigned e, unsigned i, unsigned j) {
-  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8{{$}}
+  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align [[ALIGN]]{{$}}
   // NOOPT:         [[E:%.*]] = load i32, ptr %e.addr, align 4{{$}}
   // NOOPT-NEXT:    [[I:%.*]] = load i32, ptr %i.addr, align 4{{$}}
   // NOOPT-NEXT:    [[J:%.*]] = load i32, ptr %j.addr, align 4{{$}}
-  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align [[ALIGN]], !tbaa !{{[0-9]+}}{{$}}
   // OPT:           [[E:%.*]] = load i32, ptr %e.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:      [[I:%.*]] = load i32, ptr %i.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:      [[J:%.*]] = load i32, ptr %j.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
@@ -240,16 +242,16 @@ void test_insert_template1(inout MyMatrix<unsigned, 2, 2> Mat, unsigned e, unsig
   // NOOPT:         [[I:%.*]] = load i32, ptr %i.addr, align 4{{$}}
   // OPT:           [[E:%.*]] = load i32, ptr %e.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT:           [[I:%.*]] = load i32, ptr %i.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[I_EXT:%.*]] = zext i32 [[I]] to i64
+  // SPIRV-NEXT:    [[I:%.*]] = zext i32 {{.*}} to i64
   // NOOPT-NEXT:    [[J:%.*]] = load i32, ptr %j.addr, align 4{{$}}
   // OPT-NEXT:      [[J:%.*]] = load i32, ptr %j.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[J_EXT:%.*]] = zext i32 [[J]] to i64
-  // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_EXT]], 2
-  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
-  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 4
+  // SPIRV-NEXT:    [[J:%.*]] = zext i32 {{.*}} to i64
+  // CHECK-NEXT:    [[IDX1:%.*]] = mul [[IPTR_T]] [[J]], 2
+  // CHECK-NEXT:    [[IDX2:%.*]] = add [[IPTR_T]] [[IDX1]], [[I]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult [[IPTR_T]] [[IDX2]], 4
   // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <4 x i32>, ptr {{.*}}, align 4{{$}}
-  // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <4 x i32> [[MAT]], i32 [[E]], i64 [[IDX2]]
+  // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <4 x i32> [[MAT]], i32 [[E]], [[IPTR_T]] [[IDX2]]
   // CHECK-NEXT:    store <4 x i32> [[MATINS]], ptr {{.*}}, align 4
   // CHECK-NEXT:    ret void
 
@@ -258,9 +260,9 @@ void test_insert_template1(inout MyMatrix<unsigned, 2, 2> Mat, unsigned e, unsig
 
 // CHECK-LABEL: define {{.*}}test_insert_template2
 void test_insert_template2(inout MyMatrix<float, 3, 4> Mat, float e) {
-  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8{{$}}
+  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align [[ALIGN]]{{$}}
   // NOOPT:         [[E:%.*]] = load float, ptr %e.addr, align 4{{$}}
-  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align [[ALIGN]], !tbaa !{{[0-9]+}}{{$}}
   // OPT:           [[E:%.*]] = load float, ptr %e.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    call{{.*}} void @_Z6insertIfLj3ELj4EEv8MyMatrixIT_XT0_EXT1_EES1_jj(ptr noalias noundef nonnull align 4 dereferenceable(48) %{{.*}}, float noundef [[E]], i32 noundef 2, i32 noundef 3)
   // CHECK:         ret void
@@ -270,16 +272,16 @@ void test_insert_template2(inout MyMatrix<float, 3, 4> Mat, float e) {
   // NOOPT:         [[I:%.*]] = load i32, ptr %i.addr, align 4{{$}}
   // OPT:           [[E:%.*]] = load float, ptr %e.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT:           [[I:%.*]] = load i32, ptr %i.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[I_EXT:%.*]] = zext i32 [[I]] to i64
+  // SPIRV-NEXT:    [[I:%.*]] = zext i32 {{.*}} to i64
   // NOOPT-NEXT:    [[J:%.*]] = load i32, ptr %j.addr, align 4{{$}}
   // OPT-NEXT:      [[J:%.*]] = load i32, ptr %j.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[J_EXT:%.*]] = zext i32 [[J]] to i64
-  // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_EXT]], 3
-  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
-  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 12
+  // SPIRV-NEXT:    [[J:%.*]] = zext i32 {{.*}} to i64
+  // CHECK-NEXT:    [[IDX1:%.*]] = mul [[IPTR_T]] [[J]], 3
+  // CHECK-NEXT:    [[IDX2:%.*]] = add [[IPTR_T]] [[IDX1]], [[I]]
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult [[IPTR_T]] [[IDX2]], 12
   // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <12 x float>, ptr {{.*}}, align 4{{$}}
-  // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <12 x float> [[MAT]], float [[E]], i64 [[IDX2]]
+  // CHECK-NEXT:    [[MATINS:%.*]] = insertelement <12 x float> [[MAT]], float [[E]], [[IPTR_T]] [[IDX2]]
   // CHECK-NEXT:    store <12 x float> [[MATINS]], ptr {{.*}}, align 4
   // CHECK-NEXT:    ret void
 
@@ -294,19 +296,19 @@ EltTy extract(inout MyMatrix<EltTy, Rows, Columns> Mat) {
 // CHECK-LABEL: define {{.*}}test_extract_template
 int test_extract_template(MyMatrix<int, 2, 2> Mat1) {
   // CHECK-NEXT:  entry:
-  // CHECK-NEXT:    %0 = call token @llvm.experimental.convergence.entry()
+  // SPIRV-NEXT:    %0 = call token @llvm.experimental.convergence.entry()
   // CHECK-NEXT:    %tmp = alloca %struct.MyMatrix.5, align 4
-  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %Mat1, i64 16, i1 false)
+  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.[[IPTR_T]](ptr align 4 %tmp, ptr align 4 %Mat1, [[IPTR_T]] 16, i1 false)
   // OPT-NEXT:      call void @llvm.lifetime.start.p0(i64 16, ptr %tmp)
   // CHECK-NEXT:    [[CALL:%.*]] = call{{.*}} i32 @_Z7extractIiLj2ELj2EET_8MyMatrixIS0_XT0_EXT1_EE(ptr noalias noundef nonnull align 4 dereferenceable(16) %tmp)
-  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %Mat1, ptr align 4 %tmp, i64 16, i1 false)
+  // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.[[IPTR_T]](ptr align 4 %Mat1, ptr align 4 %tmp, [[IPTR_T]] 16, i1 false)
   // OPT-NEXT:      call void @llvm.lifetime.end.p0(i64 16, ptr %tmp)
   // CHECK-NEXT:    ret i32 [[CALL]]
   //
   // CHECK-LABEL: define{{.*}} i32 @_Z7extractIiLj2ELj2EET_8MyMatrixIS0_XT0_EXT1_EE(
   // NOOPT:         [[MAT:%.*]] = load <4 x i32>, ptr {{.*}}, align 4{{$}}
   // OPT:           [[MAT:%.*]] = load <4 x i32>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <4 x i32> [[MAT]], i64 1
+  // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <4 x i32> [[MAT]], [[IPTR_T]] 1
   // CHECK-NEXT:    ret i32 [[MATEXT]]
 
   return extract(Mat1);
@@ -319,7 +321,7 @@ auto matrix_subscript(double4x4 m, R r, C c) -> decltype(m[r][c]) {}
 double test_matrix_subscript(double4x4 m) {
   // NOOPT:         [[MAT:%.*]] = load <16 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:           [[MAT:%.*]] = load <16 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[CALL:%.*]] = call{{.*}} nonnull align 8 dereferenceable(8) ptr @_Z16matrix_subscriptIiiEDTixixfp_fp0_fp1_Eu11matrix_typeILj4ELj4EdET_T0_(<16 x double> noundef [[MAT]], i32 noundef 1, i32 noundef 2)
+  // CHECK-NEXT:    [[CALL:%.*]] = call{{.*}} nonnull align 8 dereferenceable(8) ptr @_Z16matrix_subscriptIiiEDTixixfp_fp0_fp1_Eu11matrix_typeIL{{[mj]}}4EL{{[mj]}}4EdET_T0_(<16 x double> noundef [[MAT]], i32 noundef 1, i32 noundef 2)
   // NOOPT-NEXT:    [[RES:%.*]] = load double, ptr [[CALL]], align 8{{$}}
   // OPT-NEXT:      [[RES:%.*]] = load double, ptr [[CALL]], align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    ret double [[RES]]
@@ -330,12 +332,12 @@ double test_matrix_subscript(double4x4 m) {
 // CHECK-LABEL: define {{.*}}test_matrix_subscript_const
 const double test_matrix_subscript_const(const double4x4 m) {
   // CHECK-NEXT:  entry:
-  // CHECK-NEXT:    %0 = call token @llvm.experimental.convergence.entry()
+  // SPIRV-NEXT:    %0 = call token @llvm.experimental.convergence.entry()
   // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [16 x double], align 8
   // CHECK-NEXT:    store <16 x double> [[M:%.*]], ptr [[M_ADDR]], align 8
   // NOOPT:         [[NAMELESS1:%.*]] = load <16 x double>, ptr [[M_ADDR]], align 8{{$}}
   // OPT:           [[NAMELESS1:%.*]] = load <16 x double>, ptr [[M_ADDR]], align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <16 x double> [[NAMELESS1]], i64 4
+  // CHECK-NEXT:    [[MATEXT:%.*]] = extractelement <16 x double> [[NAMELESS1]], [[IPTR_T]] 4
   // CHECK-NEXT:    ret double [[MATEXT]]
 
   return m[0][1];
@@ -352,19 +354,19 @@ struct UnsignedWrapper {
 double extract_IntWrapper_idx(inout double4x4 m, IntWrapper i, UnsignedWrapper j) {
   // CHECK:         [[I:%.*]] = call{{.*}} i32 @_ZN10IntWrappercviEv(ptr {{[^,]*}} %i)
   // CHECK-NEXT:    [[I_ADD:%.*]] = add nsw i32 [[I]], 1
-  // CHECK-NEXT:    [[I_ADD_EXT:%.*]] = sext i32 [[I_ADD]] to i64
+  // SPIRV-NEXT:    [[I_ADD:%.*]] = sext i32 {{.*}} to i64
   // CHECK-NEXT:    [[J:%.*]] = call{{.*}} i32 @_ZN15UnsignedWrappercvjEv(ptr {{[^,]*}} %j)
   // CHECK-NEXT:    [[J_SUB:%.*]] = sub i32 [[J]], 1
-  // CHECK-NEXT:    [[J_SUB_EXT:%.*]] = zext i32 [[J_SUB]] to i64
-  // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_SUB_EXT]], 4
-  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_ADD_EXT]]
-  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
+  // SPIRV-NEXT:    [[J_SUB:%.*]] = zext i32 {{.*}} to i64
+  // CHECK-NEXT:    [[IDX1:%.*]] = mul [[IPTR_T]] [[J_SUB]], 4
+  // CHECK-NEXT:    [[IDX2:%.*]] = add [[IPTR_T]] [[IDX1]], [[I_ADD]]
+  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align [[ALIGN]]{{$}}
   // NOOPT-NEXT:    [[MAT:%.*]] = load <16 x double>, ptr [[MAT_ADDR]], align 8{{$}}
-  // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 16
+  // OPT-NEXT:      [[CMP:%.*]] = icmp ult [[IPTR_T]] [[IDX2]], 16
   // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
-  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align [[ALIGN]], !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <16 x double>, ptr [[MAT_ADDR]], align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[MATEXT:%.*]]  = extractelement <16 x double> [[MAT]], i64 [[IDX2]]
+  // CHECK-NEXT:    [[MATEXT:%.*]]  = extractelement <16 x double> [[MAT]], [[IPTR_T]] [[IDX2]]
   // CHECK-NEXT:    ret double [[MATEXT]]
   return m[i + 1][j - 1];
 }
@@ -389,8 +391,8 @@ void test_constexpr1(inout matrix_type<float, 4, 4> m) {
   // OPT:           [[MAT:%.*]] = load <16 x float>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[IM:%.*]] = call{{.*}} <16 x float> @_ZNK13identmatrix_tcvu11matrix_typeIXT0_EXT0_ET_EIfLj4EEEv(ptr {{[^,]*}} @_ZL11identmatrix)
   // CHECK-NEXT:    [[ADD:%.*]] = fadd <16 x float> [[MAT]], [[IM]]
-  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
-  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align [[ALIGN]]{{$}}
+  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align [[ALIGN]], !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    store <16 x float> [[ADD]], ptr [[MAT_ADDR]], align 4
   // CHECK-NEXT:    ret voi
 
@@ -398,16 +400,16 @@ void test_constexpr1(inout matrix_type<float, 4, 4> m) {
   // CHECK-LABEL: for.body:                                         ; preds = %for.cond
   // NOOPT-NEXT:   [[I:%.*]] = load i32, ptr %i, align 4{{$}}
   // OPT-NEXT:     [[I:%.*]] = load i32, ptr %i, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[I_EXT:%.*]] = zext i32 [[I]] to i64
+  // SPIRV-NEXT:   [[I:%.*]] = zext i32 {{.*}} to i64
   // NOOPT-NEXT:   [[I2:%.*]] = load i32, ptr %i, align 4{{$}}
   // OPT-NEXT:     [[I2:%.*]] = load i32, ptr %i, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[I2_EXT:%.*]] = zext i32 [[I2]] to i64
-  // CHECK-NEXT:   [[IDX1:%.*]] = mul i64 [[I2_EXT]], 4
-  // CHECK-NEXT:   [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
-  // OPT-NEXT:     [[CMP:%.*]] = icmp ult i64 [[IDX2]], 16
+  // SPIRV-NEXT:   [[I2:%.*]] = zext i32 {{.*}} to i64
+  // CHECK-NEXT:   [[IDX1:%.*]] = mul [[IPTR_T]] [[I2]], 4
+  // CHECK-NEXT:   [[IDX2:%.*]] = add [[IPTR_T]] [[IDX1]], [[I]]
+  // OPT-NEXT:     [[CMP:%.*]] = icmp ult [[IPTR_T]] [[IDX2]], 16
   // OPT-NEXT:     call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:   [[MAT:%.*]] = load <16 x float>, ptr %result, align 4{{$}}
-  // CHECK-NEXT:   [[MATINS:%.*]] = insertelement <16 x float> [[MAT]], float 1.000000e+00, i64 [[IDX2]]
+  // CHECK-NEXT:   [[MATINS:%.*]] = insertelement <16 x float> [[MAT]], float 1.000000e+00, [[IPTR_T]] [[IDX2]]
   // CHECK-NEXT:   store <16 x float> [[MATINS]], ptr %result, align 4
   // CHECK-NEXT:   br label %for.inc
   m = m + identmatrix;
@@ -420,8 +422,8 @@ void test_constexpr2(inout matrix_type<int, 4, 4> m) {
   // OPT:           [[MAT:%.*]] = load <16 x i32>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SUB:%.*]] = sub <16 x i32> [[IM]], [[MAT]]
   // CHECK-NEXT:    [[SUB2:%.*]] = add <16 x i32> [[SUB]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
-  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align [[ALIGN]]{{$}}
+  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align [[ALIGN]], !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    store <16 x i32> [[SUB2]], ptr [[MAT_ADDR]], align 4
   // CHECK-NEXT:    ret void
   //
@@ -430,16 +432,16 @@ void test_constexpr2(inout matrix_type<int, 4, 4> m) {
   // CHECK-LABEL: for.body:                                         ; preds = %for.cond
   // NOOPT-NEXT:   [[I:%.*]] = load i32, ptr %i, align 4{{$}}
   // OPT-NEXT:     [[I:%.*]] = load i32, ptr %i, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[I_EXT:%.*]] = zext i32 [[I]] to i64
+  // SPIRV-NEXT:   [[I:%.*]] = zext i32 {{.*}} to i64
   // NOOPT-NEXT:   [[I2:%.*]] = load i32, ptr %i, align 4{{$}}
   // OPT-NEXT:     [[I2:%.*]] = load i32, ptr %i, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[I2_EXT:%.*]] = zext i32 [[I2]] to i64
-  // CHECK-NEXT:   [[IDX1:%.*]] = mul i64 [[I2_EXT]], 4
-  // CHECK-NEXT:   [[IDX2:%.*]] = add i64 [[IDX1]], [[I_EXT]]
-  // OPT-NEXT:     [[CMP:%.*]] = icmp ult i64 [[IDX2]], 16
+  // SPIRV-NEXT:   [[I2:%.*]] = zext i32 {{.*}} to i64
+  // CHECK-NEXT:   [[IDX1:%.*]] = mul [[IPTR_T]] [[I2]], 4
+  // CHECK-NEXT:   [[IDX2:%.*]] = add [[IPTR_T]] [[IDX1]], [[I]]
+  // OPT-NEXT:     [[CMP:%.*]] = icmp ult [[IPTR_T]] [[IDX2]], 16
   // OPT-NEXT:     call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:   [[MAT:%.*]] = load <16 x i32>, ptr %result, align 4{{$}}
-  // CHECK-NEXT:   [[MATINS:%.*]] = insertelement <16 x i32> [[MAT]], i32 1, i64 [[IDX2]]
+  // CHECK-NEXT:   [[MATINS:%.*]] = insertelement <16 x i32> [[MAT]], i32 1, [[IPTR_T]] [[IDX2]]
   // CHECK-NEXT:   store <16 x i32> [[MATINS]], ptr %result, align 4
   // CHECK-NEXT:   br label %for.inc
 

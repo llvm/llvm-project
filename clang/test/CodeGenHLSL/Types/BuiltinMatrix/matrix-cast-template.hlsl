@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - -DSPIRV | FileCheck %s --check-prefixes=CHECK,SPIRV
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -finclude-default-header -fnative-half-type -emit-llvm -disable-llvm-passes  %s -o - | FileCheck %s
 
 
@@ -324,13 +324,12 @@ class Foo {
   Foo(matrix_4_4<int> x);
 };
 
-#ifdef SPIRV
 // These require mangling. DXIL uses MicrosoftMangle which doesn't support mangling matrices yet.
-// SPIRV-LABEL: define {{.*}}class_constructor_matrix_ty
+// CHECK-LABEL: define {{.*}}class_constructor_matrix_ty
 Foo class_constructor_matrix_ty(matrix_4_4<int> m) {
-  // SPIRV:         [[M:%.*]]  = load <16 x i32>, ptr {{.*}}, align 4
-  // SPIRV-NEXT:    call{{.*}} void @_ZN3FooC1Eu11matrix_typeILj4ELj4EiE(ptr noundef nonnull align 4 dereferenceable(40) %agg.result, <16 x i32> noundef [[M]])
-  // SPIRV-NEXT:    ret void
+  // CHECK:         [[M:%.*]]  = load <16 x i32>, ptr {{.*}}, align 4
+  // CHECK-NEXT:    call{{.*}} void @_ZN3FooC1Eu11matrix_typeIL{{[mj]}}4EL{{[mj]}}4EiE(ptr noundef nonnull align 4 dereferenceable(40) %agg.result, <16 x i32> noundef [[M]])
+  // CHECK-NEXT:    ret void
 
   return Foo(m);
 }
@@ -340,12 +339,11 @@ struct Bar {
   Bar(matrix_3_3<float> x);
 };
 
-// SPIRV-LABEL: define {{.*}}struct_constructor_matrix_ty
+// CHECK-LABEL: define {{.*}}struct_constructor_matrix_ty
 Bar struct_constructor_matrix_ty(matrix_3_3<float> m) {
-  // SPIRV:         [[M:%.*]] = load <9 x float>, ptr {{.*}}, align 4
-  // SPIRV-NEXT:    call{{.*}} void @_ZN3BarC1Eu11matrix_typeILj3ELj3EfE(ptr noundef nonnull align 4 dereferenceable(40) %agg.result, <9 x float> noundef [[M]])
-  // SPIRV-NEXT:    ret void
+  // CHECK:         [[M:%.*]] = load <9 x float>, ptr {{.*}}, align 4
+  // CHECK-NEXT:    call{{.*}} void @_ZN3BarC1Eu11matrix_typeIL{{[mj]}}3EL{{[mj]}}3EfE(ptr noundef nonnull align 4 dereferenceable(40) %agg.result, <9 x float> noundef [[M]])
+  // CHECK-NEXT:    ret void
 
   return Bar(m);
 }
-#endif
