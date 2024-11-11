@@ -29,6 +29,7 @@ namespace llvm {
 template <typename IRUnitT> class AllAnalysesOn;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 class PreservedAnalyses;
+struct RequiredPassMixin;
 
 // Implementation details of the pass manager interfaces.
 namespace detail {
@@ -112,7 +113,10 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
     return false;
   }
 
-  bool isRequired() const override { return passIsRequiredImpl<PassT>(); }
+  bool isRequired() const override {
+    return passIsRequiredImpl<PassT>() ||
+           std::is_base_of_v<RequiredPassMixin, PassT>;
+  }
 
   PassT Pass;
 };
