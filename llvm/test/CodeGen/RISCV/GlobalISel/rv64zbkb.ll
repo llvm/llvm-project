@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBKB
 
+; FIXME: Use packw
 define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: pack_i32:
 ; RV64I:       # %bb.0:
@@ -30,6 +31,7 @@ define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %or
 }
 
+; FIXME: Use packw
 define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; RV64I-LABEL: pack_i32_2:
 ; RV64I:       # %bb.0:
@@ -52,6 +54,7 @@ define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 }
 
 ; Test case where we don't have a sign_extend_inreg after the or.
+; FIXME: Use packw
 define signext i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 signext %2) {
 ; RV64I-LABEL: pack_i32_3:
 ; RV64I:       # %bb.0:
@@ -93,6 +96,7 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
+; FIXME: The slli+srli isn't needed with pack.
 define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: pack_i64_2:
 ; RV64I:       # %bb.0:
@@ -141,6 +145,7 @@ define i64 @pack_i64_3(ptr %0, ptr %1) {
   ret i64 %8
 }
 
+; FIXME: Use packh
 define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: packh_i32:
 ; RV64I:       # %bb.0:
@@ -168,6 +173,7 @@ define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %or
 }
 
+; FIXME: Use packh
 define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: packh_i32_2:
 ; RV64I:       # %bb.0:
@@ -191,6 +197,7 @@ define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
+; FIXME: Use packh
 define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: packh_i64:
 ; RV64I:       # %bb.0:
@@ -238,6 +245,7 @@ define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
+; FIXME: Use packh
 define zeroext i16 @packh_i16(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; RV64I-LABEL: packh_i16:
 ; RV64I:       # %bb.0:
@@ -261,6 +269,7 @@ define zeroext i16 @packh_i16(i8 zeroext %a, i8 zeroext %b) nounwind {
   ret i16 %or
 }
 
+; FIXME: Use packh
 define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
 ; RV64I-LABEL: packh_i16_2:
 ; RV64I:       # %bb.0:
@@ -289,6 +298,7 @@ define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
   ret i16 %8
 }
 
+; FIXME: Use packh
 define void @packh_i16_3(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2, ptr %p) {
 ; RV64I-LABEL: packh_i16_3:
 ; RV64I:       # %bb.0:
@@ -394,6 +404,7 @@ define i64 @pack_i64_imm() {
   ret i64 1157442765409226768 ; 0x0101010101010101
 }
 
+; FIXME: Use zext.h
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-LABEL: zexth_i32:
 ; RV64I:       # %bb.0:

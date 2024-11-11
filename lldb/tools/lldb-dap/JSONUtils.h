@@ -9,14 +9,21 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
-#include "BreakpointBase.h"
 #include "DAPForward.h"
-#include "lldb/API/SBModule.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBType.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace lldb_dap {
 
@@ -379,17 +386,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread);
-
-/// Create a "instruction" object for a LLDB disassemble object as described in
-/// the Visual Studio Code debug adaptor definition.
-///
-/// \param[in] bp
-///     The LLDB instruction object used to populate the disassembly
-///     instruction.
-/// \return
-///     A "Scope" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp);
 
 /// Create a "Thread" object for a LLDB thread object.
 ///
