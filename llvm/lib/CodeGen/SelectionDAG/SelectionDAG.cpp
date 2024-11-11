@@ -2518,9 +2518,9 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     SDValue StoreValue = ST->getValue();
     unsigned ResNo = StoreValue.getResNo();
     Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
-    // If the pointer value does not come from the IR, it could come from ABI
-    // lowering and may alias with the arguments of the library call if they are
-    // passed via the stack.
+    // Limit this fold to IR pointers. Stores to areas such as the stack may be
+    // part of the setup for a call, which, if folded, could result in nested
+    // call sequences.
     const Value *PointerValue =
         dyn_cast_or_null<const Value *>(ST->getPointerInfo().V);
     if (!PointerValue || CallRetResNo == ResNo || !ST->isSimple() ||
