@@ -613,7 +613,7 @@ def OMP_Critical : Directive<"critical"> {
 }
 def OMP_DeclareMapper : Directive<"declare mapper"> {
   let requiredClauses = [
-    VersionedClause<OMPC_Map, 50>,
+    VersionedClause<OMPC_Map, 45>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
