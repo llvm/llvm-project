@@ -15665,6 +15665,10 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
     Terms.emplace_back(LoopEntryPredicate->getCondition(),
                        LoopEntryPredicate->getSuccessor(0) == Pair.second);
+
+    // If we are recursively collecting guards stop after 2 predecessors.
+    if (Depth > 0 && Terms.size() == 2)
+      break;
   }
   // Finally, if we stopped climbing the predecessor chain because
   // there wasn't a unique one to continue, try to collect conditions
