@@ -3024,6 +3024,14 @@ SDValue SITargetLowering::LowerFormalArguments(
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
       } else {
+#ifndef NDEBUG
+        if (Arg.isOrigArg()) {
+          Argument *OrigArg = Fn.getArg(Arg.getOrigArgIndex());
+          assert(!OrigArg->hasAttribute("amdgpu-hidden-argument") &&
+                 "Hidden arguments should be preloaded");
+        }
+#endif // NDEBUG
+
         NewArg =
             lowerKernargMemParameter(DAG, VT, MemVT, DL, Chain, Offset,
                                      Alignment, Ins[i].Flags.isSExt(), &Ins[i]);

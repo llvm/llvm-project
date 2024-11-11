@@ -144,17 +144,17 @@ public:
   // Returns the maximum number of user SGPRs that we have available to preload
   // arguments.
   void setInitialFreeUserSGPRsCount() {
-    const unsigned MaxUserSGPRs = ST.getMaxNumUserSGPRs();
     GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
-
-    NumFreeUserSGPRs = MaxUserSGPRs - UserSGPRInfo.getNumUsedUserSGPRs();
+    NumFreeUserSGPRs =
+        UserSGPRInfo.getNumFreeUserSGPRs() - 1 /* Synthetic SGPRs*/;
   }
 
   bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
                             uint64_t LastExplicitArgOffset) {
     //  Check if this argument may be loaded into the same register as the
     //  previous argument.
-    if (!isAligned(Align(4), ArgOffset) && AllocSize < 4)
+    if (ArgOffset == LastExplicitArgOffset && !isAligned(Align(4), ArgOffset) &&
+        AllocSize < 4)
       return true;
 
     // Pad SGPRs for kernarg alignment.
@@ -170,6 +170,7 @@ public:
 
   // Try to allocate SGPRs to preload implicit kernel arguments.
   void tryAllocImplicitArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
+                                       uint64_t LastExplicitArgOffset,
                                        IRBuilder<> &Builder) {
     Function *ImplicitArgPtr = Intrinsic::getDeclarationIfExists(
         F.getParent(), Intrinsic::amdgcn_implicitarg_ptr);
@@ -215,7 +216,6 @@ public:
     // argument can actually be preloaded.
     std::sort(ImplicitArgLoads.begin(), ImplicitArgLoads.end(), less_second());
 
-    uint64_t LastExplicitArgOffset = ImplicitArgsBaseOffset;
     // If we fail to preload any implicit argument we know we don't have SGPRs
     // to preload any subsequent ones with larger offsets. Find the first
     // argument that we cannot preload.
@@ -485,7 +485,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     uint64_t ImplicitArgsBaseOffset =
         alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
         BaseOffset;
-    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset,
+    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset, ExplicitArgOffset,
                                                 Builder);
   }
 
