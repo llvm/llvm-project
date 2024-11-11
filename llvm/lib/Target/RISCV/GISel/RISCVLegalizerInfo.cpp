@@ -132,10 +132,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0, nxv16p0};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
-      .legalFor({s32, sXLen})
+      .legalFor({sXLen})
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen);
+      .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();

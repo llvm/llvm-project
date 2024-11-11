@@ -7,19 +7,16 @@
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBB-ZBKB,RV64ZBKB
 
 ; FIXME: sext.w is unneeded.
+; FIXME: Use andn
 define signext i32 @andn_i32(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: andn_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    not a1, a1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-ZBKB-LABEL: andn_i32:
-; RV64ZBB-ZBKB:       # %bb.0:
-; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
-; RV64ZBB-ZBKB-NEXT:    sext.w a0, a0
-; RV64ZBB-ZBKB-NEXT:    ret
+; CHECK-LABEL: andn_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    srli a2, a2, 32
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
   %neg = xor i32 %b, -1
   %and = and i32 %neg, %a
   ret i32 %and
@@ -42,19 +39,16 @@ define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 }
 
 ; FIXME: sext.w is unneeded.
+; FIXME: Use orn
 define signext i32 @orn_i32(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: orn_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    not a1, a1
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-ZBKB-LABEL: orn_i32:
-; RV64ZBB-ZBKB:       # %bb.0:
-; RV64ZBB-ZBKB-NEXT:    orn a0, a0, a1
-; RV64ZBB-ZBKB-NEXT:    sext.w a0, a0
-; RV64ZBB-ZBKB-NEXT:    ret
+; CHECK-LABEL: orn_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    srli a2, a2, 32
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
   %neg = xor i32 %b, -1
   %or = or i32 %neg, %a
   ret i32 %or
@@ -77,19 +71,16 @@ define i64 @orn_i64(i64 %a, i64 %b) nounwind {
 }
 
 ; FIXME: sext.w is unneeded.
+; FIXME: Use xnor
 define signext i32 @xnor_i32(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: xnor_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    not a0, a0
-; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-ZBKB-LABEL: xnor_i32:
-; RV64ZBB-ZBKB:       # %bb.0:
-; RV64ZBB-ZBKB-NEXT:    xnor a0, a0, a1
-; RV64ZBB-ZBKB-NEXT:    sext.w a0, a0
-; RV64ZBB-ZBKB-NEXT:    ret
+; CHECK-LABEL: xnor_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    srli a2, a2, 32
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
   %neg = xor i32 %a, -1
   %xor = xor i32 %neg, %b
   ret i32 %xor
@@ -116,7 +107,7 @@ declare i32 @llvm.fshl.i32(i32, i32, i32)
 define signext i32 @rol_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: rol_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    negw a2, a1
+; RV64I-NEXT:    neg a2, a1
 ; RV64I-NEXT:    andi a1, a1, 31
 ; RV64I-NEXT:    sllw a1, a0, a1
 ; RV64I-NEXT:    andi a2, a2, 31
@@ -136,7 +127,7 @@ define signext i32 @rol_i32(i32 signext %a, i32 signext %b) nounwind {
 define void @rol_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
 ; RV64I-LABEL: rol_i32_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    negw a3, a1
+; RV64I-NEXT:    neg a3, a1
 ; RV64I-NEXT:    andi a1, a1, 31
 ; RV64I-NEXT:    sllw a1, a0, a1
 ; RV64I-NEXT:    andi a3, a3, 31
@@ -159,7 +150,7 @@ define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: rol_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a1, -2
-; RV64I-NEXT:    negw a2, a0
+; RV64I-NEXT:    neg a2, a0
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    sllw a0, a1, a0
 ; RV64I-NEXT:    andi a2, a2, 31
@@ -202,7 +193,7 @@ declare i32 @llvm.fshr.i32(i32, i32, i32)
 define signext i32 @ror_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: ror_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    negw a2, a1
+; RV64I-NEXT:    neg a2, a1
 ; RV64I-NEXT:    andi a1, a1, 31
 ; RV64I-NEXT:    srlw a1, a0, a1
 ; RV64I-NEXT:    andi a2, a2, 31
@@ -222,7 +213,7 @@ define signext i32 @ror_i32(i32 signext %a, i32 signext %b) nounwind {
 define void @ror_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
 ; RV64I-LABEL: ror_i32_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    negw a3, a1
+; RV64I-NEXT:    neg a3, a1
 ; RV64I-NEXT:    andi a1, a1, 31
 ; RV64I-NEXT:    srlw a1, a0, a1
 ; RV64I-NEXT:    andi a3, a3, 31
@@ -245,7 +236,7 @@ define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: ror_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a1, -2
-; RV64I-NEXT:    negw a2, a0
+; RV64I-NEXT:    neg a2, a0
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    srlw a0, a1, a0
 ; RV64I-NEXT:    andi a2, a2, 31
