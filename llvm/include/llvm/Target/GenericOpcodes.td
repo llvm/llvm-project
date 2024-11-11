@@ -1590,6 +1590,13 @@ def G_SPLAT_VECTOR: GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic stepvector.
+def G_STEP_VECTOR: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$step);
+  let hasSideEffects = false;
+}
+
 // Generic masked compress.
 def G_VECTOR_COMPRESS: GenericInstruction {
   let OutOperandList = (outs type0:$dst);

@@ -2904,7 +2904,9 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     if (auto *SI = dyn_cast<SelectInst>(LHS)) {
       // We cannot do this fold for elementwise select since ShuffleVector is
       // not elementwise.
-      if (SI->getCondition()->getType()->isIntegerTy()) {
+      if (SI->getCondition()->getType()->isIntegerTy() &&
+          (isa<PoisonValue>(RHS) ||
+           isGuaranteedNotToBePoison(SI->getCondition()))) {
         if (Instruction *I = FoldOpIntoSelect(SVI, SI))
           return I;
       }

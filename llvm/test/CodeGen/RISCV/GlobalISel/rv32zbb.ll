@@ -616,12 +616,13 @@ define i32 @sextb_i32(i32 %a) nounwind {
   ret i32 %shr
 }
 
+; FIXME: Combine back to back srai.
 define i64 @sextb_i64(i64 %a) nounwind {
 ; RV32I-LABEL: sextb_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 24
-; RV32I-NEXT:    srai a1, a0, 31
+; RV32I-NEXT:    slli a1, a0, 24
+; RV32I-NEXT:    srai a0, a1, 24
+; RV32I-NEXT:    srai a1, a1, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: sextb_i64:
@@ -650,12 +651,13 @@ define i32 @sexth_i32(i32 %a) nounwind {
   ret i32 %shr
 }
 
+; FIXME: Combine back to back srai.
 define i64 @sexth_i64(i64 %a) nounwind {
 ; RV32I-LABEL: sexth_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
-; RV32I-NEXT:    srai a1, a0, 31
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srai a0, a1, 16
+; RV32I-NEXT:    srai a1, a1, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: sexth_i64:

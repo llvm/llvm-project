@@ -128,7 +128,7 @@ define i1 @test4(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[ADD]], 15
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp samesign ult i32 [[ADD]], 15
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT2]] ]
@@ -198,7 +198,7 @@ define i1 @test6(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = shl nuw nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[SHIFTED]], 65536
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp samesign ult i32 [[SHIFTED]], 65536
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT2]] ]
@@ -1265,7 +1265,7 @@ define void @ashr_sgt(i8 %x) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @check1(i1 true)
-; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i8 [[X]], 8
+; CHECK-NEXT:    [[C3:%.*]] = icmp samesign ugt i8 [[X]], 8
 ; CHECK-NEXT:    call void @check1(i1 [[C3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
@@ -1291,7 +1291,7 @@ define void @ashr_sge(i8 %x) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @check1(i1 true)
-; CHECK-NEXT:    [[C3:%.*]] = icmp uge i8 [[X]], 5
+; CHECK-NEXT:    [[C3:%.*]] = icmp samesign uge i8 [[X]], 5
 ; CHECK-NEXT:    call void @check1(i1 [[C3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
@@ -1374,7 +1374,7 @@ define i1 @pr69928(i64 noundef %arg, i64 noundef %arg1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 64424509440
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ARG1:%.*]], 4294967295
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[ARG]], [[AND]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i64 [[ARG]], [[AND]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[SELECT]]
 ;
@@ -1390,7 +1390,7 @@ define i1 @test_select_flip(i64 noundef %arg) {
 ; CHECK-LABEL: @test_select_flip(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ARG:%.*]], 1000
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[ARG]], 100
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i64 [[ARG]], 100
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[SELECT]]
 ;
