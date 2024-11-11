@@ -95,9 +95,9 @@ function (add_flangrt_library name)
 
   # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
   # should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
-  # functions for 128-bit integer math (__udivti3, __modti3, __fixsfti,
-  # __floattidf, ...) that msvc does not support. We are injecting a dependency
-  # to Compiler-RT where these are implemented.
+  # functions in some cases like 128-bit integer math (__udivti3, __modti3,
+  # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
+  # dependency to Compiler-RT's builtin library where these are implemented.
   if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FLANG_RT_LIBCALL)
     target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FLANG_RT_LIBCALL}")
   endif ()

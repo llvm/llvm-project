@@ -291,6 +291,14 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
 
+  // Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
+  // should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
+  // functions in some cases like 128-bit integer math (__udivti3, __modti3,
+  // __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
+  // dependency to Compiler-RT's builtin library where these are implemented.
+  CmdArgs.push_back(Args.MakeArgString(
+      "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+
   unsigned RTOptionID = options::OPT__SLASH_MT;
   if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
     RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
