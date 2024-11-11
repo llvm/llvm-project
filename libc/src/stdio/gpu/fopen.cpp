@@ -9,6 +9,7 @@
 #include "src/stdio/fopen.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"
@@ -17,6 +18,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict path, const char *__restrict mode)) {
+  LIBC_CRASH_ON_NULLPTR(path);
+  LIBC_CRASH_ON_NULLPTR(mode);
   uintptr_t file;
   rpc::Client::Port port = rpc::client.open<LIBC_OPEN_FILE>();
   port.send_n(path, internal::string_length(path) + 1);
