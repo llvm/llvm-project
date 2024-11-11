@@ -2044,6 +2044,31 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
+bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) {
+  GSub &Sub = cast<GSub>(MI);
+
+  LLT Ty = MRI.getType(Sub.getReg(0));
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {Ty}}))
+    return false;
+
+  if (!isConstantLegalOrBeforeLegalizer(Ty))
+    return false;
+
+  APInt Imm = getIConstantFromReg(Sub.getRHSReg(), MRI);
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto NegCst = B.buildConstant(Ty, -Imm);
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
+    MI.getOperand(2).setReg(NegCst.getReg(0));
+    MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
+
 // shl ([sza]ext x), y => zext (shl x, y), if shift does not overflow source
 bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
                                              RegisterImmPair &MatchData) {

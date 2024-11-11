@@ -49,6 +49,16 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %mul_flag = llvm.mul %arg0, %arg0 overflow<nsw, nuw> : i32
   %shl_flag = llvm.shl %arg0, %arg0 overflow<nuw, nsw> : i32
 
+// Integer exact flag.
+// CHECK: {{.*}} = llvm.sdiv exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.udiv exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.ashr exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.lshr exact %[[I32]], %[[I32]] : i32
+  %sdiv_flag = llvm.sdiv exact %arg0, %arg0 : i32
+  %udiv_flag = llvm.udiv exact %arg0, %arg0 : i32
+  %ashr_flag = llvm.ashr exact %arg0, %arg0 : i32
+  %lshr_flag = llvm.lshr exact %arg0, %arg0 : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32
@@ -312,6 +322,19 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %10 = llvm.addrspacecast %arg4 : !llvm.ptr to !llvm.ptr<2>
 // CHECK:  = llvm.bitcast %[[I64]] : i64 to f64
   %11 = llvm.bitcast %arg1 : i64 to f64
+  llvm.return
+}
+
+// CHECK-LABEL: @nneg_casts
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
+func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+                %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
+// CHECK:  = llvm.zext nneg %[[I32]] : i32 to i64
+  %0 = llvm.zext nneg %arg0 : i32 to i64
+// CHECK:  = llvm.zext nneg %[[V4I32]] : vector<4xi32> to vector<4xi64>
+  %4 = llvm.zext nneg %arg2 : vector<4xi32> to vector<4xi64>
+// CHECK:  = llvm.uitofp nneg %[[I32]] : i32 to f32
+  %7 = llvm.uitofp nneg %arg0 : i32 to f32
   llvm.return
 }
 

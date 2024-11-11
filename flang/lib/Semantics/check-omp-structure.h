@@ -157,6 +157,7 @@ private:
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
+  void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);

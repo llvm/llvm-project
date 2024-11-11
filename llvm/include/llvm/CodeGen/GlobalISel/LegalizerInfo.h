@@ -1102,6 +1102,13 @@ public:
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
   }
 
+  LegalizeRuleSet &clampScalar(bool Pred, unsigned TypeIdx, const LLT MinTy,
+                               const LLT MaxTy) {
+    if (!Pred)
+      return *this;
+    return clampScalar(TypeIdx, MinTy, MaxTy);
+  }
+
   /// Limit the range of scalar sizes to MinTy and MaxTy.
   LegalizeRuleSet &clampScalarOrElt(unsigned TypeIdx, const LLT MinTy,
                                     const LLT MaxTy) {

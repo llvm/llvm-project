@@ -1106,8 +1106,7 @@ Order make(const parser::OmpClause::Order &inp,
   auto &t1 = std::get<wrapped::Type>(inp.v.t);
 
   auto convert3 = [&](const parser::OmpOrderModifier &s) {
-    return Fortran::common::visit(
-        [&](parser::OmpOrderModifier::Kind k) { return convert1(k); }, s.u);
+    return convert1(s.v);
   };
   return Order{
       {/*OrderModifier=*/maybeApply(convert3, t0), /*Ordering=*/convert2(t1)}};

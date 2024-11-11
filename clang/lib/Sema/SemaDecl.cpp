@@ -15021,7 +15021,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
                                             : diag::warn_deprecated_register)
           << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
     } else if (!getLangOpts().CPlusPlus &&
-               DS.getTypeSpecType() == DeclSpec::TST_void) {
+               DS.getTypeSpecType() == DeclSpec::TST_void &&
+               D.getNumTypeObjects() == 0) {
       Diag(DS.getStorageClassSpecLoc(),
            diag::err_invalid_storage_class_in_func_decl)
           << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
@@ -19364,11 +19365,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       }
 
       // Structs without named members are extension in C (C99 6.7.2.1p7),
-      // but are accepted by GCC.
-      if (NonBitFields == 0 && !getLangOpts().CPlusPlus) {
-        Diag(RecLoc, IsEmpty ? diag::ext_empty_struct_union :
-                               diag::ext_no_named_members_in_struct_union)
-          << Record->isUnion();
+      // but are accepted by GCC. In C2y, this became implementation-defined
+      // (C2y 6.7.3.2p10).
+      if (NonBitFields == 0 && !getLangOpts().CPlusPlus && !getLangOpts().C2y) {
+        Diag(RecLoc, IsEmpty ? diag::ext_empty_struct_union
+                             : diag::ext_no_named_members_in_struct_union)
+            << Record->isUnion();
       }
     }
   } else {

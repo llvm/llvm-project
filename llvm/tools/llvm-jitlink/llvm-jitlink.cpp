@@ -15,6 +15,7 @@
 #include "llvm-jitlink.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
@@ -1740,7 +1741,7 @@ static Error addSectCreates(Session &S,
 
     StringRef SCArg(*SCItr);
 
-    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.rsplit('@');
     auto [SectName, FileName] = SectAndFileName.rsplit(',');
     if (SectName.empty())
       return make_error<StringError>("In -sectcreate=" + SCArg +

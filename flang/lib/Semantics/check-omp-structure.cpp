@@ -420,13 +420,47 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
         "region."_err_en_US);
   }
 }
+void OmpStructureChecker::HasInvalidLoopBinding(
+    const parser::OpenMPLoopConstruct &x) {
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+
+  auto teamsBindingChecker = [&](parser::MessageFixedText msg) {
+    const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+    for (const auto &clause : clauseList.v) {
+      if (const auto *bindClause{
+              std::get_if<parser::OmpClause::Bind>(&clause.u)}) {
+        if (bindClause->v.v != parser::OmpBindClause::Type::Teams) {
+          context_.Say(beginDir.source, msg);
+        }
+      }
+    }
+  };
+
+  if (llvm::omp::Directive::OMPD_loop == beginDir.v &&
+      CurrentDirectiveIsNested() &&
+      OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}.test(
+          GetContextParent().directive)) {
+    teamsBindingChecker(
+        "`BIND(TEAMS)` must be specified since the `LOOP` region is "
+        "strictly nested inside a `TEAMS` region."_err_en_US);
+  }
+
+  if (OmpDirectiveSet{
+          llvm::omp::OMPD_teams_loop, llvm::omp::OMPD_target_teams_loop}
+          .test(beginDir.v)) {
+    teamsBindingChecker(
+        "`BIND(TEAMS)` must be specified since the `LOOP` directive is "
+        "combined with a `TEAMS` construct."_err_en_US);
+  }
+}
 
 void OmpStructureChecker::HasInvalidTeamsNesting(
     const llvm::omp::Directive &dir, const parser::CharBlock &source) {
   if (!llvm::omp::nestedTeamsAllowedSet.test(dir)) {
     context_.Say(source,
-        "Only `DISTRIBUTE` or `PARALLEL` regions are allowed to be strictly "
-        "nested inside `TEAMS` region."_err_en_US);
+        "Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be "
+        "strictly nested inside `TEAMS` region."_err_en_US);
   }
 }
 
@@ -590,6 +624,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   CheckLoopItrVariableIsInt(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
+  HasInvalidLoopBinding(x);
   if (CurrentDirectiveIsNested() &&
       llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
     HasInvalidTeamsNesting(beginDir.v, beginDir.source);
@@ -1696,8 +1731,8 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
 
 void OmpStructureChecker::CheckOrderedDependClause(
     std::optional<int64_t> orderedValue) {
-  auto visitDoacross = [&](const parser::OmpDoacross &doa,
-                           const parser::CharBlock &src) {
+  auto visitDoacross{[&](const parser::OmpDoacross &doa,
+                         const parser::CharBlock &src) {
     if (auto *sinkVector{std::get_if<parser::OmpDoacross::Sink>(&doa.u)}) {
       int64_t numVar = sinkVector->v.v.size();
       if (orderedValue != numVar) {
@@ -1705,16 +1740,16 @@ void OmpStructureChecker::CheckOrderedDependClause(
             "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
       }
     }
-  };
+  }};
   auto depClauses{FindClauses(llvm::omp::Clause::OMPC_depend)};
-  for (auto itr = depClauses.first; itr != depClauses.second; ++itr) {
+  for (auto itr{depClauses.first}; itr != depClauses.second; ++itr) {
     auto &dependClause{std::get<parser::OmpClause::Depend>(itr->second->u)};
     if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
       visitDoacross(*doAcross, itr->second->source);
     }
   }
   auto doaClauses = FindClauses(llvm::omp::Clause::OMPC_doacross);
-  for (auto itr = doaClauses.first; itr != doaClauses.second; ++itr) {
+  for (auto itr{doaClauses.first}; itr != doaClauses.second; ++itr) {
     auto &doaClause{std::get<parser::OmpClause::Doacross>(itr->second->u)};
     visitDoacross(doaClause.v.v, itr->second->source);
   }
