@@ -834,4 +834,12 @@ def err_drv_triple_version_invalid : Error<
 
 def warn_missing_include_dirs : Warning<
   "no such include directory: '%0'">, InGroup<MissingIncludeDirs>, DefaultIgnore;
+
+def warn_wasm_opt_not_found : Warning<
+  "wasm-opt was not found, some optimizations were not applied">,
+  InGroup<WebAssemblyOptimization>;
+def err_wasm_opt_not_found_with_flag : Error<
+  "wasm-opt was explicitly requested, but was not found">;
+def err_wasm_opt_requested_but_not_supported : Error<
+  "wasm-opt was explicitly requested, but is not supported with '%0'">;
 }
