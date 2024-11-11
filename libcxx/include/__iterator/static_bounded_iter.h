@@ -17,9 +17,13 @@
 #include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/make_const_lvalue_ref.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -93,7 +97,12 @@ struct __static_bounded_iter {
   _LIBCPP_HIDE_FROM_ABI __static_bounded_iter(__static_bounded_iter const&) = default;
   _LIBCPP_HIDE_FROM_ABI __static_bounded_iter(__static_bounded_iter&&)      = default;
 
-  template <class _OtherIterator, __enable_if_t<is_convertible<_OtherIterator, _Iterator>::value, int> = 0>
+  template <class _OtherIterator,
+            __enable_if_t<
+                _And< is_convertible<const _OtherIterator&, _Iterator>,
+                      _Or<is_same<reference, __iter_reference<_OtherIterator> >,
+                          is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
+                int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
   __static_bounded_iter(__static_bounded_iter<_OtherIterator, _Size> const& __other) _NOEXCEPT
       : __storage_(__other.__storage_.__current(), __other.__storage_.__begin()) {}
@@ -264,7 +273,7 @@ public:
 private:
   template <class>
   friend struct pointer_traits;
-  template <class, size_t, class>
+  template <class, size_t>
   friend struct __static_bounded_iter;
   __static_bounded_iter_storage<_Iterator, _Size> __storage_;
 
