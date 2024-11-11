@@ -17,6 +17,12 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
+#define XRAY_OPTIONS_VAR __llvm_xray_options
+
+extern "C" {
+extern char XRAY_OPTIONS_VAR[1];
+}
+
 namespace __xray {
 
 struct Flags {

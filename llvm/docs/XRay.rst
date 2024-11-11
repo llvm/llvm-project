@@ -157,7 +157,8 @@ Also by default the filename of the XRay trace is ``xray-log.XXXXXX`` where the
 ``XXXXXX`` part is randomly generated.
 
 These options can be controlled through the ``XRAY_OPTIONS`` environment
-variable, where we list down the options and their defaults below.
+variable during program run-time, where we list down the options and their
+defaults below.
 
 +-------------------+-----------------+---------------+------------------------+
 | Option            | Type            | Default       | Description            |
@@ -177,6 +178,18 @@ variable, where we list down the options and their defaults below.
 |                   |                 |               | level.                 |
 +-------------------+-----------------+---------------+------------------------+
 
+In addition to environment variable, you can also use ``-fxray-default-options``
+to specify default XRay options during program build time.
+
+For example, programs built with the following flags automatically use
+'patch_premain=true,xray_mode=basic' by default even without setting ``XRAY_OPTIONS``.
+
+::
+
+  clang -fxray-instrument -fxray-default-options='patch_premain=true,xray_mode=basic' ...
+
+Note that you still can override options designated by ``-fxray-default-options``
+using ``XRAY_OPTIONS`` during run-time.
 
 If you choose to not use the default logging implementation that comes with the
 XRay runtime and/or control when/how the XRay instrumentation runs, you may use

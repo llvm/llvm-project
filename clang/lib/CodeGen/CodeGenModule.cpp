@@ -448,6 +448,14 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
     getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
                               CodeGenOpts.NumRegisterParameters);
+
+  // Insert XRay default options if it hasn't been done.
+  if (CodeGenOpts.XRayInstrumentFunctions &&
+      !CodeGenOpts.XRayDefaultOptions.empty() &&
+      !getModule().getModuleFlag("xray-default-opts"))
+    getModule().addModuleFlag(
+        llvm::Module::Error, "xray-default-opts",
+        llvm::MDString::get(LLVMContext, CodeGenOpts.XRayDefaultOptions));
 }
 
 CodeGenModule::~CodeGenModule() {}

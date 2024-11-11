@@ -200,6 +200,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     Args.addOptInFlag(CmdArgs, options::OPT_fxray_shared,
                       options::OPT_fno_xray_shared);
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fxray_default_options_EQ))
+    A->render(Args, CmdArgs);
+
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {
     int Value;

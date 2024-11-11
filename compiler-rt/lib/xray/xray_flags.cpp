@@ -67,6 +67,10 @@ void initializeFlags() XRAY_NEVER_INSTRUMENT {
   const char *XRayCompileFlags = useCompilerDefinedFlags();
   XRayParser.ParseString(XRayCompileFlags);
 
+  // Override from compile-time options.
+  if (XRAY_OPTIONS_VAR[0] != 0)
+    XRayParser.ParseString(XRAY_OPTIONS_VAR);
+
   // Override from environment variables.
   XRayParser.ParseStringFromEnv("XRAY_OPTIONS");
 

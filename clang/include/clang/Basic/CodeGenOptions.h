@@ -399,6 +399,10 @@ public:
   /// Set of XRay instrumentation kinds to emit.
   XRayInstrSet XRayInstrumentationBundle;
 
+  /// Default XRay options. Will be overrided by the XRAY_OPTIONS
+  /// environment variable during run-time.
+  std::string XRayDefaultOptions;
+
   std::vector<std::string> DefaultFunctionAttrs;
 
   /// List of dynamic shared object files to be loaded as pass plugins.

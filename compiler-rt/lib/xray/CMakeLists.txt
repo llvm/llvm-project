@@ -7,6 +7,7 @@ set(XRAY_SOURCES
   xray_flags.cpp
   xray_interface.cpp
   xray_log_interface.cpp
+  xray_options_var.cpp
   xray_utils.cpp
   )
 

@@ -2882,6 +2882,12 @@ defm xray_instrument : BoolFOption<"xray-instrument",
           "Generate XRay instrumentation sleds on function entry and exit">,
   NegFlag<SetFalse>>;
 
+def fxray_default_options_EQ :
+  Joined<["-"], "fxray-default-options=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Default XRay options. Can be overwritten by XRAY_OPTIONS environment variable during run-time.">,
+  MarshallingInfoString<CodeGenOpts<"XRayDefaultOptions">>;
+
 def fxray_instruction_threshold_EQ :
   Joined<["-"], "fxray-instruction-threshold=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
