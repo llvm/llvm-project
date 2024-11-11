@@ -104,37 +104,34 @@
 // RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
 // RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-STATIC-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD %s
 
 // RUN: %clang --target=x86_64-sie-ps5 %s -pthread -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-PTHREAD %s
 
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-STATIC-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" --check-prefixes=CHECK-LD,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -shared -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" --check-prefixes=CHECK-LD,CHECK-DYNAMIC-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostartfiles -static -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" --check-prefixes=CHECK-LD,CHECK-STATIC-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
 
-// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-NO-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-NO-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -### 2>&1 | FileCheck "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD,CHECK-MAIN-CRT %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -shared -### 2>&1 | FileCheck "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD,CHECK-SHARED-CRT %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nodefaultlibs -pthread -fjmc -static -### 2>&1 | FileCheck "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD,CHECK-STATIC-CRT %s
 
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-NO-CRT,CHECK-NO-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -shared -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib -pthread -fjmc -static -### 2>&1 | FileCheck "--implicit-check-not=\"crt{{[^\"]*}}.o\"" "--implicit-check-not=\"-l{{[^\"]*}}\"" --check-prefixes=CHECK-LD %s
 
-// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-NO-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-NO-LIBC,CHECK-DYNAMIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-STATIC-LIBCPP,CHECK-NO-LIBC,CHECK-STATIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -### 2>&1 | FileCheck "--implicit-check-not=\"-lc_stub_weak\"" --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -shared -### 2>&1 | FileCheck "--implicit-check-not=\"-lc_stub_weak\"" --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nolibc -static -### 2>&1 | FileCheck "--implicit-check-not=\"-lc\"" --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-STATIC-LIBCPP,CHECK-STATIC-CORE-LIBS %s
 
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-NO-LIBCPP,CHECK-DYNAMIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-NO-LIBCPP,CHECK-DYNAMIC-CORE-LIBS %s
-// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -static -### 2>&1 | FileCheck --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-NO-LIBCPP,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -### 2>&1 | FileCheck "--implicit-check-not=\"-lc_stub_weak\"" --check-prefixes=CHECK-LD,CHECK-MAIN-CRT,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -shared -### 2>&1 | FileCheck "--implicit-check-not=\"-lc_stub_weak\"" --check-prefixes=CHECK-LD,CHECK-SHARED-CRT,CHECK-DYNAMIC-CORE-LIBS %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -nostdlib++ -static -### 2>&1 | FileCheck "--implicit-check-not=\"-lstdc++\"" --check-prefixes=CHECK-LD,CHECK-STATIC-CRT,CHECK-STATIC-LIBC,CHECK-STATIC-CORE-LIBS %s
 
 // CHECK-LD: {{ld(\.exe)?}}"
 // CHECK-MAIN-CRT-SAME: "crt1.o" "crti.o" "crtbegin.o"
 // CHECK-SHARED-CRT-SAME: "crti.o" "crtbeginS.o"
 // CHECK-STATIC-CRT-SAME: "crt1.o" "crti.o" "crtbeginT.o"
-
-// CHECK-NO-LIBC-NOT: "-lc{{(_stub_weak)?}}"
-// CHECK-NO-LIBCPP-NOT: "-l{{c_stub_weak|stdc\+\+}}"
 
 // CHECK-DYNAMIC-LIBC-SAME: "-lc_stub_weak"
 // CHECK-DYNAMIC-CORE-LIBS-SAME: "-lkernel_stub_weak"
@@ -147,9 +144,6 @@
 // CHECK-MAIN-CRT-SAME: "crtend.o" "crtn.o"
 // CHECK-SHARED-CRT-SAME: "crtendS.o" "crtn.o"
 // CHECK-STATIC-CRT-SAME: "crtend.o" "crtn.o"
-
-// CHECK-NO-CRT-NOT: "crt{{[^"]*}}.o"
-// CHECK-NO-LIBS-NOT: "-l{{[^"]*}}"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.
 
