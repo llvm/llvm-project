@@ -1379,7 +1379,7 @@ mlir::affine::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
 // input[i] should move from position i -> permMap[i]. Returns the position in
 // `input` that becomes the new outermost loop.
-unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
+unsigned mlir::affine::permuteLoops(ArrayRef<AffineForOp> input,
                                     ArrayRef<unsigned> permMap) {
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
@@ -1406,8 +1406,8 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
   // Move the innermost loop body to the loop that would be the innermost in the
   // permuted nest (only if the innermost loop is going to change).
   if (permMap.back() != input.size() - 1) {
-    auto *destBody = input[invPermMap.back().second].getBody();
-    auto *srcBody = input.back().getBody();
+    Block *destBody = ((AffineForOp)input[invPermMap.back().second]).getBody();
+    Block *srcBody = ((AffineForOp)input.back()).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      srcBody->getOperations(), srcBody->begin(),
                                      std::prev(srcBody->end()));
@@ -1437,7 +1437,7 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
       continue;
 
     // Move input[i] to its surrounding loop in the transformed nest.
-    auto *destBody = input[parentPosInInput].getBody();
+    auto *destBody = ((AffineForOp)input[parentPosInInput]).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      input[i]->getBlock()->getOperations(),
                                      Block::iterator(input[i]));

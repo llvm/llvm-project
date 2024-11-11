@@ -84,7 +84,7 @@ void func() {
   for(;;){}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc loop clause list
-  for(;;){}
+  for(int i = 0; i < 6;++i){}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc parallel invalid clause list
   for(;;){}
