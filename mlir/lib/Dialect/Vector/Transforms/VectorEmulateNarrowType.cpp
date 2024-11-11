@@ -43,7 +43,9 @@ using namespace mlir;
 ///
 ///   %mask = [1, 1, 0, 0, 0, 0]
 ///
-/// will first be padded with number of `intraDataOffset` zeros:
+/// will first be padded in the front with number of `intraDataOffset` zeros,
+/// and pad zeros in the back to make the number of elements a multiple of
+/// `scale` (just to make it easier to compute). The new mask will be:
 ///   %mask = [0, 1, 1, 0, 0, 0, 0, 0]
 ///
 /// then it will return the following new compressed mask:
@@ -54,7 +56,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   int origElements, int scale,
                                                   int intraDataOffset = 0) {
   assert(intraDataOffset < scale && "intraDataOffset must be less than scale");
-  auto numElements = (intraDataOffset + origElements + scale - 1) / scale;
+  auto numElements = llvm::divideCeil(intraDataOffset + origElements, scale);
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
