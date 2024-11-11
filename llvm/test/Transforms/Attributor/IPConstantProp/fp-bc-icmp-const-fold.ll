@@ -17,7 +17,7 @@ define void @test(i32 signext %n, i1 %arg) {
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end4:
-; CHECK-NEXT:    switch i32 undef, label [[IF_ELSE14:%.*]] [
+; CHECK-NEXT:    switch i32 [[N]], label [[IF_ELSE14:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[IF_THEN9:%.*]]
 ; CHECK-NEXT:      i32 1, label [[IF_THEN12:%.*]]
 ; CHECK-NEXT:    ]
@@ -26,13 +26,16 @@ define void @test(i32 signext %n, i1 %arg) {
 ; CHECK:       if.then12:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else14:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[SCALE_0:%.*]] = phi ppc_fp128 [ 0xM3FF00000000000000000000000000000, [[IF_ELSE14]] ], [ [[SCALE_0]], [[DO_BODY]] ]
+; CHECK-NEXT:    br i1 [[ARG]], label [[DO_BODY]], label [[IF_THEN33:%.*]]
 ; CHECK:       if.then33:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[ARG]], label [[_ZN5BOOST4MATH4SIGNIGEEIRKT__EXIT30:%.*]], label [[COND_FALSE_I28:%.*]]
 ; CHECK:       cond.false.i28:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 [[SCALE_0]] to i128
+; CHECK-NEXT:    [[TOBOOL_I26:%.*]] = icmp slt i128 [[TMP0]], 0
+; CHECK-NEXT:    br label [[_ZN5BOOST4MATH4SIGNIGEEIRKT__EXIT30]]
 ; CHECK:       _ZN5boost4math4signIgEEiRKT_.exit30:
 ; CHECK-NEXT:    unreachable
 ;
@@ -50,8 +53,7 @@ if.then2:                                         ; preds = %if.end
   unreachable
 
 if.end4:                                          ; preds = %if.end
-  %sub.n = select i1 undef, i32 undef, i32 %n
-  switch i32 %sub.n, label %if.else14 [
+  switch i32 %n, label %if.else14 [
   i32 0, label %if.then9
   i32 1, label %if.then12
   ]
