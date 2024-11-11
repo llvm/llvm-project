@@ -100,7 +100,7 @@ def StructStatvfs : NamedType<"struct statvfs">;
 def StructStatvfsPtr : PtrType<StructStatvfs>;
 def RestrictedStructStatvfsPtr : RestrictedPtrType<StructStatvfs>;
 
-// The function pointer type for the predicate for lsearch, lfin
+// The function pointer type for the predicate for lsearch, lfind
 def LSearchCompareT : NamedType<"__lsearchcompare_t">;
 
 def POSIX : StandardSpec<"POSIX"> {
