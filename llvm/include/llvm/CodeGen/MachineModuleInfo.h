@@ -86,7 +86,7 @@ class MachineModuleInfo {
   const LLVMTargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
-  MCContext Context;
+  std::unique_ptr<MCContext> Context;
   // This is an external context, that if assigned, will be used instead of the
   // internal context.
   MCContext *ExternalContext = nullptr;
@@ -124,10 +124,10 @@ public:
   const LLVMTargetMachine &getTarget() const { return TM; }
 
   const MCContext &getContext() const {
-    return ExternalContext ? *ExternalContext : Context;
+    return ExternalContext ? *ExternalContext : *Context;
   }
   MCContext &getContext() {
-    return ExternalContext ? *ExternalContext : Context;
+    return ExternalContext ? *ExternalContext : *Context;
   }
 
   const Module *getModule() const { return TheModule; }
