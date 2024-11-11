@@ -2495,16 +2495,15 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     const SCEV *TC2OverflowSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
     const SCEV *StepSCEV = SE.getSCEV(Step);
 
-    // Check if the tc + step is >= maxuint.
+    // Check if (UMax - n) < (VF * UF).
     if (SE.isKnownPredicate(ICmpInst::ICMP_ULT, TC2OverflowSCEV, StepSCEV)) {
       CheckMinIters = Builder.getTrue();
     } else if (!SE.isKnownPredicate(
                    CmpInst::getInversePredicate(CmpInst::ICMP_ULT),
                    TC2OverflowSCEV, StepSCEV)) {
-      // Generate the IV overflow check only if we cannot prove the IV won't
-      // overflow, or known to always overflow.
+      // Don't execute the vector loop if (UMax - n) < (VF * UF).
       CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
-    } // else tc + step known < maxuint, use CheckMinIters preset to false
+    } // else n + (VF * UF) <= UMax, use CheckMinIters preset to false
   }
 
   // Create new preheader for vector loop.
