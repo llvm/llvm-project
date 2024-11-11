@@ -59,7 +59,7 @@ protected:
 
 // Check that we don't accept egregiously incorrect prototypes.
 TEST_F(TargetLibraryInfoTest, InvalidProto) {
-  parseAssembly("%foo = type { %foo }\n");
+  parseAssembly("%foo = type opaque\n");
 
   auto *StructTy = StructType::getTypeByName(Context, "foo");
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);

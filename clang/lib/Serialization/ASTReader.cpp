@@ -2465,7 +2465,7 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
     return InputFileInfo();
 
   // If we've already loaded this input file, return it.
-  if (!F.InputFileInfosLoaded[ID - 1].Filename.empty())
+  if (F.InputFileInfosLoaded[ID - 1].isValid())
     return F.InputFileInfosLoaded[ID - 1];
 
   // Go find this input file.
@@ -2502,21 +2502,11 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevel = static_cast<bool>(Record[5]);
   R.ModuleMap = static_cast<bool>(Record[6]);
-  std::tie(R.FilenameAsRequested, R.Filename) = [&]() {
-    uint16_t AsRequestedLength = Record[7];
-
-    StringRef NameAsRequestedRef = Blob.substr(0, AsRequestedLength);
-    StringRef NameRef = Blob.substr(AsRequestedLength);
-
-    std::string NameAsRequested =
-        ResolveImportedPathAndAllocate(PathBuf, NameAsRequestedRef, F);
-    std::string Name = ResolveImportedPathAndAllocate(PathBuf, NameRef, F);
-
-    if (Name.empty())
-      Name = NameAsRequested;
-
-    return std::make_pair(std::move(NameAsRequested), std::move(Name));
-  }();
+  uint16_t AsRequestedLength = Record[7];
+  R.UnresolvedImportedFilenameAsRequested = Blob.substr(0, AsRequestedLength);
+  R.UnresolvedImportedFilename = Blob.substr(AsRequestedLength);
+  if (R.UnresolvedImportedFilename.empty())
+    R.UnresolvedImportedFilename = R.UnresolvedImportedFilenameAsRequested;
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
   if (!MaybeEntry) // FIXME this drops errors on the floor.
@@ -2568,7 +2558,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   time_t StoredTime = FI.StoredTime;
   bool Overridden = FI.Overridden;
   bool Transient = FI.Transient;
-  StringRef Filename = FI.FilenameAsRequested;
+  auto Filename =
+      ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilenameAsRequested, F);
   uint64_t StoredContentHash = FI.ContentHash;
 
   // For standard C++ modules, we don't need to check the inputs.
@@ -2584,17 +2575,17 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     Overridden = false;
   }
 
-  auto File = FileMgr.getOptionalFileRef(Filename, /*OpenFile=*/false);
+  auto File = FileMgr.getOptionalFileRef(*Filename, /*OpenFile=*/false);
 
   // For an overridden file, create a virtual file with the stored
   // size/timestamp.
   if ((Overridden || Transient || SkipChecks) && !File)
-    File = FileMgr.getVirtualFileRef(Filename, StoredSize, StoredTime);
+    File = FileMgr.getVirtualFileRef(*Filename, StoredSize, StoredTime);
 
   if (!File) {
     if (Complain) {
       std::string ErrorStr = "could not find file '";
-      ErrorStr += Filename;
+      ErrorStr += *Filename;
       ErrorStr += "' referenced by AST file '";
       ErrorStr += F.FileName;
       ErrorStr += "'";
@@ -2614,7 +2605,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   if ((!Overridden && !Transient) && !SkipChecks &&
       SM.isFileOverridden(*File)) {
     if (Complain)
-      Error(diag::err_fe_pch_file_overridden, Filename);
+      Error(diag::err_fe_pch_file_overridden, *Filename);
 
     // After emitting the diagnostic, bypass the overriding file to recover
     // (this creates a separate FileEntry).
@@ -2706,7 +2697,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       // The top-level PCH is stale.
       StringRef TopLevelPCHName(ImportStack.back()->FileName);
       Diag(diag::err_fe_ast_file_modified)
-          << Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
+          << *Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
           << TopLevelPCHName << FileChange.Kind
           << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
@@ -2715,7 +2706,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       // Print the import stack.
       if (ImportStack.size() > 1) {
         Diag(diag::note_pch_required_by)
-          << Filename << ImportStack[0]->FileName;
+            << *Filename << ImportStack[0]->FileName;
         for (unsigned I = 1; I < ImportStack.size(); ++I)
           Diag(diag::note_pch_required_by)
             << ImportStack[I-1]->FileName << ImportStack[I]->FileName;
@@ -2963,8 +2954,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         for (unsigned I = 0; I < N; ++I) {
           bool IsSystem = I >= NumUserInputs;
           InputFileInfo FI = getInputFileInfo(F, I + 1);
+          auto FilenameAsRequested = ResolveImportedPath(
+              PathBuf, FI.UnresolvedImportedFilenameAsRequested, F);
           Listener->visitInputFile(
-              FI.FilenameAsRequested, IsSystem, FI.Overridden,
+              *FilenameAsRequested, IsSystem, FI.Overridden,
               F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule);
         }
       }
@@ -3528,6 +3521,9 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           SpecialTypes.push_back(getGlobalTypeID(F, Record[I]));
         break;
       }
+
+      if (Record.empty())
+        break;
 
       if (SpecialTypes.size() != Record.size())
         return llvm::createStringError(std::errc::illegal_byte_sequence,
@@ -5866,6 +5862,12 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       }
 
       CurrentModule->Kind = Kind;
+      // Note that we may be rewriting an existing location and it is important
+      // to keep doing that. In particular, we would like to prefer a
+      // `DefinitionLoc` loaded from the module file instead of the location
+      // created in the current source manager, because it allows the new
+      // location to be marked as "unaffecting" when writing and avoid creating
+      // duplicate locations for the same module map file.
       CurrentModule->DefinitionLoc = DefinitionLoc;
       CurrentModule->Signature = F.Signature;
       CurrentModule->IsFromModuleFile = true;
@@ -9988,8 +9990,7 @@ void ASTReader::finishPendingActions() {
 
     auto RTD = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
     for (auto *R = getMostRecentExistingDecl(RTD); R; R = R->getPreviousDecl())
-      cast<RedeclarableTemplateDecl>(R)->setCommonPtr(
-          RTD->getCommonPtrInternal());
+      cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
   }
   PendingDefinitions.clear();
 
@@ -11598,6 +11599,7 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
 }
 
 void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
+  C->setAllocatorModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
   C->setLParenLoc(Record.readSourceLocation());
   C->setColonLoc(Record.readSourceLocation());
   C->setAllocator(Record.readSubExpr());

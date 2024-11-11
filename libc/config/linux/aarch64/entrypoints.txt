@@ -245,6 +245,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlock2
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.msync
     libc.src.sys.mman.munlock
@@ -330,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lseek
     libc.src.unistd.pathconf
     libc.src.unistd.pipe
+    libc.src.unistd.pipe2
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -958,6 +960,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch
     libc.src.search.hsearch_r
     libc.src.search.insque
+    libc.src.search.lfind
     libc.src.search.remque
 
     # threads.h entrypoints

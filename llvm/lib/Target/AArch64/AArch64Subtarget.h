@@ -417,6 +417,10 @@ public:
     return DefaultSVETFOpts;
   }
 
+  /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
+  /// add + cnt instructions.
+  bool useScalarIncVL() const;
+
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";

@@ -1483,8 +1483,8 @@ define void @movnt_dq(ptr %p, <2 x i64> %a1) nounwind #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 0, [[TMP3]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[A2:%.*]] = add <2 x i64> [[A1:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <2 x i64> [[_MSPROP]], <2 x i64> <i64 -1, i64 -1>, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A2:%.*]] = add <2 x i64> [[A1:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <2 x i64> [[_MSPROP]], <2 x i64> splat (i64 -1), <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[A3:%.*]] = shufflevector <2 x i64> [[A2]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]

@@ -626,6 +626,22 @@ void SPIRV::RequirementHandler::removeCapabilityIf(
 namespace llvm {
 namespace SPIRV {
 void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
+  // Provided by both all supported Vulkan versions and OpenCl.
+  addAvailableCaps({Capability::Shader, Capability::Linkage, Capability::Int8,
+                    Capability::Int16});
+
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+    addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
+                      Capability::DotProductInput4x8Bit,
+                      Capability::DotProductInput4x8BitPacked});
+
+  // Add capabilities enabled by extensions.
+  for (auto Extension : ST.getAllAvailableExtensions()) {
+    CapabilityList EnabledCapabilities =
+        getCapabilitiesEnabledByExtension(Extension);
+    addAvailableCaps(EnabledCapabilities);
+  }
+
   if (ST.isOpenCLEnv()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
@@ -643,10 +659,8 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
     const SPIRVSubtarget &ST) {
   // Add the min requirements for different OpenCL and SPIR-V versions.
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
-                    Capability::Int16, Capability::Int8, Capability::Kernel,
-                    Capability::Linkage, Capability::Vector16,
-                    Capability::Groups, Capability::GenericPointer,
-                    Capability::Shader});
+                    Capability::Kernel, Capability::Vector16,
+                    Capability::Groups, Capability::GenericPointer});
   if (ST.hasOpenCLFullProfile())
     addAvailableCaps({Capability::Int64, Capability::Int64Atomics});
   if (ST.hasOpenCLImageSupport()) {
@@ -675,25 +689,16 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
 
-  // Add capabilities enabled by extensions.
-  for (auto Extension : ST.getAllAvailableExtensions()) {
-    CapabilityList EnabledCapabilities =
-        getCapabilitiesEnabledByExtension(Extension);
-    addAvailableCaps(EnabledCapabilities);
-  }
-
   // TODO: add OpenCL extensions.
 }
 
 void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
-  addAvailableCaps({Capability::Shader, Capability::Linkage});
 
   // Core in Vulkan 1.1 and earlier.
-  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
-                    Capability::Float64, Capability::GroupNonUniform,
-                    Capability::Image1D, Capability::SampledBuffer,
-                    Capability::ImageBuffer,
+  addAvailableCaps({Capability::Int64, Capability::Float16, Capability::Float64,
+                    Capability::GroupNonUniform, Capability::Image1D,
+                    Capability::SampledBuffer, Capability::ImageBuffer,
                     Capability::UniformBufferArrayDynamicIndexing,
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
@@ -997,6 +1002,32 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
     else
       Handler.addRequirements(
           SPIRV::Capability::StorageImageArrayDynamicIndexing);
+  }
+}
+
+static void AddDotProductRequirements(const MachineInstr &MI,
+                                      SPIRV::RequirementHandler &Reqs,
+                                      const SPIRVSubtarget &ST) {
+  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product))
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_integer_dot_product);
+  Reqs.addCapability(SPIRV::Capability::DotProduct);
+
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const MachineInstr *InstrPtr = &MI;
+  assert(MI.getOperand(1).isReg() && "Unexpected operand in dot");
+
+  Register TypeReg = InstrPtr->getOperand(1).getReg();
+  SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
+  if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
+    assert(TypeDef->getOperand(1).getImm() == 32);
+    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
+  } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
+    SPIRVType *ScalarTypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
+    auto Capability = ScalarTypeDef->getOperand(1).getImm() == 8
+                          ? SPIRV::Capability::DotProductInput4x8Bit
+                          : SPIRV::Capability::DotProductInputAll;
+    Reqs.addCapability(Capability);
   }
 }
 
@@ -1375,6 +1406,10 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_split_barrier);
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
     }
+    break;
+  case SPIRV::OpSDot:
+  case SPIRV::OpUDot:
+    AddDotProductRequirements(MI, Reqs, ST);
     break;
   default:
     break;

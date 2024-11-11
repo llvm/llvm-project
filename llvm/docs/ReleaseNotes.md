@@ -56,6 +56,8 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Types are no longer allowed to be recursive.
+
 * The `x86_mmx` IR type has been removed. It will be translated to
   the standard vector type `<1 x i64>` in bitcode upgrade.
 * Renamed `llvm.experimental.stepvector` intrinsic to `llvm.stepvector`.
@@ -184,6 +186,7 @@ Changes to the RISC-V Backend
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
   are no longer marked as experimental.
 * The `Sha` extension is now supported.
@@ -306,6 +309,8 @@ Changes to LLDB
 
 * Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
   * eg. `settings set target.output-path/target.error-path <path/to/file>`
+
+* A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
 
 Changes to BOLT
 ---------------------------------
