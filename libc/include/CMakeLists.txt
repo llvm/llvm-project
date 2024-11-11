@@ -178,6 +178,7 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
+    .llvm-libc-types.stdfix-types
 )
 
 # TODO: This should be conditional on POSIX networking being included.
