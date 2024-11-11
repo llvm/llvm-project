@@ -34,7 +34,7 @@ void foo(int x) {
 // CHECK:  cir.return
 
 union { int i; float f; } u = { };
-// CHECK: cir.global  external @u = #cir.zero : ![[TY_u]]
+// CHECK: cir.global external @u = #cir.zero : ![[TY_u]]
 
 unsigned is_little(void) {
   const union {

@@ -5,7 +5,7 @@
 void foo() {
   char s1[] = "Hello";
 }
-// AFTER-DAG:  cir.global "private"  constant cir_private @__const._Z3foov.s1 = #cir.const_array<"Hello\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
+// AFTER-DAG:  cir.global "private" constant cir_private @__const._Z3foov.s1 = #cir.const_array<"Hello\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
 // AFTER: @_Z3foov
 // AFTER:    %[[S1:.*]] = cir.alloca !cir.array<!s8i x 6>, !cir.ptr<!cir.array<!s8i x 6>>, ["s1"]
 // AFTER:    %[[HELLO:.*]] = cir.get_global @__const._Z3foov.s1 : !cir.ptr<!cir.array<!s8i x 6>>

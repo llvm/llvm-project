@@ -285,19 +285,6 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
 }
 
-static mlir::ParseResult
-parseOmitDefaultVisibility(mlir::OpAsmParser &parser,
-                           cir::VisibilityAttr &visibility) {
-  parseVisibilityAttr(parser, visibility);
-  return success();
-}
-
-static void printOmitDefaultVisibility(mlir::OpAsmPrinter &printer,
-                                       cir::GlobalOp &op,
-                                       cir::VisibilityAttr visibility) {
-  printVisibilityAttr(printer, visibility);
-}
-
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//

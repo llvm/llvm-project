@@ -7,5 +7,5 @@ extern int var;
 int get() {
   return var;
 }
-// CIR: cir.global "private"  external dsolocal @var : !s32i {alignment = 4 : i64}
+// CIR: cir.global "private" external dsolocal @var : !s32i {alignment = 4 : i64}
 // LLVM: @var = external dso_local global i32

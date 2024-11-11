@@ -18,11 +18,11 @@ void bar() __attribute__((annotate("withargfunc", "os", 22))) {
 
 // BEFORE: module @{{.*}}attribute-annotate-multiple.cpp" attributes {cir.lang =
 
-// BEFORE: cir.global  external @a = #cir.ptr<null> : !cir.ptr<!cir.double>
+// BEFORE: cir.global external @a = #cir.ptr<null> : !cir.ptr<!cir.double>
 // BEFORE-SAME: [#cir.annotation<name = "withargs", args = ["21", 12 : i32]>]
-// BEFORE: cir.global  external @b = #cir.ptr<null> : !cir.ptr<!s32i>
+// BEFORE: cir.global external @b = #cir.ptr<null> : !cir.ptr<!s32i>
 // BEFORE-SAME: [#cir.annotation<name = "withargs", args = ["21", 12 : i32]>]
-// BEFORE: cir.global  external @c = #cir.ptr<null> : !cir.ptr<!void>
+// BEFORE: cir.global external @c = #cir.ptr<null> : !cir.ptr<!void>
 // BEFORE-SAME: [#cir.annotation<name = "noargvar", args = []>]
 // BEFORE: cir.global external @tile = #cir.int<7> : !s32i
 // BEFORE-SAME: #cir.annotation<name = "cir.aie.device.tile", args = [42 : i8]>]

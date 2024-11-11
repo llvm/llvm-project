@@ -14,9 +14,9 @@ void f() {
   !E();
 }
 
-//      CIR: cir.func private  @_ZN1EC1Ev(!cir.ptr<!ty_E>) extra(#fn_attr)
-// CIR-NEXT: cir.func private  @_ZN1EntEv(!cir.ptr<!ty_E>) -> !ty_E
-// CIR-NEXT: cir.func private  @_ZN1ED1Ev(!cir.ptr<!ty_E>) extra(#fn_attr)
+//      CIR: cir.func private @_ZN1EC1Ev(!cir.ptr<!ty_E>) extra(#fn_attr)
+// CIR-NEXT: cir.func private @_ZN1EntEv(!cir.ptr<!ty_E>) -> !ty_E
+// CIR-NEXT: cir.func private @_ZN1ED1Ev(!cir.ptr<!ty_E>) extra(#fn_attr)
 // CIR-NEXT: cir.func @_Z1fv() extra(#fn_attr1) {
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     %[[ONE:[0-9]+]] = cir.alloca !ty_E, !cir.ptr<!ty_E>, ["agg.tmp.ensured"] {alignment = 1 : i64}
@@ -44,8 +44,8 @@ void f() {
 const unsigned int n = 1234;
 const int &r = (const int&)n;
 
-//      CIR: cir.global "private"  constant internal @_ZGR1r_ = #cir.int<1234> : !s32i
-// CIR-NEXT: cir.global  constant external @r = #cir.global_view<@_ZGR1r_> : !cir.ptr<!s32i> {alignment = 8 : i64}
+//      CIR: cir.global "private" constant internal @_ZGR1r_ = #cir.int<1234> : !s32i
+// CIR-NEXT: cir.global constant external @r = #cir.global_view<@_ZGR1r_> : !cir.ptr<!s32i> {alignment = 8 : i64}
 
 //      LLVM: @_ZGR1r_ = internal constant i32 1234, align 4
 // LLVM-NEXT: @r = constant ptr @_ZGR1r_, align 8

@@ -15,7 +15,7 @@ struct C {
   C(void (C::*x)(), int y) : b(), c(y), e(x) {}
 };
 
-// CHECK-LABEL:   cir.global  external @x = #cir.zero : !ty_A
+// CHECK-LABEL:   cir.global external @x = #cir.zero : !ty_A
 A x;
 C a, b(x), c(0, 2);
 

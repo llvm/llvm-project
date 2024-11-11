@@ -23,7 +23,7 @@ template <int I>
 void make1() {
   Vec v;
   S1((Vec&&) v);
-// CIR: cir.func linkonce_odr  @_Z5make1ILi0EEvv()
+// CIR: cir.func linkonce_odr @_Z5make1ILi0EEvv()
 // CIR:   %[[VEC:.*]] = cir.alloca ![[VecType]], !cir.ptr<![[VecType]]>
 // CIR:   cir.call @_ZN3VecC1Ev(%[[VEC]]) : (!cir.ptr<![[VecType]]>)
 // CIR:   cir.scope {
@@ -35,7 +35,7 @@ void make1() {
 // CIR:   cir.call @_ZN3VecD1Ev(%[[VEC]]) : (!cir.ptr<![[VecType]]>) -> ()
 // CIR:   cir.return
 
-// CIR_EH: cir.func linkonce_odr  @_Z5make1ILi0EEvv()
+// CIR_EH: cir.func linkonce_odr @_Z5make1ILi0EEvv()
 // CIR_EH:  %[[VEC:.*]] = cir.alloca ![[VecType]], !cir.ptr<![[VecType]]>, ["v", init]
 
 // Construct v

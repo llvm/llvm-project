@@ -38,7 +38,7 @@ void func2(void) {
   // CHECK-DAG: cir.global "private" internal dsolocal @_ZZ5func2vE1j = #cir.fp<0.000000e+00> : !cir.float
 }
 
-// CHECK-DAG: cir.global  linkonce_odr comdat @_ZZ4testvE1c = #cir.int<0> : !s32i
+// CHECK-DAG: cir.global linkonce_odr comdat @_ZZ4testvE1c = #cir.int<0> : !s32i
 
 // LLVM-DAG: $_ZZ4testvE1c = comdat any
 // LLVM-DAG: @_ZZ4testvE1c = linkonce_odr global i32 0, comdat, align 4

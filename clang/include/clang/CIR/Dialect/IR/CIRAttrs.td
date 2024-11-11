@@ -1016,6 +1016,9 @@ def VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
 
   let skipDefaultBuilders = 1;
 
+  // Make DefaultValuedAttr accept VisibilityKind as default value ($0).
+  let constBuilderCall = "cir::VisibilityAttr::get($_builder.getContext(), $0)";
+
   let extraClassDeclaration = [{
     bool isDefault() const { return getValue() == VisibilityKind::Default; };
     bool isHidden() const { return getValue() == VisibilityKind::Hidden; };

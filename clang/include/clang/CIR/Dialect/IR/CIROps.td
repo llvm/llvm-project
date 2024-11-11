@@ -2387,7 +2387,10 @@ def GlobalOp : CIR_Op<"global",
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       VisibilityAttr:$global_visibility,
+                       DefaultValuedAttr<
+                        VisibilityAttr,
+                        "VisibilityKind::Default"
+                       >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
@@ -2405,7 +2408,7 @@ def GlobalOp : CIR_Op<"global",
   let regions = (region AnyRegion:$ctorRegion, AnyRegion:$dtorRegion);
   let assemblyFormat = [{
        ($sym_visibility^)?
-       custom<OmitDefaultVisibility>($global_visibility)
+       (`` $global_visibility^)?
        (`constant` $constant^)?
        $linkage
        (`comdat` $comdat^)?

@@ -28,7 +28,7 @@ cir.func @bar() attributes {annotations = [#cir.annotation<name = "noargfunc", a
 // CHECK-SAME: ["bar", #cir.annotation<name = "noargfunc", args = []>],
 // CHECK-SAME: ["bar", #cir.annotation<name = "withargfunc", args = ["os", 23 : i32]>],
 // CHECK-SAME: ["_Z1fv", #cir.annotation<name = "tile", args = []>]]>}
-// CHECK: cir.global  external @a = #cir.int<0> : !s32i
+// CHECK: cir.global external @a = #cir.int<0> : !s32i
 // CHECK-SAME: [#cir.annotation<name = "testanno", args = ["21", 12 : i32]>]
 // CHECK: cir.func @foo()
 // CHECK-SAME: [#cir.annotation<name = "withargfunc", args = ["os", 22 : i32]>]

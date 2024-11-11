@@ -40,7 +40,7 @@ S init(S s) {
   return s;
 }
 
-// CIR: cir.func no_proto  @foo1
+// CIR: cir.func no_proto @foo1
 // CIR: %[[#V0:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["s"]
 // CIR: %[[#V1:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["tmp"] {alignment = 4 : i64}
 // CIR: %[[#V2:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_S>), !cir.ptr<!u64i>
@@ -143,7 +143,7 @@ S2 init2(S2 s) {
   return s;
 }
 
-// CIR: cir.func no_proto  @foo3()
+// CIR: cir.func no_proto @foo3()
 // CIR: %[[#V0:]] = cir.alloca !ty_S2_, !cir.ptr<!ty_S2_>, ["s"]
 // CIR: %[[#V1:]] = cir.alloca !ty_S2_, !cir.ptr<!ty_S2_>, ["tmp"] {alignment = 1 : i64}
 // CIR: %[[#V2:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_S2_>), !cir.ptr<!u16i>

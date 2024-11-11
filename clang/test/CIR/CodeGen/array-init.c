@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o - | FileCheck %s
 
-// CHECK-DAG: cir.global "private"  constant cir_private @__const.foo.bar = #cir.const_array<[#cir.fp<9.000000e+00> : !cir.double, #cir.fp<8.000000e+00> : !cir.double, #cir.fp<7.000000e+00> : !cir.double]> : !cir.array<!cir.double x 3>
+// CHECK-DAG: cir.global "private" constant cir_private @__const.foo.bar = #cir.const_array<[#cir.fp<9.000000e+00> : !cir.double, #cir.fp<8.000000e+00> : !cir.double, #cir.fp<7.000000e+00> : !cir.double]> : !cir.array<!cir.double x 3>
 typedef struct {
   int a;
   long b;

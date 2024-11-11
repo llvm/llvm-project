@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
-// CIR-DAG:  cir.global  external @globalvar = #cir.int<3> : !s32i [#cir.annotation<name = "globalvar_ann_0", args = []>] {alignment = 4 : i64}
-// CIR-DAG:  cir.global  external @globalvar2 = #cir.int<2> : !s32i [#cir.annotation<name = "common_ann", args = ["os", 21 : i32]>] {alignment = 4 : i64}
+// CIR-DAG:  cir.global external @globalvar = #cir.int<3> : !s32i [#cir.annotation<name = "globalvar_ann_0", args = []>] {alignment = 4 : i64}
+// CIR-DAG:  cir.global external @globalvar2 = #cir.int<2> : !s32i [#cir.annotation<name = "common_ann", args = ["os", 21 : i32]>] {alignment = 4 : i64}
 
 // LLVM-DAG: @.str.annotation = private unnamed_addr constant [15 x i8] c"localvar_ann_0\00", section "llvm.metadata"
 // LLVM-DAG: @.str.1.annotation = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}annotations-var.c\00", section "llvm.metadata"
