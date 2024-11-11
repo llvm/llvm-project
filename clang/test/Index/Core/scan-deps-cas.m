@@ -37,10 +37,10 @@
 // CHECK-NEXT:     cache-key: [[CASFS_MODA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:     file-deps:
+// CHECK-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
-// CHECK-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:     build-args:
 // CHECK-SAME:       -cc1
 // CHECK-SAME:       -fcas-path
@@ -77,10 +77,10 @@
 // INCLUDE_TREE-NEXT:     cache-key: [[ModA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     module-deps:
 // INCLUDE_TREE-NEXT:     file-deps:
+// INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
-// INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // INCLUDE_TREE-NEXT:     build-args:
 // INCLUDE_TREE-SAME:       -cc1
 // INCLUDE_TREE-SAME:       -fcas-path

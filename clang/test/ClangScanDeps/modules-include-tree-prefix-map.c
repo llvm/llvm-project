@@ -140,8 +140,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/dir1/Left.h"
 // CHECK-NEXT:         "[[PREFIX]]/dir1/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/dir1/Left.h"
 // CHECK:            ]
 // CHECK:            "name": "Left"
 // CHECK:          }
@@ -175,8 +175,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/dir1/Right.h"
 // CHECK-NEXT:         "[[PREFIX]]/dir1/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/dir1/Right.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Right"
 // CHECK:          }
@@ -201,9 +201,9 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-DAG:         "{{.*}}/stdbool.h"
 // CHECK-DAG:         "[[PREFIX]]/dir1/System/module.modulemap"
 // CHECK-DAG:         "[[PREFIX]]/dir1/System/sys.h"
+// CHECK-DAG:         "{{.*}}/stdbool.h"
 // CHECK:            ]
 // CHECK:            "name": "System"
 // CHECK:          }
@@ -228,8 +228,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/dir1/Top.h"
 // CHECK-NEXT:         "[[PREFIX]]/dir1/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/dir1/Top.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Top"
 // CHECK:          }

@@ -112,8 +112,8 @@
 // PCH:              "/^sdk/usr/include"
 // PCH:            ]
 // PCH:            "file-deps": [
-// PCH:              "[[PREFIX]]/a.h"
 // PCH:              "[[PREFIX]]/module.modulemap"
+// PCH:              "[[PREFIX]]/a.h"
 // PCH:            ]
 // PCH:            "name": "A"
 // PCH:          }
@@ -145,10 +145,10 @@
 // PCH:            "context-hash": "[[B_CONTEXT_HASH]]"
 // PCH:            "file-deps": [
 // Note: PREFIX, SDK_PREFIX and toolchain path are unordered
-// PCH-DAG:          "{{.*}}/include/stdarg.h"
-// PCH-DAG:          "[[PREFIX]]/b.h"
 // PCH-DAG:          "[[PREFIX]]/module.modulemap"
+// PCH-DAG:          "[[PREFIX]]/b.h"
 // PCH-DAG:          "[[SDK_PREFIX]]/usr/include/stdlib.h"
+// PCH-DAG:          "{{.*}}/include/stdarg.h"
 // PCH:            ]
 // PCH:            "name": "B"
 // PCH:          }

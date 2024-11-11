@@ -87,8 +87,8 @@
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}Left.h"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]{{.}}Left.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Left"
 // CHECK:          }
@@ -116,8 +116,8 @@
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}Right.h"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]{{.}}Right.h"
 // CHECK:            ]
 // CHECK:            "name": "Right"
 // CHECK:          }
@@ -137,8 +137,8 @@
 // CHECK:              "-emit-module"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}Top.h"
 // CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]{{.}}Top.h"
 // CHECK:            ]
 // CHECK:            "name": "Top"
 // CHECK:          }

@@ -16,10 +16,10 @@
 // CHECK-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:     file-deps:
+// CHECK-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
-// CHECK-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:     build-args: {{.*}} -emit-module {{.*}} -fmodule-name=ModA {{.*}} -fno-implicit-modules {{.*}}
 // CHECK-NEXT: dependencies:
 // CHECK-NEXT:   command 0:
