@@ -333,7 +333,7 @@ func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %0 = llvm.zext nneg %arg0 : i32 to i64
 // CHECK:  = llvm.zext nneg %[[V4I32]] : vector<4xi32> to vector<4xi64>
   %4 = llvm.zext nneg %arg2 : vector<4xi32> to vector<4xi64>
-// CHECK: %[[FLOAT:.*]] = llvm.uitofp nneg %[[I32]] : i32 to f32
+// CHECK:  = llvm.uitofp nneg %[[I32]] : i32 to f32
   %7 = llvm.uitofp nneg %arg0 : i32 to f32
   llvm.return
 }

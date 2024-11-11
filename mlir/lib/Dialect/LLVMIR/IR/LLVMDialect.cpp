@@ -146,9 +146,6 @@ static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
   } else if (auto iface = dyn_cast<ExactFlagInterface>(op)) {
     printer.printOptionalAttrDict(filteredAttrs,
                                   /*elidedAttrs=*/{iface.getIsExactName()});
-  } else if (auto iface = dyn_cast<NonNegFlagInterface>(op)) {
-    printer.printOptionalAttrDict(filteredAttrs,
-                                  /*elidedAttrs=*/{iface.getNonNegName()});
   } else {
     printer.printOptionalAttrDict(filteredAttrs);
   }
