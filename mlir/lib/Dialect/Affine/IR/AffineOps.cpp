@@ -4734,11 +4734,29 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
     return success();
   }
 };
+
+/// Rewrite `affine.linearize_index [%%x] by (%b)`, into `%x`.
+///
+/// By definition, that operation is `affine.apply affine_map<()[s0] -> (s0)>,`
+/// which is the identity.
+struct DropLinearizeOneBasisElement final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getStaticBasis().size() != 1 || op.getMultiIndex().size() != 1)
+      return failure();
+    rewriter.replaceOp(op, op.getMultiIndex().front());
+    return success();
+  }
+};
 } // namespace
 
 void affine::AffineLinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<DropLinearizeUnitComponentsIfDisjointOrZero>(context);
+  patterns.add<DropLinearizeUnitComponentsIfDisjointOrZero,
+               DropLinearizeOneBasisElement>(context);
 }
 
 //===----------------------------------------------------------------------===//

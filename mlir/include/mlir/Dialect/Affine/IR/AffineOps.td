@@ -1158,7 +1158,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
 
   let assemblyFormat = [{
     (`disjoint` $disjoint^)? ` `
-    `[` $multi_index `]` `by` ` `
+    `[` $multi_index `]` `by`
     custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
     attr-dict `:` type($linear_index)
   }];
