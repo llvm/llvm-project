@@ -1684,10 +1684,10 @@ public:
     return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
-  /// Get FPOptions inside this statement. They may differ from the outer
+  /// Get FPOptions active inside this statement. They may differ from the outer
   /// options due to pragmas.
   /// \param CurFPOptions FPOptions outside this statement.
-  FPOptions getInsideFPOptions(FPOptions CurFPOptions) const {
+  FPOptions getActiveFPOptions(FPOptions CurFPOptions) const {
     return hasStoredFPFeatures()
                ? getStoredFPFeatures().applyOverrides(CurFPOptions)
                : CurFPOptions;

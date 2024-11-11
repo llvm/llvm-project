@@ -524,7 +524,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
 
   // Optionally set up the new FP environment, if the compound statement
   // contains a pragma that modifies it.
-  FPOptions NewFP = S.getInsideFPOptions(CurFPFeatures);
+  FPOptions NewFP = S.getActiveFPOptions(CurFPFeatures);
   CGFPOptionsRAII SavedFPFeatues(*this, NewFP);
 
   Address RetAlloca = Address::invalid();
