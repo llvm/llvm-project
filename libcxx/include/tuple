@@ -257,8 +257,10 @@ template <class... Types>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/unwrap_ref.h>
+#include <__utility/conditional_no_unique_address.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/in_place.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
@@ -283,25 +285,26 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // __tuple_leaf
 
-template <size_t _Ip, class _Hp, bool = is_empty<_Hp>::value && !__libcpp_is_final<_Hp>::value >
+template <size_t _Ip, class _Hp>
 class __tuple_leaf;
 
-template <size_t _Ip, class _Hp, bool _Ep>
+template <size_t _Ip, class _Hp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-swap(__tuple_leaf<_Ip, _Hp, _Ep>& __x, __tuple_leaf<_Ip, _Hp, _Ep>& __y) noexcept(__is_nothrow_swappable_v<_Hp>) {
+swap(__tuple_leaf<_Ip, _Hp>& __x, __tuple_leaf<_Ip, _Hp>& __y) noexcept(__is_nothrow_swappable_v<_Hp>) {
   swap(__x.get(), __y.get());
 }
 
-template <size_t _Ip, class _Hp, bool _Ep>
+template <size_t _Ip, class _Hp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-swap(const __tuple_leaf<_Ip, _Hp, _Ep>& __x,
-     const __tuple_leaf<_Ip, _Hp, _Ep>& __y) noexcept(__is_nothrow_swappable_v<const _Hp>) {
+swap(const __tuple_leaf<_Ip, _Hp>& __x,
+     const __tuple_leaf<_Ip, _Hp>& __y) noexcept(__is_nothrow_swappable_v<const _Hp>) {
   swap(__x.get(), __y.get());
 }
 
-template <size_t _Ip, class _Hp, bool>
+template <size_t _Ip, class _Hp>
 class __tuple_leaf {
-  _Hp __value_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<is_empty<_Hp>::value && !__libcpp_is_final<_Hp>::value, _Hp>
+      __value_;
 
   template <class _Tp>
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
@@ -315,23 +318,25 @@ class __tuple_leaf {
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() noexcept(is_nothrow_default_constructible<_Hp>::value) : __value_() {
+  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() noexcept(is_nothrow_default_constructible<_Hp>::value)
+      : __value_(__in_place) {
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
   }
 
   template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 0>, const _Alloc&) : __value_() {
+  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 0>, const _Alloc&) : __value_(__in_place) {
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
   }
 
   template <class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a)
-      : __value_(allocator_arg_t(), __a) {
+      : __value_(__in_place, allocator_arg_t(), __a) {
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
   }
 
   template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a) : __value_(__a) {
+  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a)
+      : __value_(__in_place, __a) {
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
   }
 
@@ -340,7 +345,7 @@ public:
       __enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) noexcept(is_nothrow_constructible<_Hp, _Tp>::value)
-      : __value_(std::forward<_Tp>(__t)) {
+      : __value_(__in_place, std::forward<_Tp>(__t)) {
     static_assert(__can_bind_reference<_Tp&&>(),
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
@@ -348,7 +353,7 @@ public:
   template <class _Tp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
-      : __value_(std::forward<_Tp>(__t)) {
+      : __value_(__in_place, std::forward<_Tp>(__t)) {
     static_assert(__can_bind_reference<_Tp&&>(),
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
@@ -356,14 +361,14 @@ public:
   template <class _Tp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a, _Tp&& __t)
-      : __value_(allocator_arg_t(), __a, std::forward<_Tp>(__t)) {
+      : __value_(__in_place, allocator_arg_t(), __a, std::forward<_Tp>(__t)) {
     static_assert(!is_reference<_Hp>::value, "Attempted to uses-allocator construct a reference element in a tuple");
   }
 
   template <class _Tp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a, _Tp&& __t)
-      : __value_(std::forward<_Tp>(__t), __a) {
+      : __value_(__in_place, std::forward<_Tp>(__t), __a) {
     static_assert(!is_reference<_Hp>::value, "Attempted to uses-allocator construct a reference element in a tuple");
   }
 
@@ -382,65 +387,8 @@ public:
     return 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Hp& get() _NOEXCEPT { return __value_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Hp& get() const _NOEXCEPT { return __value_; }
-};
-
-template <size_t _Ip, class _Hp>
-class __tuple_leaf<_Ip, _Hp, true> : private _Hp {
-public:
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() noexcept(is_nothrow_default_constructible<_Hp>::value) {}
-
-  template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 0>, const _Alloc&) {}
-
-  template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a)
-      : _Hp(allocator_arg_t(), __a) {}
-
-  template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a) : _Hp(__a) {}
-
-  template <class _Tp,
-            __enable_if_t< _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value,
-                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) noexcept(is_nothrow_constructible<_Hp, _Tp>::value)
-      : _Hp(std::forward<_Tp>(__t)) {}
-
-  template <class _Tp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
-      : _Hp(std::forward<_Tp>(__t)) {}
-
-  template <class _Tp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a, _Tp&& __t)
-      : _Hp(allocator_arg_t(), __a, std::forward<_Tp>(__t)) {}
-
-  template <class _Tp, class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a, _Tp&& __t)
-      : _Hp(std::forward<_Tp>(__t), __a) {}
-
-  __tuple_leaf(__tuple_leaf const&) = default;
-  __tuple_leaf(__tuple_leaf&&)      = default;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int
-  swap(__tuple_leaf& __t) noexcept(__is_nothrow_swappable_v<__tuple_leaf>) {
-    std::swap(*this, __t);
-    return 0;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int swap(const __tuple_leaf& __rhs) const
-      noexcept(__is_nothrow_swappable_v<const __tuple_leaf>) {
-    std::swap(*this, __rhs);
-    return 0;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Hp& get() _NOEXCEPT { return static_cast<_Hp&>(*this); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Hp& get() const _NOEXCEPT {
-    return static_cast<const _Hp&>(*this);
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Hp& get() _NOEXCEPT { return __value_.__v; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Hp& get() const _NOEXCEPT { return __value_.__v; }
 };
 
 template <class... _Tp>

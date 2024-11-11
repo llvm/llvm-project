@@ -171,7 +171,7 @@ class StdTuplePrinter(object):
         def __next__(self):
             # child_iter raises StopIteration when appropriate.
             field_name = next(self.child_iter)
-            child = self.val["__base_"][field_name]["__value_"]
+            child = self.val["__base_"][field_name]["__value_"]["__v"]
             self.count += 1
             return ("[%d]" % (self.count - 1), child)
 

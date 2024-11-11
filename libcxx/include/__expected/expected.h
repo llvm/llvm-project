@@ -40,6 +40,7 @@
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/as_const.h>
+#include <__utility/conditional_no_unique_address.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
@@ -80,55 +81,6 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
   _LIBCPP_VERBOSE_ABORT("bad_expected_access was thrown in -fno-exceptions mode");
 #  endif
 }
-
-// If parameter type `_Tp` of `__conditional_no_unique_address` is neither
-// copyable nor movable, a constructor with this tag is provided. For that
-// constructor, the user has to provide a function and arguments. The function
-// must return an object of type `_Tp`. When the function is invoked by the
-// constructor, guaranteed copy elision kicks in and the `_Tp` is constructed
-// in place.
-struct __conditional_no_unique_address_invoke_tag {};
-
-// This class implements an object with `[[no_unique_address]]` conditionally applied to it,
-// based on the value of `_NoUnique`.
-//
-// A member of this class must always have `[[no_unique_address]]` applied to
-// it. Otherwise, the `[[no_unique_address]]` in the "`_NoUnique == true`" case
-// would not have any effect. In the `false` case, the `__v` is not
-// `[[no_unique_address]]`, so nullifies the effects of the "outer"
-// `[[no_unique_address]]` regarding data layout.
-//
-// If we had a language feature, this class would basically be replaced by `[[no_unique_address(condition)]]`.
-template <bool _NoUnique, class _Tp>
-struct __conditional_no_unique_address;
-
-template <class _Tp>
-struct __conditional_no_unique_address<true, _Tp> {
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(in_place_t, _Args&&... __args)
-      : __v(std::forward<_Args>(__args)...) {}
-
-  template <class _Func, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(
-      __conditional_no_unique_address_invoke_tag, _Func&& __f, _Args&&... __args)
-      : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
-
-  _LIBCPP_NO_UNIQUE_ADDRESS _Tp __v;
-};
-
-template <class _Tp>
-struct __conditional_no_unique_address<false, _Tp> {
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(in_place_t, _Args&&... __args)
-      : __v(std::forward<_Args>(__args)...) {}
-
-  template <class _Func, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(
-      __conditional_no_unique_address_invoke_tag, _Func&& __f, _Args&&... __args)
-      : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
-
-  _Tp __v;
-};
 
 // This function returns whether the type `_Second` can be stuffed into the tail padding
 // of the `_First` type if both of them are given `[[no_unique_address]]`.

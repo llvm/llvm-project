@@ -59,6 +59,14 @@ using __is_inplace_index = __is_inplace_index_imp<__remove_cvref_t<_Tp>>;
 
 #endif // _LIBCPP_STD_VER >= 17
 
+struct __in_place_t {
+  explicit __in_place_t() = default;
+#if _LIBCPP_STD_VER >= 17
+  _LIBCPP_HIDE_FROM_ABI constexpr __in_place_t(in_place_t) {}
+#endif
+};
+inline const __in_place_t __in_place;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___UTILITY_IN_PLACE_H
