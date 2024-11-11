@@ -165,6 +165,7 @@ struct Configuration {
 
   llvm::StringRef installName;
   llvm::StringRef mapFile;
+  llvm::StringRef ltoNewPmPasses;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
@@ -238,6 +239,7 @@ struct Configuration {
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
 
   bool zeroModTime = true;
   bool generateUuid = true;
