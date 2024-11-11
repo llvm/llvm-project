@@ -60,6 +60,7 @@
 #include <__type_traits/maybe_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__vector/vector.h>
 #include <initializer_list>
 #include <stdexcept>
