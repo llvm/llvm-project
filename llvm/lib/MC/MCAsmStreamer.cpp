@@ -378,6 +378,7 @@ public:
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
+  void emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
 
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
@@ -2186,6 +2187,15 @@ void MCAsmStreamer::emitCFIBKeyFrame() {
 void MCAsmStreamer::emitCFIMTETaggedFrame() {
   MCStreamer::emitCFIMTETaggedFrame();
   OS << "\t.cfi_mte_tagged_frame";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFIValOffset(int64_t Register, int64_t Offset,
+                                     SMLoc Loc) {
+  MCStreamer::emitCFIValOffset(Register, Offset, Loc);
+  OS << "\t.cfi_val_offset ";
+  EmitRegisterName(Register);
+  OS << ", " << Offset;
   EmitEOL();
 }
 
