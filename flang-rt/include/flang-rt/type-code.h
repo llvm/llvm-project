@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_TYPE_CODE_H_
-#define FLANGRT_TYPE_CODE_H_
+#ifndef FLANG_RT_TYPE_CODE_H_
+#define FLANG_RT_TYPE_CODE_H_
 
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
@@ -75,4 +75,4 @@ private:
   ISO::CFI_type_t raw_{CFI_type_other};
 };
 } // namespace Fortran::runtime
-#endif /* FLANGRT_TYPE_CODE_H_ */
+#endif /* FLANG_RT_TYPE_CODE_H_ */

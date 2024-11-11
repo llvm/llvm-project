@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_IO_API_COMMON_H_
-#define FLANGRT_IO_API_COMMON_H_
+#ifndef FLANG_RT_IO_API_COMMON_H_
+#define FLANG_RT_IO_API_COMMON_H_
 
 #include "flang-rt/io-api-funcs.h"
 #include "io-stmt.h"
@@ -94,4 +94,4 @@ RT_API_ATTRS Cookie BeginExternalListIO(
 }
 
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_IO_API_COMMON_H_ */
+#endif /* FLANG_RT_IO_API_COMMON_H_ */

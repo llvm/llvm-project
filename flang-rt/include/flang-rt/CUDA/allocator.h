@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_CUDA_ALLOCATOR_H_
-#define FLANGRT_CUDA_ALLOCATOR_H_
+#ifndef FLANG_RT_CUDA_ALLOCATOR_H_
+#define FLANG_RT_CUDA_ALLOCATOR_H_
 
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
@@ -43,4 +43,4 @@ void *CUFAllocUnified(std::size_t);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda
-#endif /* FLANGRT_CUDA_ALLOCATOR_H_ */
+#endif /* FLANG_RT_CUDA_ALLOCATOR_H_ */

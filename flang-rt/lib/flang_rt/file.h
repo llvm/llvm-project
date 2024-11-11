@@ -8,8 +8,8 @@
 
 // Raw system I/O wrappers
 
-#ifndef FLANGRT_FILE_H_
-#define FLANGRT_FILE_H_
+#ifndef FLANG_RT_FILE_H_
+#define FLANG_RT_FILE_H_
 
 #include "flang-rt/memory.h"
 #include "io-error.h"
@@ -113,4 +113,4 @@ RT_API_ATTRS bool MayWrite(const char *path);
 RT_API_ATTRS bool MayReadAndWrite(const char *path);
 RT_API_ATTRS std::int64_t SizeInBytes(const char *path);
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_FILE_H_ */
+#endif /* FLANG_RT_FILE_H_ */

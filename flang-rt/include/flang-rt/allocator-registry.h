@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_ALLOCATOR_REGISTRY_H_
-#define FLANGRT_ALLOCATOR_REGISTRY_H_
+#ifndef FLANG_RT_ALLOCATOR_REGISTRY_H_
+#define FLANG_RT_ALLOCATOR_REGISTRY_H_
 
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/allocator-registry-consts.h"
@@ -55,4 +55,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif /* FLANGRT_ALLOCATOR_REGISTRY_H_ */
+#endif /* FLANG_RT_ALLOCATOR_REGISTRY_H_ */

@@ -8,8 +8,8 @@
 
 // Representations of the state of an I/O statement in progress
 
-#ifndef FLANGRT_IO_STMT_H_
-#define FLANGRT_IO_STMT_H_
+#ifndef FLANG_RT_IO_STMT_H_
+#define FLANG_RT_IO_STMT_H_
 
 #include "connection.h"
 #include "file.h"
@@ -789,4 +789,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_IO_STMT_H_ */
+#endif /* FLANG_RT_IO_STMT_H_ */

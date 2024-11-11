@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANGRT_DESCRIPTOR_H_
-#define FLANGRT_DESCRIPTOR_H_
+#ifndef FLANG_RT_DESCRIPTOR_H_
+#define FLANG_RT_DESCRIPTOR_H_
 
 // Defines data structures used during execution of a Fortran program
 // to implement nontrivial dummy arguments, pointers, allocatables,
@@ -482,4 +482,4 @@ private:
 };
 
 } // namespace Fortran::runtime
-#endif /* FLANGRT_DESCRIPTOR_H_ */
+#endif /* FLANG_RT_DESCRIPTOR_H_ */

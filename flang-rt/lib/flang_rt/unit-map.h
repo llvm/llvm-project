@@ -9,8 +9,8 @@
 // Maps Fortran unit numbers to their ExternalFileUnit instances.
 // A simple hash table with forward-linked chains per bucket.
 
-#ifndef FLANGRT_UNIT_MAP_H_
-#define FLANGRT_UNIT_MAP_H_
+#ifndef FLANG_RT_UNIT_MAP_H_
+#define FLANG_RT_UNIT_MAP_H_
 
 #include "flang-rt/memory.h"
 #include "lock.h"
@@ -100,4 +100,4 @@ private:
   int emergencyNewUnit_{maxNewUnits_}; // not recycled
 };
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_UNIT_MAP_H_ */
+#endif /* FLANG_RT_UNIT_MAP_H_ */

@@ -8,8 +8,8 @@
 
 // External file buffering
 
-#ifndef FLANGRT_BUFFER_H_
-#define FLANGRT_BUFFER_H_
+#ifndef FLANG_RT_BUFFER_H_
+#define FLANG_RT_BUFFER_H_
 
 #include "flang-rt/memory.h"
 #include "io-error.h"
@@ -221,4 +221,4 @@ private:
   bool dirty_{false};
 };
 } // namespace Fortran::runtime::io
-#endif /* FLANGRT_BUFFER_H_ */
+#endif /* FLANG_RT_BUFFER_H_ */
