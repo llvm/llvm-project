@@ -780,7 +780,7 @@ void multiply_float_matrix_constant(float2x3 a) {
   // CHECK-NEXT:    store <6 x float> %a, ptr [[A_ADDR]], align 4
   // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+  // CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], splat (float 2.500000e+00)
   // CHECK-NEXT:    store <6 x float> [[RES]], ptr [[A_ADDR]], align 4
   // CHECK-NEXT:    ret void
   a = a * 2.5;
@@ -792,7 +792,7 @@ void multiply_compound_float_matrix_constant(float2x3 a) {
   // CHECK-NEXT:    store <6 x float> [[A:%.*]], ptr [[A_ADDR]], align 4
   // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+  // CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], splat (float 2.500000e+00)
   // CHECK-NEXT:    store <6 x float> [[RES]], ptr [[A_ADDR]], align 4
   // CHECK-NEXT:    ret void
   a *= 2.5;
@@ -804,7 +804,7 @@ void multiply_int_matrix_constant(int4x3 a) {
   // CHECK-NEXT:    store <12 x i32> [[A:%.*]], ptr [[A_ADDR]], align 4
   // NOOPT-NEXT:    [[MAT:%.*]] = load <12 x i32>, ptr [[A_ADDR]], align 4{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <12 x i32>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[RES:%.*]] = mul <12 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, [[MAT]]
+  // CHECK-NEXT:    [[RES:%.*]] = mul <12 x i32> splat (i32 5), [[MAT]]
   // CHECK-NEXT:    store <12 x i32> [[RES]], ptr [[A_ADDR]], align 4
   // CHECK-NEXT:    ret void
   a = 5 * a;
@@ -816,7 +816,7 @@ void multiply_compound_int_matrix_constant(int4x3 a) {
   // CHECK-NEXT:    store <12 x i32> [[A:%.*]], ptr [[A_ADDR]], align 4
   // NOOPT-NEXT:    [[MAT:%.*]] = load <12 x i32>, ptr [[A_ADDR]], align 4{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <12 x i32>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[RES:%.*]] = mul <12 x i32> [[MAT]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+  // CHECK-NEXT:    [[RES:%.*]] = mul <12 x i32> [[MAT]], splat (i32 5)
   // CHECK-NEXT:    store <12 x i32> [[RES]], ptr [[A_ADDR]], align 4
   // CHECK-NEXT:    ret void
   a *= 5;
@@ -916,7 +916,7 @@ void divide_float_matrix_constant(float2x3 a) {
   // CHECK-NEXT:    store <6 x float> [[A:%.*]], ptr [[A_ADDR]], align 4
   // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+  // CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], splat (float 2.500000e+00)
   // CHECK-NEXT:    store <6 x float> [[RES]], ptr [[A_ADDR]], align 4
   // CHECK-NEXT:    ret void
   a = a / 2.5;
