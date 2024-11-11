@@ -250,36 +250,25 @@ public:
         std::pair<const MemRegion *, ImmutableMap<BindingKey, SVal>>;
     using Binding = std::pair<BindingKey, SVal>;
 
-    const auto MemSpaceBeforeRegionName = [&ToString](const Cluster *L,
-                                                      const Cluster *R) {
-      if (isa<MemSpaceRegion>(L->first) && !isa<MemSpaceRegion>(R->first))
-        return true;
-      if (!isa<MemSpaceRegion>(L->first) && isa<MemSpaceRegion>(R->first))
-        return false;
-      return ToString(L->first) < ToString(R->first);
+    const auto ClusterSortKey = [&ToString](const Cluster *C) {
+      const MemRegion *Key = C->first;
+      return std::tuple{isa<MemSpaceRegion>(Key), ToString(Key)};
     };
 
-    const auto SymbolicBeforeOffset = [&ToString](const BindingKey &L,
-                                                  const BindingKey &R) {
-      if (L.hasSymbolicOffset() && !R.hasSymbolicOffset())
-        return true;
-      if (!L.hasSymbolicOffset() && R.hasSymbolicOffset())
-        return false;
-      if (L.hasSymbolicOffset() && R.hasSymbolicOffset())
-        return ToString(L.getRegion()) < ToString(R.getRegion());
-      return L.getOffset() < R.getOffset();
+    const auto MemSpaceBeforeRegionName = [&ClusterSortKey](const Cluster *L,
+                                                            const Cluster *R) {
+      return ClusterSortKey(L) < ClusterSortKey(R);
+    };
+
+    const auto BindingSortKey = [&ToString](const Binding *BPtr) {
+      const BindingKey &Key = BPtr->first;
+      return std::tuple{Key.isDirect(), !Key.hasSymbolicOffset(),
+                        ToString(Key.getRegion()), Key.getOffset()};
     };
 
     const auto DefaultBindingBeforeDirectBindings =
-        [&SymbolicBeforeOffset](const Binding *LPtr, const Binding *RPtr) {
-          const BindingKey &L = LPtr->first;
-          const BindingKey &R = RPtr->first;
-          if (L.isDefault() && !R.isDefault())
-            return true;
-          if (!L.isDefault() && R.isDefault())
-            return false;
-          assert(L.isDefault() == R.isDefault());
-          return SymbolicBeforeOffset(L, R);
+        [&BindingSortKey](const Binding *LPtr, const Binding *RPtr) {
+          return BindingSortKey(LPtr) < BindingSortKey(RPtr);
         };
 
     const auto AddrOf = [](const auto &Item) { return &Item; };
