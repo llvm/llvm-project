@@ -4625,11 +4625,39 @@ struct DropDelinearizeOneBasisElement
   }
 };
 
+/// If a `affine.delinearize_index`'s input is a `affine.linearize_index
+/// disjoint` and the two operations have the same basis, replace the
+/// delinearizeation results with the inputs of the `affine.linearize_index`
+/// since they are exact inverses of each other.
+///
+/// The `disjoint` flag is needed on the `affine.linearize_index` because
+/// otherwise, there is no guarantee that the inputs to the linearization are
+/// in-bounds the way the outputs of the delinearization would be.
+struct CancelDelinearizeOfLinearizeDisjointExact
+    : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
+                                PatternRewriter &rewriter) const override {
+    auto linearizeOp = delinearizeOp.getLinearIndex()
+                           .getDefiningOp<affine::AffineLinearizeIndexOp>();
+    if (!linearizeOp)
+      return failure();
+
+    if (!linearizeOp.getDisjoint() ||
+        linearizeOp.getMixedBasis() != delinearizeOp.getMixedBasis())
+      return failure();
+
+    rewriter.replaceOp(delinearizeOp, linearizeOp.getMultiIndex());
+    return success();
+  }
+};
 } // namespace
 
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.insert<DropDelinearizeOneBasisElement, DropUnitExtentBasis>(context);
+  patterns.insert<DropDelinearizeOneBasisElement, DropUnitExtentBasis,
+                  CancelDelinearizeOfLinearizeDisjointExact>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4751,12 +4779,45 @@ struct DropLinearizeOneBasisElement final
     return success();
   }
 };
+
+/// Cancel out linearize_index(delinearize_index(x, B), B).
+///
+/// That is, rewrite
+/// ```
+/// %0:N = affine.delinearize_index %x by (%b1, %b2, ... %bN)
+/// %y = affine.linearize_index [%0#0, %0#1, ... %0#(N-1)] by (%b1, %b2, ...
+/// %bN)
+/// ```
+/// to replacing `%y` with `%x`.
+struct CancelLinearizeOfDelinearizeExact final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp linearizeOp,
+                                PatternRewriter &rewriter) const override {
+    auto delinearizeOp = linearizeOp.getMultiIndex()
+                             .front()
+                             .getDefiningOp<affine::AffineDelinearizeIndexOp>();
+    if (!delinearizeOp)
+      return failure();
+
+    if (linearizeOp.getMixedBasis() != delinearizeOp.getMixedBasis())
+      return failure();
+
+    if (delinearizeOp.getResults() != linearizeOp.getMultiIndex())
+      return failure();
+
+    rewriter.replaceOp(linearizeOp, delinearizeOp.getLinearIndex());
+    return success();
+  }
+};
 } // namespace
 
 void affine::AffineLinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<DropLinearizeUnitComponentsIfDisjointOrZero,
-               DropLinearizeOneBasisElement>(context);
+               DropLinearizeOneBasisElement, CancelLinearizeOfDelinearizeExact>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
