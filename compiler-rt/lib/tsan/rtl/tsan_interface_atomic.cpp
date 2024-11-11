@@ -987,7 +987,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a) {
   a64 cmp = *(a64 *)(a + 8);
-  a32 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire, *(a64 **)a,
+  a64 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire, *(a64 **)a,
                                cmp, *(a64 *)(a + 16));
   *(bool *)(a + 24) = (cur == cmp);
 }
