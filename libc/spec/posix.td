@@ -1582,7 +1582,8 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Macros
     [
         ActionType,
-        EntryType
+        EntryType,
+        LSearchCompareT,
     ], // Types
     [], // Enumerations
     [
