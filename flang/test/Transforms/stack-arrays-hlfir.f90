@@ -53,3 +53,31 @@ end subroutine omp_temp_array
 ! CHECK-NEXT:    }
 ! CHECK:         return
 ! CHECK-NEXT:  }
+
+subroutine omp_target_wsloop
+  implicit none
+  integer (8) :: lV, i
+  integer (8), dimension (2) :: iaVS
+
+  lV = 202
+
+  !$omp target teams distribute
+  do i = 1, 10
+    iaVS = [lV, lV]
+  end do
+  !$omp end target teams distribute
+end subroutine omp_target_wsloop
+! CHECK-LABEL: func.func @_QPomp_target_wsloop{{.*}} {
+! CHECK:         omp.target {{.*}} {
+! CHECK-NOT:       fir.allocmem
+! CHECK-NOT:       fir.freemem
+! CHECK:           fir.alloca !fir.array<2xi64>
+! CHECK:         omp.teams {
+! CHECK:         omp.distribute {
+! CHECK:         omp.loop_nest {{.*}} {
+! CHECK-NOT:       fir.allocmem
+! CHECK-NOT:       fir.freemem
+! CHECK:           omp.yield
+! CHECK-NEXT:    }
+! CHECK:         return
+! CHECK-NEXT:  }

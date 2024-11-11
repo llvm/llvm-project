@@ -1,5 +1,5 @@
 ! Test lowering of select rank to HLFIR
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module iface_helpers
 interface
@@ -796,7 +796,6 @@ end subroutine
 ! CHECK:           %[[VAL_10:.*]] = arith.xori %[[VAL_8]], %[[VAL_9]] : i1
 ! CHECK:           fir.if %[[VAL_10]] {
 ! CHECK:             fir.call @_QPone() fastmath<contract> : () -> ()
-! CHECK:           } else {
 ! CHECK:           }
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_6]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb7

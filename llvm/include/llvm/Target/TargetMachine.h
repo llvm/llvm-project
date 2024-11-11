@@ -254,10 +254,10 @@ public:
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
 
   /// Returns the optimization level: None, Less, Default, or Aggressive.
-  CodeGenOptLevel getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const { return OptLevel; }
 
   /// Overrides the optimization level.
-  void setOptLevel(CodeGenOptLevel Level);
+  void setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
   void setFastISel(bool Enable) { Options.EnableFastISel = Enable; }
   bool getO0WantsFastISel() { return O0WantsFastISel; }
@@ -447,6 +447,9 @@ protected: // Can only create subclasses.
                     CodeModel::Model CM, CodeGenOptLevel OL);
 
   void initAsmInfo();
+
+  /// Reset internal state.
+  virtual void reset() {};
 
 public:
   /// Get a TargetTransformInfo implementation for the target.

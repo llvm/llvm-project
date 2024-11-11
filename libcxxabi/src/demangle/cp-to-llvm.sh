@@ -18,7 +18,7 @@ if [[ ! -d "$LLVM_DEMANGLE_DIR" ]]; then
     exit 1
 fi
 
-read -p "This will overwrite the copies of $FILES in $LLVM_DEMANGLE_DIR; are you sure? [y/N]" -n 1 -r ANSWER
+read -p "This will overwrite the copies of $HDRS in $LLVM_DEMANGLE_DIR; are you sure? [y/N]" -n 1 -r ANSWER
 echo
 
 if [[ $ANSWER =~ ^[Yy]$ ]]; then

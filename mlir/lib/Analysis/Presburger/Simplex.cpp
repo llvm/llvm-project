@@ -1306,7 +1306,7 @@ void SimplexBase::addDivisionVariable(ArrayRef<DynamicAPInt> coeffs,
   assert(denom > 0 && "Denominator must be positive!");
   appendVariable();
 
-  SmallVector<DynamicAPInt, 8> ineq(coeffs.begin(), coeffs.end());
+  SmallVector<DynamicAPInt, 8> ineq(coeffs);
   DynamicAPInt constTerm = ineq.back();
   ineq.back() = -denom;
   ineq.emplace_back(constTerm);
@@ -1754,7 +1754,7 @@ private:
   getCoeffsForDirection(ArrayRef<DynamicAPInt> dir) {
     assert(2 * dir.size() == simplex.getNumVariables() &&
            "Direction vector has wrong dimensionality");
-    SmallVector<DynamicAPInt, 8> coeffs(dir.begin(), dir.end());
+    SmallVector<DynamicAPInt, 8> coeffs(dir);
     coeffs.reserve(dir.size() + 1);
     for (const DynamicAPInt &coeff : dir)
       coeffs.emplace_back(-coeff);
@@ -2153,9 +2153,16 @@ void SimplexBase::print(raw_ostream &os) const {
   for (unsigned col = 2, e = getNumColumns(); col < e; ++col)
     os << ", c" << col << ": " << colUnknown[col];
   os << '\n';
-  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row)
     for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col)
-      os << tableau(row, col) << '\t';
+      updatePrintMetrics<DynamicAPInt>(tableau(row, col), ptm);
+  unsigned MIN_SPACING = 1;
+  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
+    for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col) {
+      printWithPrintMetrics<DynamicAPInt>(os, tableau(row, col), MIN_SPACING,
+                                          ptm);
+    }
     os << '\n';
   }
   os << '\n';

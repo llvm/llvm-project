@@ -1181,7 +1181,7 @@ class MDNode : public Metadata {
 
 protected:
   MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt);
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
   ~MDNode() = default;
 
   void *operator new(size_t Size, size_t NumOps, StorageType Storage);
@@ -1489,8 +1489,7 @@ class MDTuple : public MDNode {
 
   TempMDTuple cloneImpl() const {
     ArrayRef<MDOperand> Operands = operands();
-    return getTemporary(getContext(), SmallVector<Metadata *, 4>(
-                                          Operands.begin(), Operands.end()));
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(Operands));
   }
 
 public:

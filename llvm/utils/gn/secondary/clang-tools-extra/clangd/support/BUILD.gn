@@ -9,9 +9,12 @@ static_library("support") {
   ]
   include_dirs = [ ".." ]
   sources = [
+    "Bracket.cpp",
     "Cancellation.cpp",
     "Context.cpp",
+    "DirectiveTree.cpp",
     "FileCache.cpp",
+    "Lex.cpp",
     "Logger.cpp",
     "Markup.cpp",
     "MemoryTree.cpp",
@@ -20,6 +23,7 @@ static_library("support") {
     "ThreadCrashReporter.cpp",
     "Threading.cpp",
     "ThreadsafeFS.cpp",
+    "Token.cpp",
     "Trace.cpp",
   ]
 }

@@ -7,7 +7,7 @@ enums: []
 objects: []
 functions:
   - name: getrandom
-    standards: 
+    standards:
       - Linux
     return_type: ssize_t
     arguments:

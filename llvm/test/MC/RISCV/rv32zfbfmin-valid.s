@@ -49,8 +49,11 @@ fmv.x.h a2, fs7
 fmv.h.x ft1, a6
 
 # CHECK-ASM-AND-OBJ: fcvt.s.bf16 fa0, ft0
-# CHECK-ASM: encoding: [0x53,0x75,0x60,0x40]
+# CHECK-ASM: encoding: [0x53,0x05,0x60,0x40]
 fcvt.s.bf16 fa0, ft0
+# CHECK-ASM-AND-OBJ: fcvt.s.bf16 fa0, ft0, rup
+# CHECK-ASM: encoding: [0x53,0x35,0x60,0x40]
+fcvt.s.bf16 fa0, ft0, rup
 # CHECK-ASM-AND-OBJ: fcvt.bf16.s ft2, fa2
 # CHECK-ASM: encoding: [0x53,0x71,0x86,0x44]
 fcvt.bf16.s ft2, fa2

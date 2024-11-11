@@ -16,6 +16,7 @@ TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
 #include <__type_traits/negation.h>
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 struct Bomb;
 template <int N, class T = Bomb >

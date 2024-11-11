@@ -14,8 +14,8 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Symbol/Block.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -26,6 +26,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -244,6 +245,22 @@ public:
       }
     }
     return m_description.c_str();
+  }
+
+  std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) override {
+    if (!inlined_stack)
+      return {};
+
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (!thread_sp)
+      return {};
+    BreakpointSiteSP bp_site_sp(
+        thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
+    if (!bp_site_sp)
+      return {};
+
+    return bp_site_sp->GetSuggestedStackFrameIndex();
   }
 
 protected:
@@ -1125,6 +1142,29 @@ private:
   std::optional<int> m_code;
 };
 
+// StopInfoInterrupt
+
+class StopInfoInterrupt : public StopInfo {
+public:
+  StopInfoInterrupt(Thread &thread, int signo, const char *description)
+      : StopInfo(thread, signo) {
+    SetDescription(description);
+  }
+
+  ~StopInfoInterrupt() override = default;
+
+  StopReason GetStopReason() const override {
+    return lldb::eStopReasonInterrupt;
+  }
+
+  const char *GetDescription() override {
+    if (m_description.empty()) {
+      m_description = "async interrupt";
+    }
+    return m_description.c_str();
+  }
+};
+
 // StopInfoTrace
 
 class StopInfoTrace : public StopInfo {
@@ -1140,6 +1180,44 @@ public:
       return "trace";
     else
       return m_description.c_str();
+  }
+
+  std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) override {
+    // Trace only knows how to adjust inlined stacks:
+    if (!inlined_stack)
+      return {};
+
+    ThreadSP thread_sp = GetThread();
+    StackFrameSP frame_0_sp = thread_sp->GetStackFrameAtIndex(0);
+    if (!frame_0_sp)
+      return {};
+    if (!frame_0_sp->IsInlined())
+      return {};
+    Block *block_ptr = frame_0_sp->GetFrameBlock();
+    if (!block_ptr)
+      return {};
+    Address pc_address = frame_0_sp->GetFrameCodeAddress();
+    AddressRange containing_range;
+    if (!block_ptr->GetRangeContainingAddress(pc_address, containing_range) ||
+        pc_address != containing_range.GetBaseAddress())
+      return {};
+
+    int num_inlined_functions = 0;
+
+    for (Block *container_ptr = block_ptr->GetInlinedParent();
+         container_ptr != nullptr;
+         container_ptr = container_ptr->GetInlinedParent()) {
+      if (!container_ptr->GetRangeContainingAddress(pc_address,
+                                                    containing_range))
+        break;
+      if (pc_address != containing_range.GetBaseAddress())
+        break;
+
+      num_inlined_functions++;
+    }
+    inlined_stack = true;
+    return num_inlined_functions + 1;
   }
 };
 
@@ -1388,6 +1466,11 @@ StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,
                                                 std::optional<int> code) {
   thread.GetProcess()->GetUnixSignals()->IncrementSignalHitCount(signo);
   return StopInfoSP(new StopInfoUnixSignal(thread, signo, description, code));
+}
+
+StopInfoSP StopInfo::CreateStopReasonWithInterrupt(Thread &thread, int signo,
+                                                   const char *description) {
+  return StopInfoSP(new StopInfoInterrupt(thread, signo, description));
 }
 
 StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {

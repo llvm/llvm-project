@@ -19,6 +19,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -453,6 +454,9 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
   if (!Subtarget->useSmallAddressing() && !Subtarget->isTargetMachO())
     return 0;
 
+  if (FuncInfo.MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT())
+    return 0;
+
   unsigned OpFlags = Subtarget->ClassifyGlobalReference(GV, TM);
 
   EVT DestEVT = TLI.getValueType(DL, GV->getType(), true);
@@ -597,7 +601,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
     // Don't walk into other basic blocks unless the object is an alloca from
     // another block, otherwise it may not have a virtual register assigned.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -749,7 +753,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
 
     const Value *Src = U->getOperand(0);
     if (const auto *I = dyn_cast<Instruction>(Src)) {
-      if (FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+      if (FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
         // Fold the zext or sext when it won't become a noop.
         if (const auto *ZE = dyn_cast<ZExtInst>(I)) {
           if (!isIntExtFree(ZE) &&
@@ -831,7 +835,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
 
     const Value *Src = LHS;
     if (const auto *I = dyn_cast<Instruction>(Src)) {
-      if (FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+      if (FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
         // Fold the zext or sext when it won't become a noop.
         if (const auto *ZE = dyn_cast<ZExtInst>(I)) {
           if (!isIntExtFree(ZE) &&
@@ -1027,7 +1031,7 @@ bool AArch64FastISel::isValueAvailable(const Value *V) const {
     return true;
 
   const auto *I = cast<Instruction>(V);
-  return FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB;
+  return FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB;
 }
 
 bool AArch64FastISel::simplifyAddress(Address &Addr, MVT VT) {
@@ -2279,8 +2283,8 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
   if (BW > 64)
     return false;
 
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   // Try to take advantage of fallthrough opportunities.
   if (FuncInfo.MBB->isLayoutSuccessor(TBB)) {
@@ -2384,13 +2388,13 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
 bool AArch64FastISel::selectBranch(const Instruction *I) {
   const BranchInst *BI = cast<BranchInst>(I);
   if (BI->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.MBBMap[BI->getSuccessor(0)];
+    MachineBasicBlock *MSucc = FuncInfo.getMBB(BI->getSuccessor(0));
     fastEmitBranch(MSucc, BI->getDebugLoc());
     return true;
   }
 
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
     if (CI->hasOneUse() && isValueAvailable(CI)) {
@@ -2527,7 +2531,7 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
 
   // Make sure the CFG is up-to-date.
   for (const auto *Succ : BI->successors())
-    FuncInfo.MBB->addSuccessor(FuncInfo.MBBMap[Succ]);
+    FuncInfo.MBB->addSuccessor(FuncInfo.getMBB(Succ));
 
   return true;
 }

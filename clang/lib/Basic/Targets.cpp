@@ -23,7 +23,6 @@
 #include "Targets/DirectX.h"
 #include "Targets/Hexagon.h"
 #include "Targets/Lanai.h"
-#include "Targets/Le64.h"
 #include "Targets/LoongArch.h"
 #include "Targets/M68k.h"
 #include "Targets/MSP430.h"
@@ -344,17 +343,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<M68kTargetInfo>(Triple, Opts);
     }
 
-  case llvm::Triple::le32:
-    switch (os) {
-    case llvm::Triple::NaCl:
-      return std::make_unique<NaClTargetInfo<PNaClTargetInfo>>(Triple, Opts);
-    default:
-      return nullptr;
-    }
-
-  case llvm::Triple::le64:
-    return std::make_unique<Le64TargetInfo>(Triple, Opts);
-
   case llvm::Triple::ppc:
     switch (os) {
     case llvm::Triple::Linux:
@@ -625,6 +613,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Solaris:
       return std::make_unique<SolarisTargetInfo<X86_64TargetInfo>>(Triple,
                                                                    Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFIX86_64TargetInfo>(Triple, Opts);
+
     case llvm::Triple::Win32: {
       switch (Triple.getEnvironment()) {
       case llvm::Triple::Cygnus:
@@ -719,12 +710,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::dxil:
     return std::make_unique<DirectXTargetInfo>(Triple, Opts);
-  case llvm::Triple::renderscript32:
-    return std::make_unique<LinuxTargetInfo<RenderScript32TargetInfo>>(Triple,
-                                                                       Opts);
-  case llvm::Triple::renderscript64:
-    return std::make_unique<LinuxTargetInfo<RenderScript64TargetInfo>>(Triple,
-                                                                       Opts);
 
   case llvm::Triple::ve:
     return std::make_unique<LinuxTargetInfo<VETargetInfo>>(Triple, Opts);

@@ -924,6 +924,8 @@ class GPUTransformDialectExtension
     : public transform::TransformDialectExtension<
           GPUTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GPUTransformDialectExtension)
+
   GPUTransformDialectExtension() {
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<arith::ArithDialect>();

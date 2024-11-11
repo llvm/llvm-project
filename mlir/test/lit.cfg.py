@@ -18,12 +18,15 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "MLIR"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
 # We prefer the lit internal shell which provides a better user experience on failures
 # unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
 use_lit_shell = True
 lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
 if lit_shell_env:
-  use_lit_shell = not lit.util.pythonize_bool(lit_shell_env)
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
 config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
@@ -122,11 +125,6 @@ tools = [
     "not",
 ]
 
-if config.enable_spirv_cpu_runner:
-    tools.extend(
-        ["mlir-spirv-cpu-runner", add_runtime("mlir_test_spirv_cpu_runner_c_wrappers")]
-    )
-
 if config.enable_vulkan_runner:
     tools.extend([add_runtime("vulkan-runtime-wrappers")])
 
@@ -138,6 +136,9 @@ if config.enable_cuda_runner:
 
 if config.enable_sycl_runner:
     tools.extend([add_runtime("mlir_sycl_runtime")])
+
+if config.enable_spirv_cpu_runner:
+    tools.extend([add_runtime("mlir_spirv_cpu_runtime")])
 
 if config.mlir_run_arm_sve_tests or config.mlir_run_arm_sme_tests:
     tools.extend([add_runtime("mlir_arm_runner_utils")])

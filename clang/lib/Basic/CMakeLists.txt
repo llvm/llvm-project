@@ -89,6 +89,7 @@ add_clang_library(clangBasic
   SourceManager.cpp
   SourceMgrAdapter.cpp
   Stack.cpp
+  StackExhaustionHandler.cpp
   TargetID.cpp
   TargetInfo.cpp
   Targets.cpp
@@ -102,7 +103,6 @@ add_clang_library(clangBasic
   Targets/DirectX.cpp
   Targets/Hexagon.cpp
   Targets/Lanai.cpp
-  Targets/Le64.cpp
   Targets/LoongArch.cpp
   Targets/M68k.cpp
   Targets/MSP430.cpp

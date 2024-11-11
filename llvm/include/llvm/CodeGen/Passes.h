@@ -261,11 +261,11 @@ namespace llvm {
 
   /// TailDuplicate - Duplicate blocks with unconditional branches
   /// into tails of their predecessors.
-  extern char &TailDuplicateID;
+  extern char &TailDuplicateLegacyID;
 
   /// Duplicate blocks with unconditional branches into tails of their
   /// predecessors. Variant that works before register allocation.
-  extern char &EarlyTailDuplicateID;
+  extern char &EarlyTailDuplicateLegacyID;
 
   /// MachineTraceMetrics - This pass computes critical path and CPU resource
   /// usage in an ensemble of traces.
@@ -273,7 +273,7 @@ namespace llvm {
 
   /// EarlyIfConverter - This pass performs if-conversion on SSA form by
   /// inserting cmov instructions.
-  extern char &EarlyIfConverterID;
+  extern char &EarlyIfConverterLegacyID;
 
   /// EarlyIfPredicator - This pass performs if-conversion on SSA form by
   /// predicating if/else block and insert select at the join point.
@@ -285,7 +285,7 @@ namespace llvm {
 
   /// StackSlotColoring - This pass performs stack coloring and merging.
   /// It merges disjoint allocas to reduce the stack size.
-  extern char &StackColoringID;
+  extern char &StackColoringLegacyID;
 
   /// StackFramePrinter - This pass prints the stack frame layout and variable
   /// mappings.
@@ -330,7 +330,7 @@ namespace llvm {
   extern char &GCMachineCodeAnalysisID;
 
   /// MachineCSE - This pass performs global CSE on machine instructions.
-  extern char &MachineCSEID;
+  extern char &MachineCSELegacyID;
 
   /// MIRCanonicalizer - This pass canonicalizes MIR by renaming vregs
   /// according to the semantics of the instruction as well as hoists
@@ -367,7 +367,7 @@ namespace llvm {
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.
-  extern char &OptimizePHIsID;
+  extern char &OptimizePHIsLegacyID;
 
   /// StackSlotColoring - This pass performs stack slot coloring.
   extern char &StackSlotColoringID;
@@ -440,6 +440,9 @@ namespace llvm {
   // metadata after llvm SanitizerBinaryMetadata pass.
   extern char &MachineSanitizerBinaryMetadataID;
 
+  /// RemoveLoadsIntoFakeUses pass.
+  extern char &RemoveLoadsIntoFakeUsesID;
+
   /// RemoveRedundantDebugValues pass.
   extern char &RemoveRedundantDebugValuesID;
 
@@ -476,7 +479,9 @@ namespace llvm {
   ///
   Pass *createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
                               bool OnlyOptimizeForSize = false,
-                              bool MergeExternalByDefault = false);
+                              bool MergeExternalByDefault = false,
+                              bool MergeConstantByDefault = false,
+                              bool MergeConstAggressiveByDefault = false);
 
   /// This pass splits the stack into a safe stack and an unsafe stack to
   /// protect against stack-based overflow vulnerabilities.
@@ -512,11 +517,6 @@ namespace llvm {
   // This pass replaces intrinsics operating on vector operands with calls to
   // the corresponding function in a vector library (e.g., SVML, libmvec).
   FunctionPass *createReplaceWithVeclibLegacyPass();
-
-  /// This pass expands the vector predication intrinsics into unpredicated
-  /// instructions with selects or just the explicit vector length into the
-  /// predicate mask.
-  FunctionPass *createExpandVectorPredicationPass();
 
   // Expands large div/rem instructions.
   FunctionPass *createExpandLargeDivRemPass();

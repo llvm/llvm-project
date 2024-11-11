@@ -1379,12 +1379,12 @@ mlir::affine::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
 // input[i] should move from position i -> permMap[i]. Returns the position in
 // `input` that becomes the new outermost loop.
-unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
+unsigned mlir::affine::permuteLoops(ArrayRef<AffineForOp> input,
                                     ArrayRef<unsigned> permMap) {
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
   // just sort and check if it's iota.
-  SmallVector<unsigned, 4> checkPermMap(permMap.begin(), permMap.end());
+  SmallVector<unsigned, 4> checkPermMap(permMap);
   llvm::sort(checkPermMap);
   if (llvm::any_of(llvm::enumerate(checkPermMap),
                    [](const auto &en) { return en.value() != en.index(); }))
@@ -1406,8 +1406,8 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
   // Move the innermost loop body to the loop that would be the innermost in the
   // permuted nest (only if the innermost loop is going to change).
   if (permMap.back() != input.size() - 1) {
-    auto *destBody = input[invPermMap.back().second].getBody();
-    auto *srcBody = input.back().getBody();
+    Block *destBody = ((AffineForOp)input[invPermMap.back().second]).getBody();
+    Block *srcBody = ((AffineForOp)input.back()).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      srcBody->getOperations(), srcBody->begin(),
                                      std::prev(srcBody->end()));
@@ -1437,7 +1437,7 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
       continue;
 
     // Move input[i] to its surrounding loop in the transformed nest.
-    auto *destBody = input[parentPosInInput].getBody();
+    auto *destBody = ((AffineForOp)input[parentPosInInput]).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      input[i]->getBlock()->getOperations(),
                                      Block::iterator(input[i]));
@@ -1583,7 +1583,7 @@ SmallVector<SmallVector<AffineForOp, 8>, 8>
 mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
                    ArrayRef<AffineForOp> targets) {
   SmallVector<SmallVector<AffineForOp, 8>, 8> res;
-  SmallVector<AffineForOp, 8> currentTargets(targets.begin(), targets.end());
+  SmallVector<AffineForOp, 8> currentTargets(targets);
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
@@ -2067,7 +2067,7 @@ static LogicalResult generateCopy(
     // fastMemRefType is a constant shaped memref.
     auto maySizeInBytes = getIntOrFloatMemRefSizeInBytes(fastMemRefType);
     // We don't account for things of unknown size.
-    *sizeInBytes = maySizeInBytes ? *maySizeInBytes : 0;
+    *sizeInBytes = maySizeInBytes.value_or(0);
 
     LLVM_DEBUG(emitRemarkForBlock(*block)
                << "Creating fast buffer of type " << fastMemRefType

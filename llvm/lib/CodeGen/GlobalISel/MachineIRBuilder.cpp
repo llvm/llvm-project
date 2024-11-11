@@ -646,7 +646,7 @@ MachineInstrBuilder MachineIRBuilder::buildMergeValues(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   assert(TmpVec.size() > 1);
   return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, TmpVec);
 }
@@ -657,7 +657,7 @@ MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   assert(TmpVec.size() > 1);
   return buildInstr(getOpcodeForMerge(Res, TmpVec), Res, TmpVec);
 }
@@ -685,7 +685,7 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<DstOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<DstOp, 8> TmpVec(Res.begin(), Res.end());
+  SmallVector<DstOp, 8> TmpVec(Res);
   assert(TmpVec.size() > 1);
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
@@ -702,7 +702,7 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<DstOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<DstOp, 8> TmpVec(Res.begin(), Res.end());
+  SmallVector<DstOp, 8> TmpVec(Res);
   assert(TmpVec.size() > 1);
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
@@ -712,7 +712,7 @@ MachineInstrBuilder MachineIRBuilder::buildBuildVector(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
@@ -739,7 +739,7 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   if (TmpVec[0].getLLTTy(*getMRI()).getSizeInBits() ==
       Res.getLLTTy(*getMRI()).getElementType().getSizeInBits())
     return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
@@ -772,13 +772,13 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   LLT Src1Ty = Src1.getLLTTy(*getMRI());
   LLT Src2Ty = Src2.getLLTTy(*getMRI());
-  assert((size_t)(Src1Ty.getNumElements() + Src2Ty.getNumElements()) >=
-         Mask.size());
-  assert(DstTy.getElementType() == Src1Ty.getElementType() &&
-         DstTy.getElementType() == Src2Ty.getElementType());
-  (void)DstTy;
-  (void)Src1Ty;
-  (void)Src2Ty;
+  const LLT DstElemTy = DstTy.isVector() ? DstTy.getElementType() : DstTy;
+  const LLT ElemTy1 = Src1Ty.isVector() ? Src1Ty.getElementType() : Src1Ty;
+  const LLT ElemTy2 = Src2Ty.isVector() ? Src2Ty.getElementType() : Src2Ty;
+  assert(DstElemTy == ElemTy1 && DstElemTy == ElemTy2);
+  (void)DstElemTy;
+  (void)ElemTy1;
+  (void)ElemTy2;
   ArrayRef<int> MaskAlloc = getMF().allocateShuffleMask(Mask);
   return buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {Res}, {Src1, Src2})
       .addShuffleMask(MaskAlloc);
@@ -789,7 +789,7 @@ MachineIRBuilder::buildConcatVectors(const DstOp &Res, ArrayRef<Register> Ops) {
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
-  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  SmallVector<SrcOp, 8> TmpVec(Ops);
   return buildInstr(TargetOpcode::G_CONCAT_VECTORS, Res, TmpVec);
 }
 
@@ -807,6 +807,17 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   }
 
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildStepVector(const DstOp &Res,
+                                                      unsigned Step) {
+  ConstantInt *CI =
+      ConstantInt::get(getMF().getFunction().getContext(), APInt(64, Step));
+  auto StepVector = buildInstr(TargetOpcode::G_STEP_VECTOR);
+  StepVector->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), StepVector);
+  StepVector.addCImm(CI);
+  return StepVector;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
@@ -898,8 +909,9 @@ MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
 MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
-                                                const SrcOp &Op1) {
-  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1});
+                                                const SrcOp &Op1,
+                                                std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
@@ -942,7 +954,7 @@ MachineInstrBuilder MachineIRBuilder::buildInsertSubvector(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildExtractSubvector(const DstOp &Res,
                                                             const SrcOp &Src,
                                                             unsigned Idx) {
-  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+  return buildInstr(TargetOpcode::G_EXTRACT_SUBVECTOR, Res,
                     {Src, uint64_t(Idx)});
 }
 

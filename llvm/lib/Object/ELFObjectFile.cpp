@@ -441,6 +441,8 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
+  case ELF::EM_BPF:
+    return StringRef("v4");
   default:
     return std::nullopt;
   }
@@ -588,6 +590,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1151";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152:
     return "gfx1152";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153:
+    return "gfx1153";
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:

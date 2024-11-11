@@ -120,7 +120,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+    error = Status(::GetLastError(), eErrorTypeWin32);
     // Note that error 50 ("The request is not supported") will occur if you
     // try debug a 64-bit inferior from a 32-bit LLDB.
   }

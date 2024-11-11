@@ -183,12 +183,12 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pcmpeqq	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   pcmpeqq	(%rax), %xmm2
 # CHECK-NEXT:  2      3     1.00                        pextrb	$1, %xmm0, %ecx
-# CHECK-NEXT:  3      2     1.00           *            pextrb	$1, %xmm0, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            pextrb	$1, %xmm0, (%rax)
 # CHECK-NEXT:  2      3     1.00                        pextrd	$1, %xmm0, %ecx
-# CHECK-NEXT:  3      2     1.00           *            pextrd	$1, %xmm0, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            pextrd	$1, %xmm0, (%rax)
 # CHECK-NEXT:  2      3     1.00                        pextrq	$1, %xmm0, %rcx
-# CHECK-NEXT:  3      2     1.00           *            pextrq	$1, %xmm0, (%rax)
-# CHECK-NEXT:  3      2     1.00           *            pextrw	$1, %xmm0, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            pextrq	$1, %xmm0, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            pextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      4     1.00                        phminposuw	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    1.00    *                   phminposuw	(%rax), %xmm2
 # CHECK-NEXT:  2      2     2.00                        pinsrb	$1, %eax, %xmm1
@@ -268,7 +268,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     36.67  42.67  22.00  22.00  2.50   52.67   -     2.50   2.50   2.50
+# CHECK-NEXT:  -      -     36.67  46.17  22.00  22.00  2.50   49.17   -     2.50   2.50   2.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -299,13 +299,13 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -      -      -     pblendw	$11, (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     pcmpeqq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     pcmpeqq	(%rax), %xmm2
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     pextrb	$1, %xmm0, %ecx
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   pextrb	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     pextrd	$1, %xmm0, %ecx
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   pextrd	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     pextrq	$1, %xmm0, %rcx
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   pextrq	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   pextrw	$1, %xmm0, (%rax)
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     pextrb	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   pextrb	$1, %xmm0, (%rax)
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     pextrd	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   pextrd	$1, %xmm0, (%rax)
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     pextrq	$1, %xmm0, %rcx
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   pextrq	$1, %xmm0, (%rax)
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   pextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     phminposuw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     phminposuw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     pinsrb	$1, %eax, %xmm1

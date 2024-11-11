@@ -383,6 +383,11 @@ class TypeConverter {
 };
 ```
 
+Materializations through the type converter are optional. If the
+`ConversionConfig::buildMaterializations` flag is set to "false", the dialect
+conversion driver builds an `unrealized_conversion_cast` op instead of calling
+the respective type converter callback whenever a materialization is required.
+
 ### Region Signature Conversion
 
 From the perspective of type conversion, the types of block arguments are a bit

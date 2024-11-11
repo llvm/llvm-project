@@ -2,7 +2,7 @@
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
    CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0.0)
   message(STATUS "Can only test with Clang compiler in version 6.0.0 or later.")
-  libomptarget_warning_say("The check-libomptarget target will not be available!")
+  message(WARNING "The check-offload target will not be available!")
   return()
 endif()
 
@@ -10,6 +10,12 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
   set(LIBOMPTARGET_DEBUG True)
 else()
   set(LIBOMPTARGET_DEBUG False)
+endif()
+
+if (NOT OPENMP_STANDALONE_BUILD AND "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(LIBOMPTARGET_TEST_GPU_PGO True)
+else()
+  set(LIBOMPTARGET_TEST_GPU_PGO False)
 endif()
 
 # Replace the space from user's input with ";" in case that CMake add escape

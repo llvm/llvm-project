@@ -1,0 +1,42 @@
+# REQUIRES: python
+# RUN: %lldb -s %s -o exit | FileCheck %s
+
+scripting extension list
+# CHECK:Available scripted extension templates:
+
+# CHECK:  Name: OperatingSystemPythonInterface
+# CHECK-NEXT:  Language: Python
+# CHECK-NEXT:  Description: Mock thread state
+# CHECK-NEXT:  API Usages: None
+# CHECK-NEXT:  Command Interpreter Usages:
+# CHECK-NEXT:    settings set target.process.python-os-plugin-path <script-path>
+# CHECK-NEXT:    settings set process.experimental.os-plugin-reports-all-threads [0/1]
+
+# CHECK:  Name: ScriptedPlatformPythonInterface
+# CHECK-NEXT:  Language: Python
+# CHECK-NEXT:  Description: Mock platform and interact with its processes.
+# CHECK-NEXT:  API Usages: None
+# CHECK-NEXT:  Command Interpreter Usages: None
+
+# CHECK:  Name: ScriptedProcessPythonInterface
+# CHECK-NEXT:  Language: Python
+# CHECK-NEXT:  Description: Mock process state
+# CHECK-NEXT:  API Usages:
+# CHECK-NEXT:    SBAttachInfo.SetScriptedProcessClassName
+# CHECK-NEXT:    SBAttachInfo.SetScriptedProcessDictionary
+# CHECK-NEXT:    SBTarget.Attach
+# CHECK-NEXT:    SBLaunchInfo.SetScriptedProcessClassName
+# CHECK-NEXT:    SBLaunchInfo.SetScriptedProcessDictionary
+# CHECK-NEXT:    SBTarget.Launch
+# CHECK-NEXT:  Command Interpreter Usages:
+# CHECK-NEXT:    process attach -C <script-name> [-k key -v value ...]
+# CHECK-NEXT:    process launch -C <script-name> [-k key -v value ...]
+
+# CHECK:  Name: ScriptedThreadPlanPythonInterface
+# CHECK-NEXT:  Language: Python
+# CHECK-NEXT:  Description: Alter thread stepping logic and stop reason
+# CHECK-NEXT:  API Usages: SBThread.StepUsingScriptedThreadPlan
+# CHECK-NEXT:  Command Interpreter Usages: thread step-scripted -C <script-name> [-k key -v value ...]
+
+scripting extension list -l lua
+# CHECK: Available scripted extension templates: None

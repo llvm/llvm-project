@@ -4,7 +4,7 @@
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
-// DEFINE:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
+// DEFINE:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
 // RUN: %{compile}
 
@@ -22,7 +22,7 @@
 func.func @test_outerproduct_no_accumulator_4x4xf32() {
   %c0 = arith.constant 0 : index
 
-  %vector_i32 = llvm.intr.experimental.stepvector : vector<[4]xi32>
+  %vector_i32 = llvm.intr.stepvector : vector<[4]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
   %tile = vector.outerproduct %vector, %vector : vector<[4]xf32>, vector<[4]xf32>
 
@@ -47,7 +47,7 @@ func.func @test_outerproduct_with_accumulator_4x4xf32() {
   %f10 = arith.constant 10.0 : f32
 
   %acc = vector.splat %f10 : vector<[4]x[4]xf32>
-  %vector_i32 = llvm.intr.experimental.stepvector : vector<[4]xi32>
+  %vector_i32 = llvm.intr.stepvector : vector<[4]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
   %tile = vector.outerproduct %vector, %vector, %acc : vector<[4]xf32>, vector<[4]xf32>
 
@@ -71,7 +71,7 @@ func.func @test_masked_outerproduct_no_accumulator_4x4xf32() {
   %c0 = arith.constant 0 : index
   %ones = arith.constant dense<1> : vector<[4]xi32>
 
-  %step_vector = llvm.intr.experimental.stepvector : vector<[4]xi32>
+  %step_vector = llvm.intr.stepvector : vector<[4]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[4]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
 
@@ -104,7 +104,7 @@ func.func @test_masked_outerproduct_with_accumulator_4x4xf32() {
   %f10 = arith.constant 10.0 : f32
 
   %acc = vector.splat %f10 : vector<[4]x[4]xf32>
-  %step_vector = llvm.intr.experimental.stepvector : vector<[4]xi32>
+  %step_vector = llvm.intr.stepvector : vector<[4]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[4]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
 

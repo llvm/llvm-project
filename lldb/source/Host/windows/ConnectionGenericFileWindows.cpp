@@ -28,13 +28,13 @@ namespace {
 class ReturnInfo {
 public:
   void Set(size_t bytes, ConnectionStatus status, DWORD error_code) {
-    m_error.SetError(error_code, eErrorTypeWin32);
+    m_error = Status(error_code, eErrorTypeWin32);
     m_bytes = bytes;
     m_status = status;
   }
 
   void Set(size_t bytes, ConnectionStatus status, llvm::StringRef error_msg) {
-    m_error.SetErrorString(error_msg.data());
+    m_error = Status::FromErrorString(error_msg.data());
     m_bytes = bytes;
     m_status = status;
   }
@@ -97,8 +97,8 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
 
   if (!path.consume_front("file://")) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("unsupported connection URL: '%s'",
-                                          path.str().c_str());
+      *error_ptr = Status::FromErrorStringWithFormat(
+          "unsupported connection URL: '%s'", path.str().c_str());
     return eConnectionStatusError;
   }
 
@@ -115,7 +115,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
   std::wstring wpath;
   if (!llvm::ConvertUTF8toWide(path, wpath)) {
     if (error_ptr)
-      error_ptr->SetError(1, eErrorTypeGeneric);
+      *error_ptr = Status(1, eErrorTypeGeneric);
     return eConnectionStatusError;
   }
   m_file = ::CreateFileW(wpath.c_str(), GENERIC_READ | GENERIC_WRITE,
@@ -123,7 +123,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
                          FILE_FLAG_OVERLAPPED, NULL);
   if (m_file == INVALID_HANDLE_VALUE) {
     if (error_ptr)
-      error_ptr->SetError(::GetLastError(), eErrorTypeWin32);
+      *error_ptr = Status(::GetLastError(), eErrorTypeWin32);
     return eConnectionStatusError;
   }
 
@@ -236,7 +236,7 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
 finish:
   status = return_info.GetStatus();
   if (error_ptr)
-    *error_ptr = return_info.GetError();
+    *error_ptr = return_info.GetError().Clone();
 
   // kBytesAvailableEvent is a manual reset event.  Make sure it gets reset
   // here so that any subsequent operations don't immediately see bytes
@@ -290,7 +290,7 @@ size_t ConnectionGenericFile::Write(const void *src, size_t src_len,
 finish:
   status = return_info.GetStatus();
   if (error_ptr)
-    *error_ptr = return_info.GetError();
+    *error_ptr = return_info.GetError().Clone();
 
   IncrementFilePointer(return_info.GetBytes());
   Log *log = GetLog(LLDBLog::Connection);

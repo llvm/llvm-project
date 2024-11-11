@@ -17,7 +17,7 @@ declare  i8 @llvm.ctlz.i8(i8, i1)
 
 define i64 @var_ctlz_i64(i64 %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_i64'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call i64 @llvm.ctlz.i64(i64 %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call i64 @llvm.ctlz.i64(i64 %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %ctlz
 ;
 ; LZCNT-LABEL: 'var_ctlz_i64'
@@ -43,7 +43,7 @@ define i64 @var_ctlz_i64u(i64 %a) {
 
 define i32 @var_ctlz_i32(i32 %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_i32'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %ctlz
 ;
 ; LZCNT-LABEL: 'var_ctlz_i32'
@@ -69,7 +69,7 @@ define i32 @var_ctlz_i32u(i32 %a) {
 
 define i16 @var_ctlz_i16(i16 %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_i16'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call i16 @llvm.ctlz.i16(i16 %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call i16 @llvm.ctlz.i16(i16 %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %ctlz
 ;
 ; LZCNT-LABEL: 'var_ctlz_i16'
@@ -95,7 +95,7 @@ define i16 @var_ctlz_i16u(i16 %a) {
 
 define i8 @var_ctlz_i8(i8 %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_i8'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call i8 @llvm.ctlz.i8(i8 %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call i8 @llvm.ctlz.i8(i8 %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %ctlz
 ;
 ; LZCNT-LABEL: 'var_ctlz_i8'

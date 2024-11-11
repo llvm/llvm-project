@@ -48,10 +48,8 @@ enum class CountedByInvalidPointeeTypeKind {
   VALID,
 };
 
-bool Sema::CheckCountedByAttrOnField(
-    FieldDecl *FD, Expr *E,
-    llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls, bool CountInBytes,
-    bool OrNull) {
+bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                     bool OrNull) {
   // Check the context the attribute is used in
 
   unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
@@ -185,8 +183,6 @@ bool Sema::CheckCountedByAttrOnField(
       return true;
     }
   }
-
-  Decls.push_back(TypeCoupledDeclRefInfo(CountFD, /*IsDref*/ false));
   return false;
 }
 

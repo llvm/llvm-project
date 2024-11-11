@@ -11,26 +11,17 @@
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/sleep.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace spinlock {
-template <typename LockWord, typename Return>
-using AtomicOp = Return (cpp::Atomic<LockWord>::*)(LockWord, cpp::MemoryOrder,
-                                                   cpp::MemoryScope);
-}
-
-template <typename LockWord, spinlock::AtomicOp<LockWord, LockWord> Acquire,
-          spinlock::AtomicOp<LockWord, void> Release>
-class SpinLockAdaptor {
-  cpp::Atomic<LockWord> flag;
+class SpinLock {
+  cpp::Atomic<unsigned char> flag;
 
 public:
-  LIBC_INLINE constexpr SpinLockAdaptor() : flag{false} {}
+  LIBC_INLINE constexpr SpinLock() : flag{0} {}
   LIBC_INLINE bool try_lock() {
-    return !flag.*Acquire(static_cast<LockWord>(1), cpp::MemoryOrder::ACQUIRE);
+    return !flag.exchange(1u, cpp::MemoryOrder::ACQUIRE);
   }
   LIBC_INLINE void lock() {
     // clang-format off
@@ -60,21 +51,14 @@ public:
       while (flag.load(cpp::MemoryOrder::RELAXED))
         sleep_briefly();
   }
-  LIBC_INLINE void unlock() {
-    flag.*Release(static_cast<LockWord>(0), cpp::MemoryOrder::RELEASE);
+  LIBC_INLINE void unlock() { flag.store(0u, cpp::MemoryOrder::RELEASE); }
+  LIBC_INLINE bool is_locked() { return flag.load(cpp::MemoryOrder::ACQUIRE); }
+  LIBC_INLINE bool is_invalid() {
+    return flag.load(cpp::MemoryOrder::ACQUIRE) > 1;
   }
+  // poison the lock
+  LIBC_INLINE ~SpinLock() { flag.store(0xffu, cpp::MemoryOrder::RELEASE); }
 };
-
-// It is reported that atomic operations with higher-order semantics
-// lead to better performance on GPUs.
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-using SpinLock =
-    SpinLockAdaptor<unsigned int, &cpp::Atomic<unsigned int>::fetch_or,
-                    &cpp::Atomic<unsigned int>::fetch_and>;
-#else
-using SpinLock = SpinLockAdaptor<bool, &cpp::Atomic<bool>::exchange,
-                                 &cpp::Atomic<bool>::store>;
-#endif
 
 } // namespace LIBC_NAMESPACE_DECL
 

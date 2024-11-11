@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "State.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
 
@@ -34,7 +34,7 @@ TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
   TaskDescriptorTy *TaskDescriptor = (TaskDescriptorTy *)memory::allocGlobal(
       TaskSizeTotal, "explicit task descriptor");
   TaskDescriptor->Payload =
-      utils::advance(TaskDescriptor, TaskSizeInclPrivateValuesPadded);
+      utils::advancePtr(TaskDescriptor, TaskSizeInclPrivateValuesPadded);
   TaskDescriptor->TaskFn = TaskFn;
 
   return TaskDescriptor;

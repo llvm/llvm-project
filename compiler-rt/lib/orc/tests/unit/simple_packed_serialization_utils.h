@@ -14,15 +14,15 @@
 
 template <typename SPSTagT, typename T>
 static void blobSerializationRoundTrip(const T &Value) {
-  using BST = __orc_rt::SPSSerializationTraits<SPSTagT, T>;
+  using BST = orc_rt::SPSSerializationTraits<SPSTagT, T>;
 
   size_t Size = BST::size(Value);
   auto Buffer = std::make_unique<char[]>(Size);
-  __orc_rt::SPSOutputBuffer OB(Buffer.get(), Size);
+  orc_rt::SPSOutputBuffer OB(Buffer.get(), Size);
 
   EXPECT_TRUE(BST::serialize(OB, Value));
 
-  __orc_rt::SPSInputBuffer IB(Buffer.get(), Size);
+  orc_rt::SPSInputBuffer IB(Buffer.get(), Size);
 
   T DSValue;
   EXPECT_TRUE(BST::deserialize(IB, DSValue));

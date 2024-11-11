@@ -336,7 +336,9 @@ public:
 
   /// Allow the target to apply other metadata to an atomic instruction
   virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
-                                       llvm::AtomicRMWInst &RMW) const {}
+                                       llvm::Instruction &AtomicInst,
+                                       const AtomicExpr *Expr = nullptr) const {
+  }
 
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
@@ -418,13 +420,21 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
+  // Set the Branch Protection Attributes of the Function accordingly to the
+  // BPI. Remove attributes that contradict with current BPI.
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::Function &F);
 
+  // Add the Branch Protection Attributes of the FuncAttrs.
   static void
-  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
-                                  llvm::AttrBuilder &FuncAttrs);
+  initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                   llvm::AttrBuilder &FuncAttrs);
 
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
@@ -546,6 +556,9 @@ createTCETargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
 createVETargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createDirectXTargetCodeGenInfo(CodeGenModule &CGM);
 
 enum class WebAssemblyABIKind {
   MVP = 0,

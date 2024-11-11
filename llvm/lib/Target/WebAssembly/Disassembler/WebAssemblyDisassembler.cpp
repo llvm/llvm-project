@@ -289,6 +289,24 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         return MCDisassembler::Fail;
       break;
     }
+    case WebAssembly::OPERAND_CATCH_LIST: {
+      if (!parseLEBImmediate(MI, Size, Bytes, false))
+        return MCDisassembler::Fail;
+      int64_t NumCatches = MI.getOperand(MI.getNumOperands() - 1).getImm();
+      for (int64_t I = 0; I < NumCatches; I++) {
+        if (!parseImmediate<uint8_t>(MI, Size, Bytes))
+          return MCDisassembler::Fail;
+        int64_t CatchOpcode = MI.getOperand(MI.getNumOperands() - 1).getImm();
+        if (CatchOpcode == wasm::WASM_OPCODE_CATCH ||
+            CatchOpcode == wasm::WASM_OPCODE_CATCH_REF) {
+          if (!parseLEBImmediate(MI, Size, Bytes, false)) // tag index
+            return MCDisassembler::Fail;
+        }
+        if (!parseLEBImmediate(MI, Size, Bytes, false)) // destination
+          return MCDisassembler::Fail;
+      }
+      break;
+    }
     case MCOI::OPERAND_REGISTER:
       // The tablegen header currently does not have any register operands since
       // we use only the stack (_S) instructions.

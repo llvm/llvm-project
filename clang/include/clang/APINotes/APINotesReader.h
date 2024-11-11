@@ -141,6 +141,13 @@ public:
                                                  ObjCSelectorRef Selector,
                                                  bool IsInstanceMethod);
 
+  /// Look for information regarding the given field of a C struct.
+  ///
+  /// \param Name The name of the field.
+  ///
+  /// \returns information about the field, if known.
+  VersionedInfo<FieldInfo> lookupField(ContextID CtxID, llvm::StringRef Name);
+
   /// Look for information regarding the given C++ method in the given C++ tag
   /// context.
   ///

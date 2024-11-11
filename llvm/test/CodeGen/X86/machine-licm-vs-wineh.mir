@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=x86_64-pc-windows-msvc -run-pass=machinelicm | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-pc-windows-msvc -passes=machinelicm | FileCheck %s
 #
 # This test checks that MachineLICM doesn't hoist loads out of funclets.
 # Manually modified from the IR of the following C++ function by running

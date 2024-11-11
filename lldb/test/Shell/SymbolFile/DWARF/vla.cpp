@@ -1,3 +1,6 @@
+// When linking with link.exe, -gdwarf still produces PDB instead.
+// UNSUPPORTED: system-windows
+
 // RUN: %clangxx_host -gdwarf -std=c++11 -o %t %s
 // RUN: %lldb %t \
 // RUN:   -o run \

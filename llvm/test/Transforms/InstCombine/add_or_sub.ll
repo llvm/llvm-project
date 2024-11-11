@@ -58,7 +58,7 @@ define i64 @add_or_sub_comb_i64_commuted4(i64 %p) {
 define <3 x i32> @add_or_sub_comb_i32vec(<3 x i32> %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i32vec(
 ; CHECK-NEXT:    [[X:%.*]] = mul <3 x i32> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i32> [[X]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i32> [[X]], splat (i32 -1)
 ; CHECK-NEXT:    [[ADD:%.*]] = and <3 x i32> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i32> [[ADD]]
 ;
@@ -72,7 +72,7 @@ define <3 x i32> @add_or_sub_comb_i32vec(<3 x i32> %p) {
 define <4 x i16> @add_or_sub_comb_i32vec_poison(<4 x i16> %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i32vec_poison(
 ; CHECK-NEXT:    [[X:%.*]] = mul <4 x i16> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[X]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[X]], splat (i16 -1)
 ; CHECK-NEXT:    [[ADD:%.*]] = and <4 x i16> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <4 x i16> [[ADD]]
 ;
@@ -103,7 +103,7 @@ define i12 @add_or_sub_comb_i12_multiuse_only_sub(i12 %p) {
 define i8 @add_or_sub_comb_i8_negative_y_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_or_sub_comb_i8_negative_y_sub(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[X]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
@@ -116,7 +116,7 @@ define i8 @add_or_sub_comb_i8_negative_y_sub(i8 %x, i8 %y) {
 define i8 @add_or_sub_comb_i8_negative_y_or(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_or_sub_comb_i8_negative_y_or(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[X]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
@@ -129,7 +129,7 @@ define i8 @add_or_sub_comb_i8_negative_y_or(i8 %x, i8 %y) {
 define i8 @add_or_sub_comb_i8_negative_y_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_or_sub_comb_i8_negative_y_add(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[SUB]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
@@ -142,7 +142,7 @@ define i8 @add_or_sub_comb_i8_negative_y_add(i8 %x, i8 %y) {
 define i8 @add_or_sub_comb_i8_negative_xor_instead_or(i8 %x) {
 ; CHECK-LABEL: @add_or_sub_comb_i8_negative_xor_instead_or(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[SUB]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;

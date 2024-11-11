@@ -79,6 +79,50 @@ void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *D
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
+static void transformGlobalArray(StringRef ArrayName, Module &M,
+                                 const GlobalCtorTransformFn &Fn) {
+  GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName);
+  if (!GVCtor)
+    return;
+
+  IRBuilder<> IRB(M.getContext());
+  SmallVector<Constant *, 16> CurrentCtors;
+  bool Changed = false;
+  StructType *EltTy =
+      cast<StructType>(GVCtor->getValueType()->getArrayElementType());
+  if (Constant *Init = GVCtor->getInitializer()) {
+    CurrentCtors.reserve(Init->getNumOperands());
+    for (Value *OP : Init->operands()) {
+      Constant *C = cast<Constant>(OP);
+      Constant *NewC = Fn(C);
+      Changed |= (!NewC || NewC != C);
+      if (NewC)
+        CurrentCtors.push_back(NewC);
+    }
+  }
+  if (!Changed)
+    return;
+
+  GVCtor->eraseFromParent();
+
+  // Create a new initializer.
+  ArrayType *AT = ArrayType::get(EltTy, CurrentCtors.size());
+  Constant *NewInit = ConstantArray::get(AT, CurrentCtors);
+
+  // Create the new global variable and replace all uses of
+  // the old global variable with the new one.
+  (void)new GlobalVariable(M, NewInit->getType(), false,
+                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
+}
+
+void llvm::transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_ctors", M, Fn);
+}
+
+void llvm::transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_dtors", M, Fn);
+}
+
 static void collectUsedGlobals(GlobalVariable *GV,
                                SmallSetVector<Constant *, 16> &Init) {
   if (!GV || !GV->hasInitializer())
@@ -161,11 +205,13 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDB(Ctx);
-  F.setMetadata(
-      LLVMContext::MD_kcfi_type,
-      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                           Type::getInt32Ty(Ctx),
-                           static_cast<uint32_t>(xxHash64(MangledType))))));
+  std::string Type = MangledType.str();
+  if (M.getModuleFlag("cfi-normalize-integers"))
+    Type += ".normalized";
+  F.setMetadata(LLVMContext::MD_kcfi_type,
+                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                     Type::getInt32Ty(Ctx),
+                                     static_cast<uint32_t>(xxHash64(Type))))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(

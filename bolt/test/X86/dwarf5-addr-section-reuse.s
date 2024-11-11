@@ -3,7 +3,7 @@
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-helper2-addr-section-reuse.s -o %thelper2.o
 # RUN: %clang %cflags -dwarf-5 %thelper1.o %tmain.o %thelper2.o -o %t.exe -Wl,-q
 # RUN: llvm-dwarfdump --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
-# RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 # RUN: llvm-dwarfdump --debug-info %t.exe.bolt | FileCheck --check-prefix=POSTCHECK %s
 
 ## This test checks that when a binary is bolted if CU is not modified and has DW_AT_addr_base that is shared

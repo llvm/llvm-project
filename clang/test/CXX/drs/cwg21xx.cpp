@@ -12,7 +12,15 @@
 #endif
 
 namespace std {
-struct type_info;
+  typedef __SIZE_TYPE__ size_t;
+
+  template<typename E> struct initializer_list {
+    const E *p; size_t n;
+    initializer_list(const E *p, size_t n);
+    initializer_list();
+  };
+
+  struct type_info;
 }
 
 namespace cwg2100 { // cwg2100: 12
@@ -133,6 +141,41 @@ namespace cwg2126 { // cwg2126: 12
   //   since-cxx11-note@-2 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
   //   since-cxx11-note@#cwg21260-j {{temporary created here}}
   static_assert(k.a.n == 1, "");
+#endif
+}
+
+namespace cwg2137 { // cwg2137: 20
+#if __cplusplus >= 201103L
+  struct Q {
+    Q();
+    Q(Q&&);
+    Q(std::initializer_list<Q>) = delete; // #cwg2137-Qcons
+  };
+
+  Q x = Q { Q() };
+  // since-cxx11-error@-1 {{call to deleted constructor of 'Q'}}
+  //   since-cxx11-note@#cwg2137-Qcons {{'Q' has been explicitly marked deleted here}}
+
+  int f(Q); // #cwg2137-f
+  int y = f({ Q() });
+  // since-cxx11-error@-1 {{call to deleted constructor of 'Q'}}
+  //   since-cxx11-note@#cwg2137-Qcons {{'Q' has been explicitly marked deleted here}}
+  //   since-cxx11-note@#cwg2137-f {{passing argument to parameter here}}
+
+  struct U {
+    U();
+    U(const U&);
+  };
+
+  struct Derived : U {
+    Derived();
+    Derived(const Derived&);
+  } d;
+
+  int g(Derived);
+  int g(U(&&)[1]) = delete;
+
+  int z = g({ d });
 #endif
 }
 
