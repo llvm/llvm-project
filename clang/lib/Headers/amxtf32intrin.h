@@ -15,11 +15,6 @@
 #define __AMX_TF32INTRIN_H
 #ifdef __x86_64__
 
-#if !defined(__SCE__) || __has_feature(modules) ||                             \
-    (defined(__AMX_TF32__) && defined(__AMX_TRANSPOSE__))
-#include <amxtf32transposeintrin.h>
-#endif
-
 #define __DEFAULT_FN_ATTRS_TF32                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("amx-tf32")))
 

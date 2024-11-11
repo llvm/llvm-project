@@ -1,4 +1,4 @@
-/*===-- amxtf32transposeintrin.h - AMX_TF32 transpose intrinsics -*- C++ -*--===
+/*===--------- amxtf32transposeintrin.h - AMX-TF32 and AMX-TRANSPOSE --------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
