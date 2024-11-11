@@ -158,9 +158,26 @@ __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
          ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __lo));
 }
 
+// Returns true if the flat pointer points to CUDA 'shared' memory.
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
+  return __builtin_amdgcn_is_shared(
+      (void __attribute__((address_space(0))) *)ptr);
+}
+
+// Returns true if the flat pointer points to CUDA 'local' memory.
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
+  return __builtin_amdgcn_is_private(
+      (void __attribute__((address_space(0))) *)ptr);
+}
+
 // Terminates execution of the associated wavefront.
 _DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {
   __builtin_amdgcn_endpgm();
+}
+
+// Suspend the thread briefly to assist the scheduler during busy loops.
+_DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
+  __builtin_amdgcn_s_sleep(2);
 }
 
 _Pragma("omp end declare variant");

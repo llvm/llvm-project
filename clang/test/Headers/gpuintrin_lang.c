@@ -13,7 +13,7 @@
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -cl-std=CL3.0 -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -cl-std=CL2.0 -triple amdgcn -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENCL
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \

@@ -170,9 +170,25 @@ __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
                                              __gpu_num_lanes() - 1u));
 }
 
+// Returns true if the flat pointer points to CUDA 'shared' memory.
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
+  return __nvvm_isspacep_shared(ptr);
+}
+
+// Returns true if the flat pointer points to CUDA 'local' memory.
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
+  return __nvvm_isspacep_local(ptr);
+}
+
 // Terminates execution of the calling thread.
 _DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {
   __nvvm_exit();
+}
+
+// Suspend the thread briefly to assist the scheduler during busy loops.
+_DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
+  if (__nvvm_reflect("__CUDA_ARCH") >= 700)
+    asm("nanosleep.u32 64;" ::: "memory");
 }
 
 _Pragma("omp end declare variant");
