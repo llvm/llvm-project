@@ -936,6 +936,13 @@ def FeatureStdExtSscsrind
     : RISCVExtension<"sscsrind", 1, 0,
                      "'Sscsrind' (Indirect CSR Access Supervisor Level)">;
 
+def FeatureStdExtSmdbltrp
+    : RISCVExtension<"smdbltrp", 1, 0,
+                     "'Smdbltrp' (Double Trap Machine Level)">;
+def FeatureStdExtSsdbltrp
+    : RISCVExtension<"ssdbltrp", 1, 0,
+                     "'Ssdbltrp' (Double Trap Supervisor Level)">;
+
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
@@ -1454,8 +1461,3 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-def FeatureForcedSWShadowStack : SubtargetFeature<
-    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
-    "Implement shadow stack with software.">;
-def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

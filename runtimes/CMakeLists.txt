@@ -268,6 +268,10 @@ if(LLVM_INCLUDE_TESTS)
     set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
     get_llvm_lit_path(_base_dir _file_name)
     set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
+    # Avoid warning about missing llvm-lit from runtimes CMake files. This is
+    # fine since we call configure_file() to create llvm-lit at the end of this
+    # file (after recursing into all runtimes' CMake logic), so it will exist.
+    set(LLVM_EXTERNAL_LIT_MISSING_WARNED_ONCE YES CACHE INTERNAL "")
   endif()
 
   set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")

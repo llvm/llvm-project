@@ -3858,8 +3858,7 @@ def LifetimeBoundDocs : Documentation {
 The ``lifetimebound`` attribute on a function parameter or implicit object
 parameter indicates that objects that are referred to by that parameter may
 also be referred to by the return value of the annotated function (or, for a
-parameter of a constructor, by the value of the constructed object). It is only
-supported in C++.
+parameter of a constructor, by the value of the constructed object).
 
 By default, a reference is considered to refer to its referenced object, a
 pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
@@ -6791,6 +6790,16 @@ template when declaring the texture reference. A texture reference variable
 could be accessed on the host side and, on the device side, might be translated
 into an internal texture object, which is established through texture bind and
 unbind runtime APIs.
+  }];
+}
+
+def CUDAGridConstantAttrDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__grid_constant__`` attribute can be applied to a ``const``-qualified kernel
+function argument and allows compiler to take the address of that argument without
+making a copy. The argument applies to sm_70 or newer GPUs, during compilation
+with CUDA-11.7(PTX 7.7) or newer, and is ignored otherwise.
   }];
 }
 

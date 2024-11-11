@@ -1041,7 +1041,7 @@ public:
   void setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
                                           UsingShadowDecl *Pattern);
 
-  FieldDecl *getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field);
+  FieldDecl *getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) const;
 
   void setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst, FieldDecl *Tmpl);
 
@@ -1747,7 +1747,9 @@ public:
   QualType
   getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
                                unsigned Index,
-                               std::optional<unsigned> PackIndex) const;
+                               std::optional<unsigned> PackIndex,
+                               SubstTemplateTypeParmTypeFlag Flag =
+                                   SubstTemplateTypeParmTypeFlag::None) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);

@@ -80,18 +80,18 @@ define void @test_amx_spill(i8* %pointer, i8* %base, i64 %stride) #0 {
 ; CHECK-NEXT:    tileloadd (%rsi,%rdx), %tmm0
 ; CHECK-NEXT:    t2rpntlvwz0 (%rsi,%rdx), %tmm4
 ; CHECK-NEXT:    t2rpntlvwz0t1 (%rsi,%rdx), %tmm6
-; CHECK-NEXT:    tilestored %tmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 1024-byte Folded Spill
-; CHECK-NEXT:    tilestored %tmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 1024-byte Folded Spill
+; CHECK-NEXT:    movabsq $64, %rcx
+; CHECK-NEXT:    tilestored %tmm6, 4032(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm7, 5056(%rsp,%rcx) # 1024-byte Folded Spill
 ; CHECK-NEXT:    t2rpntlvwz1 (%rsi,%rdx), %tmm6
-; CHECK-NEXT:    tilestored %tmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 1024-byte Folded Spill
-; CHECK-NEXT:    tilestored %tmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm6, 1984(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm7, 3008(%rsp,%rcx) # 1024-byte Folded Spill
 ; CHECK-NEXT:    t2rpntlvwz1t1 (%rsi,%rdx), %tmm6
-; CHECK-NEXT:    tilestored %tmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 1024-byte Folded Spill
-; CHECK-NEXT:    tilestored %tmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm6, -64(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm7, 960(%rsp,%rcx) # 1024-byte Folded Spill
 ; CHECK-NEXT:    t2rpntlvwz0 (%rsi,%rdx), %tmm6
 ; CHECK-NEXT:    tilestored %tmm4, (%rsi,%rdx)
 ; CHECK-NEXT:    tilestored %tmm5, (%rsi,%rdx)
-; CHECK-NEXT:    movabsq $64, %rcx
 ; CHECK-NEXT:    tileloadd 4032(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tileloadd 5056(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tilestored %tmm4, (%rsi,%rdx)

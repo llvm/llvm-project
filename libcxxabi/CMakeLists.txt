@@ -86,8 +86,6 @@ set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the stat
 
 set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE STRING "Path to install the libc++abi headers at.")
 
-set(LIBCXXABI_GENERATED_INCLUDE_DIR "${LIBCXXABI_BINARY_DIR}/include/c++/v1")
-
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 set(LIBCXXABI_LIBRARY_VERSION "1.0" CACHE STRING
 "Version of libc++abi. This will be reflected in the name of the shared \
