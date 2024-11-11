@@ -16,7 +16,7 @@ define void @func_5(ptr %Dst) {
 ; CHECK-NEXT:    stg %r0, 0(%r1)
 ; CHECK-NEXT:    lgrl %r1, G1@GOT
 ; CHECK-NEXT:    stg %r0, 0(%r1)
-; CHECK-NEXT:    st %r0, 0(%r2)
+; CHECK-NEXT:    mvhi 0(%r2), 2
 ; CHECK-NEXT:    br %r14
   store i64 214748364802, ptr @G2, align 8
   store i64 214748364802, ptr @G1, align 8
