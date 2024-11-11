@@ -5179,13 +5179,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Value *Order = EmitScalarExpr(E->getArg(0));
     Value *Scope = EmitScalarExpr(E->getArg(1));
-    if (isa<llvm::ConstantInt>(Order) && isa<llvm::ConstantInt>(Scope)) {
-      int Ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
-      int Scp = cast<llvm::ConstantInt>(Scope)->getZExtValue();
-      SyncScope SS = ScopeModel->isValid(Scp)
-                         ? ScopeModel->map(Scp)
+    if (auto Ord = dyn_cast<llvm::ConstantInt>(Order);
+        auto Scp = dyn_cast<llvm::ConstantInt>(Scope)) {
+      SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
+                         ? ScopeModel->map(Scp->getZExtValue())
                          : ScopeModel->map(ScopeModel->getFallBackValue());
-      switch (Ord) {
+      switch (Ord->getZExtValue()) {
       case 0:  // memory_order_relaxed
       default: // invalid order
         break;
@@ -5224,7 +5223,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     llvm::BasicBlock *ContBB = createBasicBlock("atomic.scope.continue", CurFn);
 
-    llvm::DenseMap<llvm::BasicBlock *, llvm::AtomicOrdering> OrderBBs;
+    llvm::SmallVector<std::pair<llvm::BasicBlock *, llvm::AtomicOrdering>>
+        OrderBBs;
     if (auto Ord = dyn_cast<llvm::ConstantInt>(Order)) {
       switch (Ord->getZExtValue()) {
       case 0:  // memory_order_relaxed
@@ -5233,18 +5233,20 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return RValue::get(nullptr);
       case 1: // memory_order_consume
       case 2: // memory_order_acquire
-        OrderBBs[Builder.GetInsertBlock()] = llvm::AtomicOrdering::Acquire;
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::Acquire);
         break;
       case 3: // memory_order_release
-        OrderBBs[Builder.GetInsertBlock()] = llvm::AtomicOrdering::Release;
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::Release);
         break;
       case 4: // memory_order_acq_rel
-        OrderBBs[Builder.GetInsertBlock()] =
-            llvm::AtomicOrdering::AcquireRelease;
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::AcquireRelease);
         break;
       case 5: // memory_order_seq_cst
-        OrderBBs[Builder.GetInsertBlock()] =
-            llvm::AtomicOrdering::SequentiallyConsistent;
+        OrderBBs.emplace_back(Builder.GetInsertBlock(),
+                              llvm::AtomicOrdering::SequentiallyConsistent);
         break;
       }
     } else {
@@ -5261,10 +5263,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       SI->addCase(Builder.getInt32(4), AcqRelBB);
       SI->addCase(Builder.getInt32(5), SeqCstBB);
 
-      OrderBBs[AcquireBB] = llvm::AtomicOrdering::Acquire;
-      OrderBBs[ReleaseBB] = llvm::AtomicOrdering::Release;
-      OrderBBs[AcqRelBB] = llvm::AtomicOrdering::AcquireRelease;
-      OrderBBs[SeqCstBB] = llvm::AtomicOrdering::SequentiallyConsistent;
+      OrderBBs.emplace_back(AcquireBB, llvm::AtomicOrdering::Acquire);
+      OrderBBs.emplace_back(ReleaseBB, llvm::AtomicOrdering::Release);
+      OrderBBs.emplace_back(AcqRelBB, llvm::AtomicOrdering::AcquireRelease);
+      OrderBBs.emplace_back(SeqCstBB,
+                            llvm::AtomicOrdering::SequentiallyConsistent);
     }
 
     for (auto &[OrderBB, Ordering] : OrderBBs) {
