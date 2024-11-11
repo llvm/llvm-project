@@ -136,7 +136,7 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Registers reserved by users
   for (size_t Reg = 0, Total = getNumRegs(); Reg != Total; ++Reg) {
-    if (MF.getSubtarget<M68kSubtarget>().isRegisterReservedByUser(Reg))
+    if (MF.getSubtarget().isRegisterReservedByUser(Reg))
       setBitVector(Reg);
   }
 

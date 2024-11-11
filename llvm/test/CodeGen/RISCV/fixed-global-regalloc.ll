@@ -4,16 +4,8 @@
 define i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd s8, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset s8, -8
 ; CHECK-NEXT:    li s8, 123
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ld s8, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_restore s8
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   tail call void @llvm.write_register.i64(metadata !0, i64 123)
