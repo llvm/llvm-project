@@ -276,7 +276,7 @@ class SimplifyCFGOpt {
   bool simplifyCleanupReturn(CleanupReturnInst *RI);
   bool simplifyUnreachable(UnreachableInst *UI);
   bool simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder);
-  bool simplifyDuplicateSwitchArms(SwitchInst *SI);
+  bool simplifyDuplicateSwitchArms(SwitchInst *SI, DomTreeUpdater *DTU);
   bool simplifyIndirectBr(IndirectBrInst *IBI);
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
@@ -7525,7 +7525,8 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
 };
 } // namespace llvm
 
-bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
+bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
+                                                 DomTreeUpdater *DTU) {
   // Build Cases. Skip BBs that are not candidates for simplification. Mark
   // PHINodes which need to be processed into PhiPredIVs. We decide to process
   // an entire PHI at once after the loop, opposed to calling
@@ -7592,17 +7593,25 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   ReplaceWith.reserve(Cases.size());
 
   bool MadeChange = false;
+  SmallVector<DominatorTree::UpdateType> Updates;
+  Updates.reserve(ReplaceWith.size());
   for (auto &CHW : Cases) {
     // CHW is a candidate for simplification. If we find a duplicate BB,
     // replace it.
     const auto [It, Inserted] = ReplaceWith.insert(&CHW);
     if (!Inserted) {
+      // We know that SI's parent BB no longer dominates the old case successor
+      // since we are making it dead.
+      Updates.push_back({DominatorTree::Delete, SI->getParent(),
+                         CHW.Case.getCaseSuccessor()});
       CHW.Case.setSuccessor((*It)->Case.getCaseSuccessor());
       MadeChange = true;
     } else {
       ReplaceWith.insert(&CHW);
     }
   }
+  if (DTU)
+    DTU->applyUpdates(Updates);
 
   return MadeChange;
 }
@@ -7667,7 +7676,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
       hoistCommonCodeFromSuccessors(SI, !Options.HoistCommonInsts))
     return requestResimplify();
 
-  if (simplifyDuplicateSwitchArms(SI))
+  if (simplifyDuplicateSwitchArms(SI, DTU))
     return requestResimplify();
 
   return false;
