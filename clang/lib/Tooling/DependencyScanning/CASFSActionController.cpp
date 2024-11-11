@@ -213,7 +213,8 @@ Error CASFSActionController::finalizeModuleBuild(
   assert(M && "finalizing without a module");
 #endif
 
-  ModuleScanInstance.getASTContext().setCASFileSystemRootID(RootID->toString());
+  ModuleScanInstance.getPreprocessor().setCASFileSystemRootID(
+      RootID->toString());
   return Error::success();
 }
 
