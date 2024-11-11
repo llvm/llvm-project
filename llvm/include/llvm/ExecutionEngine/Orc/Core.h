@@ -666,40 +666,6 @@ private:
   SymbolStringPtr InitSymbol;
 };
 
-/// A MaterializationUnit implementation for pre-existing absolute symbols.
-///
-/// All symbols will be resolved and marked ready as soon as the unit is
-/// materialized.
-class AbsoluteSymbolsMaterializationUnit : public MaterializationUnit {
-public:
-  AbsoluteSymbolsMaterializationUnit(SymbolMap Symbols);
-
-  StringRef getName() const override;
-
-private:
-  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
-  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
-  static MaterializationUnit::Interface extractFlags(const SymbolMap &Symbols);
-
-  SymbolMap Symbols;
-};
-
-/// Create an AbsoluteSymbolsMaterializationUnit with the given symbols.
-/// Useful for inserting absolute symbols into a JITDylib. E.g.:
-/// \code{.cpp}
-///   JITDylib &JD = ...;
-///   SymbolStringPtr Foo = ...;
-///   ExecutorSymbolDef FooSym = ...;
-///   if (auto Err = JD.define(absoluteSymbols({{Foo, FooSym}})))
-///     return Err;
-/// \endcode
-///
-inline std::unique_ptr<AbsoluteSymbolsMaterializationUnit>
-absoluteSymbols(SymbolMap Symbols) {
-  return std::make_unique<AbsoluteSymbolsMaterializationUnit>(
-      std::move(Symbols));
-}
-
 /// A materialization unit for symbol aliases. Allows existing symbols to be
 /// aliased with alternate flags.
 class ReExportsMaterializationUnit : public MaterializationUnit {
