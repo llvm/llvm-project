@@ -25,12 +25,11 @@
 using namespace llvm;
 using namespace llvm::support;
 
-static cl::opt<bool>
-    DisableGlobalMerging("disable-global-merging", cl::Hidden,
-                         cl::desc("Disable global merging only by ignoring "
-                                  "the codegen data generation or use. Local "
-                                  "merging is still enabled within a module."),
-                         cl::init(false));
+static cl::opt<bool> DisableCGDataForMerging(
+    "disable-cgdata-for-merging", cl::Hidden,
+    cl::desc("Disable codegen data for function merging. Local "
+             "merging is still enabled within a module."),
+    cl::init(false));
 
 STATISTIC(NumMismatchedFunctionHash,
           "Number of mismatched function hash for global merge function");
@@ -562,8 +561,8 @@ void GlobalMergeFunc::initializeMergerMode(const Module &M) {
   // Initialize the local function map regardless of the merger mode.
   LocalFunctionMap = std::make_unique<StableFunctionMap>();
 
-  // Skip the global merge mode. The local merge is still enabled.
-  if (DisableGlobalMerging)
+  // Disable codegen data for merging. The local merge is still enabled.
+  if (DisableCGDataForMerging)
     return;
 
   // (Full)LTO module does not have functions added to the index.
