@@ -29,6 +29,9 @@ namespace llvm {
 
 ELFYAML::Chunk::~Chunk() = default;
 
+ELFYAML::Opt::~Opt() = default;
+const char ELFYAML::Opt::ID = 'E';
+
 namespace ELFYAML {
 ELF_ELFOSABI Object::getOSAbi() const { return Header.OSABI; }
 
@@ -1582,6 +1585,19 @@ static bool isInteger(StringRef Val) {
 
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
+  if (!IO.outputting()) {
+    /// Prepare CustomRawContentSection by Name for ELFEmitter.
+    if (auto *Opt = dyn_cast<ELFYAML::Opt>(IO.Opt)) {
+      StringRef Name;
+      IO.mapOptional("Name", Name);
+      if (auto S = Opt->makeCustomRawContentSection(Name)) {
+        S->sectionMapping(IO);
+        Section = std::move(S);
+        return;
+      }
+    }
+  }
+
   ELFYAML::ELF_SHT Type;
   StringRef TypeStr;
   if (IO.outputting()) {
@@ -1731,7 +1747,9 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
         Section = std::make_unique<ELFYAML::RawContentSection>();
     }
 
-    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Section.get()))
+    if (auto S = dyn_cast<ELFYAML::CustomRawContentSection>(Section.get()))
+      S->sectionMapping(IO);
+    else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Section.get()))
       sectionMapping(IO, *S);
     else
       sectionMapping(IO, *cast<ELFYAML::StackSizesSection>(Section.get()));
@@ -1981,6 +1999,8 @@ void MappingTraits<ELFYAML::ARMIndexTableEntry>::mapping(
 void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   assert(!IO.getContext() && "The IO context is initialized already");
   IO.setContext(&Object);
+  if (auto *Opt = dyn_cast<ELFYAML::Opt>(IO.Opt))
+    Opt->preMapping(Object, IO.outputting());
   IO.mapTag("!ELF", true);
   IO.mapRequired("FileHeader", Object.Header);
   IO.mapOptional("ProgramHeaders", Object.ProgramHeaders);
@@ -1994,6 +2014,8 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
     Object.DWARF->Is64BitAddrSize =
         Object.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
   }
+  if (auto *Opt = dyn_cast<ELFYAML::Opt>(IO.Opt))
+    Opt->postMapping(Object, IO.outputting());
   IO.setContext(nullptr);
 }
 

@@ -252,6 +252,9 @@ template <class ELFT> class ELFState {
                            const ELFYAML::NoBitsSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::CustomRawContentSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
@@ -859,7 +862,9 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     if (!isa<ELFYAML::NoBitsSection>(Sec) && (Sec->Content || Sec->Size))
       SHeader.sh_size = writeContent(CBA, Sec->Content, Sec->Size);
 
-    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
+    if (auto S = dyn_cast<ELFYAML::CustomRawContentSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::SymtabShndxSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
@@ -1262,6 +1267,15 @@ void ELFState<ELFT>::writeSectionContent(
     ContiguousBlobAccumulator &CBA) {
   if (Section.Info)
     SHeader.sh_info = *Section.Info;
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::CustomRawContentSection &Section,
+    ContiguousBlobAccumulator &CBA) {
+  std::string Storage = Section.encode();
+  SHeader.sh_size = Storage.size();
+  CBA.write(Storage.data(), Storage.size());
 }
 
 static bool isMips64EL(const ELFYAML::Object &Obj) {

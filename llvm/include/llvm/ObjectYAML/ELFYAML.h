@@ -211,6 +211,7 @@ struct Chunk {
     Dynamic,
     Group,
     RawContent,
+    CustomRawContent,
     Relocation,
     Relr,
     NoBits,
@@ -388,7 +389,7 @@ struct DynamicSection : Section {
 struct RawContentSection : Section {
   std::optional<llvm::yaml::Hex64> Info;
 
-  RawContentSection() : Section(ChunkKind::RawContent) {}
+  RawContentSection(ChunkKind Kind = ChunkKind::RawContent) : Section(Kind) {}
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::RawContent;
@@ -396,6 +397,29 @@ struct RawContentSection : Section {
 
   // Is used when a content is read as an array of bytes.
   std::optional<std::vector<uint8_t>> ContentBuf;
+};
+
+/// Abstract base class for non-blob contents.
+struct CustomRawContentSection : RawContentSection {
+  CustomRawContentSection() : RawContentSection(ChunkKind::CustomRawContent) {
+    // Type assumes PROGBITS.
+    Type = ELF::SHT_PROGBITS;
+    Flags = ELF::SHF_GNU_RETAIN;
+    AddressAlign = 1;
+  }
+
+  /// Apply mappings.
+  virtual void sectionMapping(yaml::IO &IO) = 0;
+
+  /// Decode Content and store to members.
+  virtual Error decode(const ArrayRef<uint8_t> Content, bool isLE) = 0;
+
+  /// Encode members and returns Content.
+  virtual std::string encode() const = 0;
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::CustomRawContent;
+  }
 };
 
 struct NoBitsSection : Section {
@@ -757,6 +781,50 @@ struct Object {
 bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
                              const NoBitsSection &S);
 
+/// ELFYAML::Opt -- Abstract base class for ELFYAML to provide
+/// the interface for handling CustomRawConetentSection.
+///
+/// Users in ELFYAML should obtain the pointer with
+/// dyn_cast<ELFYAML::Opt> if IO::Opt is the instance from yaml::Opt.
+///
+///     if (auto *Opt = dyn_cast<ELFYAML::Opt>(IO.Opt))
+///
+/// Derivered classes should not modify OptClassID to ensue that
+/// dyn_cast<ELFYAML::Opt> can find this interface.
+class Opt : public yaml::Opt {
+public:
+  Opt() {
+    OptClassID = &ID;
+    ELFOptClassID = &ID;
+  }
+  ~Opt();
+
+  /// Create an empty new object of CustomRawContentSection.
+  /// Its contents will be filled later.
+  /// This is called:
+  ///   - Before preMapping for elf2yaml.
+  ///   - After preMapping for yaml2elf.
+  virtual std::unique_ptr<CustomRawContentSection>
+  makeCustomRawContentSection(StringRef Name) const = 0;
+
+  /// Called before mapping sections for prettyprinting yaml.
+  virtual void preMapping(const ELFYAML::Object &Object, bool IsOutputting) = 0;
+
+  /// Called after mapping sections to gather members for the file format.
+  virtual void postMapping(const ELFYAML::Object &Object,
+                           bool IsOutputting) = 0;
+
+  /// Tell IO::Opt to be this and derivered classes.
+  static bool classof(const yaml::Opt *Obj) { return (Obj->OptClassID == &ID); }
+
+  /// This will be not needed unless the pointer to ELFYAML::Opt would
+  /// be cast further.
+  static bool classof(const Opt *Obj) { return (Obj->ELFOptClassID == &ID); }
+  const char *ELFOptClassID;
+
+private:
+  static const char ID;
+};
 } // end namespace ELFYAML
 } // end namespace llvm
 

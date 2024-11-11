@@ -58,6 +58,20 @@ static cl::opt<uint64_t> MaxSize(
 cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                     cl::value_desc("filename"), cl::init("-"),
                                     cl::Prefix, cl::cat(Cat));
+
+class EmitterOpt : public ELFYAML::Opt {
+public:
+  std::unique_ptr<ELFYAML::CustomRawContentSection>
+  makeCustomRawContentSection(StringRef Name) const override {
+    return nullptr;
+  }
+  void preMapping(const ELFYAML::Object &Object, bool IsOutputting) override {
+    // Do nothing.
+  }
+  void postMapping(const ELFYAML::Object &Object, bool IsOutputting) override {
+    // Do nothing.
+  }
+};
 } // namespace
 
 static std::optional<std::string> preprocess(StringRef Buf,
@@ -142,7 +156,9 @@ int main(int argc, char **argv) {
   if (PreprocessOnly) {
     Out->os() << Buffer;
   } else {
+    EmitterOpt Opt;
     yaml::Input YIn(*Buffer);
+    YIn.Opt = &Opt;
 
     if (!convertYAML(YIn, Out->os(), ErrHandler, DocNum,
                      MaxSize == 0 ? UINT64_MAX : MaxSize))
