@@ -525,8 +525,7 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (isa<VPExtendedReductionRecipe>(&R)) {
-        auto *ExtRed = cast<VPExtendedReductionRecipe>(&R);
+      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
         auto *Ext = new VPWidenCastRecipe(
             ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
             *ExtRed->getExtInstr());
@@ -542,14 +541,14 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         auto *MulAcc = cast<VPMulAccRecipe>(&R);
         VPValue *Op0, *Op1;
         if (MulAcc->isExtended()) {
-          Op0 =
-              new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                    MulAcc->getResultType());
+          CastInst *Ext0 = MulAcc->getExt0Instr();
+          Op0 = new VPWidenCastRecipe(Ext0->getOpcode(), MulAcc->getVecOp0(),
+                                      MulAcc->getResultType(), *Ext0);
           Op0->getDefiningRecipe()->insertBefore(MulAcc);
           if (!MulAcc->isSameExtend()) {
-            Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(),
-                                        MulAcc->getVecOp1(),
-                                        MulAcc->getResultType());
+            CastInst *Ext1 = MulAcc->getExt1Instr();
+            Op1 = new VPWidenCastRecipe(Ext1->getOpcode(), MulAcc->getVecOp1(),
+                                        MulAcc->getResultType(), *Ext1);
             Op1->getDefiningRecipe()->insertBefore(MulAcc);
           } else {
             Op1 = Op0;
@@ -566,8 +565,9 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         // Outer extend.
         if (auto *OuterExtInstr = MulAcc->getExtInstr())
           VecOp = new VPWidenCastRecipe(
-              MulAcc->getExtOpcode(), Mul,
-              MulAcc->getRecurrenceDescriptor().getRecurrenceType());
+              OuterExtInstr->getOpcode(), Mul,
+              MulAcc->getRecurrenceDescriptor().getRecurrenceType(),
+              *OuterExtInstr);
         else
           VecOp = Mul;
         auto *Red = new VPReductionRecipe(
