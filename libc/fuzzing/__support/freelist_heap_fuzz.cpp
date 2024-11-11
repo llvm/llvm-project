@@ -19,13 +19,15 @@
 
 using namespace LIBC_NAMESPACE;
 
+// Record of an outstanding allocation.
 struct Alloc {
   void *ptr;
   size_t size;
   size_t alignment;
-  uint8_t canary;
+  uint8_t canary; // Byte written to the allocation
 };
 
+// A simple vector that tracks allocations using the heap.
 class AllocVec {
 public:
   AllocVec(FreeListHeap &heap) : heap(&heap), size_(0), capacity(0) {
@@ -77,6 +79,7 @@ cpp::optional<T> choose(const uint8_t *&data, size_t &remainder) {
   return out;
 }
 
+// The type of allocation to perform
 enum class AllocType : uint8_t {
   MALLOC,
   ALIGNED_ALLOC,
@@ -98,7 +101,7 @@ cpp::optional<AllocType> choose<AllocType>(const uint8_t *&data,
 constexpr size_t heap_size = 64 * 1024;
 
 cpp::optional<size_t> choose_size(const uint8_t *&data, size_t &remainder) {
-  auto raw = choose<uint8_t>(data, remainder);
+  auto raw = choose<size_t>(data, remainder);
   if (!raw)
     return cpp::nullopt;
   return *raw % heap_size;
@@ -180,12 +183,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
       }
 
       if (ptr) {
+        // aligned_allocate should automatically apply a minimum alignment.
         if (alignment < alignof(max_align_t))
           alignment = alignof(max_align_t);
         // Check alignment.
         if (reinterpret_cast<uintptr_t>(ptr) % alignment)
           __builtin_trap();
 
+        // Reallocation is treated specially above, since we would otherwise
+        // lose the original size.
         if (alloc_type != AllocType::REALLOC) {
           // Fill the object with a canary byte.
           inline_memset(ptr, canary, alloc_size);
