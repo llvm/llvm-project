@@ -740,6 +740,7 @@ X86 Support
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
 - Support ISA of ``AMX-AVX512``.
+- Support ISA of ``AMX-TF32``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

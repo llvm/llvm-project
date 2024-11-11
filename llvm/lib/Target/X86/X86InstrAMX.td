@@ -516,3 +516,55 @@ let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
                                      TILE:$src3, GR32:$src4))]>;
   }
 }
+
+let Predicates = [HasAMXTF32, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let Constraints = "$src1 = $dst" in {
+      def TMMULTF32PS: I<0x48, MRMSrcReg4VOp3, (outs TILE:$dst),
+                         (ins TILE:$src1, TILE:$src2, TILE:$src3),
+                         "tmmultf32ps\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                         []>, VEX, VVVV, T8, PD;
+    }
+    let Constraints = "$src4 = $dst" in {
+      def PTMMULTF32PSV : PseudoI<(outs TILE:$dst),
+                                  (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                   TILE:$src4, TILE:$src5, TILE:$src6),
+                                  [(set TILE:$dst,
+                                    (int_x86_tmmultf32ps_internal GR16:$src1,
+                                     GR16:$src2, GR16:$src3, TILE:$src4,
+                                     TILE:$src5, TILE:$src6))]>;
+    }
+    let usesCustomInserter = 1 in {
+      def PTMMULTF32PS : PseudoI<(outs),
+                                 (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                                 [(int_x86_tmmultf32ps timm:$src1, timm:$src2,
+                                   timm:$src3)]>;
+    }
+  } // SchedRW = [WriteSystem]
+} // HasAMXTF32
+
+let Predicates = [HasAMXTF32, HasAMXTRANSPOSE, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let Constraints = "$src1 = $dst" in {
+      def TTMMULTF32PS: I<0x48, MRMSrcReg4VOp3, (outs TILE:$dst),
+                         (ins TILE:$src1, TILE:$src2, TILE:$src3),
+                         "ttmmultf32ps\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                         []>, VEX, VVVV, T8, PS;
+    }
+    let Constraints = "$src4 = $dst" in {
+      def PTTMMULTF32PSV : PseudoI<(outs TILE:$dst),
+                                   (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                                   [(set TILE:$dst,
+                                     (int_x86_ttmmultf32ps_internal GR16:$src1,
+                                      GR16:$src2, GR16:$src3, TILE:$src4,
+                                      TILE:$src5, TILE:$src6))]>;
+    }
+    let usesCustomInserter = 1 in {
+      def PTTMMULTF32PS : PseudoI<(outs),
+                                  (ins u8imm:$src1, u8imm:$src2, u8imm:$src3),
+                                  [(int_x86_ttmmultf32ps timm:$src1, timm:$src2,
+                                    timm:$src3)]>;
+    }
+  } // SchedRW = [WriteSystem]
+} // HasAMXTF32, HasAMXTRANSPOSE
