@@ -2749,3 +2749,43 @@ func.func @omp_target_private(%map1: memref<?xi32>, %map2: memref<?xi32>, %priv_
 
   return
 }
+
+// CHECK-LABEL: omp_loop
+func.func @omp_loop(%lb : index, %ub : index, %step : index) {
+  // CHECK: omp.loop {
+  omp.loop {
+    // CHECK: omp.loop_nest {{.*}} {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+    // CHECK: }
+  }
+  // CHECK: }
+
+  // CHECK: omp.loop bind(teams) {
+  omp.loop bind(teams) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  // CHECK: }
+
+  // CHECK: omp.loop bind(parallel) {
+  omp.loop bind(parallel) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  // CHECK: }
+
+  // CHECK: omp.loop bind(thread) {
+  omp.loop bind(thread) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  // CHECK: }
+
+  return
+}

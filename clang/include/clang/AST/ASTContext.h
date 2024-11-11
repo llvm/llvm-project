@@ -1747,7 +1747,9 @@ public:
   QualType
   getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
                                unsigned Index,
-                               std::optional<unsigned> PackIndex) const;
+                               std::optional<unsigned> PackIndex,
+                               SubstTemplateTypeParmTypeFlag Flag =
+                                   SubstTemplateTypeParmTypeFlag::None) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);

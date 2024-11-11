@@ -26,8 +26,14 @@ public:
   MacroBuilder(raw_ostream &Output) : Out(Output) {}
 
   /// Append a \#define line for macro of the form "\#define Name Value\n".
-  void defineMacro(const Twine &Name, const Twine &Value = "1") {
+  /// If DeprecationMsg is provided, also append a pragma to deprecate the
+  /// defined macro.
+  void defineMacro(const Twine &Name, const Twine &Value = "1",
+                   Twine DeprecationMsg = "") {
     Out << "#define " << Name << ' ' << Value << '\n';
+    if (!DeprecationMsg.isTriviallyEmpty())
+      Out << "#pragma clang deprecated(" << Name << ", \"" << DeprecationMsg
+          << "\")\n";
   }
 
   /// Append a \#undef line for Name.  Name should be of the form XXX

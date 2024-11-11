@@ -195,6 +195,8 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "",
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
+std::string replaceThinLTOSuffix(StringRef path);
+
 } // namespace wasm
 
 std::string toString(const wasm::InputFile *file);

@@ -2204,6 +2204,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "exp10m1f",
+    additional_deps = [
+        ":explogxf",
+    ],
+)
+
+libc_math_function(
     name = "exp2",
     additional_deps = [
         ":__support_fputil_double_double",
@@ -4648,6 +4655,7 @@ libc_function(
     name = "socket",
     srcs = ["src/sys/socket/linux/socket.cpp"],
     hdrs = ["src/sys/socket/socket.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4659,6 +4667,7 @@ libc_function(
     name = "socketpair",
     srcs = ["src/sys/socket/linux/socketpair.cpp"],
     hdrs = ["src/sys/socket/socketpair.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4670,6 +4679,7 @@ libc_function(
     name = "send",
     srcs = ["src/sys/socket/linux/send.cpp"],
     hdrs = ["src/sys/socket/send.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4684,6 +4694,7 @@ libc_function(
     name = "sendto",
     srcs = ["src/sys/socket/linux/sendto.cpp"],
     hdrs = ["src/sys/socket/sendto.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4698,6 +4709,7 @@ libc_function(
     name = "sendmsg",
     srcs = ["src/sys/socket/linux/sendmsg.cpp"],
     hdrs = ["src/sys/socket/sendmsg.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4711,6 +4723,7 @@ libc_function(
     name = "recv",
     srcs = ["src/sys/socket/linux/recv.cpp"],
     hdrs = ["src/sys/socket/recv.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4725,6 +4738,7 @@ libc_function(
     name = "recvfrom",
     srcs = ["src/sys/socket/linux/recvfrom.cpp"],
     hdrs = ["src/sys/socket/recvfrom.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -4739,6 +4753,7 @@ libc_function(
     name = "recvmsg",
     srcs = ["src/sys/socket/linux/recvmsg.cpp"],
     hdrs = ["src/sys/socket/recvmsg.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",

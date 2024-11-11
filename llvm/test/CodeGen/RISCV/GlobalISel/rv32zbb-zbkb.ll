@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=riscv32 -global-isel -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I
 ; RUN: llc -mtriple=riscv32 -global-isel -mattr=+zbb -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBB-ZBKB
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBB-ZBKB,RV32ZBB
 ; RUN: llc -mtriple=riscv32 -global-isel -mattr=+zbkb -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBB-ZBKB
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBB-ZBKB,RV32ZBKB
 
 define i32 @andn_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: andn_i32:
@@ -143,8 +143,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    bltu a6, a4, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    sub a5, a6, a4
-; CHECK-NEXT:    sll a7, a0, a5
+; CHECK-NEXT:    sll a7, a0, a6
 ; CHECK-NEXT:    j .LBB7_3
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    sll a3, a0, a2
@@ -162,8 +161,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    andi a6, a5, 63
 ; CHECK-NEXT:    bltu a6, a4, .LBB7_7
 ; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    sub a7, a6, a4
-; CHECK-NEXT:    srl a7, a1, a7
+; CHECK-NEXT:    srl a7, a1, a6
 ; CHECK-NEXT:    bnez a6, .LBB7_8
 ; CHECK-NEXT:    j .LBB7_9
 ; CHECK-NEXT:  .LBB7_7:
@@ -220,8 +218,7 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sub a3, a5, a4
-; CHECK-NEXT:    srl a6, a1, a3
+; CHECK-NEXT:    srl a6, a1, a5
 ; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    bnez a5, .LBB9_3
 ; CHECK-NEXT:    j .LBB9_4
@@ -235,33 +232,32 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    mv a3, a6
 ; CHECK-NEXT:  .LBB9_4:
-; CHECK-NEXT:    neg a7, a2
+; CHECK-NEXT:    neg a6, a2
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_7
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    andi a5, a7, 63
+; CHECK-NEXT:    andi a5, a6, 63
 ; CHECK-NEXT:    bgeu a5, a4, .LBB9_8
 ; CHECK-NEXT:  .LBB9_6:
-; CHECK-NEXT:    sll a6, a0, a7
-; CHECK-NEXT:    neg a4, a5
-; CHECK-NEXT:    srl a0, a0, a4
-; CHECK-NEXT:    sll a4, a1, a7
-; CHECK-NEXT:    or a0, a0, a4
+; CHECK-NEXT:    sll a4, a0, a6
+; CHECK-NEXT:    neg a7, a5
+; CHECK-NEXT:    srl a0, a0, a7
+; CHECK-NEXT:    sll a6, a1, a6
+; CHECK-NEXT:    or a0, a0, a6
 ; CHECK-NEXT:    bnez a5, .LBB9_9
 ; CHECK-NEXT:    j .LBB9_10
 ; CHECK-NEXT:  .LBB9_7:
 ; CHECK-NEXT:    srl a2, a1, a2
-; CHECK-NEXT:    andi a5, a7, 63
+; CHECK-NEXT:    andi a5, a6, 63
 ; CHECK-NEXT:    bltu a5, a4, .LBB9_6
 ; CHECK-NEXT:  .LBB9_8:
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    sub a4, a5, a4
-; CHECK-NEXT:    sll a0, a0, a4
+; CHECK-NEXT:    li a4, 0
+; CHECK-NEXT:    sll a0, a0, a5
 ; CHECK-NEXT:    beqz a5, .LBB9_10
 ; CHECK-NEXT:  .LBB9_9:
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB9_10:
-; CHECK-NEXT:    or a0, a3, a6
+; CHECK-NEXT:    or a0, a3, a4
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %b)
@@ -338,21 +334,30 @@ define i8 @srli_i8(i8 %a) nounwind {
   ret i8 %1
 }
 
-; We could use sext.b+srai, but slli+srai offers more opportunities for
-; comppressed instructions.
+; FIXME: We should use slli+srai with Zbb for better compression.
 define i8 @srai_i8(i8 %a) nounwind {
 ; RV32I-LABEL: srai_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 24
-; RV32I-NEXT:    srai a0, a0, 5
+; RV32I-NEXT:    srai a0, a0, 29
 ; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: srai_i8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sext.b a0, a0
+; RV32ZBB-NEXT:    srai a0, a0, 5
+; RV32ZBB-NEXT:    ret
+;
+; RV32ZBKB-LABEL: srai_i8:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    slli a0, a0, 24
+; RV32ZBKB-NEXT:    srai a0, a0, 29
+; RV32ZBKB-NEXT:    ret
   %1 = ashr i8 %a, 5
   ret i8 %1
 }
 
-; We could use zext.h+srli, but slli+srli offers more opportunities for
-; comppressed instructions.
+; FIXME: We should use slli+srli.
 define i16 @srli_i16(i16 %a) nounwind {
 ; RV32I-LABEL: srli_i16:
 ; RV32I:       # %bb.0:
@@ -371,15 +376,25 @@ define i16 @srli_i16(i16 %a) nounwind {
   ret i16 %1
 }
 
-; We could use sext.h+srai, but slli+srai offers more opportunities for
-; comppressed instructions.
+; FIXME: We should use slli+srai with Zbb/Zbkb for better compression.
 define i16 @srai_i16(i16 %a) nounwind {
 ; RV32I-LABEL: srai_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 9
+; RV32I-NEXT:    srai a0, a0, 25
 ; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: srai_i16:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sext.h a0, a0
+; RV32ZBB-NEXT:    srai a0, a0, 9
+; RV32ZBB-NEXT:    ret
+;
+; RV32ZBKB-LABEL: srai_i16:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    slli a0, a0, 16
+; RV32ZBKB-NEXT:    srai a0, a0, 25
+; RV32ZBKB-NEXT:    ret
   %1 = ashr i16 %a, 9
   ret i16 %1
 }

@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Type.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"

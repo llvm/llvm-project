@@ -1797,11 +1797,8 @@ define float @vreduce_fminimum_v7f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmset.m v0
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vmfne.vv v10, v8, v8
-; CHECK-NEXT:    vcpop.m a0, v10, v0.t
+; CHECK-NEXT:    vcpop.m a0, v10
 ; CHECK-NEXT:    beqz a0, .LBB111_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lui a0, 523264
@@ -2558,11 +2555,8 @@ define float @vreduce_fmaximum_v7f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmset.m v0
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vmfne.vv v10, v8, v8
-; CHECK-NEXT:    vcpop.m a0, v10, v0.t
+; CHECK-NEXT:    vcpop.m a0, v10
 ; CHECK-NEXT:    beqz a0, .LBB139_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lui a0, 523264

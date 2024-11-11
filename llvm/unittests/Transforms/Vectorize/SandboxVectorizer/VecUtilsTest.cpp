@@ -410,3 +410,32 @@ TEST_F(VecUtilsTest, GetWideType) {
   auto *Int32X8Ty = sandboxir::FixedVectorType::get(Int32Ty, 8);
   EXPECT_EQ(sandboxir::VecUtils::getWideType(Int32X4Ty, 2), Int32X8Ty);
 }
+
+TEST_F(VecUtilsTest, GetLowest) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+bb0:
+  %A = add i8 %v, %v
+  %B = add i8 %v, %v
+  %C = add i8 %v, %v
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *IA = &*It++;
+  auto *IB = &*It++;
+  auto *IC = &*It++;
+  SmallVector<sandboxir::Instruction *> ABC({IA, IB, IC});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC), IC);
+  SmallVector<sandboxir::Instruction *> ACB({IA, IC, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ACB), IC);
+  SmallVector<sandboxir::Instruction *> CAB({IC, IA, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(CAB), IC);
+  SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
+}

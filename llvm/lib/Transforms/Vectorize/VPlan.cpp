@@ -58,7 +58,7 @@ static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
-#define DEBUG_TYPE "vplan"
+#define DEBUG_TYPE "loop-vectorize"
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
@@ -552,17 +552,9 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
          "can only split at a position in the same block");
 
   SmallVector<VPBlockBase *, 2> Succs(successors());
-  // First, disconnect the current block from its successors.
-  for (VPBlockBase *Succ : Succs)
-    VPBlockUtils::disconnectBlocks(this, Succ);
-
   // Create new empty block after the block to split.
   auto *SplitBlock = new VPBasicBlock(getName() + ".split");
   VPBlockUtils::insertBlockAfter(SplitBlock, this);
-
-  // Add successors for block to split to new block.
-  for (VPBlockBase *Succ : Succs)
-    VPBlockUtils::connectBlocks(SplitBlock, Succ);
 
   // Finally, move the recipes starting at SplitAt to new block.
   for (VPRecipeBase &ToMove :

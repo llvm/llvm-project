@@ -120,9 +120,12 @@ public:
   }
 };
 
-using ValueWeightPair = std::pair<Value *, MaybeCondBranchWeights>;
+struct PredInfo {
+  Value *Pred;
+  MaybeCondBranchWeights Weights;
+};
 
-using BBPredicates = DenseMap<BasicBlock *, ValueWeightPair>;
+using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
 
@@ -308,7 +311,7 @@ class StructurizeCFG {
 
   void analyzeLoops(RegionNode *N);
 
-  ValueWeightPair buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
+  PredInfo buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
 
   void gatherPredicates(RegionNode *N);
 
@@ -490,8 +493,8 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 }
 
 /// Build the condition for one edge
-ValueWeightPair StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
-                                               bool Invert) {
+PredInfo StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
+                                        bool Invert) {
   Value *Cond = Invert ? BoolFalse : BoolTrue;
   MaybeCondBranchWeights Weights;
 
@@ -616,7 +619,6 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
     PhiInserter.Initialize(Boolean, "");
-    PhiInserter.AddAvailableValue(&Func->getEntryBlock(), Default);
     PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
 
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
@@ -624,24 +626,19 @@ void StructurizeCFG::insertConditions(bool Loops) {
     NearestCommonDominator Dominator(DT);
     Dominator.addBlock(Parent);
 
-    Value *ParentValue = nullptr;
-    MaybeCondBranchWeights ParentWeights = std::nullopt;
-    for (std::pair<BasicBlock *, ValueWeightPair> BBAndPred : Preds) {
-      BasicBlock *BB = BBAndPred.first;
-      auto [Pred, Weight] = BBAndPred.second;
-
+    PredInfo ParentInfo{nullptr, std::nullopt};
+    for (auto [BB, PI] : Preds) {
       if (BB == Parent) {
-        ParentValue = Pred;
-        ParentWeights = Weight;
+        ParentInfo = PI;
         break;
       }
-      PhiInserter.AddAvailableValue(BB, Pred);
+      PhiInserter.AddAvailableValue(BB, PI.Pred);
       Dominator.addAndRememberBlock(BB);
     }
 
-    if (ParentValue) {
-      Term->setCondition(ParentValue);
-      CondBranchWeights::setMetadata(*Term, ParentWeights);
+    if (ParentInfo.Pred) {
+      Term->setCondition(ParentInfo.Pred);
+      CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
     } else {
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Dominator.result(), Default);
@@ -656,15 +653,14 @@ void StructurizeCFG::simplifyConditions() {
   SmallVector<Instruction *> InstToErase;
   for (auto &I : concat<PredMap::value_type>(Predicates, LoopPreds)) {
     auto &Preds = I.second;
-    for (auto &J : Preds) {
-      Value *Cond = J.second.first;
+    for (auto [BB, PI] : Preds) {
       Instruction *Inverted;
-      if (match(Cond, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
-          !Cond->use_empty()) {
+      if (match(PI.Pred, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
+          !PI.Pred->use_empty()) {
         if (auto *InvertedCmp = dyn_cast<CmpInst>(Inverted)) {
           InvertedCmp->setPredicate(InvertedCmp->getInversePredicate());
-          Cond->replaceAllUsesWith(InvertedCmp);
-          InstToErase.push_back(cast<Instruction>(Cond));
+          PI.Pred->replaceAllUsesWith(InvertedCmp);
+          InstToErase.push_back(cast<Instruction>(PI.Pred));
         }
       }
     }
@@ -1046,10 +1042,9 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
 /// Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  return llvm::all_of(Preds,
-                      [&](std::pair<BasicBlock *, ValueWeightPair> Pred) {
-                        return DT->dominates(BB, Pred.first);
-                      });
+  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, PredInfo> Pred) {
+    return DT->dominates(BB, Pred.first);
+  });
 }
 
 /// Can we predict that this node will always be called?
@@ -1061,11 +1056,8 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
   if (!PrevNode)
     return true;
 
-  for (std::pair<BasicBlock *, ValueWeightPair> Pred : Preds) {
-    BasicBlock *BB = Pred.first;
-    Value *V = Pred.second.first;
-
-    if (V != BoolTrue)
+  for (auto [BB, PI] : Preds) {
+    if (PI.Pred != BoolTrue)
       return false;
 
     if (!Dominated && DT->dominates(BB, PrevNode->getEntry()))
