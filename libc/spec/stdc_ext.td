@@ -15,8 +15,8 @@ def UnsignedShortAccumType : NamedType<"unsigned short accum">;
 def UnsignedAccumType : NamedType<"unsigned accum">;
 def UnsignedLongAccumType : NamedType<"unsigned long accum">;
 
-def IntHrT : NamedType <"int_hr_t">; 
-def IntRT : NamedTypes<"int_r_t">;
+def IntHrT : NamedType <"int_hr_t">;
+def IntRT : NamedType<"int_r_t">;
 def IntLrT : NamedType<"int_lr_t">;
 def IntHkT : NamedType<"int_hk_t">;
 def IntKT : NamedType<"int_k_t">;
