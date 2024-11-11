@@ -68,7 +68,6 @@ struct MissingFeatures {
 
   // Address space related
   static bool addressSpace() { return false; }
-  static bool addressSpaceInGlobalVar() { return false; }
 
   // Clang codegen options
   static bool strictVTablePointers() { return false; }

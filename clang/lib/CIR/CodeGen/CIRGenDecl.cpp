@@ -575,19 +575,7 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
   // because some types, like unions, can't be completely represented
   // in the LLVM type system.)
   if (GV.getSymType() != Init.getType()) {
-    cir::GlobalOp OldGV = GV;
-    GV = builder.createGlobal(CGM.getModule(), getLoc(D.getSourceRange()),
-                              OldGV.getName(), Init.getType(),
-                              OldGV.getConstant(), GV.getLinkage());
-    // FIXME(cir): OG codegen inserts new GV before old one, we probably don't
-    // need that?
-    GV.setVisibility(OldGV.getVisibility());
-    GV.setGlobalVisibilityAttr(OldGV.getGlobalVisibilityAttr());
-    GV.setInitialValueAttr(Init);
-    GV.setTlsModelAttr(OldGV.getTlsModelAttr());
-    assert(!cir::MissingFeatures::setDSOLocal());
-    assert(!cir::MissingFeatures::setComdat());
-    assert(!cir::MissingFeatures::addressSpaceInGlobalVar());
+    GV.setSymType(Init.getType());
 
     // Normally this should be done with a call to CGM.replaceGlobal(OldGV, GV),
     // but since at this point the current block hasn't been really attached,
@@ -595,8 +583,7 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // Given those constraints, thread in the GetGlobalOp and update it
     // directly.
     GVAddr.getAddr().setType(
-        cir::PointerType::get(&getMLIRContext(), Init.getType()));
-    OldGV->erase();
+        getBuilder().getPointerTo(Init.getType(), GV.getAddrSpaceAttr()));
   }
 
   bool NeedsDtor =
