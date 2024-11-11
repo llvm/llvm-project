@@ -1119,17 +1119,17 @@ void SIFoldOperandsImpl::foldOperand(
         UseOpc == AMDGPU::SI_READANYLANE ||
         (UseOpc == AMDGPU::V_READLANE_B32 &&
          (int)UseOpIdx ==
-             AMDGPU::getNamedOperandIdx(UseOpc, AMDGPU::OpName::src0))) {
-      // readanylane doesn't care exec
-      const bool ReadAnyLean = UseOpc == AMDGPU::SI_READANYLANE;
+         AMDGPU::getNamedOperandIdx(UseOpc, AMDGPU::OpName::src0))) {
+      const bool NeedExec = UseOpc != AMDGPU::SI_READANYLANE;
       // %vgpr = V_MOV_B32 imm
       // %sgpr = V_READFIRSTLANE_B32 %vgpr
       // =>
       // %sgpr = S_MOV_B32 imm
       if (FoldingImmLike) {
-        if (!ReadAnyLean && execMayBeModifiedBeforeUse(
-                                *MRI, UseMI->getOperand(UseOpIdx).getReg(),
-                                *OpToFold.getParent(), *UseMI))
+        if (execMayBeModifiedBeforeUse(*MRI,
+                                       UseMI->getOperand(UseOpIdx).getReg(),
+                                       *OpToFold.getParent(),
+                                       *UseMI))
           return;
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
@@ -1138,15 +1138,16 @@ void SIFoldOperandsImpl::foldOperand(
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
         else
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
-        if (!ReadAnyLean)
+        if (NeedExec)
           UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
 
       if (OpToFold.isReg() && TRI->isSGPRReg(*MRI, OpToFold.getReg())) {
-        if (!ReadAnyLean && execMayBeModifiedBeforeUse(
-                                *MRI, UseMI->getOperand(UseOpIdx).getReg(),
-                                *OpToFold.getParent(), *UseMI))
+        if (execMayBeModifiedBeforeUse(*MRI,
+                                       UseMI->getOperand(UseOpIdx).getReg(),
+                                       *OpToFold.getParent(),
+                                       *UseMI))
           return;
 
         // %vgpr = COPY %sgpr0
@@ -1157,7 +1158,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
         UseMI->getOperand(1).setIsKill(false);
-        if (!ReadAnyLean)
+        if (NeedExec)
           UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }

@@ -2152,11 +2152,12 @@ def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// This is similar to readfirstlane, but marks value that is uniform, allowed sunk / hoist into
+// This is similar to readfirstlane, but marks value that is uniform, allowed sunk into
 // control flow. The result is undefined if the value is actual divergent.
 def int_amdgcn_readanylane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
-            [IntrNoCallback, IntrNoFree, IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+            [IntrConvergent, IntrNoCallback, IntrNoFree, IntrNoMem, IntrSpeculatable,
+             IntrWillReturn]>;
 
 // The lane argument must be uniform across the currently active threads of the
 // current wave. Otherwise, the result is undefined.
