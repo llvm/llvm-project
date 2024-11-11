@@ -277,6 +277,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-z");
     CmdArgs.push_back("start-stop-visibility=hidden");
 
+    // DT_DEBUG is not supported on PlayStation.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("rodynamic");
+
     CmdArgs.push_back("-z");
     CmdArgs.push_back("common-page-size=0x4000");
 
@@ -371,9 +375,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (UseJMC) {
+    CmdArgs.push_back("--push-state");
     CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lSceJmc_nosubmission");
-    CmdArgs.push_back("--no-whole-archive");
+    CmdArgs.push_back("--pop-state");
   }
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
