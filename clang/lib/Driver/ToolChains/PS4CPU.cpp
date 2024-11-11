@@ -367,7 +367,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--no-demangle");
 
   // Sanitizer runtimes must be supplied before all other objects and libs.
-  if (!Args.hasArg(options::OPT_nodefaultlibs, options::OPT_nostdlib))
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
   const bool AddStartFiles =
