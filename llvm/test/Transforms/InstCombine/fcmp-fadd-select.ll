@@ -59,7 +59,7 @@ define <2 x float> @test_fcmp_ogt_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-LABEL: define <2 x float> @test_fcmp_ogt_fadd_select_constant_vectors(
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nnan nsz <2 x float> @llvm.maxnum.v2f32(<2 x float> [[IN]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp ogt <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -127,7 +127,7 @@ define <2 x float> @test_fcmp_olt_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-LABEL: define <2 x float> @test_fcmp_olt_fadd_select_constant_vectors(
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nnan nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[IN]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp olt <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -195,7 +195,7 @@ define <2 x float> @test_fcmp_oge_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-LABEL: define <2 x float> @test_fcmp_oge_fadd_select_constant_vectors(
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nnan nsz <2 x float> @llvm.maxnum.v2f32(<2 x float> [[IN]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp oge <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -263,7 +263,7 @@ define <2 x float> @test_fcmp_ole_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-LABEL: define <2 x float> @test_fcmp_ole_fadd_select_constant_vectors(
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nnan nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[IN]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp ole <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -336,7 +336,7 @@ define <2 x float> @test_fcmp_ugt_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp ole <2 x float> [[IN]], zeroinitializer
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = select <2 x i1> [[CMP1_INV]], <2 x float> zeroinitializer, <2 x float> [[IN]]
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp ugt <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -409,7 +409,7 @@ define <2 x float> @test_fcmp_uge_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp olt <2 x float> [[IN]], zeroinitializer
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = select <2 x i1> [[CMP1_INV]], <2 x float> zeroinitializer, <2 x float> [[IN]]
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp uge <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -482,7 +482,7 @@ define <2 x float> @test_fcmp_ult_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp oge <2 x float> [[IN]], zeroinitializer
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = select <2 x i1> [[CMP1_INV]], <2 x float> zeroinitializer, <2 x float> [[IN]]
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp ult <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
@@ -555,7 +555,7 @@ define <2 x float> @test_fcmp_ule_fadd_select_constant_vectors(<2 x float> %in) 
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp ogt <2 x float> [[IN]], zeroinitializer
 ; CHECK-NEXT:    [[SEL_NEW:%.*]] = select <2 x i1> [[CMP1_INV]], <2 x float> zeroinitializer, <2 x float> [[IN]]
-; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz <2 x float> [[SEL_NEW]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[ADD_NEW]]
 ;
   %cmp1 = fcmp ule <2 x float> %in, <float 0.000000e+00, float 0.000000e+00>
