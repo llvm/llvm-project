@@ -755,7 +755,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
-  case X86::PTDPFP16PSV: {
+  case X86::PTDPFP16PSV:
+  case X86::PTMMULTF32PSV:
+  case X86::PTTMMULTF32PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
@@ -769,6 +771,13 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
+    case X86::PTMMULTF32PSV:
+      Opc = X86::TMMULTF32PS;
+      break;
+    case X86::PTTMMULTF32PSV:
+      Opc = X86::TTMMULTF32PS;
+      break;
+
     default:
       llvm_unreachable("Unexpected Opcode");
     }
