@@ -254,6 +254,7 @@ add_header_macro(
     .llvm-libc-types.ENTRY
     .llvm-libc-types.struct_hsearch_data
     .llvm-libc-types.size_t
+    .llvm-libc-types.__lsearchcompare_t
 )
 
 add_header_macro(
