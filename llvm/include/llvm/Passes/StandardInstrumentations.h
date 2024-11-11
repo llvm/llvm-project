@@ -597,7 +597,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
-  DroppedVariableStats DroppedStats;
+  DroppedVariableStatsIR DroppedStatsIR;
 
   bool VerifyEach;
 
