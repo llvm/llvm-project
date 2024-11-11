@@ -176,13 +176,14 @@ struct BankAffineLoadPattern : public OpRewritePattern<AffineLoadOp> {
     Location loc = loadOp.getLoc();
     auto banks = memoryToBanks[loadOp.getMemref()];
     Value loadIndex = loadOp.getIndices().front();
-    rewriter.setInsertionPointToStart(loadOp->getBlock());
-    Value bankingFactorValue =
-        rewriter.create<mlir::arith::ConstantIndexOp>(loc, unrollFactor);
-    Value bankIndex = rewriter.create<mlir::arith::RemUIOp>(loc, loadIndex,
-                                                            bankingFactorValue);
-    Value offset =
-        computeIntraBankingOffset(rewriter, loc, loadIndex, unrollFactor);
+    auto modMap =
+        AffineMap::get(1, 0, {rewriter.getAffineDimExpr(0) % unrollFactor});
+    auto divMap = AffineMap::get(
+        1, 0, {rewriter.getAffineDimExpr(0).floorDiv(unrollFactor)});
+
+    Value bankIndex = rewriter.create<AffineApplyOp>(
+        loc, modMap, loadIndex); // assuming one-dim
+    Value offset = rewriter.create<AffineApplyOp>(loc, divMap, loadIndex);
 
     SmallVector<Type> resultTypes = {loadOp.getResult().getType()};
 
@@ -233,14 +234,16 @@ struct BankAffineStorePattern : public OpRewritePattern<AffineStoreOp> {
     llvm::errs() << "store pattern matchAndRewrite\n";
     Location loc = storeOp.getLoc();
     auto banks = memoryToBanks[storeOp.getMemref()];
-    Value loadIndex = storeOp.getIndices().front();
-    rewriter.setInsertionPointToStart(storeOp->getBlock());
-    Value bankingFactorValue =
-        rewriter.create<mlir::arith::ConstantIndexOp>(loc, unrollFactor);
-    Value bankIndex = rewriter.create<mlir::arith::RemUIOp>(loc, loadIndex,
-                                                            bankingFactorValue);
-    Value offset =
-        computeIntraBankingOffset(rewriter, loc, loadIndex, unrollFactor);
+    Value storeIndex = storeOp.getIndices().front();
+
+    auto modMap =
+        AffineMap::get(1, 0, {rewriter.getAffineDimExpr(0) % unrollFactor});
+    auto divMap = AffineMap::get(
+        1, 0, {rewriter.getAffineDimExpr(0).floorDiv(unrollFactor)});
+
+    Value bankIndex = rewriter.create<AffineApplyOp>(
+        loc, modMap, storeIndex); // assuming one-dim
+    Value offset = rewriter.create<AffineApplyOp>(loc, divMap, storeIndex);
 
     SmallVector<Type> resultTypes = {};
 
