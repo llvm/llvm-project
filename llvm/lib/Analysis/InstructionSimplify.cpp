@@ -4790,10 +4790,6 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
     if (Value *V =
             simplifySelectWithEquivalence(CmpRHS, CmpLHS, T, F, Q, MaxRecurse))
       return V;
-
-    // (T == F) ? T : F --> F
-    // (T != F) ? F : T --> F
-    return CmpLHS == T && CmpRHS == F ? F : nullptr;
   }
 
   if (CmpLHS != T || CmpRHS != F)
