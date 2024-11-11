@@ -107,9 +107,9 @@ static TargetOptions getTargetOptionsForBogusMachine() {
 class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
-      : CodeGenTargetMachineImpl(Target(), "", Triple(""), "", "",
-                                 getTargetOptionsForBogusMachine(), Reloc::Static,
-                                 CodeModel::Small, CodeGenOptLevel::Default),
+      : CodeGenTargetMachineImpl(
+            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}
