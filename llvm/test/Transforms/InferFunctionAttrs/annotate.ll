@@ -619,6 +619,15 @@ declare float @ldexpf(float, i32)
 ; CHECK: declare x86_fp80 @ldexpl(x86_fp80, i32) [[NOFREE_WILLRETURN]]
 declare x86_fp80 @ldexpl(x86_fp80, i32)
 
+; CHECK: declare double @lgamma(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @lgamma(double)
+
+; CHECK: declare float @lgammaf(float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @lgammaf(float)
+
+; CHECK: declare x86_fp80 @lgammal(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @lgammal(x86_fp80)
+
 ; CHECK: declare i64 @llabs(i64) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare i64 @llabs(i64)
 

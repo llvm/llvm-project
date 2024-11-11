@@ -1726,6 +1726,21 @@ TLI_DEFINE_ENUM_INTERNAL(ldexpl)
 TLI_DEFINE_STRING_INTERNAL("ldexpl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Int)
 
+/// double lgamma(double x);
+TLI_DEFINE_ENUM_INTERNAL(lgamma)
+TLI_DEFINE_STRING_INTERNAL("lgamma")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl)
+
+/// float lgammaf(float x);
+TLI_DEFINE_ENUM_INTERNAL(lgammaf)
+TLI_DEFINE_STRING_INTERNAL("lgammaf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
+
+/// long double lgammal(long double x);
+TLI_DEFINE_ENUM_INTERNAL(lgammal)
+TLI_DEFINE_STRING_INTERNAL("lgammal")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
 /// long long int llabs(long long int j);
 TLI_DEFINE_ENUM_INTERNAL(llabs)
 TLI_DEFINE_STRING_INTERNAL("llabs")
