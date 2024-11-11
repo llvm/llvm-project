@@ -526,6 +526,14 @@ multiclass SVE_3_Op_Undef_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1
             (inst $Op1, $Op2, $Op3)>;
 }
 
+multiclass SVE_3_Op_UndefZero_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                                  ValueType vt2, ValueType vt3, Instruction inst> {
+  def : Pat<(vtd (op (vt1 undef), vt2:$Op1, vt3:$Op2)),
+            (inst $Op1, $Op2)>;
+  def : Pat<(vtd (op (vt1 (SVEDup0)), vt2:$Op1, vt3:$Op2)),
+            (inst $Op1, $Op2)>;
+}
+
 class SVE_4_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, ValueType vt3, ValueType vt4,
                    Instruction inst>
