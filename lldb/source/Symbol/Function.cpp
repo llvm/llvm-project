@@ -262,7 +262,7 @@ AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
 
   Address lowest_addr = ranges[0].GetBaseAddress();
   addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
-  for (const AddressRange &range: ranges.drop_front()) {
+  for (const AddressRange &range : ranges.drop_front()) {
     Address range_begin = range.GetBaseAddress();
     addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
     if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())

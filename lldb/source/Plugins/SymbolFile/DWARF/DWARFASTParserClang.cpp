@@ -2340,10 +2340,8 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   return ConstString(sstr.GetString());
 }
 
-Function *
-DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
-                                            const DWARFDIE &die,
-                                            AddressRanges func_ranges) {
+Function *DWARFASTParserClang::ParseFunctionFromDWARF(
+    CompileUnit &comp_unit, const DWARFDIE &die, AddressRanges func_ranges) {
   DWARFRangeList unused_func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;

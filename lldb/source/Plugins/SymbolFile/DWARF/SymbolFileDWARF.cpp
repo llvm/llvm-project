@@ -918,7 +918,6 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!dwarf_ast)
     return nullptr;
 
-
   AddressRanges ranges;
   ModuleSP module_sp(die.GetModule());
   for (const auto &range : die.GetDIE()->GetAttributeAddressRanges(
