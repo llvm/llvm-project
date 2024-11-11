@@ -1709,7 +1709,7 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
 
   // Parse the PLT header
   uint64_t HeaderSize = 0;
-  if (Section.getName() != ".plt.sec") {
+  if (Section.getName() == ".plt") {
     MCInst FirstInstr;
     uint64_t FirstInstrSize;
     disassemblePLTInstruction(Section, 0, FirstInstr, FirstInstrSize);
