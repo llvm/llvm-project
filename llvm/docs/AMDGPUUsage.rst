@@ -16545,7 +16545,7 @@ On entry to a function:
     :ref:`amdgpu-amdhsa-kernel-prolog-m0`.
 4.  The EXEC register is set to the lanes active on entry to the function.
 5.  MODE register: *TBD*
-6.  VGPR0-31 and SGPR4-29 are used to pass function input arguments as described
+6.  VGPR0-31 and SGPR4-27 are used to pass function input arguments as described
     below.
 7.  SGPR30-31 return address (RA). The code address that the function must
     return to when it completes. The value is undefined if the function is *no
@@ -16796,7 +16796,7 @@ The input and result arguments are assigned in order in the following manner:
     How are overly aligned structures allocated on the stack?
 
 * SGPR arguments are assigned to consecutive SGPRs starting at SGPR0 up to
-  SGPR29.
+  SGPR27.
 
   If there are more arguments than will fit in these registers, the remaining
   arguments are allocated on the stack in order on naturally aligned
