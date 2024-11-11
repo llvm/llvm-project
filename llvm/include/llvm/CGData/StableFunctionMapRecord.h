@@ -49,7 +49,7 @@ struct StableFunctionMapRecord {
   void deserializeYAML(yaml::Input &YIS);
 
   /// Finalize the stable function map by trimming content.
-  void finalize() { FunctionMap->finalize(); }
+  void finalize(bool SkipTrim = false) { FunctionMap->finalize(SkipTrim); }
 
   /// Merge the stable function map into this one.
   void merge(const StableFunctionMapRecord &Other) {

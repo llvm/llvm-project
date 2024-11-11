@@ -110,7 +110,7 @@ struct StableFunctionMap {
   size_t size(SizeType Type = UniqueHashCount) const;
 
   /// Finalize the stable function map by trimming content.
-  void finalize();
+  void finalize(bool SkipTrim = false);
 
 private:
   /// Insert a `StableFunctionEntry` into the function map directly. This

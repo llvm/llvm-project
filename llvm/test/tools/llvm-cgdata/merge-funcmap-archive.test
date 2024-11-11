@@ -21,7 +21,7 @@ RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-2.ll -o %t/merge-2.o
 RUN: llvm-ar rcs %t/merge-archive.a %t/merge-1.o %t/merge-2.o
 
 # Merge the archive into the codegen data file.
-RUN: llvm-cgdata --merge %t/merge-archive.a -o %t/merge-archive.cgdata
+RUN: llvm-cgdata --merge --skip-trim %t/merge-archive.a -o %t/merge-archive.cgdata
 RUN: llvm-cgdata --show %t/merge-archive.cgdata | FileCheck %s
 
 RUN: llvm-cgdata --show %t/merge-archive.cgdata| FileCheck %s

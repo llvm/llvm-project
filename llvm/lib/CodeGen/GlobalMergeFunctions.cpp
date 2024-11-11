@@ -31,30 +31,6 @@ static cl::opt<bool>
                                   "the codegen data generation or use. Local "
                                   "merging is still enabled within a module."),
                          cl::init(false));
-static cl::opt<unsigned> GlobalMergingMinInstrs(
-    "global-merging-min-instrs",
-    cl::desc("The minimum instruction count required when merging functions."),
-    cl::init(1), cl::Hidden);
-static cl::opt<unsigned> GlobalMergingMaxParams(
-    "global-merging-max-params",
-    cl::desc(
-        "The maximum number of parameters allowed when merging functions."),
-    cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden);
-static cl::opt<unsigned> GlobalMergingParamOverhead(
-    "global-merging-param-overhead",
-    cl::desc("The overhead cost associated with each parameter when merging "
-             "functions."),
-    cl::init(2), cl::Hidden);
-static cl::opt<unsigned>
-    GlobalMergingCallOverhead("global-merging-call-overhead",
-                              cl::desc("The overhead cost associated with each "
-                                       "function call when merging functions."),
-                              cl::init(1), cl::Hidden);
-static cl::opt<unsigned> GlobalMergingExtraThreshold(
-    "global-merging-extra-threshold",
-    cl::desc("An additional cost threshold that must be exceeded for merging "
-             "to be considered beneficial."),
-    cl::init(0), cl::Hidden);
 
 STATISTIC(NumMismatchedFunctionHash,
           "Number of mismatched function hash for global merge function");
@@ -442,40 +418,6 @@ static ParamLocsVecTy computeParamInfo(
   return ParamLocsVec;
 }
 
-static bool isProfitable(
-    const SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>>
-        &SFS,
-    const Function *F) {
-  // No interest if the number of candidates are less than 2.
-  unsigned StableFunctionCount = SFS.size();
-  if (StableFunctionCount < 2)
-    return false;
-
-  unsigned InstCount = SFS[0]->InstCount;
-  if (InstCount < GlobalMergingMinInstrs)
-    return false;
-
-  unsigned ParamCount = SFS[0]->IndexOperandHashMap->size();
-  unsigned TotalParamCount = ParamCount + F->getFunctionType()->getNumParams();
-  if (TotalParamCount > GlobalMergingMaxParams)
-    return false;
-
-  unsigned Benefit = InstCount * (StableFunctionCount - 1);
-  unsigned Cost =
-      (GlobalMergingParamOverhead * ParamCount + GlobalMergingCallOverhead) *
-          StableFunctionCount +
-      GlobalMergingExtraThreshold;
-
-  bool Result = Benefit > Cost;
-  LLVM_DEBUG(dbgs() << "isProfitable: Function = " << F->getName() << ", "
-                    << "StableFunctionCount = " << StableFunctionCount
-                    << ", InstCount = " << InstCount
-                    << ", ParamCount = " << ParamCount
-                    << ", Benefit = " << Benefit << ", Cost = " << Cost
-                    << ", Result = " << (Result ? "true" : "false") << "\n");
-  return Result;
-}
-
 bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   bool Changed = false;
 
@@ -488,12 +430,9 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
 
   auto ModId = M.getModuleIdentifier();
   for (auto &[Hash, SFS] : FunctionMap->getFunctionMap()) {
-    // Compute the parameter locations based on the unique hash sequences
+    // Parameter locations based on the unique hash sequences
     // across the candidates.
-    auto ParamLocsVec = computeParamInfo(SFS);
-    LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash
-                      << " with Params " << ParamLocsVec.size() << "\n");
-
+    std::optional<ParamLocsVecTy> ParamLocsVec;
     Function *MergedFunc = nullptr;
     std::string MergedModId;
     SmallVector<FuncMergeInfo> FuncMergeInfos;
@@ -542,14 +481,16 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
         ++NumMismatchedConstHash;
         continue;
       }
+      if (!ParamLocsVec.has_value()) {
+        ParamLocsVec = computeParamInfo(SFS);
+        LLVM_DEBUG(dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash
+                          << " with Params " << ParamLocsVec->size() << "\n");
+      }
       if (!checkConstLocationCompatible(*SF, *FI.IndexInstruction,
-                                        ParamLocsVec)) {
+                                        *ParamLocsVec)) {
         ++NumMismatchedConstHash;
         continue;
       }
-
-      if (!isProfitable(SFS, F))
-        break;
 
       if (MergedFunc) {
         // Check if the matched functions fall into the same (first) module.
@@ -583,7 +524,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
       // the parameters. Populate parameters pointing to the original constants.
       SmallVector<Constant *> Params;
       SmallVector<Type *> ParamTypes;
-      for (auto &ParamLocs : ParamLocsVec) {
+      for (auto &ParamLocs : *ParamLocsVec) {
         assert(!ParamLocs.empty());
         auto &[InstIndex, OpndIndex] = ParamLocs[0];
         auto *Inst = FMI.IndexInstruction->lookup(InstIndex);
@@ -594,7 +535,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
 
       // Create a merged function derived from the current function.
       Function *MergedFunc =
-          createMergedFunction(FMI, ParamTypes, ParamLocsVec);
+          createMergedFunction(FMI, ParamTypes, *ParamLocsVec);
 
       LLVM_DEBUG({
         dbgs() << "[GlobalMergeFunc] Merged function (hash:" << FMI.SF->Hash
