@@ -45,7 +45,7 @@ namespace std
 #if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
-#  include <__atomic/atomic_base.h>
+#  include <__atomic/atomic.h>
 #  include <__atomic/atomic_sync.h>
 #  include <__atomic/memory_order.h>
 #  include <__cstddef/ptrdiff_t.h>
@@ -64,7 +64,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 class latch {
-  __atomic_base<ptrdiff_t> __a_;
+  atomic<ptrdiff_t> __a_;
 
 public:
   static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return numeric_limits<ptrdiff_t>::max(); }
