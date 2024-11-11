@@ -976,8 +976,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   dirContext_.pop_back();
 
   assert(!loopStack_.empty() && "Expecting non-empty loop stack");
-  const LoopConstruct &top{loopStack_.back()};
 #ifndef NDEBUG
+  const LoopConstruct &top{loopStack_.back()};
   auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&top)};
   assert(loopc != nullptr && *loopc == &x && "Mismatched loop constructs");
 #endif
@@ -4438,8 +4438,8 @@ void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
 
 void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
   assert(!loopStack_.empty() && "Expecting non-empty loop stack");
-  const LoopConstruct &top = loopStack_.back();
 #ifndef NDEBUG
+  const LoopConstruct &top = loopStack_.back();
   auto *doc{std::get_if<const parser::DoConstruct *>(&top)};
   assert(doc != nullptr && *doc == &x && "Mismatched loop constructs");
 #endif
