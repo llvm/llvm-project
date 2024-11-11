@@ -149,8 +149,9 @@ function(compileDeviceRTLLibrary target_name target_triple)
       VERBATIM
     )
 
-    if(${outfile} MATCHES "State.cpp")
+    if(${outfile} MATCHES "State.cpp" OR SANITIZER_AMDGPU)
       # Run the prep tool on the library to replace internal attribute with linkonce_odr for dm_alloc only.
+      # If SANITIZER_AMDGPU is enabled then run prep tool for all device functions.
       set(outfile_prep "${outfile}-${target_name}-prep.bc")
       add_custom_target(${outfile_prep}
           COMMAND ${PREP_TOOL} -dm ${outfile}
@@ -345,6 +346,13 @@ set(amd_options -Xclang -mcode-object-version=none
                 -Wno-linker-warnings # Silence the empty host compilation.
                 -Xclang -mcode-object-version=none
 )
+
+if(SANITIZER_AMDGPU)
+get_target_property(asanrtl_path asanrtl IMPORTED_LOCATION)
+list(APPEND amd_options -DSANITIZER_AMDGPU=1)
+list(APPEND amd_options -Xclang -mlink-bitcode-file -Xclang ${asanrtl_path})
+endif()
+
 
 compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa ${amd_options})
 compileDeviceRTLLibrary(nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)

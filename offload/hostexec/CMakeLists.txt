@@ -179,6 +179,12 @@ foreach(archname ${HOSTRPC_ARCHS})
           -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
           -Wno-linker-warnings # Silence the empty host compilation.
           -c -emit-llvm --offload-device-only -nogpulib)
+
+      if(SANITIZER_AMDGPU)
+        get_target_property(asanrtl_path asanrtl IMPORTED_LOCATION)
+        list(APPEND openmp_device_args -DSANITIZER_AMDGPU=1)
+        list(APPEND openmp_device_args -Xclang -mlink-bitcode-file -Xclang ${asanrtl_path})
+      endif()
     elseif(${archname} STREQUAL "nvptx")
        set(openmp_device_args 
       -I../../runtime/src  # to pickup omp.h, we may need a dependency

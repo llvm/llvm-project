@@ -24,8 +24,8 @@
 using namespace ompx;
 
 #pragma omp begin declare target device_type(host)
-void *internal_malloc(uint64_t Size);
-void internal_free(void *Ptr);
+__attribute__((noinline)) void *internal_malloc(uint64_t Size);
+__attribute__((noinline)) void internal_free(void *Ptr);
 #pragma omp end declare target
 
 #pragma omp begin declare target device_type(nohost)
@@ -59,18 +59,35 @@ namespace {
 ///
 ///{
 
-// global_allocate uses ockl_dm_alloc to manage a global memory heap
+// global_allocate uses ockl_dm_alloc/asan_malloc_impl to manage a global memory
+// heap
 __attribute__((noinline)) extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 __attribute__((noinline)) extern "C" void __ockl_dm_dealloc(uint64_t ptr);
-
+#if SANITIZER_AMDGPU
+__attribute__((noinline)) extern "C" uint64_t __asan_malloc_impl(uint64_t bufsz,
+                                                                 uint64_t pc);
+__attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
+                                                           uint64_t pc);
+#endif
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 extern "C" {
-void *internal_malloc(uint64_t Size) {
+__attribute__((noinline)) void *internal_malloc(uint64_t Size) {
+#if SANITIZER_AMDGPU
+  uint64_t ptr =
+      __asan_malloc_impl(Size, (uint64_t)__builtin_return_address(0));
+#else
   uint64_t ptr = __ockl_dm_alloc(Size);
+#endif
   return (void *)ptr;
 }
 
-void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
+__attribute__((noinline)) void internal_free(void *Ptr) {
+#if SANITIZER_AMDGPU
+  __asan_free_impl((uint64_t)Ptr, (uint64_t)__builtin_return_address(0));
+#else
+  __ockl_dm_dealloc((uint64_t)Ptr);
+#endif
+}
 }
 #pragma omp end declare variant
 
