@@ -44,6 +44,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
@@ -2700,8 +2702,18 @@ void CGBuilderInserter::InsertHelper(
     llvm::Instruction *I, const llvm::Twine &Name,
     llvm::BasicBlock::iterator InsertPt) const {
   llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
-  if (CGF)
+  if (CGF) {
     CGF->InsertHelper(I, Name, InsertPt);
+    if (CGF->GetOMPLoopImperfection() &&
+        I->mayReadOrWriteMemory()) {
+      llvm::LLVMContext &Ctx = CGF->getLLVMContext();
+      llvm::MDNode *Imp = llvm::MDNode::get(Ctx,
+                                            llvm::ConstantAsMetadata::get(
+                                              llvm::ConstantInt::get(
+                                              llvm::Type::getInt1Ty(Ctx), 1)));
+      I->setMetadata("llvm.omp.loop.imperfection", Imp);
+    }
+  }
 }
 
 // Emits an error if we don't have a valid set of target features for the
