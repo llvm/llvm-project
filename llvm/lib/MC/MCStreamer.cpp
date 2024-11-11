@@ -712,6 +712,16 @@ void MCStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
     F->Instructions.push_back(MCCFIInstruction::createLabel(Label, Sym, Loc));
 }
 
+void MCStreamer::emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createValOffset(Label, Register, Offset, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(Instruction);
+}
+
 WinEH::FrameInfo *MCStreamer::EnsureValidWinFrameInfo(SMLoc Loc) {
   const MCAsmInfo *MAI = Context.getAsmInfo();
   if (!MAI->usesWindowsCFI()) {
