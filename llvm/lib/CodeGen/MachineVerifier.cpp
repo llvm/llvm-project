@@ -3035,6 +3035,16 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
             if (llvm::is_contained(TRI->subregs(MOP.getReg()), Reg))
               Bad = false;
+
+            if (any_of(TRI->subregs(MOP.getReg()),
+                       [&](const MCRegister MOPSubReg) {
+                         return all_of(TRI->regunits(Reg),
+                                       [&](const MCRegUnit RegUnit) {
+                                         return llvm::is_contained(
+                                             TRI->regunits(MOPSubReg), RegUnit);
+                                       });
+                       }))
+              Bad = false;
           }
         }
         if (Bad)
