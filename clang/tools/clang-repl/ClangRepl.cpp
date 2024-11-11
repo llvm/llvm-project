@@ -56,7 +56,8 @@ static llvm::cl::opt<std::string> SlabAllocateSizeString(
 static llvm::cl::opt<std::string>
     OOPExecutor("oop-executor",
                 llvm::cl::desc("Launch an out-of-process executor to run code"),
-                llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
+                llvm::cl::init(""), llvm::cl::ValueOptional,
+                llvm::cl::cat(OOPCategory));
 static llvm::cl::opt<std::string> OOPExecutorConnect(
     "oop-executor-connect",
     llvm::cl::desc(
@@ -64,7 +65,8 @@ static llvm::cl::opt<std::string> OOPExecutorConnect(
     llvm::cl::value_desc("<hostname>:<port>"));
 static llvm::cl::opt<std::string>
     OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
-                   llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
+                   llvm::cl::init(""), llvm::cl::ValueOptional,
+                   llvm::cl::cat(OOPCategory));
 static llvm::cl::opt<bool> UseSharedMemory(
     "use-shared-memory",
     llvm::cl::desc("Use shared memory to transfer generated code and data"),
