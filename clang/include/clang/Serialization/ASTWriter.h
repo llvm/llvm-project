@@ -659,10 +659,13 @@ public:
   /// include timestamps in the output file.
   time_t getTimestampForOutput(const FileEntry *E) const;
 
-  /// Write a precompiled header for the given semantic analysis.
+  /// Write a precompiled header or a module with the AST produced by the
+  /// \c Sema object, or a dependency scanner module with the preprocessor state
+  /// produced by the \c Preprocessor object.
   ///
-  /// \param Subject The object that processed the input to be written into the
-  /// AST file.
+  /// \param Subject The \c Sema object that processed the AST to be written, or
+  /// in the case of a dependency scanner module the \c Preprocessor that holds
+  /// the state.
   ///
   /// \param WritingModule The module that we are writing. If null, we are
   /// writing a precompiled header.
