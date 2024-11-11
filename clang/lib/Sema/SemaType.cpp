@@ -4887,9 +4887,18 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
-                   diag::err_trailing_return_without_auto)
-                << T << D.getDeclSpec().getSourceRange();
+            SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
+            SourceRange SR = D.getDeclSpec().getSourceRange();
+            if (Loc.isInvalid()) {
+              TypeSourceInfo *TSI = nullptr;
+              S.GetTypeFromParser(FTI.getTrailingReturnType(), &TSI);
+              if (TSI) {
+                TypeLoc TSILoc = TSI->getTypeLoc();
+                Loc = TSILoc.getBeginLoc();
+                SR = TSILoc.getSourceRange();
+              }
+            }
+            S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
             D.setInvalidType(true);
             // FIXME: recover and fill decls in `TypeLoc`s.
             AreDeclaratorChunksValid = false;

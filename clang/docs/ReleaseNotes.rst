@@ -652,6 +652,7 @@ Bug Fixes to C++ Support
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Clang now uses deduced type locations in trailing return without auto diagnostics. (#GH78694)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
