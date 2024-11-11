@@ -542,14 +542,14 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         auto *MulAcc = cast<VPMulAccRecipe>(&R);
         VPValue *Op0, *Op1;
         if (MulAcc->isExtended()) {
-          Op0 = new VPWidenCastRecipe(
-              MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-              MulAcc->getResultType(), *MulAcc->getExt0Instr());
+          Op0 =
+              new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                    MulAcc->getResultType());
           Op0->getDefiningRecipe()->insertBefore(MulAcc);
           if (!MulAcc->isSameExtend()) {
-            Op1 = new VPWidenCastRecipe(
-                MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                MulAcc->getResultType(), *MulAcc->getExt1Instr());
+            Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(),
+                                        MulAcc->getVecOp1(),
+                                        MulAcc->getResultType());
             Op1->getDefiningRecipe()->insertBefore(MulAcc);
           } else {
             Op1 = Op0;
@@ -567,8 +567,7 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         if (auto *OuterExtInstr = MulAcc->getExtInstr())
           VecOp = new VPWidenCastRecipe(
               MulAcc->getExtOpcode(), Mul,
-              MulAcc->getRecurrenceDescriptor().getRecurrenceType(),
-              *OuterExtInstr);
+              MulAcc->getRecurrenceDescriptor().getRecurrenceType());
         else
           VecOp = Mul;
         auto *Red = new VPReductionRecipe(
