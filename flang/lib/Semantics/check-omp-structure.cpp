@@ -3820,7 +3820,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
-  for (auto [_, clauses] : GetClauses(llvm::omp::Clause::OMPC_use_device_ptr)) {
+  for (auto [_, clause] : GetClauses(llvm::omp::Clause::OMPC_use_device_ptr)) {
     const auto &useDevicePtrClause{
         std::get<parser::OmpClause::UseDevicePtr>(clause->u)};
     const auto &useDevicePtrList{useDevicePtrClause.v};
