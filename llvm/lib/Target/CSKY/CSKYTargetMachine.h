@@ -14,13 +14,13 @@
 #define LLVM_LIB_TARGET_CSKY_CSKYTARGETMACHINE_H
 
 #include "CSKYSubtarget.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
 #include <optional>
 
 namespace llvm {
 
-class CSKYTargetMachine : public CodeGenCommonTMImpl {
+class CSKYTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<CSKYSubtarget>> SubtargetMap;
 

@@ -15,7 +15,7 @@
 
 #include "X86Subtarget.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
 #include <optional>
@@ -25,7 +25,7 @@ namespace llvm {
 class StringRef;
 class TargetTransformInfo;
 
-class X86TargetMachine final : public CodeGenCommonTMImpl {
+class X86TargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
   // True if this is used in JIT.

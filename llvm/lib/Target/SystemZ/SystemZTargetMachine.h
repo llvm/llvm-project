@@ -17,7 +17,7 @@
 #include "SystemZSubtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class SystemZTargetMachine : public CodeGenCommonTMImpl {
+class SystemZTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   mutable StringMap<std::unique_ptr<SystemZSubtarget>> SubtargetMap;

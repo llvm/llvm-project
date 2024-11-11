@@ -1,4 +1,4 @@
-//===-- CodeGenCommonTMImpl.h -----------------------------------*- C++ -*-===//
+//===-- CodeGenTargetMachineImpl.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file describes the CodeGenCommonTMImpl class, which
+/// \file This file describes the CodeGenTargetMachineImpl class, which
 /// implements a set of functionality used by \c TargetMachine classes in
 /// LLVM that make use of the target-independent code generator.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CODEGEN_CODEGENCOMMONTMIMPL_H
-#define LLVM_CODEGEN_CODEGENCOMMONTMIMPL_H
+#ifndef LLVM_CODEGEN_CODEGENTARGETMACHINEIMPL_H
+#define LLVM_CODEGEN_CODEGENTARGETMACHINEIMPL_H
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -20,12 +20,12 @@ namespace llvm {
 /// for targets that make use of the independent code generator (CodeGen)
 /// library. Must not be used directly in code unless to inherit its
 /// implementation.
-class CodeGenCommonTMImpl : public TargetMachine {
+class CodeGenTargetMachineImpl : public TargetMachine {
 protected: // Can only create subclasses.
-  CodeGenCommonTMImpl(const Target &T, StringRef DataLayoutString,
-                      const Triple &TT, StringRef CPU, StringRef FS,
-                      const TargetOptions &Options, Reloc::Model RM,
-                      CodeModel::Model CM, CodeGenOptLevel OL);
+  CodeGenTargetMachineImpl(const Target &T, StringRef DataLayoutString,
+                           const Triple &TT, StringRef CPU, StringRef FS,
+                           const TargetOptions &Options, Reloc::Model RM,
+                           CodeModel::Model CM, CodeGenOptLevel OL);
 
   void initAsmInfo();
 

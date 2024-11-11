@@ -15,7 +15,7 @@
 
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
 #include <optional>
 
@@ -23,7 +23,7 @@ namespace llvm {
 
 /// Common code between 32-bit and 64-bit PowerPC targets.
 ///
-class PPCTargetMachine final : public CodeGenCommonTMImpl {
+class PPCTargetMachine final : public CodeGenTargetMachineImpl {
 public:
   enum PPCABI { PPC_ABI_UNKNOWN, PPC_ABI_ELFv1, PPC_ABI_ELFv2 };
   enum Endian { NOT_DETECTED, LITTLE, BIG };

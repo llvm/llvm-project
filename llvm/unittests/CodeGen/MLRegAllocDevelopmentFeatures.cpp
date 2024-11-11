@@ -8,7 +8,7 @@
 
 #include "../../lib/CodeGen/MLRegAllocEvictAdvisor.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"

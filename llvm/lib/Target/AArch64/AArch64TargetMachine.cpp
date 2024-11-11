@@ -356,7 +356,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT,
                                            bool LittleEndian)
-    : CodeGenCommonTMImpl(
+    : CodeGenTargetMachineImpl(
           T, computeDataLayout(TT, Options.MCOptions, LittleEndian), TT,
           computeDefaultCPU(TT, CPU), FS, Options,
           getEffectiveRelocModel(TT, RM),

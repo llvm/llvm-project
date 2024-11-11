@@ -660,7 +660,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OptLevel)
-    : CodeGenCommonTMImpl(
+    : CodeGenTargetMachineImpl(
           T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU), FS, Options,
           getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),

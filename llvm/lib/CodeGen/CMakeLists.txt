@@ -99,7 +99,7 @@ add_llvm_component_library(LLVMCodeGen
   LiveRegUnits.cpp
   LiveStacks.cpp
   LiveVariables.cpp
-  CodeGenCommonTMImpl.cpp
+  CodeGenTargetMachineImpl.cpp
   LocalStackSlotAllocation.cpp
   LoopTraversal.cpp
   LowLevelTypeUtils.cpp

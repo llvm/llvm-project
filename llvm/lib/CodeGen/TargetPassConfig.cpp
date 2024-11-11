@@ -22,7 +22,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -621,7 +621,8 @@ void TargetPassConfig::insertPass(AnalysisID TargetPassID,
 /// addPassToEmitX methods for generating a pipeline of CodeGen passes.
 ///
 /// Targets may override this to extend TargetPassConfig.
-TargetPassConfig *CodeGenCommonTMImpl::createPassConfig(PassManagerBase &PM) {
+TargetPassConfig *
+CodeGenTargetMachineImpl::createPassConfig(PassManagerBase &PM) {
   return new TargetPassConfig(*this, PM);
 }
 

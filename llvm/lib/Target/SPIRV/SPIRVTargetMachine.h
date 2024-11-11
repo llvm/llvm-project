@@ -14,11 +14,11 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTARGETMACHINE_H
 
 #include "SPIRVSubtarget.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
-class SPIRVTargetMachine : public CodeGenCommonTMImpl {
+class SPIRVTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   SPIRVSubtarget Subtarget;
 

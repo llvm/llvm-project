@@ -1,4 +1,4 @@
-//===-- CodeGenCommonTMImpl.cpp - CodeGenCommonTMImpl implementation ------===//
+//===-- CodeGenTargetMachineImpl.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file implements the CodeGenCommonTMImpl class.
+/// \file This file implements the CodeGenTargetMachineImpl class.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -42,7 +42,7 @@ static cl::opt<bool> EnableNoTrapAfterNoreturn(
     cl::desc("Do not emit a trap instruction for 'unreachable' IR instructions "
              "after noreturn calls, even if --trap-unreachable is set."));
 
-void CodeGenCommonTMImpl::initAsmInfo() {
+void CodeGenTargetMachineImpl::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
   assert(MRI && "Unable to create reg info");
   MII.reset(TheTarget.createMCInstrInfo());
@@ -85,7 +85,7 @@ void CodeGenCommonTMImpl::initAsmInfo() {
   AsmInfo.reset(TmpAsmInfo);
 }
 
-CodeGenCommonTMImpl::CodeGenCommonTMImpl(
+CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
     const Target &T, StringRef DataLayoutString, const Triple &TT,
     StringRef CPU, StringRef FS, const TargetOptions &Options, Reloc::Model RM,
     CodeModel::Model CM, CodeGenOptLevel OL)
@@ -101,13 +101,13 @@ CodeGenCommonTMImpl::CodeGenCommonTMImpl(
 }
 
 TargetTransformInfo
-CodeGenCommonTMImpl::getTargetTransformInfo(const Function &F) const {
+CodeGenTargetMachineImpl::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(BasicTTIImpl(this, F));
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.
 static TargetPassConfig *
-addPassesToGenerateCode(CodeGenCommonTMImpl &TM, PassManagerBase &PM,
+addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
                         bool DisableVerify,
                         MachineModuleInfoWrapperPass &MMIWP) {
   // Targets may override createPassConfig to provide a target-specific
@@ -125,11 +125,11 @@ addPassesToGenerateCode(CodeGenCommonTMImpl &TM, PassManagerBase &PM,
   return PassConfig;
 }
 
-bool CodeGenCommonTMImpl::addAsmPrinter(PassManagerBase &PM,
-                                        raw_pwrite_stream &Out,
-                                        raw_pwrite_stream *DwoOut,
-                                        CodeGenFileType FileType,
-                                        MCContext &Context) {
+bool CodeGenTargetMachineImpl::addAsmPrinter(PassManagerBase &PM,
+                                             raw_pwrite_stream &Out,
+                                             raw_pwrite_stream *DwoOut,
+                                             CodeGenFileType FileType,
+                                             MCContext &Context) {
   Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
       createMCStreamer(Out, DwoOut, FileType, Context);
   if (auto Err = MCStreamerOrErr.takeError())
@@ -145,9 +145,11 @@ bool CodeGenCommonTMImpl::addAsmPrinter(PassManagerBase &PM,
   return false;
 }
 
-Expected<std::unique_ptr<MCStreamer>> CodeGenCommonTMImpl::createMCStreamer(
-    raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-    MCContext &Context) {
+Expected<std::unique_ptr<MCStreamer>>
+CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
+                                           raw_pwrite_stream *DwoOut,
+                                           CodeGenFileType FileType,
+                                           MCContext &Context) {
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCAsmInfo &MAI = *getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
@@ -206,7 +208,7 @@ Expected<std::unique_ptr<MCStreamer>> CodeGenCommonTMImpl::createMCStreamer(
   return std::move(AsmStreamer);
 }
 
-bool CodeGenCommonTMImpl::addPassesToEmitFile(
+bool CodeGenTargetMachineImpl::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
@@ -236,10 +238,10 @@ bool CodeGenCommonTMImpl::addPassesToEmitFile(
 /// code is not supported. It fills the MCContext Ctx pointer which can be
 /// used to build custom MCStreamer.
 ///
-bool CodeGenCommonTMImpl::addPassesToEmitMC(PassManagerBase &PM,
-                                            MCContext *&Ctx,
-                                            raw_pwrite_stream &Out,
-                                            bool DisableVerify) {
+bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
+                                                 MCContext *&Ctx,
+                                                 raw_pwrite_stream &Out,
+                                                 bool DisableVerify) {
   // Add common CodeGen passes.
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(this);
   TargetPassConfig *PassConfig =

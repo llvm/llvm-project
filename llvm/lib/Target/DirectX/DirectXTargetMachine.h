@@ -12,12 +12,12 @@
 #define LLVM_DIRECTX_DIRECTXTARGETMACHINE_H
 
 #include "DirectXSubtarget.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
 class Function;
-class DirectXTargetMachine : public CodeGenCommonTMImpl {
+class DirectXTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   std::unique_ptr<DirectXSubtarget> Subtarget;
 

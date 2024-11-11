@@ -15,12 +15,12 @@
 
 #include "VEInstrInfo.h"
 #include "VESubtarget.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
 
-class VETargetMachine : public CodeGenCommonTMImpl {
+class VETargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   VESubtarget Subtarget;
   // Hold Strings that can be free'd all together with VETargetMachine

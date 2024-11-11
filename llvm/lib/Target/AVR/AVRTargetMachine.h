@@ -13,7 +13,7 @@
 #ifndef LLVM_AVR_TARGET_MACHINE_H
 #define LLVM_AVR_TARGET_MACHINE_H
 
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
 
 #include "AVRFrameLowering.h"
@@ -27,7 +27,7 @@
 namespace llvm {
 
 /// A generic AVR implementation.
-class AVRTargetMachine : public CodeGenCommonTMImpl {
+class AVRTargetMachine : public CodeGenTargetMachineImpl {
 public:
   AVRTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
