@@ -4,9 +4,8 @@
 define <vscale x 16 x i1> @match_nxv16i8_v1i8(<vscale x 16 x i8> %op1, <1 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v1i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    umov w8, v1.b[0]
-; CHECK-NEXT:    mov z1.b, w8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    mov z1.b, b1
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <1 x i8> %op2, <vscale x 16 x i1> %mask)
@@ -244,130 +243,100 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    umov w8, v1.b[1]
-; CHECK-NEXT:    umov w9, v1.b[0]
-; CHECK-NEXT:    umov w10, v1.b[2]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z3.b, z1.b[1]
+; CHECK-NEXT:    mov z4.b, b1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    mov z4.b, w9
-; CHECK-NEXT:    umov w8, v1.b[3]
-; CHECK-NEXT:    mov z5.b, w10
-; CHECK-NEXT:    umov w9, v1.b[4]
-; CHECK-NEXT:    umov w10, v1.b[15]
+; CHECK-NEXT:    mov z5.b, z1.b[2]
 ; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v1.b[5]
+; CHECK-NEXT:    mov z3.b, z1.b[3]
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z5.b
-; CHECK-NEXT:    mov z4.b, w9
-; CHECK-NEXT:    umov w9, v1.b[6]
+; CHECK-NEXT:    mov z4.b, z1.b[4]
 ; CHECK-NEXT:    mov p2.b, p3/m, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v1.b[7]
+; CHECK-NEXT:    mov z3.b, z1.b[5]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, w9
-; CHECK-NEXT:    umov w9, v1.b[8]
+; CHECK-NEXT:    mov z4.b, z1.b[6]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v1.b[9]
+; CHECK-NEXT:    mov z3.b, z1.b[7]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, w9
-; CHECK-NEXT:    umov w9, v1.b[10]
+; CHECK-NEXT:    mov z4.b, z1.b[8]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v1.b[11]
+; CHECK-NEXT:    mov z3.b, z1.b[9]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, w9
-; CHECK-NEXT:    umov w9, v1.b[12]
+; CHECK-NEXT:    mov z4.b, z1.b[10]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v1.b[13]
+; CHECK-NEXT:    mov z3.b, z1.b[11]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, w9
-; CHECK-NEXT:    umov w9, v1.b[14]
+; CHECK-NEXT:    mov z4.b, z1.b[12]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    umov w8, v2.b[0]
+; CHECK-NEXT:    mov z3.b, z1.b[13]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    umov w9, v2.b[1]
+; CHECK-NEXT:    mov z4.b, z1.b[14]
+; CHECK-NEXT:    mov z1.b, z1.b[15]
+; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
+; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
+; CHECK-NEXT:    mov z3.b, b2
+; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
+; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w10
+; CHECK-NEXT:    mov z1.b, z2.b[1]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[2]
+; CHECK-NEXT:    mov z3.b, z2.b[2]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[3]
+; CHECK-NEXT:    mov z1.b, z2.b[3]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[4]
+; CHECK-NEXT:    mov z3.b, z2.b[4]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[5]
+; CHECK-NEXT:    mov z1.b, z2.b[5]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[6]
+; CHECK-NEXT:    mov z3.b, z2.b[6]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[7]
+; CHECK-NEXT:    mov z1.b, z2.b[7]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[8]
+; CHECK-NEXT:    mov z3.b, z2.b[8]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[9]
+; CHECK-NEXT:    mov z1.b, z2.b[9]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[10]
+; CHECK-NEXT:    mov z3.b, z2.b[10]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[11]
+; CHECK-NEXT:    mov z1.b, z2.b[11]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[12]
+; CHECK-NEXT:    mov z3.b, z2.b[12]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[13]
+; CHECK-NEXT:    mov z1.b, z2.b[13]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, w8
-; CHECK-NEXT:    umov w8, v2.b[14]
+; CHECK-NEXT:    mov z3.b, z2.b[14]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    umov w9, v2.b[15]
+; CHECK-NEXT:    mov z1.b, z2.b[15]
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z2.b
 ; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z1.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
@@ -496,18 +465,15 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov w11, v1.s[3]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.s, z1.s[1]
+; CHECK-NEXT:    mov z3.s, s1
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, w10
-; CHECK-NEXT:    mov z1.s, w8
-; CHECK-NEXT:    mov z3.s, w9
-; CHECK-NEXT:    cmpeq p3.s, p1/z, z0.s, z2.s
-; CHECK-NEXT:    cmpeq p2.s, p1/z, z0.s, z1.s
-; CHECK-NEXT:    mov z1.s, w11
-; CHECK-NEXT:    cmpeq p4.s, p1/z, z0.s, z3.s
+; CHECK-NEXT:    mov z4.s, z1.s[2]
+; CHECK-NEXT:    mov z1.s, z1.s[3]
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z0.s, z2.s
+; CHECK-NEXT:    cmpeq p3.s, p1/z, z0.s, z3.s
+; CHECK-NEXT:    cmpeq p4.s, p1/z, z0.s, z4.s
 ; CHECK-NEXT:    cmpeq p1.s, p1/z, z0.s, z1.s
 ; CHECK-NEXT:    mov p2.b, p3/m, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
@@ -524,13 +490,12 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 define <vscale x 2 x i1> @match_nxv2xi64_v2i64(<vscale x 2 x i64> %op1, <2 x i64> %op2, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv2xi64_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.d, z1.d[1]
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mov z2.d, x9
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z1.d
-; CHECK-NEXT:    cmpeq p1.d, p1/z, z0.d, z2.d
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z2.d
+; CHECK-NEXT:    cmpeq p1.d, p1/z, z0.d, z1.d
 ; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    ret

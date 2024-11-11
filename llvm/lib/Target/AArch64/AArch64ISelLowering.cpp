@@ -5823,21 +5823,13 @@ SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
       Op2 = DAG.getNode(AArch64ISD::DUPLANE128, dl, OpContainerVT, Op2,
                         DAG.getTargetConstant(0, dl, MVT::i64));
   } else {
-    // If Op2 is not a full 128-bit vector, we need to broadcast it. Ideally we
-    // would use a AArch64ISD::DUPLANE* node for this similarly to the below,
-    // but unfortunately we seem to be missing some patterns for this. So, in
-    // alternative, we splat Op2 through a splat of a scalable vector extract.
-    // This idiom, though a bit more verbose, is supported and get us the MOV
-    // instruction we want.
+    // If Op2 is not a full 128-bit vector, we always need to broadcast it.
     unsigned Op2BitWidth = Op2VT.getFixedSizeInBits();
     MVT Op2IntVT = MVT::getIntegerVT(Op2BitWidth);
     MVT Op2PromotedVT = MVT::getVectorVT(Op2IntVT, 128 / Op2BitWidth,
                                          /*IsScalable=*/true);
-    SDValue Op2Widened = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpContainerVT,
-                                     DAG.getUNDEF(OpContainerVT), Op2,
-                                     DAG.getConstant(0, dl, MVT::i64));
-    Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op2IntVT,
-                      DAG.getBitcast(Op2PromotedVT, Op2Widened),
+    Op2 = DAG.getBitcast(MVT::getVectorVT(Op2IntVT, 1), Op2);
+    Op2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op2IntVT, Op2,
                       DAG.getConstant(0, dl, MVT::i64));
     Op2 = DAG.getSplatVector(Op2PromotedVT, dl, Op2);
     Op2 = DAG.getBitcast(OpContainerVT, Op2);
