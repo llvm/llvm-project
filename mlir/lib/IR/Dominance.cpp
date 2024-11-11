@@ -327,7 +327,8 @@ bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
 //===----------------------------------------------------------------------===//
 
 /// Returns true if statement 'a' properly postdominates statement b.
-bool PostDominanceInfo::properlyPostDominates(Operation *a, Operation *b) {
+bool PostDominanceInfo::properlyPostDominates(Operation *a,
+                                              Operation *b) const {
   auto *aBlock = a->getBlock(), *bBlock = b->getBlock();
   assert(aBlock && bBlock && "operations must be in a block");
 
