@@ -13,6 +13,9 @@
       "name": "vfs-redirecting-with"
     },
     {
+      "name": "extract-api-ignores"
+    },
+    {
       "name": "depscan-prefix-map"
     },
     {
@@ -34,6 +37,9 @@
     },
     {
       "name": "resource-dir-uses-major-version-only"
+    },
+    {
+      "name": "extract-api-supports-cpp"
     }
   ]
 }
