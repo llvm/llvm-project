@@ -689,6 +689,12 @@ void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
   iface.setIsExact(inst->isExact());
 }
 
+void ModuleImport::setNonNegFlag(llvm::Instruction *inst, Operation *op) const {
+  auto iface = cast<NonNegFlagInterface>(op);
+
+  iface.setNonNeg(inst->hasNonNeg());
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
