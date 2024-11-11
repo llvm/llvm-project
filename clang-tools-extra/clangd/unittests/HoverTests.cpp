@@ -118,7 +118,8 @@ TEST(Hover, Structured) {
          HI.Size = 192;
          HI.Padding = 46;
          HI.Align = 64;
-       }},      {R"cpp(
+       }},
+      {R"cpp(
             struct [[F^oo]] {
               double a;
               char b;
