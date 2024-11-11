@@ -654,6 +654,8 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tdpbhf8ps:
   case X86::BI__builtin_ia32_tdphbf8ps:
   case X86::BI__builtin_ia32_tdphf8ps:
+  case X86::BI__builtin_ia32_tmmultf32ps:
+  case X86::BI__builtin_ia32_ttmmultf32ps:
     return CheckBuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
   case X86::BI__builtin_ia32_ttransposed:
     return CheckBuiltinTileArgumentsRange(TheCall, {0, 1});
