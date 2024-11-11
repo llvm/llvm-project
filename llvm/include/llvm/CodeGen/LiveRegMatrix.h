@@ -118,6 +118,16 @@ public:
   /// the segment [Start, End).
   bool checkInterference(SlotIndex Start, SlotIndex End, MCRegister PhysReg);
 
+  /// Check for interference in the segment [Start, End) that may prevent
+  /// assignment to PhysReg, like checkInterference. Returns a lane mask of
+  /// which lanes of the physical register interfere in the segment [Start, End)
+  /// of some other interval already assigned to PhysReg.
+  ///
+  /// If this function returns LaneBitmask::getNone(), PhysReg is completely
+  /// free at the segment [Start, End).
+  LaneBitmask checkInterferenceLanes(SlotIndex Start, SlotIndex End,
+                                     MCRegister PhysReg);
+
   /// Assign VirtReg to PhysReg.
   /// This will mark VirtReg's live range as occupied in the LiveRegMatrix and
   /// update VirtRegMap. The live range is expected to be available in PhysReg.

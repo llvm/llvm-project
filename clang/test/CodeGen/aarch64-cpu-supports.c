@@ -50,7 +50,7 @@ int main(void) {
   if (__builtin_cpu_supports("sb"))
     return 1;
 
-  if (__builtin_cpu_supports("sve2-pmull128+memtag"))
+  if (__builtin_cpu_supports("sve2-aes+memtag"))
     return 2;
 
   if (__builtin_cpu_supports("sme2+ls64+wfxt"))

@@ -143,6 +143,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
     setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
+    setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
   // Set operations for LA32 only.
@@ -269,6 +270,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64})
+      setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
@@ -284,6 +287,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                         VT, Expand);
     }
     setOperationAction(ISD::CTPOP, GRLenVT, Legal);
+    setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FFLOOR, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FTRUNC, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FROUNDEVEN, {MVT::f32, MVT::f64}, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -317,6 +324,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64})
+      setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
@@ -1927,8 +1936,8 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   }
 
   return getTLSDescAddr(N, DAG,
-                        Large ? LoongArch::PseudoLA_TLS_DESC_PC_LARGE
-                              : LoongArch::PseudoLA_TLS_DESC_PC,
+                        Large ? LoongArch::PseudoLA_TLS_DESC_LARGE
+                              : LoongArch::PseudoLA_TLS_DESC,
                         Large);
 }
 
@@ -3097,6 +3106,18 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     replaceINTRINSIC_WO_CHAINResults(N, Results, DAG, Subtarget);
+    break;
+  }
+  case ISD::LROUND: {
+    SDValue Op0 = N->getOperand(0);
+    EVT OpVT = Op0.getValueType();
+    RTLIB::Libcall LC =
+        OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    MakeLibCallOptions CallOptions;
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
+    Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+    Results.push_back(Result);
     break;
   }
   }
@@ -5734,6 +5755,13 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       AI->getOperation() == AtomicRMWInst::USubCond ||
       AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
+
+  if (Subtarget.hasLAM_BH() && Subtarget.is64Bit() &&
+      (AI->getOperation() == AtomicRMWInst::Xchg ||
+       AI->getOperation() == AtomicRMWInst::Add ||
+       AI->getOperation() == AtomicRMWInst::Sub)) {
+    return AtomicExpansionKind::None;
+  }
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)

@@ -20,6 +20,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # search.h entrypoints
+    libc.src.search.lfind  
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
@@ -197,6 +200,14 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # complex.h entrypoints
+    libc.src.complex.creal
+    libc.src.complex.crealf
+    libc.src.complex.creall
+    libc.src.complex.cimag
+    libc.src.complex.cimagf
+    libc.src.complex.cimagl
+    
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept

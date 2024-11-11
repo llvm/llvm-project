@@ -191,7 +191,7 @@ define <2 x double> @gather_zeromask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 
 define <2 x double> @gather_onemask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 ; CHECK-LABEL: @gather_onemask(
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS:%.*]], i32 4, <2 x i1> <i1 true, i1 true>, <2 x double> poison)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS:%.*]], i32 4, <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> <i1 true, i1 true>, <2 x double> %passthru)
@@ -363,7 +363,7 @@ define void @negative_scatter_v4i16_no_uniform_vals_no_uniform_ptrs_all_active_m
 ; CHECK-LABEL: @negative_scatter_v4i16_no_uniform_vals_no_uniform_ptrs_all_active_mask(
 ; CHECK-NEXT:    [[BROADCAST:%.*]] = shufflevector <4 x ptr> [[INPTR:%.*]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[SRC:%.*]], align 2
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> [[WIDE_LOAD]], <4 x ptr> [[BROADCAST]], i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> [[WIDE_LOAD]], <4 x ptr> [[BROADCAST]], i32 2, <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
   %broadcast= shufflevector <4 x ptr> %inPtr, <4 x ptr> poison, <4 x i32> zeroinitializer
@@ -412,7 +412,7 @@ define <2 x i64> @gather_v2i64_uniform_ptrs_all_active_mask(ptr %src) {
 define <2 x i64> @negative_gather_v2i64_non_uniform_ptrs_all_active_mask(<2 x ptr> %inVal, ptr %src ) {
 ; CHECK-LABEL: @negative_gather_v2i64_non_uniform_ptrs_all_active_mask(
 ; CHECK-NEXT:    [[INSERT_VALUE:%.*]] = insertelement <2 x ptr> [[INVAL:%.*]], ptr [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> [[INSERT_VALUE]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> poison)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> [[INSERT_VALUE]], i32 8, <2 x i1> splat (i1 true), <2 x i64> poison)
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %insert.value = insertelement <2 x ptr> %inVal, ptr %src, i32 1
