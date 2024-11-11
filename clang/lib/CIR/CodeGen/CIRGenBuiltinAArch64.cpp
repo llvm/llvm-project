@@ -2516,7 +2516,12 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
                                                     : "aarch64.neon.shadd";
     break;
   }
-
+  case NEON::BI__builtin_neon_vhsub_v:
+  case NEON::BI__builtin_neon_vhsubq_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic) ? "aarch64.neon.uhsub"
+                                                    : "aarch64.neon.shsub";
+    break;
+  }
   case NEON::BI__builtin_neon_vqmovn_v: {
     intrincsName = (intrinicId != altLLVMIntrinsic) ? "aarch64.neon.uqxtn"
                                                     : "aarch64.neon.sqxtn";
