@@ -115,34 +115,30 @@ func.func @update_halo_3d(
   // CHECK-NEXT: [[vc4_i32:%.*]] = arith.constant 4 : i32
   // CHECK-NEXT: [[vc44_i32:%.*]] = arith.constant 44 : i32
   // CHECK-NEXT: [[valloc:%.*]] = memref.alloc() : memref<117x113x5xi8>
-  // CHECK-NEXT: [[vcast:%.*]] = memref.cast [[valloc]] : memref<117x113x5xi8> to memref<?x?x5xi8>
   // CHECK-NEXT: [[vsubview:%.*]] = memref.subview [[varg0]][1, 3, 109] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>>
   // CHECK-NEXT: memref.copy [[vsubview]], [[valloc]] : memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>> to memref<117x113x5xi8>
-  // CHECK-NEXT: mpi.send([[vcast]], [[vc91_i32]], [[vc4_i32]]) : memref<?x?x5xi8>, i32, i32
-  // CHECK-NEXT: mpi.recv([[vcast]], [[vc91_i32]], [[vc44_i32]]) : memref<?x?x5xi8>, i32, i32
+  // CHECK-NEXT: mpi.send([[valloc]], [[vc91_i32]], [[vc4_i32]]) : memref<117x113x5xi8>, i32, i32
+  // CHECK-NEXT: mpi.recv([[valloc]], [[vc91_i32]], [[vc44_i32]]) : memref<117x113x5xi8>, i32, i32
   // CHECK-NEXT: [[vsubview_0:%.*]] = memref.subview [[varg0]][1, 3, 0] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14760>>
   // CHECK-NEXT: memref.copy [[valloc]], [[vsubview_0]] : memref<117x113x5xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14760>>
   // CHECK-NEXT: memref.dealloc [[valloc]] : memref<117x113x5xi8>
   // CHECK-NEXT: [[valloc_1:%.*]] = memref.alloc() : memref<117x113x6xi8>
-  // CHECK-NEXT: [[vcast_2:%.*]] = memref.cast [[valloc_1]] : memref<117x113x6xi8> to memref<?x?x6xi8>
   // CHECK-NEXT: [[vsubview_3:%.*]] = memref.subview [[varg0]][1, 3, 5] [117, 113, 6] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14765>>
   // CHECK-NEXT: memref.copy [[vsubview_3]], [[valloc_1]] : memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14765>> to memref<117x113x6xi8>
-  // CHECK-NEXT: mpi.send([[vcast_2]], [[vc91_i32]], [[vc44_i32]]) : memref<?x?x6xi8>, i32, i32
-  // CHECK-NEXT: mpi.recv([[vcast_2]], [[vc91_i32]], [[vc4_i32]]) : memref<?x?x6xi8>, i32, i32
+  // CHECK-NEXT: mpi.send([[valloc_1]], [[vc91_i32]], [[vc44_i32]]) : memref<117x113x6xi8>, i32, i32
+  // CHECK-NEXT: mpi.recv([[valloc_1]], [[vc91_i32]], [[vc4_i32]]) : memref<117x113x6xi8>, i32, i32
   // CHECK-NEXT: [[vsubview_4:%.*]] = memref.subview [[varg0]][1, 3, 114] [117, 113, 6] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14874>>
   // CHECK-NEXT: memref.copy [[valloc_1]], [[vsubview_4]] : memref<117x113x6xi8> to memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14874>>
   // CHECK-NEXT: memref.dealloc [[valloc_1]] : memref<117x113x6xi8>
   // CHECK-NEXT: [[valloc_5:%.*]] = memref.alloc() : memref<117x3x120xi8>
-  // CHECK-NEXT: [[vcast_6:%.*]] = memref.cast [[valloc_5]] : memref<117x3x120xi8> to memref<?x3x120xi8>
-  // CHECK-NEXT: mpi.recv([[vcast_6]], [[vc91_i32]], [[vc29_i32]]) : memref<?x3x120xi8>, i32, i32
+  // CHECK-NEXT: mpi.recv([[valloc_5]], [[vc91_i32]], [[vc29_i32]]) : memref<117x3x120xi8>, i32, i32
   // CHECK-NEXT: [[vsubview_7:%.*]] = memref.subview [[varg0]][1, 0, 0] [117, 3, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<117x3x120xi8, strided<[14400, 120, 1], offset: 14400>>
   // CHECK-NEXT: memref.copy [[valloc_5]], [[vsubview_7]] : memref<117x3x120xi8> to memref<117x3x120xi8, strided<[14400, 120, 1], offset: 14400>>
   // CHECK-NEXT: memref.dealloc [[valloc_5]] : memref<117x3x120xi8>
   // CHECK-NEXT: [[valloc_8:%.*]] = memref.alloc() : memref<117x4x120xi8>
-  // CHECK-NEXT: [[vcast_9:%.*]] = memref.cast [[valloc_8]] : memref<117x4x120xi8> to memref<?x4x120xi8>
   // CHECK-NEXT: [[vsubview_10:%.*]] = memref.subview [[varg0]][1, 3, 0] [117, 4, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<117x4x120xi8, strided<[14400, 120, 1], offset: 14760>>
   // CHECK-NEXT: memref.copy [[vsubview_10]], [[valloc_8]] : memref<117x4x120xi8, strided<[14400, 120, 1], offset: 14760>> to memref<117x4x120xi8>
-  // CHECK-NEXT: mpi.send([[vcast_9]], [[vc91_i32]], [[vc29_i32]]) : memref<?x4x120xi8>, i32, i32
+  // CHECK-NEXT: mpi.send([[valloc_8]], [[vc91_i32]], [[vc29_i32]]) : memref<117x4x120xi8>, i32, i32
   // CHECK-NEXT: memref.dealloc [[valloc_8]] : memref<117x4x120xi8>
   // CHECK-NEXT: [[valloc_11:%.*]] = memref.alloc() : memref<1x120x120xi8>
   // CHECK-NEXT: [[vsubview_12:%.*]] = memref.subview [[varg0]][117, 0, 0] [1, 120, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<1x120x120xi8, strided<[14400, 120, 1], offset: 1684800>>
@@ -170,34 +166,30 @@ func.func @update_halo_3d_tensor(
   // CHECK-NEXT: [[vc91_i32:%.*]] = arith.constant 91 : i32
   // CHECK-NEXT: [[v0:%.*]] = bufferization.to_memref [[varg0]] : memref<120x120x120xi8>
   // CHECK-NEXT: [[valloc:%.*]] = memref.alloc() : memref<117x113x5xi8>
-  // CHECK-NEXT: [[vcast:%.*]] = memref.cast [[valloc]] : memref<117x113x5xi8> to memref<?x?x5xi8>
   // CHECK-NEXT: [[vsubview:%.*]] = memref.subview [[v0]][1, 3, 109] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>>
   // CHECK-NEXT: memref.copy [[vsubview]], [[valloc]] : memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>> to memref<117x113x5xi8>
-  // CHECK-NEXT: mpi.send([[vcast]], [[vc91_i32]], [[vc4_i32]]) : memref<?x?x5xi8>, i32, i32
-  // CHECK-NEXT: mpi.recv([[vcast]], [[vc91_i32]], [[vc44_i32]]) : memref<?x?x5xi8>, i32, i32
+  // CHECK-NEXT: mpi.send([[valloc]], [[vc91_i32]], [[vc4_i32]]) : memref<117x113x5xi8>, i32, i32
+  // CHECK-NEXT: mpi.recv([[valloc]], [[vc91_i32]], [[vc44_i32]]) : memref<117x113x5xi8>, i32, i32
   // CHECK-NEXT: [[vsubview_0:%.*]] = memref.subview [[v0]][1, 3, 0] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14760>>
   // CHECK-NEXT: memref.copy [[valloc]], [[vsubview_0]] : memref<117x113x5xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14760>>
   // CHECK-NEXT: memref.dealloc [[valloc]] : memref<117x113x5xi8>
   // CHECK-NEXT: [[valloc_1:%.*]] = memref.alloc() : memref<117x113x6xi8>
-  // CHECK-NEXT: [[vcast_2:%.*]] = memref.cast [[valloc_1]] : memref<117x113x6xi8> to memref<?x?x6xi8>
   // CHECK-NEXT: [[vsubview_3:%.*]] = memref.subview [[v0]][1, 3, 5] [117, 113, 6] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14765>>
   // CHECK-NEXT: memref.copy [[vsubview_3]], [[valloc_1]] : memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14765>> to memref<117x113x6xi8>
-  // CHECK-NEXT: mpi.send([[vcast_2]], [[vc91_i32]], [[vc44_i32]]) : memref<?x?x6xi8>, i32, i32
-  // CHECK-NEXT: mpi.recv([[vcast_2]], [[vc91_i32]], [[vc4_i32]]) : memref<?x?x6xi8>, i32, i32
+  // CHECK-NEXT: mpi.send([[valloc_1]], [[vc91_i32]], [[vc44_i32]]) : memref<117x113x6xi8>, i32, i32
+  // CHECK-NEXT: mpi.recv([[valloc_1]], [[vc91_i32]], [[vc4_i32]]) : memref<117x113x6xi8>, i32, i32
   // CHECK-NEXT: [[vsubview_4:%.*]] = memref.subview [[v0]][1, 3, 114] [117, 113, 6] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14874>>
   // CHECK-NEXT: memref.copy [[valloc_1]], [[vsubview_4]] : memref<117x113x6xi8> to memref<117x113x6xi8, strided<[14400, 120, 1], offset: 14874>>
   // CHECK-NEXT: memref.dealloc [[valloc_1]] : memref<117x113x6xi8>
   // CHECK-NEXT: [[valloc_5:%.*]] = memref.alloc() : memref<117x3x120xi8>
-  // CHECK-NEXT: [[vcast_6:%.*]] = memref.cast [[valloc_5]] : memref<117x3x120xi8> to memref<?x3x120xi8>
-  // CHECK-NEXT: mpi.recv([[vcast_6]], [[vc91_i32]], [[vc29_i32]]) : memref<?x3x120xi8>, i32, i32
+  // CHECK-NEXT: mpi.recv([[valloc_5]], [[vc91_i32]], [[vc29_i32]]) : memref<117x3x120xi8>, i32, i32
   // CHECK-NEXT: [[vsubview_7:%.*]] = memref.subview [[v0]][1, 0, 0] [117, 3, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<117x3x120xi8, strided<[14400, 120, 1], offset: 14400>>
   // CHECK-NEXT: memref.copy [[valloc_5]], [[vsubview_7]] : memref<117x3x120xi8> to memref<117x3x120xi8, strided<[14400, 120, 1], offset: 14400>>
   // CHECK-NEXT: memref.dealloc [[valloc_5]] : memref<117x3x120xi8>
   // CHECK-NEXT: [[valloc_8:%.*]] = memref.alloc() : memref<117x4x120xi8>
-  // CHECK-NEXT: [[vcast_9:%.*]] = memref.cast [[valloc_8]] : memref<117x4x120xi8> to memref<?x4x120xi8>
   // CHECK-NEXT: [[vsubview_10:%.*]] = memref.subview [[v0]][1, 3, 0] [117, 4, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<117x4x120xi8, strided<[14400, 120, 1], offset: 14760>>
   // CHECK-NEXT: memref.copy [[vsubview_10]], [[valloc_8]] : memref<117x4x120xi8, strided<[14400, 120, 1], offset: 14760>> to memref<117x4x120xi8>
-  // CHECK-NEXT: mpi.send([[vcast_9]], [[vc91_i32]], [[vc29_i32]]) : memref<?x4x120xi8>, i32, i32
+  // CHECK-NEXT: mpi.send([[valloc_8]], [[vc91_i32]], [[vc29_i32]]) : memref<117x4x120xi8>, i32, i32
   // CHECK-NEXT: memref.dealloc [[valloc_8]] : memref<117x4x120xi8>
   // CHECK-NEXT: [[valloc_11:%.*]] = memref.alloc() : memref<1x120x120xi8>
   // CHECK-NEXT: [[vsubview_12:%.*]] = memref.subview [[v0]][117, 0, 0] [1, 120, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<1x120x120xi8, strided<[14400, 120, 1], offset: 1684800>>
@@ -209,7 +201,7 @@ func.func @update_halo_3d_tensor(
   // CHECK-NEXT: [[vsubview_14:%.*]] = memref.subview [[v0]][118, 0, 0] [2, 120, 120] [1, 1, 1] : memref<120x120x120xi8> to memref<2x120x120xi8, strided<[14400, 120, 1], offset: 1699200>>
   // CHECK-NEXT: memref.copy [[valloc_13]], [[vsubview_14]] : memref<2x120x120xi8> to memref<2x120x120xi8, strided<[14400, 120, 1], offset: 1699200>>
   // CHECK-NEXT: memref.dealloc [[valloc_13]] : memref<2x120x120xi8>
-  // CHECK-NEXT: [[v1:%.*]] = bufferization.to_tensor [[v0]] : memref<120x120x120xi8>
+  // CHECK-NEXT: [[v1:%.*]] = bufferization.to_tensor [[v0]] restrict writable : memref<120x120x120xi8>
   %res = mesh.update_halo %arg0 on @mesh0 split_axes = [[2], [1], [0]] halo_sizes = [1, 2, 3, 4, 5, 6] : tensor<120x120x120xi8>
   // CHECK: return [[v1]] : tensor<120x120x120xi8>
   return %res : tensor<120x120x120xi8>
