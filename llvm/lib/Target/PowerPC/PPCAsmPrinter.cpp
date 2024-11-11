@@ -3047,7 +3047,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
 bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   const bool Result = PPCAsmPrinter::doInitialization(M);
 
-  // Emit .machine directive on AIX.
+  // Emit the .machine directive on AIX.
   const Triple &Target = TM.getTargetTriple();
   XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
   // Walk through the "target-cpu" attribute of functions and use the newest
@@ -3061,10 +3061,12 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   // If there is no "target-cpu" attribute within the functions, take the
   // "-mcpu" value. If both are omitted, use getNormalizedPPCTargetCPU() to
   // determine the default CPU.
-  if (!TargetCpuId)
-    TargetCpuId = XCOFF::getCpuID(TM.getTargetCPU().empty()
-                                      ? PPC::getNormalizedPPCTargetCPU(Target)
-                                      : TM.getTargetCPU());
+  if (!TargetCpuId) {
+    StringRef TargetCPU = TM.getTargetCPU();
+    TargetCpuId = XCOFF::getCpuID(
+        TargetCPU.empty() ? PPC::getNormalizedPPCTargetCPU(Target) : TargetCPU);
+  }
+
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
   TS->emitMachine(XCOFF::getTCPUString(TargetCpuId));
