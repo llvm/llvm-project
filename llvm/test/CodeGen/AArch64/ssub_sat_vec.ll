@@ -333,9 +333,9 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    ldrsb w9, [x1]
 ; CHECK-GI-NEXT:    sub w8, w8, w9
 ; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    asr w10, w9, #7
-; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    sbfx w10, w8, #7, #1
 ; CHECK-GI-NEXT:    sub w10, w10, #128
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w8, w10, w8, ne
 ; CHECK-GI-NEXT:    strb w8, [x2]
 ; CHECK-GI-NEXT:    ret
@@ -361,9 +361,9 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    ldrsh w9, [x1]
 ; CHECK-GI-NEXT:    sub w8, w8, w9
 ; CHECK-GI-NEXT:    sxth w9, w8
-; CHECK-GI-NEXT:    asr w10, w9, #15
-; CHECK-GI-NEXT:    cmp w8, w9
+; CHECK-GI-NEXT:    sbfx w10, w8, #15, #1
 ; CHECK-GI-NEXT:    sub w10, w10, #8, lsl #12 // =32768
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w8, w10, w8, ne
 ; CHECK-GI-NEXT:    strh w8, [x2]
 ; CHECK-GI-NEXT:    ret
