@@ -402,7 +402,9 @@ clang_experimental_DepGraphModule_getModuleMapPath(CXDepGraphModule CXDepMod) {
 CXCStringArray
 clang_experimental_DepGraphModule_getFileDeps(CXDepGraphModule CXDepMod) {
   ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
-  return unwrap(CXDepMod)->StrMgr.createCStringsRef(ModDeps.FileDeps);
+  std::vector<std::string> FileDeps;
+  ModDeps.forEachFileDep([&](StringRef File) { FileDeps.emplace_back(File); });
+  return unwrap(CXDepMod)->StrMgr.createCStringsOwned(std::move(FileDeps));
 }
 
 CXCStringArray
