@@ -2325,7 +2325,9 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
                                                VPReplicateRecipe *RepRecipe,
                                                const VPLane &Lane,
                                                VPTransformState &State) {
-  assert(!Instr->getType()->isAggregateType() && "Can't handle vectors");
+  assert((!Instr->getType()->isAggregateType() ||
+          canWidenType(Instr->getType())) &&
+         "Expected widenable or non-aggregate type.");
 
   // Does this instruction return a value ?
   bool IsVoidRetTy = Instr->getType()->isVoidTy();
@@ -2336,8 +2338,18 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
 #if !defined(NDEBUG)
     // Verify that VPlan type inference results agree with the type of the
     // generated values.
-    assert(State.TypeAnalysis.inferScalarType(RepRecipe) == Cloned->getType() &&
-           "inferred type and type from generated instructions do not match");
+    if (auto *StructTy = dyn_cast<StructType>(Instr->getType())) {
+      for (auto [I, VPV] : enumerate(RepRecipe->definedValues())) {
+        assert(
+            State.TypeAnalysis.inferScalarType(VPV) ==
+                StructTy->getTypeAtIndex(I) &&
+            "inferred type and type from generated instructions do not match");
+      }
+    } else {
+      assert(State.TypeAnalysis.inferScalarType(
+                 RepRecipe->getVPSingleValue()) == Cloned->getType() &&
+             "inferred type and type from generated instructions do not match");
+    }
 #endif
   }
 
@@ -2360,7 +2372,14 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // Place the cloned scalar in the new loop.
   State.Builder.Insert(Cloned);
 
-  State.set(RepRecipe, Cloned, Lane);
+  if (isa<StructType>(Instr->getType())) {
+    for (auto [I, Def] : enumerate(RepRecipe->definedValues())) {
+      Value *AggV = State.Builder.CreateExtractValue(Cloned, I);
+      State.set(Def, AggV, Lane);
+    }
+  } else {
+    State.set(RepRecipe->getVPSingleValue(), Cloned, Lane);
+  }
 
   // If we just cloned a new assumption, add it the assumption cache.
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
@@ -7427,6 +7446,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
     if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
       return &WidenMem->getIngredient();
+    if (auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R))
+      return WidenCall->getUnderlyingCallInstruction();
+    if (auto *Rep = dyn_cast<VPReplicateRecipe>(R))
+      return Rep->getUnderlyingInstr();
     return nullptr;
   };
 
@@ -8404,9 +8427,9 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   return new VPBlendRecipe(Phi, OperandsWithMask);
 }
 
-VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
-                                                   ArrayRef<VPValue *> Operands,
-                                                   VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
+                                              ArrayRef<VPValue *> Operands,
+                                              VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [this, CI](ElementCount VF) {
         return CM.isScalarWithPredication(CI, VF);
@@ -9113,6 +9136,20 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // TODO: Model and preserve debug intrinsics in VPlan.
     for (Instruction &I : drop_end(BB->instructionsWithoutDebug(false))) {
       Instruction *Instr = &I;
+
+      // Special case: Handle extractvalues from struct ret calls.
+      if (auto *ExtractValue = dyn_cast<ExtractValueInst>(Instr)) {
+        if (auto *CI =
+                dyn_cast<CallInst>(ExtractValue->getAggregateOperand())) {
+          auto *R = RecipeBuilder.getRecipe(cast<Instruction>(CI));
+          assert(R->getNumDefinedValues() ==
+                 cast<StructType>(CI->getType())->getNumElements());
+          unsigned Idx = ExtractValue->getIndices()[0];
+          RecipeBuilder.setRecipe(Instr, R->getVPValue(Idx));
+          continue;
+        }
+      }
+
       SmallVector<VPValue *, 4> Operands;
       auto *Phi = dyn_cast<PHINode>(Instr);
       if (Phi && Phi->getParent() == HeaderBB) {
@@ -9324,12 +9361,13 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
            "AnyOf reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
-    SetVector<VPSingleDefRecipe *> Worklist;
+    SetVector<VPRecipeBase *> Worklist;
     Worklist.insert(PhiR);
     for (unsigned I = 0; I != Worklist.size(); ++I) {
-      VPSingleDefRecipe *Cur = Worklist[I];
-      for (VPUser *U : Cur->users()) {
-        auto *UserRecipe = cast<VPSingleDefRecipe>(U);
+      VPRecipeBase *Cur = Worklist[I];
+      // TODO: This may need to handle recipes with multiple defs.
+      for (VPUser *U : Cur->getVPSingleValue()->users()) {
+        auto *UserRecipe = cast<VPRecipeBase>(U);
         if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
           assert((UserRecipe->getParent() == MiddleVPBB ||
                   UserRecipe->getParent() == Plan->getScalarPreheader()) &&
@@ -9349,8 +9387,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // get folded to their non-phi operand, as the reduction recipe handles the
     // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
-    for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
-      Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
+    for (VPRecipeBase *CurrentLink : Worklist.getArrayRef().drop_front()) {
+      VPValue *CurrentLinkV = CurrentLink->getVPSingleValue();
+      Instruction *CurrentLinkI =
+          cast<Instruction>(CurrentLinkV->getUnderlyingValue());
 
       // Index of the first operand which holds a non-mask vector operand.
       unsigned IndexOfFirstOperand;
@@ -9433,7 +9473,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Note that this transformation may leave over dead recipes (including
       // CurrentLink), which will be cleaned by a later VPlan transform.
       LinkVPBB->appendRecipe(RedRecipe);
-      CurrentLink->replaceAllUsesWith(RedRecipe);
+      CurrentLinkV->replaceAllUsesWith(RedRecipe);
       PreviousLink = RedRecipe;
     }
   }
@@ -9584,16 +9624,18 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
            "uniform recipe shouldn't be predicated");
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
     State.ILV->scalarizeInstruction(UI, this, *State.Lane, State);
-    // Insert scalar instance packing it into a vector.
-    if (State.VF.isVector() && shouldPack()) {
-      // If we're constructing lane 0, initialize to start from poison.
-      if (State.Lane->isFirstLane()) {
-        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Poison = PoisonValue::get(
-            VectorType::get(UI->getType(), State.VF));
-        State.set(this, Poison);
+    for (auto [I, Def] : enumerate(definedValues())) {
+      // Insert scalar instance packing it into a vector.
+      if (State.VF.isVector() && shouldPack(I)) {
+        // If we're constructing lane 0, initialize to start from poison.
+        if (State.Lane->isFirstLane()) {
+          assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+          Value *Poison =
+              PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+          State.set(Def, Poison);
+        }
+        State.packScalarIntoVectorValue(Def, *State.Lane);
       }
-      State.packScalarIntoVectorValue(this, *State.Lane);
     }
     return;
   }

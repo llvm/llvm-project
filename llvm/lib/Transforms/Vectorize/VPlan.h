@@ -62,6 +62,7 @@ class Type;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPRecipeIRFlags;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
@@ -700,8 +701,6 @@ struct VPCostContext {
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 };
 
-class VPRecipeIRFlags;
-
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
 /// instructions. VPRecipeBase owns the VPValues it defines through VPDef
 /// and is responsible for deleting its defined values. Single-value
@@ -866,11 +865,9 @@ public:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
-    case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
     case VPRecipeBase::VPReverseVectorPointerSC:
-    case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
@@ -892,6 +889,8 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenCallSC:
+    case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -1740,28 +1739,58 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
+/// A base class to define recipes with multiple results and IR flags.
+class VPMultipleDefRecipeWithIRFlags : public VPRecipeBase,
+                                       public VPRecipeIRFlags {
+public:
+  using VPRecipeBase::getIRFlags;
+
+  template <typename IterT>
+  VPMultipleDefRecipeWithIRFlags(const unsigned char SC, Instruction *I,
+                                 IterT Operands, unsigned NumDefs,
+                                 DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), VPRecipeIRFlags(*I) {
+    assert(NumDefs >= 1 && "Expected at least one defined value.");
+    for (unsigned Def = 0; Def < NumDefs; ++Def)
+      new VPValue(I, this);
+  }
+
+  Instruction *getUnderlyingInstr() const {
+    return cast<Instruction>(getVPValue(0)->getUnderlyingValue());
+  }
+
+  virtual const VPRecipeIRFlags *getIRFlags() const override {
+    return static_cast<const VPRecipeIRFlags *>(this);
+  }
+};
+
 /// A recipe for widening Call instructions using library calls.
-class VPWidenCallRecipe : public VPSingleDefRecipeWithIRFlags {
+class VPWidenCallRecipe : public VPMultipleDefRecipeWithIRFlags {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
   Function *Variant;
 
 public:
-  VPWidenCallRecipe(Value *UV, Function *Variant,
+  VPWidenCallRecipe(CallInst *CI, Function *Variant,
                     ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
-      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
-                                     *cast<Instruction>(UV)),
+      : VPMultipleDefRecipeWithIRFlags(
+            VPDef::VPWidenCallSC, CI, CallArguments,
+            /*NumDefs=*/getContainedTypes(CI->getType()).size(), DL),
         Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
   }
 
+  CallInst *getUnderlyingCallInstruction() const {
+    return cast<CallInst>(getUnderlyingInstr());
+  }
+
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
+    return new VPWidenCallRecipe(getUnderlyingCallInstruction(), Variant,
                                  {op_begin(), op_end()}, getDebugLoc());
   }
 
@@ -2679,7 +2708,7 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPSingleDefRecipeWithIRFlags {
+class VPReplicateRecipe : public VPMultipleDefRecipeWithIRFlags {
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -2690,7 +2719,9 @@ public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
                     bool IsUniform, VPValue *Mask = nullptr)
-      : VPSingleDefRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
+      : VPMultipleDefRecipeWithIRFlags(
+            VPDef::VPReplicateSC, I, Operands,
+            /*NumDefs=*/getContainedTypes(I->getType()).size()),
         IsUniform(IsUniform), IsPredicated(Mask) {
     if (Mask)
       addOperand(Mask);
@@ -2741,10 +2772,10 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe is used by a widened recipe via an intervening
-  /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
-  /// in a vector.
-  bool shouldPack() const;
+  /// Returns true if the recipe value at index \p I is used by a widened recipe
+  /// via an intervening VPPredInstPHIRecipe. In this case, the scalar values
+  /// should also be packed in a vector.
+  bool shouldPack(unsigned I) const;
 
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {

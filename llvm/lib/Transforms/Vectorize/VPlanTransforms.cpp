@@ -111,7 +111,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
   bool Changed = false;
   // First, collect the operands of all recipes in replicate blocks as seeds for
   // sinking.
-  SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
+  SetVector<std::pair<VPBasicBlock *, VPRecipeBase *>> WorkList;
   for (VPRegionBlock *VPR : VPBlockUtils::blocksOnly<VPRegionBlock>(Iter)) {
     VPBasicBlock *EntryVPBB = VPR->getEntryBasicBlock();
     if (!VPR->isReplicator() || EntryVPBB->getSuccessors().size() != 2)
@@ -121,8 +121,9 @@ static bool sinkScalarOperands(VPlan &Plan) {
       continue;
     for (auto &Recipe : *VPBB) {
       for (VPValue *Op : Recipe.operands())
-        if (auto *Def =
-                dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
+        // TODO: Add support for multiple-def recipes.
+        if (auto *Def = Op->getDefiningRecipe();
+            Def && Def->getNumDefinedValues() == 1)
           WorkList.insert(std::make_pair(VPBB, Def));
     }
   }
@@ -131,15 +132,18 @@ static bool sinkScalarOperands(VPlan &Plan) {
   // Try to sink each replicate or scalar IV steps recipe in the worklist.
   for (unsigned I = 0; I != WorkList.size(); ++I) {
     VPBasicBlock *SinkTo;
-    VPSingleDefRecipe *SinkCandidate;
+    VPRecipeBase *SinkCandidate;
     std::tie(SinkTo, SinkCandidate) = WorkList[I];
     if (SinkCandidate->getParent() == SinkTo ||
         SinkCandidate->mayHaveSideEffects() ||
         SinkCandidate->mayReadOrWriteMemory())
       continue;
+
+    Instruction *UI = nullptr;
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
       if (!ScalarVFOnly && RepR->isUniform())
         continue;
+      UI = RepR->getUnderlyingInstr();
     } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
       continue;
 
@@ -150,32 +154,33 @@ static bool sinkScalarOperands(VPlan &Plan) {
     // SinkCandidate.
     auto CanSinkWithUser = [SinkTo, &NeedsDuplicating,
                             SinkCandidate](VPUser *U) {
-      auto *UI = cast<VPRecipeBase>(U);
-      if (UI->getParent() == SinkTo)
+      auto *UR = cast<VPRecipeBase>(U);
+      if (UR->getParent() == SinkTo)
         return true;
-      NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
+      NeedsDuplicating =
+          UR->onlyFirstLaneUsed(SinkCandidate->getVPSingleValue());
       // We only know how to duplicate VPRecipeRecipes for now.
       return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
     };
-    if (!all_of(SinkCandidate->users(), CanSinkWithUser))
+    if (!all_of(SinkCandidate->getVPSingleValue()->users(), CanSinkWithUser))
       continue;
 
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = SinkCandidate->getUnderlyingInstr();
-      auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
+      auto *Clone = new VPReplicateRecipe(UI, SinkCandidate->operands(), true);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
-        return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
-      });
+      SinkCandidate->getVPSingleValue()->replaceUsesWithIf(
+          Clone->getVPSingleValue(), [SinkTo](VPUser &U, unsigned) {
+            return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
+          });
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
-      if (auto *Def =
-              dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
+      if (auto *Def = Op->getDefiningRecipe();
+          Def && Def->getNumDefinedValues() == 1)
         WorkList.insert(std::make_pair(SinkTo, Def));
     Changed = true;
   }
@@ -321,10 +326,10 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
   VPPredInstPHIRecipe *PHIRecipe = nullptr;
-  if (PredRecipe->getNumUsers() != 0) {
-    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask);
-    PredRecipe->replaceAllUsesWith(PHIRecipe);
-    PHIRecipe->setOperand(0, RecipeWithoutMask);
+  if (PredRecipe->getVPSingleValue()->getNumUsers() != 0) {
+    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask->getVPSingleValue());
+    PredRecipe->getVPSingleValue()->replaceAllUsesWith(PHIRecipe);
+    PHIRecipe->setOperand(0, RecipeWithoutMask->getVPSingleValue());
   }
   PredRecipe->eraseFromParent();
   auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
@@ -344,7 +349,8 @@ static void addReplicateRegions(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : *VPBB)
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
-        if (RepR->isPredicated())
+        // TODO: Support for multiple-def replications.
+        if (RepR->isPredicated() && RepR->getNumDefinedValues() == 1)
           WorkList.push_back(RepR);
       }
   }
@@ -434,11 +440,12 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
     auto &Casts = IV->getInductionDescriptor().getCastInsts();
     VPValue *FindMyCast = IV;
     for (Instruction *IRCast : reverse(Casts)) {
-      VPSingleDefRecipe *FoundUserCast = nullptr;
+      VPValue *FoundUserCast = nullptr;
       for (auto *U : FindMyCast->users()) {
-        auto *UserCast = dyn_cast<VPSingleDefRecipe>(U);
-        if (UserCast && UserCast->getUnderlyingValue() == IRCast) {
-          FoundUserCast = UserCast;
+        auto *UserCast = dyn_cast<VPRecipeBase>(U);
+        if (UserCast && UserCast->getNumDefinedValues() == 1 &&
+            UserCast->getVPSingleValue()->getUnderlyingValue() == IRCast) {
+          FoundUserCast = UserCast->getVPSingleValue();
           break;
         }
       }
@@ -1128,6 +1135,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
                VPWidenSelectRecipe, VPWidenLoadRecipe>(&R))
+        continue;
+
+      // TODO: Figure out how to handle multiple defs.
+      if (R.getNumDefinedValues() > 1)
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();

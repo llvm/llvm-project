@@ -47,12 +47,12 @@ class VPTypeAnalysis {
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
-  Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R, const VPValue *V);
   Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenIntOrFpInductionRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenSelectRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
+  Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R, const VPValue *V);
 
 public:
   VPTypeAnalysis(Type *CanonicalIVTy)
