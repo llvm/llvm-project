@@ -31,6 +31,21 @@ void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
 }
 
+Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
+  bool IsFileInRootDir;
+  llvm::SmallString<128> File =
+      getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
+  ASTContext &Context = D->getASTContext();
+  int Start = Context.getSourceManager()
+                     .getPresumedLoc(D->getBeginLoc())
+                     .getLine();
+  int End = Context.getSourceManager()
+                   .getPresumedLoc(D->getEndLoc())
+                   .getLine();
+  
+  return Location(Start, End, File, IsFileInRootDir);
+}
+
 template <typename T>
 bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   // If we're looking a decl not in user files, skip this decl.
@@ -59,8 +74,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                               getLine(D, D->getASTContext()), File,
-                               IsFileInRootDir, CDCtx.PublicOnly);
+                               getDeclLocation(D), CDCtx.PublicOnly);
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
@@ -114,12 +128,6 @@ MapASTVisitor::getComment(const NamedDecl *D, const ASTContext &Context) const {
   }
   return nullptr;
 }
-
-int MapASTVisitor::getLine(const NamedDecl *D,
-                           const ASTContext &Context) const {
-  return Context.getSourceManager().getPresumedLoc(D->getBeginLoc()).getLine();
-}
-
 
 llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
                                               const ASTContext &Context,

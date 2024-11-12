@@ -74,16 +74,19 @@ static void StringAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
 static void LocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
   AbbrevGen(
       Abbrev,
-      {// 0. Fixed-size integer (line number)
+      {// 0. Start fixed-size integer (line number)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::LineNumberSize),
-       // 1. Boolean (IsFileInRootDir)
+       // 1. End fixed-size integer (line number)
+       llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
+                             BitCodeConstants::LineNumberSize),
+       // 2. Boolean (IsFileInRootDir)
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::BoolSize),
-       // 2. Fixed-size integer (length of the following string (filename))
+       // 3. Fixed-size integer (length of the following string (filename))
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
                              BitCodeConstants::StringLengthSize),
-       // 3. The string blob
+       // 4. The string blob
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
 }
 
@@ -358,7 +361,8 @@ void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
   if (!prepRecordData(ID, true))
     return;
   // FIXME: Assert that the line number is of the appropriate size.
-  Record.push_back(Loc.LineNumber);
+  Record.push_back(Loc.StartLineNumber);
+  Record.push_back(Loc.EndLineNumber);
   assert(Loc.Filename.size() < (1U << BitCodeConstants::StringLengthSize));
   Record.push_back(Loc.IsFileInRootDir);
   Record.push_back(Loc.Filename.size());

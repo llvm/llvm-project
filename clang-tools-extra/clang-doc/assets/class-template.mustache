@@ -12,6 +12,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{Name}}</title>
     <link rel="stylesheet" type="text/css" href="clang-doc-mustache.css"/>
+    {{! Highlight.js dependency for syntax highlighting }}
     <script src="mustache-index.js"></script>
     {{! Highlight.js dependency for syntax highlighting }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
@@ -20,11 +21,10 @@
 </head>
 <body>
 <main>
-    <!-- Sidebar -->
     <div class="container">
+        <!-- Sidebar -->
         <div class="sidebar">
             <ul>
-
                 <li class="sidebar-section">
                     <h1>
                         {{ProjectName}}
@@ -36,81 +36,85 @@
                     </h2>
                 </li>
                 <!-- Members -->
+                {{#MemberFlag}}
                 <li class="sidebar-section">
-                    <input type="checkbox" id="members-toggle">
+                    <input type="checkbox" id="members-toggle" checked>
                     <label for="members-toggle">Members</label>
                     <ul>
                         {{#PublicMembers}}
                         <li class="sidebar-subsection">
-                            <input type="checkbox" id="public-members-toggle">
+                            <input type="checkbox" id="public-members-toggle" checked>
                             <label for="public-members-toggle">Public</label>
                             <ul>
                                 {{#Obj}}
-                                    <li class="sidebar-item-container">
-                                        <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                                    </li>
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
                                 {{/Obj}}
                             </ul>
                         </li>
                         {{/PublicMembers}}
                         {{#ProtectedMembers}}
                         <li class="sidebar-subsection">
-                            <input type="checkbox" id="protected-members-toggle">
+                            <input type="checkbox" id="protected-members-toggle" checked>
                             <label for="protected-members-toggle">Protected</label>
                             <ul>
                                 {{#Obj}}
-                                    <li class="sidebar-item-container">
-                                        <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                                    </li>
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
                                 {{/Obj}}
                             </ul>
                         </li>
                         {{/ProtectedMembers}}
                     </ul>
                 </li>
+                {{/MemberFlag}}    
                 <!-- Methods -->
+                {{#FunctionFlag}}
                 <li class="sidebar-section">
-                    <input type="checkbox" id="methods-toggle">
+                    <input type="checkbox" id="methods-toggle" checked>
                     <label for="methods-toggle">Methods</label>
                     <ul>
                         {{#PublicFunction}}
-                            <li class="sidebar-subsection">
-                                <input type="checkbox" id="public-methods-toggle">
-                                <label for="public-methods-toggle">Public</label>
-                                <ul>
-                                    {{#Obj}}
-                                        <li class="sidebar-item-container">
-                                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                                        </li>
-                                    {{/Obj}}
-                                </ul>
-                            </li>
+                        <li class="sidebar-subsection">
+                            <input type="checkbox" id="public-methods-toggle" checked>
+                            <label for="public-methods-toggle">Public</label>
+                            <ul>
+                                {{#Obj}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                </li>
+                                {{/Obj}}
+                            </ul>
+                        </li>
                         {{/PublicFunction}}
                         {{#ProtectedFunction}}
-                            <li class="sidebar-subsection">
-                                <input type="checkbox" id="protected-methods-toggle">
-                                <label for="protected-methods-toggle">Protected</label>
-                                <ul>
-                                    {{#Obj}}
-                                        <li class="sidebar-item-container">
-                                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                                        </li>
-                                    {{/Obj}}
-                                </ul>
-                            </li>
+                        <li class="sidebar-subsection">
+                            <input type="checkbox" id="protected-methods-toggle" checked>
+                            <label for="protected-methods-toggle">Protected</label>
+                            <ul>
+                                {{#Obj}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                </li>
+                                {{/Obj}}
+                            </ul>
+                        </li>
                         {{/ProtectedFunction}}
                     </ul>
-                </li>
+                </li>    
+                {{/FunctionFlag}}
                 <!-- Enums -->
                 {{#Enums}}
                 <li class="sidebar-section">
-                    <input type="checkbox" id="enums-toggle">
+                    <input type="checkbox" id="enums-toggle" checked>
                     <label for="enums-toggle">Enums</label>
                     <ul>
                         {{#Obj}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{ID}}">{{EnumName}}</a>
-                            </li>
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{EnumName}}</a>
+                        </li>
                         {{/Obj}}
                     </ul>
                 </li>
@@ -118,7 +122,7 @@
                 <!-- Typedefs -->
                 {{#Typedefs}}
                 <li class="sidebar-section">
-                    <input type="checkbox" id="enums-toggle">
+                    <input type="checkbox" id="enums-toggle" checked>
                     <label for="enums-toggle">Typedefs</label>
                     <ul>
                         {{#Obj}}

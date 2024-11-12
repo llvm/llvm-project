@@ -7,68 +7,173 @@
 }}
 <!DOCTYPE html>
 <html lang="en-US">
-    <head>
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{NamespaceTitle}}</title>
-        <link rel="stylesheet" type="text/css" href="clang-doc-mustache.css"/>
-        <script src="mustache-index.js"></script>
-        {{! Highlight.js dependency for syntax highlighting }}
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
-    </head>
-    <body>
-        <nav class="sidebar">
-            {{#ProjectName}}
-            <h2 class="sidebar-project-name">
-                {{ProjectName}}
-            </h2>
-            {{/ProjectName}}
-            <h1>{{NamespaceTitle}}</h1>
-            {{#Namespace}}
-            <h3 id="Namespace">Namespace</h3>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{Name}}</title>
+    <link rel="stylesheet" type="text/css" href="clang-doc-mustache.css"/>
+    <script src="mustache-index.js"></script>
+    {{! Highlight.js dependency for syntax highlighting }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+</head>
+<body>
+<main>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
             <ul>
-                {{#Links}}
-                <li>
-                    <a href="{{Link}}">{{Name}}</a>
+                <li class="sidebar-section">
+                    <h1>
+                        {{ProjectName}}
+                    </h1>
                 </li>
-                {{/Links}}
+                <li class="sidebar-section">
+                    <h2>
+                        {{NamespaceTitle}}
+                    </h2>
+                </li>
+                <!-- Namespace -->
+                {{#Namespace}}
+                <li class="sidebar-section">
+                    <input type="checkbox" id="namespace-toggle" checked>
+                    <label for="namespace-toggle">Namespace</label>
+                    <ul>
+                        {{#Links}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                        </li>
+                        {{/Links}}
+                    </ul>
+                </li>
+                {{/Namespace}}
+                {{#Record}}
+                <li class="sidebar-section">
+                    <input type="checkbox" id="namespace-toggle" checked>
+                    <label for="namespace-toggle">Classes</label>
+                    <ul>
+                        {{#Links}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                        </li>
+                        {{/Links}}
+                    </ul>
+                </li>
+                {{/Record}}
+                <!-- Methods -->
+                {{#Function}}    
+                <li class="sidebar-section">
+                    <input type="checkbox" id="function-toggle" checked>
+                    <label for="function-toggle">Functions</label>
+                    <ul>
+                        {{#Obj}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                        </li>
+                        {{/Obj}}
+                    </ul>
+                </li>
+                {{/Function}}
+                <!-- Enums -->
+                {{#Enums}}
+                <li class="sidebar-section">
+                    <input type="checkbox" id="enums-toggle" checked>
+                    <label for="enums-toggle">Enums</label>
+                    <ul>
+                        {{#Obj}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{EnumName}}</a>
+                        </li>
+                        {{/Obj}}
+                    </ul>
+                </li>
+                {{/Enums}}
+                <!-- Typedefs -->
+                {{#Typedefs}}
+                <li class="sidebar-section">
+                    <input type="checkbox" id="typedef-toggle" checked>
+                    <label for="typedef-toggle">Typedefs</label>
+                    <ul>
+                        {{#Obj}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                            </li>
+                        {{/Obj}}
+                    </ul>
+                </li>
+                {{/Typedefs}}
             </ul>
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <div class="content">
+            <section id="class" class="hero section-container">
+                <pre>
+                    <code class="language-cpp hero__title-large">
+{{&NamespaceTitle}}
+                    </code>
+                </pre>
+                {{#NamespaceComments}}
+                <h2>Description</h2>
+                <div class="hero__subtitle">
+                    {{>Comments}}
+                </div>
+                {{/NamespaceComments}}
+            </section>
+            {{#Namespace}}
+            <section id="Classes" class="section-container">
+                <h2>Namespace</h2>
+                <ul class="class-container">
+                    {{#Links}}
+                    <li id="{{ID}}" style="max-height: 40px;">
+<a href="{{Link}}"><pre><code class="language-cpp code-clang-doc" >namespace {{Name}}</code></pre></a>
+                    </li>
+                    {{/Links}}
+                </ul>
+            </section>
             {{/Namespace}}
             {{#Record}}
-            <h3 id="Class">Class</h3>
-            <ul>
-                {{#Links}}
-                <li>
-                    <a href="{{Link}}">{{Name}}</a>
-                </li>
-                {{/Links}}
-            </ul>
+            <section id="Classes" class="section-container">
+                <h2>Classes</h2>
+                <ul class="class-container">
+                    {{#Links}}
+                        <li id="{{ID}}" style="max-height: 40px;">
+<a href="{{Link}}"><pre><code class="language-cpp code-clang-doc" >class {{Name}}</code></pre></a>
+                        </li>
+                    {{/Links}}
+                </ul>
+            </section>
             {{/Record}}
             {{#Function}}
-            <h3 id="Function">Function</h3>
-            <div>
-                {{#Obj}}
-                {{/Obj}}
-            </div>
+            <section id="Classes" class="section-container">
+                <h2>Functions</h2>
+                <div>
+                    {{#Obj}}
+{{>FunctionPartial}}
+                    {{/Obj}}
+                </div>
+            </section>    
             {{/Function}}
             {{#Enums}}
-            <h3 id="Enums">Enums</h3>
-            <div>
+            <section id="Enums" class="section-container">
+                <h2>Enumerations</h2>
+                <div>
                 {{#Obj}}
+{{>EnumPartial}}
                 {{/Obj}}
-            </div>
+                </div>
+            </section>
             {{/Enums}}
-        </nav>
-        <div class="sidebar-resizer"></div>
-        <main>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc
-            ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam nec purus
-            nec nunc ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam
-            nec purus nec nunc ultricies ultricies. Nullam nec purus nec nunc
-            ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam nec purus
-            nec nunc ultricies ultricies. Nullam nec purus nec nunc ultricies ultricies. Nullam
-        </main>
-    </body>
-</html>
+            {{#Typedefs}}
+            <section id="Typedefs" class="section-container">
+                <h2>Typedefs</h2>
+                <div>
+                    {{#Obj}}
+ {{>TypedefPartial}}
+                    {{/Obj}}
+                </div>
+            </section>
+            {{/Typedefs}}
+        </div>
+    </div>
+</main>

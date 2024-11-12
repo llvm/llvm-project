@@ -237,8 +237,6 @@ html, body {
     font-size: 1.2rem;
 }
 
-
-
 .delimiter-container {
     padding: 0.5rem 1rem;
     margin-bottom:1rem;
@@ -317,12 +315,12 @@ html, body {
 .sidebar-item-container {
     font-size: 16px;
     padding-left: 5px;
-    color: #0e79c0;
 }
 
 
 .sidebar-item-container:hover {
     border-left: 3px solid var(--brand);
+    color: #0e79c0;
 }
 
 .sidebar-section input[type="checkbox"] {

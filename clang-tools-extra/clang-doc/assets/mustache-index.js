@@ -1,4 +1,3 @@
-
 // highlight.js plugin to merge the original HTML stream and the highlighted stream
 // see this issue: https://github.com/highlightjs/highlight.js/issues/2889
 var mergeHTMLPlugin = (function () {

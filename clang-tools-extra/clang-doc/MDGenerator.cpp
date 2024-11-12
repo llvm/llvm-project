@@ -54,13 +54,13 @@ static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
                                 raw_ostream &OS) {
 
   if (!CDCtx.RepositoryUrl) {
-    OS << "*Defined at " << L.Filename << "#" << std::to_string(L.LineNumber)
+    OS << "*Defined at " << L.Filename << "#" << std::to_string(L.StartLineNumber)
        << "*";
   } else {
-    OS << "*Defined at [" << L.Filename << "#" << std::to_string(L.LineNumber)
+    OS << "*Defined at [" << L.Filename << "#" << std::to_string(L.StartLineNumber)
        << "](" << StringRef{*CDCtx.RepositoryUrl}
        << llvm::sys::path::relative_path(L.Filename) << "#"
-       << std::to_string(L.LineNumber) << ")"
+       << std::to_string(L.StartLineNumber) << ")"
        << "*";
   }
   OS << "\n\n";

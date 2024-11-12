@@ -45,7 +45,8 @@ public:
 private:
   template <typename T> bool mapDecl(const T *D, bool IsDefinition);
 
-  int getLine(const NamedDecl *D, const ASTContext &Context) const;
+  Location getDeclLocation(const NamedDecl *D) const;
+  
   llvm::SmallString<128> getFile(const NamedDecl *D, const ASTContext &Context,
                                  StringRef RootDir,
                                  bool &IsFileInRootDir) const;

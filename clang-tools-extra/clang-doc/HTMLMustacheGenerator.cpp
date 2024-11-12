@@ -219,7 +219,7 @@ Value extractValue(const std::optional<Location> &Loc,
   if (Loc.has_value()) {
     Location L = *Loc;
     SmallString<128> Filename(llvm::sys::path::filename(L.Filename));
-    Obj.insert({"LineNumber", L.LineNumber});
+    Obj.insert({"LineNumber", L.StartLineNumber});
     Obj.insert({"Filename", Filename});
     if (!RepositoryUrl)
       return Obj;
@@ -227,18 +227,17 @@ Value extractValue(const std::optional<Location> &Loc,
     SmallString<128> FileURL(*RepositoryUrl);
     llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, "blob/main");
     llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
-    FileURL += "#L" + std::to_string(L.LineNumber);
+    FileURL += "#L" + std::to_string(L.StartLineNumber) + 
+               "-L" + std::to_string(L.EndLineNumber);
     Obj.insert({"FileURL", FileURL});
   }
   return Obj;
 }
 
-Value extractValue(const Reference &I, StringRef CurrentDirectory) {
-  llvm::SmallString<64> Path = I.getRelativeFilePath(CurrentDirectory);
-  llvm::sys::path::append(Path, I.getFileBaseName() + ".html");
-  llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
+Value extractValue(const Reference &I) {
+  std::string Link = llvm::toHex(llvm::toStringRef(I.USR)) + ".html";
   Object Obj = Object();
-  Obj.insert({"Link", Path});
+  Obj.insert({"Link", Link});
   Obj.insert({"Name", I.Name});
   Obj.insert({"QualName", I.QualName});
   Obj.insert({"ID", llvm::toHex(llvm::toStringRef(I.USR))});
@@ -299,7 +298,7 @@ void replaceSubstring(llvm::SmallString<256> &Input,
 SmallString<64> extractLink(const Reference& R) {
   std::string HexId = llvm::toHex(llvm::toStringRef(R.USR));
   SmallString<16> Name = Index[HexId];
-  SmallString<64> Link({Name, ".html"});
+  SmallString<64> Link({Name, ".html#", HexId});
   return Link;
 }
 
@@ -378,7 +377,7 @@ Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
               extractFunctionPrototype(I.ProtoType, I.Params, I.ReturnType)});
   Obj.insert({"ID", llvm::toHex(llvm::toStringRef(I.USR))});
   Obj.insert({"Access", getAccessSpelling(I.Access).str()});
-  Obj.insert({"ReturnType", extractValue(I.ReturnType.Type, ParentInfoDir)});
+  Obj.insert({"ReturnType", extractValue(I.ReturnType.Type)});
   Value ParamArr = Array();
   for (const auto Val : llvm::enumerate(I.Params)) {
     Value V = Object();
@@ -443,14 +442,14 @@ void extractScopeChildren(const ScopeChildren &S, Object &Obj,
                           const ClangDocContext &CDCtx) {
   Value ArrNamespace = Array();
   for (const Reference& Child : S.Namespaces)
-    ArrNamespace.getAsArray()->emplace_back(extractValue(Child, ParentInfoDir));
+    ArrNamespace.getAsArray()->emplace_back(extractValue(Child));
   
   if (!ArrNamespace.getAsArray()->empty())
     Obj.insert({"Namespace", Object{{"Links", ArrNamespace}}});
   
   Value ArrRecord = Array();
   for (const Reference& Child : S.Records)
-    ArrRecord.getAsArray()->emplace_back(extractValue(Child, ParentInfoDir));
+    ArrRecord.getAsArray()->emplace_back(extractValue(Child));
   
   if (!ArrRecord.getAsArray()->empty())
     Obj.insert({"Record", Object{{"Links", ArrRecord}}});
@@ -470,14 +469,22 @@ void extractScopeChildren(const ScopeChildren &S, Object &Obj,
     else
       ArrFunction.getAsArray()->emplace_back(F);
   }  
-  if (!ArrFunction.getAsArray()->empty())
+  
+  bool HasFunction = !ArrFunction.getAsArray()->empty();
+  bool HasPublicFunction = !PublicFunction.getAsArray()->empty();
+  bool HasProtectedFunction = !ProtectedFunction.getAsArray()->empty();
+  
+  if (HasFunction) 
     Obj.insert({"Function", Object{{"Obj", ArrFunction}}});
   
-  if (!PublicFunction.getAsArray()->empty())
+  if (HasPublicFunction)
     Obj.insert({"PublicFunction", Object{{"Obj", PublicFunction}}});
   
-  if (!ProtectedFunction.getAsArray()->empty())
+  if (HasProtectedFunction)
     Obj.insert({"ProtectedFunction", Object{{"Obj", ProtectedFunction}}});
+  
+  if (HasFunction || HasPublicFunction || HasProtectedFunction)
+    Obj.insert({"FunctionFlag", true});
   
   
   Value ArrEnum = Array();
@@ -493,11 +500,6 @@ void extractScopeChildren(const ScopeChildren &S, Object &Obj,
   
   if (!ArrTypedefs.getAsArray()->empty())
     Obj.insert({"Typedefs", Object{{"Obj", ArrTypedefs }}});
-  
-  
-  llvm::raw_fd_ostream os(1, false);
-  llvm::json::OStream jStream(os, /*Indent=*/2);
-  jStream.value(ArrTypedefs);
 }
 
 Value extractValue(const NamespaceInfo &I, const ClangDocContext &CDCtx) {
@@ -519,6 +521,7 @@ Value extractValue(const NamespaceInfo &I, const ClangDocContext &CDCtx) {
     NamespaceValue.insert({"NamespaceComments", ArrDesc });
   }
   extractScopeChildren(I.Children, NamespaceValue, BasePath, CDCtx);
+  
   return NamespaceValue;
 }
 
@@ -561,12 +564,19 @@ Value extractValue(const RecordInfo &I, const ClangDocContext &CDCtx) {
     else if (Member.Access == AccessSpecifier::AS_private)
       PrivateMembers.getAsArray()->emplace_back(MemberValue);
   }
-  if (!PublicMembers.getAsArray()->empty())
+  bool HasPublicMembers = !PublicMembers.getAsArray()->empty();
+  bool HasProtectedMembers = !ProtectedMembers.getAsArray()->empty();
+  bool HasPrivateMembers = !PrivateMembers.getAsArray()->empty();
+  
+  if (HasPublicMembers)
     RecordValue.insert({"PublicMembers", Object{{"Obj", PublicMembers}}});
-  if (!ProtectedMembers.getAsArray()->empty())
+  if (HasProtectedMembers)
     RecordValue.insert({"ProtectedMembers", Object{{"Obj", ProtectedMembers}}});
-  if (!PrivateMembers.getAsArray()->empty())
+  if (HasPrivateMembers)
     RecordValue.insert({"PrivateMembers", Object{{"Obj", PrivateMembers}}});
+  
+  if (HasPublicMembers || HasProtectedMembers || HasPrivateMembers)
+    RecordValue.insert({"MemberFlag", true});
   
   return RecordValue;
 }
