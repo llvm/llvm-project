@@ -1075,8 +1075,7 @@ memsetRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
   std::optional<DenseMap<Attribute, Type>> types =
       cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
 
-  IntegerAttr memsetLenAttr;
-  createMemsetLenAttr(op, memsetLenAttr);
+  IntegerAttr memsetLenAttr = createMemsetLenAttr(op);
 
   bool packed = false;
   if (auto structType = dyn_cast<LLVM::LLVMStructType>(slot.elemType))
