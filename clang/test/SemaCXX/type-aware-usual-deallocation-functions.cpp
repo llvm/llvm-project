@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -o - -emit-llvm -std=c++23 -faligned-allocation -fexperimental-cxx-type-aware-allocators -fexceptions | FileCheck %s
+// RUN: %clang_cc1 %s -o - -emit-llvm -std=c++23 -faligned-allocation -fexperimental-cxx-type-aware-allocators -fexceptions | FileCheck --check-prefixes=CHECK,CHECK_TA %s
 // RUN: %clang_cc1 %s -o - -emit-llvm -std=c++23 -faligned-allocation                                          -fexceptions | FileCheck %s
 
 // This is a semantic test, but the only way to observe the pickup of the usual delete
@@ -46,6 +46,28 @@ struct __attribute__((aligned(128))) S3 {
 #endif
 };
 
+#if __has_feature(cxx_type_aware_allocators)
+struct __attribute__((aligned(128))) S4 {
+    S4();
+};
+
+template <typename U> void *operator new(std::type_identity<S4>, size_t, U) asm("S4_operator_new");
+template <typename U> void operator delete(std::type_identity<S4>, void*, U) asm("S4_cleanup_operator_delete");
+#endif
+
+template <typename AlignValT>
+struct __attribute__((aligned(128))) S5 {
+    S5();
+#if __has_feature(cxx_type_aware_allocators)
+    template <typename T> void *operator new(std::type_identity<T>, size_t, AlignValT) asm("S5_operator_new");
+    template <typename T> void operator delete(std::type_identity<T>, void*, AlignValT) asm("S5_cleanup_operator_delete");
+#else
+    void *operator new(size_t, AlignValT) asm("S5_operator_new");
+    void operator delete(void*, AlignValT) asm("S5_cleanup_operator_delete");
+#endif
+};
+
+
 extern "C" void test1() {
     S1 *s = new S1;
 // CHECK-LABEL: test1
@@ -67,3 +89,18 @@ extern "C" void test3() {
 // CHECK: S3_cleanup_operator_delete
 }
 
+#if __has_feature(cxx_type_aware_allocators)
+extern "C" void test4() {
+    S4 *s = new S4;
+// CHECK_TA-LABEL: test4
+// CHECK_TA: S4_operator_new
+// CHECK_TA: S4_cleanup_operator_delete
+}
+#endif
+
+extern "C" void test5() {
+    S5<std::align_val_t> *s = new S5<std::align_val_t>;
+// CHECK-LABEL: test5
+// CHECK: S5_operator_new
+// CHECK: S5_cleanup_operator_delete
+}
