@@ -106,7 +106,7 @@ bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput) {
 void SetTimer(int Seconds) {
   timer_t TimerId;
   struct itimerspec T {
-    { Seconds, 0 }, { Seconds, 0 }
+    {Seconds, 0}, { Seconds, 0 }
   };
   SetSigaction(SIGALRM, AlarmHandler);
   if (timer_create(CLOCK_REALTIME, nullptr, &TimerId) == -1) {
