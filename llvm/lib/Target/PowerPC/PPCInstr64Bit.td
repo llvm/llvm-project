@@ -777,7 +777,7 @@ def ADDIS8 : DForm_2<15, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s17imm64:$D),
 def LA8     : DForm_2<14, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s16imm64:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
                      [(set i64:$RST, (add i64:$RA,
-                                    (PPClo tglobaladdr:$D, 0)))]>;
+                                    (PPClo tglobaladdr:$D, 0)))]>, MemriOp;
 
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$RST), (ins g8rc:$RA, s16imm64:$D),
