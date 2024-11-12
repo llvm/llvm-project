@@ -386,22 +386,23 @@ define void @vnsrl_0_i8_undef3(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lui a0, 24640
-; CHECK-NEXT:    addi a0, a0, 6
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vadd.vi v9, v9, -8
 ; CHECK-NEXT:    li a0, -32
 ; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    lui a0, 24640
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    addi a0, a0, 6
+; CHECK-NEXT:    vadd.vv v9, v9, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vadd.vi v9, v9, -8
+; CHECK-NEXT:    vrgather.vv v11, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; CHECK-NEXT:    vrgather.vv v10, v8, v9, v0.t
-; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vrgather.vv v11, v8, v9, v0.t
+; CHECK-NEXT:    vse8.v v11, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -419,18 +420,18 @@ define void @vnsrl_0_i8_undef_negative(ptr %in, ptr %out) {
 ; CHECK-NEXT:    lui a0, %hi(.LCPI17_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI17_0)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vadd.vi v9, v9, -8
+; CHECK-NEXT:    vle8.v v10, (a0)
 ; CHECK-NEXT:    li a0, 48
+; CHECK-NEXT:    vadd.vv v9, v9, v9
 ; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vadd.vi v9, v9, -8
+; CHECK-NEXT:    vrgather.vv v11, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; CHECK-NEXT:    vrgather.vv v10, v8, v9, v0.t
-; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vrgather.vv v11, v8, v9, v0.t
+; CHECK-NEXT:    vse8.v v11, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1

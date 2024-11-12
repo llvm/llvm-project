@@ -88,17 +88,17 @@ define void @store_v6i1(ptr %p, <6 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vfirst.m a1, v0
-; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    vmv.x.s a2, v0
+; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    andi a3, a2, 2
+; CHECK-NEXT:    andi a4, a2, 4
 ; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    andi a3, a2, 4
-; CHECK-NEXT:    andi a4, a2, 8
-; CHECK-NEXT:    or a3, a3, a4
-; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    andi a3, a2, 16
+; CHECK-NEXT:    andi a3, a2, 8
+; CHECK-NEXT:    or a3, a4, a3
+; CHECK-NEXT:    andi a4, a2, 16
 ; CHECK-NEXT:    andi a2, a2, -32
-; CHECK-NEXT:    or a2, a3, a2
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    or a2, a4, a2
 ; CHECK-NEXT:    or a1, a1, a2
 ; CHECK-NEXT:    andi a1, a1, 63
 ; CHECK-NEXT:    sb a1, 0(a0)

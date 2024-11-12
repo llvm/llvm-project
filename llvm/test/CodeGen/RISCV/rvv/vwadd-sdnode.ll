@@ -1377,9 +1377,9 @@ define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb
 ;
 ; RV64-LABEL: i1_zext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
-; RV64-NEXT:    vadd.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    li a1, 42
+; RV64-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; RV64-NEXT:    vadd.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    sh a1, 0(a0)
 ; RV64-NEXT:    ret
   %vc = zext <vscale x 1 x i1> %va to <vscale x 1 x i64>
