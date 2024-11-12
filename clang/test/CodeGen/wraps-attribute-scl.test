@@ -2,16 +2,17 @@
 // RUN: split-file %s %t
 
 // Ensure the wraps and no_wraps attributes properly adjust SSCL coverage
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/ignoreall.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/precedence.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=PREC
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/promotion.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=PROMO
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/ignoreall.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/precedence.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=PREC
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/promotion.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=PROMO
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/truncation.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=TRUNC
 
 //--- ignoreall.ignorelist
-[signed-integer-overflow]
+[{signed-integer-overflow,unsigned-integer-overflow}]
 type:*
 
 //--- precedence.ignorelist
-[signed-integer-overflow]
+[{signed-integer-overflow,unsigned-integer-overflow}]
 type:myty
 type:qaz=sanitize
 
@@ -20,11 +21,19 @@ type:qaz=sanitize
 type:*
 type:int=sanitize
 
+//--- truncation.ignorelist
+[{implicit-signed-integer-truncation,implicit-unsigned-integer-truncation}]
+type:*
+type:wrapping_int=sanitize
+type:char=sanitize
+type:unsigned char=sanitize
+
 //--- test.c
+typedef int __attribute__((wraps)) wrapping_int;
 typedef int __attribute__((no_wraps)) non_wrapping_int;
 
-// CHECK-LABEL: define dso_local void @foo
-void foo(non_wrapping_int A, int B) {
+// CHECK-LABEL: define dso_local void @increment
+void increment(non_wrapping_int A, int B, unsigned int __attribute__((wraps)) C) {
 // CHECK: %[[A:.*]] = load i32, ptr %A.addr
 // CHECK-NEXT: @llvm.sadd.with.overflow.i32(i32 %[[A]], i32 1)
   ++A;
@@ -33,6 +42,11 @@ void foo(non_wrapping_int A, int B) {
 // CHECK-NEXT: %[[INC1:.*]] = add nsw i32 %[[B]], 1
 // CHECK-NEXT: store i32 %[[INC1]], ptr %B.addr
   ++B;
+
+// CHECK: %[[C:.*]] = load i32, ptr %C.addr
+// CHECK-NEXT: %[[INC2:.*]] = add i32 %[[C]], 1
+// CHECK-NEXT: store i32 %[[INC2]], ptr %C.addr
+  ++C;
 }
 
 // If our ignorelist (precedence.ignorelist) has an entry for `myty`, the
@@ -45,8 +59,8 @@ typedef int __attribute__((no_wraps)) myty;
 // instrumentation.
 typedef int __attribute__((wraps)) qaz;
 
-// PREC-LABEL: define dso_local void @bar
-void bar(myty C, qaz D) {
+// PREC-LABEL: define dso_local void @precedence
+void precedence(myty C, qaz D) {
 // PREC: %[[C:.*]] = load i32, ptr %C.addr
 // PREC-NEXT: @llvm.sadd.with.overflow.i32(i32 %[[C]], i32 1)
   ++C;
@@ -57,10 +71,21 @@ void bar(myty C, qaz D) {
   ++D;
 }
 
-// PROMO-LABEL: define dso_local void @bux
-void bux(char __attribute__((wraps)) F) {
+// PROMO-LABEL: define dso_local void @promotions
+void promotions(char __attribute__((wraps)) F) {
 // PROMO: %[[F:.*]] = load i8, ptr %F.addr
 // PROMO-NEXT: %[[CONV1:.*]] = sext i8 %[[F]] to i32
 // PROMO-NEXT: add i32 %[[CONV1]], 1
   (F + 1); // F is promoted to `int` but should carry the `wraps` attribute with it
+}
+
+// TRUNC-LABEL: define dso_local void @truncation
+void truncation(wrapping_int A, int B) {
+// TRUNC-NOT: call void @__ubsan_handle_implicit_conversion
+  char C = A;
+  char D __attribute__((wraps)) = B;
+  unsigned char E = A;
+  unsigned char F __attribute__((wraps)) = B;
+  short G = B;
+  char *H = &D;
 }

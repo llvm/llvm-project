@@ -53,3 +53,14 @@ void wraps_used_with_no_wraps(void) {
   // expected-error@+1 {{attribute 'wraps' cannot be used alongside 'no_wraps'}}
   long long __attribute__((no_wraps)) __attribute__((wraps)) B;
 }
+
+void pointers_and_pointees(void) {
+  // expected-error@+1 {{cannot use attribute 'wraps' with non-integer type}}
+  char *A __attribute__((wraps));
+  // expected-error@+1 {{cannot use attribute 'no_wraps' with non-integer type}}
+  char *B __attribute__((no_wraps));
+
+  // allowed, see other tests in CodeGen
+  char C __attribute__((wraps)) = 127;
+  char *D = &C;
+}

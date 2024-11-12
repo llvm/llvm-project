@@ -170,4 +170,10 @@ void test2(void) {
   d = 127;
   w = d*d*d*d*d; // d is promoted to int, then calculation is made.
                  // wraps prevents instrumentation even through promotion
+
+  char Pointee __attribute__((wraps)) = 127;
+  char *Ptr = &Pointee;
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB: call {{.*}} @llvm.sadd.with.overflow.i32
+  ++(*Ptr);
 }
+
