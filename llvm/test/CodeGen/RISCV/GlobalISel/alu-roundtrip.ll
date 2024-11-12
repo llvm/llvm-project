@@ -171,7 +171,7 @@ define i32 @slli_i32(i32 %a) {
 ;
 ; RV64IM-LABEL: slli_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    slliw a0, a0, 11
+; RV64IM-NEXT:    slli a0, a0, 11
 ; RV64IM-NEXT:    ret
 entry:
   %0 = shl i32 %a, 11
