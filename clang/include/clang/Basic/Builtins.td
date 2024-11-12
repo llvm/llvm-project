@@ -227,10 +227,10 @@ def FminimumNumF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T)";
 }
 
-def Atan2F128 : Builtin {
-  let Spellings = ["__builtin_atan2f128"];
+def Atan2F16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_atan2"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128, __float128)";
+  let Prototype = "T(T, T)";
 }
 
 def CopysignF16 : Builtin {

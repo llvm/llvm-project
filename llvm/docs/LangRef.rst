@@ -15749,16 +15749,17 @@ all types however.
 
 ::
 
-      declare float     @llvm.atan2.f32(float  %X, float %Y)
-      declare double    @llvm.atan2.f64(double %X, double %Y)
-      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %X, x86_fp80 %Y)
-      declare fp128     @llvm.atan2.f128(fp128 %X, fp128 %Y)
-      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %X, ppc_fp128 %Y)
+      declare float     @llvm.atan2.f32(float  %Y, float %X)
+      declare double    @llvm.atan2.f64(double %Y, double %X)
+      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %Y, x86_fp80 %X)
+      declare fp128     @llvm.atan2.f128(fp128 %Y, fp128 %X)
+      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %Y, ppc_fp128 %X)
 
 Overview:
 """""""""
 
-The '``llvm.atan2.*``' intrinsics return the arctangent of the operand.
+The '``llvm.atan2.*``' intrinsics return the arctangent of ``Y/X`` accounting
+for the quadrant.
 
 Arguments:
 """"""""""
@@ -27259,6 +27260,42 @@ Semantics:
 This function returns the arctangent of the specified operand, returning the
 same values as the libm ``atan`` functions would, and handles error
 conditions in the same way.
+
+'``llvm.experimental.constrained.atan2``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.atan2(<type> <op1>,
+                                           <type> <op2>,
+                                           metadata <rounding mode>,
+                                           metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.atan2``' intrinsic returns the arctangent
+of ``<op1>`` divided by ``<op2>`` accounting for the quadrant.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers of the
+same type.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the quadrant-specific arctangent using the specified
+operands, returning the same values as the libm ``atan2`` functions would, and
+handles error conditions in the same way.
 
 '``llvm.experimental.constrained.sinh``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
