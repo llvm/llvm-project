@@ -146,15 +146,18 @@ define void @rol_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
   ret void
 }
 
+; FIXME: Bad materialization of -2 as 0xfffffffe.
 define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: rol_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -2
-; RV64I-NEXT:    neg a2, a0
+; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    andi a0, a0, 31
-; RV64I-NEXT:    sllw a0, a1, a0
-; RV64I-NEXT:    andi a2, a2, 31
-; RV64I-NEXT:    srlw a1, a1, a2
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    slli a2, a2, 32
+; RV64I-NEXT:    addi a2, a2, -2
+; RV64I-NEXT:    sllw a0, a2, a0
+; RV64I-NEXT:    andi a1, a1, 31
+; RV64I-NEXT:    srlw a1, a2, a1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -232,15 +235,18 @@ define void @ror_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
   ret void
 }
 
+; FIXME: Bad materialization of -2 as 0xfffffffe.
 define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: ror_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -2
-; RV64I-NEXT:    neg a2, a0
+; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    andi a0, a0, 31
-; RV64I-NEXT:    srlw a0, a1, a0
-; RV64I-NEXT:    andi a2, a2, 31
-; RV64I-NEXT:    sllw a1, a1, a2
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    slli a2, a2, 32
+; RV64I-NEXT:    addi a2, a2, -2
+; RV64I-NEXT:    srlw a0, a2, a0
+; RV64I-NEXT:    andi a1, a1, 31
+; RV64I-NEXT:    sllw a1, a2, a1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -418,12 +424,11 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
   ret i64 %1
 }
 
-; FIXME: We should use srli instead of srliw for better compression.
 define i8 @srli_i8(i8 %a) nounwind {
 ; CHECK-LABEL: srli_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 255
-; CHECK-NEXT:    srliw a0, a0, 6
+; CHECK-NEXT:    srli a0, a0, 6
 ; CHECK-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1
@@ -433,20 +438,20 @@ define i8 @srli_i8(i8 %a) nounwind {
 define i8 @srai_i8(i8 %a) nounwind {
 ; RV64I-LABEL: srai_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    sraiw a0, a0, 29
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srai a0, a0, 61
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: srai_i8:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    sext.b a0, a0
-; RV64ZBB-NEXT:    sraiw a0, a0, 5
+; RV64ZBB-NEXT:    srai a0, a0, 5
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: srai_i8:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 24
-; RV64ZBKB-NEXT:    sraiw a0, a0, 29
+; RV64ZBKB-NEXT:    slli a0, a0, 56
+; RV64ZBKB-NEXT:    srai a0, a0, 61
 ; RV64ZBKB-NEXT:    ret
   %1 = ashr i8 %a, 5
   ret i8 %1
@@ -457,38 +462,38 @@ define i16 @srli_i16(i16 %a) nounwind {
 ; RV64I-LABEL: srli_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 6
+; RV64I-NEXT:    srli a0, a0, 6
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-ZBKB-LABEL: srli_i16:
 ; RV64ZBB-ZBKB:       # %bb.0:
 ; RV64ZBB-ZBKB-NEXT:    zext.h a0, a0
-; RV64ZBB-ZBKB-NEXT:    srliw a0, a0, 6
+; RV64ZBB-ZBKB-NEXT:    srli a0, a0, 6
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = lshr i16 %a, 6
   ret i16 %1
 }
 
-; FIXME: We should use slli+srai with Zbb/Zbkb for better compression.
+; FIXME: We should use slli+srai with Zbb for better compression.
 define i16 @srai_i16(i16 %a) nounwind {
 ; RV64I-LABEL: srai_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 16
-; RV64I-NEXT:    sraiw a0, a0, 25
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a0, a0, 57
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: srai_i16:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    sext.h a0, a0
-; RV64ZBB-NEXT:    sraiw a0, a0, 9
+; RV64ZBB-NEXT:    srai a0, a0, 9
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: srai_i16:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 16
-; RV64ZBKB-NEXT:    sraiw a0, a0, 25
+; RV64ZBKB-NEXT:    slli a0, a0, 48
+; RV64ZBKB-NEXT:    srai a0, a0, 57
 ; RV64ZBKB-NEXT:    ret
   %1 = ashr i16 %a, 9
   ret i16 %1

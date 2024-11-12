@@ -262,15 +262,16 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[ANYEXT]]
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC1]], [[C]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C1]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C1]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[AND]](s64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[TRUNC]](s32), [[COPY1]](p0) :: (store (s8))
-    ; CHECK-NEXT: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p0) :: (store (s8) into unknown-address + 1)
     ; CHECK-NEXT: PseudoRET
     ;
     ; UNALIGNED-LABEL: name: store_i16_unaligned
@@ -313,24 +314,33 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[ZEXT]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C3]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[ANYEXT]]
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC1]], [[C2]](s32)
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C4]](s64)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C4]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C4]]
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND2]], [[AND1]](s64)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C5]](s64)
     ; CHECK-NEXT: G_STORE [[COPY2]](s32), [[COPY1]](p0) :: (store (s8))
-    ; CHECK-NEXT: G_STORE [[LSHR1]](s32), [[PTR_ADD1]](p0) :: (store (s8) into unknown-address + 1)
-    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[C5]](s32)
-    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C4]](s64)
-    ; CHECK-NEXT: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into unknown-address + 2)
-    ; CHECK-NEXT: G_STORE [[LSHR2]](s32), [[PTR_ADD2]](p0) :: (store (s8) into unknown-address + 3)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC2]](s32), [[PTR_ADD1]](p0) :: (store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C6]](s32)
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[ANYEXT1]], [[C4]]
+    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s64) = G_AND [[LSHR]], [[C4]]
+    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND4]], [[AND3]](s64)
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C5]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p0) :: (store (s8) into unknown-address + 2)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR2]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC3]](s32), [[PTR_ADD2]](p0) :: (store (s8) into unknown-address + 3)
     ; CHECK-NEXT: PseudoRET
     ;
     ; UNALIGNED-LABEL: name: store_i32_unaligned
@@ -373,11 +383,15 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[ZEXT]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[COPY2]](s32), [[COPY1]](p0) :: (store (s16))
-    ; CHECK-NEXT: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 2)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 2)
     ; CHECK-NEXT: PseudoRET
     ;
     ; UNALIGNED-LABEL: name: store_i32_align2
@@ -423,16 +437,21 @@ body:             |
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC]], [[C2]](s32)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C3]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C2]](s32)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[ZEXT]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C4]](s64)
     ; CHECK-NEXT: G_STORE [[TRUNC]](s32), [[COPY1]](p0) :: (store (s16))
-    ; CHECK-NEXT: G_STORE [[LSHR1]](s32), [[PTR_ADD1]](p0) :: (store (s16) into unknown-address + 2)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
-    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC1]], [[C2]](s32)
-    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C3]](s64)
-    ; CHECK-NEXT: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 4)
-    ; CHECK-NEXT: G_STORE [[LSHR2]](s32), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 6)
+    ; CHECK-NEXT: G_STORE [[TRUNC1]](s32), [[PTR_ADD1]](p0) :: (store (s16) into unknown-address + 2)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[LSHR]], [[ZEXT]](s64)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR2]](s64)
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C4]](s64)
+    ; CHECK-NEXT: G_STORE [[TRUNC2]](s32), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 4)
+    ; CHECK-NEXT: G_STORE [[TRUNC3]](s32), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 6)
     ; CHECK-NEXT: PseudoRET
     ;
     ; UNALIGNED-LABEL: name: store_i64_align2
