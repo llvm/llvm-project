@@ -46,228 +46,97 @@ void func_call();
 template<typename Int, typename IntPtr, typename Float, typename Struct, typename Iterator, typename RandAccessIterator>
 void SeqLoopRules() {
 
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
   // expected-error@+3{{OpenACC 'parallel loop' construct can only be applied to a 'for' loop}}
   // expected-note@+1{{'parallel loop' construct is here}}
 #pragma acc parallel loop seq
   while(true);
 
   // No rules in this section!
-  // TODO: OpenACC: When we implement 'seq' for the combined constructs, all of
-  // these diagnostics here should go away.
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+6{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'kernels loop' construct is here}}
-  // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-4{{'kernels loop' construct is here}}
-  // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'kernels loop' construct is here}}
   for(;;);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+6{{loop variable of loop associated with an OpenACC 'parallel loop' construct must be of integer, pointer, or random-access-iterator type (is 'float')}}
-  // expected-note@-2{{'parallel loop' construct is here}}
-  // expected-error@+4{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-4{{'parallel loop' construct is here}}
-  // expected-error@+2{{OpenACC 'parallel loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'parallel loop' construct is here}}
   for(float f = 0;;);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+6{{OpenACC 'serial loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'serial loop' construct is here}}
-  // expected-error@+4{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-4{{'serial loop' construct is here}}
-  // expected-error@+2{{OpenACC 'serial loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'serial loop' construct is here}}
   for(int f;;);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+6 2{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'kernels loop' construct is here}}
-  // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-4{{'kernels loop' construct is here}}
-  // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'kernels loop' construct is here}}
   for(int f,g;;);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+4{{OpenACC 'parallel loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'parallel loop' construct is here}}
-  // expected-error@+2{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-4{{'parallel loop' construct is here}}
   for(Int f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+2{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-2{{'serial loop' construct is here}}
   for(Int *f = nullptr;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+2{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-2{{'kernels loop' construct is here}}
   for(IntPtr f = nullptr;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+2{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-2{{'parallel loop' construct is here}}
   for(Float *f = nullptr;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+6{{loop variable of loop associated with an OpenACC 'serial loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeStruct')}}
-  // expected-note@-2{{'serial loop' construct is here}}
-  // expected-error@+4{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-4{{'serial loop' construct is here}}
-  // expected-error@+2{{OpenACC 'serial loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'serial loop' construct is here}}
   for(SomeStruct f;;);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+4{{loop variable of loop associated with an OpenACC 'kernels loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeStruct')}}
-  // expected-note@-2{{'kernels loop' construct is here}}
-  // expected-error@+2{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-4{{'kernels loop' construct is here}}
   for(Struct f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+4{{loop variable of loop associated with an OpenACC 'parallel loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
-  // expected-note@-2{{'parallel loop' construct is here}}
-  // expected-error@+2{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-4{{'parallel loop' construct is here}}
   for(SomeIterator f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+4{{loop variable of loop associated with an OpenACC 'serial loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
-  // expected-note@-2{{'serial loop' construct is here}}
-  // expected-error@+2{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-4{{'serial loop' construct is here}}
   for(Iterator f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+2{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-2{{'kernels loop' construct is here}}
   for(SomeRAIterator f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+2{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-2{{'parallel loop' construct is here}}
   for(RandAccessIterator f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+6{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'kernels loop' construct is here}}
-  // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-4{{'kernels loop' construct is here}}
-  // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'kernels loop' construct is here}}
   for(Int f;;);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+4{{OpenACC 'parallel loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'parallel loop' construct is here}}
-  // expected-error@+2{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-4{{'parallel loop' construct is here}}
   for(Int f;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+4{{OpenACC 'serial loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'serial loop' construct is here}}
-  // expected-error@+2{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-4{{'serial loop' construct is here}}
   for(Int f;;f+=1);
 
   int i;
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+6{{OpenACC 'kernels loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'kernels loop' construct is here}}
-  // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-4{{'kernels loop' construct is here}}
-  // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'kernels loop' construct is here}}
   for(Int f;;i+=1);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+6{{OpenACC 'parallel loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2{{'parallel loop' construct is here}}
-  // expected-error@+4{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-4{{'parallel loop' construct is here}}
-  // expected-error@+2{{OpenACC 'parallel loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-6{{'parallel loop' construct is here}}
   for(Int f;;i++);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+4{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-2{{'serial loop' construct is here}}
-  // expected-error@+2{{OpenACC 'serial loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-4{{'serial loop' construct is here}}
   for(RandAccessIterator f;;i++);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+4{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-2{{'kernels loop' construct is here}}
-  // expected-error@+2{{OpenACC 'kernels loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
-  // expected-note@-4{{'kernels loop' construct is here}}
   for(RandAccessIterator f;;func_call());
 
   Int Array[5];
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
   for(auto X : Array);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+2 2{{loop variable of loop associated with an OpenACC 'serial loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
-  // expected-note@-2 2{{'serial loop' construct is here}}
   for(auto X : HasIteratorCollection{});
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
   for(auto X : HasRAIteratorCollection{});
 
   RandAccessIterator f, end;
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+2 2{{OpenACC 'parallel loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'parallel loop' construct is here}}
   for(f;f != end;f++);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc kernels loop seq
-  // expected-error@+2{{OpenACC 'kernels loop' construct must have a terminating condition}}
-  // expected-note@-2{{'kernels loop' construct is here}}
   for(f = 0;;++f);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc parallel loop seq
-  // expected-error@+2{{OpenACC 'parallel loop' construct must have a terminating condition}}
-  // expected-note@-2{{'parallel loop' construct is here}}
   for(f = 0;;f++);
 
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial loop seq
-  // expected-error@+2{{OpenACC 'serial loop' construct must have a terminating condition}}
-  // expected-note@-2{{'serial loop' construct is here}}
   for(f = 0;;f+=1);
 }
 
@@ -517,7 +386,6 @@ void LoopRules() {
 }
 
 void inst() {
-  // expected-note@+1{{in instantiation of function template specialization}}
   SeqLoopRules<int, int*, float, SomeStruct, SomeIterator, SomeRAIterator>();
   // expected-note@+1{{in instantiation of function template specialization}}
   LoopRules<int, int*, float, SomeStruct, SomeIterator, SomeRAIterator>();
