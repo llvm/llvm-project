@@ -159,14 +159,14 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration round(const duration<
 template <class _Rep, class _Period>
 class _LIBCPP_TEMPLATE_VIS duration {
   static_assert(!__is_duration<_Rep>::value, "A duration representation can not be a duration");
-  static_assert(__is_ratio<_Period>::value, "Second template parameter of duration must be a std::ratio");
+  static_assert(__is_ratio_v<_Period>, "Second template parameter of duration must be a std::ratio");
   static_assert(_Period::num > 0, "duration period must be positive");
 
   template <class _R1, class _R2>
   struct __no_overflow {
   private:
-    static const intmax_t __gcd_n1_n2 = __static_gcd<_R1::num, _R2::num>::value;
-    static const intmax_t __gcd_d1_d2 = __static_gcd<_R1::den, _R2::den>::value;
+    static const intmax_t __gcd_n1_n2 = __static_gcd<_R1::num, _R2::num>;
+    static const intmax_t __gcd_d1_d2 = __static_gcd<_R1::den, _R2::den>;
     static const intmax_t __n1        = _R1::num / __gcd_n1_n2;
     static const intmax_t __d1        = _R1::den / __gcd_d1_d2;
     static const intmax_t __n2        = _R2::num / __gcd_n1_n2;
