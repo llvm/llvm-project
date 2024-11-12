@@ -224,5 +224,7 @@ __tile_dphf8ps(__tile1024i *dst, __tile1024i src1, __tile1024i src2) {
 #define _tile_dphf8ps(dst, src1, src2)                                         \
   __builtin_ia32_tdphf8ps((dst), (src1), (src2))
 
+#undef __DEFAULT_FN_ATTRS_FP8
+
 #endif /* __x86_64__ */
 #endif /* __AMXFP8INTRIN_H */
