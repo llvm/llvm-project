@@ -42,7 +42,7 @@ def CIR_Dialect : Dialect {
     void printType(mlir::Type type, mlir::DialectAsmPrinter &printer) const override;
 
     mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
-                             mlir::Type type) const override;
+                                   mlir::Type type) const override;
 
     void printAttribute(mlir::Attribute attr, mlir::DialectAsmPrinter &os) const override;
   }];
