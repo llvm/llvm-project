@@ -11307,15 +11307,15 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue CR6Reg = DAG.getRegister(PPC::CR6, MVT::i32);
     SDValue CRBit =
         SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
-                                   CR6Reg, SubRegIdx, GlueOp), 0);
+                                   CR6Reg, SubRegIdx, GlueOp),
+                0);
     return DAG.getNode(SetOp, dl, MVT::i32, CRBit);
   }
 
   // Now that we have the comparison, emit a copy from the CR to a GPR.
   // This is flagged to the above dot comparison.
-  SDValue Flags =
-      DAG.getNode(PPCISD::MFOCRF, dl, MVT::i32,
-                  DAG.getRegister(PPC::CR6, MVT::i32), GlueOp);
+  SDValue Flags = DAG.getNode(PPCISD::MFOCRF, dl, MVT::i32,
+                              DAG.getRegister(PPC::CR6, MVT::i32), GlueOp);
 
   // Shift the bit into the low position.
   Flags = DAG.getNode(ISD::SRL, dl, MVT::i32, Flags,
