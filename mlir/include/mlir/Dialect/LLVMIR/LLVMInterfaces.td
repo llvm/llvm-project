@@ -116,7 +116,7 @@ def ExactFlagInterface : OpInterface<"ExactFlagInterface"> {
 
 def DisjointFlagInterface : OpInterface<"DisjointFlagInterface"> {
   let description = [{
-    This interface defines an LLVM operation with an disjoint flag and
+    This interface defines an LLVM operation with a disjoint flag and
     provides a uniform API for accessing it.
   }];
 

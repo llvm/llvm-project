@@ -107,11 +107,11 @@ class LLVM_IntArithmeticOpWithDisjointFlag<string mnemonic, string instName,
   let assemblyFormat = [{
     (`disjoint` $isDisjoint^)? $lhs `,` $rhs attr-dict `:` type($res)
   }];
-  string llvmBuilder =
-    [{auto inst = builder.Create}] # instName #
-    [{($lhs, $rhs, /*Name=*/"");
+  string llvmBuilder = [{
+    auto inst = builder.Create}] # instName # [{($lhs, $rhs, /*Name=*/"");
     moduleTranslation.setDisjointFlag(op, inst);
-    $res = inst;}];
+    $res = inst;
+  }];
 }
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :

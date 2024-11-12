@@ -1900,7 +1900,6 @@ void ModuleTranslation::setLoopMetadata(Operation *op,
 
 void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *inst) {
   auto iface = cast<DisjointFlagInterface>(op);
-
   auto inst_disjoint = cast<llvm::PossiblyDisjointInst>(inst);
 
   inst_disjoint->setIsDisjoint(iface.getIsDisjoint());
