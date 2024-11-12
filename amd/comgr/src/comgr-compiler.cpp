@@ -42,6 +42,7 @@
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
+#include "comgr-spirv-command.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "clang/Basic/Version.h"
@@ -86,10 +87,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-
-#ifndef COMGR_DISABLE_SPIRV
-#include "LLVMSPIRVLib/LLVMSPIRVLib.h"
-#endif
 
 #include "time-stat/ts-interface.h"
 
@@ -1884,10 +1881,6 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
     return Status;
   }
 
-  LLVMContext Context;
-  Context.setDiagnosticHandler(
-      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this->LogS), true);
-
   for (auto *Input : InSet->DataObjects) {
 
     if (env::shouldSaveTemps()) {
@@ -1900,28 +1893,20 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-    // TODO: With C++23, we should investigate replacing with spanstream
-    // to avoid memory copies:
-    //  https://en.cppreference.com/w/cpp/io/basic_ispanstream
-    std::istringstream ISS(std::string(Input->Data, Input->Size));
+    SmallString<0> OutBuf;
+    SPIRVCommand SPIRV(Input, OutBuf);
 
-    llvm::Module *M;
-    std::string Err;
-
-    SPIRV::TranslatorOpts Opts;
-    Opts.enableAllExtensions();
-    Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::OpenCL20);
-
-    if (!llvm::readSpirv(Context, Opts, ISS, M, Err)) {
-      LogS << "Failed to load SPIR-V as LLVM Module: " << Err << '\n';
-      return AMD_COMGR_STATUS_ERROR;
+    std::optional<CommandCache> &Cache = CommandCache::singleton(LogS);
+    amd_comgr_status_t Status;
+    if (!Cache) {
+      Status = SPIRV.execute(LogS);
+    } else {
+      Status = Cache->execute(SPIRV, LogS);
     }
 
-    SmallString<0> OutBuf;
-    BitcodeWriter Writer(OutBuf);
-    Writer.writeModule(*M, false, nullptr, false, nullptr);
-    Writer.writeSymtab();
-    Writer.writeStrtab();
+    if (Status) {
+      return Status;
+    }
 
     amd_comgr_data_t OutputT;
     if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT)) {

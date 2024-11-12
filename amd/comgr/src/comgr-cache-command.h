@@ -58,7 +58,8 @@ class raw_ostream;
 namespace COMGR {
 class CachedCommandAdaptor {
 public:
-  using ActionClass = clang::driver::Action::ActionClass;
+  using ActionClass =
+      std::underlying_type_t<clang::driver::Action::ActionClass>;
   using HashAlgorithm = llvm::SHA256;
   using Identifier = llvm::SmallString<64>;
 
