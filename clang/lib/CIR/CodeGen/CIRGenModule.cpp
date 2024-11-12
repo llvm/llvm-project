@@ -22,7 +22,9 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
-using namespace cir;
+using namespace clang;
+using namespace clang::CIRGen;
+
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &cgo,
@@ -75,7 +77,7 @@ void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
 void CIRGenModule::buildGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                  mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  auto funcOp = builder.create<mlir::cir::FuncOp>(
+  auto funcOp = builder.create<cir::FuncOp>(
       getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
   theModule.push_back(funcOp);
 }

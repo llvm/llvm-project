@@ -237,14 +237,16 @@ def HasStdExtAOrZaamo
 
 def FeatureStdExtZabha
     : RISCVExtension<"zabha", 1, 0,
-                     "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+                     "'Zabha' (Byte and Halfword Atomic Memory Operations)",
+                     [FeatureStdExtZaamo]>;
 def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                      AssemblerPredicate<(all_of FeatureStdExtZabha),
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 
 def FeatureStdExtZacas
     : RISCVExtension<"zacas", 1, 0,
-                     "'Zacas' (Atomic Compare-And-Swap Instructions)">,
+                     "'Zacas' (Atomic Compare-And-Swap Instructions)",
+                     [FeatureStdExtZaamo]>,
       RISCVExtensionBitmask<0, 26>;
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
@@ -1461,8 +1463,3 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-def FeatureForcedSWShadowStack : SubtargetFeature<
-    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
-    "Implement shadow stack with software.">;
-def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

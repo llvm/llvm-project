@@ -1703,6 +1703,13 @@ public:
   void Unparse(const IntrinsicStmt &x) { // R1519
     Word("INTRINSIC :: "), Walk(x.v, ", ");
   }
+  void Unparse(const CallStmt::StarOrExpr &x) {
+    if (x.v) {
+      Walk(*x.v);
+    } else {
+      Word("*");
+    }
+  }
   void Unparse(const CallStmt::Chevrons &x) { // CUDA
     Walk(std::get<0>(x.t)); // grid
     Word(","), Walk(std::get<1>(x.t)); // block
@@ -2228,35 +2235,15 @@ public:
         std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
-  void Unparse(const OmpDependSinkVecLength &x) {
-    Walk(std::get<DefinedOperator>(x.t));
-    Walk(std::get<ScalarIntConstantExpr>(x.t));
+  void Unparse(const OmpDoacross::Sink &x) {
+    Word("SINK: ");
+    Walk(x.v.v);
   }
-  void Unparse(const OmpDependSinkVec &x) {
-    Walk(std::get<Name>(x.t));
-    Walk(std::get<std::optional<OmpDependSinkVecLength>>(x.t));
-  }
-  void Unparse(const OmpDependClause::InOut &x) {
+  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
+  void Unparse(const OmpDependClause::TaskDep &x) {
     Walk(std::get<OmpTaskDependenceType>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-  }
-  bool Pre(const OmpDependClause &x) {
-    return common::visit(
-        common::visitors{
-            [&](const OmpDependClause::Source &) {
-              Word("SOURCE");
-              return false;
-            },
-            [&](const OmpDependClause::Sink &y) {
-              Word("SINK:");
-              Walk(y.v);
-              Put(")");
-              return false;
-            },
-            [&](const OmpDependClause::InOut &) { return true; },
-        },
-        x.u);
   }
   void Unparse(const OmpDefaultmapClause &x) {
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));

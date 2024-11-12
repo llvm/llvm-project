@@ -24,8 +24,7 @@ def uimmlog2xlennonzero : RISCVOp, ImmLeaf<XLenVT, [{
   return isUInt<5>(Imm) && (Imm != 0);
 }]> {
   let ParserMatchClass = UImmLog2XLenNonZeroAsmOperand;
-  // TODO: should ensure invalid shamt is rejected when decoding.
-  let DecoderMethod = "decodeUImmNonZeroOperand<6>";
+  let DecoderMethod = "decodeUImmLog2XLenNonZeroOperand";
   let OperandType = "OPERAND_UIMMLOG2XLEN_NONZERO";
   let MCOperandPredicate = [{
     int64_t Imm;

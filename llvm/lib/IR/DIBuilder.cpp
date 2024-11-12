@@ -554,7 +554,7 @@ DIBuilder::createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_variant_part, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
-      Elements, 0, nullptr, nullptr, UniqueIdentifier, 0, Discriminator);
+      Elements, 0, nullptr, nullptr, UniqueIdentifier, Discriminator);
   trackIfUnresolved(R);
   return R;
 }
@@ -1033,8 +1033,8 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(Value *V,
   DbgInstPtr DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
-  if (DVI.is<Instruction *>())
-    cast<CallInst>(DVI.get<Instruction *>())->setTailCall();
+  if (auto *Inst = dyn_cast<Instruction *>(DVI))
+    cast<CallInst>(Inst)->setTailCall();
   return DVI;
 }
 

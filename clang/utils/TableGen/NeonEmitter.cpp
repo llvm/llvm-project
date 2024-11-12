@@ -340,7 +340,7 @@ class Intrinsic {
   /// The index of the key type passed to CGBuiltin.cpp for polymorphic calls.
   int PolymorphicKeyType;
   /// The local variables defined.
-  std::map<std::string, Variable> Variables;
+  std::map<std::string, Variable, std::less<>> Variables;
   /// NeededEarly - set if any other intrinsic depends on this intrinsic.
   bool NeededEarly;
   /// UseMacro - set if we should implement using a macro or unset for a
@@ -578,7 +578,7 @@ private:
 class NeonEmitter {
   const RecordKeeper &Records;
   DenseMap<const Record *, ClassKind> ClassMap;
-  std::map<std::string, std::deque<Intrinsic>> IntrinsicMap;
+  std::map<std::string, std::deque<Intrinsic>, std::less<>> IntrinsicMap;
   unsigned UniqueNumber;
 
   void createIntrinsic(const Record *R, SmallVectorImpl<Intrinsic *> &Out);
@@ -1548,8 +1548,8 @@ Intrinsic::DagEmitter::emitDagCast(const DagInit *DI, bool IsBitCast) {
     //   5. The value "H" or "D" to half or double the bitwidth.
     //   6. The value "8" to convert to 8-bit (signed) integer lanes.
     if (!DI->getArgNameStr(ArgIdx).empty()) {
-      assert_with_loc(Intr.Variables.find(std::string(
-                          DI->getArgNameStr(ArgIdx))) != Intr.Variables.end(),
+      assert_with_loc(Intr.Variables.find(DI->getArgNameStr(ArgIdx)) !=
+                          Intr.Variables.end(),
                       "Variable not found");
       castToType =
           Intr.Variables[std::string(DI->getArgNameStr(ArgIdx))].getType();
@@ -1937,9 +1937,9 @@ void Intrinsic::indexBody() {
 Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types,
                                      std::optional<std::string> MangledName) {
   // First, look up the name in the intrinsic map.
-  assert_with_loc(IntrinsicMap.find(Name.str()) != IntrinsicMap.end(),
+  assert_with_loc(IntrinsicMap.find(Name) != IntrinsicMap.end(),
                   ("Intrinsic '" + Name + "' not found!").str());
-  auto &V = IntrinsicMap.find(Name.str())->second;
+  auto &V = IntrinsicMap.find(Name)->second;
   std::vector<Intrinsic *> GoodVec;
 
   // Create a string to print if we end up failing.
