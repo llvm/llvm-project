@@ -1231,9 +1231,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_SHL: {
-    Register AmtReg = MI.getOperand(2).getReg();
-    auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
-    if (VRegAndVal) {
+    if (getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
       // We don't need a custom node for shift by constant. Just widen the
       // source and the shift amount.
       unsigned ExtOpc = TargetOpcode::G_ANYEXT;
