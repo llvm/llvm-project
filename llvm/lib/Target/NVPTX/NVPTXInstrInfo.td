@@ -3965,31 +3965,20 @@ def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
   return N->hasOneUse() && N->getFlags().hasNoNaNs();
 }]>;
 
-def FMARELU_F16 :
-  NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
-    "fma.rn.relu.f16 \t$dst, $a, $b, $c;", []>,
+multiclass FMARELU<RegisterClass RC, string OpVecString = "">  {
+  def _F16# !toupper(OpVecString) : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
+    !strconcat("fma.rn.relu.f16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
     Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
-def FMARELU_BF16 :
-  NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
-    "fma.rn.relu.bf16 \t$dst, $a, $b, $c;", []>,
+  def _F16# !toupper(OpVecString) #_FTZ : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
+    !strconcat("fma.rn.ftz.relu.f16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
+    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
+  def _BF16# !toupper(OpVecString) : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
+    !strconcat("fma.rn.relu.bf16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
     Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
-def FMARELU_F16X2 :
-  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
-    "fma.rn.relu.f16x2 \t$dst, $a, $b, $c;", []>,
-    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
-def FMARELU_BF16X2 :
-  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
-    "fma.rn.relu.bf16x2 \t$dst, $a, $b, $c;", []>,
-    Requires<[hasBF16Math, hasPTX<70>, hasSM<80>]>;
-// FTZ variants are only supported by fp16, not bf16
-def FMARELU_F16_FTZ :
-  NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
-    "fma.rn.ftz.relu.f16 \t$dst, $a, $b, $c;", []>,
-    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
-def FMARELU_F16X2_FTZ :
-  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
-    "fma.rn.ftz.relu.f16x2 \t$dst, $a, $b, $c;", []>,
-    Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
+}
+
+defm FMARELU : FMARELU<Int16Regs>;
+defm FMARELU : FMARELU<Int32Regs, "x2">;
 
 // Don't use function attributes, use instruction flag instead
 // FTZ variants are only supported by fp16, not bf16
