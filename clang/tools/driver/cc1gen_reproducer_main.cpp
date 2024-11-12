@@ -123,10 +123,9 @@ generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, new IgnoringDiagConsumer());
-  auto VFS = llvm::vfs::getRealFileSystem();
-  ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
-  Driver TheDriver(ToolContext.Path, llvm::sys::getDefaultTargetTriple(), Diags,
-                   /*Title=*/"clang LLVM compiler", VFS);
+  ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
+  Driver TheDriver(ToolContext.Path, llvm::sys::getDefaultTargetTriple(),
+                   Diags);
   TheDriver.setTargetAndMode(TargetAndMode);
   if (ToolContext.NeedsPrependArg)
     TheDriver.setPrependArg(ToolContext.PrependArg);
