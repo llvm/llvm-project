@@ -4557,3 +4557,25 @@ multiclass sve_fp_2op_p_zd_uscvtf_pat<string op> {
 
 defm SCVTF :  sve_fp_2op_p_zd_uscvtf_pat<"int_aarch64_sve_scvtf">;
 defm UCVTF :  sve_fp_2op_p_zd_uscvtf_pat<"int_aarch64_sve_ucvtf">;
+
+multiclass sve_int_un_pred_arit_bitwise_pat<SDPatternOperator op> {
+  let Predicates = [HasSVEorSME, NotHasSVE2p2orSME2p2] in {
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Pseudo>(NAME # _ZPmZ_B_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Pseudo>(NAME # _ZPmZ_H_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Pseudo>(NAME # _ZPmZ_S_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Pseudo>(NAME # _ZPmZ_D_UNDEF)>;
+  }
+
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Instruction>(NAME # _ZPzZ_B)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm CLS  : sve_int_un_pred_arit_bitwise_pat<AArch64cls_mt>;
+defm CLZ  : sve_int_un_pred_arit_bitwise_pat<AArch64clz_mt>;
+defm CNT  : sve_int_un_pred_arit_bitwise_pat<AArch64cnt_mt>;
+defm CNOT : sve_int_un_pred_arit_bitwise_pat<AArch64cnot_mt>;
+defm NOT  : sve_int_un_pred_arit_bitwise_pat<AArch64not_mt>;
