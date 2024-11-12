@@ -12,7 +12,8 @@
 //
 /// Currently, only power-of-two integer types are supported. These are
 /// converted to wider integers that are either 8 bits wide or wider.
-//
+///
+/// TODO: Support for non-powers-of-two.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -351,6 +352,9 @@ struct ConvertVectorMaskedStore final
     //
     // Using the compressed mask to store %packed_data results in expected
     // output.
+    //
+    // FIXME: Make an example based on the comment above work (see #115460 for
+    // reproducer).
     FailureOr<Operation *> newMask =
         getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale);
     if (failed(newMask))
