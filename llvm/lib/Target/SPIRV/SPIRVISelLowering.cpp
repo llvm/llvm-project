@@ -414,6 +414,17 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         validateForwardCalls(STI, MRI, GR, MI);
         break;
 
+      // ensure that LLVM IR add/sub instructions result in logical SPIR-V
+      // instructions when applied to bool type
+      case SPIRV::OpIAddS:
+      case SPIRV::OpIAddV:
+      case SPIRV::OpISubS:
+      case SPIRV::OpISubV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
+        break;
+
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
       // instructions when applied to bool type
       case SPIRV::OpBitwiseOrS:
