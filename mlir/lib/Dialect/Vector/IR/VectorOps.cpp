@@ -1339,6 +1339,50 @@ bool ExtractOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return l == r;
 }
 
+// Common verification rules for `InsertOp` and `ExtractOp` involving indices.
+// `indexedType` is the vector type being indexed in the operation, i.e., the
+// destination type in InsertOp and the source type in ExtractOp.
+// `vecOrScalarType` is the type that is not indexed in the op and can be
+// either a scalar or a vector, i.e., the source type in InsertOp and the
+// return type in ExtractOp.
+static LogicalResult verifyInsertExtractIndices(Operation *op,
+                                                VectorType indexedType,
+                                                int64_t numIndices,
+                                                Type vecOrScalarType) {
+  int64_t indexedRank = indexedType.getRank();
+  if (numIndices > indexedRank)
+    return op->emitOpError(
+        "expected a number of indices no greater than the indexed vector rank");
+
+  if (auto nonIndexedVecType = dyn_cast<VectorType>(vecOrScalarType)) {
+    // Vector case, including:
+    //  * 0-D vector:
+    //    * vector.extract %src[2]: vector<f32> from vector<8xf32)
+    //    * vector.insert %src, %dst[3]: vector<f32> into vector<8xf32>
+    //  * One-element vector:
+    //    * vector.extract %src[4]: vector<1xf32> from vector<8xf32>
+    //    * vector.insert %src, %dst[1]: vector<1xf32> into vector<8xf32>
+    //    * vector.extract %src[7]: vector<1xf32> from vector<8x1xf32>
+    //    * vector.insert %src, %dst[5]: vector<1xf32> into vector<8x1xf32>
+    int64_t indexedRankMinusIndices = indexedRank - numIndices;
+    int64_t nonIndexedRank = nonIndexedVecType.getRank();
+    bool isOneElemVec =
+        nonIndexedRank == 1 && nonIndexedVecType.getDimSize(0) == 1;
+    if (indexedRankMinusIndices != nonIndexedRank &&
+        (!isOneElemVec || indexedRankMinusIndices != 0)) {
+      return op->emitOpError(
+          "expected indexed vector rank minus number of indices to match "
+          "the rank of the non-indexed vector rank");
+    }
+  } else if (indexedRank != numIndices) {
+    // Scalar case.
+    return op->emitOpError("expected indexed vector rank to match the number "
+                           "of indices for scalar cases");
+  }
+
+  return success();
+}
+
 LogicalResult vector::ExtractOp::verify() {
   // Note: This check must come before getMixedPosition() to prevent a crash.
   auto dynamicMarkersCount =
@@ -1348,31 +1392,12 @@ LogicalResult vector::ExtractOp::verify() {
         "mismatch between dynamic and static positions (kDynamic marker but no "
         "corresponding dynamic position) -- this can only happen due to an "
         "incorrect fold/rewrite");
-  auto position = getMixedPosition();
-  VectorType srcVecType = getSourceVectorType();
-  int64_t srcRank = srcVecType.getRank();
-  if (position.size() > static_cast<unsigned>(srcRank))
-    return emitOpError(
-        "expected position attribute of rank no greater than vector rank");
+  auto srcVecType = getSourceVectorType();
+  if (failed(verifyInsertExtractIndices(*this, srcVecType, getNumIndices(),
+                                        getResult().getType())))
+    return failure();
 
-  VectorType dstVecType = dyn_cast<VectorType>(getResult().getType());
-  if (dstVecType) {
-    int64_t srcRankMinusIndices = srcRank - getNumIndices();
-    int64_t dstRank = dstVecType.getRank();
-    if ((srcRankMinusIndices == 0 && dstRank != 1) ||
-        (srcRankMinusIndices != 0 && srcRankMinusIndices != dstRank)) {
-      return emitOpError(
-          "expected source rank minus number of indices to match "
-          "destination vector rank");
-    }
-  } else {
-    // Scalar result.
-    if (srcRank != getNumIndices())
-      return emitOpError("expected source rank to match number of indices "
-                         "for scalar result");
-  }
-
-  for (auto [idx, pos] : llvm::enumerate(position)) {
+  for (auto [idx, pos] : llvm::enumerate(getMixedPosition())) {
     if (pos.is<Attribute>()) {
       int64_t constIdx = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
       if (constIdx < 0 || constIdx >= srcVecType.getDimSize(idx)) {
@@ -2881,25 +2906,15 @@ void vector::InsertOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult InsertOp::verify() {
-  SmallVector<OpFoldResult> position = getMixedPosition();
-  auto destVectorType = getDestVectorType();
-  if (position.size() > static_cast<unsigned>(destVectorType.getRank()))
-    return emitOpError(
-        "expected position attribute of rank no greater than dest vector rank");
-  auto srcVectorType = llvm::dyn_cast<VectorType>(getSourceType());
-  if (srcVectorType &&
-      (static_cast<unsigned>(srcVectorType.getRank()) + position.size() !=
-       static_cast<unsigned>(destVectorType.getRank())))
-    return emitOpError("expected position attribute rank + source rank to "
-                       "match dest vector rank");
-  if (!srcVectorType &&
-      (position.size() != static_cast<unsigned>(destVectorType.getRank())))
-    return emitOpError(
-        "expected position attribute rank to match the dest vector rank");
-  for (auto [idx, pos] : llvm::enumerate(position)) {
+  auto dstVecType = getDestVectorType();
+  if (failed(verifyInsertExtractIndices(*this, dstVecType, getNumIndices(),
+                                        getSourceType())))
+    return failure();
+
+  for (auto [idx, pos] : llvm::enumerate(getMixedPosition())) {
     if (auto attr = pos.dyn_cast<Attribute>()) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
-      if (constIdx < 0 || constIdx >= destVectorType.getDimSize(idx)) {
+      if (constIdx < 0 || constIdx >= dstVecType.getDimSize(idx)) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "
