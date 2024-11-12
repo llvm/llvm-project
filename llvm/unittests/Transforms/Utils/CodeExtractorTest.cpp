@@ -580,7 +580,7 @@ TEST(CodeExtractor, AllocaBlock) {
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     define i32 @foo(i32 %x, i32 %y, i32 %z) {
     entry:
-      br label %allocas    
+      br label %allocas
 
     allocas:
       br label %body

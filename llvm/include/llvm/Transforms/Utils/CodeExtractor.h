@@ -111,16 +111,16 @@ public:
     /// irrelevant.
     ///
     /// When there are exactly two exit blocks, the extracted function returns a
-    /// boolean. For SwitchCases[0], it returns 'true'. For SwitchCases[1] it
-    /// returns 'false'.
-    /// NOTE: Since a boolean is represented by i1, SwitchCases[0] returns 1 and
-    ///       SwitchCases[1] returns 0, which is inverted with the the regular
-    ///       switch case below.
+    /// boolean. For ExtractedFuncRetVals[0], it returns 'true'. For
+    /// ExtractedFuncRetVals[1] it returns 'false'.
+    /// NOTE: Since a boolean is represented by i1, ExtractedFuncRetVals[0]
+    ///       returns 1 and ExtractedFuncRetVals[1] returns 0, which opposite
+    ///       of the regular pattern below.
     ///
     /// When there are 3 or more exit blocks, leaving the extracted function via
     /// the first block it returns 0. When leaving via the second entry it
     /// returns 1, etc.
-    SmallVector<BasicBlock *> SwitchCases;
+    SmallVector<BasicBlock *> ExtractedFuncRetVals;
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
@@ -254,7 +254,7 @@ public:
 
     /// Updates the list of SwitchCases (corresponding to exit blocks) after
     /// changes of the control flow or the Blocks list.
-    void recomputeSwitchCases();
+    void computeExtractedFuncRetVals();
 
     /// Return the type used for the return code of the extracted function to
     /// indicate which exit block to jump to.

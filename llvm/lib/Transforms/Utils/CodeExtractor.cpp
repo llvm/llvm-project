@@ -735,7 +735,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 /// and other with remaining incoming blocks; then first PHIs are placed in
 /// outlined region.
 void CodeExtractor::severSplitPHINodesOfExits() {
-  for (BasicBlock *ExitBB : SwitchCases) {
+  for (BasicBlock *ExitBB : ExtractedFuncRetVals) {
     BasicBlock *NewBB = nullptr;
 
     for (PHINode &PN : ExitBB->phis()) {
@@ -1422,7 +1422,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
       cast<Instruction>(II)->moveBefore(TI);
-    recomputeSwitchCases();
+    computeExtractedFuncRetVals();
   }
 
   // CFG/ExitBlocks must not change hereafter
@@ -1440,7 +1440,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
           BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
     }
 
-    for (BasicBlock *Succ : SwitchCases) {
+    for (BasicBlock *Succ : ExtractedFuncRetVals) {
       for (BasicBlock *Block : predecessors(Succ)) {
         if (!Blocks.count(Block))
           continue;
@@ -1507,12 +1507,12 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&header) {
   // region, create a new PHI for those values within the region such that only
   // PHI itself becomes an output value, not each of its incoming values
   // individually.
-  recomputeSwitchCases();
+  computeExtractedFuncRetVals();
   severSplitPHINodesOfExits();
 }
 
-void CodeExtractor::recomputeSwitchCases() {
-  SwitchCases.clear();
+void CodeExtractor::computeExtractedFuncRetVals() {
+  ExtractedFuncRetVals.clear();
 
   SmallPtrSet<BasicBlock *, 2> ExitBlocks;
   for (BasicBlock *Block : Blocks) {
@@ -1522,7 +1522,7 @@ void CodeExtractor::recomputeSwitchCases() {
 
       bool IsNew = ExitBlocks.insert(Succ).second;
       if (IsNew)
-        SwitchCases.push_back(Succ);
+        ExtractedFuncRetVals.push_back(Succ);
     }
   }
 }
@@ -1530,8 +1530,9 @@ void CodeExtractor::recomputeSwitchCases() {
 Type *CodeExtractor::getSwitchType() {
   LLVMContext &Context = Blocks.front()->getContext();
 
-  assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
-  switch (SwitchCases.size()) {
+  assert(ExtractedFuncRetVals.size() < 0xffff &&
+         "too many exit blocks for switch");
+  switch (ExtractedFuncRetVals.size()) {
   case 0:
   case 1:
     return Type::getVoidTy(Context);
@@ -1617,7 +1618,7 @@ void CodeExtractor::emitFunctionBody(
 
   // Iterate over the previously collected targets, and create new blocks inside
   // the function to branch to.
-  for (auto P : enumerate(SwitchCases)) {
+  for (auto P : enumerate(ExtractedFuncRetVals)) {
     BasicBlock *OldTarget = P.value();
     size_t SuccNum = P.index();
 
@@ -1627,8 +1628,9 @@ void CodeExtractor::emitFunctionBody(
 
     Value *brVal = nullptr;
     Type *RetTy = getSwitchType();
-    assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
-    switch (SwitchCases.size()) {
+    assert(ExtractedFuncRetVals.size() < 0xffff &&
+           "too many exit blocks for switch");
+    switch (ExtractedFuncRetVals.size()) {
     case 0:
     case 1:
       // No value needed.
@@ -1729,7 +1731,7 @@ void CodeExtractor::emitFunctionBody(
     }
   }
 
-  if (SwitchCases.empty()) {
+  if (ExtractedFuncRetVals.empty()) {
     // Mark the new function `noreturn` if applicable. Terminators which resume
     // exception propagation are treated as returning instructions. This is to
     // avoid inserting traps after calls to outlined functions which unwind.
@@ -1817,9 +1819,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   }
 
   // Emit the call to the function
-  CallInst *call = CallInst::Create(newFunction, params,
-                                    SwitchCases.size() > 1 ? "targetBlock" : "",
-                                    codeReplacer);
+  CallInst *call = CallInst::Create(
+      newFunction, params, ExtractedFuncRetVals.size() > 1 ? "targetBlock" : "",
+      codeReplacer);
 
   // Set swifterror parameter attributes.
   unsigned ParamIdx = 0;
@@ -1870,7 +1872,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   SwitchInst *TheSwitch =
       SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
                          codeReplacer, 0, codeReplacer);
-  for (auto P : enumerate(SwitchCases)) {
+  for (auto P : enumerate(ExtractedFuncRetVals)) {
     BasicBlock *OldTarget = P.value();
     size_t SuccNum = P.index();
 
@@ -1880,7 +1882,7 @@ CallInst *CodeExtractor::emitReplacerCall(
 
   // Now that we've done the deed, simplify the switch instruction.
   Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
-  switch (SwitchCases.size()) {
+  switch (ExtractedFuncRetVals.size()) {
   case 0:
     // There are no successors (the block containing the switch itself), which
     // means that previously this was the last part of the function, and hence
@@ -1923,10 +1925,11 @@ CallInst *CodeExtractor::emitReplacerCall(
     // Otherwise, make the default destination of the switch instruction be one
     // of the other successors.
     TheSwitch->setCondition(call);
-    TheSwitch->setDefaultDest(TheSwitch->getSuccessor(SwitchCases.size()));
+    TheSwitch->setDefaultDest(
+        TheSwitch->getSuccessor(ExtractedFuncRetVals.size()));
     // Remove redundant case
     TheSwitch->removeCase(
-        SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
+        SwitchInst::CaseIt(TheSwitch, ExtractedFuncRetVals.size() - 1));
     break;
   }
 
@@ -1963,7 +1966,7 @@ void CodeExtractor::insertReplacerCall(
   // extracted function values. Since the original definition's block
   // dominated its use, it will also be dominated by codeReplacer's switch
   // which joined multiple exit blocks.
-  for (BasicBlock *ExitBB : SwitchCases)
+  for (BasicBlock *ExitBB : ExtractedFuncRetVals)
     for (PHINode &PN : ExitBB->phis()) {
       Value *IncomingCodeReplacerVal = nullptr;
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
@@ -1992,7 +1995,7 @@ void CodeExtractor::insertReplacerCall(
   }
 
   // Update the branch weights for the exit block.
-  if (BFI && SwitchCases.size() > 1)
+  if (BFI && ExtractedFuncRetVals.size() > 1)
     calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
 }
 
