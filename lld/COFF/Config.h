@@ -166,7 +166,7 @@ struct Configuration {
   Symbol *delayLoadHelper = nullptr;
   Symbol *arm64ECIcallHelper = nullptr;
 
-  bool saveTemps = false;
+  llvm::DenseSet<llvm::StringRef> saveTempsArgs;
 
   // /guard:cf
   int guardCF = GuardCFLevel::Off;
