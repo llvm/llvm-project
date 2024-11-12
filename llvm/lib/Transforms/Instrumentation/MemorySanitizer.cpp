@@ -5590,14 +5590,14 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
 struct VarArgPowerPCHelper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
-  const DataLayout &DL = F.getDataLayout();
-  unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
 
   VarArgPowerPCHelper(Function &F, MemorySanitizer &MS,
                       MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
       : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    const DataLayout &DL = F.getDataLayout();
+
     // For PowerPC, we need to deal with alignment of stack arguments -
     // they are mostly aligned to 8 bytes, but vectors and i128 arrays
     // are aligned to 16 bytes, byvals can be aligned to 8 or 16 bytes,
@@ -5733,6 +5733,8 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
 
       Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      const DataLayout &DL = F.getDataLayout();
+      unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
       const Align Alignment = Align(IntptrSize);
       std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
           MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
@@ -6028,14 +6030,14 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
 struct VarArgI386Helper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
-  const DataLayout &DL = F.getDataLayout();
-  unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
 
   VarArgI386Helper(Function &F, MemorySanitizer &MS,
                    MemorySanitizerVisitor &MSV)
       : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/4) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    const DataLayout &DL = F.getDataLayout();
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     unsigned VAArgOffset = 0;
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
@@ -6126,6 +6128,8 @@ struct VarArgI386Helper : public VarArgHelperBase {
       Value *RegSaveAreaPtr =
           IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      const DataLayout &DL = F.getDataLayout();
+      unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
       const Align Alignment = Align(IntptrSize);
       std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
           MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
@@ -6141,8 +6145,6 @@ struct VarArgI386Helper : public VarArgHelperBase {
 struct VarArgGenericHelper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
-  const DataLayout &DL = F.getDataLayout();
-  unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
 
   VarArgGenericHelper(Function &F, MemorySanitizer &MS,
                       MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
@@ -6150,10 +6152,10 @@ struct VarArgGenericHelper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
-    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
-      bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      if (IsFixed)
-        continue;
+    const DataLayout &DL = F.getDataLayout();
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    for (Value *A :
+         llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
       if (DL.isBigEndian()) {
         // Adjusting the shadow for argument with size < IntptrSize to match the
@@ -6211,6 +6213,8 @@ struct VarArgGenericHelper : public VarArgHelperBase {
       Value *RegSaveAreaPtr =
           IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      const DataLayout &DL = F.getDataLayout();
+      unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
       const Align Alignment = Align(IntptrSize);
       std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
           MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
