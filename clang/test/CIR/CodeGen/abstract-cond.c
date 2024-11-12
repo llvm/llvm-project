@@ -27,10 +27,10 @@ int f6(int a0, struct s6 a1, struct s6 a2) {
 // LLVM:    %[[LOAD_A0:.*]] = load i32, ptr {{.*}}
 // LLVM:    %[[COND:.*]] = icmp ne i32 %[[LOAD_A0]], 0
 // LLVM:    br i1 %[[COND]], label %[[A1_PATH:.*]], label %[[A2_PATH:.*]],
-// LLVM:  [[A2_PATH]]:
+// LLVM:  [[A1_PATH]]:
 // LLVM:    call void @llvm.memcpy.p0.p0.i32(ptr %[[TMP:.*]], ptr {{.*}}, i32 4, i1 false)
 // LLVM:    br label %[[EXIT:[a-z0-9]+]]
-// LLVM:  [[A1_PATH]]:
+// LLVM:  [[A2_PATH]]:
 // LLVM:    call void @llvm.memcpy.p0.p0.i32(ptr %[[TMP]], ptr {{.*}}, i32 4, i1 false)
 // LLVM:    br label %[[EXIT]]
 // LLVM:  [[EXIT]]:

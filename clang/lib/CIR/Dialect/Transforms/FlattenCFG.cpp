@@ -91,7 +91,7 @@ struct CIRIfFlattening : public OpRewritePattern<IfOp> {
     if (!emptyElse) {
       elseBeforeBody = &ifOp.getElseRegion().front();
       elseAfterBody = &ifOp.getElseRegion().back();
-      rewriter.inlineRegionBefore(ifOp.getElseRegion(), thenAfterBody);
+      rewriter.inlineRegionBefore(ifOp.getElseRegion(), continueBlock);
     } else {
       elseBeforeBody = elseAfterBody = continueBlock;
     }

@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=BEFORE
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -fclangir-mem2reg %s -o %t.cir 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -fclangir-mem2reg %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=MEM2REG
 
 int return_42() {
   int y = 42;
-  return y;  
+  return y;
 }
 
 // BEFORE: cir.func {{.*@return_42}}
 // BEFORE:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // BEFORE:   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
 // BEFORE:   %2 = cir.const #cir.int<42> : !s32i
-// BEFORE:   cir.store %2, %1 : !s32i, !cir.ptr<!s32i> 
+// BEFORE:   cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
 // BEFORE:   %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // BEFORE:   cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
 // BEFORE:   %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
@@ -63,7 +63,7 @@ void alloca_in_loop(int* ar, int n) {
 // BEFORE:        cir.yield
 // BEFORE:      }
 // BEFORE:    }
-// BEFORE:    cir.return  
+// BEFORE:    cir.return
 
 // MEM2REG:  cir.func {{.*@alloca_in_loop}}
 // MEM2REG:    cir.br ^bb1
@@ -152,13 +152,13 @@ int alloca_in_ifelse(int x) {
 // MEM2REG:    %1 = cir.const #cir.int<42> : !s32i
 // MEM2REG:    %2 = cir.cmp(gt, %arg0, %1) : !s32i, !s32i
 // MEM2REG:    %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
-// MEM2REG:    cir.brcond %3 ^bb3, ^bb2
+// MEM2REG:    cir.brcond %3 ^bb2, ^bb3
 // MEM2REG:  ^bb2:  // pred: ^bb1
-// MEM2REG:    %4 = cir.const #cir.int<3> : !s32i
+// MEM2REG:    %4 = cir.const #cir.int<2> : !s32i
 // MEM2REG:    %5 = cir.binop(mul, %arg0, %4) nsw : !s32i
 // MEM2REG:    cir.br ^bb4(%5 : !s32i)
 // MEM2REG:  ^bb3:  // pred: ^bb1
-// MEM2REG:    %6 = cir.const #cir.int<2> : !s32i
+// MEM2REG:    %6 = cir.const #cir.int<3> : !s32i
 // MEM2REG:    %7 = cir.binop(mul, %arg0, %6) nsw : !s32i
 // MEM2REG:    cir.br ^bb4(%7 : !s32i)
 // MEM2REG:  ^bb4(%8: !s32i{{.*}}):  // 2 preds: ^bb2, ^bb3
@@ -174,7 +174,7 @@ int alloca_in_ifelse(int x) {
 
 typedef __SIZE_TYPE__ size_t;
 void *alloca(size_t size);
-  
+
 void test_bitcast(size_t n) {
   int *c1 = alloca(n);
 }
@@ -189,7 +189,7 @@ void test_bitcast(size_t n) {
 // BEFORE:    %5 = cir.cast(bitcast, %4 : !cir.ptr<!void>), !cir.ptr<!s32i>
 // BEFORE:    cir.store %5, %1 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // BEFORE:    cir.return
-  
+
 // MEM2REG:  cir.func {{.*@test_bitcast}}
 // MEM2REG:    cir.return
 // MEM2REG:  }
