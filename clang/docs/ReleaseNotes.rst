@@ -528,6 +528,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Improved diagnostic message for __builtin_bit_cast size mismatch (#GH115870).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

@@ -12354,7 +12354,8 @@ def err_preserve_enum_value_not_const: Error<
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
-  "__builtin_bit_cast source size does not equal destination size (%0 vs %1)">;
+  "__builtin_bit_cast source type %0 size (%1 %plural{1:byte|:bytes}1) "
+  "does not match destination type %2 size (%3 %plural{1:byte|:bytes}3)">;
 
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
