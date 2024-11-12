@@ -1040,6 +1040,11 @@ template <class MemsetIntr>
 void createMemsetIntr(OpBuilder &builder, MemsetIntr toReplace,
                       IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
                       DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index);
+template <>
+void createMemsetIntr(OpBuilder &builder, LLVM::MemsetOp toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
                       Attribute index) {
   Value newMemsetSizeValue =
       builder
