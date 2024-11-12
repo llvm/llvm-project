@@ -22,7 +22,9 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
-using namespace cir;
+using namespace clang;
+using namespace clang::CIRGen;
+
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &cgo,
@@ -48,7 +50,7 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
   return mlir::FusedLoc::get({begin, end}, metadata, builder.getContext());
 }
 
-void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
+void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -69,19 +71,19 @@ void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
   }
 
   // TODO(CIR): Defer emitting some global definitions until later
-  buildGlobalDefinition(gd);
+  emitGlobalDefinition(gd);
 }
 
-void CIRGenModule::buildGlobalFunctionDefinition(clang::GlobalDecl gd,
-                                                 mlir::Operation *op) {
+void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
+                                                mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  auto funcOp = builder.create<mlir::cir::FuncOp>(
+  auto funcOp = builder.create<cir::FuncOp>(
       getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
   theModule.push_back(funcOp);
 }
 
-void CIRGenModule::buildGlobalDefinition(clang::GlobalDecl gd,
-                                         mlir::Operation *op) {
+void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
+                                        mlir::Operation *op) {
   const auto *decl = cast<ValueDecl>(gd.getDecl());
   if (const auto *fd = dyn_cast<FunctionDecl>(decl)) {
     // TODO(CIR): Skip generation of CIR for functions with available_externally
@@ -97,15 +99,15 @@ void CIRGenModule::buildGlobalDefinition(clang::GlobalDecl gd,
 
     if (fd->isMultiVersion())
       errorNYI(fd->getSourceRange(), "multiversion functions");
-    buildGlobalFunctionDefinition(gd, op);
+    emitGlobalFunctionDefinition(gd, op);
     return;
   }
 
-  llvm_unreachable("Invalid argument to CIRGenModule::buildGlobalDefinition");
+  llvm_unreachable("Invalid argument to CIRGenModule::emitGlobalDefinition");
 }
 
 // Emit code for a single top level declaration.
-void CIRGenModule::buildTopLevelDecl(Decl *decl) {
+void CIRGenModule::emitTopLevelDecl(Decl *decl) {
 
   // Ignore dependent declarations.
   if (decl->isTemplated())
@@ -121,7 +123,7 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
     auto *fd = cast<FunctionDecl>(decl);
     // Consteval functions shouldn't be emitted.
     if (!fd->isConsteval())
-      buildGlobal(fd);
+      emitGlobal(fd);
     break;
   }
   }

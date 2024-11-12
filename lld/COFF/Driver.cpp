@@ -1525,6 +1525,10 @@ getVFS(const opt::InputArgList &args) {
   return nullptr;
 }
 
+constexpr const char *lldsaveTempsValues[] = {
+    "resolution", "preopt",     "promote", "internalize",  "import",
+    "opt",        "precodegen", "prelink", "combinedindex"};
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ScopedTimer rootTimer(ctx.rootTimer);
   Configuration *config = &ctx.config;
@@ -2012,8 +2016,18 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->ltoDebugPassManager = ltoDebugPM;
 
   // Handle /lldsavetemps
-  if (args.hasArg(OPT_lldsavetemps))
-    config->saveTemps = true;
+  if (args.hasArg(OPT_lldsavetemps)) {
+    for (const char *s : lldsaveTempsValues)
+      config->saveTempsArgs.insert(s);
+  } else {
+    for (auto *arg : args.filtered(OPT_lldsavetemps_colon)) {
+      StringRef s = arg->getValue();
+      if (llvm::is_contained(lldsaveTempsValues, s))
+        config->saveTempsArgs.insert(s);
+      else
+        error("unknown /lldsavetemps value: " + s);
+    }
+  }
 
   // Handle /lldemit
   if (auto *arg = args.getLastArg(OPT_lldemit)) {

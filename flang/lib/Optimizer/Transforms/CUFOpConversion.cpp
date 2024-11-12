@@ -337,6 +337,13 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
                                                  seqTy.getConstantArraySize());
         }
         bytes = rewriter.create<mlir::arith::MulIOp>(loc, nbElem, width);
+      } else if (fir::isa_derived(op.getInType())) {
+        mlir::Type structTy = typeConverter->convertType(op.getInType());
+        std::size_t structSize = dl->getTypeSizeInBits(structTy) / 8;
+        bytes = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                              structSize);
+      } else {
+        mlir::emitError(loc, "unsupported type in cuf.alloc\n");
       }
       mlir::func::FuncOp func =
           fir::runtime::getRuntimeFunc<mkRTKey(CUFMemAlloc)>(loc, builder);
@@ -500,8 +507,11 @@ struct CUFDataTransferOpConversion
   using OpRewritePattern::OpRewritePattern;
 
   CUFDataTransferOpConversion(mlir::MLIRContext *context,
-                              const mlir::SymbolTable &symtab)
-      : OpRewritePattern(context), symtab{symtab} {}
+                              const mlir::SymbolTable &symtab,
+                              mlir::DataLayout *dl,
+                              const fir::LLVMTypeConverter *typeConverter)
+      : OpRewritePattern(context), symtab{symtab}, dl{dl},
+        typeConverter{typeConverter} {}
 
   mlir::LogicalResult
   matchAndRewrite(cuf::DataTransferOp op,
@@ -569,7 +579,13 @@ struct CUFDataTransferOpConversion
           nbElement = builder.createIntegerConstant(
               loc, i64Ty, seqTy.getConstantArraySize());
       }
-      int width = computeWidth(loc, dstTy, kindMap);
+      unsigned width = 0;
+      if (fir::isa_derived(dstTy)) {
+        mlir::Type structTy = typeConverter->convertType(dstTy);
+        width = dl->getTypeSizeInBits(structTy) / 8;
+      } else {
+        width = computeWidth(loc, dstTy, kindMap);
+      }
       mlir::Value widthValue = rewriter.create<mlir::arith::ConstantOp>(
           loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
       mlir::Value bytes =
@@ -640,6 +656,8 @@ struct CUFDataTransferOpConversion
 
 private:
   const mlir::SymbolTable &symtab;
+  mlir::DataLayout *dl;
+  const fir::LLVMTypeConverter *typeConverter;
 };
 
 struct CUFLaunchOpConversion
@@ -742,6 +760,7 @@ void cuf::populateCUFToFIRConversionPatterns(
   patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
                   CUFFreeOpConversion>(patterns.getContext());
-  patterns.insert<CUFDataTransferOpConversion, CUFLaunchOpConversion>(
-      patterns.getContext(), symtab);
+  patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
+                                               &dl, &converter);
+  patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
 }

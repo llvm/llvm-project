@@ -73,6 +73,11 @@ int Test_InlineCommandCommentAnchor;
 // CHECK:      VarDecl{{.*}}Test_InlineCommandComment
 // CHECK:        InlineCommandComment{{.*}} Name="anchor" RenderAnchor Arg[0]="Aaa"
 
+/// \relates Aaa
+int Test_InlineCommandCommentRelates;
+// CHECK:      VarDecl{{.*}}Test_InlineCommandCommentRelates
+// CHECK:        InlineCommandComment{{.*}} Name="relates" RenderNormal Arg[0]="Aaa"
+
 /// <a>Aaa</a>
 /// <br/>
 int Test_HTMLTagComment;

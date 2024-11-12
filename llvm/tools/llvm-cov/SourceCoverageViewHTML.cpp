@@ -1213,7 +1213,6 @@ void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     OS << EndPre;
     OS << EndExpansionDiv;
   }
-  return;
 }
 
 void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,

@@ -34,11 +34,6 @@ class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 private:
-  /// A collection of loop constructs in the compute construct scope that
-  /// haven't had their 'parent' compute construct set yet. Entires will only be
-  /// made to this list in the case where we know the loop isn't an orphan.
-  llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
-
   struct ComputeConstructInfo {
     /// Which type of compute construct we are inside of, which we can use to
     /// determine whether we should add loops to the above collection.  We can
@@ -175,10 +170,14 @@ public:
   /// 'worker' clauses.
   SourceLocation LoopVectorClauseLoc;
   /// If there is a current 'active' loop construct that does NOT have a 'seq'
-  /// clause on it, this has that source location. This permits us to implement
-  /// the 'loop' restrictions on the loop variable. This can be extended via
-  /// 'collapse', so we need to keep this around for a while.
-  SourceLocation LoopWithoutSeqLoc;
+  /// clause on it, this has that source location and loop Directive 'kind'.
+  /// This permits us to implement the 'loop' restrictions on the loop variable.
+  /// This can be extended via 'collapse', so we need to keep this around for a
+  /// while.
+  struct LoopWithoutSeqCheckingInfo {
+    OpenACCDirectiveKind Kind = OpenACCDirectiveKind::Invalid;
+    SourceLocation Loc;
+  } LoopWithoutSeqInfo;
 
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
@@ -767,8 +766,7 @@ public:
     SourceLocation OldLoopGangClauseOnKernelLoc;
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
-    SourceLocation OldLoopWithoutSeqLoc;
-    llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
+    LoopWithoutSeqCheckingInfo OldLoopWithoutSeqInfo;
     llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
     LoopInConstructRAII LoopRAII;
 

@@ -745,7 +745,6 @@ void emitDebugNamesHeader(raw_ostream &OS, bool IsLittleEndian,
   writeInteger(AbbrevSize, OS, IsLittleEndian);
   writeInteger(uint32_t(AugmentationString.size()), OS, IsLittleEndian);
   OS.write(AugmentationString.data(), AugmentationString.size());
-  return;
 }
 
 /// Emits the abbreviations for a DebugNames section.
