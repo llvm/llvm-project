@@ -18961,18 +18961,12 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
   }
   case Builtin::BI__builtin_hlsl_wave_active_any_true: {
-    // Assert Op->getType() == Bool
-
-    // FIXME: PR Question: Can this be simpler? Looks like Int1Ty isn't
-    // predefined
     IntegerType *Int1Ty =
         llvm::Type::getInt1Ty(CGM.getTypes().getLLVMContext());
     Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType() == Int1Ty &&
            "wave_active_any_true operand must be a bool");
 
-    // FIXME: PR Question: Re Style SingleRef vs {SingleRef} vs
-    // ArrayRef{SingleRef}
     llvm::FunctionType *FT =
         llvm::FunctionType::get(Int1Ty, {Int1Ty}, /*isVarArg=*/false);
     llvm::StringRef Name = Intrinsic::getName(
