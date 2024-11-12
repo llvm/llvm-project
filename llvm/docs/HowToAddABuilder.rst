@@ -257,7 +257,7 @@ to the remote buildmaster by connecting to ``localhost:9900``:
 
     .. code-block:: bash
 
-       ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@server_address
+       ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@buildmaster_server_address
 
 
 Best Practices for Configuring a Fast Builder
