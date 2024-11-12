@@ -3726,8 +3726,9 @@ void mlir::python::populateIRCore(py::module &m) {
           kValueReplaceAllUsesWithDocstring)
       .def(
           "replace_all_uses_except",
-          [](MlirValue self, MlirValue with, MlirOperation exception) {
-            mlirValueReplaceAllUsesExceptWithSingle(self, with, exception);
+          [](MlirValue self, MlirValue with, PyOperation &exception) {
+            MlirOperation exceptedUser = exception.get();
+            mlirValueReplaceAllUsesExceptWithSingle(self, with, exceptedUser);
           },
           py::arg("with"), py::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
