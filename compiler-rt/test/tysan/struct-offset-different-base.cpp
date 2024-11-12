@@ -1,5 +1,5 @@
 // RUN: %clangxx_tysan -O0 %s -o %t && %run %t >%t.out 2>&1
-// RUN: FileCheck %s < %t.out
+// RUN: FileCheck %s --implicit-check-not ERROR < %t.out
 
 // Modified reproducer from https://github.com/llvm/llvm-project/issues/105960
 
@@ -11,7 +11,7 @@ struct inner {
 };
 
 void init_inner(inner *iPtr) {
-	iPtr->i = 0;
+	iPtr->i = 200;
 }
 
 struct outer {
@@ -25,9 +25,9 @@ int main(void) {
     init_inner(&l->foo);
     
     int access_offsets_with_different_base = l->foo.i;
-    printf("%d\n", access_offsets_with_different_base);
+    printf("Accessed value is %d\n", access_offsets_with_different_base);
     
     return 0;
 }
 
-// CHECK-NOT: ERROR: TypeSanitizer: type-aliasing-violation
+// CHECK: Accessed value is 200
