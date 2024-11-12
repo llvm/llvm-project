@@ -485,6 +485,8 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Branch Count: " << RawBranchCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
+  if (hasConstantIsland())
+    OS << "\n  Has constant island";
 
   if (opts::PrintDynoStats && !getLayout().block_empty()) {
     OS << '\n';
