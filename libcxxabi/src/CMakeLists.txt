@@ -75,6 +75,10 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
 
+if (FUCHSIA)
+    add_library_flags(zircon)
+endif()
+
 if (NOT LIBCXXABI_USE_COMPILER_RT)
   add_library_flags_if(LIBCXXABI_HAS_GCC_LIB gcc)
 endif()
