@@ -7223,7 +7223,16 @@ SDValue SystemZTargetLowering::combineSTORE(
       if (C->getAPIntValue().getBitWidth() > 64 || C->isAllOnes() ||
           isInt<16>(C->getSExtValue()) || MemVT.getStoreSize() <= 2)
         return;
-      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, C->getZExtValue()));
+
+      APInt Val = C->getAPIntValue();
+      // Truncate Val in case of a truncating store.
+      if (!llvm::isUIntN(TotBytes * 8, Val.getZExtValue())) {
+        assert(SN->isTruncatingStore() &&
+               "Non-truncating store and immediate value does not fit?");
+        Val = Val.trunc(TotBytes * 8);
+      }
+
+      SystemZVectorConstantInfo VCI(APInt(TotBytes * 8, Val.getZExtValue()));
       if (VCI.isVectorConstantLegal(Subtarget) &&
           VCI.Opcode == SystemZISD::REPLICATE) {
         Word = DAG.getConstant(VCI.OpVals[0], SDLoc(SN), MVT::i32);
