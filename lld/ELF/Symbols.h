@@ -40,6 +40,8 @@ class Undefined;
 class LazySymbol;
 class InputFile;
 
+const ELFSyncStream &operator<<(const ELFSyncStream &, const Symbol *);
+
 void printTraceSymbol(const Symbol &sym, StringRef name);
 
 enum {
@@ -75,7 +77,7 @@ public:
 
   // The default copy constructor is deleted due to atomic flags. Define one for
   // places where no atomic is needed.
-  Symbol(const Symbol &o) { memcpy(this, &o, sizeof(o)); }
+  Symbol(const Symbol &o) { memcpy(static_cast<void *>(this), &o, sizeof(o)); }
 
 protected:
   const char *nameData;
@@ -210,7 +212,7 @@ public:
   bool isInGot(Ctx &ctx) const { return getGotIdx(ctx) != uint32_t(-1); }
   bool isInPlt(Ctx &ctx) const { return getPltIdx(ctx) != uint32_t(-1); }
 
-  uint64_t getVA(int64_t addend = 0) const;
+  uint64_t getVA(Ctx &, int64_t addend = 0) const;
 
   uint64_t getGotOffset(Ctx &) const;
   uint64_t getGotVA(Ctx &) const;
@@ -363,8 +365,9 @@ public:
 // Represents a symbol that is defined in the current output file.
 class Defined : public Symbol {
 public:
-  Defined(InputFile *file, StringRef name, uint8_t binding, uint8_t stOther,
-          uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
+  Defined(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
+          uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
+          SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
     exportDynamic = ctx.arg.exportDynamic;
@@ -401,7 +404,7 @@ public:
 // section. (Therefore, the later passes don't see any CommonSymbols.)
 class CommonSymbol : public Symbol {
 public:
-  CommonSymbol(InputFile *file, StringRef name, uint8_t binding,
+  CommonSymbol(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {

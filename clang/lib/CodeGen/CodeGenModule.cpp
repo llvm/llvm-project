@@ -295,6 +295,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createCommonSPIRTargetCodeGenInfo(CGM);
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
+  case llvm::Triple::spirv:
     return createSPIRVTargetCodeGenInfo(CGM);
   case llvm::Triple::dxil:
     return createDirectXTargetCodeGenInfo(CGM);
@@ -341,7 +342,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
-      VMContext(M.getContext()), VTables(*this),
+      VMContext(M.getContext()), VTables(*this), StackHandler(diags),
       SanitizerMD(new SanitizerMetadata(*this)) {
 
   // Initialize the type cache.
@@ -1594,17 +1595,9 @@ void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
   getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
 }
 
-void CodeGenModule::warnStackExhausted(SourceLocation Loc) {
-  // Only warn about this once.
-  if (!WarnedStackExhausted) {
-    getDiags().Report(Loc, diag::warn_stack_exhausted);
-    WarnedStackExhausted = true;
-  }
-}
-
 void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
                                                 llvm::function_ref<void()> Fn) {
-  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
@@ -5536,12 +5529,14 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().CPlusPlus) {
-        if (InitDecl->hasFlexibleArrayInit(getContext()))
-          ErrorUnsupported(D, "flexible array initializer");
         Init = EmitNullConstant(T);
-
         if (!IsDefinitionAvailableExternally)
           NeedsGlobalCtor = true;
+        if (InitDecl->hasFlexibleArrayInit(getContext())) {
+          ErrorUnsupported(D, "flexible array initializer");
+          // We cannot create ctor for flexible array initializer
+          NeedsGlobalCtor = false;
+        }
       } else {
         ErrorUnsupported(D, "static initializer");
         Init = llvm::UndefValue::get(getTypes().ConvertType(T));
@@ -5632,6 +5627,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     }
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
+
+  if (LangOpts.HLSL)
+    getHLSLRuntime().handleGlobalVarDefinition(D, GV);
 
   GV->setInitializer(Init);
   if (emitter)
@@ -7148,8 +7146,8 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // For C++ standard modules we are done - we will call the module
     // initializer for imported modules, and that will likewise call those for
     // any imports it has.
-    if (CXX20ModuleInits && Import->getImportedOwningModule() &&
-        !Import->getImportedOwningModule()->isModuleMapModule())
+    if (CXX20ModuleInits && Import->getImportedModule() &&
+        Import->getImportedModule()->isNamedModule())
       break;
 
     // For clang C++ module map modules the initializers for sub-modules are

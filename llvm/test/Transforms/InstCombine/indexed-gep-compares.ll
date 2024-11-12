@@ -40,7 +40,7 @@ define ptr @test1_nuw(ptr %A, i32 %Offset) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RHS_ADD]] = add nuw nsw i32 [[RHS_IDX]], 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[RHS_IDX]], 400
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i32 [[RHS_IDX]]

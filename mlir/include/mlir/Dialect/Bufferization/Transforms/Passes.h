@@ -163,7 +163,7 @@ struct BufferResultsToOutParamsOpts {
 
   // Filter function; returns true if the function should be converted.
   // Defaults to true, i.e. all functions are converted.
-  llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
+  std::function<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
     return true;
   };
 

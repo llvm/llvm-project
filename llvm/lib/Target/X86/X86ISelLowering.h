@@ -1568,7 +1568,7 @@ namespace llvm {
     /// returns the address of that location. Otherwise, returns nullptr.
     Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
@@ -1847,9 +1847,6 @@ namespace llvm {
 
     MachineBasicBlock *EmitLoweredProbedAlloca(MachineInstr &MI,
                                                MachineBasicBlock *BB) const;
-
-    MachineBasicBlock *EmitLoweredTLSAddr(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;

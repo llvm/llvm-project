@@ -18,7 +18,6 @@
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86TargetMachine.h"
-#include "X86TargetObjectFile.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -2855,6 +2854,13 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
   }
+
+  // The stack frame of the caller cannot be replaced by the tail-callee one's
+  // if the function is required to preserve all the registers. Conservatively
+  // prevent tail optimization even if hypothetically all the registers are used
+  // for passing formal parameters or returning values.
+  if (CallerF.hasFnAttribute("no_caller_saved_registers"))
+    return false;
 
   unsigned StackArgsSize = CCInfo.getStackSize();
 

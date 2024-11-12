@@ -2714,6 +2714,7 @@ def Abs : IntMathTemplate, LibBuiltin<"stdlib.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Calloc : LibBuiltin<"stdlib.h"> {
@@ -4761,6 +4762,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool()";
 }
 
+def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_read_lane_at"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const];
@@ -4781,6 +4788,24 @@ def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot4add_i8packed"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "int(unsigned int, unsigned int, int)";
+}
+
+def HLSLDot4AddU8Packed : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot4add_u8packed"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int(unsigned int, unsigned int, unsigned int)";
+}
+
+def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbithigh"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
@@ -4864,6 +4889,12 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];
@@ -4900,4 +4931,10 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
   let Spellings = ["__arithmetic_fence"];
   let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
+}
+
+def CountedByRef : Builtin {
+  let Spellings = ["__builtin_counted_by_ref"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "int(...)";
 }

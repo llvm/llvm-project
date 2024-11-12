@@ -41,6 +41,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "SIPeepholeSDWA.h"
+#include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -257,6 +258,11 @@ static WWMRegisterRegAlloc
                          createGreedyWWMRegisterAllocator);
 static WWMRegisterRegAlloc fastRegAllocWWMReg("fast", "fast register allocator",
                                               createFastWWMRegisterAllocator);
+
+static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
+  return Phase == ThinOrFullLTOPhase::FullLTOPreLink ||
+         Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
+}
 } // anonymous namespace
 
 static cl::opt<bool>
@@ -508,7 +514,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
-  initializeSIPreAllocateWWMRegsPass(*PR);
+  initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeSIPostRABundlerPass(*PR);
   initializeGCNCreateVOPDPass(*PR);
@@ -739,14 +745,13 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerPipelineStartEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level) {
-        FunctionPassManager FPM;
-        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
         if (EnableHipStdPar)
           PM.addPass(HipStdParAcceleratorCodeSelectionPass());
       });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [](ModulePassManager &PM, OptimizationLevel Level) {
+      [](ModulePassManager &PM, OptimizationLevel Level,
+         ThinOrFullLTOPhase Phase) {
         PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (Level == OptimizationLevel::O0)
@@ -754,7 +759,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         PM.addPass(AMDGPUUnifyMetadataPass());
 
-        if (InternalizeSymbols) {
+        // We don't want to run internalization at per-module stage.
+        if (InternalizeSymbols && !isLTOPreLink(Phase)) {
           PM.addPass(InternalizePass(mustPreserveGV));
           PM.addPass(GlobalDCEPass());
         }
@@ -806,12 +812,14 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   // FIXME: Why is AMDGPUAttributor not in CGSCC?
-  PB.registerOptimizerLastEPCallback(
-      [this](ModulePassManager &MPM, OptimizationLevel Level) {
-        if (Level != OptimizationLevel::O0) {
-          MPM.addPass(AMDGPUAttributorPass(*this));
-        }
-      });
+  PB.registerOptimizerLastEPCallback([this](ModulePassManager &MPM,
+                                            OptimizationLevel Level,
+                                            ThinOrFullLTOPhase Phase) {
+    if (Level != OptimizationLevel::O0) {
+      if (!isLTOPreLink(Phase))
+        MPM.addPass(AMDGPUAttributorPass(*this));
+    }
+  });
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -822,8 +830,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
-        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
-          PM.addPass(AMDGPUAttributorPass(*this));
+        if (Level != OptimizationLevel::O0) {
+          // Do we really need internalization in LTO?
+          if (InternalizeSymbols) {
+            PM.addPass(InternalizePass(mustPreserveGV));
+            PM.addPass(GlobalDCEPass());
+          }
+          if (EnableAMDGPUAttributor)
+            PM.addPass(AMDGPUAttributorPass(*this));
+        }
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -1335,7 +1350,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
 
 bool GCNPassConfig::addILPOpts() {
   if (EnableEarlyIfConversion)
-    addPass(&EarlyIfConverterID);
+    addPass(&EarlyIfConverterLegacyID);
 
   TargetPassConfig::addILPOpts();
   return false;
@@ -1506,7 +1521,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(&SIPreAllocateWWMRegsID);
+  addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other wwm register operands.
   addPass(createWWMRegAllocPass(false));
@@ -1543,7 +1558,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(&SIPreAllocateWWMRegsID);
+  addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
@@ -1719,14 +1734,17 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   }
 
   for (const auto &[_, Info] : PFS.VRegInfosNamed) {
-    for (uint8_t Flag : Info->Flags) {
-      MFI->setFlag(Info->VReg, Flag);
-    }
+    MFI->setFlag(Info->VReg, Info->Flags);
   }
   for (const auto &[_, Info] : PFS.VRegInfos) {
-    for (uint8_t Flag : Info->Flags) {
-      MFI->setFlag(Info->VReg, Flag);
-    }
+    MFI->setFlag(Info->VReg, Info->Flags);
+  }
+
+  for (const auto &YamlRegStr : YamlMFI.SpillPhysVGPRS) {
+    Register ParsedReg;
+    if (parseRegister(YamlRegStr, ParsedReg))
+      return true;
+    MFI->SpillPhysVGPRs.push_back(ParsedReg);
   }
 
   auto parseAndCheckArgument = [&](const std::optional<yaml::SIArgument> &A,
@@ -1992,6 +2010,13 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
   // isn't this in addInstSelector?
   addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
+}
+
+void AMDGPUCodeGenPassBuilder::addILPOpts(AddMachinePass &addPass) const {
+  if (EnableEarlyIfConversion)
+    addPass(EarlyIfConverterPass());
+
+  Base::addILPOpts(addPass);
 }
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,

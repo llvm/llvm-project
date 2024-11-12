@@ -776,6 +776,9 @@ HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 /// Generic splatvector.
 HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
+/// Generic stepvector.
+HANDLE_TARGET_OPCODE(G_STEP_VECTOR)
+
 /// Generic masked compress.
 HANDLE_TARGET_OPCODE(G_VECTOR_COMPRESS)
 
@@ -808,6 +811,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
+
+/// Floating point combined sine and cosine.
+HANDLE_TARGET_OPCODE(G_FSINCOS)
 
 /// Floating point tangent.
 HANDLE_TARGET_OPCODE(G_FTAN)
