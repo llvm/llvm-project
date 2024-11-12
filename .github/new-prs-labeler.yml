@@ -605,6 +605,14 @@ llvm:transforms:
   - llvm/test/Transforms/**
   - llvm/unittests/Transforms/**
 
+llvm:instcombine:
+  - llvm/lib/Analysis/InstructionSimplify.cpp
+  - llvm/lib/Transforms/InstCombine/**
+  - llvm/include/llvm/Transforms/InstCombine/
+  - llvm/include/llvm/Analysis/InstructionSimplify.h
+  - llvm/test/Transforms/InstCombine/**
+  - llvm/test/Transforms/InstSimplify/**
+
 clangd:
   - clang-tools-extra/clangd/**
 
