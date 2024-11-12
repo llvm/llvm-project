@@ -12,7 +12,6 @@
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
@@ -105,15 +104,13 @@ void PMDataManager::emitInstrCountChangedRemark(
       [&FunctionToInstrCount](Function &MaybeChangedFn) {
         // Update the total module count.
         unsigned FnSize = MaybeChangedFn.getInstructionCount();
-        auto It = FunctionToInstrCount.find(MaybeChangedFn.getName());
 
         // If we created a new function, then we need to add it to the map and
         // say that it changed from 0 instructions to FnSize.
-        if (It == FunctionToInstrCount.end()) {
-          FunctionToInstrCount[MaybeChangedFn.getName()] =
-              std::pair<unsigned, unsigned>(0, FnSize);
+        auto [It, Inserted] = FunctionToInstrCount.try_emplace(
+            MaybeChangedFn.getName(), 0, FnSize);
+        if (Inserted)
           return;
-        }
         // Insert the new function size into the second member of the pair. This
         // tells us whether or not this function changed in size.
         It->second.second = FnSize;
@@ -1384,8 +1381,7 @@ bool FPPassManager::runOnFunction(Function &F) {
 
   // Store name outside of loop to avoid redundant calls.
   const StringRef Name = F.getName();
-  llvm::TimeTraceScope FunctionScope(
-      "OptFunction", [&F]() { return demangle(F.getName().str()); });
+  llvm::TimeTraceScope FunctionScope("OptFunction", Name);
 
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);

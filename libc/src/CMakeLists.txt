@@ -1,5 +1,6 @@
 add_subdirectory(__support)
 
+add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(dlfcn)
 add_subdirectory(errno)
@@ -40,3 +41,4 @@ add_subdirectory(signal)
 add_subdirectory(spawn)
 add_subdirectory(threads)
 add_subdirectory(time)
+add_subdirectory(locale)

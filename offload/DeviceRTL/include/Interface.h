@@ -14,7 +14,7 @@
 
 #include "Shared/Environment.h"
 
-#include "Types.h"
+#include "DeviceTypes.h"
 
 /// External API
 ///

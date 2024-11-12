@@ -438,7 +438,7 @@ public:
   }
   RT_API_ATTRS inline void SetAllocIdx(int pos) {
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
-    raw_.extra |= (pos << _CFI_ALLOCATOR_IDX_SHIFT);
+    raw_.extra |= pos << _CFI_ALLOCATOR_IDX_SHIFT;
   }
 
 private:

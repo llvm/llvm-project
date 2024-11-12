@@ -50,6 +50,20 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
+// FIXME: This is labelled as handling 's32', however the ComplexPattern it
+// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
+// parameter appears to be ignored so this pattern works for both, however we
+// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
+// here.
+def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
+             GIComplexPatternEquiv<VLOp>;
+
+// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
+// checking happy so we can use ADDIW which expects an XLen immediate.
+def as_i64imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+}]>;
+
 def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
   GISDNodeXFormEquiv<as_i64imm>;
 
@@ -82,18 +96,15 @@ def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
 def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
                       GIComplexPatternEquiv<sh3add_uw_op>;
 
-// FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
-def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
-          (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
+def gi_sexti32 : GIComplexOperandMatcher<s64, "selectSExtBits<32>">,
+                 GIComplexPatternEquiv<sexti32>;
 
-let Predicates = [IsRV64] in {
-def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-
-def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
-}
+def gi_zexti32 : GIComplexOperandMatcher<s64, "selectZExtBits<32>">,
+                 GIComplexPatternEquiv<zexti32>;
+def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,
+                 GIComplexPatternEquiv<zexti16>;
+def gi_zexti8  : GIComplexOperandMatcher<s32, "selectZExtBits<8>">,
+                 GIComplexPatternEquiv<zexti8>;
 
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
@@ -156,4 +167,62 @@ def : StPat<store, SW, GPR, PtrVT>;
 let Predicates = [IsRV64] in {
 def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
+}
+
+let Predicates = [IsRV64] in {
+// FIXME: Temporary until i32->i64 zext is no longer legal.
+def : Pat <(srl (zext GPR:$rs1), uimm5:$shamt),
+           (SRLIW GPR:$rs1, uimm5:$shamt)>;
+}
+
+//===----------------------------------------------------------------------===//
+// RV64 i32 patterns not used by SelectionDAG
+//===----------------------------------------------------------------------===//
+
+def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
+
+def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  return Known.isNonNegative();
+}]>;
+
+let Predicates = [IsRV64] in {
+def : LdPat<sextloadi8, LB, i32>;
+def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
+def : LdPat<sextloadi16, LH, i32>;
+def : LdPat<extloadi16, LH, i32>;
+def : LdPat<zextloadi8, LBU, i32>;
+def : LdPat<zextloadi16, LHU, i32>;
+
+def : StPat<truncstorei8, SB, GPR, i32>;
+def : StPat<truncstorei16, SH, GPR, i32>;
+
+def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
+def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
+def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
+
+// Use sext if the sign bit of the input is 0.
+def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
+}
+
+let Predicates = [IsRV64, NotHasStdExtZba] in {
+def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
+
+// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
+// shifts instead of 3. This can occur when unsigned is used to index an array.
+def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
+          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
+}
+
+//===----------------------------------------------------------------------===//
+// Zb* RV64 i32 patterns not used by SelectionDAG.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZba, IsRV64] in {
+def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
+          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+
+def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
+          (ADD_UW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 }

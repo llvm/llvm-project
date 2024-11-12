@@ -326,22 +326,21 @@ private:
 
 Expected<std::unique_ptr<InProcessMemoryManager>>
 InProcessMemoryManager::Create() {
-  if (auto PageSize = sys::Process::getPageSize())
+  if (auto PageSize = sys::Process::getPageSize()) {
+    // FIXME: Just check this once on startup.
+    if (!isPowerOf2_64((uint64_t)*PageSize))
+      return make_error<StringError>(
+          "Could not create InProcessMemoryManager: Page size " +
+              Twine(*PageSize) + " is not a power of 2",
+          inconvertibleErrorCode());
+
     return std::make_unique<InProcessMemoryManager>(*PageSize);
-  else
+  } else
     return PageSize.takeError();
 }
 
 void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                                       OnAllocatedFunction OnAllocated) {
-
-  // FIXME: Just check this once on startup.
-  if (!isPowerOf2_64((uint64_t)PageSize)) {
-    OnAllocated(make_error<StringError>("Page size is not a power of 2",
-                                        inconvertibleErrorCode()));
-    return;
-  }
-
   BasicLayout BL(G);
 
   /// Scan the request and calculate the group and total sizes.

@@ -9,17 +9,14 @@
 #ifndef LLVM_ANALYSIS_VALUELATTICE_H
 #define LLVM_ANALYSIS_VALUELATTICE_H
 
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Constants.h"
 
 //===----------------------------------------------------------------------===//
 //                               ValueLatticeElement
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-
-class Constant;
 
 /// This class represents lattice values for constants.
 ///
@@ -473,6 +470,23 @@ public:
   Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
                        const ValueLatticeElement &Other,
                        const DataLayout &DL) const;
+
+  /// Combine two sets of facts about the same value into a single set of
+  /// facts.  Note that this method is not suitable for merging facts along
+  /// different paths in a CFG; that's what the mergeIn function is for.  This
+  /// is for merging facts gathered about the same value at the same location
+  /// through two independent means.
+  /// Notes:
+  /// * This method does not promise to return the most precise possible lattice
+  ///   value implied by A and B.  It is allowed to return any lattice element
+  ///   which is at least as strong as *either* A or B (unless our facts
+  ///   conflict, see below).
+  /// * Due to unreachable code, the intersection of two lattice values could be
+  ///   contradictory.  If this happens, we return some valid lattice value so
+  ///   as not confuse the rest of LVI.  Ideally, we'd always return Undefined,
+  ///   but we do not make this guarantee.  TODO: This would be a useful
+  ///   enhancement.
+  ValueLatticeElement intersect(const ValueLatticeElement &Other) const;
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }

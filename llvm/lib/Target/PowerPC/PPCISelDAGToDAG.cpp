@@ -1296,7 +1296,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> TZ) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDIC, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TZ), getI32Imm(LZ));
   }
@@ -1318,7 +1318,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> (30 - LZ)) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(30 - LZ), getI32Imm(LZ));
   }
@@ -1331,7 +1331,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> TO) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TO), getI32Imm(LZ));
   }
@@ -6176,7 +6176,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
-    EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+    EVT VT = Subtarget->getScalarIntVT();
     SDNode *Tmp = CurDAG->getMachineNode(
         isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
 
@@ -6309,7 +6309,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     SDValue ZeroReg =
         CurDAG->getRegister(Subtarget->isPPC64() ? PPC::ZERO8 : PPC::ZERO,
-                            Subtarget->isPPC64() ? MVT::i64 : MVT::i32);
+                            Subtarget->getScalarIntVT());
     unsigned LIOpcode = Subtarget->isPPC64() ? PPC::LI8 : PPC::LI;
     // v16i8 LD_SPLAT addr
     // ======>

@@ -763,7 +763,7 @@ Error COFFObjectFile::initLoadConfigPtr() {
       if (Error E =
               getRvaPtr(ChpeOff - getImageBase(), IntPtr, "CHPE metadata"))
         return E;
-      if (Error E = checkOffset(Data, IntPtr, sizeof(CHPEMetadata)))
+      if (Error E = checkOffset(Data, IntPtr, sizeof(*CHPEMetadata)))
         return E;
 
       CHPEMetadata = reinterpret_cast<const chpe_metadata *>(IntPtr);
@@ -1132,6 +1132,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM64EC";
   case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return "COFF-ARM64X";
+  case COFF::IMAGE_FILE_MACHINE_R4000:
+    return "COFF-MIPS";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1465,6 +1467,27 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
       return "Unknown";
     }
     break;
+  case Triple::mipsel:
+    switch (Type) {
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_ABSOLUTE);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFHALF);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFWORD);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_JMPADDR);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFHI);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFLO);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_GPREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_LITERAL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECTION);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECRELLO);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECRELHI);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_JMPADDR16);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFWORDNB);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_PAIR);
+    default:
+      return "Unknown";
+    }
+    break;
   default:
     return "Unknown";
   }
@@ -1487,6 +1510,54 @@ StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
   return StringSwitch<StringRef>(Name)
       .Case("eh_fram", "eh_frame")
       .Default(Name);
+}
+
+std::unique_ptr<MemoryBuffer> COFFObjectFile::getHybridObjectView() const {
+  if (getMachine() != COFF::IMAGE_FILE_MACHINE_ARM64X)
+    return nullptr;
+
+  std::unique_ptr<WritableMemoryBuffer> HybridView;
+
+  for (auto DynReloc : dynamic_relocs()) {
+    if (DynReloc.getType() != COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X)
+      continue;
+
+    for (auto reloc : DynReloc.arm64x_relocs()) {
+      if (!HybridView) {
+        HybridView =
+            WritableMemoryBuffer::getNewUninitMemBuffer(Data.getBufferSize());
+        memcpy(HybridView->getBufferStart(), Data.getBufferStart(),
+               Data.getBufferSize());
+      }
+
+      uint32_t RVA = reloc.getRVA();
+      void *Ptr;
+      uintptr_t IntPtr;
+      if (RVA & ~0xfff) {
+        cantFail(getRvaPtr(RVA, IntPtr));
+        Ptr = HybridView->getBufferStart() + IntPtr -
+              reinterpret_cast<uintptr_t>(base());
+      } else {
+        // PE header relocation.
+        Ptr = HybridView->getBufferStart() + RVA;
+      }
+
+      switch (reloc.getType()) {
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+        memset(Ptr, 0, reloc.getSize());
+        break;
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE: {
+        auto Value = static_cast<ulittle64_t>(reloc.getValue());
+        memcpy(Ptr, &Value, reloc.getSize());
+        break;
+      }
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+        *reinterpret_cast<ulittle32_t *>(Ptr) += reloc.getValue();
+        break;
+      }
+    }
+  }
+  return HybridView;
 }
 
 bool ImportDirectoryEntryRef::
@@ -2012,8 +2083,7 @@ bool Arm64XRelocRef::operator==(const Arm64XRelocRef &Other) const {
 uint8_t Arm64XRelocRef::getEntrySize() const {
   switch (getType()) {
   case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
-    return (1u << getArg()) / sizeof(uint16_t) + 1;
-    break;
+    return (1ull << getArg()) / sizeof(uint16_t) + 1;
   case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
     return 2;
   default:
@@ -2042,6 +2112,7 @@ uint8_t Arm64XRelocRef::getSize() const {
   case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
     return sizeof(uint32_t);
   }
+  llvm_unreachable("Unknown Arm64XFixupType enum");
 }
 
 uint64_t Arm64XRelocRef::getValue() const {
@@ -2321,7 +2392,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
         Expected<StringRef> Contents = S.getContents();
         if (!Contents)
           return Contents.takeError();
-        return Contents->slice(Offset, Offset + Entry.DataSize);
+        return Contents->substr(Offset, Entry.DataSize);
       }
     }
     return createStringError(object_error::parse_failed,

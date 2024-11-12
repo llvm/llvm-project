@@ -1331,9 +1331,9 @@ DWARFDebugLine::LineTable::lookupAddress(object::SectionedAddress Address,
 uint32_t
 DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
                                              bool *IsApproximateLine) const {
-  assert(!IsApproximateLine ||
-         !*IsApproximateLine && "Make sure IsApproximateLine is appropriately "
-                                "initialized, if provided");
+  assert((!IsApproximateLine || !*IsApproximateLine) &&
+         "Make sure IsApproximateLine is appropriately "
+         "initialized, if provided");
   // First, find an instruction sequence containing the given address.
   DWARFDebugLine::Sequence Sequence;
   Sequence.SectionIndex = Address.SectionIndex;

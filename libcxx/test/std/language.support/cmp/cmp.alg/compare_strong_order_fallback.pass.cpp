@@ -473,6 +473,44 @@ namespace N2 {
         friend bool operator<(const VC2&, VC2&);
         friend bool operator<(VC2&, const VC2&);
     };
+
+    enum class comparison_result_kind : bool {
+      convertible_bool,
+      boolean_testable,
+    };
+
+    template <comparison_result_kind K>
+    struct comparison_result {
+      bool value;
+
+      constexpr operator bool() const noexcept { return value; }
+
+      constexpr auto operator!() const noexcept {
+        if constexpr (K == comparison_result_kind::boolean_testable) {
+          return comparison_result{!value};
+        }
+      }
+    };
+
+    template <comparison_result_kind EqKind, comparison_result_kind LeKind>
+    struct boolean_tested_type {
+      friend constexpr comparison_result<EqKind> operator==(boolean_tested_type, boolean_tested_type) noexcept {
+        return comparison_result<EqKind>{true};
+      }
+
+      friend constexpr comparison_result<LeKind> operator<(boolean_tested_type, boolean_tested_type) noexcept {
+        return comparison_result<LeKind>{false};
+      }
+    };
+
+    using test_only_convertible =
+        boolean_tested_type<comparison_result_kind::convertible_bool, comparison_result_kind::convertible_bool>;
+    using test_eq_boolean_testable =
+        boolean_tested_type<comparison_result_kind::boolean_testable, comparison_result_kind::convertible_bool>;
+    using test_le_boolean_testable =
+        boolean_tested_type<comparison_result_kind::convertible_bool, comparison_result_kind::boolean_testable>;
+    using test_boolean_testable =
+        boolean_tested_type<comparison_result_kind::boolean_testable, comparison_result_kind::boolean_testable>;
 }
 
 constexpr bool test_2()
@@ -506,6 +544,20 @@ constexpr bool test_2()
         assert( has_strong_order(cvc, vc));
         assert(!has_strong_order(vc, cvc));
     }
+    {
+      // P2167R3: Both decltype(e == f) and decltype(e < f) need to be well-formed and boolean-testable.
+      N2::test_only_convertible tc;
+      N2::test_eq_boolean_testable teq;
+      N2::test_le_boolean_testable tle;
+      N2::test_boolean_testable tbt;
+
+      assert(!has_strong_order(tc, tc));
+      assert(!has_strong_order(teq, teq));
+      assert(!has_strong_order(tle, tle));
+      assert(has_strong_order(tbt, tbt));
+
+      assert(std::compare_strong_order_fallback(tbt, tbt) == std::strong_ordering::equal);
+    }
     return true;
 }
 
@@ -515,13 +567,17 @@ int main(int, char**)
     test_1_2();
     test_1_3<float>();
     test_1_3<double>();
-    // test_1_3<long double>();  // UNIMPLEMENTED
+#ifdef TEST_LONG_DOUBLE_IS_DOUBLE
+    test_1_3<long double>(); // UNIMPLEMENTED when long double is a distinct type
+#endif
     test_1_4();
     test_2();
 
     static_assert(test_1_3<float>());
     static_assert(test_1_3<double>());
-    // static_assert(test_1_3<long double>());  // UNIMPLEMENTED
+#ifdef TEST_LONG_DOUBLE_IS_DOUBLE
+    static_assert(test_1_3<long double>()); // UNIMPLEMENTED when long double is a distinct type
+#endif
     static_assert(test_1_4());
     static_assert(test_2());
 

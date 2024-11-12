@@ -320,8 +320,7 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fsgnjn_d:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    not a1, a1
-; RV64IZFINXZDINX-NEXT:    fsgnj.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fsgnjn.d a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjn_d:
@@ -845,16 +844,13 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINX-LABEL: fnmadd_d_3:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a0, a2, a4
-; RV32IZFINXZDINX-NEXT:    lui a2, 524288
-; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fnmadd_d_3:
 ; RV64IZFINXZDINX:       # %bb.0:
 ; RV64IZFINXZDINX-NEXT:    fmadd.d a0, a0, a1, a2
-; RV64IZFINXZDINX-NEXT:    li a1, -1
-; RV64IZFINXZDINX-NEXT:    slli a1, a1, 63
-; RV64IZFINXZDINX-NEXT:    xor a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_3:
@@ -893,17 +889,12 @@ define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fnmadd_nsz:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a0, a2, a4
-; RV32IZFINXZDINX-NEXT:    lui a2, 524288
-; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    fnmadd.d a0, a0, a2, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fnmadd_nsz:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fmadd.d a0, a0, a1, a2
-; RV64IZFINXZDINX-NEXT:    li a1, -1
-; RV64IZFINXZDINX-NEXT:    slli a1, a1, 63
-; RV64IZFINXZDINX-NEXT:    xor a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fnmadd.d a0, a0, a1, a2
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:

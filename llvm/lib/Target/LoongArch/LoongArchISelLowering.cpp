@@ -143,6 +143,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
     setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
+    setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
   // Set operations for LA32 only.
@@ -269,6 +270,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64})
+      setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
@@ -283,6 +286,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          ISD::SETUGE, ISD::SETUGT},
                         VT, Expand);
     }
+    setOperationAction(ISD::CTPOP, GRLenVT, Legal);
+    setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FFLOOR, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FTRUNC, {MVT::f32, MVT::f64}, Legal);
+    setOperationAction(ISD::FROUNDEVEN, {MVT::f32, MVT::f64}, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -296,6 +304,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
@@ -315,6 +324,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64})
+      setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
@@ -1925,8 +1936,8 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   }
 
   return getTLSDescAddr(N, DAG,
-                        Large ? LoongArch::PseudoLA_TLS_DESC_PC_LARGE
-                              : LoongArch::PseudoLA_TLS_DESC_PC,
+                        Large ? LoongArch::PseudoLA_TLS_DESC_LARGE
+                              : LoongArch::PseudoLA_TLS_DESC,
                         Large);
 }
 
@@ -3097,6 +3108,18 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     replaceINTRINSIC_WO_CHAINResults(N, Results, DAG, Subtarget);
     break;
   }
+  case ISD::LROUND: {
+    SDValue Op0 = N->getOperand(0);
+    EVT OpVT = Op0.getValueType();
+    RTLIB::Libcall LC =
+        OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    MakeLibCallOptions CallOptions;
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
+    Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+    Results.push_back(Result);
+    break;
+  }
   }
 }
 
@@ -4206,11 +4229,10 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lasx_xvreplgr2vr_b:
   case Intrinsic::loongarch_lasx_xvreplgr2vr_h:
   case Intrinsic::loongarch_lasx_xvreplgr2vr_w:
-  case Intrinsic::loongarch_lasx_xvreplgr2vr_d: {
-    EVT ResTy = N->getValueType(0);
-    SmallVector<SDValue> Ops(ResTy.getVectorNumElements(), N->getOperand(1));
-    return DAG.getBuildVector(ResTy, DL, Ops);
-  }
+  case Intrinsic::loongarch_lasx_xvreplgr2vr_d:
+    return DAG.getNode(LoongArchISD::VREPLGR2VR, DL, N->getValueType(0),
+                       DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getGRLenVT(),
+                                   N->getOperand(1)));
   case Intrinsic::loongarch_lsx_vreplve_b:
   case Intrinsic::loongarch_lsx_vreplve_h:
   case Intrinsic::loongarch_lsx_vreplve_w:
@@ -4488,6 +4510,44 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
+static MachineBasicBlock *emitPseudoCTPOP(MachineInstr &MI,
+                                          MachineBasicBlock *BB,
+                                          const LoongArchSubtarget &Subtarget) {
+  assert(Subtarget.hasExtLSX());
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &LoongArch::LSX128RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register ScratchReg1 = MRI.createVirtualRegister(RC);
+  Register ScratchReg2 = MRI.createVirtualRegister(RC);
+  Register ScratchReg3 = MRI.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(LoongArch::VLDI), ScratchReg1).addImm(0);
+  BuildMI(*BB, MI, DL,
+          TII->get(Subtarget.is64Bit() ? LoongArch::VINSGR2VR_D
+                                       : LoongArch::VINSGR2VR_W),
+          ScratchReg2)
+      .addReg(ScratchReg1)
+      .addReg(Src)
+      .addImm(0);
+  BuildMI(
+      *BB, MI, DL,
+      TII->get(Subtarget.is64Bit() ? LoongArch::VPCNT_D : LoongArch::VPCNT_W),
+      ScratchReg3)
+      .addReg(ScratchReg2);
+  BuildMI(*BB, MI, DL,
+          TII->get(Subtarget.is64Bit() ? LoongArch::VPICKVE2GR_D
+                                       : LoongArch::VPICKVE2GR_W),
+          Dst)
+      .addReg(ScratchReg3)
+      .addImm(0);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -4546,6 +4606,22 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::PseudoXVINSGR2VR_B:
   case LoongArch::PseudoXVINSGR2VR_H:
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
+  case LoongArch::PseudoCTPOP:
+    return emitPseudoCTPOP(MI, BB, Subtarget);
+  case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while bl call instruction (where statepoint will be lowered at the
+    // end) has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      LoongArch::R1, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
+    if (!Subtarget.is64Bit())
+      report_fatal_error("STATEPOINT is only supported on 64-bit targets");
+    return emitPatchPoint(MI, BB);
   }
 }
 
@@ -4633,6 +4709,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VILVH)
     NODE_NAME_CASE(VSHUF4I)
     NODE_NAME_CASE(VREPLVEI)
+    NODE_NAME_CASE(VREPLGR2VR)
     NODE_NAME_CASE(XVPERMI)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
@@ -4641,6 +4718,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VANY_ZERO)
     NODE_NAME_CASE(VALL_NONZERO)
     NODE_NAME_CASE(VANY_NONZERO)
+    NODE_NAME_CASE(FRECIPE)
+    NODE_NAME_CASE(FRSQRTE)
   }
 #undef NODE_NAME_CASE
   return nullptr;
@@ -5012,7 +5091,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
         LoongArch::R23, LoongArch::R24, LoongArch::R25,
         LoongArch::R26, LoongArch::R27, LoongArch::R28,
         LoongArch::R29, LoongArch::R30, LoongArch::R31};
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5023,7 +5102,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     //                        fs0,fs1,fs2,fs3
     static const MCPhysReg FPR32List[] = {LoongArch::F24, LoongArch::F25,
                                           LoongArch::F26, LoongArch::F27};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5034,7 +5113,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     //                        fs4,fs5,fs6,fs7
     static const MCPhysReg FPR64List[] = {LoongArch::F28_64, LoongArch::F29_64,
                                           LoongArch::F30_64, LoongArch::F31_64};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5573,6 +5652,24 @@ SDValue LoongArchTargetLowering::LowerReturn(
   return DAG.getNode(LoongArchISD::RET, DL, MVT::Other, RetOps);
 }
 
+bool LoongArchTargetLowering::isFPImmVLDILegal(const APFloat &Imm,
+                                               EVT VT) const {
+  if (!Subtarget.hasExtLSX())
+    return false;
+
+  if (VT == MVT::f32) {
+    uint64_t masked = Imm.bitcastToAPInt().getZExtValue() & 0x7e07ffff;
+    return (masked == 0x3e000000 || masked == 0x40000000);
+  }
+
+  if (VT == MVT::f64) {
+    uint64_t masked = Imm.bitcastToAPInt().getZExtValue() & 0x7fc0ffffffffffff;
+    return (masked == 0x3fc0000000000000 || masked == 0x4000000000000000);
+  }
+
+  return false;
+}
+
 bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                            bool ForCodeSize) const {
   // TODO: Maybe need more checks here after vector extension is supported.
@@ -5580,7 +5677,7 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
     return false;
-  return (Imm.isZero() || Imm.isExactlyValue(+1.0));
+  return (Imm.isZero() || Imm.isExactlyValue(1.0) || isFPImmVLDILegal(Imm, VT));
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
@@ -5601,8 +5698,9 @@ bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
 
   // On LA64, atomic store operations with IntegerBitWidth of 32 and 64 do not
   // require fences beacuse we can use amswap_db.[w/d].
-  if (isa<StoreInst>(I)) {
-    unsigned Size = I->getOperand(0)->getType()->getIntegerBitWidth();
+  Type *Ty = I->getOperand(0)->getType();
+  if (isa<StoreInst>(I) && Ty->isIntegerTy()) {
+    unsigned Size = Ty->getIntegerBitWidth();
     return (Size == 8 || Size == 16);
   }
 
@@ -5653,8 +5751,17 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // operations, use CmpXChg to expand.
   if (AI->isFloatingPointOperation() ||
       AI->getOperation() == AtomicRMWInst::UIncWrap ||
-      AI->getOperation() == AtomicRMWInst::UDecWrap)
+      AI->getOperation() == AtomicRMWInst::UDecWrap ||
+      AI->getOperation() == AtomicRMWInst::USubCond ||
+      AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
+
+  if (Subtarget.hasLAM_BH() && Subtarget.is64Bit() &&
+      (AI->getOperation() == AtomicRMWInst::Xchg ||
+       AI->getOperation() == AtomicRMWInst::Add ||
+       AI->getOperation() == AtomicRMWInst::Sub)) {
+    return AtomicExpansionKind::None;
+  }
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
@@ -5730,10 +5837,8 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
   Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *MaskedCmpXchg =
-      Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
-  Value *Result = Builder.CreateCall(
-      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
+  Value *Result = Builder.CreateIntrinsic(
+      CmpXchgIntrID, Tys, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
   Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }
@@ -5761,7 +5866,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
   Value *Ordering =
       Builder.getIntN(GRLen, static_cast<uint64_t>(AI->getOrdering()));
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *LlwOpScwLoop = Intrinsic::getDeclaration(
+  Function *LlwOpScwLoop = Intrinsic::getOrInsertDeclaration(
       AI->getModule(),
       getIntrinsicForMaskedAtomicRMWBinOp(GRLen, AI->getOperation()), Tys);
 
@@ -5823,6 +5928,71 @@ Register LoongArchTargetLowering::getExceptionPointerRegister(
 Register LoongArchTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   return LoongArch::R5;
+}
+
+//===----------------------------------------------------------------------===//
+// Target Optimization Hooks
+//===----------------------------------------------------------------------===//
+
+static int getEstimateRefinementSteps(EVT VT,
+                                      const LoongArchSubtarget &Subtarget) {
+  // Feature FRECIPE instrucions relative accuracy is 2^-14.
+  // IEEE float has 23 digits and double has 52 digits.
+  int RefinementSteps = VT.getScalarType() == MVT::f64 ? 2 : 1;
+  return RefinementSteps;
+}
+
+SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
+                                                 SelectionDAG &DAG, int Enabled,
+                                                 int &RefinementSteps,
+                                                 bool &UseOneConstNR,
+                                                 bool Reciprocal) const {
+  if (Subtarget.hasFrecipe()) {
+    SDLoc DL(Operand);
+    EVT VT = Operand.getValueType();
+
+    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
+        (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
+        (VT == MVT::v4f64 && Subtarget.hasExtLASX())) {
+
+      if (RefinementSteps == ReciprocalEstimate::Unspecified)
+        RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+
+      SDValue Estimate = DAG.getNode(LoongArchISD::FRSQRTE, DL, VT, Operand);
+      if (Reciprocal)
+        Estimate = DAG.getNode(ISD::FMUL, DL, VT, Operand, Estimate);
+
+      return Estimate;
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::getRecipEstimate(SDValue Operand,
+                                                  SelectionDAG &DAG,
+                                                  int Enabled,
+                                                  int &RefinementSteps) const {
+  if (Subtarget.hasFrecipe()) {
+    SDLoc DL(Operand);
+    EVT VT = Operand.getValueType();
+
+    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
+        (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
+        (VT == MVT::v4f64 && Subtarget.hasExtLASX())) {
+
+      if (RefinementSteps == ReciprocalEstimate::Unspecified)
+        RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+
+      return DAG.getNode(LoongArchISD::FRECIPE, DL, VT, Operand);
+    }
+  }
+
+  return SDValue();
 }
 
 //===----------------------------------------------------------------------===//

@@ -27,9 +27,6 @@
 #ifndef TEST_H
 #define TEST_H
 
-#define testmarcro1 32
-#define testmacro2 42
-
 int testfunc (int param1, int param2);
 void testfunc2 ();
 #endif /* TEST_H */
@@ -185,7 +182,7 @@ int main ()
       "location": {
         "position": {
           "character": 4,
-          "line": 6
+          "line": 3
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -249,7 +246,7 @@ int main ()
       "location": {
         "position": {
           "character": 5,
-          "line": 7
+          "line": 4
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -334,106 +331,6 @@ int main ()
       },
       "pathComponents": [
         "main"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "#define"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "testmarcro1"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:test.h@39@macro@testmarcro1"
-      },
-      "kind": {
-        "displayName": "Macro",
-        "identifier": "c.macro"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/test.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "testmarcro1"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "testmarcro1"
-          }
-        ],
-        "title": "testmarcro1"
-      },
-      "pathComponents": [
-        "testmarcro1"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "#define"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "testmacro2"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:test.h@62@macro@testmacro2"
-      },
-      "kind": {
-        "displayName": "Macro",
-        "identifier": "c.macro"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 4
-        },
-        "uri": "file://INPUT_DIR/test.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "testmacro2"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "testmacro2"
-          }
-        ],
-        "title": "testmacro2"
-      },
-      "pathComponents": [
-        "testmacro2"
       ]
     }
   ]
@@ -573,7 +470,7 @@ int main ()
       "location": {
         "position": {
           "character": 4,
-          "line": 6
+          "line": 3
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -637,7 +534,7 @@ int main ()
       "location": {
         "position": {
           "character": 5,
-          "line": 7
+          "line": 4
         },
         "uri": "file://INPUT_DIR/test.h"
       },
@@ -658,106 +555,6 @@ int main ()
       },
       "pathComponents": [
         "testfunc2"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "#define"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "testmarcro1"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:test.h@39@macro@testmarcro1"
-      },
-      "kind": {
-        "displayName": "Macro",
-        "identifier": "c.macro"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/test.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "testmarcro1"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "testmarcro1"
-          }
-        ],
-        "title": "testmarcro1"
-      },
-      "pathComponents": [
-        "testmarcro1"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "#define"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "testmacro2"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:test.h@62@macro@testmacro2"
-      },
-      "kind": {
-        "displayName": "Macro",
-        "identifier": "c.macro"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 4
-        },
-        "uri": "file://INPUT_DIR/test.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "testmacro2"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "testmacro2"
-          }
-        ],
-        "title": "testmacro2"
-      },
-      "pathComponents": [
-        "testmacro2"
       ]
     }
   ]

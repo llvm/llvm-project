@@ -384,6 +384,13 @@ end
 * `BIND(C, NAME="...", CDEFINED)` signifies that the storage for an
   interoperable variable will be allocated outside of Fortran,
   probably by a C or C++ external definition.
+* An automatic data object may be declared in the specification part
+  of the main program.
+* A local data object may appear in a specification expression, even
+  when it is not a dummy argument or in COMMON, so long as it is
+  has the SAVE attribute and was initialized.
+* `PRINT namelistname` is accepted and interpreted as
+  `WRITE(*,NML=namelistname)`, a near-universal extension.
 
 ### Extensions supported when enabled by options
 
@@ -505,10 +512,7 @@ end
   f18 supports them with a portability warning.
 * f18 does not enforce a blanket prohibition against generic
   interfaces containing a mixture of functions and subroutines.
-  Apart from some contexts in which the standard requires all of
-  a particular generic interface to have only all functions or
-  all subroutines as its specific procedures, we allow both to
-  appear, unlike several other Fortran compilers.
+  We allow both to appear, unlike several other Fortran compilers.
   This is especially desirable when two generics of the same
   name are combined due to USE association and the mixture may
   be inadvertent.
@@ -777,6 +781,12 @@ end
 character j
 print *, [(j,j=1,10)]
 ```
+
+* The Fortran standard doesn't mention integer overflow explicitly. In many cases,
+  however, integer overflow makes programs non-conforming.
+  F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
+  integer overflow never occurs in address calculations and increment of
+  do-variable unless the option `-fwrapv` is enabled.
 
 ## De Facto Standard Features
 

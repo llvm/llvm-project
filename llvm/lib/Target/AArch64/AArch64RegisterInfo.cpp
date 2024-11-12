@@ -28,7 +28,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -197,6 +196,8 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_Darwin_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
+  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+    return CSR_Darwin_AArch64_SVE_AAPCS_SaveList;
   return CSR_Darwin_AArch64_AAPCS_SaveList;
 }
 
@@ -250,8 +251,7 @@ AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
   if (CC == CallingConv::AArch64_VectorCall)
     return CSR_Darwin_AArch64_AAVPCS_RegMask;
   if (CC == CallingConv::AArch64_SVE_VectorCall)
-    report_fatal_error(
-        "Calling convention SVE_VectorCall is unsupported on Darwin.");
+    return CSR_Darwin_AArch64_SVE_AAPCS_RegMask;
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
     return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0_RegMask;
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
@@ -479,6 +479,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPMR);
   markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {

@@ -13,11 +13,12 @@
 #ifndef LLVM_CLANG_SEMA_SEMANVPTX_H
 #define LLVM_CLANG_SEMA_SEMANVPTX_H
 
-#include "clang/AST/Expr.h"
-#include "clang/Basic/TargetInfo.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class TargetInfo;
+
 class SemaNVPTX : public SemaBase {
 public:
   SemaNVPTX(Sema &S);

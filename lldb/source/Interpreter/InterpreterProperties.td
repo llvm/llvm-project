@@ -16,7 +16,7 @@ let Definition = "interpreter" in {
   def SaveSessionOnQuit: Property<"save-session-on-quit", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, LLDB will save the session's transcripts before quitting.">;
+    Desc<"If true, LLDB will save the session's transcripts before quitting. Note: transcripts will only be saved if interpreter.save-transcript is true.">;
   def OpenTranscriptInEditor: Property<"open-transcript-in-editor", "Boolean">,
     Global,
     DefaultTrue,

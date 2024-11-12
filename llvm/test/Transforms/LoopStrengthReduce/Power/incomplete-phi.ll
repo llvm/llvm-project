@@ -21,12 +21,10 @@ define void @foo(ptr %arg) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = getelementptr [0 x %0], ptr [[ARG]], i64 0, i64 -1
-; CHECK-NEXT:    [[I2:%.*]] = getelementptr i8, ptr [[I]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ARG]], i64 396
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi ptr [ [[SCEVGEP8:%.*]], [[BB18:%.*]] ], [ [[I2]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi ptr [ [[SCEVGEP8:%.*]], [[BB18:%.*]] ], [ [[ARG]], [[BB:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i64 [ [[LSR_IV_NEXT6:%.*]], [[BB18]] ], [ 4, [[BB]] ]
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[BB18]] ], [ [[SCEVGEP]], [[BB]] ]
 ; CHECK-NEXT:    br i1 true, label [[BB22_PREHEADER:%.*]], label [[BB9_PREHEADER:%.*]]

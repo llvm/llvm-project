@@ -5,8 +5,8 @@ include "llvm/Target/Target.td"
 
 def MyTarget : Target;
 
-def FeatureA : SubtargetFeature<"NameA", "", "", "">;
-
-// CHECK: [[FILE]]:[[@LINE+2]]:5: error: Feature `NameA` already defined.
-// CHECK: [[FILE]]:[[@LINE-3]]:5: note: Previous definition here.
 def FeatureB : SubtargetFeature<"NameA", "", "", "">;
+
+// CHECK: [[FILE]]:[[@LINE+2]]:5: error: Feature `NameA` is already defined.
+// CHECK: [[FILE]]:[[@LINE-3]]:5: note: Previous definition here.
+def FeatureA : SubtargetFeature<"NameA", "", "", "">;

@@ -64,6 +64,7 @@
 /// ultimately led to the creation of an illegal COPY.
 //===----------------------------------------------------------------------===//
 
+#include "SIFixSGPRCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -91,12 +92,12 @@ public:
   SetVector<MachineInstr *> SChain;
   // Number of SGPR to VGPR copies that are used to put the SALU computation
   // results back to VALU.
-  unsigned NumSVCopies;
+  unsigned NumSVCopies = 0;
 
-  unsigned Score;
+  unsigned Score = 0;
   // Actual count of v_readfirstlane_b32
   // which need to be inserted to keep SChain SALU
-  unsigned NumReadfirstlanes;
+  unsigned NumReadfirstlanes = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
@@ -108,7 +109,7 @@ public:
   SetVector<unsigned> Siblings;
   V2SCopyInfo() : Copy(nullptr), ID(0){};
   V2SCopyInfo(unsigned Id, MachineInstr *C, unsigned Width)
-      : Copy(C), NumSVCopies(0), NumReadfirstlanes(Width / 32), ID(Id){};
+      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id){};
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()
@@ -118,7 +119,7 @@ public:
 #endif
 };
 
-class SIFixSGPRCopies : public MachineFunctionPass {
+class SIFixSGPRCopies {
   MachineDominatorTree *MDT;
   SmallVector<MachineInstr*, 4> SCCCopies;
   SmallVector<MachineInstr*, 4> RegSequences;
@@ -129,15 +130,13 @@ class SIFixSGPRCopies : public MachineFunctionPass {
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
 
 public:
-  static char ID;
-
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  SIFixSGPRCopies() : MachineFunctionPass(ID) {}
+  SIFixSGPRCopies(MachineDominatorTree *MDT) : MDT(MDT) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
   void fixSCCCopies(MachineFunction &MF);
   void prepareRegSequenceAndPHIs(MachineFunction &MF);
   unsigned getNextVGPRToSGPRCopyId() { return ++NextVGPRToSGPRCopyID; }
@@ -158,6 +157,20 @@ public:
   bool tryMoveVGPRConstToSGPR(MachineOperand &MO, Register NewDst,
                               MachineBasicBlock *BlockToInsertTo,
                               MachineBasicBlock::iterator PointToInsertTo);
+};
+
+class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SIFixSGPRCopiesLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    MachineDominatorTree *MDT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    SIFixSGPRCopies Impl(MDT);
+    return Impl.run(MF);
+  }
 
   StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
@@ -171,18 +184,18 @@ public:
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(SIFixSGPRCopies, DEBUG_TYPE,
-                     "SI Fix SGPR copies", false, false)
+INITIALIZE_PASS_BEGIN(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SIFixSGPRCopies, DEBUG_TYPE,
-                     "SI Fix SGPR copies", false, false)
+INITIALIZE_PASS_END(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
+                    false, false)
 
-char SIFixSGPRCopies::ID = 0;
+char SIFixSGPRCopiesLegacy::ID = 0;
 
-char &llvm::SIFixSGPRCopiesID = SIFixSGPRCopies::ID;
+char &llvm::SIFixSGPRCopiesLegacyID = SIFixSGPRCopiesLegacy::ID;
 
-FunctionPass *llvm::createSIFixSGPRCopiesPass() {
-  return new SIFixSGPRCopies();
+FunctionPass *llvm::createSIFixSGPRCopiesLegacyPass() {
+  return new SIFixSGPRCopiesLegacy();
 }
 
 static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
@@ -574,7 +587,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
     for (auto *MI : Defs) {
-      auto MBB = MI->getParent();
+      auto *MBB = MI->getParent();
       MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB, TII);
       MachineBasicBlock::reverse_iterator B(BoundaryMI);
       // Check if B should actually be a boundary. If not set the previous
@@ -602,7 +615,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   return Changed;
 }
 
-bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
+bool SIFixSGPRCopies::run(MachineFunction &MF) {
   // Only need to run this in SelectionDAG path.
   if (MF.getProperties().hasProperty(
         MachineFunctionProperties::Property::Selected))
@@ -612,7 +625,6 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
@@ -757,7 +769,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   lowerVGPR2SGPRCopies(MF);
   // Postprocessing
   fixSCCCopies(MF);
-  for (auto MI : S2VCopies) {
+  for (auto *MI : S2VCopies) {
     // Check if it is still valid
     if (MI->isCopy()) {
       const TargetRegisterClass *SrcRC, *DstRC;
@@ -766,12 +778,12 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         tryChangeVGPRtoSGPRinCopy(*MI, TRI, TII);
     }
   }
-  for (auto MI : RegSequences) {
+  for (auto *MI : RegSequences) {
     // Check if it is still valid
     if (MI->isRegSequence())
       foldVGPRCopyIntoRegSequence(*MI, TRI, TII, *MRI);
   }
-  for (auto MI : PHINodes) {
+  for (auto *MI : PHINodes) {
     processPHINode(*MI);
   }
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
@@ -956,7 +968,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
     }
-    for (auto U : Users) {
+    for (auto *U : Users) {
       if (TII->isSALU(*U))
         Info.SChain.insert(U);
       AnalysisWorklist.push_back(U);
@@ -984,7 +996,7 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
   // of the same register.
   SmallSet<std::pair<Register, unsigned>, 4> SrcRegs;
   for (auto J : Info->Siblings) {
-    auto InfoIt = V2SCopies.find(J);
+    auto *InfoIt = V2SCopies.find(J);
     if (InfoIt != V2SCopies.end()) {
       MachineInstr *SiblingCopy = InfoIt->second.Copy;
       if (SiblingCopy->isImplicitDef())
@@ -1019,12 +1031,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
-    auto CurInfoIt = V2SCopies.find(CurID);
+    auto *CurInfoIt = V2SCopies.find(CurID);
     if (CurInfoIt != V2SCopies.end()) {
       V2SCopyInfo C = CurInfoIt->second;
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
-        auto SibInfoIt = V2SCopies.find(S);
+        auto *SibInfoIt = V2SCopies.find(S);
         if (SibInfoIt != V2SCopies.end()) {
           V2SCopyInfo &SI = SibInfoIt->second;
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());
@@ -1104,8 +1116,8 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       if (SrcReg == AMDGPU::SCC) {
-        Register SCCCopy = MRI->createVirtualRegister(
-            TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
+        Register SCCCopy =
+            MRI->createVirtualRegister(TRI->getWaveMaskRegClass());
         I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
                     MI.getDebugLoc(),
                     TII->get(IsWave32 ? AMDGPU::S_CSELECT_B32
@@ -1132,4 +1144,18 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       }
     }
   }
+}
+
+PreservedAnalyses
+SIFixSGPRCopiesPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  SIFixSGPRCopies Impl(&MDT);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // TODO: We could detect CFG changed.
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  return PA;
 }

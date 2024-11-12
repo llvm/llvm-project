@@ -7,6 +7,7 @@ types:
   - type_name: struct_tm
   - type_name: time_t
   - type_name: clock_t
+  - type_name: size_t
 enums: []
 objects: []
 functions:
@@ -23,6 +24,25 @@ functions:
     arguments:
       - type: struct tm *
       - type: char *
+  - name: ctime
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const time_t *
+  - name: ctime_r
+    standard:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const time_t *
+      - type: char *
+  - name: clock
+    standard:
+      - stdc
+    return_type: clock_t
+    arguments:
+      - type: void
   - name: clock_gettime
     standard:
       - POSIX
@@ -30,12 +50,6 @@ functions:
     arguments:
       - type: clockid_t
       - type: struct timespec *
-  - name: clock
-    standard:
-      - stdc
-    return_type: clock_t
-    arguments:
-      - type: void
   - name: difftime
     standard:
       - stdc

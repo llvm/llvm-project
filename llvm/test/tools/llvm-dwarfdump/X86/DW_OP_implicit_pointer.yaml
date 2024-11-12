@@ -1,0 +1,87 @@
+# Test that we can decode `DW_OP_implicit_pointer` (0xa0)
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_location (DW_OP_implicit_pointer 0x2a +4)
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+        - Code:            0x00000003
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+        - Code:            0x00000004
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+  debug_info:
+    - Length:          52
+      Version:         5
+      UnitType:        DW_UT_compile
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x000000000000000C
+            - Value:           0x0000000100000F50
+            - Value:           0x0000000000000034
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000100000F50
+            - Value:           0x0000000000000034
+            - Value:           0x0000000000000001
+              BlockData:
+                - 0x56
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000002
+              BlockData:
+                - 0x91
+                - 0x78
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000006
+              BlockData:
+                - 0xa0 # DW_OP_implicit_pointer
+                - 0x2a # Section offset of parameter in the previous entry
+                - 0x00
+                - 0x00
+                - 0x00
+                - 0x04 # Pointer references location 4 bytes into value of previous entry
+        - AbbrCode:        0x00000000
+          Values:
+        - AbbrCode:        0x00000000
+          Values:
+...

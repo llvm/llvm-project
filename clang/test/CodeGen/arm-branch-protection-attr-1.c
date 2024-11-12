@@ -1,6 +1,12 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -emit-llvm %s -o - \
 // RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -mbranch-target-enforce -emit-llvm %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -msign-return-address=all -emit-llvm %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple thumbv7m-unknown-unknown-eabi -mbranch-target-enforce -msign-return-address=all -emit-llvm %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=CHECK
 
 __attribute__((target("branch-protection=none"))) void none() {}
 // CHECK: define{{.*}} void @none() #[[#NONE:]]

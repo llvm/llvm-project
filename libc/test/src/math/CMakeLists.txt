@@ -46,6 +46,17 @@ add_fp_unittest(
 
 
 add_fp_unittest(
+  cospif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cospif16_test.cpp
+  DEPENDS
+    libc.src.math.cospif16
+)
+
+add_fp_unittest(
   daddl_test
   NEED_MPFR
   SUITE
@@ -88,6 +99,17 @@ add_fp_unittest(
     libc.src.math.sinpif
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sinpif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinpif16_test.cpp
+  DEPENDS
+    libc.src.math.sinpif16
 )
 
 add_fp_unittest(
@@ -147,6 +169,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanpif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanpif16_test.cpp
+  DEPENDS
+    libc.src.math.tanpif16
+)
+
+add_fp_unittest(
   fabs_test
   NEED_MPFR
   SUITE
@@ -200,6 +233,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fadd
     libc.src.__support.FPUtil.basic_operations
+)
+
+add_fp_unittest(
+  faddl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    faddl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.faddl
 )
 
 add_fp_unittest(
@@ -991,6 +1037,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp2m1f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp2m1f16_test.cpp
+  DEPENDS
+    libc.src.math.exp2m1f16
+)
+
+add_fp_unittest(
+  exp10_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp10
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   exp10f_test
   NEED_MPFR
   SUITE
@@ -1004,16 +1074,40 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- exp10_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   exp10_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.src.math.exp10
-   libc.src.__support.FPUtil.fp_bits
+  exp10f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10f16_test.cpp
+  DEPENDS
+    libc.src.math.exp10f16
+)
+
+add_fp_unittest(
+  exp10m1f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10m1f16_test.cpp
+  DEPENDS
+    libc.src.math.exp10m1f16
+)
+
+add_fp_unittest(
+  exp10m1f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    libc.hdr.math_macros
+    libc.src.errno.errno
+    libc.src.math.exp10m1f
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1434,6 +1528,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sqrtf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sqrtf16_test.cpp
+  DEPENDS
+    libc.src.math.sqrtf16
+)
+
+add_fp_unittest(
   generic_sqrtf_test
   NEED_MPFR
   SUITE
@@ -1653,6 +1758,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expm1_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expm1_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.expm1
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expm1f_test
   NEED_MPFR
   SUITE
@@ -1666,16 +1784,14 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- expm1_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   expm1_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.src.math.expm1
-   libc.src.__support.FPUtil.fp_bits
+  expm1f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expm1f16_test.cpp
+  DEPENDS
+    libc.src.math.expm1f16
 )
 
 add_fp_unittest(
@@ -1705,6 +1821,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  logf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    logf16_test.cpp
+  DEPENDS
+    libc.src.math.logf16
+)
+
+add_fp_unittest(
 log2_test
  NEED_MPFR
  SUITE
@@ -1731,6 +1858,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log2f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    log2f16_test.cpp
+  DEPENDS
+    libc.src.math.log2f16
+)
+
+add_fp_unittest(
  log10_test
  NEED_MPFR
  SUITE
@@ -1754,6 +1892,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.log10f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  log10f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    log10f16_test.cpp
+  DEPENDS
+    libc.src.math.log10f16
 )
 
 add_fp_unittest(
@@ -1849,6 +1998,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  coshf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    coshf16_test.cpp
+  DEPENDS
+    libc.src.math.coshf16
+)
+
+add_fp_unittest(
   sinhf_test
   NEED_MPFR
   SUITE
@@ -1865,6 +2025,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinhf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinhf16_test.cpp
+  DEPENDS
+    libc.src.math.sinhf16
+)
+
+add_fp_unittest(
   tanhf_test
   NEED_MPFR
   SUITE
@@ -1874,6 +2045,17 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.tanhf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  tanhf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanhf16_test.cpp
+  DEPENDS
+    libc.src.math.tanhf16
 )
 
 add_fp_unittest(
@@ -2331,6 +2513,32 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fsub_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.fsub
+)
+
+add_fp_unittest(
+  fsubl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsubl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.fsubl
+)
+
+add_fp_unittest(
   dsqrtl_test
   NEED_MPFR
   SUITE
@@ -2428,6 +2636,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ddivl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ddivl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivl
+)
+
+add_fp_unittest(
   dfmal_test
   NEED_MPFR
   SUITE
@@ -2480,7 +2701,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fdivl
 )
-
 
 add_fp_unittest(
   ffma_test

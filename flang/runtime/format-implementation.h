@@ -443,8 +443,9 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
       if (ch != 'P') { // 1PE5.2 - comma not required (C1302)
         CharType peek{Capitalize(PeekNext())};
         if (peek >= 'A' && peek <= 'Z') {
-          if (ch == 'A' /* anticipate F'202X AT editing */ || ch == 'B' ||
-              ch == 'D' || ch == 'E' || ch == 'R' || ch == 'S' || ch == 'T') {
+          if ((ch == 'A' && peek == 'T' /* anticipate F'202X AT editing */) ||
+              ch == 'B' || ch == 'D' || ch == 'E' || ch == 'R' || ch == 'S' ||
+              ch == 'T') {
             // Assume a two-letter edit descriptor
             next = peek;
             ++offset_;

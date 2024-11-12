@@ -9,8 +9,8 @@
 function(add_header target_name)
   cmake_parse_arguments(
     "ADD_HEADER"
-    ""    # No optional arguments
-    "HDR" # Single value arguments
+    ""             # No optional arguments
+    "HDR;DEST_HDR" # Single value arguments
     "DEPENDS"
     ${ARGN}
   )
@@ -18,7 +18,12 @@ function(add_header target_name)
     message(FATAL_ERROR "'add_header' rules requires the HDR argument specifying a headef file.")
   endif()
 
-  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
+  if(ADD_HEADER_DEST_HDR)
+    set(dest_leaf_filename ${ADD_HEADER_DEST_HDR})
+  else()
+    set(dest_leaf_filename ${ADD_HEADER_HDR})
+  endif()
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${dest_leaf_filename})
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
   set(dest_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
@@ -113,7 +118,7 @@ function(add_gen_header2 target_name)
             ${entry_points}
             --output_dir ${out_file}
     DEPENDS ${yaml_file} ${def_file} ${fq_data_files}
-    COMMENT "Generating header ${ADD_GEN_HDR2_GE2N_HDR} from ${yaml_file} and ${def_file}"
+    COMMENT "Generating header ${ADD_GEN_HDR2_GEN_HDR} from ${yaml_file} and ${def_file}"
   )
   if(LIBC_TARGET_OS_IS_GPU)
     file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
@@ -130,7 +135,7 @@ function(add_gen_header2 target_name)
       DEPENDS ${yaml_file} ${fq_data_files}
     )
   endif()
-  
+
   if(ADD_GEN_HDR2_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR2_DEPENDS})
     # Dependencies of a add_header target can only be another add_gen_header target

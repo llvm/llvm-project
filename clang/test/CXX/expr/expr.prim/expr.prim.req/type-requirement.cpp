@@ -182,14 +182,14 @@ namespace std_example {
   static_assert(C1<has_inner_and_type> && C2<has_inner_and_type> && C3<has_inner_and_type>);
   template<C1 T> struct C1_check {};
   // expected-note@-1 {{because 'int' does not satisfy 'C1'}}
-  // expected-note@-2 {{because 'has_type' does not satisfy 'C1'}}
+  // expected-note@-2 {{because 'std_example::has_type' does not satisfy 'C1'}}
   template<C2 T> struct C2_check {};
-  // expected-note@-1 {{because 'has_inner' does not satisfy 'C2'}}
+  // expected-note@-1 {{because 'std_example::has_inner' does not satisfy 'C2'}}
   template<C3 T> struct C3_check {};
   // expected-note@-1 {{because 'void' does not satisfy 'C3'}}
   using c1 = C1_check<int>; // expected-error{{constraints not satisfied for class template 'C1_check' [with T = int]}}
-  using c2 = C1_check<has_type>; // expected-error{{constraints not satisfied for class template 'C1_check' [with T = has_type]}}
-  using c3 = C2_check<has_inner>; // expected-error{{constraints not satisfied for class template 'C2_check' [with T = has_inner]}}
+  using c2 = C1_check<has_type>; // expected-error{{constraints not satisfied for class template 'C1_check' [with T = std_example::has_type]}}
+  using c3 = C2_check<has_inner>; // expected-error{{constraints not satisfied for class template 'C2_check' [with T = std_example::has_inner]}}
   using c4 = C3_check<void>; // expected-error{{constraints not satisfied for class template 'C3_check' [with T = void]}}
 }
 
@@ -199,10 +199,10 @@ template <typename T> concept C = requires { requires requires { T::a; }; };
 // expected-note@-1 {{because 'T::a' would be invalid: no member named 'a' in 'PR48656::T1'}}
 
 template <C...> struct A {};
-// expected-note@-1 {{because 'T1' does not satisfy 'C'}}
+// expected-note@-1 {{because 'PR48656::T1' does not satisfy 'C'}}
 
 struct T1 {};
-template struct A<T1>; // expected-error {{constraints not satisfied for class template 'A' [with $0 = <T1>]}}
+template struct A<T1>; // expected-error {{constraints not satisfied for class template 'A' [with $0 = <PR48656::T1>]}}
 
 struct T2 { static constexpr bool a = false; };
 template struct A<T2>;

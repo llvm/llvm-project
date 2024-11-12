@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
-#define LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#ifndef LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
+#define LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
@@ -19,18 +19,20 @@
 namespace llvm {
 struct SubtargetFeatureInfo;
 using SubtargetFeatureInfoMap =
-    std::map<Record *, SubtargetFeatureInfo, LessRecordByID>;
+    std::map<const Record *, SubtargetFeatureInfo, LessRecordByID>;
+using SubtargetFeaturesInfoVec =
+    std::vector<std::pair<const Record *, SubtargetFeatureInfo>>;
 
 /// Helper class for storing information on a subtarget feature which
 /// participates in instruction matching.
 struct SubtargetFeatureInfo {
   /// The predicate record for this feature.
-  Record *TheDef;
+  const Record *TheDef;
 
   /// An unique index assigned to represent this feature.
   uint64_t Index;
 
-  SubtargetFeatureInfo(Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
+  SubtargetFeatureInfo(const Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
 
   /// The name of the enumerated constant identifying this feature.
   std::string getEnumName() const {
@@ -48,8 +50,8 @@ struct SubtargetFeatureInfo {
   }
 
   void dump() const;
-  static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-  getAll(const RecordKeeper &Records);
+
+  static SubtargetFeaturesInfoVec getAll(const RecordKeeper &Records);
 
   /// Emit the subtarget feature flag definitions.
   ///
@@ -102,4 +104,4 @@ struct SubtargetFeatureInfo {
 };
 } // end namespace llvm
 
-#endif // LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#endif // LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H

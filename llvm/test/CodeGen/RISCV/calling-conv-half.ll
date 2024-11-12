@@ -161,10 +161,8 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    lui a0, 1048564
-; RV64IF-NEXT:    fmv.w.x fa5, a0
-; RV64IF-NEXT:    fmv.x.w a1, fa5
 ; RV64IF-NEXT:    li a0, 1
+; RV64IF-NEXT:    lui a1, 1048564
 ; RV64IF-NEXT:    call callee_half_in_regs
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -511,9 +509,8 @@ define half @callee_half_ret() nounwind {
 ;
 ; RV64IF-LABEL: callee_half_ret:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lui a0, %hi(.LCPI4_0)
-; RV64IF-NEXT:    flw fa5, %lo(.LCPI4_0)(a0)
-; RV64IF-NEXT:    fmv.x.w a0, fa5
+; RV64IF-NEXT:    lui a0, 1048564
+; RV64IF-NEXT:    addiw a0, a0, -1024
 ; RV64IF-NEXT:    ret
 ;
 ; RV32-ILP32F-LABEL: callee_half_ret:

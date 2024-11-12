@@ -325,7 +325,7 @@ multiclass ZAAddSub<string n_suffix> {
     def NAME # _ZA16_VG1X4_F16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x4", "vm4", "h", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x4", [IsStreaming, IsInOutZA], []>;
   }
 
-  let SMETargetGuard = "sme2,b16b16" in {
+  let SMETargetGuard = "sme-b16b16" in {
     def NAME # _ZA16_VG1X2_BF16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x2", "vm2", "b", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x2", [IsStreaming, IsInOutZA], []>;
     def NAME # _ZA16_VG1X4_BF16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x4", "vm4", "b", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x4", [IsStreaming, IsInOutZA], []>;
   }
@@ -506,7 +506,7 @@ let SMETargetGuard = "sme-f16f16" in {
   def SVMLS_LANE_VG1x4_F16 : Inst<"svmls_lane_za16[_f16]_vg1x4", "vm4di", "h", MergeNone, "aarch64_sme_fmls_lane_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
 }
 
-let SMETargetGuard = "sme2,b16b16" in {
+let SMETargetGuard = "sme-b16b16" in {
   def SVMLA_MULTI_VG1x2_BF16 : Inst<"svmla_za16[_bf16]_vg1x2", "vm22", "b", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsInOutZA], []>;
   def SVMLA_MULTI_VG1x4_BF16 : Inst<"svmla_za16[_bf16]_vg1x4", "vm44", "b", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsInOutZA], []>;
   def SVMLS_MULTI_VG1x2_BF16 : Inst<"svmls_za16[_bf16]_vg1x2", "vm22", "b", MergeNone, "aarch64_sme_fmls_vg1x2", [IsStreaming, IsInOutZA], []>;
@@ -742,7 +742,7 @@ let SMETargetGuard = "sme2" in {
 
 ////////////////////////////////////////////////////////////////////////////////
 // SME2p1 - FMOPA, FMOPS (non-widening)
-let SMETargetGuard = "sme2,b16b16" in {
+let SMETargetGuard = "sme-b16b16" in {
   def SVMOPA_BF16_NW : SInst<"svmopa_za16[_bf16]_m", "viPPdd", "b",
                              MergeNone, "aarch64_sme_mopa",
                              [IsStreaming, IsInOutZA],
@@ -817,4 +817,11 @@ multiclass ZAReadzArray<string vg_num>{
 
 defm SVREADZ_VG2 :  ZAReadzArray<"2">;
 defm SVREADZ_VG4 :  ZAReadzArray<"4">;
+
+let SMETargetGuard = "sme-lutv2" in {
+  def SVWRITE_LANE_ZT : SInst<"svwrite_lane_zt[_{d}]", "vidi", "cUcsUsiUilUlfhdb", MergeNone, "aarch64_sme_write_lane_zt", [IsStreaming, IsInOutZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck1_3>]>;
+  def SVWRITE_ZT : SInst<"svwrite_zt[_{d}]", "vid", "cUcsUsiUilUlfhdb", MergeNone, "aarch64_sme_write_zt", [IsStreaming, IsOutZT0], [ImmCheck<0, ImmCheck0_0>]>;
+  def SVLUTI4_ZT_X4 : SInst<"svluti4_zt_{d}_x4", "4i2.u", "cUc", MergeNone, "aarch64_sme_luti4_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
+}
+
 } // let SVETargetGuard = InvalidMode

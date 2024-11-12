@@ -55,14 +55,14 @@ namespace virtualBaseAlignment {
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: %[[X:.*]] = getelementptr inbounds %[[STRUCT_B:.*]], ptr %[[THIS1]], i32 0, i32 2
+// CHECK: %[[X:.*]] = getelementptr inbounds nuw %[[STRUCT_B:.*]], ptr %[[THIS1]], i32 0, i32 2
 // CHECK: store i32 123, ptr %[[X]], align 16
 
 // CHECK: define linkonce_odr void @_ZN20virtualBaseAlignment1BC2Ev(ptr {{[^,]*}} %[[THIS:.*]], ptr noundef %{{.*}})
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: %[[X:.*]] = getelementptr inbounds %[[STRUCT_B]], ptr %[[THIS1]], i32 0, i32 2
+// CHECK: %[[X:.*]] = getelementptr inbounds nuw %[[STRUCT_B]], ptr %[[THIS1]], i32 0, i32 2
 // CHECK: store i32 123, ptr %[[X]], align 8
 
 struct A {

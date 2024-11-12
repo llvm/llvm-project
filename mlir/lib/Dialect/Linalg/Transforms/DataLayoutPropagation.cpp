@@ -725,8 +725,7 @@ projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
       // If the dimension is present in the current indices group, the group
       // position within the reassociation map is the desired projected
       // dimension position.
-      if (llvm::any_of(indices,
-                       [&](int64_t expandDim) { return expandDim == pos; })) {
+      if (llvm::is_contained(indices, pos)) {
         projectedPos.push_back(idx);
         break;
       }

@@ -112,7 +112,7 @@ namespace test1 {
   // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[Y]], i32 noundef 6)
   // CHECK:      [[Z:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 2
   // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[Z]], i32 noundef 7)
-  // CHECK:      [[W:%.*]] = getelementptr inbounds [[B]], ptr [[V]], i32 0, i32 1
+  // CHECK:      [[W:%.*]] = getelementptr inbounds nuw [[B]], ptr [[V]], i32 0, i32 1
   // CHECK-NEXT: store i32 8, ptr [[W]], align 4
   // CHECK-NEXT: call void @_ZN5test11BD1Ev(ptr {{[^,]*}} [[V]])
   // CHECK-NEXT: ret void

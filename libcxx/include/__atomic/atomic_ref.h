@@ -20,14 +20,16 @@
 #include <__assert>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
+#include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/byte.h>
+#include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -219,7 +221,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
 
 protected:
-  typedef _Tp _Aligned_Tp __attribute__((aligned(required_alignment)));
+  using _Aligned_Tp [[__gnu__::__aligned__(required_alignment)]] = _Tp;
   _Aligned_Tp* __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}

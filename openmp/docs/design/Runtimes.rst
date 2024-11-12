@@ -1496,6 +1496,14 @@ clause. Examples for both are given below.
     $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
     $ env ./shared
 
+.. _libomptarget_device_allocator:
+
+Device Allocation
+^^^^^^^^^^^^^^^^^
+
+The device runtime supports basic runtime allocation via the ``omp_alloc`` 
+function. Currently, this allocates global memory for all default traits. Access 
+modifiers are currently not supported and return a null pointer.
 
 .. _libomptarget_device_debugging:
 

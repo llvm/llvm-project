@@ -145,9 +145,10 @@ public:
 // function here in the meantime to decouple from that discussion.
 Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
                                     ArrayRef<Type *> Tys = {}) {
+  if (Tys.empty())
+    return Intrinsic::getDeclarationIfExists(M, Id);
   auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return M->getFunction(Tys.empty() ? Intrinsic::getName(Id)
-                                    : Intrinsic::getName(Id, Tys, M, FT));
+  return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
 }
 
 class ExpandVariadics : public ModulePass {
@@ -238,7 +239,7 @@ public:
 
   FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
     // The type of "FTy" with the ... removed and a va_list appended
-    SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+    SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
     return FunctionType::get(FTy->getReturnType(), ArgTypes,
                              /*IsVarArgs=*/false);
@@ -538,7 +539,7 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   const bool FunctionIsDefinition = !F.isDeclaration();
 
   FunctionType *FTy = F.getFunctionType();
-  SmallVector<Type *> ArgTypes(FTy->param_begin(), FTy->param_end());
+  SmallVector<Type *> ArgTypes(FTy->params());
   ArgTypes.push_back(ABI->vaListParameterType(M));
 
   FunctionType *NFTy = inlinableVariadicFunctionType(M, FTy);
@@ -748,10 +749,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is an awkward way to guess whether there is a known stack alignment
   // without hitting an assert in DL.getStackAlignment, 1024 is an arbitrary
   // number likely to be greater than the natural stack alignment.
-  // TODO: DL.getStackAlignment could return a MaybeAlign instead of assert
   Align AllocaAlign = MaxFieldAlign;
-  if (DL.exceedsNaturalStackAlignment(Align(1024)))
-    AllocaAlign = std::max(AllocaAlign, DL.getStackAlignment());
+  if (MaybeAlign StackAlign = DL.getStackAlignment();
+      StackAlign && *StackAlign > AllocaAlign)
+    AllocaAlign = *StackAlign;
 
   // Put the alloca to hold the variadic args in the entry basic block.
   Builder.SetInsertPointPastAllocas(CBF);
@@ -809,7 +810,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     Value *Dst = NF ? NF : CI->getCalledOperand();
     FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
 
-    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI);
+    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
     CallInst::TailCallKind TCK = CI->getTailCallKind();
     assert(TCK != CallInst::TCK_MustTail);

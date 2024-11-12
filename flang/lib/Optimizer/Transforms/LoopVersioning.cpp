@@ -265,8 +265,8 @@ void LoopVersioningPass::runOnOperation() {
         mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(arg.getType());
         if (mlir::isa<mlir::FloatType>(elementType) ||
             mlir::isa<mlir::IntegerType>(elementType) ||
-            mlir::isa<fir::ComplexType>(elementType)) {
-          auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignment(
+            mlir::isa<mlir::ComplexType>(elementType)) {
+          auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
               arg.getLoc(), elementType, *dl, kindMap);
           typeSize = llvm::alignTo(eleSize, eleAlign);
         }

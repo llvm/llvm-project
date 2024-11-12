@@ -1,3 +1,5 @@
+.. _header_generation:
+
 Generating Public and Internal headers
 ======================================
 
@@ -68,6 +70,8 @@ To add through the command line:
 3. Check the YAML file that the added function is present. You will also get a
    generated header file with the new addition in the newhdrgen directory to
    examine.
+
+If you want to sort the functions alphabetically you can check out libc/newhdrgen/yaml_functions_sorted.py.
 
 
 Testing

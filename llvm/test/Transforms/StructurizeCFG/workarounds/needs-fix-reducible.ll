@@ -9,37 +9,49 @@ define void @irreducible(i1 %PredEntry, i1 %PredB1, i1 %PredB2, i1 %PredB3, i1 %
 ; CHECK-LABEL: @irreducible(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PREDB2_INV:%.*]] = xor i1 [[PREDB2:%.*]], true
-; CHECK-NEXT:    [[PREDB1_INV:%.*]] = xor i1 [[PREDB1:%.*]], true
+; CHECK-NEXT:    [[PREDENTRY_INV:%.*]] = xor i1 [[PREDENTRY:%.*]], true
 ; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
-; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[PREDB4:%.*]], [[B4:%.*]] ], [ false, [[IRR_GUARD]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[B4]] ], [ true, [[IRR_GUARD]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[B1:%.*]], label [[FLOW1:%.*]]
+; CHECK:       Flow4:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[B3:%.*]] ], [ undef, [[B2:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[PREDB3:%.*]], [[B3]] ], [ true, [[B2]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[PREDB3]], [[B3]] ], [ false, [[B2]] ]
+; CHECK-NEXT:    br label [[FLOW3:%.*]]
 ; CHECK:       B1:
-; CHECK-NEXT:    br label [[FLOW1]]
-; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[PREDB1_INV]], [[B1]] ], [ [[TMP0]], [[FLOW:%.*]] ]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[B2:%.*]], label [[FLOW2:%.*]]
-; CHECK:       B2:
-; CHECK-NEXT:    br i1 [[PREDB2_INV]], label [[B3:%.*]], label [[FLOW3:%.*]]
+; CHECK-NEXT:    br label [[FLOW5:%.*]]
 ; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP5:%.*]], [[FLOW3]] ], [ undef, [[FLOW1]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP6:%.*]], [[FLOW3]] ], [ true, [[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[EXIT:%.*]], label [[IRR_GUARD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP9:%.*]], [[FLOW5]] ], [ [[TMP11:%.*]], [[FLOW:%.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP10:%.*]], [[FLOW5]] ], [ [[TMP12:%.*]], [[FLOW]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP7:%.*]], [[FLOW5]] ], [ true, [[FLOW]] ]
+; CHECK-NEXT:    br i1 true, label [[FLOW6:%.*]], label [[FLOW]]
+; CHECK:       B2:
+; CHECK-NEXT:    br i1 [[PREDB2_INV]], label [[B3]], label [[FLOW4:%.*]]
+; CHECK:       Flow3:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP0]], [[FLOW4]] ], [ undef, [[IRR_GUARD1:%.*]] ]
+; CHECK-NEXT:    [[TMP7]] = phi i1 [ [[TMP1]], [[FLOW4]] ], [ true, [[IRR_GUARD1]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ [[TMP2]], [[FLOW4]] ], [ true, [[IRR_GUARD1]] ]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[B1:%.*]], label [[FLOW5]]
 ; CHECK:       B3:
-; CHECK-NEXT:    br label [[FLOW3]]
+; CHECK-NEXT:    br label [[FLOW4]]
 ; CHECK:       B4:
 ; CHECK-NEXT:    br label [[FLOW]]
-; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP5]] = phi i1 [ [[PREDB3:%.*]], [[B3]] ], [ undef, [[B2]] ]
-; CHECK-NEXT:    [[TMP6]] = phi i1 [ false, [[B3]] ], [ true, [[B2]] ]
-; CHECK-NEXT:    br label [[FLOW2]]
+; CHECK:       Flow5:
+; CHECK-NEXT:    [[TMP9]] = phi i1 [ undef, [[B1]] ], [ [[TMP6]], [[FLOW3]] ]
+; CHECK-NEXT:    [[TMP10]] = phi i1 [ true, [[B1]] ], [ undef, [[FLOW3]] ]
+; CHECK-NEXT:    br label [[FLOW2:%.*]]
+; CHECK:       Flow6:
+; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[IRR_GUARD]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ [[PREDENTRY:%.*]], [[ENTRY:%.*]] ], [ [[TMP3]], [[FLOW2]] ]
-; CHECK-NEXT:    [[GUARD_B1_INV:%.*]] = xor i1 [[GUARD_B1]], true
-; CHECK-NEXT:    br i1 [[GUARD_B1_INV]], label [[B4]], label [[FLOW]]
+; CHECK-NEXT:    [[GUARD_B4:%.*]] = phi i1 [ [[PREDENTRY_INV]], [[ENTRY:%.*]] ], [ [[TMP3]], [[FLOW6]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B4]], label [[B4:%.*]], label [[FLOW]]
+; CHECK:       Flow:
+; CHECK-NEXT:    [[TMP11]] = phi i1 [ [[TMP3]], [[FLOW2]] ], [ undef, [[B4]] ], [ undef, [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[TMP12]] = phi i1 [ [[TMP4]], [[FLOW2]] ], [ true, [[B4]] ], [ false, [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[FLOW2]] ], [ [[PREDB4:%.*]], [[B4]] ], [ true, [[IRR_GUARD]] ]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[IRR_GUARD1]], label [[FLOW2]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    br i1 [[TMP12]], label [[B2]], label [[FLOW3]]
 ;
 {
 entry:

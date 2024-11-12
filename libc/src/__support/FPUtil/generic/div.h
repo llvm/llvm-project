@@ -35,7 +35,7 @@ div(InType x, InType y) {
   using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
   using DyadicFloat =
-      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::FRACTION_LEN))>;
+      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::SIG_LEN + 1))>;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);

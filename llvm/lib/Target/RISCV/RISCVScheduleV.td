@@ -9,6 +9,10 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
+// This predicate is true when the rs2 operand of vlse or vsse is x0, false
+// otherwise.
+def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+
 defvar SchedMxList = ["MF8", "MF4", "MF2", "M1", "M2", "M4", "M8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = !listremove(SchedMxList, ["M8"]);
@@ -360,6 +364,9 @@ defm "" : LMULSchedWrites<"WriteVExtV">;
 defm "" : LMULSchedWrites<"WriteVICALUV">;
 defm "" : LMULSchedWrites<"WriteVICALUX">;
 defm "" : LMULSchedWrites<"WriteVICALUI">;
+defm "" : LMULSchedWrites<"WriteVICALUMV">;
+defm "" : LMULSchedWrites<"WriteVICALUMX">;
+defm "" : LMULSchedWrites<"WriteVICALUMI">;
 // 11.6. Vector Single-Width Bit Shift Instructions
 defm "" : LMULSchedWrites<"WriteVShiftV">;
 defm "" : LMULSchedWrites<"WriteVShiftX">;
@@ -852,6 +859,9 @@ defm "" : LMULWriteRes<"WriteVExtV", []>;
 defm "" : LMULWriteRes<"WriteVICALUV", []>;
 defm "" : LMULWriteRes<"WriteVICALUX", []>;
 defm "" : LMULWriteRes<"WriteVICALUI", []>;
+defm "" : LMULWriteRes<"WriteVICALUMV", []>;
+defm "" : LMULWriteRes<"WriteVICALUMX", []>;
+defm "" : LMULWriteRes<"WriteVICALUMI", []>;
 defm "" : LMULWriteRes<"WriteVShiftV", []>;
 defm "" : LMULWriteRes<"WriteVShiftX", []>;
 defm "" : LMULWriteRes<"WriteVShiftI", []>;

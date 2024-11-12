@@ -72,7 +72,7 @@ typedef int pipe_t;                     // Host pipe type
 
 typedef void (*LogOutputCallback)(const char *, void *baton);
 typedef bool (*CommandOverrideCallback)(void *baton, const char **argv);
-typedef bool (*ExpressionCancelCallback)(ExpressionEvaluationPhase phase,
+typedef bool (*ExpressionCancelCallback)(lldb::ExpressionEvaluationPhase phase,
                                          void *baton);
 
 typedef void *ScriptObjectPtr;

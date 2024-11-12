@@ -77,7 +77,7 @@
 
 #if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD || KMP_OS_NETBSD ||      \
      KMP_OS_DRAGONFLY || KMP_OS_AIX) &&                                        \
-    !KMP_OS_WASI
+    !KMP_OS_WASI && !KMP_OS_EMSCRIPTEN
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -1293,7 +1293,7 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
 extern void *__kmp_lookup_symbol(const char *name, bool next = false);
 #define KMP_DLSYM(name) __kmp_lookup_symbol(name)
 #define KMP_DLSYM_NEXT(name) __kmp_lookup_symbol(name, true)
-#elif KMP_OS_WASI
+#elif KMP_OS_WASI || KMP_OS_EMSCRIPTEN
 #define KMP_DLSYM(name) nullptr
 #define KMP_DLSYM_NEXT(name) nullptr
 #else
