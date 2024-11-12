@@ -150,6 +150,13 @@ static Value staticallyExtractSubvector(OpBuilder &rewriter, Location loc,
   assert((vectorType.getRank() == 1 && extractType.getRank() == 1) &&
          "expected 1-D source and destination types");
   (void)vectorType;
+  assert(frontOffset + subvecSize <= vectorType.getNumElements() &&
+         "subvector out of bounds");
+
+  // do not need extraction if the subvector size is the same as the source
+  if (vectorType.getNumElements() == subvecSize)
+    return source;
+
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
   auto strides = rewriter.getI64ArrayAttr({1});
