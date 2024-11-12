@@ -106,4 +106,10 @@ let TargetPrefix = "spv" in {
             [IntrNoMem]>;
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
+
+  // Read a value from the image buffer. It does not translate directly to a
+  // single OpImageRead because the result type is not necessarily a 4 element
+  // vector.
+  def int_spv_typedBufferLoad
+      : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_any_ty, llvm_i32_ty]>;
 }

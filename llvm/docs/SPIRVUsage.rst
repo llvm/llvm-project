@@ -392,6 +392,14 @@ SPIR-V backend, along with their descriptions and argument details.
        If `arraySize > 1`, then the binding represents an array of resources\
        of the given size, and the handle for the resource at the given index is returned.\
        If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
+   * - `int_spv_typeBufferLoad`
+     - Scalar or vector
+     - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`
+     - Loads a value from a Vulkan image buffer at the given coordinate. The \
+       image buffer data is assumed to be stored as a 4-element vector. If the \
+       return type is a scalar, then the first element of the vector is \
+       returned. If the return type is an n-element vector, then the first \
+       n-elements of the 4-element vector are returned.
 
 .. _spirv-builtin-functions:
 
