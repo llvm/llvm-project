@@ -1037,7 +1037,7 @@ endforeach()
 # "include" for dependency tracking.
 add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
   COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
-  DEPENDS ${_all_includes}
+  DEPENDS "${LIBCXX_SOURCE_DIR}/utils/libcxx/header_information.py"
   COMMENT "Generate the mapping file for include-what-you-use"
 )
 list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")

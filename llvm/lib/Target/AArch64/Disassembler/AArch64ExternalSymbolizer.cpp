@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExternalSymbolizer.h"
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"

@@ -35,7 +35,7 @@ TEST_CONSTEXPR(match_m128(_mm_and_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m1
 
 __m128 test_mm_andnot_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_andnot_ps
-  // CHECK: xor <4 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <4 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <4 x i32>
   return _mm_andnot_ps(A, B);
 }

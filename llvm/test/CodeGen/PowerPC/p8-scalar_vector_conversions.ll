@@ -2499,11 +2499,9 @@ define <2 x i64> @buildi2(i64 %arg, i32 %arg1) {
 ;
 ; CHECK-LE-LABEL: buildi2:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mtfprd f0, r4
+; CHECK-LE-NEXT:    mtfprwz f0, r4
 ; CHECK-LE-NEXT:    mtfprd f1, r3
-; CHECK-LE-NEXT:    xxswapd vs0, vs0
-; CHECK-LE-NEXT:    xxswapd v2, vs1
-; CHECK-LE-NEXT:    xxmrgld v2, v2, vs0
+; CHECK-LE-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-AIX-LABEL: buildi2:

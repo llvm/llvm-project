@@ -101,9 +101,6 @@ static FunctionType *
 fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
                          FunctionType *FTy, const SPIRVType *SRetTy,
                          const SmallVector<SPIRVType *, 4> &SArgTys) {
-  if (F.getParent()->getNamedMetadata("spv.cloned_funcs"))
-    return FTy;
-
   bool hasArgPtrs = false;
   for (auto &Arg : F.args()) {
     // check if it's an instance of a non-typed PointerType

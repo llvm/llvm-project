@@ -19,10 +19,8 @@
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -271,6 +269,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64DAGToDAGISelLegacyPass(*PR);
   initializeAArch64GlobalsTaggingPass(*PR);
 }
+
+void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
 
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
