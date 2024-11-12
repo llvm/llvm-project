@@ -188,15 +188,15 @@ static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
   return dest;
 }
 
-/// Inserts a 1-D subvector into a 1-D `dest` vector at index `offset`.
+/// Inserts a 1-D subvector into a 1-D `dest` vector at index `destOffsetVar`.
 static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
                                         TypedValue<VectorType> source,
                                         Value dest, OpFoldResult destOffsetVar,
-                                        int64_t length) {
+                                        size_t length) {
   assert(length > 0 && "length must be greater than 0");
   Value destOffsetVal =
       getValueOrCreateConstantIndexOp(rewriter, loc, destOffsetVar);
-  for (int i = 0; i < length; ++i) {
+  for (size_t i = 0; i < length; ++i) {
     auto insertLoc = i == 0
                          ? destOffsetVal
                          : rewriter.create<arith::AddIOp>(
