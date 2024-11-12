@@ -147,9 +147,7 @@ public:
   /// The `enclosingOpOk` flag says whether we should return true if the B op
   /// is enclosed by a region on A.
   bool properlyDominates(Operation *a, Operation *b,
-                         bool enclosingOpOk = true) const {
-    return properlyDominatesImpl(a, b, enclosingOpOk);
-  }
+                         bool enclosingOpOk = true) const;
 
   /// Return true if operation A dominates operation B, i.e. if A and B are the
   /// same operation or A properly dominates B.
@@ -187,13 +185,6 @@ public:
   bool properlyDominates(Block *a, Block *b) const {
     return super::properlyDominates(a, b);
   }
-
-private:
-  // Return true if operation A properly dominates operation B.  The
-  /// 'enclosingOpOk' flag says whether we should return true if the b op is
-  /// enclosed by a region on 'A'.
-  bool properlyDominatesImpl(Operation *a, Operation *b,
-                             bool enclosingOpOk) const;
 };
 
 /// A class for computing basic postdominance information.
