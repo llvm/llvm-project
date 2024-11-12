@@ -1019,15 +1019,17 @@ memsetCanUsesBeRemoved(MemsetLike op, const MemorySlot &slot,
 }
 namespace {
 template <class MemsetLike>
-void createMemsetLenAttr(MemsetLike op, IntegerAttr &memsetLenAttr) {
+IntegerAttr createMemsetLenAttr(MemsetLike op) {
+  IntegerAttr memsetLenAttr;
   bool successfulMatch =
       matchPattern(op.getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
   (void)successfulMatch;
   assert(successfulMatch);
+  return memsetLenAttr;
 }
 template <>
-void createMemsetLenAttr(LLVM::MemsetInlineOp op, IntegerAttr &memsetLenAttr) {
-  memsetLenAttr = op.getLenAttr();
+IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
+  return op.getLenAttr();
 }
 template <class MemsetLike>
 void createMemsetLikeToReplace(OpBuilder &builder, MemsetLike toReplace,
