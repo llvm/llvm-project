@@ -38,7 +38,7 @@ def int_dx_typedBufferStore
                             [IntrWriteMem]>;
 
 def int_dx_updateCounter
-    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i8_ty]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty]>;
     
 // Cast between target extension handle types and dxil-style opaque handles
 def int_dx_cast_handle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;

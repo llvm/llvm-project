@@ -757,7 +757,7 @@ def BufferStore : DXILOp<69, bufferStore> {
 def UpdateCounter : DXILOp<70, bufferUpdateCounter> {
   let Doc = "increments/decrements a buffer counter";
   let arguments = [HandleTy, Int8Ty];
-  let result = VoidTy;
+  let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
