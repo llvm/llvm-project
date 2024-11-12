@@ -9715,8 +9715,8 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     ImplicitDeallocationParameters IDP = {
-        typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()), AlignedAllocation::No,
-        SizedDeallocation::No};
+        typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()),
+        AlignedAllocation::No, SizedDeallocation::No};
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
                                  OperatorDelete, DeallocType, IDP,
                                  /*Diagnose*/ false)) {

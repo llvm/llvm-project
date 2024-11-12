@@ -1428,33 +1428,34 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   ImplicitAllocationParameters IAP = {
       typeAwareAllocation(S.AllowTypeAwareAllocatorsInCurrentContext()),
       alignedAllocation(S.getLangOpts().CoroAlignedAllocation)};
-  auto LookupAllocationFunction =
-      [&](Sema::AllocationFunctionScope NewScope = Sema::AFS_Both,
-          bool WithoutPlacementArgs = false, bool ForceNonAligned = false) {
-        // [dcl.fct.def.coroutine]p9
-        //   The allocation function's name is looked up by searching for it in
-        //   the
-        // scope of the promise type.
-        // - If any declarations are found, ...
-        // - If no declarations are found in the scope of the promise type, a
-        // search is performed in the global scope or via ADL for typed
-        // allocation.
-        if (NewScope == Sema::AFS_Both)
-          NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
+  auto LookupAllocationFunction = [&](Sema::AllocationFunctionScope NewScope =
+                                          Sema::AFS_Both,
+                                      bool WithoutPlacementArgs = false,
+                                      bool ForceNonAligned = false) {
+    // [dcl.fct.def.coroutine]p9
+    //   The allocation function's name is looked up by searching for it in
+    //   the
+    // scope of the promise type.
+    // - If any declarations are found, ...
+    // - If no declarations are found in the scope of the promise type, a
+    // search is performed in the global scope or via ADL for typed
+    // allocation.
+    if (NewScope == Sema::AFS_Both)
+      NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
 
-        IAP = {typeAwareAllocation(S.AllowTypeAwareAllocatorsInCurrentContext()),
-               alignedAllocation(!ForceNonAligned &&
-                                 S.getLangOpts().CoroAlignedAllocation)};
+    IAP = {typeAwareAllocation(S.AllowTypeAwareAllocatorsInCurrentContext()),
+           alignedAllocation(!ForceNonAligned &&
+                             S.getLangOpts().CoroAlignedAllocation)};
 
-        FunctionDecl *UnusedResult = nullptr;
+    FunctionDecl *UnusedResult = nullptr;
 
-        S.FindAllocationFunctions(
-            Loc, SourceRange(), NewScope,
-            /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-            /*isArray*/ false, IAP,
-            WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
-            UnusedResult, /*Diagnose*/ false);
-      };
+    S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
+                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
+                              /*isArray*/ false, IAP,
+                              WithoutPlacementArgs ? MultiExprArg{}
+                                                   : PlacementArgs,
+                              OperatorNew, UnusedResult, /*Diagnose*/ false);
+  };
 
   // We don't expect to call to global operator new with (size, p0, …, pn).
   // So if we choose to lookup the allocation function in global scope, we

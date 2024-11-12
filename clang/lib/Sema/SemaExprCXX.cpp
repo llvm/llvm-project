@@ -1754,8 +1754,8 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
     return false;
 
   unsigned UsualParams = 1;
-  if (S.AllowTypeAwareAllocatorsInCurrentContext() && UsualParams < FD->getNumParams() &&
-      S.isTypeAwareOperatorNewOrDelete(FD))
+  if (S.AllowTypeAwareAllocatorsInCurrentContext() &&
+      UsualParams < FD->getNumParams() && S.isTypeAwareOperatorNewOrDelete(FD))
     ++UsualParams;
 
   if (S.getLangOpts().SizedDeallocation && UsualParams < FD->getNumParams() &&
@@ -3540,8 +3540,8 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
   ImplicitDeallocationParameters IDP = {
-      typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()), AlignedAllocation::No,
-      SizedDeallocation::No};
+      typeAwareAllocation(AllowTypeAwareAllocatorsInCurrentContext()),
+      AlignedAllocation::No, SizedDeallocation::No};
 
   if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, DeallocType, IDP))
     return nullptr;
