@@ -7609,8 +7609,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       Updates.push_back({DominatorTree::Delete, SI->getParent(), SSW.Dest});
       SI->setSuccessor(SSW.SuccNum, (*It)->Dest);
       MadeChange = true;
-    } else {
-      ReplaceWith.insert(&SSW);
     }
   }
 
