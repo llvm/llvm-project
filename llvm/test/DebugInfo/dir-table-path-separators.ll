@@ -1,4 +1,5 @@
 ; RUN: llc %s -o - -filetype=obj -mtriple x86_64-pc-linux-gnu | llvm-dwarfdump - --debug-line | FileCheck %s --check-prefix=LINUX
+; RUN: llc %s -o - -filetype=obj -mtriple x86_64-pc-linux-gnu -force-dwarf-windows-path-seps=true | llvm-dwarfdump - --debug-line | FileCheck %s --check-prefix=PS5
 ; RUN: llc %s -o - -filetype=obj -mtriple x86_64-sie-ps5 | llvm-dwarfdump - --debug-line | FileCheck %s --check-prefix=PS5
 ;
 ; UNSUPPORTED: system-windows

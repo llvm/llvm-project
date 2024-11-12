@@ -59,6 +59,10 @@
 
 using namespace llvm;
 
+cl::opt<bool> ForceDWARFWindowsPathSeps ("force-dwarf-windows-path-seps",
+   cl::desc("Use Windows path separators when building DWARF linetables"),
+   cl::Hidden);
+
 static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
                                std::vector<const MDNode *> &) {
   SMD.print(nullptr, errs());
@@ -77,7 +81,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
-  if (TheTriple.isPS())
+  if (ForceDWARFWindowsPathSeps || TheTriple.isPS())
     PathStyle = llvm::sys::path::Style::windows;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
