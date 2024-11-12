@@ -49,9 +49,9 @@ define <4 x double> @test_x86_avx_blendv_pd_256(<4 x double> %a0, <4 x double> %
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 0, [[TMP15]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x double> [[A2:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i64> [[TMP13]], <i64 63, i64 63, i64 63, i64 63>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <4 x i64> [[TMP13]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i64> [[TMP5]] to <4 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i64> [[TMP4]], <i64 63, i64 63, i64 63, i64 63>
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i64> [[TMP4]], splat (i64 63)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i64> [[TMP7]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP2]], <4 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x double> [[A1:%.*]] to <4 x i64>
@@ -79,9 +79,9 @@ define <8 x float> @test_x86_avx_blendv_ps_256(<8 x float> %a0, <8 x float> %a1,
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 0, [[TMP15]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <8 x float> [[A2:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr <8 x i32> [[TMP13]], <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr <8 x i32> [[TMP13]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr <8 x i32> [[TMP4]], <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <8 x i32> [[TMP4]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP7]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP6]], <8 x i32> [[TMP2]], <8 x i32> [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x float> [[A1:%.*]] to <8 x i32>

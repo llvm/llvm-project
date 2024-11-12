@@ -981,9 +981,9 @@ define <32 x i8> @test_x86_avx2_pblendvb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8>
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 0, [[TMP12]]
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP10:%.*]] = ashr <32 x i8> [[A2:%.*]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr <32 x i8> [[A2:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <32 x i8> [[TMP10]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <32 x i8> [[TMP4]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <32 x i8> [[TMP4]], splat (i8 7)
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <32 x i8> [[TMP6]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> [[TMP2]], <32 x i8> [[TMP9]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <32 x i8> [[A1:%.*]], [[A0:%.*]]
