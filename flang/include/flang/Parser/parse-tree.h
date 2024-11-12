@@ -3877,6 +3877,8 @@ struct OmpDeclareMapperSpecifier {
   std::tuple<std::optional<Name>, TypeSpec, Name> t;
 };
 
+// OMP v5.2: 5.8.8
+//  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
 struct OpenMPDeclareMapperConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
   CharBlock source;
