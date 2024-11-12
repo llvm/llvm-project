@@ -5342,6 +5342,84 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
   }
 };
 
+/// MIPS-specific implementation of VarArgHelper.
+/// NOTE: This is also used for LoongArch64.
+struct VarArgGenericHelper : public VarArgHelperBase {
+  AllocaInst *VAArgTLSCopy = nullptr;
+  Value *VAArgSize = nullptr;
+
+  VarArgGenericHelper(Function &F, MemorySanitizer &MS,
+                      MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
+      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
+
+  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    unsigned VAArgOffset = 0;
+    const DataLayout &DL = F.getDataLayout();
+    for (Value *A :
+         llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
+      uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
+      if (DL.isBigEndian()) {
+        // Adjusting the shadow for argument with size < 8 to match the
+        // placement of bits in big endian system
+        if (ArgSize < 8)
+          VAArgOffset += (8 - ArgSize);
+      }
+      Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
+      VAArgOffset += ArgSize;
+      VAArgOffset = alignTo(VAArgOffset, 8);
+      if (!Base)
+        continue;
+      IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+    }
+
+    Constant *TotalVAArgSize = ConstantInt::get(IRB.getInt64Ty(), VAArgOffset);
+    // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
+    // a new class member i.e. it is the total size of all VarArgs.
+    IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
+  }
+
+  void finalizeInstrumentation() override {
+    assert(!VAArgSize && !VAArgTLSCopy &&
+           "finalizeInstrumentation called twice");
+    IRBuilder<> IRB(MSV.FnPrologueEnd);
+    VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
+    Value *CopySize =
+        IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0), VAArgSize);
+
+    if (!VAStartInstrumentationList.empty()) {
+      // If there is a va_start in this function, make a backup copy of
+      // va_arg_tls somewhere in the function entry block.
+      VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
+      VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
+      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
+                       CopySize, kShadowTLSAlignment, false);
+
+      Value *SrcSize = IRB.CreateBinaryIntrinsic(
+          Intrinsic::umin, CopySize,
+          ConstantInt::get(MS.IntptrTy, kParamTLSSize));
+      IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
+                       kShadowTLSAlignment, SrcSize);
+    }
+
+    // Instrument va_start.
+    // Copy va_list shadow from the backup copy of the TLS contents.
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
+      NextNodeIRBuilder IRB(OrigInst);
+      Value *VAListTag = OrigInst->getArgOperand(0);
+      Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
+          IRB.CreatePtrToInt(VAListTag, MS.IntptrTy), MS.PtrTy);
+      Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
+      Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
+      const Align Alignment = Align(8);
+      std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
+          MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
+                                 Alignment, /*isStore*/ true);
+      IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy, Alignment,
+                       CopySize);
+    }
+  }
+};
+
 /// AArch64-specific implementation of VarArgHelper.
 struct VarArgAArch64Helper : public VarArgHelperBase {
   static const unsigned kAArch64GrArgSize = 64;
@@ -6000,84 +6078,6 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
       Value *VAListTag = OrigInst->getArgOperand(0);
       copyRegSaveArea(IRB, VAListTag);
       copyOverflowArea(IRB, VAListTag);
-    }
-  }
-};
-
-/// MIPS-specific implementation of VarArgHelper.
-/// NOTE: This is also used for LoongArch64.
-struct VarArgGenericHelper : public VarArgHelperBase {
-  AllocaInst *VAArgTLSCopy = nullptr;
-  Value *VAArgSize = nullptr;
-
-  VarArgGenericHelper(Function &F, MemorySanitizer &MS,
-                      MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
-      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
-
-  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
-    unsigned VAArgOffset = 0;
-    const DataLayout &DL = F.getDataLayout();
-    for (Value *A :
-         llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
-      uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-      if (DL.isBigEndian()) {
-        // Adjusting the shadow for argument with size < 8 to match the
-        // placement of bits in big endian system
-        if (ArgSize < 8)
-          VAArgOffset += (8 - ArgSize);
-      }
-      Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
-      VAArgOffset += ArgSize;
-      VAArgOffset = alignTo(VAArgOffset, 8);
-      if (!Base)
-        continue;
-      IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
-    }
-
-    Constant *TotalVAArgSize = ConstantInt::get(IRB.getInt64Ty(), VAArgOffset);
-    // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
-    // a new class member i.e. it is the total size of all VarArgs.
-    IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
-  }
-
-  void finalizeInstrumentation() override {
-    assert(!VAArgSize && !VAArgTLSCopy &&
-           "finalizeInstrumentation called twice");
-    IRBuilder<> IRB(MSV.FnPrologueEnd);
-    VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
-    Value *CopySize =
-        IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0), VAArgSize);
-
-    if (!VAStartInstrumentationList.empty()) {
-      // If there is a va_start in this function, make a backup copy of
-      // va_arg_tls somewhere in the function entry block.
-      VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
-      VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
-
-      Value *SrcSize = IRB.CreateBinaryIntrinsic(
-          Intrinsic::umin, CopySize,
-          ConstantInt::get(MS.IntptrTy, kParamTLSSize));
-      IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
-                       kShadowTLSAlignment, SrcSize);
-    }
-
-    // Instrument va_start.
-    // Copy va_list shadow from the backup copy of the TLS contents.
-    for (CallInst *OrigInst : VAStartInstrumentationList) {
-      NextNodeIRBuilder IRB(OrigInst);
-      Value *VAListTag = OrigInst->getArgOperand(0);
-      Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
-          IRB.CreatePtrToInt(VAListTag, MS.IntptrTy), MS.PtrTy);
-      Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
-      Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
-      const Align Alignment = Align(8);
-      std::tie(RegSaveAreaShadowPtr, RegSaveAreaOriginPtr) =
-          MSV.getShadowOriginPtr(RegSaveAreaPtr, IRB, IRB.getInt8Ty(),
-                                 Alignment, /*isStore*/ true);
-      IRB.CreateMemCpy(RegSaveAreaShadowPtr, Alignment, VAArgTLSCopy, Alignment,
-                       CopySize);
     }
   }
 };
