@@ -2658,8 +2658,8 @@ define i64 @array_index_lshr_sh3_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 ; RV64I-LABEL: array_index_lshr_sh3_sh3:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a1, 58
-; RV64I-NEXT:    slli a1, a1, 6
 ; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 6
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld a0, 0(a0)
@@ -2761,8 +2761,8 @@ define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
 ; RV64I-LABEL: test_gep_gep_dont_crash:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a2, a2, 6
-; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    ret
