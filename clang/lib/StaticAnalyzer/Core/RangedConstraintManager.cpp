@@ -25,7 +25,7 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    bool Assumption) {
   SVal SimplifiedVal = simplifyToSVal(State, Sym);
   if (SimplifiedVal.isConstant()) {
-    bool Feasible = SimplifiedVal.isZeroConstant() ? !Assumption : Assumption;
+    bool Feasible = SimplifiedVal.isZeroConstant() != Assumption;
     return Feasible ? State : nullptr;
   }
 
