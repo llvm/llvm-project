@@ -70,7 +70,6 @@ private:
 
 public:
   bool isDirect() const { return P.getInt() & Direct; }
-  bool isDefault() const { return !isDirect(); }
   bool hasSymbolicOffset() const { return P.getInt() & Symbolic; }
 
   const MemRegion *getRegion() const { return P.getPointer(); }
