@@ -12637,6 +12637,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
   assert(BroadcastIdx < (int)Mask.size() && "We only expect to be called with "
                                             "a sorted mask where the broadcast "
                                             "comes from V1.");
+  int NumActiveElts = count_if(Mask, [](int M) { return M >= 0; });
 
   // Go up the chain of (vector) values to find a scalar load that we can
   // combine with the broadcast.
@@ -12756,16 +12757,28 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     if (VT == MVT::v4f64 || VT == MVT::v4i64)
       return SDValue();
 
-    // Only broadcast the zero-element of a 128-bit subvector.
-    if ((BitOffset % 128) != 0)
-      return SDValue();
+    // If we are broadcasting an element from the lowest 128-bit subvector, try
+    // to move the element in position.
+    if (BitOffset < 128 && NumActiveElts > 1 &&
+        V.getScalarValueSizeInBits() == NumEltBits) {
+      assert((BitOffset % V.getScalarValueSizeInBits()) == 0 &&
+             "Unexpected bit-offset");
+      SmallVector<int, 16> ExtractMask(128 / NumEltBits, SM_SentinelUndef);
+      ExtractMask[0] = BitOffset / V.getScalarValueSizeInBits();
+      V = extractSubVector(V, 0, DAG, DL, 128);
+      V = DAG.getVectorShuffle(V.getValueType(), DL, V, V, ExtractMask);
+    } else {
+      // Only broadcast the zero-element of a 128-bit subvector.
+      if ((BitOffset % 128) != 0)
+        return SDValue();
 
-    assert((BitOffset % V.getScalarValueSizeInBits()) == 0 &&
-           "Unexpected bit-offset");
-    assert((V.getValueSizeInBits() == 256 || V.getValueSizeInBits() == 512) &&
-           "Unexpected vector size");
-    unsigned ExtractIdx = BitOffset / V.getScalarValueSizeInBits();
-    V = extract128BitVector(V, ExtractIdx, DAG, DL);
+      assert((BitOffset % V.getScalarValueSizeInBits()) == 0 &&
+             "Unexpected bit-offset");
+      assert((V.getValueSizeInBits() == 256 || V.getValueSizeInBits() == 512) &&
+             "Unexpected vector size");
+      unsigned ExtractIdx = BitOffset / V.getScalarValueSizeInBits();
+      V = extract128BitVector(V, ExtractIdx, DAG, DL);
+    }
   }
 
   // On AVX we can use VBROADCAST directly for scalar sources.
@@ -27332,6 +27345,10 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
+    case Intrinsic::x86_t2rpntlvwz0rs_internal:
+    case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+    case Intrinsic::x86_t2rpntlvwz1rs_internal:
+    case Intrinsic::x86_t2rpntlvwz1rst1_internal:
     case Intrinsic::x86_t2rpntlvwz0_internal:
     case Intrinsic::x86_t2rpntlvwz0t1_internal:
     case Intrinsic::x86_t2rpntlvwz1_internal:
@@ -27354,6 +27371,18 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
         break;
       case Intrinsic::x86_t2rpntlvwz1t1_internal:
         Opc = X86::PT2RPNTLVWZ1T1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0rs_internal:
+        Opc = X86::PT2RPNTLVWZ0RSV;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0rst1_internal:
+        Opc = X86::PT2RPNTLVWZ0RST1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1rs_internal:
+        Opc = X86::PT2RPNTLVWZ1RSV;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1rst1_internal:
+        Opc = X86::PT2RPNTLVWZ1RST1V;
         break;
       }
 
@@ -37520,6 +37549,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
+  case X86::PTILELOADDRS:
+  case X86::PTILELOADDRST1:
   case X86::PTILELOADD:
   case X86::PTILELOADDT1:
   case X86::PTILESTORED: {
@@ -37537,6 +37568,12 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
       break;
 #undef GET_EGPR_IF_ENABLED
+    case X86::PTILELOADDRS:
+      Opc = X86::TILELOADDRS;
+      break;
+    case X86::PTILELOADDRST1:
+      Opc = X86::TILELOADDRST1;
+      break;
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
@@ -37577,6 +37614,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
+  case X86::PT2RPNTLVWZ0RS:
+  case X86::PT2RPNTLVWZ0RST1:
+  case X86::PT2RPNTLVWZ1RS:
+  case X86::PT2RPNTLVWZ1RST1:
   case X86::PT2RPNTLVWZ0:
   case X86::PT2RPNTLVWZ0T1:
   case X86::PT2RPNTLVWZ1:
@@ -37597,6 +37638,18 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       break;
     case X86::PT2RPNTLVWZ1T1:
       Opc = X86::T2RPNTLVWZ1T1;
+      break;
+    case X86::PT2RPNTLVWZ0RS:
+      Opc = X86::T2RPNTLVWZ0RS;
+      break;
+    case X86::PT2RPNTLVWZ0RST1:
+      Opc = X86::T2RPNTLVWZ0RST1;
+      break;
+    case X86::PT2RPNTLVWZ1RS:
+      Opc = X86::T2RPNTLVWZ1RS;
+      break;
+    case X86::PT2RPNTLVWZ1RST1:
+      Opc = X86::T2RPNTLVWZ1RST1;
       break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));

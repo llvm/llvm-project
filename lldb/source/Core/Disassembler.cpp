@@ -56,7 +56,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
-                                        const char *flavor,
+                                        const char *flavor, const char *cpu,
+                                        const char *features,
                                         const char *plugin_name) {
   LLDB_SCOPED_TIMERF("Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                      arch.GetArchitectureName(), plugin_name);
@@ -67,7 +68,7 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
     create_callback =
         PluginManager::GetDisassemblerCreateCallbackForPluginName(plugin_name);
     if (create_callback) {
-      if (auto disasm_sp = create_callback(arch, flavor))
+      if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
   } else {
@@ -75,18 +76,17 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
          (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(
               idx)) != nullptr;
          ++idx) {
-      if (auto disasm_sp = create_callback(arch, flavor))
+      if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
   }
   return DisassemblerSP();
 }
 
-DisassemblerSP Disassembler::FindPluginForTarget(const Target &target,
-                                                 const ArchSpec &arch,
-                                                 const char *flavor,
-                                                 const char *plugin_name) {
-  if (flavor == nullptr) {
+DisassemblerSP Disassembler::FindPluginForTarget(
+    const Target &target, const ArchSpec &arch, const char *flavor,
+    const char *cpu, const char *features, const char *plugin_name) {
+  if (!flavor) {
     // FIXME - we don't have the mechanism in place to do per-architecture
     // settings.  But since we know that for now we only support flavors on x86
     // & x86_64,
@@ -94,7 +94,12 @@ DisassemblerSP Disassembler::FindPluginForTarget(const Target &target,
         arch.GetTriple().getArch() == llvm::Triple::x86_64)
       flavor = target.GetDisassemblyFlavor();
   }
-  return FindPlugin(arch, flavor, plugin_name);
+  if (!cpu)
+    cpu = target.GetDisassemblyCPU();
+  if (!features)
+    features = target.GetDisassemblyFeatures();
+
+  return FindPlugin(arch, flavor, cpu, features, plugin_name);
 }
 
 static Address ResolveAddress(Target &target, const Address &addr) {
@@ -117,15 +122,16 @@ static Address ResolveAddress(Target &target, const Address &addr) {
 
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
-    Target &target, const AddressRange &range, bool force_live_memory) {
+    const char *cpu, const char *features, Target &target,
+    const AddressRange &range, bool force_live_memory) {
   if (range.GetByteSize() <= 0)
     return {};
 
   if (!range.GetBaseAddress().IsValid())
     return {};
 
-  lldb::DisassemblerSP disasm_sp =
-      Disassembler::FindPluginForTarget(target, arch, flavor, plugin_name);
+  lldb::DisassemblerSP disasm_sp = Disassembler::FindPluginForTarget(
+      target, arch, flavor, cpu, features, plugin_name);
 
   if (!disasm_sp)
     return {};
@@ -141,14 +147,15 @@ lldb::DisassemblerSP Disassembler::DisassembleRange(
 
 lldb::DisassemblerSP
 Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
-                               const char *flavor, const Address &start,
+                               const char *flavor, const char *cpu,
+                               const char *features, const Address &start,
                                const void *src, size_t src_len,
                                uint32_t num_instructions, bool data_from_file) {
   if (!src)
     return {};
 
   lldb::DisassemblerSP disasm_sp =
-      Disassembler::FindPlugin(arch, flavor, plugin_name);
+      Disassembler::FindPlugin(arch, flavor, cpu, features, plugin_name);
 
   if (!disasm_sp)
     return {};
@@ -163,6 +170,7 @@ Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const char *plugin_name, const char *flavor,
+                               const char *cpu, const char *features,
                                const ExecutionContext &exe_ctx,
                                const Address &address, Limit limit,
                                bool mixed_source_and_assembly,
@@ -172,7 +180,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
     return false;
 
   lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
-      exe_ctx.GetTargetRef(), arch, flavor, plugin_name));
+      exe_ctx.GetTargetRef(), arch, flavor, cpu, features, plugin_name));
   if (!disasm_sp)
     return false;
 
@@ -559,8 +567,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
     if (limit.value == 0)
       limit.value = DEFAULT_DISASM_BYTE_SIZE;
 
-    return Disassemble(debugger, arch, nullptr, nullptr, frame,
-                       range.GetBaseAddress(), limit, false, 0, 0, strm);
+    return Disassemble(debugger, arch, nullptr, nullptr, nullptr, nullptr,
+                       frame, range.GetBaseAddress(), limit, false, 0, 0, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)
