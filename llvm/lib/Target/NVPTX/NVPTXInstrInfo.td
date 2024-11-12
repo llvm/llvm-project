@@ -3953,7 +3953,8 @@ def fpimm_any_zero : FPImmLeaf<fAny, [{
 def fpimm_positive_zero_v2f16 : PatFrag<(ops), (v2f16 (bitconvert (i32 0)))>;
 def fpimm_positive_zero_v2bf16 : PatFrag<(ops), (v2bf16 (bitconvert (i32 0)))>;
 
-// We can use the instruction flag nnan instead of relying on a function attribute
+// Perform substitution if fma only has one use, and also if instruction has
+// nnan instruction flag or if the TM has NoNaNsFPMath
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
                                   (fma node:$a, node:$b, node:$c), [{
   return N->hasOneUse() &&
@@ -3964,6 +3965,7 @@ multiclass FMARELU<RegisterClass RC, string OpVecString = "">  {
   def _F16# !toupper(OpVecString) : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
     !strconcat("fma.rn.relu.f16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
     Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
+  // FTZ variants are only supported by fp16, not bf16
   def _F16# !toupper(OpVecString) #_FTZ : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
     !strconcat("fma.rn.ftz.relu.f16", OpVecString, "\t$dst, $a, $b, $c;"), []>,
     Requires<[useFP16Math, hasPTX<70>, hasSM<80>]>;
@@ -3975,15 +3977,15 @@ multiclass FMARELU<RegisterClass RC, string OpVecString = "">  {
 defm FMARELU : FMARELU<Int16Regs>;
 defm FMARELU : FMARELU<Int32Regs, "x2">;
 
-// Don't use function attributes, use instruction flag instead
-// FTZ variants are only supported by fp16, not bf16
+// FTZ
 def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
   (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
   Requires<[doF32FTZ]>;
 def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
   (FMARELU_F16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
   Requires<[doF32FTZ]>;
-// No FTZ
+
+// NO FTZ
 def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
   (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>;
 def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
