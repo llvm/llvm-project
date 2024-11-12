@@ -413,32 +413,28 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   bool Changed = false;
 
   // Collect stable functions related to the current module.
-  DenseMap<stable_hash, SmallVector<Function *>> HashToFuncs;
-  DenseMap<Function *, FunctionHashInfo> FuncToFI;
+  DenseMap<stable_hash, SmallVector<std::pair<Function *, FunctionHashInfo>>>
+      HashToFuncs;
   auto &Maps = FunctionMap->getFunctionMap();
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
     auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
-    if (Maps.contains(FI.FunctionHash)) {
-      HashToFuncs[FI.FunctionHash].push_back(&F);
-      FuncToFI.try_emplace(&F, std::move(FI));
-    }
+    if (Maps.contains(FI.FunctionHash))
+      HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
 
   for (auto &[Hash, Funcs] : HashToFuncs) {
     std::optional<ParamLocsVecTy> ParamLocsVec;
     SmallVector<FuncMergeInfo> FuncMergeInfos;
+    auto &SFS = Maps.at(Hash);
+    assert(!SFS.empty());
+    auto &RFS = SFS[0];
 
     // Iterate functions with the same hash.
-    for (auto &F : Funcs) {
-      auto &SFS = Maps.at(Hash);
-      auto &FI = FuncToFI.at(F);
-
+    for (auto &[F, FI] : Funcs) {
       // Check if the function is compatible with any stable function
       // in terms of the number of instructions and ignored operands.
-      assert(!SFS.empty());
-      auto &RFS = SFS[0];
       if (RFS->InstCount != FI.IndexInstruction->size())
         continue;
 
@@ -473,8 +469,8 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
                                           *ParamLocsVec))
           continue;
 
-        // As long as we found one stable function matching the current one,
-        // we create a candidate for merging and move on to the next function.
+        // If a stable function matching the current one is found,
+        // create a candidate for merging and proceed to the next function.
         FuncMergeInfos.emplace_back(SF.get(), F, FI.IndexInstruction.get());
         break;
       }
