@@ -159,18 +159,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                        typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
   if (ST.is64Bit()) {
     ExtActions.legalFor({{sXLen, s32}});
-    getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({s32, sXLen})
-        .maxScalar(0, sXLen)
-        .lower();
-  } else {
-    getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({s32})
-        .maxScalar(0, sXLen)
-        .lower();
   }
   ExtActions.customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
+
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .customFor({sXLen})
+      .clampScalar(0, sXLen, sXLen)
+      .lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -234,10 +230,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   }
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({s32, p0})
+      .legalFor({p0})
+      .legalFor(!ST.is64Bit(), {s32})
       .customFor(ST.is64Bit(), {s64})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen);
+      .clampScalar(0, sXLen, sXLen);
 
   // TODO: transform illegal vector types into legal vector type
   getActionDefinitionsBuilder(

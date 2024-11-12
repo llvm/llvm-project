@@ -559,6 +559,8 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   }
   case X86::PTILELOADDV:
   case X86::PTILELOADDT1V:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V:
   case X86::PTCVTROWD2PSrreV:
   case X86::PTCVTROWD2PSrriV:
   case X86::PTCVTROWPS2PBF16HrreV:
@@ -575,6 +577,12 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+    case X86::PTILELOADDRSV:
+      Opc = X86::TILELOADDRS;
+      break;
+    case X86::PTILELOADDRST1V:
+      Opc = X86::TILELOADDRST1;
+      break;
     case X86::PTILELOADDV:
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
       break;
@@ -719,7 +727,11 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PT2RPNTLVWZ0V:
   case X86::PT2RPNTLVWZ0T1V:
   case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V: {
+  case X86::PT2RPNTLVWZ1T1V:
+  case X86::PT2RPNTLVWZ0RSV:
+  case X86::PT2RPNTLVWZ0RST1V:
+  case X86::PT2RPNTLVWZ1RSV:
+  case X86::PT2RPNTLVWZ1RST1V: {
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -735,6 +747,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       break;
     case X86::PT2RPNTLVWZ1T1V:
       Opc = X86::T2RPNTLVWZ1T1;
+      break;
+    case X86::PT2RPNTLVWZ0RSV:
+      Opc = X86::T2RPNTLVWZ0RS;
+      break;
+    case X86::PT2RPNTLVWZ0RST1V:
+      Opc = X86::T2RPNTLVWZ0RST1;
+      break;
+    case X86::PT2RPNTLVWZ1RSV:
+      Opc = X86::T2RPNTLVWZ1RS;
+      break;
+    case X86::PT2RPNTLVWZ1RST1V:
+      Opc = X86::T2RPNTLVWZ1RST1;
       break;
     default:
       llvm_unreachable("Impossible Opcode!");
@@ -757,7 +781,11 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
   case X86::PTMMULTF32PSV:
-  case X86::PTTMMULTF32PSV: {
+  case X86::PTTMMULTF32PSV:
+  case X86::PTDPBF8PSV:
+  case X86::PTDPBHF8PSV:
+  case X86::PTDPHBF8PSV:
+  case X86::PTDPHF8PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
@@ -776,6 +804,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       break;
     case X86::PTTMMULTF32PSV:
       Opc = X86::TTMMULTF32PS;
+      break;
+    case X86::PTDPBF8PSV:
+      Opc = X86::TDPBF8PS;
+      break;
+    case X86::PTDPBHF8PSV:
+      Opc = X86::TDPBHF8PS;
+      break;
+    case X86::PTDPHBF8PSV:
+      Opc = X86::TDPHBF8PS;
+      break;
+    case X86::PTDPHF8PSV:
+      Opc = X86::TDPHF8PS;
       break;
 
     default:
