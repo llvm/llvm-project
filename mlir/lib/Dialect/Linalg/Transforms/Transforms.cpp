@@ -1183,7 +1183,8 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
   // 2. Transpose the input to match the inner tile order:
   //    %init = tensor.empty()
-  //    %transposed_tile = linalg.transpose ins(%extracted_tile), outs(%init)
+  //    %transposed_tile = linalg.transpose ins(%source_or_padded_source),
+  //                                        outs(%init)
   // Two assumptions are made:
   //  1. All outer dims are 1 - the corresponding transposition doesn't matter.
   //  2. Inner dims position correspond to the trailing `numTiles` dims.

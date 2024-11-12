@@ -15,8 +15,6 @@ func.func @KCRS_to_KCRSsr(%arg0: tensor<1x1x128x64xf32>, %arg1: tensor<1x1x4x8x8
 // CHECK:             %[[IN_S:.+]] = affine.apply #[[MAP2]](%[[S]])
 // CHECK:             %[[SRC_SLICE:.+]] = tensor.extract_slice %[[SRC]]
 // CHECK-SAME:          [0, 0, %[[IN_R]], %[[IN_S]]] [1, 1, 32, 8] [1, 1, 1, 1]
-// CHECK:             %[[TILE:.*]] = tensor.extract_slice %[[ITER_SLICE]]
-// CHECK-SAME:          [0, 0, %[[R]], %[[S]], 0, 0] [1, 1, 1, 1, 8, 32] [1, 1, 1, 1, 1, 1] : tensor<1x1x4x8x8x32xf32> to tensor<1x1x1x1x8x32xf32>
 // CHECK:             %[[EMPTY:.*]] = tensor.empty() : tensor<1x1x8x32xf32>
 // CHECK:             %[[TRANSP:.*]] = linalg.transpose
 // CHECK-SAME:          ins(%[[SRC_SLICE]] : tensor<1x1x32x8xf32>)
