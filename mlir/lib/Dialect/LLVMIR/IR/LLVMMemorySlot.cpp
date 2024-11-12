@@ -968,7 +968,6 @@ void createMemsetIntr(OpBuilder &builder, LLVM::MemsetInlineOp toReplace,
                       IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
                       DenseMap<Attribute, MemorySlot> &subslots,
                       Attribute index) {
-
   auto newMemsetSizeValue =
       IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize);
 
