@@ -23,6 +23,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <unordered_set>
 
 #define GET_REGINFO_TARGET_DESC
 #include "RISCVGenRegisterInfo.inc"
@@ -928,6 +930,22 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   for (MCPhysReg OrderReg : Order)
     if (TwoAddrHints.count(OrderReg))
       Hints.push_back(OrderReg);
+
+  // X5 register can be used by Machine Outliner to make a call to
+  // outlined function, while preserving the original return address
+  // in X1. Unless there's no other way, do not use X5 register for
+  // computation if other tmp registers are available.
+  if (auto X5It = std::find(Hints.begin(), Hints.end(), RISCV::X5);
+      X5It != Hints.end()) {
+    std::unordered_set<MCPhysReg> TmpRegs = {
+        RISCV::X6, RISCV::X7, RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31};
+    auto CheckTmpReg = [&TmpRegs](const MCPhysReg &PR) {
+      return TmpRegs.find(PR) != TmpRegs.end();
+    };
+    auto AnotherTmpIt = std::find_if(Hints.begin(), Hints.end(), CheckTmpReg);
+    if (AnotherTmpIt != Hints.end())
+      Hints.erase(X5It);
+  }
 
   return BaseImplRetVal;
 }
