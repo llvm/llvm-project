@@ -43,7 +43,7 @@ namespace {
 /// ignored by the default lowering but should be propagated by any custom
 /// lowering.
 struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
-  explicit AssertOpLowering(LLVMTypeConverter &typeConverter,
+  explicit AssertOpLowering(const LLVMTypeConverter &typeConverter,
                             bool abortOnFailedAssert = true)
       : ConvertOpToLLVMPattern<cf::AssertOp>(typeConverter, /*benefit=*/1),
         abortOnFailedAssert(abortOnFailedAssert) {}
@@ -201,7 +201,7 @@ struct SwitchOpLowering : public ConvertOpToLLVMPattern<cf::SwitchOp> {
 } // namespace
 
 void mlir::cf::populateControlFlowToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
       AssertOpLowering,
@@ -212,7 +212,7 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
 }
 
 void mlir::cf::populateAssertToLLVMConversionPattern(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool abortOnFailure) {
   patterns.add<AssertOpLowering>(converter, abortOnFailure);
 }

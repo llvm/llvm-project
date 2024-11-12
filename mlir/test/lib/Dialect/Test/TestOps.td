@@ -2048,6 +2048,18 @@ def GraphRegionOp : TEST_Op<"graph_region",  [
   let assemblyFormat = "attr-dict-with-keyword $region";
 }
 
+def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>,
+    IsolatedFromAbove]> {
+  let summary =  "isolated from above operation with a graph region";
+  let description = [{
+    Test op that defines a graph region which is isolated from above.
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
@@ -2769,11 +2781,21 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 //===----------------------------------------------------------------------===//
 // Test InferIntRangeInterface
 //===----------------------------------------------------------------------===//
-def InferIntRangeType : AnyTypeOf<[AnyInteger, Index]>;
+def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOf<[AnyInteger, Index]>]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
+  let description = [{
+    Creates a value with specified [min, max] range for integer range analysis.
+
+    Example:
+
+    ```mlir
+    %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
+    ```
+  }];
+
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
                        APIntAttr:$smin,
@@ -2807,6 +2829,18 @@ def TestIncrementOp : TEST_Op<"increment",
 def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                           AllTypesMatch<["value", "result"]>]> {
+  let description = [{
+    Integer range analysis will update this op to reflect inferred integer range
+    of the input, so it can be checked with FileCheck
+
+    Example:
+
+    ```mlir
+    CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+    %1 = test.reflect_bounds %0 : index
+    ```
+  }];
+
   let arguments = (ins InferIntRangeType:$value,
                        OptionalAttr<APIntAttr>:$umin,
                        OptionalAttr<APIntAttr>:$umax,
@@ -2992,6 +3026,11 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   let arguments = (ins
     MyStructProperty:$prop
   );
+}
+
+def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins);
 }
 
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {

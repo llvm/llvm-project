@@ -23,10 +23,8 @@
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "GISel/AArch64LegalizerInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -46,7 +44,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
@@ -90,7 +87,7 @@ std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
 
   // Use APInt to handle overflow when calculating expected element.
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1);
+  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, false, true);
 
   // The following shuffle indices must be the successive elements after the
   // first real element.
@@ -425,6 +422,9 @@ void applyNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT VecTy = MRI.getType(Insert.getReg(0));
   LLT EltTy = MRI.getType(Insert.getElementReg());
   LLT IdxTy = MRI.getType(Insert.getIndexReg());
+
+  if (VecTy.isScalableVector())
+    return;
 
   // Create a stack slot and store the vector into it
   MachineFunction &MF = Builder.getMF();
@@ -1052,6 +1052,40 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
     CmpRes = MIB.buildNot(DstTy, CmpRes).getReg(0);
   MRI.replaceRegWith(Dst, CmpRes);
   MI.eraseFromParent();
+}
+
+// Matches G_BUILD_VECTOR where at least one source operand is not a constant
+bool matchLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+
+  // Check if the values are all constants
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    auto ConstVal =
+        getAnyConstantVRegValWithLookThrough(GBuildVec->getSourceReg(I), MRI);
+
+    if (!ConstVal.has_value())
+      return true;
+  }
+
+  return false;
+}
+
+void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+  LLT DstTy = MRI.getType(GBuildVec->getReg(0));
+  Register DstReg = B.buildUndef(DstTy).getReg(0);
+
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    Register SrcReg = GBuildVec->getSourceReg(I);
+    if (mi_match(SrcReg, MRI, m_GImplicitDef()))
+      continue;
+    auto IdxReg = B.buildConstant(LLT::scalar(64), I);
+    DstReg =
+        B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
+  }
+  B.buildCopy(GBuildVec->getReg(0), DstReg);
+  GBuildVec->eraseFromParent();
 }
 
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,

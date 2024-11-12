@@ -23,11 +23,11 @@ define fastcc void @undef_phi(i64 %i5247, i1 %i4530, i1 %i4936.not) {
 ; CHECK-NEXT:    store volatile [2 x i32] [[I5293]], ptr addrspace(5) null, align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[LOOP_EXIT_GUARD]]:
-; CHECK-NEXT:    [[DOTMOVED]] = phi i32 [ [[TMP0]], %[[MBB4321]] ], [ undef, %[[LOOP_EXIT_GUARD1]] ]
+; CHECK-NEXT:    [[DOTMOVED]] = phi i32 [ [[TMP0]], %[[MBB4321]] ], [ poison, %[[LOOP_EXIT_GUARD1]] ]
 ; CHECK-NEXT:    [[GUARD_MBB4531:%.*]] = phi i1 [ false, %[[MBB4321]] ], [ [[GUARD_MBB4531_MOVED:%.*]], %[[LOOP_EXIT_GUARD1]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_MBB4531]], label %[[MBB4531]], label %[[MBB5291]]
 ; CHECK:       [[LOOP_EXIT_GUARD1]]:
-; CHECK-NEXT:    [[GUARD_MBB4531_MOVED]] = phi i1 [ true, %[[MBB4454]] ], [ undef, %[[MBB4535]] ]
+; CHECK-NEXT:    [[GUARD_MBB4531_MOVED]] = phi i1 [ true, %[[MBB4454]] ], [ poison, %[[MBB4535]] ]
 ; CHECK-NEXT:    [[GUARD_LOOP_EXIT_GUARD:%.*]] = phi i1 [ true, %[[MBB4454]] ], [ false, %[[MBB4535]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_LOOP_EXIT_GUARD]], label %[[LOOP_EXIT_GUARD]], label %[[MBB4321]]
 ;

@@ -334,6 +334,9 @@ private:
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
+  /// Cache for the loop guards of InnermostLoop.
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
   /// Check whether there is a plausible dependence between the two
   /// accesses.
   ///
@@ -480,6 +483,7 @@ public:
   /// Reset the state of the pointer runtime information.
   void reset() {
     Need = false;
+    CanUseDiffCheck = true;
     Pointers.clear();
     Checks.clear();
     DiffChecks.clear();

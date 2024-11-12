@@ -499,7 +499,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   switch (Kind) {
   case StreamKind::Exception: {
     Expected<const minidump::ExceptionStream &> ExpectedExceptionStream =
-        File.getExceptionStream();
+        File.getExceptionStream(StreamDesc);
     if (!ExpectedExceptionStream)
       return ExpectedExceptionStream.takeError();
     Expected<ArrayRef<uint8_t>> ExpectedThreadContext =

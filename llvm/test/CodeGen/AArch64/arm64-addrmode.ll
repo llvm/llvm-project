@@ -239,9 +239,8 @@ define i32 @LdOffset_i8_zext32(ptr %a)  {
 define i32 @LdOffset_i8_sext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_sext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #56952 // =0xde78
-; CHECK-NEXT:    movk w8, #15, lsl #16
-; CHECK-NEXT:    ldrsb w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
+; CHECK-NEXT:    ldrsb w0, [x8, #3704]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -266,9 +265,8 @@ define i64 @LdOffset_i8_zext64(ptr %a)  {
 define i64 @LdOffset_i8_sext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_sext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #56952 // =0xde78
-; CHECK-NEXT:    movk w8, #15, lsl #16
-; CHECK-NEXT:    ldrsb x0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
+; CHECK-NEXT:    ldrsb x0, [x8, #3704]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -280,9 +278,8 @@ define i64 @LdOffset_i8_sext64(ptr %a)  {
 define i16 @LdOffset_i16(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrh w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
+; CHECK-NEXT:    ldrh w0, [x8, #7408]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -293,9 +290,8 @@ define i16 @LdOffset_i16(ptr %a)  {
 define i32 @LdOffset_i16_zext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_zext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrh w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
+; CHECK-NEXT:    ldrh w0, [x8, #7408]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -307,9 +303,8 @@ define i32 @LdOffset_i16_zext32(ptr %a)  {
 define i32 @LdOffset_i16_sext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_sext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrsh w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
+; CHECK-NEXT:    ldrsh w0, [x8, #7408]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -321,9 +316,8 @@ define i32 @LdOffset_i16_sext32(ptr %a)  {
 define i64 @LdOffset_i16_zext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_zext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrh w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
+; CHECK-NEXT:    ldrh w0, [x8, #7408]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -335,9 +329,8 @@ define i64 @LdOffset_i16_zext64(ptr %a)  {
 define i64 @LdOffset_i16_sext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_sext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrsh x0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
+; CHECK-NEXT:    ldrsh x0, [x8, #7408]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -349,9 +342,8 @@ define i64 @LdOffset_i16_sext64(ptr %a)  {
 define i32 @LdOffset_i32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31200 // =0x79e0
-; CHECK-NEXT:    movk w8, #63, lsl #16
-; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
+; CHECK-NEXT:    ldr w0, [x8, #14816]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 4
@@ -362,9 +354,8 @@ define i32 @LdOffset_i32(ptr %a)  {
 define i64 @LdOffset_i32_zext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32_zext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31200 // =0x79e0
-; CHECK-NEXT:    movk w8, #63, lsl #16
-; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
+; CHECK-NEXT:    ldr w0, [x8, #14816]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 2
@@ -376,9 +367,8 @@ define i64 @LdOffset_i32_zext64(ptr %a)  {
 define i64 @LdOffset_i32_sext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32_sext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31200 // =0x79e0
-; CHECK-NEXT:    movk w8, #63, lsl #16
-; CHECK-NEXT:    ldrsw x0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
+; CHECK-NEXT:    ldrsw x0, [x8, #14816]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 2
@@ -390,9 +380,8 @@ define i64 @LdOffset_i32_sext64(ptr %a)  {
 define i64 @LdOffset_i64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #62400 // =0xf3c0
-; CHECK-NEXT:    movk w8, #126, lsl #16
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #2024, lsl #12 // =8290304
+; CHECK-NEXT:    ldr x0, [x8, #29632]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 1039992
   %val = load i64, ptr %arrayidx, align 4
@@ -403,9 +392,8 @@ define i64 @LdOffset_i64(ptr %a)  {
 define <2 x i32> @LdOffset_v2i32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #62400 // =0xf3c0
-; CHECK-NEXT:    movk w8, #126, lsl #16
-; CHECK-NEXT:    ldr d0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #2024, lsl #12 // =8290304
+; CHECK-NEXT:    ldr d0, [x8, #29632]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds <2 x i32>, ptr %a, i64 1039992
   %val = load <2 x i32>, ptr %arrayidx, align 4
@@ -416,9 +404,8 @@ define <2 x i32> @LdOffset_v2i32(ptr %a)  {
 define <2 x i64> @LdOffset_v2i64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #59264 // =0xe780
-; CHECK-NEXT:    movk w8, #253, lsl #16
-; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #4048, lsl #12 // =16580608
+; CHECK-NEXT:    ldr q0, [x8, #59264]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds <2 x i64>, ptr %a, i64 1039992
   %val = load <2 x i64>, ptr %arrayidx, align 4
@@ -429,9 +416,8 @@ define <2 x i64> @LdOffset_v2i64(ptr %a)  {
 define double @LdOffset_i8_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #56952 // =0xde78
-; CHECK-NEXT:    movk w8, #15, lsl #16
-; CHECK-NEXT:    ldrsb w8, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
+; CHECK-NEXT:    ldrsb w8, [x8, #3704]
 ; CHECK-NEXT:    scvtf d0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
@@ -444,9 +430,8 @@ define double @LdOffset_i8_f64(ptr %a)  {
 define double @LdOffset_i16_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
-; CHECK-NEXT:    movk w8, #31, lsl #16
-; CHECK-NEXT:    ldrsh w8, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
+; CHECK-NEXT:    ldrsh w8, [x8, #7408]
 ; CHECK-NEXT:    scvtf d0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
@@ -459,9 +444,8 @@ define double @LdOffset_i16_f64(ptr %a)  {
 define double @LdOffset_i32_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31200 // =0x79e0
-; CHECK-NEXT:    movk w8, #63, lsl #16
-; CHECK-NEXT:    ldr s0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
+; CHECK-NEXT:    ldr s0, [x8, #14816]
 ; CHECK-NEXT:    ucvtf d0, d0
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
@@ -474,9 +458,8 @@ define double @LdOffset_i32_f64(ptr %a)  {
 define double @LdOffset_i64_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i64_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #62400 // =0xf3c0
-; CHECK-NEXT:    movk w8, #126, lsl #16
-; CHECK-NEXT:    ldr d0, [x0, x8]
+; CHECK-NEXT:    add x8, x0, #2024, lsl #12 // =8290304
+; CHECK-NEXT:    ldr d0, [x8, #29632]
 ; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 1039992

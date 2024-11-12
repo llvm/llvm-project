@@ -141,11 +141,11 @@ TEST(BasicBlockDbgInfoTest, SplitBasicBlockBefore) {
   Function *F = M->getFunction("func");
 
   BasicBlock &BB = F->getEntryBlock();
-  auto I = std::prev(BB.end(), 2);
+  auto I = std::prev(BB.end(), 2); // store i32 2, ptr %1.
   BB.splitBasicBlockBefore(I, "before");
 
   BasicBlock &BBBefore = F->getEntryBlock();
-  auto I2 = std::prev(BBBefore.end(), 2);
+  auto I2 = std::prev(BBBefore.end()); // br label %1 (new).
   ASSERT_TRUE(I2->hasDbgRecords());
 }
 
@@ -1523,6 +1523,58 @@ TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
   EXPECT_EQ(Entry.getTrailingDbgRecords(), nullptr);
   EXPECT_EQ(Exit.getTrailingDbgRecords(), nullptr);
   EXPECT_FALSE(Ret->hasDbgRecords());
+}
+
+TEST(BasicBlockDbgInfoTest, CloneTrailingRecordsToEmptyBlock) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @foo(i16 %a) !dbg !6 {
+    entry:
+      %b = add i16 %a, 0
+        #dbg_value(i16 %b, !9, !DIExpression(), !11)
+      ret i16 0, !dbg !11
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("foo");
+  BasicBlock &BB = F->getEntryBlock();
+  // Start with no trailing records.
+  ASSERT_FALSE(BB.getTrailingDbgRecords());
+
+  BasicBlock::iterator Ret = std::prev(BB.end());
+  BasicBlock::iterator B = std::prev(Ret);
+
+  // Delete terminator which has debug records: we now get trailing records.
+  Ret->eraseFromParent();
+  EXPECT_TRUE(BB.getTrailingDbgRecords());
+
+  BasicBlock *NewBB = BasicBlock::Create(C, "NewBB", F);
+  NewBB->splice(NewBB->end(), &BB, B, BB.end());
+
+  // The trailing records should've been absorbed into NewBB.
+  EXPECT_FALSE(BB.getTrailingDbgRecords());
+  EXPECT_TRUE(NewBB->getTrailingDbgRecords());
+  if (DbgMarker *Trailing = NewBB->getTrailingDbgRecords()) {
+    EXPECT_EQ(llvm::range_size(Trailing->getDbgRecordRange()), 1u);
+    // Drop the trailing records now, to prevent a cleanup assertion.
+    Trailing->eraseFromParent();
+    NewBB->deleteTrailingDbgRecords();
+  }
 }
 
 } // End anonymous namespace.

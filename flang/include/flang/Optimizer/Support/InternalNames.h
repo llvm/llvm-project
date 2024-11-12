@@ -14,12 +14,22 @@
 #include <cstdint>
 #include <optional>
 
-static constexpr llvm::StringRef typeDescriptorSeparator = ".dt.";
-static constexpr llvm::StringRef componentInitSeparator = ".di.";
-static constexpr llvm::StringRef bindingTableSeparator = ".v.";
-static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
-
 namespace fir {
+
+static constexpr llvm::StringRef kNameSeparator = ".";
+static constexpr llvm::StringRef kBoundsSeparator = ".b.";
+static constexpr llvm::StringRef kComponentSeparator = ".c.";
+static constexpr llvm::StringRef kComponentInitSeparator = ".di.";
+static constexpr llvm::StringRef kDataPtrInitSeparator = ".dp.";
+static constexpr llvm::StringRef kTypeDescriptorSeparator = ".dt.";
+static constexpr llvm::StringRef kKindParameterSeparator = ".kp.";
+static constexpr llvm::StringRef kLenKindSeparator = ".lpk.";
+static constexpr llvm::StringRef kLenParameterSeparator = ".lv.";
+static constexpr llvm::StringRef kNameStringSeparator = ".n.";
+static constexpr llvm::StringRef kProcPtrSeparator = ".p.";
+static constexpr llvm::StringRef kSpecialBindingSeparator = ".s.";
+static constexpr llvm::StringRef kBindingTableSeparator = ".v.";
+static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
 
 /// Internal name mangling of identifiers
 ///
@@ -150,6 +160,9 @@ struct NameUniquer {
   /// not a valid mangled derived type name.
   static std::string getTypeDescriptorName(llvm::StringRef mangledTypeName);
 
+  static std::string
+  getTypeDescriptorAssemblyName(llvm::StringRef mangledTypeName);
+
   /// Given a mangled derived type name, get the name of the related binding
   /// table object. Returns an empty string if \p mangledTypeName is not a valid
   /// mangled derived type name.
@@ -168,6 +181,12 @@ struct NameUniquer {
   /// dropped in the names passed to LLVM.
   static llvm::StringRef
   dropTypeConversionMarkers(llvm::StringRef mangledTypeName);
+
+  static std::string replaceSpecialSymbols(const std::string &name);
+
+  /// Returns true if the passed name denotes a special symbol (e.g. global
+  /// symbol generated for derived type description).
+  static bool isSpecialSymbol(llvm::StringRef name);
 
 private:
   static std::string intAsString(std::int64_t i);

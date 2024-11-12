@@ -35,7 +35,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP11]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do collapse(2)
@@ -58,7 +57,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP16]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do
@@ -79,7 +77,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP21]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do
@@ -162,7 +159,6 @@ subroutine wsloop_variable_sub
 !CHECK:               fir.store %[[VAL_48:.*]]#1 to %[[VAL_17]]#1 : !fir.ref<i64>
 !CHECK:               omp.yield
 !CHECK:             }
-!CHECK:             omp.terminator
 !CHECK:           }
 
   !$omp do
@@ -190,11 +186,9 @@ subroutine wsloop_variable_sub
 !CHECK:               %[[VAL_56:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i8>
 !CHECK:               %[[VAL_57:.*]] = arith.cmpi eq, %[[VAL_55]], %[[VAL_56]] : i8
 !CHECK:               fir.if %[[VAL_57]] {
-!CHECK:               } else {
 !CHECK:               }
 !CHECK:               omp.yield
 !CHECK:             }
-!CHECK:             omp.terminator
 !CHECK:           }
   j1 = 5
   !$omp do

@@ -12,7 +12,7 @@ define void @test(ptr nocapture %array, i32 %r0) nounwind ssp noredzone {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpb $4, %r8b
@@ -75,7 +75,7 @@ define void @test1(ptr nocapture %array, i32 %r0, i8 signext %k, i8 signext %i0)
 ; CHECK-NEXT:    ## kill: def $ecx killed $ecx def $rcx
 ; CHECK-NEXT:    movb $32, %al
 ; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB1_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpb $4, %cl

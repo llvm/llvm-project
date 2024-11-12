@@ -93,6 +93,19 @@ csrrsi a0, mhpm12counter, a0 # CHECK: :[[@LINE]]:12: error: operand must be a va
 csrrwi a0, mhpmcounter32, 0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
 csrrsi a0, A, a0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
 
+## symbol in place of uimm12
+.set out_of_range, 4096
+csrr a0, out_of_range # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrr a0, undef_symbol # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+local_label:
+csrr a0, local_label # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+.Lstart:
+.space 10
+.Lend:
+csrr a0, .Lstart-.Lend # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+.set dot_set_sym_diff, .Lstart-.Lend
+csrr a0, dot_set_sym_diff # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+
 ## simm13_lsb0
 beq t0, t1, %lo(1) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 bne t0, t1, %lo(a) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]

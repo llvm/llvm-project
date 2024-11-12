@@ -1229,9 +1229,20 @@ void SymtabSection::emitStabs() {
       if (defined->isAbsolute())
         continue;
 
+      // Never generate a STABS entry for a symbol that has been ICF'ed using a
+      // thunk, just as we do for fully ICF'ed functions. Otherwise, we end up
+      // generating invalid DWARF as dsymutil will assume the entire function
+      // body is at that location, when, in reality, only the thunk is
+      // present. This will end up causing overlapping DWARF entries.
+      // TODO: Find an implementation that works in combination with
+      // `--keep-icf-stabs`.
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk)
+        continue;
+
       // Constant-folded symbols go in the executable's symbol table, but don't
       // get a stabs entry unless --keep-icf-stabs flag is specified
-      if (!config->keepICFStabs && defined->wasIdenticalCodeFolded)
+      if (!config->keepICFStabs &&
+          defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
         continue;
 
       ObjFile *file = defined->getObjectFile();
@@ -2119,7 +2130,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     assert(selRef && "Expected all selector names to already be already be "
                      "present in __objc_selrefs");
     symVA = selRef->getVA();
-    assert(selRef->data.size() == sizeof(target->wordSize) &&
+    assert(selRef->data.size() == target->wordSize &&
            "Expected one selref per ConcatInputSection");
   } else if (reloc->referent.is<Symbol *>()) {
     auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());

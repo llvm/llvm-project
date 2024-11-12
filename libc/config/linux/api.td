@@ -193,6 +193,10 @@ def SysSocketAPI : PublicAPI<"sys/socket.h"> {
     "socklen_t",
     "struct sockaddr",
     "struct sockaddr_un",
+    "struct msghdr",
+    "struct iovec",
+    "size_t",
+    "ssize_t",
   ];
 }
 
@@ -264,7 +268,7 @@ def SetJmpAPI : PublicAPI<"setjmp.h"> {
 }
 
 def SearchAPI : PublicAPI<"search.h"> {
-  let Types = ["ACTION", "ENTRY", "struct hsearch_data"];
+  let Types = ["ACTION", "ENTRY", "struct hsearch_data", "__lsearchcompare_t"];
 }
 
 def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {

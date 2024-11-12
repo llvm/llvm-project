@@ -80,7 +80,8 @@ raw_ostream &WriteGraph<>(raw_ostream &O, const EdgeBundles &G,
   O << "digraph {\n";
   for (const auto &MBB : *MF) {
     unsigned BB = MBB.getNumber();
-    O << "\t\"" << printMBBReference(MBB) << "\" [ shape=box ]\n"
+    O << "\t\"" << printMBBReference(MBB) << "\" [ shape=box, label=\""
+      << printMBBReference(MBB) << "\" ]\n"
       << '\t' << G.getBundle(BB, false) << " -> \"" << printMBBReference(MBB)
       << "\"\n"
       << "\t\"" << printMBBReference(MBB) << "\" -> " << G.getBundle(BB, true)

@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -67,8 +68,6 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
 
   // Default FP mode for the current function.
   SIModeRegisterDefaults Mode;
-
-  bool EnableLateStructurizeCFG;
 
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.

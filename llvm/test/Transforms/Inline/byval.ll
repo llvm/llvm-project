@@ -106,7 +106,7 @@ define void @test3() nounwind  {
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[S1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[S1]], ptr align 1 [[S]], i64 12, i1 false)
-; CHECK-NEXT:    call void @g3(ptr [[S1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @g3(ptr align 64 [[S1]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr [[S1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -131,7 +131,7 @@ define i32 @test4() nounwind  {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 64
-; CHECK-NEXT:    call void @g3(ptr [[S]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @g3(ptr align 64 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 4
 ;
 entry:

@@ -366,24 +366,15 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       resultLengths = lengths;
     }
 
-    if (!extents.empty() || !lengths.empty()) {
+    if ((!extents.empty() || !lengths.empty()) && !isElemental) {
+      // Note: in the elemental context, the alloca ownership inside the
+      // elemental region is implicit, and later pass in lowering (stack
+      // reclaim) fir.do_loop will be in charge of emitting any stack
+      // save/restore if needed.
       auto *bldr = &converter.getFirOpBuilder();
-      auto stackSaveFn = fir::factory::getLlvmStackSave(builder);
-      auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
-      mlir::Value sp;
-      fir::CallOp call = bldr->create<fir::CallOp>(
-          loc, stackSaveFn.getFunctionType().getResults(), stackSaveSymbol,
-          mlir::ValueRange{});
-      if (call.getNumResults() != 0)
-        sp = call.getResult(0);
-      stmtCtx.attachCleanup([bldr, loc, sp]() {
-        auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
-        auto stackRestoreSymbol =
-            bldr->getSymbolRefAttr(stackRestoreFn.getName());
-        bldr->create<fir::CallOp>(loc,
-                                  stackRestoreFn.getFunctionType().getResults(),
-                                  stackRestoreSymbol, mlir::ValueRange{sp});
-      });
+      mlir::Value sp = bldr->genStackSave(loc);
+      stmtCtx.attachCleanup(
+          [bldr, loc, sp]() { bldr->genStackRestore(loc, sp); });
     }
     mlir::Value temp =
         builder.createTemporary(loc, type, ".result", extents, resultLengths);
@@ -532,6 +523,8 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
 
   mlir::Value callResult;
   unsigned callNumResults;
+  fir::FortranProcedureFlagsEnumAttr procAttrs =
+      caller.getProcedureAttrs(builder.getContext());
 
   if (!caller.getCallDescription().chevrons().empty()) {
     // A call to a CUDA kernel with the chevron syntax.
@@ -619,7 +612,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
           caller.getInputs()[*passArg], operands,
-          builder.getI32IntegerAttr(*passArg));
+          builder.getI32IntegerAttr(*passArg), procAttrs);
     } else {
       // NOPASS
       const Fortran::evaluate::Component *component =
@@ -634,17 +627,15 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
         passObject = builder.create<fir::LoadOp>(loc, passObject);
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
-          passObject, operands, nullptr);
+          passObject, operands, nullptr, procAttrs);
     }
     callNumResults = dispatch.getNumResults();
     if (callNumResults != 0)
       callResult = dispatch.getResult(0);
   } else {
     // Standard procedure call with fir.call.
-    auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
-                                            funcSymbolAttr, operands);
-    if (caller.characterize().IsBindC())
-      call.setIsBindC(true);
+    auto call = builder.create<fir::CallOp>(
+        loc, funcType.getResults(), funcSymbolAttr, operands, procAttrs);
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -1202,10 +1193,26 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // is set (descriptors must be created with the actual type in this case, and
   // copy-in/copy-out should be driven by the contiguity with regard to the
   // actual type).
-  if (ignoreTKRtype)
-    dummyTypeWithActualRank = fir::changeElementType(
-        dummyTypeWithActualRank, actual.getFortranElementType(),
-        actual.isPolymorphic());
+  if (ignoreTKRtype) {
+    if (auto boxCharType =
+            mlir::dyn_cast<fir::BoxCharType>(dummyTypeWithActualRank)) {
+      auto maybeActualCharType =
+          mlir::dyn_cast<fir::CharacterType>(actual.getFortranElementType());
+      if (!maybeActualCharType ||
+          maybeActualCharType.getFKind() != boxCharType.getKind()) {
+        // When passing to a fir.boxchar with ignore(tk), prepare the argument
+        // as if only the raw address must be passed.
+        dummyTypeWithActualRank =
+            fir::ReferenceType::get(actual.getElementOrSequenceType());
+      }
+      // Otherwise, the actual is already a character with the same kind as the
+      // dummy and can be passed normally.
+    } else {
+      dummyTypeWithActualRank = fir::changeElementType(
+          dummyTypeWithActualRank, actual.getFortranElementType(),
+          actual.isPolymorphic());
+    }
+  }
 
   PreparedDummyArgument preparedDummy;
 
@@ -2563,9 +2570,26 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
           hlfir::Entity{*var}, /*isPresent=*/std::nullopt});
       continue;
     }
+    // arguments of bitwise comparison functions may not have nsw flag
+    // even if -fno-wrapv is enabled
+    mlir::arith::IntegerOverflowFlags iofBackup{};
+    auto isBitwiseComparison = [](const std::string intrinsicName) -> bool {
+      if (intrinsicName == "bge" || intrinsicName == "bgt" ||
+          intrinsicName == "ble" || intrinsicName == "blt")
+        return true;
+      return false;
+    };
+    if (isBitwiseComparison(callContext.getProcedureName())) {
+      iofBackup = callContext.getBuilder().getIntegerOverflowFlags();
+      callContext.getBuilder().setIntegerOverflowFlags(
+          mlir::arith::IntegerOverflowFlags::none);
+    }
     auto loweredActual = Fortran::lower::convertExprToHLFIR(
         loc, callContext.converter, *expr, callContext.symMap,
         callContext.stmtCtx);
+    if (isBitwiseComparison(callContext.getProcedureName()))
+      callContext.getBuilder().setIntegerOverflowFlags(iofBackup);
+
     std::optional<mlir::Value> isPresent;
     if (argLowering) {
       fir::ArgLoweringRule argRules =

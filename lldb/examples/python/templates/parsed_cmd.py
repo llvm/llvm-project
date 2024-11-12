@@ -4,7 +4,8 @@ lldb parsed commands more Pythonic.
 The way to use it is to make a class for your command that inherits from ParsedCommandBase.
 That will make an LLDBOptionValueParser which you will use for your
 option definition, and to fetch option values for the current invocation
-of your command.  Access to the OV parser is through:
+of your command.  For concision, I'll call this the `OVParser`.  
+Access to the `OVParser` is through:
 
 ParsedCommandBase.get_parser()
 
@@ -43,7 +44,65 @@ will fetch the value, and:
 will return True if the user set this option, and False if it was left at its default
 value.
 
-There are example commands in the lldb testsuite at:
+Custom Completions:
+
+You can also implement custom completers for your custom command, either for the
+arguments to your command or to the option values in your command.  If you use enum
+values or if your option/argument uses is one of the types we have completers for,
+you should not need to do this.  But if you have your own completeable types, or if
+you want completion of one option to be conditioned by other options on the command
+line, you can use this interface to take over the completion.  
+
+You can choose to add a completion for the option values defined for your command,
+or for the arguments, separately.  For the option values, define:
+
+def handle_option_argument_completion(self, long_option, cursor_pos):
+
+The line to be completed will be parsed up to the option containint the cursor position, 
+and the values will be set in the OptionValue parser object.  long_option will be
+the option name containing the cursor, and cursor_pos will be the position of the cursor
+in that option's value.  You can call the `OVParser` method: `dest_for_option(long_option)` 
+to get the value for that option.  The other options that came before the cursor in the command
+line will also be set in the `OVParser` when the completion handler is called.
+
+For argument values, define:
+
+def handle_argument_completion(self, args, arg_pos, cursor_pos):
+
+Again, the command line will be parsed up to the cursor position, and all the options
+before the cursor pose will be set in the `OVParser`.  args is a python list of the
+arguments, arg_pos is the index of the argument with the cursor, and cursor_pos is
+the position of the cursor in the argument.
+
+In both cases, the return value determines the completion.
+
+Return False to mean "Not Handled" - in which case lldb will fall back on the
+standard completion machinery.
+
+Return True to mean "Handled with no completions".
+
+If there is a single unique completion, return a Python dictionary with two elements:
+
+return {"completion" : "completed_value", "mode" : <"partial", "complete">}
+
+If the mode is "partial", then the completion is to a common base, if it is "complete"
+then the argument is considered done - mostly meaning lldb will put a space after the
+completion string.  "complete" is the default if no "mode" is specified.
+
+If there are multiple completion options, then return:
+
+return {"values" : ["option1", "option2"]}
+
+Optionally, you can return a parallel array of "descriptions" which the completer will 
+print alongside the options:
+
+return {"values" : ["option1", "option2"], "descriptions" : ["the first option", "the second option"]}
+
+The cmdtemplate example currently uses the parsed command infrastructure:
+
+llvm-project/lldb/examples/python/cmdtemplate.py
+
+There are also a few example commands in the lldb testsuite at:
 
 llvm-project/lldb/test/API/commands/command/script/add/test_commands.py
 """
@@ -226,10 +285,14 @@ class LLDBOptionValueParser:
         return True
 
     def was_set(self, opt_name):
-        """ Call this in the __call__ method of your command to determine
-            whether this option was set on the command line.  It is sometimes
-            useful to know whether an option has the default value because the
-            user set it explicitly (was_set -> True) or not.  """
+        """Call this in the __call__ method of your command to determine
+        whether this option was set on the command line.  It is sometimes
+        useful to know whether an option has the default value because the
+        user set it explicitly (was_set -> True) or not.
+        You can also call this in a handle_completion method, but it will
+        currently only report true values for the options mentioned
+        BEFORE the cursor point in the command line.
+        """
 
         elem = self.get_option_element(opt_name)
         if not elem:
@@ -238,6 +301,16 @@ class LLDBOptionValueParser:
             return elem["_value_set"]
         except AttributeError:
             return False
+
+    def dest_for_option(self, opt_name):
+        """This will return the value of the dest variable you defined for opt_name.
+        Mostly useful for handle_completion where you get passed the long option.
+        """
+        elem = self.get_option_element(opt_name)
+        if not elem:
+            return None
+        value = self.__dict__[elem["dest"]]
+        return value
 
     def add_option(self, short_option, long_option, help, default,
                    dest = None, required=False, groups = None,
@@ -251,14 +324,16 @@ class LLDBOptionValueParser:
         dest: the name of the property that gives you access to the value for
                  this value.  Defaults to the long option if not provided.
         required: if true, this option must be provided or the command will error out
-        groups: Which "option groups" does this option belong to
+        groups: Which "option groups" does this option belong to.  This can either be
+                a simple list (e.g. [1, 3, 4, 5]) or you can specify ranges by sublists:
+                so [1, [3,5]] is the same as [1, 3, 4, 5].
         value_type: one of the lldb.eArgType enum values.  Some of the common arg
                     types also have default completers, which will be applied automatically.
-        completion_type: currently these are values form the lldb.CompletionType enum, I
-                         haven't done custom completions yet.
+        completion_type: currently these are values form the lldb.CompletionType enum.  If
+                         you need custom completions, implement handle_option_argument_completion.
         enum_values: An array of duples: ["element_name", "element_help"].  If provided,
-                     only one of the enum elements is allowed.  The value will be the 
-                     element_name for the chosen enum element as a string. 
+                     only one of the enum elements is allowed.  The value will be the
+                     element_name for the chosen enum element as a string.
         """
         if not dest:
             dest = long_option

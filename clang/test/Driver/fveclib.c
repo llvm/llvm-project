@@ -49,3 +49,56 @@
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-ARMPL %s
 // CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"
+
+
+/* Verify that -fmath-errno is set correctly for the vector library. */
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LIBMVEC %s
+// CHECK-ERRNO-LIBMVEC: "-fveclib=LIBMVEC"
+// CHECK-ERRNO-LIBMVEC-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-MASSV %s
+// CHECK-ERRNO-MASSV: "-fveclib=MASSV"
+// CHECK-ERRNO-MASSV-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=SVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-SVML %s
+// CHECK-ERRNO-SVML: "-fveclib=SVML"
+// CHECK-ERRNO-SVML-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-SLEEF %s
+// CHECK-ERRNO-SLEEF-NOT: "-fmath-errno"
+// CHECK-ERRNO-SLEEF: "-fveclib=SLEEF"
+// CHECK-ERRNO-SLEEF-NOT: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-ARMPL %s
+// CHECK-ERRNO-ARMPL-NOT: "-fmath-errno"
+// CHECK-ERRNO-ARMPL: "-fveclib=ArmPL"
+// CHECK-ERRNO-ARMPL-NOT: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-ARMPL %s
+// CHECK-REENABLE-ERRNO-ARMPL: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-ARMPL: "-fveclib=ArmPL"
+// CHECK-REENABLE-ERRNO-ARMPL-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-SLEEF %s
+// CHECK-REENABLE-ERRNO-SLEEF: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=SLEEF', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-SLEEF: "-fveclib=SLEEF"
+// CHECK-REENABLE-ERRNO-SLEEF-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fno-fast-math %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-NFM %s
+// CHECK-REENABLE-ERRNO-NFM: math errno enabled by '-fno-fast-math' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-NFM: "-fveclib=ArmPL"
+// CHECK-REENABLE-ERRNO-NFM-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -ffp-model=strict %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-FP-MODEL %s
+// CHECK-REENABLE-ERRNO-FP-MODEL: math errno enabled by '-ffp-model=strict' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-FP-MODEL: "-fveclib=ArmPL"
+// CHECK-REENABLE-ERRNO-FP-MODEL-SAME: "-fmath-errno"
+
+/* Verify the warning points at the last arg to enable -fmath-errno. */
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fno-fast-math -fno-math-errno -ffp-model=strict %s 2>&1 | FileCheck --check-prefix=CHECK-ENABLED-LAST %s
+// CHECK-ENABLED-LAST: math errno enabled by '-ffp-model=strict' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+
+/* Verify no warning when math-errno is re-enabled for a different veclib (that does not imply -fno-math-errno). */
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
+// CHECK-REPEAT-VECLIB-NOT: math errno enabled

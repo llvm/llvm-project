@@ -297,3 +297,24 @@ void T1(void) {
 
 enum teste1 test1f(void), (*test1)(void) = test1f; // pedantic-warning {{ISO C forbids forward references to 'enum' types}}
 enum teste1 { TEST1 };
+
+void func(void) {
+  _Static_assert(func + 1 - func == 1, ""); // pedantic-warning {{arithmetic on a pointer to the function type}} \
+                                            // pedantic-warning {{arithmetic on pointers to the function type}} \
+                                            // pedantic-warning {{not an integer constant expression}}
+  _Static_assert(func + 0xdead000000000000UL - 0xdead000000000000UL == func, ""); // pedantic-warning 2{{arithmetic on a pointer to the function type}} \
+                                                                                  // pedantic-warning {{not an integer constant expression}} \
+                                                                                  // pedantic-note {{cannot refer to element 16045481047390945280 of non-array object in a constant expression}}
+  _Static_assert(func + 1 != func, ""); // pedantic-warning {{arithmetic on a pointer to the function type}} \
+                                        // pedantic-warning {{expression is not an integer constant expression}}
+  func + 0xdead000000000000UL; // all-warning {{expression result unused}} \
+                               // pedantic-warning {{arithmetic on a pointer to the function type}}
+  func - 0xdead000000000000UL; // all-warning {{expression result unused}} \
+                               // pedantic-warning {{arithmetic on a pointer to the function type}}
+}
+
+void foo3 (void)
+{
+ void* x = 0;
+ void* y = &*x;
+}

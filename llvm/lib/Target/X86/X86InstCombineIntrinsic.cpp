@@ -1875,9 +1875,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     // If we were an EXTRQ call, we'll save registers if we convert to EXTRQI.
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
-      Module *M = II.getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
-      return Builder.CreateCall(F, Args);
+      return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_extrqi, {}, Args);
     }
   }
 
@@ -1974,9 +1972,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Constant *CIIndex = ConstantInt::get(IntTy8, Index, false);
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
-    Module *M = II.getModule();
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
-    return Builder.CreateCall(F, Args);
+    return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_insertqi, {}, Args);
   }
 
   return nullptr;
@@ -2142,6 +2138,22 @@ static Value *simplifyX86vpermv3(const IntrinsicInst &II,
   auto V1 = II.getArgOperand(0);
   auto V2 = II.getArgOperand(2);
   return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, Size));
+}
+
+// Simplify VPERMV/VPERMV3 mask - only demand the active index bits.
+static bool simplifyX86VPERMMask(Instruction *II, bool IsBinary,
+                                 InstCombiner &IC) {
+  auto *VecTy = cast<FixedVectorType>(II->getType());
+  unsigned EltSizeInBits = VecTy->getScalarSizeInBits();
+  unsigned NumElts = VecTy->getNumElements();
+  assert(isPowerOf2_32(NumElts) && isPowerOf2_32(EltSizeInBits) &&
+         "Unexpected shuffle mask size");
+
+  unsigned IdxSizeInBits = Log2_32(IsBinary ? (2 * NumElts) : NumElts);
+  APInt DemandedMask = APInt::getLowBitsSet(EltSizeInBits, IdxSizeInBits);
+
+  KnownBits KnownMask(EltSizeInBits);
+  return IC.SimplifyDemandedBits(II, /*OpNo=*/1, DemandedMask, KnownMask);
 }
 
 std::optional<Instruction *>
@@ -2950,22 +2962,42 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
   case Intrinsic::x86_ssse3_pshuf_b_128:
   case Intrinsic::x86_avx2_pshuf_b:
-  case Intrinsic::x86_avx512_pshuf_b_512:
+  case Intrinsic::x86_avx512_pshuf_b_512: {
     if (Value *V = simplifyX86pshufb(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+
+    KnownBits KnownMask(8);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(8, 0b10001111), KnownMask))
+      return &II;
     break;
+  }
 
   case Intrinsic::x86_avx_vpermilvar_ps:
   case Intrinsic::x86_avx_vpermilvar_ps_256:
-  case Intrinsic::x86_avx512_vpermilvar_ps_512:
-  case Intrinsic::x86_avx_vpermilvar_pd:
-  case Intrinsic::x86_avx_vpermilvar_pd_256:
-  case Intrinsic::x86_avx512_vpermilvar_pd_512:
+  case Intrinsic::x86_avx512_vpermilvar_ps_512: {
     if (Value *V = simplifyX86vpermilvar(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+
+    KnownBits KnownMask(32);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(32, 0b00011), KnownMask))
+      return &II;
     break;
+  }
+
+  case Intrinsic::x86_avx_vpermilvar_pd:
+  case Intrinsic::x86_avx_vpermilvar_pd_256:
+  case Intrinsic::x86_avx512_vpermilvar_pd_512: {
+    if (Value *V = simplifyX86vpermilvar(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+
+    KnownBits KnownMask(64);
+    if (IC.SimplifyDemandedBits(&II, 1, APInt(64, 0b00010), KnownMask))
+      return &II;
+    break;
+  }
 
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:
@@ -2984,20 +3016,22 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Value *V = simplifyX86vpermv(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+    if (simplifyX86VPERMMask(&II, /*IsBinary=*/false, IC))
+      return &II;
     break;
 
   case Intrinsic::x86_avx512_vpermi2var_d_128:
   case Intrinsic::x86_avx512_vpermi2var_d_256:
   case Intrinsic::x86_avx512_vpermi2var_d_512:
-  case Intrinsic::x86_avx512_vpermi2var_hi_128: 
-  case Intrinsic::x86_avx512_vpermi2var_hi_256: 
-  case Intrinsic::x86_avx512_vpermi2var_hi_512: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_128: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_256: 
-  case Intrinsic::x86_avx512_vpermi2var_pd_512: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_128: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_256: 
-  case Intrinsic::x86_avx512_vpermi2var_ps_512: 
+  case Intrinsic::x86_avx512_vpermi2var_hi_128:
+  case Intrinsic::x86_avx512_vpermi2var_hi_256:
+  case Intrinsic::x86_avx512_vpermi2var_hi_512:
+  case Intrinsic::x86_avx512_vpermi2var_pd_128:
+  case Intrinsic::x86_avx512_vpermi2var_pd_256:
+  case Intrinsic::x86_avx512_vpermi2var_pd_512:
+  case Intrinsic::x86_avx512_vpermi2var_ps_128:
+  case Intrinsic::x86_avx512_vpermi2var_ps_256:
+  case Intrinsic::x86_avx512_vpermi2var_ps_512:
   case Intrinsic::x86_avx512_vpermi2var_q_128:
   case Intrinsic::x86_avx512_vpermi2var_q_256:
   case Intrinsic::x86_avx512_vpermi2var_q_512:
@@ -3007,6 +3041,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Value *V = simplifyX86vpermv3(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
+    if (simplifyX86VPERMMask(&II, /*IsBinary=*/true, IC))
+      return &II;
     break;
 
   case Intrinsic::x86_avx_maskload_ps:

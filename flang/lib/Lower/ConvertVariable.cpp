@@ -46,10 +46,10 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
-static llvm::cl::opt<bool> allowAssumedRank(
-    "allow-assumed-rank",
-    llvm::cl::desc("Enable assumed rank lowering - experimental"),
-    llvm::cl::init(false));
+static llvm::cl::opt<bool>
+    allowAssumedRank("allow-assumed-rank",
+                     llvm::cl::desc("Enable assumed rank lowering"),
+                     llvm::cl::init(true));
 
 #define DEBUG_TYPE "flang-lower-variable"
 
@@ -478,6 +478,20 @@ void Fortran::lower::createGlobalInitialization(
   builder.restoreInsertionPoint(insertPt);
 }
 
+static unsigned getAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
+  if (dataAttr) {
+    if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
+      return kPinnedAllocatorPos;
+    if (dataAttr.getValue() == cuf::DataAttribute::Device)
+      return kDeviceAllocatorPos;
+    if (dataAttr.getValue() == cuf::DataAttribute::Managed)
+      return kManagedAllocatorPos;
+    if (dataAttr.getValue() == cuf::DataAttribute::Unified)
+      return kUnifiedAllocatorPos;
+  }
+  return kDefaultAllocator;
+}
+
 /// Create the global op and its init if it has one
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
@@ -504,8 +518,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   // type does not support nested structures.
   if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
-    if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getElementType();
+    if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
                   fir::LogicalType>(eleTy)) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
@@ -540,8 +554,10 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       // Create unallocated/disassociated descriptor if no explicit init
       Fortran::lower::createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value box =
-                fir::factory::createUnallocatedBox(b, loc, symTy, std::nullopt);
+            mlir::Value box = fir::factory::createUnallocatedBox(
+                b, loc, symTy,
+                /*nonDeferredParams=*/std::nullopt,
+                /*typeSourceBox=*/{}, getAllocatorIdx(dataAttr));
             b.create<fir::HasValueOp>(loc, box);
           });
     }

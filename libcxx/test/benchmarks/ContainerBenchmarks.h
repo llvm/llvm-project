@@ -150,7 +150,7 @@ void BM_EmplaceDuplicate(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
+void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
   auto in = gen(st.range(0));
   c.insert(in.begin(), in.end());
   benchmark::DoNotOptimize(&(*c.begin()));
@@ -164,7 +164,7 @@ static void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
+void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
   c.rehash(8);
   auto in = gen(st.range(0));
   c.insert(in.begin(), in.end());
@@ -179,7 +179,7 @@ static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
+void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
   auto in = gen(st.range(0));
   c.max_load_factor(3.0);
   c.insert(in.begin(), in.end());
@@ -193,7 +193,7 @@ static void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-static void BM_Compare_same_container(benchmark::State& st, Container, GenInputs gen) {
+void BM_Compare_same_container(benchmark::State& st, Container, GenInputs gen) {
   auto in = gen(st.range(0));
   Container c1(in.begin(), in.end());
   Container c2 = c1;
@@ -208,7 +208,7 @@ static void BM_Compare_same_container(benchmark::State& st, Container, GenInputs
 }
 
 template <class Container, class GenInputs>
-static void BM_Compare_different_containers(benchmark::State& st, Container, GenInputs gen) {
+void BM_Compare_different_containers(benchmark::State& st, Container, GenInputs gen) {
   auto in1 = gen(st.range(0));
   auto in2 = gen(st.range(0));
   Container c1(in1.begin(), in1.end());
@@ -223,6 +223,6 @@ static void BM_Compare_different_containers(benchmark::State& st, Container, Gen
   }
 }
 
-} // end namespace ContainerBenchmarks
+} // namespace ContainerBenchmarks
 
 #endif // BENCHMARK_CONTAINER_BENCHMARKS_H

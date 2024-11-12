@@ -7,15 +7,14 @@
 // X64-LABEL: define <2 x float> @gen4()
 // AARCH64-LABEL: define { float, float } @gen4()
 // PPC-LABEL: define { float, float } @gen4()
-func.func @gen4() -> !fir.complex<4> {
-  %1 = fir.undefined !fir.complex<4>
+func.func @gen4() -> complex<f32> {
+  %1 = fir.undefined complex<f32>
   %2 = arith.constant 2.0 : f32
-  %3 = fir.convert %2 : (f32) -> !fir.real<4>
   %c0 = arith.constant 0 : i32
-  %4 = fir.insert_value %1, %3, [0 : index] : (!fir.complex<4>, !fir.real<4>) -> !fir.complex<4>
+  %4 = fir.insert_value %1, %2, [0 : index] : (complex<f32>, f32) -> complex<f32>
   %c1 = arith.constant 1 : i32
   %5 = arith.constant -42.0 : f32
-  %6 = fir.insert_value %4, %5, [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+  %6 = fir.insert_value %4, %5, [1 : index] : (complex<f32>, f32) -> complex<f32>
   // I32: store { float, float } { float 2.000000e+00, float -4.200000e+01 }
   // I32: %[[load:.*]] = load i64, ptr
   // I32: ret i64 %[[load]]
@@ -24,41 +23,41 @@ func.func @gen4() -> !fir.complex<4> {
   // X64: ret <2 x float> %[[load]]
   // AARCH64: ret { float, float }
   // PPC: ret { float, float }
-  return %6 : !fir.complex<4>
+  return %6 : complex<f32>
 }
 
 // I32-LABEL: define void @gen8(ptr sret({ double, double }) align 4 %
 // X64-LABEL: define { double, double } @gen8()
 // AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
-func.func @gen8() -> !fir.complex<8> {
-  %1 = fir.undefined !fir.complex<8>
+func.func @gen8() -> complex<f64> {
+  %1 = fir.undefined complex<f64>
   %2 = arith.constant 1.0 : f64
   %3 = arith.constant -4.0 : f64
   %c0 = arith.constant 0 : i32
-  %4 = fir.insert_value %1, %3, [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
+  %4 = fir.insert_value %1, %3, [0 : index] : (complex<f64>, f64) -> complex<f64>
   %c1 = arith.constant 1 : i32
-  %5 = fir.insert_value %4, %2, [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
+  %5 = fir.insert_value %4, %2, [1 : index] : (complex<f64>, f64) -> complex<f64>
   // I32: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
   // I64: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
   // I64: %[[load:.*]] = load { double, double }
   // I64: ret { double, double } %[[load]]
   // AARCH64: ret { double, double }
   // PPC: ret { double, double }
-  return %5 : !fir.complex<8>
+  return %5 : complex<f64>
 }
 
 // I32: declare void @sink4(ptr byval({ float, float }) align 4)
 // X64: declare void @sink4(<2 x float>)
 // AARCH64: declare void @sink4([2 x float])
 // PPC: declare void @sink4(float, float)
-func.func private @sink4(!fir.complex<4>) -> ()
+func.func private @sink4(complex<f32>) -> ()
 
 // I32: declare void @sink8(ptr byval({ double, double }) align 4)
 // X64: declare void @sink8(double, double)
 // AARCH64: declare void @sink8([2 x double])
 // PPC: declare void @sink8(double, double)
-func.func private @sink8(!fir.complex<8>) -> ()
+func.func private @sink8(complex<f64>) -> ()
 
 // I32-LABEL: define void @call4()
 // X64-LABEL: define void @call4()
@@ -68,12 +67,12 @@ func.func @call4() {
   // X64: = call <2 x float> @gen4()
   // AARCH64: = call { float, float } @gen4()
   // PPC: = call { float, float } @gen4()
-  %1 = fir.call @gen4() : () -> !fir.complex<4>
+  %1 = fir.call @gen4() : () -> complex<f32>
   // I32: call void @sink4(ptr %
   // X64: call void @sink4(<2 x float> %
   // AARCH64: call void @sink4([2 x float] %
   // PPC: call void @sink4(float %{{.*}}, float %{{.*}})
-  fir.call @sink4(%1) : (!fir.complex<4>) -> ()
+  fir.call @sink4(%1) : (complex<f32>) -> ()
   return
 }
 
@@ -85,12 +84,12 @@ func.func @call8() {
   // X64: = call { double, double } @gen8()
   // AARCH64: = call { double, double } @gen8()
   // PPC: = call { double, double } @gen8()
-  %1 = fir.call @gen8() : () -> !fir.complex<8>
+  %1 = fir.call @gen8() : () -> complex<f64>
   // I32: call void @sink8(ptr %
   // X64: call void @sink8(double %{{[0-9]*}}, double %{{[0-9]*}})
   // AARCH64: call void @sink8([2 x double] %
   // PPC: call void @sink8(double %{{.*}}, double %{{.*}})
-  fir.call @sink8(%1) : (!fir.complex<8>) -> ()
+  fir.call @sink8(%1) : (complex<f64>) -> ()
   return
 }
 

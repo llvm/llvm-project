@@ -175,6 +175,9 @@ namespace llvm {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
     }
 
+    /// Return true if this is a vector value type.
+    bool isRISCVVectorTuple() const { return V.isRISCVVectorTuple(); }
+
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
                         : isExtendedFixedLengthVector();
@@ -227,7 +230,8 @@ namespace llvm {
 
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
-      return (V==MVT::iAny || V==MVT::fAny || V==MVT::vAny || V==MVT::iPTRAny);
+      return (V == MVT::iAny || V == MVT::fAny || V == MVT::vAny ||
+              V == MVT::pAny);
     }
 
     /// Return true if the bit size is a multiple of 8.
@@ -349,6 +353,11 @@ namespace llvm {
     /// Given a vector type, return the minimum number of elements it contains.
     unsigned getVectorMinNumElements() const {
       return getVectorElementCount().getKnownMinValue();
+    }
+
+    /// Given a RISCV vector tuple type, return the num_fields.
+    unsigned getRISCVVectorTupleNumFields() const {
+      return V.getRISCVVectorTupleNumFields();
     }
 
     /// Return the size of the specified value type in bits.

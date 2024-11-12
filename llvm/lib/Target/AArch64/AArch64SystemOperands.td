@@ -177,6 +177,17 @@ def : DC<"CIPAE",   0b100, 0b0111, 0b1110, 0b000>;
 def : DC<"CIGDPAE", 0b100, 0b0111, 0b1110, 0b111>;
 }
 
+let Requires = [{ {AArch64::FeatureOCCMO} }] in {
+// Outer cacheable CMO (FEAT_OCCMO)
+def : DC<"CIVAOC", 0b011, 0b0111, 0b1111, 0b000>;
+def : DC<"CVAOC",  0b011, 0b0111, 0b1011, 0b000>;
+}
+
+let Requires = [{ {AArch64::FeatureOCCMO, AArch64::FeatureMTE} }] in {
+def : DC<"CIGDVAOC", 0b011, 0b0111, 0b1111, 0b111>;
+def : DC<"CGDVAOC",  0b011, 0b0111, 0b1011, 0b111>;
+}
+
 //===----------------------------------------------------------------------===//
 // IC (instruction cache maintenance) instruction options.
 //===----------------------------------------------------------------------===//
@@ -939,6 +950,7 @@ def : RWSysReg<"SCTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"SCTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"SCTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"ACTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b001>;
+def : RWSysReg<"ACTLR_EL12",         0b11, 0b101, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"HCR_EL2",            0b11, 0b100, 0b0001, 0b0001, 0b000>;
@@ -1969,3 +1981,90 @@ def : RWSysReg<"HACDBSCONS_EL2",    0b11, 0b100, 0b0010, 0b0011, 0b101>;
 // v9.5a Fine Grained Write Trap EL3 (FEAT_FGWTE3)
 //                                  Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"FGWTE3_EL3",        0b11, 0b110, 0b0001, 0b0001, 0b101>;
+
+// v9.6a Memory partitioning and monitoring (FEAT_MPAM) registers
+//                                        Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"MPAMBWIDR_EL1",           0b11, 0b000, 0b1010, 0b0100, 0b101>;
+def : RWSysReg<"MPAMBW3_EL3",             0b11, 0b110, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW2_EL2",             0b11, 0b100, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW1_EL1",             0b11, 0b000, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW1_EL12",            0b11, 0b101, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW0_EL1",             0b11, 0b000, 0b1010, 0b0101, 0b101>;
+def : RWSysReg<"MPAMBWCAP_EL2",           0b11, 0b100, 0b1010, 0b0101, 0b110>;
+def : RWSysReg<"MPAMBWSM_EL1",            0b11, 0b000, 0b1010, 0b0101, 0b111>;
+
+//===----------------------------------------------------------------------===//
+// FEAT_SRMASK v9.6a registers
+//===----------------------------------------------------------------------===//
+def : RWSysReg<"SCTLRMASK_EL1",   0b11, 0b000, 0b0001, 0b0100, 0b000>;
+def : RWSysReg<"SCTLRMASK_EL2",   0b11, 0b100, 0b0001, 0b0100, 0b000>;
+def : RWSysReg<"SCTLRMASK_EL12",  0b11, 0b101, 0b0001, 0b0100, 0b000>;
+def : RWSysReg<"CPACRMASK_EL1",   0b11, 0b000, 0b0001, 0b0100, 0b010>;
+def : RWSysReg<"CPTRMASK_EL2",    0b11, 0b100, 0b0001, 0b0100, 0b010>;
+def : RWSysReg<"CPACRMASK_EL12",  0b11, 0b101, 0b0001, 0b0100, 0b010>;
+def : RWSysReg<"SCTLR2MASK_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b011>;
+def : RWSysReg<"SCTLR2MASK_EL2",  0b11, 0b100, 0b0001, 0b0100, 0b011>;
+def : RWSysReg<"SCTLR2MASK_EL12", 0b11, 0b101, 0b0001, 0b0100, 0b011>;
+def : RWSysReg<"CPACRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b100>;
+def : RWSysReg<"SCTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b110>;
+def : RWSysReg<"SCTLR2ALIAS_EL1", 0b11, 0b000, 0b0001, 0b0100, 0b111>;
+def : RWSysReg<"TCRMASK_EL1",     0b11, 0b000, 0b0010, 0b0111, 0b010>;
+def : RWSysReg<"TCRMASK_EL2",     0b11, 0b100, 0b0010, 0b0111, 0b010>;
+def : RWSysReg<"TCRMASK_EL12",    0b11, 0b101, 0b0010, 0b0111, 0b010>;
+def : RWSysReg<"TCR2MASK_EL1",    0b11, 0b000, 0b0010, 0b0111, 0b011>;
+def : RWSysReg<"TCR2MASK_EL2",    0b11, 0b100, 0b0010, 0b0111, 0b011>;
+def : RWSysReg<"TCR2MASK_EL12",   0b11, 0b101, 0b0010, 0b0111, 0b011>;
+def : RWSysReg<"TCRALIAS_EL1",    0b11, 0b000, 0b0010, 0b0111, 0b110>;
+def : RWSysReg<"TCR2ALIAS_EL1",   0b11, 0b000, 0b0010, 0b0111, 0b111>;
+def : RWSysReg<"ACTLRMASK_EL1",   0b11, 0b000, 0b0001, 0b0100, 0b001>;
+def : RWSysReg<"ACTLRMASK_EL2",   0b11, 0b100, 0b0001, 0b0100, 0b001>;
+def : RWSysReg<"ACTLRMASK_EL12",  0b11, 0b101, 0b0001, 0b0100, 0b001>;
+def : RWSysReg<"ACTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b101>;
+
+//===----------------------------------------------------------------------===//
+// v9.6a PCDPHINT instruction options.
+//===----------------------------------------------------------------------===//
+
+class PHint<bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+              bits<3> op2, string name> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  string AltName = name;
+  bits<16> Encoding;
+  let Encoding{15-14} = op0;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  code Requires = [{ {} }];
+}
+
+let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {
+  def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
+  def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
+}
+
+// v9.6a Realm management extension enhancements
+def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;
+
+// v9.6a Statistical Profiling Extension exception registers (FEAT_SPE_EXC)
+//                                Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PMBMAR_EL1",      0b11, 0b000, 0b1001, 0b1010, 0b101>;
+def : RWSysReg<"PMBSR_EL12",      0b11, 0b101, 0b1001, 0b1010, 0b011>;
+def : RWSysReg<"PMBSR_EL2",       0b11, 0b100, 0b1001, 0b1010, 0b011>;
+def : RWSysReg<"PMBSR_EL3",       0b11, 0b110, 0b1001, 0b1010, 0b011>;
+
+// v9.6a Trace Buffer Management Events exception registers (FEAT_TRBE_EXC)
+//                                Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TRBSR_EL12",      0b11, 0b101, 0b1001, 0b1011, 0b011>;
+def : RWSysReg<"TRBSR_EL2",       0b11, 0b100, 0b1001, 0b1011, 0b011>;
+def : RWSysReg<"TRBSR_EL3",       0b11, 0b110, 0b1001, 0b1011, 0b011>;
+
+// v9.6 FEAT_PoPS
+//
+let Requires = [{ {AArch64::FeaturePoPS} }] in {
+def : DC<"CIGDVAPS",  0b000, 0b0111, 0b1111, 0b101>;
+def : DC<"CIVAPS",    0b000, 0b0111, 0b1111, 0b001>;
+}

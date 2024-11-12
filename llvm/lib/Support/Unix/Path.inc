@@ -487,7 +487,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
-#ifdef __GNU__
+#if defined(__GNU__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 39)))
   switch ((uint32_t)Vfs.__f_type) {
 #else
   switch ((uint32_t)Vfs.f_type) {
@@ -1096,17 +1096,17 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enableAutoConversion(ResultFD))
+      if (auto EC = llvm::enablezOSAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setFileTag(ResultFD, CCSID_IBM_1047, true))
+        if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
-      if (auto EC = llvm::disableAutoConversion(ResultFD))
+      if (auto EC = llvm::disablezOSAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setFileTag(ResultFD, FT_BINARY, false))
+        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
           return EC;
       }
     }

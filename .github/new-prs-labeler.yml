@@ -69,7 +69,7 @@ PGO:
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
 
-vectorization:
+vectorizers:
   - llvm/lib/Transforms/Vectorize/**/*
   - llvm/include/llvm/Transforms/Vectorize/**/*
 
@@ -605,6 +605,14 @@ llvm:transforms:
   - llvm/test/Transforms/**
   - llvm/unittests/Transforms/**
 
+llvm:instcombine:
+  - llvm/lib/Analysis/InstructionSimplify.cpp
+  - llvm/lib/Transforms/InstCombine/**
+  - llvm/include/llvm/Transforms/InstCombine/
+  - llvm/include/llvm/Analysis/InstructionSimplify.h
+  - llvm/test/Transforms/InstCombine/**
+  - llvm/test/Transforms/InstSimplify/**
+
 clangd:
   - clang-tools-extra/clangd/**
 
@@ -668,7 +676,7 @@ mlgo:
   - llvm/lib/CodeGen/ML*
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
-  - llvm/utils/mlgo-utils/*
+  - llvm/utils/mlgo-utils/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -1008,3 +1016,8 @@ bazel:
 
 offload:
   - offload/**
+
+tablegen:
+  - llvm/include/TableGen/**
+  - llvm/lib/TableGen/**
+  - llvm/utils/TableGen/**

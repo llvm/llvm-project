@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[A_REF]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[A]], ptr [[A_REF:[^,]+]],
 // CHECK-DAG:   [[A_REF]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 1
-// CHECK-DAG:   [[GEPA]] = getelementptr inbounds [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
+// CHECK-DAG:   [[GEPA]] = getelementptr inbounds nuw [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
 // CHECK-DAG:   [[TMP6:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 2
 // CHECK-DAG:   store i64 4, ptr [[TMP6]],
 // CHECK-DAG:   [[TMP7:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPA]], i32 0, i32 3
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP12]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[B]], ptr [[TMP12:%[^,]+]],
 // CHECK-DAG:   [[TMP12]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 1
-// CHECK-DAG:   [[GEPB]] = getelementptr inbounds [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
+// CHECK-DAG:   [[GEPB]] = getelementptr inbounds nuw [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
 // CHECK-DAG:   [[TMP14:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 2
 // CHECK-DAG:   store i64 4, ptr [[TMP14]],
 // CHECK-DAG:   [[TMP15:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPB]], i32 0, i32 3
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP20]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[ARGC_ADDR]], ptr [[TMP20:%[^,]+]],
 // CHECK-DAG:   [[TMP20]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 1
-// CHECK-DAG:   [[GEPARGC]] = getelementptr inbounds [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
+// CHECK-DAG:   [[GEPARGC]] = getelementptr inbounds nuw [3 x [[T1]]], ptr [[RD_IN1]], i64 0, i64
 // CHECK-DAG:   [[TMP22:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 2
 // CHECK-DAG:   store i64 4, ptr [[TMP22]],
 // CHECK-DAG:   [[TMP23:%.+]] = getelementptr inbounds nuw [[T1]], ptr [[GEPARGC]], i32 0, i32 3
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP30]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[C]], ptr [[TMP30:%[^,]+]],
 // CHECK-DAG:   [[TMP30]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 1
-// CHECK-DAG:   [[GEPC]] = getelementptr inbounds [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
+// CHECK-DAG:   [[GEPC]] = getelementptr inbounds nuw [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
 // CHECK-DAG:   [[TMP32:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 2
 // CHECK-DAG:   store i64 20, ptr [[TMP32]],
 // CHECK-DAG:   [[TMP33:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPC]], i32 0, i32 3
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP38]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA:%[^,]+]], i32 0, i32 0
 // CHECK-DAG:   store ptr [[VLA]], ptr [[TMP38:%[^,]+]],
 // CHECK-DAG:   [[TMP38]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 1
-// CHECK-DAG:   [[GEPVLA]] = getelementptr inbounds [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
+// CHECK-DAG:   [[GEPVLA]] = getelementptr inbounds nuw [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
 // CHECK-DAG:   [[TMP40:%.+]] = mul nuw i64 [[VLA_SIZE]], 2
 // CHECK-DAG:   [[TMP41:%.+]] = udiv exact i64 [[TMP40]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
 // CHECK-DAG:   [[TMP42:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 2

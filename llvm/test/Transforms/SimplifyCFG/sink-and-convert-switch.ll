@@ -9,23 +9,8 @@ define void @pr104567(i8 %x, ptr %f) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[Y:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[Y]])
-; CHECK-NEXT:    switch i8 [[X]], label %[[DEFAULT_UNREACHABLE:.*]] [
-; CHECK-NEXT:      i8 0, label %[[BB4:.*]]
-; CHECK-NEXT:      i8 1, label %[[BB3:.*]]
-; CHECK-NEXT:      i8 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[DEFAULT_UNREACHABLE]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
-; CHECK-NEXT:    store i8 4, ptr [[Y]], align 1
-; CHECK-NEXT:    br label %[[BB5:.*]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    store i8 5, ptr [[Y]], align 1
-; CHECK-NEXT:    br label %[[BB5]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    store i8 6, ptr [[Y]], align 1
-; CHECK-NEXT:    br label %[[BB5]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[X]], 4
+; CHECK-NEXT:    store i8 [[SWITCH_OFFSET]], ptr [[Y]], align 1
 ; CHECK-NEXT:    call void [[F]](ptr [[Y]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[Y]])
 ; CHECK-NEXT:    ret void
@@ -58,4 +43,105 @@ bb5:
   call void %f(ptr %y)
   call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %y)
   ret void
+}
+
+define i64 @dont_make_div_variable(i64 noundef %x, i64 noundef %i) {
+; CHECK-LABEL: define i64 @dont_make_div_variable(
+; CHECK-SAME: i64 noundef [[X:%.*]], i64 noundef [[I:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    switch i64 [[I]], label %[[SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i64 9, label %[[SW_BB:.*]]
+; CHECK-NEXT:      i64 10, label %[[SW_BB1:.*]]
+; CHECK-NEXT:      i64 11, label %[[SW_BB3:.*]]
+; CHECK-NEXT:      i64 12, label %[[SW_BB5:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SW_BB]]:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[X]], 9
+; CHECK-NEXT:    br label %[[RETURN:.*]]
+; CHECK:       [[SW_BB1]]:
+; CHECK-NEXT:    [[DIV2:%.*]] = udiv i64 [[X]], 10
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[SW_BB3]]:
+; CHECK-NEXT:    [[DIV4:%.*]] = udiv i64 [[X]], 11
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[SW_BB5]]:
+; CHECK-NEXT:    [[DIV7:%.*]] = udiv i64 [[X]], 12
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[SW_DEFAULT]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    [[DIV6:%.*]] = phi i64 [ [[DIV7]], %[[SW_BB5]] ], [ [[DIV4]], %[[SW_BB3]] ], [ [[DIV2]], %[[SW_BB1]] ], [ [[DIV]], %[[SW_BB]] ]
+; CHECK-NEXT:    ret i64 [[DIV6]]
+;
+entry:
+  switch i64 %i, label %sw.default [
+  i64 9, label %sw.bb
+  i64 10, label %sw.bb1
+  i64 11, label %sw.bb3
+  i64 12, label %sw.bb5
+  ]
+
+sw.bb:
+  %div = udiv i64 %x, 9
+  br label %return
+
+sw.bb1:
+  %div2 = udiv i64 %x, 10
+  br label %return
+
+sw.bb3:
+  %div4 = udiv i64 %x, 11
+  br label %return
+
+sw.bb5:
+  %div6 = udiv i64 %x, 12
+  br label %return
+
+sw.default:
+  unreachable
+
+return:
+  %retval.0 = phi i64 [ %div6, %sw.bb5 ], [ %div4, %sw.bb3 ], [ %div2, %sw.bb1 ], [ %div, %sw.bb ]
+  ret i64 %retval.0
+}
+
+define i64 @okay_to_make_div_variable(i64 noundef %x, i64 noundef %i) {
+; CHECK-LABEL: define i64 @okay_to_make_div_variable(
+; CHECK-SAME: i64 noundef [[X:%.*]], i64 noundef [[I:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i64 [[I]], 9
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i64 [[SWITCH_TABLEIDX]], 9
+; CHECK-NEXT:    [[DIV6:%.*]] = udiv i64 [[SWITCH_OFFSET]], [[X]]
+; CHECK-NEXT:    ret i64 [[DIV6]]
+;
+entry:
+  switch i64 %i, label %sw.default [
+  i64 9, label %sw.bb
+  i64 10, label %sw.bb1
+  i64 11, label %sw.bb3
+  i64 12, label %sw.bb5
+  ]
+
+sw.bb:
+  %div = udiv i64 9, %x
+  br label %return
+
+sw.bb1:
+  %div2 = udiv i64 10, %x
+  br label %return
+
+sw.bb3:
+  %div4 = udiv i64 11, %x
+  br label %return
+
+sw.bb5:
+  %div6 = udiv i64 12, %x
+  br label %return
+
+sw.default:
+  unreachable
+
+return:
+  %retval.0 = phi i64 [ %div6, %sw.bb5 ], [ %div4, %sw.bb3 ], [ %div2, %sw.bb1 ], [ %div, %sw.bb ]
+  ret i64 %retval.0
 }

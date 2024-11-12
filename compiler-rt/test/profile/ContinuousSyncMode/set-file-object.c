@@ -1,11 +1,11 @@
-// REQUIRES: darwin || linux
+// REQUIRES: target={{.*(darwin|linux|solaris|aix).*}}
 
 // Test using __llvm_profile_set_file_object in continuous mode (%c).
 // Create & cd into a temporary directory.
 // RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
 
 // The -mllvm -runtime-counter-relocation=true flag has effect only on linux.
-// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -mllvm -instrprof-atomic-counter-update-all=1 -mllvm -runtime-counter-relocation=true -o main.exe %s
+// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -fprofile-update=atomic -mllvm -runtime-counter-relocation=true -o main.exe %s
 
 // Test continuous mode with __llvm_profile_set_file_object with mergin disabled.
 // RUN: env LLVM_PROFILE_FILE="%t.dir/profdir/%c%mprofraw.old" %run  %t.dir/main.exe nomerge %t.dir/profdir/profraw.new 2>&1 | FileCheck %s -check-prefix=WARN

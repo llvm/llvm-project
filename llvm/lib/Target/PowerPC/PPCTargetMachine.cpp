@@ -141,7 +141,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCBSelPass(PR);
   initializePPCBranchCoalescingPass(PR);
   initializePPCBoolRetToIntPass(PR);
-  initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);
   initializePPCTLSDynamicCallPass(PR);
   initializePPCMIPeepholePass(PR);
@@ -506,10 +505,13 @@ bool PPCPassConfig::addPreISel() {
           ? EnableGlobalMerge
           : (TM->getTargetTriple().isOSAIX() &&
              getOptLevel() != CodeGenOptLevel::None))
-    addPass(
-        createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true));
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+                                  true));
 
-  if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
+  if ((MergeStringPool.getNumOccurrences() > 0)
+          ? MergeStringPool
+          : (TM->getTargetTriple().isOSLinux() &&
+             getOptLevel() != CodeGenOptLevel::None))
     addPass(createPPCMergeStringPoolPass());
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
@@ -522,7 +524,7 @@ bool PPCPassConfig::addPreISel() {
 }
 
 bool PPCPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
@@ -600,7 +602,6 @@ void PPCPassConfig::addPreSched2() {
 
 void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCPreEmitPeepholePass());
-  addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCEarlyReturnPass());

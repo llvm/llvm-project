@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 31;
+const unsigned VERSION_MAJOR = 33;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -54,7 +54,7 @@ const unsigned VERSION_MAJOR = 31;
 /// for the previous version could still support reading the new
 /// version by ignoring new kinds of subblocks), this number
 /// should be increased.
-const unsigned VERSION_MINOR = 1;
+const unsigned VERSION_MINOR = 0;
 
 /// An ID number that refers to an identifier in an AST file.
 ///
@@ -724,6 +724,16 @@ enum ASTRecordTypes {
 
   /// Record code for vtables to emit.
   VTABLES_TO_EMIT = 70,
+
+  /// Record code for the FunctionDecl to lambdas mapping. These lambdas have to
+  /// be loaded right after the function they belong to. It is required to have
+  /// canonical declaration for the lambda class from the same module as
+  /// enclosing function.
+  FUNCTION_DECL_TO_LAMBDAS_MAP = 71,
+
+  /// Record code for Sema's vector of functions/blocks with effects to
+  /// be verified.
+  DECLS_WITH_EFFECTS_TO_VERIFY = 72,
 };
 
 /// Record types used within a source manager block.
@@ -1122,7 +1132,7 @@ enum PredefinedTypeIDs {
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 // \brief AMDGPU types with auto numeration
-#define AMDGPU_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/AMDGPUTypes.def"
 // \brief HLSL intangible types with auto numeration
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
@@ -1139,7 +1149,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 505;
+const unsigned NUM_PREDEF_TYPE_IDS = 513;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1992,9 +2002,14 @@ enum StmtCode {
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
 
-  // OpenACC Constructs
+  // OpenACC Constructs/Exprs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+  EXPR_OPENACC_ASTERISK_SIZE,
+
+  // HLSL Constructs
+  EXPR_HLSL_OUT_ARG,
+
 };
 
 /// The kinds of designators that can occur in a
