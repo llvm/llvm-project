@@ -157,6 +157,12 @@ let Definition = "target" in {
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,
     Desc<"The default disassembly flavor to use for x86 or x86-64 targets.">;
+  def DisassemblyCPU: Property<"disassembly-cpu", "String">,
+    DefaultStringValue<"">,
+    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu clang flag.">;
+  def DisassemblyFeatures: Property<"disassembly-features", "String">,
+    DefaultStringValue<"">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
