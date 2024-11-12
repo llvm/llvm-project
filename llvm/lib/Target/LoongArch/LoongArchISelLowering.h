@@ -129,6 +129,7 @@ enum NodeType : unsigned {
   VILVH,
   VSHUF4I,
   VREPLVEI,
+  VREPLGR2VR,
   XVPERMI,
 
   // Extended vector element extraction

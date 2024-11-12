@@ -4,22 +4,8 @@
 define <16 x i8> @vrepl_ins_b(i32 %a, i32 %b) {
 ; CHECK-LABEL: vrepl_ins_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 2
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 3
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 4
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 5
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 6
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 7
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 8
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 9
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 10
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 11
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 12
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 13
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.loongarch.lsx.vreplgr2vr.b(i32 %a)
@@ -30,14 +16,8 @@ entry:
 define <8 x i16> @vrepl_ins_h(i32 %a, i32 %b) {
 ; CHECK-LABEL: vrepl_ins_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.h $vr0, $a0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 2
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 6
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.loongarch.lsx.vreplgr2vr.h(i32 %a)
@@ -48,10 +28,8 @@ entry:
 define <4 x i32> @vrepl_ins_w(i32 %a, i32 %b) {
 ; CHECK-LABEL: vrepl_ins_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 2
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 3
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.loongarch.lsx.vreplgr2vr.w(i32 %a)
@@ -62,7 +40,7 @@ entry:
 define <2 x i64> @vrepl_ins_d(i64 %a, i64 %b) {
 ; CHECK-LABEL: vrepl_ins_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a1, 1
 ; CHECK-NEXT:    ret
 entry:
