@@ -23,6 +23,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -149,11 +150,8 @@ DISubprogram *llvm::ProcessSubprogramAttachment(const Function &F,
   const Module *M = F.getParent();
   if (Changes != CloneFunctionChangeType::ClonedModule && M) {
     // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
-    for (const auto &BB : F) {
-      for (const auto &I : BB) {
-        DIFinder.processInstruction(*M, I);
-      }
-    }
+    for (const auto &I : instructions(F))
+      DIFinder.processInstruction(*M, I);
   }
 
   return SPClonedWithinModule;
