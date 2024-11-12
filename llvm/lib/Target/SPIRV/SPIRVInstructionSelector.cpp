@@ -1766,8 +1766,8 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
-                                                    const SPIRVType *ResType,
-                                                    MachineInstr &I) const {
+                                                       const SPIRVType *ResType,
+                                                       MachineInstr &I) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
 
@@ -1776,8 +1776,7 @@ bool SPIRVInstructionSelector::selectWaveActiveAnyTrue(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
 
-  return BuildMI(BB, I, I.getDebugLoc(),
-                 TII.get(SPIRV::OpGroupNonUniformAny))
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformAny))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII))

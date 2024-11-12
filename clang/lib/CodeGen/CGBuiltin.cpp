@@ -18963,15 +18963,24 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   case Builtin::BI__builtin_hlsl_wave_active_any_true: {
     // Assert Op->getType() == Bool
 
-    // FIXME: PR Question: Can this be simpler? Looks like Int1Ty isn't  predefined
-    IntegerType* Int1Ty = llvm::Type::getInt1Ty(CGM.getTypes().getLLVMContext());
+    // FIXME: PR Question: Can this be simpler? Looks like Int1Ty isn't
+    // predefined
+    IntegerType *Int1Ty =
+        llvm::Type::getInt1Ty(CGM.getTypes().getLLVMContext());
     Value *Op = EmitScalarExpr(E->getArg(0));
-    assert(Op->getType() == Int1Ty && "wave_active_any_true operand must be a bool");
+    assert(Op->getType() == Int1Ty &&
+           "wave_active_any_true operand must be a bool");
 
-    // FIXME: PR Question: Re Style SingleRef vs {SingleRef} vs ArrayRef{SingleRef}
-    llvm::FunctionType *FT = llvm::FunctionType::get(Int1Ty, {Int1Ty}, /*isVarArg=*/false);
-    llvm::StringRef Name = Intrinsic::getName(CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {}, /*Local=*/false, /*AssumeConvergent=*/true), {Op}, "hlsl.wave.activeanytrue");
+    // FIXME: PR Question: Re Style SingleRef vs {SingleRef} vs
+    // ArrayRef{SingleRef}
+    llvm::FunctionType *FT =
+        llvm::FunctionType::get(Int1Ty, {Int1Ty}, /*isVarArg=*/false);
+    llvm::StringRef Name = Intrinsic::getName(
+        CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           {Op}, "hlsl.wave.activeanytrue");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in
