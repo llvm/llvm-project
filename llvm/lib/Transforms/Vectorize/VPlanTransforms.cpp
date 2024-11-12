@@ -526,9 +526,12 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
+        // Genearte VPWidenCastRecipe.
         auto *Ext = new VPWidenCastRecipe(
             ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
             *ExtRed->getExtInstr());
+
+        // Generate VPreductionRecipe.
         auto *Red = new VPReductionRecipe(
             ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
             ExtRed->getChainOp(), Ext, ExtRed->getCondOp(),
@@ -539,45 +542,55 @@ void VPlanTransforms::prepareExecute(VPlan &Plan) {
         ExtRed->eraseFromParent();
       } else if (isa<VPMulAccRecipe>(&R)) {
         auto *MulAcc = cast<VPMulAccRecipe>(&R);
+
+        // Generate inner VPWidenCastRecipes if necessary.
         VPValue *Op0, *Op1;
         if (MulAcc->isExtended()) {
           CastInst *Ext0 = MulAcc->getExt0Instr();
           Op0 = new VPWidenCastRecipe(Ext0->getOpcode(), MulAcc->getVecOp0(),
                                       MulAcc->getResultType(), *Ext0);
           Op0->getDefiningRecipe()->insertBefore(MulAcc);
-          if (!MulAcc->isSameExtend()) {
+          // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
+          // VPWidenCastRecipe.
+          if (MulAcc->isSameExtend()) {
+            Op1 = Op0;
+          } else {
             CastInst *Ext1 = MulAcc->getExt1Instr();
             Op1 = new VPWidenCastRecipe(Ext1->getOpcode(), MulAcc->getVecOp1(),
                                         MulAcc->getResultType(), *Ext1);
             Op1->getDefiningRecipe()->insertBefore(MulAcc);
-          } else {
-            Op1 = Op0;
           }
+          // Not contains extend instruction in this MulAccRecipe.
         } else {
           Op0 = MulAcc->getVecOp0();
           Op1 = MulAcc->getVecOp1();
         }
+
+        // Generate VPWidenRecipe.
         VPSingleDefRecipe *VecOp;
-        Instruction *MulInstr = MulAcc->getMulInstr();
         SmallVector<VPValue *, 2> MulOps = {Op0, Op1};
-        auto *Mul = new VPWidenRecipe(*MulInstr,
+        auto *Mul = new VPWidenRecipe(*MulAcc->getMulInstr(),
                                       make_range(MulOps.begin(), MulOps.end()));
-        // Outer extend.
-        if (auto *OuterExtInstr = MulAcc->getExtInstr())
+        Mul->insertBefore(MulAcc);
+
+        // Generate outer VPWidenCastRecipe if necessary.
+        if (auto *OuterExtInstr = MulAcc->getExtInstr()) {
           VecOp = new VPWidenCastRecipe(
               OuterExtInstr->getOpcode(), Mul,
               MulAcc->getRecurrenceDescriptor().getRecurrenceType(),
               *OuterExtInstr);
-        else
+          VecOp->insertBefore(MulAcc);
+        } else {
           VecOp = Mul;
+        }
+
+        // Generate VPReductionRecipe.
         auto *Red = new VPReductionRecipe(
             MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),
             MulAcc->getChainOp(), VecOp, MulAcc->getCondOp(),
             MulAcc->isOrdered());
-        Mul->insertBefore(MulAcc);
-        if (VecOp != Mul)
-          VecOp->insertBefore(MulAcc);
         Red->insertBefore(MulAcc);
+
         MulAcc->replaceAllUsesWith(Red);
         MulAcc->eraseFromParent();
       }

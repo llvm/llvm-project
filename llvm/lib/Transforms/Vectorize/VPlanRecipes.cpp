@@ -2264,8 +2264,8 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
   const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
-  Type *ElementTy = IsExtended ? RdxDesc.getRecurrenceType()
-                               : Ctx.Types.inferScalarType(getVecOp0());
+  Type *ElementTy = isExtended() ? RdxDesc.getRecurrenceType()
+                                 : Ctx.Types.inferScalarType(getVecOp0());
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
@@ -2281,20 +2281,19 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
 
   // Extended cost
   InstructionCost ExtendedCost = 0;
-  if (IsExtended) {
+  if (isExtended()) {
     auto *SrcTy = cast<VectorType>(
         ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
     auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
     TTI::CastContextHint CCH0 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
-    // Arm TTI will use the underlying instruction to determine the cost.
     ExtendedCost = Ctx.TTI.getCastInstrCost(
-        ExtOp, DestTy, SrcTy, CCH0, TTI::TCK_RecipThroughput,
+        Ext0Instr->getOpcode(), DestTy, SrcTy, CCH0, TTI::TCK_RecipThroughput,
         dyn_cast_if_present<Instruction>(getExt0Instr()));
     TTI::CastContextHint CCH1 =
         computeCCH(getVecOp0()->getDefiningRecipe(), VF);
     ExtendedCost += Ctx.TTI.getCastInstrCost(
-        ExtOp, DestTy, SrcTy, CCH1, TTI::TCK_RecipThroughput,
+        Ext1Instr->getOpcode(), DestTy, SrcTy, CCH1, TTI::TCK_RecipThroughput,
         dyn_cast_if_present<Instruction>(getExt1Instr()));
   }
 
@@ -2302,7 +2301,7 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   InstructionCost MulCost;
   SmallVector<const Value *, 4> Operands;
   Operands.append(MulInstr->value_op_begin(), MulInstr->value_op_end());
-  if (IsExtended)
+  if (isExtended())
     MulCost = Ctx.TTI.getArithmeticInstrCost(
         Instruction::Mul, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
@@ -2329,9 +2328,8 @@ InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
   // MulAccReduction Cost
   VectorType *SrcVecTy =
       cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
-      getExtOpcode() == Instruction::CastOps::ZExt, ElementTy, SrcVecTy,
-      CostKind);
+  InstructionCost MulAccCost =
+      Ctx.TTI.getMulAccReductionCost(isZExt(), ElementTy, SrcVecTy, CostKind);
 
   // Check if folding ext into ExtendedReduction is profitable.
   if (MulAccCost.isValid() &&
@@ -2420,26 +2418,26 @@ void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " + ";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  if (IsOuterExtended)
+  if (isOuterExtended())
     O << " (";
   O << "reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   O << "mul ";
-  if (IsExtended)
+  if (isExtended())
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
-  if (IsExtended)
+  if (isExtended())
     O << " extended to " << *getResultType() << "), (";
   else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
-  if (IsExtended)
+  if (isExtended())
     O << " extended to " << *getResultType() << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
-  if (IsOuterExtended)
+  if (isOuterExtended())
     O << " extended to " << *RdxDesc.getRecurrenceType() << ")";
   if (RdxDesc.IntermediateStore)
     O << " (with final reduction value stored in invariant address sank "
