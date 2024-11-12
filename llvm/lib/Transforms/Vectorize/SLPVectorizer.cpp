@@ -3045,7 +3045,9 @@ private:
 
   /// \returns a vector from a collection of scalars in \p VL. if \p Root is not
   /// specified, the starting vector value is poison.
-  Value *gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy);
+  Value *
+  gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy,
+         function_ref<Value *(Value *, Value *, ArrayRef<int>)> CreateShuffle);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -9167,8 +9169,9 @@ protected:
     int VF = Mask.size();
     if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
       VF = FTy->getNumElements();
-    if (V2 &&
-        !isUndefVector(V2, buildUseMask(VF, Mask, UseMask::SecondArg)).all()) {
+    if (V2 && !isUndefVector</*IsPoisonOnly=*/true>(
+                   V2, buildUseMask(VF, Mask, UseMask::SecondArg))
+                   .all()) {
       // Peek through shuffles.
       Value *Op1 = V1;
       Value *Op2 = V2;
@@ -10986,7 +10989,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // If the selects are the only uses of the compares, they will be
     // dead and we can adjust the cost by removing their cost.
     if (VI && SelectOnly) {
-      assert(!Ty->isVectorTy() && "Expected only for scalar type.");
+      assert((!Ty->isVectorTy() || SLPReVec) &&
+             "Expected only for scalar type.");
       auto *CI = cast<CmpInst>(VI->getOperand(0));
       IntrinsicCost -= TTI->getCmpSelInstrCost(
           CI->getOpcode(), Ty, Builder.getInt1Ty(), CI->getPredicate(),
@@ -13453,7 +13457,9 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
-Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
+Value *BoUpSLP::gather(
+    ArrayRef<Value *> VL, Value *Root, Type *ScalarTy,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> CreateShuffle) {
   // List of instructions/lanes from current block and/or the blocks which are
   // part of the current loop. These instructions will be inserted at the end to
   // make it possible to optimize loops and hoist invariant instructions out of
@@ -13559,7 +13565,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (isa<PoisonValue>(Vec)) {
       Vec = OriginalRoot;
     } else {
-      Vec = Builder.CreateShuffleVector(Root, Vec, Mask);
+      Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
           OI && OI->hasNUses(0))
         eraseInstruction(OI);
@@ -14021,7 +14027,10 @@ public:
   }
   Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
                 Value *Root = nullptr) {
-    return R.gather(VL, Root, ScalarTy);
+    return R.gather(VL, Root, ScalarTy,
+                    [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
+                      return createShuffle(V1, V2, Mask);
+                    });
   }
   Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.

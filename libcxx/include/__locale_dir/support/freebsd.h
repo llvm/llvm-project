@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===-----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_APPLE_H
-#define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_APPLE_H
+#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
+#define _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
 
 #include <__config>
-#include <ctype.h>
-#include <string.h>
-#include <time.h>
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <wctype.h>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
 #endif
 
-#include <xlocale.h>
+#include <__locale_dir/support/bsd_like.h>
 
-#endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_APPLE_H
+#endif // _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
