@@ -134,6 +134,10 @@ public:
 
   const char *GetDisassemblyFlavor() const;
 
+  const char *GetDisassemblyCPU() const;
+
+  const char *GetDisassemblyFeatures() const;
+
   InlineStrategy GetInlineStrategy() const;
 
   RealpathPrefixes GetSourceRealpathPrefixes() const;

@@ -668,6 +668,8 @@ enum CommandArgumentType {
   eArgTypeRemotePath,
   eArgTypeRemoteFilename,
   eArgTypeModule,
+  eArgTypeCPUName,
+  eArgTypeCPUFeatures,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
