@@ -652,6 +652,8 @@ Bug Fixes to C++ Support
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 - Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Fixed expression transformation for ``[[assume(...)]]``, allowing using pack indexing expressions within the
+  assumption if they also occur inside of a dependent lambda. (#GH114787)
 - Clang now uses valid deduced type locations when diagnosing functions with trailing return type
   missing placeholder return type. (#GH78694)
 
@@ -741,6 +743,7 @@ X86 Support
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
+- Support ISA of ``AMX-MOVRS``.
 - Support ISA of ``AMX-AVX512``.
 - Support ISA of ``AMX-TF32``.
 
@@ -867,6 +870,9 @@ New features
   attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
+
+- Introduced ``-warning-suppression-mappings`` flag to control diagnostic
+  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
