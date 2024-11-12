@@ -33,8 +33,6 @@ class TestSwiftDeserializationFailure(TestBase):
     @swiftTest
     @skipIf(oslist=['windows'])
     @skipIf(debug_info=no_match(["dwarf"]))
-    @expectedFailureAll(archs=["arm64", "arm64e", 'arm64_32'], bugnumber="<rdar://problem/58096919>")
-    @expectedFailureAll(archs=["arm64", "arm64e", 'arm64_32'], bugnumber="<rdar://problem/58097436>")
     def test_missing_module(self):
         """Test what happens when a .swiftmodule can't be loaded"""
         self.prepare()
@@ -44,8 +42,6 @@ class TestSwiftDeserializationFailure(TestBase):
     @swiftTest
     @skipIf(oslist=['windows'])
     @skipIf(debug_info=no_match(["dwarf"]))
-    @expectedFailureAll(archs=["arm64", "arm64e", 'arm64_32'], bugnumber="<rdar://problem/58096919>")
-    @expectedFailureAll(archs=["arm64", "arm64e", 'arm64_32'], bugnumber="<rdar://problem/58097436>")
     def test_damaged_module(self):
         """Test what happens when a .swiftmodule can't be loaded"""
         self.prepare()
