@@ -1710,7 +1710,6 @@ ELFDumper<ELFT>::dumpCustomRawContentSection(const Elf_Shdr *Shdr) {
   if (Content.empty())
     return nullptr;
 
-  S->Content = yaml::BinaryRef(Content);
   if (Error E = S->decode(Content, Obj.isLE()))
     return E;
   return S.release();

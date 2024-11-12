@@ -1591,6 +1591,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       StringRef Name;
       IO.mapOptional("Name", Name);
       if (auto S = Opt->makeCustomRawContentSection(Name)) {
+        commonSectionMapping(IO, *S);
         S->sectionMapping(IO);
         Section = std::move(S);
         return;
@@ -1747,9 +1748,10 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
         Section = std::make_unique<ELFYAML::RawContentSection>();
     }
 
-    if (auto S = dyn_cast<ELFYAML::CustomRawContentSection>(Section.get()))
+    if (auto S = dyn_cast<ELFYAML::CustomRawContentSection>(Section.get())) {
+      commonSectionMapping(IO, *S);
       S->sectionMapping(IO);
-    else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Section.get()))
+    } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Section.get()))
       sectionMapping(IO, *S);
     else
       sectionMapping(IO, *cast<ELFYAML::StackSizesSection>(Section.get()));

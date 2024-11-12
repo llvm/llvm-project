@@ -401,12 +401,7 @@ struct RawContentSection : Section {
 
 /// Abstract base class for non-blob contents.
 struct CustomRawContentSection : RawContentSection {
-  CustomRawContentSection() : RawContentSection(ChunkKind::CustomRawContent) {
-    // Type assumes PROGBITS.
-    Type = ELF::SHT_PROGBITS;
-    Flags = ELF::SHF_GNU_RETAIN;
-    AddressAlign = 1;
-  }
+  CustomRawContentSection() : RawContentSection(ChunkKind::CustomRawContent) {}
 
   /// Apply mappings.
   virtual void sectionMapping(yaml::IO &IO) = 0;
