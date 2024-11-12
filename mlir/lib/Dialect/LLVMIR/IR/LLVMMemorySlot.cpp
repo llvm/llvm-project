@@ -916,6 +916,67 @@ std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemsetInlineOp op) {
   return memIntrLen.getZExtValue();
 }
 
+/// Returns an integer attribute representing the length of a memset intrinsic
+template <class MemsetIntr>
+IntegerAttr createMemsetLenAttr(MemsetIntr op) {
+  IntegerAttr memsetLenAttr;
+  bool successfulMatch =
+      matchPattern(op.getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
+  (void)successfulMatch;
+  assert(successfulMatch);
+  return memsetLenAttr;
+}
+
+/// Returns an integer attribute representing the length of a memset intrinsic
+/// Because MemsetInlineOp has its length encoded as an attribute, this requires
+/// specialized handling.
+template <>
+IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
+  return op.getLenAttr();
+}
+
+/// Template function to create memset intrinsic
+template <class MemsetIntr>
+void createMemsetIntr(OpBuilder &builder, MemsetIntr toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index);
+
+/// Create memset intrinsic
+/// This is specialized for MemsetOp
+template <>
+void createMemsetIntr(OpBuilder &builder, LLVM::MemsetOp toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index) {
+  Value newMemsetSizeValue =
+      builder
+          .create<LLVM::ConstantOp>(
+              toReplace.getLen().getLoc(),
+              IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize))
+          .getResult();
+
+  builder.create<LLVM::MemsetOp>(toReplace.getLoc(), subslots.at(index).ptr,
+                                 toReplace.getVal(), newMemsetSizeValue,
+                                 toReplace.getIsVolatile());
+}
+
+/// Create memset intrinsic
+/// This is specialized for MemsetInlineOp
+template <>
+void createMemsetIntr(OpBuilder &builder, LLVM::MemsetInlineOp toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index) {
+
+  auto newMemsetSizeValue =
+      IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize);
+
+  builder.create<LLVM::MemsetInlineOp>(
+      toReplace.getLoc(), subslots.at(index).ptr, toReplace.getVal(),
+      newMemsetSizeValue, toReplace.getIsVolatile());
+}
+
 } // namespace
 
 /// Returns whether one can be sure the memory intrinsic does not write outside
@@ -1021,56 +1082,6 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
 
   return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
 }
-
-namespace {
-template <class MemsetIntr>
-IntegerAttr createMemsetLenAttr(MemsetIntr op) {
-  IntegerAttr memsetLenAttr;
-  bool successfulMatch =
-      matchPattern(op.getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
-  (void)successfulMatch;
-  assert(successfulMatch);
-  return memsetLenAttr;
-}
-template <>
-IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
-  return op.getLenAttr();
-}
-template <class MemsetIntr>
-void createMemsetIntr(OpBuilder &builder, MemsetIntr toReplace,
-                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
-                      DenseMap<Attribute, MemorySlot> &subslots,
-                      Attribute index);
-template <>
-void createMemsetIntr(OpBuilder &builder, LLVM::MemsetOp toReplace,
-                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
-                      DenseMap<Attribute, MemorySlot> &subslots,
-                      Attribute index) {
-  Value newMemsetSizeValue =
-      builder
-          .create<LLVM::ConstantOp>(
-              toReplace.getLen().getLoc(),
-              IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize))
-          .getResult();
-
-  builder.create<LLVM::MemsetOp>(toReplace.getLoc(), subslots.at(index).ptr,
-                                 toReplace.getVal(), newMemsetSizeValue,
-                                 toReplace.getIsVolatile());
-}
-template <>
-void createMemsetIntr(OpBuilder &builder, LLVM::MemsetInlineOp toReplace,
-                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
-                      DenseMap<Attribute, MemorySlot> &subslots,
-                      Attribute index) {
-
-  auto newMemsetSizeValue =
-      IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize);
-
-  builder.create<LLVM::MemsetInlineOp>(
-      toReplace.getLoc(), subslots.at(index).ptr, toReplace.getVal(),
-      newMemsetSizeValue, toReplace.getIsVolatile());
-}
-} // namespace
 
 template <class MemsetIntr>
 static DeletionKind
