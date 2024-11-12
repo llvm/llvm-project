@@ -211,8 +211,8 @@ config.substitutions.append(("%host_cc", config.host_cc))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 
 # Determine whether the test target is compatible with execution on the host.
-if config.host_arch in config.target_triple:
-    config.available_features.add("host-target-compatible")
+if "aarch64" in config.host_arch:
+    config.available_features.add("aarch64-host")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
