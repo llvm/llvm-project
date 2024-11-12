@@ -826,19 +826,65 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     return marshal;
   }
 
+  // Flatten a RecordType::TypeList containing more record types or array types
+  static std::optional<std::vector<mlir::Type>>
+  flattenTypeList(const RecordType::TypeList &types) {
+    std::vector<mlir::Type> flatTypes;
+    // The flat list will be at least the same size as the non-flat list.
+    flatTypes.reserve(types.size());
+    for (auto [c, type] : types) {
+      // Flatten record type
+      if (auto recTy = mlir::dyn_cast<RecordType>(type)) {
+        auto subTypeList = flattenTypeList(recTy.getTypeList());
+        if (!subTypeList)
+          return std::nullopt;
+        llvm::copy(*subTypeList, std::back_inserter(flatTypes));
+        continue;
+      }
+
+      // Flatten array type
+      if (auto seqTy = mlir::dyn_cast<SequenceType>(type)) {
+        if (seqTy.hasDynamicExtents())
+          return std::nullopt;
+        std::size_t n = seqTy.getConstantArraySize();
+        auto eleTy = seqTy.getElementType();
+        // Flatten array of record types
+        if (auto recTy = mlir::dyn_cast<RecordType>(eleTy)) {
+          auto subTypeList = flattenTypeList(recTy.getTypeList());
+          if (!subTypeList)
+            return std::nullopt;
+          for (std::size_t i = 0; i < n; ++i)
+            llvm::copy(*subTypeList, std::back_inserter(flatTypes));
+        } else {
+          std::fill_n(std::back_inserter(flatTypes),
+                      seqTy.getConstantArraySize(), eleTy);
+        }
+        continue;
+      }
+
+      // Other types are already flat
+      flatTypes.push_back(type);
+    }
+    return flatTypes;
+  }
+
   // Determine if the type is a Homogenous Floating-point Aggregate (HFA). An
   // HFA is a record type with up to 4 floating-point members of the same type.
   static bool isHFA(fir::RecordType ty) {
-    auto types = ty.getTypeList();
-    if (types.empty() || types.size() > 4) {
+    RecordType::TypeList types = ty.getTypeList();
+    if (types.empty() || types.size() > 4)
+      return false;
+
+    std::optional<std::vector<mlir::Type>> flatTypes = flattenTypeList(types);
+    if (!flatTypes || flatTypes->size() > 4) {
       return false;
     }
 
-    if (!isa_real(types.front().second)) {
+    if (!isa_real(flatTypes->front())) {
       return false;
     }
 
-    return llvm::all_equal(llvm::make_second_range(types));
+    return llvm::all_equal(*flatTypes);
   }
 
   // AArch64 procedure call ABI:
@@ -848,8 +894,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     CodeGenSpecifics::Marshalling marshal;
 
     if (isHFA(ty)) {
-      auto newTy = fir::SequenceType::get({ty.getNumFields()}, ty.getType(0));
-      marshal.emplace_back(newTy, AT{});
+      // Just return the existing record type
+      marshal.emplace_back(ty, AT{});
       return marshal;
     }
 
