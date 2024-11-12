@@ -215,13 +215,13 @@ In order to use this "local testing" mode:
        ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/master.cfg .
        ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/config/ .
        ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
-       BUILDMASTER_TEST=1 buildbot checkconfig
+       BUILDBOT_TEST=1 buildbot checkconfig
 
 * Start the buildmaster.
 
     .. code-block:: bash
 
-       BUILDMASTER_TEST=1 buildbot start --nodaemon .
+       BUILDBOT_TEST=1 buildbot start --nodaemon .
 
 * After waiting a few seconds for startup to complete, you should be able to
   open the web UI at ``http://localhost:8011``.  If there are any errors or
