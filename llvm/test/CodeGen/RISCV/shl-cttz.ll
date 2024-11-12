@@ -432,7 +432,11 @@ define i32 @shl_cttz_multiuse_i32(i32 %x, i32 %y) {
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: shl_cttz_multiuse_i32:
@@ -453,7 +457,11 @@ define i32 @shl_cttz_multiuse_i32(i32 %x, i32 %y) {
 ; RV32ZBB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ZBB-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32ZBB-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    .cfi_restore ra
+; RV32ZBB-NEXT:    .cfi_restore s0
+; RV32ZBB-NEXT:    .cfi_restore s1
 ; RV32ZBB-NEXT:    addi sp, sp, 16
+; RV32ZBB-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64I-LABEL: shl_cttz_multiuse_i32:
@@ -483,7 +491,11 @@ define i32 @shl_cttz_multiuse_i32(i32 %x, i32 %y) {
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: shl_cttz_multiuse_i32:
@@ -504,7 +516,11 @@ define i32 @shl_cttz_multiuse_i32(i32 %x, i32 %y) {
 ; RV64ZBB-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64ZBB-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64ZBB-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZBB-NEXT:    .cfi_restore ra
+; RV64ZBB-NEXT:    .cfi_restore s0
+; RV64ZBB-NEXT:    .cfi_restore s1
 ; RV64ZBB-NEXT:    addi sp, sp, 32
+; RV64ZBB-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZBB-NEXT:    ret
 entry:
   %cttz = call i32 @llvm.cttz.i32(i32 %y, i1 true)

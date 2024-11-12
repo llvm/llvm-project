@@ -4471,6 +4471,11 @@ void TargetProperties::SetDisableSTDIO(bool b) {
   const uint32_t idx = ePropertyDisableSTDIO;
   SetPropertyAtIndex(idx, b);
 }
+llvm::StringRef TargetProperties::GetLaunchWorkingDirectory() const {
+  const uint32_t idx = ePropertyLaunchWorkingDir;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_target_properties[idx].default_cstr_value);
+}
 
 const char *TargetProperties::GetDisassemblyFlavor() const {
   const uint32_t idx = ePropertyDisassemblyFlavor;
@@ -4483,6 +4488,20 @@ const char *TargetProperties::GetDisassemblyFlavor() const {
 
   return_value = g_x86_dis_flavor_value_types[flavor_value].string_value;
   return return_value;
+}
+
+const char *TargetProperties::GetDisassemblyCPU() const {
+  const uint32_t idx = ePropertyDisassemblyCPU;
+  llvm::StringRef str = GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_target_properties[idx].default_cstr_value);
+  return str.empty() ? nullptr : str.data();
+}
+
+const char *TargetProperties::GetDisassemblyFeatures() const {
+  const uint32_t idx = ePropertyDisassemblyFeatures;
+  llvm::StringRef str = GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_target_properties[idx].default_cstr_value);
+  return str.empty() ? nullptr : str.data();
 }
 
 InlineStrategy TargetProperties::GetInlineStrategy() const {

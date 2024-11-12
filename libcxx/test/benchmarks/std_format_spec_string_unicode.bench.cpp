@@ -6,8 +6,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
-
 #  include <concepts>
 #  include <format>
 #  include <string_view>
@@ -17,6 +15,8 @@
 #  include "test_macros.h"
 
 #  define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+#if _LIBCPP_HAS_UNICODE
 
 // generated with https://generator.lorem-ipsum.info/_latin
 
