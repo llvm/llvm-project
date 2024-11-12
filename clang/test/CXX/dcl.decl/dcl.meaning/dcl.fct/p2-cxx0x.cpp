@@ -12,7 +12,7 @@ namespace GH78694 {
 template <typename T> struct B {
   // CHECK:      error: function with trailing return type must specify return type 'auto', not 'void'
   // CHECK-NEXT: {{^}}  template <class U> B(U) -> B<int>;
-  // CHECK-NEXT: {{^}}                             ^~~~~~{{$}}
+  // CHECK-NEXT: {{^}}                     ~~~~~~~~^~~~~~{{$}}
   template <class U> B(U) -> B<int>; // expected-error {{function with trailing return type must specify return type 'auto', not 'void'}}
 };
 }
