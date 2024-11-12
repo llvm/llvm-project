@@ -239,14 +239,6 @@ def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
 }
 
 //===----------------------------------------------------------------------===//
-// M RV64 i32 legalization patterns.
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZmmul, IsRV64] in {
-def : PatGprGpr<mul, MULW, i32, i32>;
-}
-
-//===----------------------------------------------------------------------===//
 // Zb* RV64 i32 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
 
@@ -255,6 +247,10 @@ def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
 def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
 
 def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
+} // Predicates = [HasStdExtZbb, IsRV64]
+
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
+def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (PACKW GPR:$rs, (XLenVT X0))>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {

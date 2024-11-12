@@ -518,6 +518,7 @@ public:
     OpNegateRAStateWithPC,
     OpGnuArgsSize,
     OpLabel,
+    OpValOffset,
     OpLLVMRegisterPair,
     OpLLVMVectorRegisters,
     OpLLVMVectorOffset,
@@ -807,6 +808,12 @@ public:
   template <class ExtraFieldsTy> const ExtraFieldsTy &getExtraFields() const {
     return std::get<ExtraFieldsTy>(ExtraFields);
   }
+  /// .cfi_val_offset Previous value of Register is offset Offset from the
+  /// current CFA register.
+  static MCCFIInstruction createValOffset(MCSymbol *L, unsigned Register,
+                                          int64_t Offset, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpValOffset, L, Register, Offset, Loc);
+  }
 
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
@@ -819,9 +826,10 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset || Operation == OpLLVMVectorRegisters ||
+           Operation == OpLLVMVectorRegisters ||
            Operation == OpLLVMRegisterPair || Operation == OpLLVMVectorOffset ||
-           Operation == OpLLVMVectorRegisterMask);
+           Operation == OpLLVMVectorRegisterMask ||
+           Operation == OpRelOffset || Operation == OpValOffset);
     return U.RI.Register;
   }
 
@@ -841,7 +849,8 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
-           Operation == OpLLVMVectorOffset);
+           Operation == OpLLVMVectorOffset ||
+           Operation == OpValOffset);
     return U.RI.Offset;
   }
 

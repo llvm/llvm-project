@@ -292,6 +292,10 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
         Fields.MaskRegisterSizeInBits);
     break;
   }
+
+  case MCCFIInstruction::OpValOffset:
+    OutStreamer->emitCFIValOffset(Inst.getRegister(), Inst.getOffset(), Loc);
+    break;
   }
 }
 
