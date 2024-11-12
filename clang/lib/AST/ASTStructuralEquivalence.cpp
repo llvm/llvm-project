@@ -61,6 +61,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
+#include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -1601,6 +1602,12 @@ IsRecordContextStructurallyEquivalent(StructuralEquivalenceContext &Context,
       if (!DC1->isInlineNamespace() &&
           !IsStructurallyEquivalent(ND1->getIdentifier(), ND2->getIdentifier()))
         return false;
+      auto *NS1 = dyn_cast<NamespaceDecl>(DC1);
+      auto *NS2 = dyn_cast<NamespaceDecl>(DC2);
+      if (Context.Importer && NS1 && NS1->isAnonymousNamespace() && NS2 &&
+          NS2->isAnonymousNamespace())
+        if (Context.Importer->GetFromTU(D2) != D1->getTranslationUnitDecl())
+          return false;
     }
 
     if (auto *D1Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC1)) {

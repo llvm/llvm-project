@@ -24,6 +24,7 @@
 namespace clang {
 
 class ASTContext;
+class ASTImporter;
 class Decl;
 class DiagnosticBuilder;
 class QualType;
@@ -72,16 +73,18 @@ struct StructuralEquivalenceContext {
   /// Whether to ignore comparing the depth of template param(TemplateTypeParm)
   bool IgnoreTemplateParmDepth;
 
+  ASTImporter *Importer;
+
   StructuralEquivalenceContext(
       ASTContext &FromCtx, ASTContext &ToCtx,
       llvm::DenseSet<std::pair<Decl *, Decl *>> &NonEquivalentDecls,
       StructuralEquivalenceKind EqKind, bool StrictTypeSpelling = false,
       bool Complain = true, bool ErrorOnTagTypeMismatch = false,
-      bool IgnoreTemplateParmDepth = false)
+      bool IgnoreTemplateParmDepth = false, ASTImporter *Importer = nullptr)
       : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
         EqKind(EqKind), StrictTypeSpelling(StrictTypeSpelling),
         ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
-        IgnoreTemplateParmDepth(IgnoreTemplateParmDepth) {}
+        IgnoreTemplateParmDepth(IgnoreTemplateParmDepth), Importer(Importer) {}
 
   DiagnosticBuilder Diag1(SourceLocation Loc, unsigned DiagID);
   DiagnosticBuilder Diag2(SourceLocation Loc, unsigned DiagID);
