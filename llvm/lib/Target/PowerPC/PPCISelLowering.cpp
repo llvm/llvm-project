@@ -183,6 +183,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // arguments are at least 4/8 bytes aligned.
   bool isPPC64 = Subtarget.isPPC64();
   setMinStackArgumentAlignment(isPPC64 ? Align(8) : Align(4));
+  const MVT RegVT = Subtarget.getScalarIntVT();
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &PPC::GPRCRegClass);
@@ -198,7 +199,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
-  setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
+  setOperationAction(ISD::UADDO, RegVT, Custom);
 
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
@@ -268,32 +269,24 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
     if (isPPC64 || Subtarget.hasFPCVT()) {
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_SINT_TO_FP, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_SINT_TO_FP, MVT::i1, RegVT);
       setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_UINT_TO_FP, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_UINT_TO_FP, MVT::i1, RegVT);
 
       setOperationAction(ISD::SINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType (ISD::SINT_TO_FP, MVT::i1,
-                         isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::SINT_TO_FP, MVT::i1, RegVT);
       setOperationAction(ISD::UINT_TO_FP, MVT::i1, Promote);
-      AddPromotedToType(ISD::UINT_TO_FP, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::UINT_TO_FP, MVT::i1, RegVT);
 
       setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_FP_TO_SINT, MVT::i1, RegVT);
       setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::i1, RegVT);
 
       setOperationAction(ISD::FP_TO_SINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::FP_TO_SINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::FP_TO_SINT, MVT::i1, RegVT);
       setOperationAction(ISD::FP_TO_UINT, MVT::i1, Promote);
-      AddPromotedToType(ISD::FP_TO_UINT, MVT::i1,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+      AddPromotedToType(ISD::FP_TO_UINT, MVT::i1, RegVT);
     } else {
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i1, Custom);
       setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i1, Custom);
@@ -482,9 +475,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::BSWAP, MVT::i32, Expand);
-    setOperationAction(
-        ISD::BSWAP, MVT::i64,
-        (Subtarget.hasP9Vector() && Subtarget.isPPC64()) ? Custom : Expand);
+    setOperationAction(ISD::BSWAP, MVT::i64,
+                       (Subtarget.hasP9Vector() && isPPC64) ? Custom : Expand);
   }
 
   // CTPOP or CTTZ were introduced in P8/P9 respectively
@@ -709,7 +701,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
 
-    if (Subtarget.hasLFIWAX() || Subtarget.isPPC64()) {
+    if (Subtarget.hasLFIWAX() || isPPC64) {
       setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
     }
@@ -3191,12 +3183,11 @@ static void setUsesTOCBasePtr(SelectionDAG &DAG) {
 
 SDValue PPCTargetLowering::getTOCEntry(SelectionDAG &DAG, const SDLoc &dl,
                                        SDValue GA) const {
-  const bool Is64Bit = Subtarget.isPPC64();
-  EVT VT = Is64Bit ? MVT::i64 : MVT::i32;
-  SDValue Reg = Is64Bit ? DAG.getRegister(PPC::X2, VT)
-                        : Subtarget.isAIXABI()
-                              ? DAG.getRegister(PPC::R2, VT)
-                              : DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
+  EVT VT = Subtarget.getScalarIntVT();
+  SDValue Reg = Subtarget.isPPC64() ? DAG.getRegister(PPC::X2, VT)
+                : Subtarget.isAIXABI()
+                    ? DAG.getRegister(PPC::R2, VT)
+                    : DAG.getNode(PPCISD::GlobalBaseReg, dl, VT);
   SDValue Ops[] = { GA, Reg };
   return DAG.getMemIntrinsicNode(
       PPCISD::TOC_ENTRY, dl, DAG.getVTList(VT, MVT::Other), Ops, VT,
@@ -3436,6 +3427,10 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   // Apply update to the TLS model.
   if (Subtarget.hasAIXShLibTLSModelOpt())
     updateForAIXShLibTLSModelOpt(Model, DAG, getTargetMachine());
+
+  // TLS variables are accessed through TOC entries.
+  // To support this, set the DAG to use the TOC base pointer.
+  setUsesTOCBasePtr(DAG);
 
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
@@ -4004,8 +3999,8 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   Entry.Node = Trmp; Args.push_back(Entry);
 
   // TrampSize == (isPPC64 ? 48 : 40);
-  Entry.Node = DAG.getConstant(isPPC64 ? 48 : 40, dl,
-                               isPPC64 ? MVT::i64 : MVT::i32);
+  Entry.Node =
+      DAG.getConstant(isPPC64 ? 48 : 40, dl, Subtarget.getScalarIntVT());
   Args.push_back(Entry);
 
   Entry.Node = FPtr; Args.push_back(Entry);
@@ -5233,13 +5228,12 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
     MachineFunction &MF = DAG.getMachineFunction();
     const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
     const PPCFrameLowering *FL = Subtarget.getFrameLowering();
-    bool isPPC64 = Subtarget.isPPC64();
-    int SlotSize = isPPC64 ? 8 : 4;
+    int SlotSize = Subtarget.isPPC64() ? 8 : 4;
     int NewRetAddrLoc = SPDiff + FL->getReturnSaveOffset();
     int NewRetAddr = MF.getFrameInfo().CreateFixedObject(SlotSize,
                                                          NewRetAddrLoc, true);
-    EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
-    SDValue NewRetAddrFrIdx = DAG.getFrameIndex(NewRetAddr, VT);
+    SDValue NewRetAddrFrIdx =
+        DAG.getFrameIndex(NewRetAddr, Subtarget.getScalarIntVT());
     Chain = DAG.getStore(Chain, dl, OldRetAddr, NewRetAddrFrIdx,
                          MachinePointerInfo::getFixedStack(MF, NewRetAddr));
   }
@@ -5248,14 +5242,14 @@ static SDValue EmitTailCallStoreFPAndRetAddr(SelectionDAG &DAG, SDValue Chain,
 
 /// CalculateTailCallArgDest - Remember Argument for later processing. Calculate
 /// the position of the argument.
-static void
-CalculateTailCallArgDest(SelectionDAG &DAG, MachineFunction &MF, bool isPPC64,
-                         SDValue Arg, int SPDiff, unsigned ArgOffset,
-                     SmallVectorImpl<TailCallArgumentInfo>& TailCallArguments) {
+static void CalculateTailCallArgDest(
+    SelectionDAG &DAG, MachineFunction &MF, bool IsPPC64, SDValue Arg,
+    int SPDiff, unsigned ArgOffset,
+    SmallVectorImpl<TailCallArgumentInfo> &TailCallArguments) {
   int Offset = ArgOffset + SPDiff;
   uint32_t OpSize = (Arg.getValueSizeInBits() + 7) / 8;
   int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
-  EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+  EVT VT = IsPPC64 ? MVT::i64 : MVT::i32;
   SDValue FIN = DAG.getFrameIndex(FI, VT);
   TailCallArgumentInfo Info;
   Info.Arg = Arg;
@@ -5272,9 +5266,9 @@ SDValue PPCTargetLowering::EmitTailCallLoadFPAndRetAddr(
     SDValue &FPOpOut, const SDLoc &dl) const {
   if (SPDiff) {
     // Load the LR and FP stack slot for later adjusting.
-    EVT VT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
     LROpOut = getReturnAddrFrameIndex(DAG);
-    LROpOut = DAG.getLoad(VT, dl, Chain, LROpOut, MachinePointerInfo());
+    LROpOut = DAG.getLoad(Subtarget.getScalarIntVT(), dl, Chain, LROpOut,
+                          MachinePointerInfo());
     Chain = SDValue(LROpOut.getNode(), 1);
   }
   return Chain;
@@ -5316,8 +5310,9 @@ static void LowerMemOpCallTo(
     MemOpChains.push_back(
         DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
     // Calculate and remember argument location.
-  } else CalculateTailCallArgDest(DAG, MF, isPPC64, Arg, SPDiff, ArgOffset,
-                                  TailCallArguments);
+  } else
+    CalculateTailCallArgDest(DAG, MF, isPPC64, Arg, SPDiff, ArgOffset,
+                             TailCallArguments);
 }
 
 static void
@@ -5668,7 +5663,7 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   const unsigned TOCAnchorOffset = Subtarget.descriptorTOCAnchorOffset();
   const unsigned EnvPtrOffset = Subtarget.descriptorEnvironmentPointerOffset();
 
-  const MVT RegVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  const MVT RegVT = Subtarget.getScalarIntVT();
   const Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
 
   // One load for the functions entry point address.
@@ -5720,7 +5715,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
                   const PPCSubtarget &Subtarget) {
   const bool IsPPC64 = Subtarget.isPPC64();
   // MVT for a general purpose register.
-  const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+  const MVT RegVT = Subtarget.getScalarIntVT();
 
   // First operand is always the chain.
   Ops.push_back(Chain);
@@ -6863,7 +6858,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   const unsigned PtrSize = IsPPC64 ? 8 : 4;
   const Align PtrAlign(PtrSize);
   const Align StackAlign(16);
-  const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+  const MVT RegVT = Subtarget.getScalarIntVT();
 
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
@@ -7814,7 +7809,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     assert(!CFlags.IsTailCall && "Indirect tail-calls not supported.");
     const MCRegister TOCBaseReg = Subtarget.getTOCPointerRegister();
     const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
-    const MVT PtrVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    const MVT PtrVT = Subtarget.getScalarIntVT();
     const unsigned TOCSaveOffset =
         Subtarget.getFrameLowering()->getTOCSaveOffset();
 
@@ -8379,7 +8374,7 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
       Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
   }
   if ((DestTy == MVT::i8 || DestTy == MVT::i16) && Subtarget.hasP9Vector())
-    DestTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+    DestTy = Subtarget.getScalarIntVT();
   unsigned Opc = ISD::DELETED_NODE;
   switch (DestTy.SimpleTy) {
   default: llvm_unreachable("Unhandled FP_TO_INT type in custom expander!");
@@ -11315,11 +11310,11 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Val);
     }
     unsigned Opcode = Subtarget.isPPC64() ? PPC::CFENCE8 : PPC::CFENCE;
-    EVT FTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
     return SDValue(
-        DAG.getMachineNode(Opcode, DL, MVT::Other,
-                           DAG.getNode(ISD::ANY_EXTEND, DL, FTy, Val),
-                           Op.getOperand(0)),
+        DAG.getMachineNode(
+            Opcode, DL, MVT::Other,
+            DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getScalarIntVT(), Val),
+            Op.getOperand(0)),
         0);
   }
   default:
@@ -15683,16 +15678,20 @@ static SDValue isScalarToVec(SDValue Op) {
 // On little endian, that's just the corresponding element in the other
 // half of the vector. On big endian, it is in the same half but right
 // justified rather than left justified in that half.
-static void fixupShuffleMaskForPermutedSToV(SmallVectorImpl<int> &ShuffV,
-                                            int LHSMaxIdx, int RHSMinIdx,
-                                            int RHSMaxIdx, int HalfVec,
-                                            unsigned ValidLaneWidth,
-                                            const PPCSubtarget &Subtarget) {
-  for (int i = 0, e = ShuffV.size(); i < e; i++) {
-    int Idx = ShuffV[i];
-    if ((Idx >= 0 && Idx < LHSMaxIdx) || (Idx >= RHSMinIdx && Idx < RHSMaxIdx))
-      ShuffV[i] +=
-          Subtarget.isLittleEndian() ? HalfVec : HalfVec - ValidLaneWidth;
+static void fixupShuffleMaskForPermutedSToV(
+    SmallVectorImpl<int> &ShuffV, int LHSFirstElt, int LHSLastElt,
+    int RHSFirstElt, int RHSLastElt, int HalfVec, unsigned LHSNumValidElts,
+    unsigned RHSNumValidElts, const PPCSubtarget &Subtarget) {
+  int LHSEltFixup =
+      Subtarget.isLittleEndian() ? HalfVec : HalfVec - LHSNumValidElts;
+  int RHSEltFixup =
+      Subtarget.isLittleEndian() ? HalfVec : HalfVec - RHSNumValidElts;
+  for (int I = 0, E = ShuffV.size(); I < E; ++I) {
+    int Idx = ShuffV[I];
+    if (Idx >= LHSFirstElt && Idx <= LHSLastElt)
+      ShuffV[I] += LHSEltFixup;
+    else if (Idx >= RHSFirstElt && Idx <= RHSLastElt)
+      ShuffV[I] += RHSEltFixup;
   }
 }
 
@@ -15729,6 +15728,51 @@ static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG,
   }
   return DAG.getNode(PPCISD::SCALAR_TO_VECTOR_PERMUTED, dl, VT,
                      OrigSToV.getOperand(0));
+}
+
+static bool isShuffleMaskInRange(const SmallVectorImpl<int> &ShuffV,
+                                 int HalfVec, int LHSLastElementDefined,
+                                 int RHSLastElementDefined) {
+  for (int Index : ShuffV) {
+    if (Index < 0) // Skip explicitly undefined mask indices.
+      continue;
+    // Handle first input vector of the vector_shuffle.
+    if ((LHSLastElementDefined >= 0) && (Index < HalfVec) &&
+        (Index > LHSLastElementDefined))
+      return false;
+    // Handle second input vector of the vector_shuffle.
+    if ((RHSLastElementDefined >= 0) &&
+        (Index > HalfVec + RHSLastElementDefined))
+      return false;
+  }
+  return true;
+}
+
+static SDValue generateSToVPermutedForVecShuffle(
+    int ScalarSize, uint64_t ShuffleEltWidth, unsigned &NumValidElts,
+    int FirstElt, int &LastElt, SDValue VecShuffOperand, SDValue SToVNode,
+    SelectionDAG &DAG, const PPCSubtarget &Subtarget) {
+  EVT VecShuffOperandType = VecShuffOperand.getValueType();
+  // Set up the values for the shuffle vector fixup.
+  NumValidElts = ScalarSize / VecShuffOperandType.getScalarSizeInBits();
+  // The last element depends on if the input comes from the LHS or RHS.
+  //
+  // For example:
+  // (shuff (s_to_v i32), (bitcast (s_to_v i64), v4i32), ...)
+  //
+  // For the LHS: The last element that comes from the LHS is actually 0, not 3
+  // because elements 1 and higher of a scalar_to_vector are undefined.
+  // For the RHS: The last element that comes from the RHS is actually 5, not 7
+  // because elements 1 and higher of a scalar_to_vector are undefined.
+  // It is also not 4 because the original scalar_to_vector is wider and
+  // actually contains two i32 elements.
+  LastElt = (uint64_t)ScalarSize > ShuffleEltWidth
+                ? ScalarSize / ShuffleEltWidth - 1 + FirstElt
+                : FirstElt;
+  SDValue SToVPermuted = getSToVPermuted(SToVNode, DAG, Subtarget);
+  if (SToVPermuted.getValueType() != VecShuffOperandType)
+    SToVPermuted = DAG.getBitcast(VecShuffOperandType, SToVPermuted);
+  return SToVPermuted;
 }
 
 // On little endian subtargets, combine shuffles such as:
@@ -15778,36 +15822,25 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
   SDValue SToVLHS = isScalarToVec(LHS);
   SDValue SToVRHS = isScalarToVec(RHS);
   if (SToVLHS || SToVRHS) {
-    // FIXME: If both LHS and RHS are SCALAR_TO_VECTOR, but are not the
-    // same type and have differing element sizes, then do not perform
-    // the following transformation. The current transformation for
-    // SCALAR_TO_VECTOR assumes that both input vectors have the same
-    // element size. This will be updated in the future to account for
-    // differing sizes of the LHS and RHS.
-    if (SToVLHS && SToVRHS &&
-        (SToVLHS.getValueType().getScalarSizeInBits() !=
-         SToVRHS.getValueType().getScalarSizeInBits()))
-      return Res;
-
-    int NumEltsIn = SToVLHS ? SToVLHS.getValueType().getVectorNumElements()
-                            : SToVRHS.getValueType().getVectorNumElements();
-    int NumEltsOut = ShuffV.size();
+    EVT VT = SVN->getValueType(0);
+    uint64_t ShuffleEltWidth = VT.getVectorElementType().getSizeInBits();
+    int ShuffleNumElts = ShuffV.size();
+    int HalfVec = ShuffleNumElts / 2;
     // The width of the "valid lane" (i.e. the lane that contains the value that
     // is vectorized) needs to be expressed in terms of the number of elements
     // of the shuffle. It is thereby the ratio of the values before and after
-    // any bitcast.
-    unsigned ValidLaneWidth =
-        SToVLHS ? SToVLHS.getValueType().getScalarSizeInBits() /
-                      LHS.getValueType().getScalarSizeInBits()
-                : SToVRHS.getValueType().getScalarSizeInBits() /
-                      RHS.getValueType().getScalarSizeInBits();
+    // any bitcast, which will be set later on if the LHS or RHS are
+    // SCALAR_TO_VECTOR nodes.
+    unsigned LHSNumValidElts = HalfVec;
+    unsigned RHSNumValidElts = HalfVec;
 
     // Initially assume that neither input is permuted. These will be adjusted
-    // accordingly if either input is.
-    int LHSMaxIdx = -1;
-    int RHSMinIdx = -1;
-    int RHSMaxIdx = -1;
-    int HalfVec = LHS.getValueType().getVectorNumElements() / 2;
+    // accordingly if either input is. Note, that -1 means that all elements
+    // are undefined.
+    int LHSFirstElt = 0;
+    int RHSFirstElt = ShuffleNumElts;
+    int LHSLastElt = -1;
+    int RHSLastElt = -1;
 
     // Get the permuted scalar to vector nodes for the source(s) that come from
     // ISD::SCALAR_TO_VECTOR.
@@ -15815,34 +15848,38 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     // than 64 bits since for 64-bit elements, all instructions already put
     // the value into element zero. Since scalar size of LHS and RHS may differ
     // after isScalarToVec, this should be checked using their own sizes.
+    int LHSScalarSize = 0;
+    int RHSScalarSize = 0;
     if (SToVLHS) {
-      if (!IsLittleEndian && SToVLHS.getValueType().getScalarSizeInBits() >= 64)
+      LHSScalarSize = SToVLHS.getValueType().getScalarSizeInBits();
+      if (!IsLittleEndian && LHSScalarSize >= 64)
         return Res;
-      // Set up the values for the shuffle vector fixup.
-      LHSMaxIdx = NumEltsOut / NumEltsIn;
-      SToVLHS = getSToVPermuted(SToVLHS, DAG, Subtarget);
-      if (SToVLHS.getValueType() != LHS.getValueType())
-        SToVLHS = DAG.getBitcast(LHS.getValueType(), SToVLHS);
-      LHS = SToVLHS;
     }
     if (SToVRHS) {
-      if (!IsLittleEndian && SToVRHS.getValueType().getScalarSizeInBits() >= 64)
+      RHSScalarSize = SToVRHS.getValueType().getScalarSizeInBits();
+      if (!IsLittleEndian && RHSScalarSize >= 64)
         return Res;
-      RHSMinIdx = NumEltsOut;
-      RHSMaxIdx = NumEltsOut / NumEltsIn + RHSMinIdx;
-      SToVRHS = getSToVPermuted(SToVRHS, DAG, Subtarget);
-      if (SToVRHS.getValueType() != RHS.getValueType())
-        SToVRHS = DAG.getBitcast(RHS.getValueType(), SToVRHS);
-      RHS = SToVRHS;
     }
+    if (LHSScalarSize != 0)
+      LHS = generateSToVPermutedForVecShuffle(
+          LHSScalarSize, ShuffleEltWidth, LHSNumValidElts, LHSFirstElt,
+          LHSLastElt, LHS, SToVLHS, DAG, Subtarget);
+    if (RHSScalarSize != 0)
+      RHS = generateSToVPermutedForVecShuffle(
+          RHSScalarSize, ShuffleEltWidth, RHSNumValidElts, RHSFirstElt,
+          RHSLastElt, RHS, SToVRHS, DAG, Subtarget);
+
+    if (!isShuffleMaskInRange(ShuffV, HalfVec, LHSLastElt, RHSLastElt))
+      return Res;
 
     // Fix up the shuffle mask to reflect where the desired element actually is.
     // The minimum and maximum indices that correspond to element zero for both
     // the LHS and RHS are computed and will control which shuffle mask entries
     // are to be changed. For example, if the RHS is permuted, any shuffle mask
-    // entries in the range [RHSMinIdx,RHSMaxIdx) will be adjusted.
-    fixupShuffleMaskForPermutedSToV(ShuffV, LHSMaxIdx, RHSMinIdx, RHSMaxIdx,
-                                    HalfVec, ValidLaneWidth, Subtarget);
+    // entries in the range [RHSFirstElt,RHSLastElt] will be adjusted.
+    fixupShuffleMaskForPermutedSToV(
+        ShuffV, LHSFirstElt, LHSLastElt, RHSFirstElt, RHSLastElt, HalfVec,
+        LHSNumValidElts, RHSNumValidElts, Subtarget);
     Res = DAG.getVectorShuffle(SVN->getValueType(0), dl, LHS, RHS, ShuffV);
 
     // We may have simplified away the shuffle. We won't be able to do anything
@@ -17315,7 +17352,6 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
   // the stack.
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   FuncInfo->setLRStoreRequired();
-  bool isPPC64 = Subtarget.isPPC64();
   auto PtrVT = getPointerTy(MF.getDataLayout());
 
   if (Depth > 0) {
@@ -17327,7 +17363,7 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
                     LowerFRAMEADDR(Op, DAG), MachinePointerInfo());
     SDValue Offset =
         DAG.getConstant(Subtarget.getFrameLowering()->getReturnSaveOffset(), dl,
-                        isPPC64 ? MVT::i64 : MVT::i32);
+                        Subtarget.getScalarIntVT());
     return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(),
                        DAG.getNode(ISD::ADD, dl, PtrVT, FrameAddr, Offset),
                        MachinePointerInfo());

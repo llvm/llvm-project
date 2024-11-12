@@ -270,6 +270,22 @@ def FeatureAMXFP16     : SubtargetFeature<"amx-fp16", "HasAMXFP16", "true",
 def FeatureAMXCOMPLEX : SubtargetFeature<"amx-complex", "HasAMXCOMPLEX", "true",
                                          "Support AMX-COMPLEX instructions",
                                          [FeatureAMXTILE]>;
+def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
+                                     "Support AMX-FP8 instructions",
+                                     [FeatureAMXTILE]>;
+def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
+                                       "Support AMX-MOVRS instructions",
+                                       [FeatureAMXTILE]>;
+def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
+                                           "Support AMX amx-transpose instructions",
+                                           [FeatureAMXTILE]>;
+def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
+                                        "HasAMXAVX512", "true",
+                                        "Support AMX-AVX512 instructions",
+                                        [FeatureAMXTILE]>;
+def FeatureAMXTF32 : SubtargetFeature<"amx-tf32", "HasAMXTF32", "true",
+                                      "Support AMX-TF32 instructions",
+                                      [FeatureAMXTILE]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",

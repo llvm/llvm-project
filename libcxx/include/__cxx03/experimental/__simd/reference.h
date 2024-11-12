@@ -10,16 +10,16 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_same.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <cstddef>
-#include <experimental/__config>
-#include <experimental/__simd/utility.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/experimental/__simd/utility.h>
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 

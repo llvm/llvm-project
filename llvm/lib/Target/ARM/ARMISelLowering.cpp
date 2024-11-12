@@ -6051,7 +6051,7 @@ static SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                             DAG.getConstant((1 << BW) - 1, DL, VT));
   if (IsSigned)
     Max = DAG.getNode(ISD::SMAX, DL, VT, Max,
-                      DAG.getConstant(-(1 << BW), DL, VT));
+                      DAG.getSignedConstant(-(1 << BW), DL, VT));
   return Max;
 }
 
@@ -7951,6 +7951,8 @@ static bool IsQRMVEInstruction(const SDNode *N, const SDNode *Op) {
   case ISD::MUL:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
     return true;
   case ISD::SUB:
   case ISD::SSUBSAT:
@@ -20136,8 +20138,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)
-      KnownOp1 = KnownBits::mul(
-          KnownOp1, KnownBits::makeConstant(APInt(32, -1)));
+      KnownOp1 = KnownBits::mul(KnownOp1,
+                                KnownBits::makeConstant(APInt::getAllOnes(32)));
 
     Known = KnownOp0.intersectWith(KnownOp1);
     break;

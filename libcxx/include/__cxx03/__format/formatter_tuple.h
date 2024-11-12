@@ -10,22 +10,22 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_TUPLE_H
 #define _LIBCPP___FORMAT_FORMATTER_TUPLE_H
 
-#include <__algorithm/ranges_copy.h>
-#include <__chrono/statically_widen.h>
-#include <__config>
-#include <__format/buffer.h>
-#include <__format/concepts.h>
-#include <__format/format_context.h>
-#include <__format/format_error.h>
-#include <__format/format_parse_context.h>
-#include <__format/formatter.h>
-#include <__format/formatter_output.h>
-#include <__format/parser_std_format_spec.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/integer_sequence.h>
-#include <__utility/pair.h>
-#include <string_view>
-#include <tuple>
+#include <__cxx03/__algorithm/ranges_copy.h>
+#include <__cxx03/__chrono/statically_widen.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/buffer.h>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/format_context.h>
+#include <__cxx03/__format/format_error.h>
+#include <__cxx03/__format/format_parse_context.h>
+#include <__cxx03/__format/formatter.h>
+#include <__cxx03/__format/formatter_output.h>
+#include <__cxx03/__format/parser_std_format_spec.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/__utility/pair.h>
+#include <__cxx03/string_view>
+#include <__cxx03/tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

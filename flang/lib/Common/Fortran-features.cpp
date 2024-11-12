@@ -66,7 +66,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::ZeroDoStep);
   warnUsage_.set(UsageWarning::UnusedForallIndex);
   warnUsage_.set(UsageWarning::OpenMPUsage);
-  warnUsage_.set(UsageWarning::ModuleFile);
   warnUsage_.set(UsageWarning::DataLength);
   warnUsage_.set(UsageWarning::IgnoredDirective);
   warnUsage_.set(UsageWarning::HomonymousSpecific);

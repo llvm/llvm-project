@@ -1538,6 +1538,13 @@ public:
   void Post(const parser::OpenMPDeclarativeConstruct &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OpenMPDepobjConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OpenMPDepobjConstruct &x) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
   bool Pre(const parser::OpenMPAtomicConstruct &x) {
     return common::visit(common::visitors{[&](const auto &u) -> bool {
       AddOmpSourceRange(u.source);

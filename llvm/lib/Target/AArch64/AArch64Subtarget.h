@@ -90,6 +90,8 @@ protected:
   unsigned VScaleForTuning = 2;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
+  bool EnableSubregLiveness;
+
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -153,6 +155,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+  bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -414,6 +417,10 @@ public:
     return DefaultSVETFOpts;
   }
 
+  /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
+  /// add + cnt instructions.
+  bool useScalarIncVL() const;
+
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
@@ -439,29 +446,6 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
-
-  const PseudoSourceValue *getAddressCheckPSV() const {
-    return AddressCheckPSV.get();
-  }
-
-private:
-  /// Pseudo value representing memory load performed to check an address.
-  ///
-  /// This load operation is solely used for its side-effects: if the address
-  /// is not mapped (or not readable), it triggers CPU exception, otherwise
-  /// execution proceeds and the value is not used.
-  class AddressCheckPseudoSourceValue : public PseudoSourceValue {
-  public:
-    AddressCheckPseudoSourceValue(const TargetMachine &TM)
-        : PseudoSourceValue(TargetCustom, TM) {}
-
-    bool isConstant(const MachineFrameInfo *) const override { return false; }
-    bool isAliased(const MachineFrameInfo *) const override { return true; }
-    bool mayAlias(const MachineFrameInfo *) const override { return true; }
-    void printCustom(raw_ostream &OS) const override { OS << "AddressCheck"; }
-  };
-
-  std::unique_ptr<AddressCheckPseudoSourceValue> AddressCheckPSV;
 };
 } // End llvm namespace
 

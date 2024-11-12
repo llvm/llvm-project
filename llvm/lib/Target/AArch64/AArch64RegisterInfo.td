@@ -19,18 +19,24 @@ class AArch64Reg<bits<16> enc, string n, list<Register> subregs = [],
 }
 
 let Namespace = "AArch64" in {
+  // SubRegIndexes for GPR registers
   def sub_32 : SubRegIndex<32>;
+  def sube64 : SubRegIndex<64>;
+  def subo64 : SubRegIndex<64>;
+  def sube32 : SubRegIndex<32>;
+  def subo32 : SubRegIndex<32>;
 
+  // SubRegIndexes for FPR/Vector registers
   def bsub : SubRegIndex<8>;
   def hsub : SubRegIndex<16>;
   def ssub : SubRegIndex<32>;
   def dsub : SubRegIndex<64>;
-  def sube32 : SubRegIndex<32>;
-  def subo32 : SubRegIndex<32>;
-  def sube64 : SubRegIndex<64>;
-  def subo64 : SubRegIndex<64>;
-  // SVE
-  def zsub    : SubRegIndex<128>;
+  def zsub : SubRegIndex<128>;
+  // Note: Code depends on these having consecutive numbers
+  def zsub0 : SubRegIndex<128, -1>;
+  def zsub1 : SubRegIndex<128, -1>;
+  def zsub2 : SubRegIndex<128, -1>;
+  def zsub3 : SubRegIndex<128, -1>;
   // Note: Code depends on these having consecutive numbers
   def dsub0 : SubRegIndex<64>;
   def dsub1 : SubRegIndex<64>;
@@ -41,7 +47,8 @@ let Namespace = "AArch64" in {
   def qsub1 : SubRegIndex<128>;
   def qsub2 : SubRegIndex<128>;
   def qsub3 : SubRegIndex<128>;
-  // Note: Code depends on these having consecutive numbers
+
+  // SubRegIndexes for SME Matrix tiles
   def zasubb  : SubRegIndex<2048>; // (16 x 16)/1 bytes  = 2048 bits
   def zasubh0 : SubRegIndex<1024>; // (16 x 16)/2 bytes  = 1024 bits
   def zasubh1 : SubRegIndex<1024>; // (16 x 16)/2 bytes  = 1024 bits
@@ -52,7 +59,11 @@ let Namespace = "AArch64" in {
   def zasubq0 : SubRegIndex<128>;  // (16 x 16)/16 bytes = 128 bits
   def zasubq1 : SubRegIndex<128>;  // (16 x 16)/16 bytes = 128 bits
 
-  def psub : SubRegIndex<16>;
+  // SubRegIndexes for SVE Predicates
+  def psub  : SubRegIndex<16>;
+  // Note: Code depends on these having consecutive numbers
+  def psub0 : SubRegIndex<16, -1>;
+  def psub1 : SubRegIndex<16, -1>;
 }
 
 let Namespace = "AArch64" in {
@@ -238,6 +249,10 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
 def tcGPRx17 : RegisterClass<"AArch64", [i64], 64, (add X17)>;
 def tcGPRx16x17 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
 def tcGPRnotx16 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16)>;
+// LR checking code expects either x16 or x17 to be available as a scratch
+// register - for that reason restrict one of two register operands of
+// AUTH_TCRETURN* pseudos.
+def tcGPRnotx16x17 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16, X17)>;
 
 // Register set that excludes registers that are reserved for procedure calls.
 // This is used for pseudo-instructions that are actually implemented using a
@@ -1026,11 +1041,6 @@ def PNR16_p8to15  : PNRP8to15RegOp<"h", PNRAsmOp16_p8to15, 16, PNR_p8to15>;
 def PNR32_p8to15  : PNRP8to15RegOp<"s", PNRAsmOp32_p8to15, 32, PNR_p8to15>;
 def PNR64_p8to15  : PNRP8to15RegOp<"d", PNRAsmOp64_p8to15, 64, PNR_p8to15>;
 
-let Namespace = "AArch64" in {
-  def psub0 : SubRegIndex<16, -1>;
-  def psub1 : SubRegIndex<16, -1>;
-}
-
 class PPRorPNRClass : RegisterClass<
                                   "AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
@@ -1123,8 +1133,7 @@ let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
 }  // end let EncoderMethod/DecoderMethod
 
 
-//******************************************************************************
-
+//===----------------------------------------------------------------------===//
 // SVE vector register classes
 class ZPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                             [nxv16i8, nxv8i16, nxv4i32, nxv2i64,
@@ -1244,13 +1253,6 @@ def FPR16asZPR  : FPRasZPROperand<16>;
 def FPR32asZPR  : FPRasZPROperand<32>;
 def FPR64asZPR  : FPRasZPROperand<64>;
 def FPR128asZPR : FPRasZPROperand<128>;
-
-let Namespace = "AArch64" in {
-  def zsub0 : SubRegIndex<128, -1>;
-  def zsub1 : SubRegIndex<128, -1>;
-  def zsub2 : SubRegIndex<128, -1>;
-  def zsub3 : SubRegIndex<128, -1>;
-}
 
 // Pairs, triples, and quads of SVE vector registers.
 def ZSeqPairs   : RegisterTuples<[zsub0, zsub1], [(rotl ZPR, 0), (rotl ZPR, 1)]>;
