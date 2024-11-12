@@ -1526,6 +1526,15 @@ func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, 
 
 // -----
 
+// CHECK-LABEL: func @delinearize_non_loop_like
+// CHECK-NOT: affine.delinearize
+func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
+  %2 = affine.delinearize_index %i into (1024) : index
+  return %2 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_exact(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
@@ -1561,6 +1570,7 @@ func.func @no_cancel_delinearize_linearize_exact(%arg0: index, %arg1: index, %ar
 
 // -----
 
+// These don't cancel because the delinearize and linearize have a different basis.
 // CHECK-LABEL: func @no_cancel_delinearize_linearize_different_basis(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
@@ -1575,15 +1585,6 @@ func.func @no_cancel_delinearize_linearize_different_basis(%arg0: index, %arg1: 
   %1:3 = affine.delinearize_index %0 into (%arg3, 8, %arg4)
       : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
-}
-
-// -----
-
-// CHECK-LABEL: func @delinearize_non_loop_like
-// CHECK-NOT: affine.delinearize
-func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
-  %2 = affine.delinearize_index %i into (1024) : index
-  return %2 : index
 }
 
 // -----
@@ -1646,6 +1647,7 @@ func.func @cancel_linearize_denearize_exact(%arg0: index, %arg1: index, %arg2: i
 
 // -----
 
+// Don't cancel because the values from the delinearize aren't used in order
 // CHECK-LABEL: func @no_cancel_linearize_denearize_permuted(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
@@ -1661,6 +1663,7 @@ func.func @no_cancel_linearize_denearize_permuted(%arg0: index, %arg1: index, %a
 
 // -----
 
+// Won't cancel because the linearize and delinearize are using a different basis
 // CHECK-LABEL: func @no_cancel_linearize_denearize_different_basis(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
