@@ -94,6 +94,10 @@ SmallVector<Value> mlir::LLVM::MemsetOp::getAccessedOperands() {
   return {getDst()};
 }
 
+SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
+  return {getDst()};
+}
+
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
   return llvm::to_vector(
       llvm::make_filter_range(getArgOperands(), [](Value arg) {
