@@ -1516,7 +1516,7 @@ protected:
 };
 
 /// Rewrites a tensor::PackOp into a sequence of:
-///   * tensor::PadOp + linalg::TransposeOp + tensor::ExtractSliceOp +
+///   * tensor::PadOp + linalg::TransposeOp +
 ///     tensor::EmptyOp + tensor::InsertSliceOp ops.
 ///
 /// Required that all the outer dims of the input tensor::PackOp are 1.
@@ -1537,10 +1537,6 @@ protected:
 ///     ^bb0(...):
 ///       tensor.yield %arg2 : f32
 ///   } : tensor<5x1xf32> to tensor<?x2xf32>
-///   // ExtractSliceOp
-///   %extracted_slice = tensor.extract_slice %padded[0, 0] [%tile_dim_1, 2] [1,
-///   1]
-///     : tensor<?x2xf32> to tensor<?x2xf32>
 ///   // EmptyOp + TransposeOp
 ///   %empty = tensor.empty(%arg3) : tensor<2x?xf32>
 ///   %transposed = linalg.transpose

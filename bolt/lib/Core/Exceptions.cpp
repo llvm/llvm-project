@@ -108,8 +108,7 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   DWARFDataExtractor Data(
       StringRef(reinterpret_cast<const char *>(LSDASectionData.data()),
                 LSDASectionData.size()),
-      BC.DwCtx->getDWARFObj().isLittleEndian(),
-      BC.DwCtx->getDWARFObj().getAddressSize());
+      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
   uint64_t Offset = getLSDAAddress() - LSDASectionAddress;
   assert(Data.isValidOffset(Offset) && "wrong LSDA address");
 
