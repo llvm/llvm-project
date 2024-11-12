@@ -652,6 +652,33 @@ static void HandleOrdinalModifier(unsigned ValNo,
   Out << ValNo << llvm::getOrdinalSuffix(ValNo);
 }
 
+// 123 -> "123".
+// 1234 -> "1.23k".
+// 123456 -> "123.46k".
+// 1234567 -> "1.23M".
+// 1234567890 -> "1.23G".
+// 1234567890123 -> "1.23T".
+static void HandleIntegerHumanModifier(unsigned ValNo,
+                                       SmallVectorImpl<char> &OutStr) {
+  static constexpr std::array<std::pair<uint64_t, char>, 4> Units = {
+      {{1'000'000'000'000UL, 'T'},
+       {1'000'000'000UL, 'G'},
+       {1'000'000UL, 'M'},
+       {1'000UL, 'k'}}};
+
+  llvm::raw_svector_ostream Out(OutStr);
+  for (const auto &[UnitSize, UnitSign] : Units) {
+    if (ValNo >= UnitSize) {
+      // Out << llvm::formatv("{0:F}{1}", ValNo / static_cast<double>(UnitSize),
+                          //  UnitSign);
+      Out << llvm::format("%0.2f%c", ValNo / static_cast<double>(UnitSize),
+                          UnitSign);
+      return;
+    }
+  }
+  Out << ValNo;
+}
+
 /// PluralNumber - Parse an unsigned integer and advance Start.
 static unsigned PluralNumber(const char *&Start, const char *End) {
   // Programming 101: Parse a decimal number :-)
@@ -988,6 +1015,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                              OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "ordinal")) {
         HandleOrdinalModifier((unsigned)Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "human")) {
+        HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;
@@ -1006,6 +1035,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                              OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "ordinal")) {
         HandleOrdinalModifier(Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "human")) {
+        HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;

@@ -440,6 +440,7 @@ enum ModifierType {
   MT_Plural,
   MT_Diff,
   MT_Ordinal,
+  MT_Human,
   MT_S,
   MT_Q,
   MT_ObjCClass,
@@ -458,6 +459,8 @@ static StringRef getModifierName(ModifierType MT) {
     return "plural";
   case MT_Ordinal:
     return "ordinal";
+  case MT_Human:
+    return "human";
   case MT_S:
     return "s";
   case MT_Q:
@@ -1053,6 +1056,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                .Case("plural", MT_Plural)
                                .Case("s", MT_S)
                                .Case("ordinal", MT_Ordinal)
+                               .Case("human", MT_Human)
                                .Case("q", MT_Q)
                                .Case("objcclass", MT_ObjCClass)
                                .Case("objcinstance", MT_ObjCInstance)
@@ -1154,7 +1158,8 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     case MT_Placeholder:
     case MT_ObjCClass:
     case MT_ObjCInstance:
-    case MT_Ordinal: {
+    case MT_Ordinal:
+    case MT_Human: {
       Parsed.push_back(New<PlaceholderPiece>(ModType, parseModifier(Text)));
       continue;
     }
