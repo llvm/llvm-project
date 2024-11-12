@@ -1470,7 +1470,6 @@ public:
   }
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &);
-  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopScope(); };
 
   void Post(const parser::OmpBeginLoopDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
@@ -1609,10 +1608,10 @@ void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   }
 }
 
-// This "manually" walks the tree of the cosntruct, because the order
-// elements are resolved by the normal visitor will try to resolve
-// the map clauses attached to the directive without having resolved
-// the type, so the type is figured out using the implicit rules.
+// This "manually" walks the tree of the construct, because we need
+// to resolve the type before the map clauses are processed - when
+// just following the natural flow, the map clauses gets processed before
+// the type has been fully processed.
 bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   AddOmpSourceRange(x.source);
   BeginDeclTypeSpec();
@@ -1623,8 +1622,9 @@ bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
         &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
     mapperName->symbol = mapperSym;
   } else {
+    const parser::CharBlock defaultName{"default", 7};
     mapperSym = &MakeSymbol(
-        "default", Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
+        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
   }
 
   PushScope(Scope::Kind::OtherConstruct, nullptr);
@@ -1635,6 +1635,7 @@ bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   Walk(std::get<parser::OmpClauseList>(x.t));
 
   EndDeclTypeSpec();
+  PopScope();
   return false;
 }
 

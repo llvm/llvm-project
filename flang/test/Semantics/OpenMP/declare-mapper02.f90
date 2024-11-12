@@ -1,5 +1,5 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
-! Test the source code starting with omp syntax
+! Test the declare mapper construct with abstract type.
 
 type, abstract :: t1
    integer :: y
