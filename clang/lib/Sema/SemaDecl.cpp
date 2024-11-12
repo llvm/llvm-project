@@ -6732,7 +6732,7 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   }
 
   if (ShadowedDecl && !Redeclaration)
-    CheckShadow(S, NewTD, ShadowedDecl, Previous);
+    CheckShadow(NewTD, ShadowedDecl, Previous);
 
   // If this is the C FILE type, notify the AST context.
   if (IdentifierInfo *II = NewTD->getIdentifier())
@@ -8092,7 +8092,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   // Diagnose shadowed variables iff this isn't a redeclaration.
   if (!IsPlaceholderVariable && ShadowedDecl && !D.isRedeclaration())
-    CheckShadow(S, NewVD, ShadowedDecl, Previous);
+    CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
 
@@ -8237,7 +8237,7 @@ NamedDecl *Sema::getShadowedDeclaration(const BindingDecl *D,
                                                             : nullptr;
 }
 
-void Sema::CheckShadow(Scope *S, NamedDecl *D, NamedDecl *ShadowedDecl,
+void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
                        const LookupResult &R) {
   DeclContext *NewDC = D->getDeclContext();
 
@@ -8328,9 +8328,15 @@ void Sema::CheckShadow(Scope *S, NamedDecl *D, NamedDecl *ShadowedDecl,
     return;
 
   // Only warn about certain kinds of shadowing for class members.
-  if (NewDC && NewDC->isRecord()) {
+  if (NewDC) {
     // In particular, don't warn about shadowing non-class members.
-    if (!OldDC->isRecord())
+    if (NewDC->isRecord() && !OldDC->isRecord())
+      return;
+
+    // Skip shadowing check if we're in a class scope, dealing with an enum
+    // constant in a different context.
+    DeclContext *ReDC = NewDC->getRedeclContext();
+    if (ReDC->isRecord() && isa<EnumConstantDecl>(D) && !OldDC->Equals(ReDC))
       return;
 
     // TODO: should we warn about static data members shadowing
@@ -8340,12 +8346,6 @@ void Sema::CheckShadow(Scope *S, NamedDecl *D, NamedDecl *ShadowedDecl,
     // This is hard to do perfectly because we might friend the
     // shadowing context, but that's just a false negative.
   }
-
-  // Skip shadowing check if we're in a class scope, dealing with an enum
-  // constant in a different context.
-  if (S->isClassScope() && isa<EnumConstantDecl>(D) &&
-      !OldDC->Equals(NewDC->getRedeclContext()))
-    return;
 
   DeclarationName Name = R.getLookupName();
 
@@ -8394,7 +8394,7 @@ void Sema::CheckShadow(Scope *S, VarDecl *D) {
                  RedeclarationKind::ForVisibleRedeclaration);
   LookupName(R, S);
   if (NamedDecl *ShadowedDecl = getShadowedDeclaration(D, R))
-    CheckShadow(S, D, ShadowedDecl, R);
+    CheckShadow(D, ShadowedDecl, R);
 }
 
 /// Check if 'E', which is an expression that is about to be modified, refers
@@ -19741,7 +19741,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   if (PrevDecl) {
     if (!TheEnumDecl->isScoped() && isa<ValueDecl>(PrevDecl)) {
       // Check for other kinds of shadowing not already handled.
-      CheckShadow(S, New, PrevDecl, R);
+      CheckShadow(New, PrevDecl, R);
     }
 
     // When in C++, we may get a TagDecl with the same name; in this case the

@@ -3453,7 +3453,7 @@ public:
   ///
   /// \param ShadowedDecl the declaration that is shadowed by the given variable
   /// \param R the lookup of the name
-  void CheckShadow(Scope *S, NamedDecl *D, NamedDecl *ShadowedDecl,
+  void CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
                    const LookupResult &R);
 
   /// Check -Wshadow without the advantage of a previous lookup.
