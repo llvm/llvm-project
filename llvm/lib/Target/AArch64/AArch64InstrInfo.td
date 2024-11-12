@@ -1969,7 +1969,7 @@ let Predicates = [HasPAuth] in {
   // As the check requires either x16 or x17 as a scratch register and
   // authenticated tail call instructions have two register operands,
   // make sure at least one register is usable as a scratch one - for that
-  // purpose, use tcGPRnotx16x17 register class for the second operand.
+  // purpose, use tcGPRnotx16x17 register class for one of the operands.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
       Uses = [SP] in {
     def AUTH_TCRETURN
