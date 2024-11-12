@@ -53,7 +53,7 @@ config_setting(
 
 ################################## Base Config #################################
 
-cc_library(
+libc_support_library(
     name = "__support_macros_config",
     hdrs = ["src/__support/macros/config.h"],
 )

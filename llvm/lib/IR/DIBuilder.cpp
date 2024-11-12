@@ -1033,8 +1033,8 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(Value *V,
   DbgInstPtr DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
-  if (DVI.is<Instruction *>())
-    cast<CallInst>(DVI.get<Instruction *>())->setTailCall();
+  if (auto *Inst = dyn_cast<Instruction *>(DVI))
+    cast<CallInst>(Inst)->setTailCall();
   return DVI;
 }
 
