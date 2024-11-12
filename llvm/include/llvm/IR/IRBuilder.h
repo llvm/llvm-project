@@ -2125,12 +2125,12 @@ public:
     return CreateCast(Instruction::SIToFP, V, DestTy, Name);
   }
 
-  Value *CreateFPTrunc(Value *V, Type *DestTy,
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+  Value *CreateFPTrunc(Value *V, Type *DestTy, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(
-          Intrinsic::experimental_constrained_fptrunc, V, DestTy, nullptr,
-          Name, FPMathTag);
+          Intrinsic::experimental_constrained_fptrunc, V, DestTy, nullptr, Name,
+          FPMathTag);
     return CreateCast(Instruction::FPTrunc, V, DestTy, Name, FPMathTag);
   }
 
