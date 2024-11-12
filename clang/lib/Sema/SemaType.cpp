@@ -4887,9 +4887,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            // Attach a valid source location for diagnostics on functions with trailing
-            // return types missing 'auto'. Attempt to get the location from the declared
-            // type; if invalid, fall back to the trailing return type's location.s
+            // Attach a valid source location for diagnostics on functions with
+            // trailing return types missing 'auto'. Attempt to get the location
+            // from the declared type; if invalid, fall back to the trailing
+            // return type's location.
             SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
             SourceRange SR = D.getDeclSpec().getSourceRange();
             if (Loc.isInvalid()) {
