@@ -202,7 +202,6 @@ defset list<DXILOpClass> OpClasses = {
   def unpack4x8 : DXILOpClass;
   def viewID : DXILOpClass;
   def waveActiveAllEqual : DXILOpClass;
-  def waveActiveAnyTrue : DXILOpClass;
   def waveActiveBallot : DXILOpClass;
   def waveActiveBit : DXILOpClass;
   def waveActiveOp : DXILOpClass;
@@ -854,7 +853,7 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
-def WaveActiveAnyTrue : DXILOp<113, waveActiveAnyTrue> {
+def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let Doc = "returns true if the expression is true in any of the active lanes in the current wave";
   let LLVMIntrinsic = int_dx_wave_activeanytrue;
   let arguments = [Int1Ty];

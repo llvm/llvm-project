@@ -2091,12 +2091,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_wave_active_any_true: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-
-    break;
-  }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;

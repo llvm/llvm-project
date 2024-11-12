@@ -2,7 +2,7 @@
 
 define noundef i1 @wave_aat_simple(i1 noundef %p1) {
 entry:
-; CHECK: call i1 @dx.op.waveActiveAnyTrue(i32 113, i1 %p1)
+; CHECK: call i1 @dx.op.waveAnyTrue(i32 113, i1 %p1)
   %ret = call i1 @llvm.dx.wave.activeanytrue(i1 %p1)
   ret i1 %ret
 }
