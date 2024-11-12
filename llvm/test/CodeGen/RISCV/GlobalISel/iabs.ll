@@ -31,8 +31,8 @@ define i8 @abs8(i8 %x) {
 ;
 ; RV64I-LABEL: abs8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 24
-; RV64I-NEXT:    sraiw a1, a1, 31
+; RV64I-NEXT:    slli a1, a0, 56
+; RV64I-NEXT:    srai a1, a1, 63
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -65,8 +65,8 @@ define i16 @abs16(i16 %x) {
 ;
 ; RV64I-LABEL: abs16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 16
-; RV64I-NEXT:    sraiw a1, a1, 31
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    srai a1, a1, 63
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
