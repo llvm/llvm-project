@@ -2716,6 +2716,37 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
       "SwiftLanguageRuntime: Unsupported register location type = %d", loctype);
 }
 
+/// Returns true if the async register should be dereferenced once to obtain the
+/// CFA of the currently executing function. This is the case at the start of
+/// "Q" funclets, before the low level code changes the meaning of the async
+/// register to not require the indirection.
+/// This implementation detects the transition point by comparing the
+/// continuation pointer in the async context with the currently executing
+/// funclet given by the SymbolContext sc. If they are the same, the PC is
+/// before the transition point.
+/// FIXME: this fails in some recursive async functions. See: rdar://139676623
+static llvm::Expected<bool> IsIndirectContext(Process &process,
+                                              StringRef mangled_name,
+                                              addr_t async_reg,
+                                              SymbolContext &sc) {
+  if (!SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
+          mangled_name))
+    return false;
+
+  llvm::Expected<addr_t> continuation_ptr = ReadPtrFromAddr(
+      process, async_reg, /*offset*/ process.GetAddressByteSize());
+  if (!continuation_ptr)
+    return continuation_ptr.takeError();
+
+  if (sc.function)
+    return sc.function->GetAddressRange().ContainsLoadAddress(
+        *continuation_ptr, &process.GetTarget());
+  assert(sc.symbol);
+  Address continuation_addr;
+  continuation_addr.SetLoadAddress(*continuation_ptr, &process.GetTarget());
+  return sc.symbol->ContainsFileAddress(continuation_addr.GetFileAddress());
+}
+
 // Examine the register state and detect the transition from a real
 // stack frame to an AsyncContext frame, or a frame in the middle of
 // the AsyncContext chain, and return an UnwindPlan for these situations.
@@ -2776,15 +2807,20 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   // for await resume ("Q") funclets ("indirect context").
   // 2. The async context for the currently executing async function, for all
   // other funclets ("Y" and "Yx" funclets, where "x" is a number).
-  bool indirect_context =
-      IsSwiftAsyncAwaitResumePartialFunctionSymbol(mangled_name.GetStringRef());
 
   llvm::Expected<addr_t> async_reg = ReadAsyncContextRegisterFromUnwind(
       sc, *process_sp, pc, func_start_addr, *regctx, *regnums);
   if (!async_reg)
     return log_expected(async_reg.takeError());
+
+  llvm::Expected<bool> maybe_indirect_context =
+      IsIndirectContext(*process_sp, mangled_name, *async_reg, sc);
+  if (!maybe_indirect_context)
+    return log_expected(maybe_indirect_context.takeError());
+
   llvm::Expected<addr_t> async_ctx =
-      indirect_context ? ReadPtrFromAddr(*m_process, *async_reg) : *async_reg;
+      *maybe_indirect_context ? ReadPtrFromAddr(*m_process, *async_reg)
+                              : *async_reg;
   if (!async_ctx)
     return log_expected(async_ctx.takeError());
 
