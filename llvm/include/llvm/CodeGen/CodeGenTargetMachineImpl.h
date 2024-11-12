@@ -29,6 +29,9 @@ protected: // Can only create subclasses.
 
   void initAsmInfo();
 
+  /// Reset internal state.
+  virtual void reset() {};
+
 public:
   /// Get a TargetTransformInfo implementation for the target.
   ///
