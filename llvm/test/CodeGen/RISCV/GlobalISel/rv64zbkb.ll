@@ -18,12 +18,9 @@ define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: pack_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    lui a2, 16
-; RV64ZBKB-NEXT:    addi a2, a2, -1
-; RV64ZBKB-NEXT:    and a0, a0, a2
-; RV64ZBKB-NEXT:    slli a1, a1, 16
+; RV64ZBKB-NEXT:    zext.h a0, a0
+; RV64ZBKB-NEXT:    slliw a1, a1, 16
 ; RV64ZBKB-NEXT:    or a0, a1, a0
-; RV64ZBKB-NEXT:    sext.w a0, a0
 ; RV64ZBKB-NEXT:    ret
   %shl = and i32 %a, 65535
   %shl1 = shl i32 %b, 16
@@ -149,20 +146,20 @@ define i64 @pack_i64_3(ptr %0, ptr %1) {
 define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: packh_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    slliw a1, a1, 8
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: packh_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    lui a2, 16
-; RV64ZBKB-NEXT:    addiw a2, a2, -256
 ; RV64ZBKB-NEXT:    andi a0, a0, 255
 ; RV64ZBKB-NEXT:    slliw a1, a1, 8
+; RV64ZBKB-NEXT:    lui a2, 16
+; RV64ZBKB-NEXT:    addiw a2, a2, -256
 ; RV64ZBKB-NEXT:    and a1, a1, a2
 ; RV64ZBKB-NEXT:    or a0, a1, a0
 ; RV64ZBKB-NEXT:    ret
@@ -368,9 +365,7 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
 ; RV64ZBKB-LABEL: pack_i32_allWUsers:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    add a0, a1, a0
-; RV64ZBKB-NEXT:    lui a1, 16
-; RV64ZBKB-NEXT:    addi a1, a1, -1
-; RV64ZBKB-NEXT:    and a0, a0, a1
+; RV64ZBKB-NEXT:    zext.h a0, a0
 ; RV64ZBKB-NEXT:    slli a0, a0, 16
 ; RV64ZBKB-NEXT:    or a0, a0, a2
 ; RV64ZBKB-NEXT:    sext.w a0, a0
@@ -404,7 +399,6 @@ define i64 @pack_i64_imm() {
   ret i64 1157442765409226768 ; 0x0101010101010101
 }
 
-; FIXME: Use zext.h
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-LABEL: zexth_i32:
 ; RV64I:       # %bb.0:
@@ -415,9 +409,7 @@ define i32 @zexth_i32(i32 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: zexth_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    lui a1, 16
-; RV64ZBKB-NEXT:    addiw a1, a1, -1
-; RV64ZBKB-NEXT:    and a0, a0, a1
+; RV64ZBKB-NEXT:    zext.h a0, a0
 ; RV64ZBKB-NEXT:    ret
   %and = and i32 %a, 65535
   ret i32 %and
