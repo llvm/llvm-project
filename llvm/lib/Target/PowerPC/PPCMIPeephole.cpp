@@ -500,7 +500,6 @@ bool PPCMIPeephole::simplifyCode() {
           NumConvertedToImmediateForm++;
           SomethingChanged = true;
           Simplified = true;
-          continue;
         }
       }
     } while (SomethingChanged && FixedPointRegToImm);
