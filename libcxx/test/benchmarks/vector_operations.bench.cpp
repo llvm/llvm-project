@@ -85,4 +85,8 @@ BENCHMARK_CAPTURE(BM_AssignInputIterIter, vector_int, std::vector<int>{}, getRan
 BENCHMARK_CAPTURE(BM_AssignInputIterIter, vector_string, std::vector<std::string>{}, getRandomStringInputsWithLength)
     ->Args({TestNumInputs, TestNumInputs});
 
+BENCHMARK_CAPTURE(
+    BM_AssignInputIterIter, vector_vector_int, std::vector<std::vector<int>>{}, getRandomIntegerInputsWithLength<int>)
+    ->Args({TestNumInputs, TestNumInputs});
+
 BENCHMARK_MAIN();
