@@ -8710,15 +8710,6 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
-static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
-                                        QualType &CurType, ParsedAttr &PA) {
-  if (State.getDeclarator().isDeclarationOfFunction()) {
-    auto *Attr = State.getSema().ParseLifetimeCaptureByAttr(PA, "this");
-    if (Attr)
-      CurType = State.getAttributedType(Attr, CurType, CurType);
-  }
-}
-
 static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
                                         QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
@@ -8883,10 +8874,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_LifetimeBound:
       if (TAL == TAL_DeclChunk)
         HandleLifetimeBoundAttr(state, type, attr);
-      break;
-    case ParsedAttr::AT_LifetimeCaptureBy:
-      if (TAL == TAL_DeclChunk)
-        HandleLifetimeCaptureByAttr(state, type, attr);
       break;
 
     case ParsedAttr::AT_NoDeref: {
