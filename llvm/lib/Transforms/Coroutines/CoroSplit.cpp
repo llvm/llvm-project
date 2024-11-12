@@ -1889,8 +1889,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto *Suspend = CS.value();
     auto *Clone = Clones[CS.index()];
 
-    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone, Suspend,
-                            TTI);
+    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone,
+                            Suspend, TTI);
   }
 }
 
@@ -1951,8 +1951,8 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto Suspend = cast<CoroSuspendRetconInst>(CS.value());
 
     // Create the clone declaration.
-    auto Continuation =
-        createCloneDeclaration(F, Shape, ".resume." + Twine(CS.index()), NextF, nullptr);
+    auto Continuation = createCloneDeclaration(
+        F, Shape, ".resume." + Twine(CS.index()), NextF, nullptr);
     Clones.push_back(Continuation);
 
     // Insert a branch to the unified return block immediately before
@@ -1971,15 +1971,16 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
       IRBuilder<> Builder(ReturnBB);
 
       // First, the continuation.
-      ContinuationPhi = Builder.CreatePHI(Continuation->getType(),
-                                             Shape.CoroSuspends.size());
+      ContinuationPhi =
+          Builder.CreatePHI(Continuation->getType(), Shape.CoroSuspends.size());
 
       // Create PHIs for all other return values.
       assert(ReturnPHIs.empty());
 
       // Next, all the directly-yielded values.
       for (auto *ResultTy : Shape.getRetconResultTypes())
-        ReturnPHIs.push_back(Builder.CreatePHI(ResultTy, Shape.CoroSuspends.size()));
+        ReturnPHIs.push_back(
+            Builder.CreatePHI(ResultTy, Shape.CoroSuspends.size()));
 
       // Build the return value.
       auto RetTy = F.getReturnType();
@@ -2009,7 +2010,8 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     Branch->setSuccessor(0, ReturnBB);
     assert(ContinuationPhi);
     ContinuationPhi->addIncoming(Continuation, SuspendBB);
-    for (auto [Phi, VUse] : llvm::zip_equal(ReturnPHIs, Suspend->value_operands()))
+    for (auto [Phi, VUse] :
+         llvm::zip_equal(ReturnPHIs, Suspend->value_operands()))
       Phi->addIncoming(VUse, SuspendBB);
   }
 
@@ -2018,8 +2020,8 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     auto Suspend = CS.value();
     auto Clone = Clones[CS.index()];
 
-    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone, Suspend,
-                            TTI);
+    CoroCloner::createClone(F, "resume." + Twine(CS.index()), Shape, Clone,
+                            Suspend, TTI);
   }
 }
 
