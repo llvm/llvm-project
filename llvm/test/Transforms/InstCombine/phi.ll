@@ -2795,14 +2795,13 @@ BB5:                                             ; preds = %BB4
   ret void
 }
 
-; FIXME: This is a miscompilation.
 define i64 @wrong_gep_arg_into_phi(ptr noundef %ptr) {
 ; CHECK-LABEL: @wrong_gep_arg_into_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[PTR_PN:%.*]] = phi ptr [ [[PTR:%.*]], [[ENTRY:%.*]] ], [ [[DOTPN:%.*]], [[FOR_COND]] ]
-; CHECK-NEXT:    [[DOTPN]] = getelementptr inbounds nuw i8, ptr [[PTR_PN]], i64 1
+; CHECK-NEXT:    [[DOTPN]] = getelementptr i8, ptr [[PTR_PN]], i64 1
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[DOTPN]], align 1
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i8 [[VAL]], 0
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[EXIT:%.*]], label [[FOR_COND]]
