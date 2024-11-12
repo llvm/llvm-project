@@ -556,10 +556,10 @@ private:
   friend struct MemorySanitizerVisitor;
   friend struct VarArgHelperBase;
   friend struct VarArgAMD64Helper;
+  friend struct VarArgMIPS64Helper;
   friend struct VarArgAArch64Helper;
-  friend struct VarArgPowerPCHelper;
+  friend struct VarArgPowerPC64Helper;
   friend struct VarArgSystemZHelper;
-  friend struct VarArgGenericHelper;
 
   void initializeModule(Module &M);
   void initializeCallbacks(Module &M, const TargetLibraryInfo &TLI);
@@ -5342,29 +5342,31 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
   }
 };
 
-/// MIPS-specific implementation of VarArgHelper.
+/// MIPS64-specific implementation of VarArgHelper.
 /// NOTE: This is also used for LoongArch64.
-struct VarArgGenericHelper : public VarArgHelperBase {
+struct VarArgMIPS64Helper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
 
-  VarArgGenericHelper(Function &F, MemorySanitizer &MS,
-                      MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
-      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
+  VarArgMIPS64Helper(Function &F, MemorySanitizer &MS,
+                     MemorySanitizerVisitor &MSV)
+      : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/8) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
     const DataLayout &DL = F.getDataLayout();
     for (Value *A :
          llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
+      Triple TargetTriple(F.getParent()->getTargetTriple());
+      Value *Base;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-      if (DL.isBigEndian()) {
+      if (TargetTriple.getArch() == Triple::mips64) {
         // Adjusting the shadow for argument with size < 8 to match the
         // placement of bits in big endian system
         if (ArgSize < 8)
           VAArgOffset += (8 - ArgSize);
       }
-      Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
+      Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
       VAArgOffset += ArgSize;
       VAArgOffset = alignTo(VAArgOffset, 8);
       if (!Base)
@@ -5663,14 +5665,14 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
   }
 };
 
-/// PowerPC-specific implementation of VarArgHelper.
-struct VarArgPowerPCHelper : public VarArgHelperBase {
+/// PowerPC64-specific implementation of VarArgHelper.
+struct VarArgPowerPC64Helper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
 
-  VarArgPowerPCHelper(Function &F, MemorySanitizer &MS,
-                      MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
-      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
+  VarArgPowerPC64Helper(Function &F, MemorySanitizer &MS,
+                        MemorySanitizerVisitor &MSV)
+      : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/8) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     // For PowerPC, we need to deal with alignment of stack arguments -
@@ -6084,8 +6086,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
 
 // Loongarch64 is not a MIPS, but the current vargs calling convention matches
 // the MIPS.
-using VarArgMIPSHelper = VarArgGenericHelper;
-using VarArgLoongArch64Helper = VarArgGenericHelper;
+using VarArgLoongArch64Helper = VarArgMIPS64Helper;
 
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
@@ -6110,24 +6111,19 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   Triple TargetTriple(Func.getParent()->getTargetTriple());
   if (TargetTriple.getArch() == Triple::x86_64)
     return new VarArgAMD64Helper(Func, Msan, Visitor);
-
-  if (TargetTriple.isAArch64())
+  else if (TargetTriple.isMIPS64())
+    return new VarArgMIPS64Helper(Func, Msan, Visitor);
+  else if (TargetTriple.getArch() == Triple::aarch64)
     return new VarArgAArch64Helper(Func, Msan, Visitor);
-
-  if (TargetTriple.isSystemZ())
+  else if (TargetTriple.getArch() == Triple::ppc64 ||
+           TargetTriple.getArch() == Triple::ppc64le)
+    return new VarArgPowerPC64Helper(Func, Msan, Visitor);
+  else if (TargetTriple.getArch() == Triple::systemz)
     return new VarArgSystemZHelper(Func, Msan, Visitor);
-
-  if (TargetTriple.isPPC64())
-    return new VarArgPowerPCHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
-
-  if (TargetTriple.isMIPS64())
-    return new VarArgMIPSHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
-
-  if (TargetTriple.isLoongArch64())
-    return new VarArgLoongArch64Helper(Func, Msan, Visitor,
-                                       /*VAListTagSize=*/8);
-
-  return new VarArgNoOpHelper(Func, Msan, Visitor);
+  else if (TargetTriple.isLoongArch64())
+    return new VarArgLoongArch64Helper(Func, Msan, Visitor);
+  else
+    return new VarArgNoOpHelper(Func, Msan, Visitor);
 }
 
 bool MemorySanitizer::sanitizeFunction(Function &F, TargetLibraryInfo &TLI) {
