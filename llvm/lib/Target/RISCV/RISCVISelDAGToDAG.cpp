@@ -1631,9 +1631,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           if (!IsUnsigned || CVal != 0)
             break;
           IsCmpMinimum = true;
-        } else if (!IsUnsigned &&
-                   CVal == APSInt::getMinValue(Src1VT.getScalarSizeInBits(),
-                                               /*Unsigned=*/false)) {
+        } else if (!IsUnsigned && CVal == APInt::getSignedMinValue(
+                                              Src1VT.getScalarSizeInBits())) {
           IsCmpMinimum = true;
         }
       }
@@ -1664,7 +1663,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue VL;
       selectVLOp(Node->getOperand(3), VL);
 
-      // If vmsgeu with 0 immediate, expand it to vmset.
+      // If vmsge(u) with minimum value, expand it to vmset.
       if (IsCmpMinimum) {
         ReplaceNode(Node, CurDAG->getMachineNode(VMSetOpcode, DL, VT, VL, SEW));
         return;
@@ -1708,9 +1707,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           if (!IsUnsigned || CVal != 0)
             break;
           IsCmpMinimum = true;
-        } else if (!IsUnsigned &&
-                   CVal == APSInt::getMinValue(Src1VT.getScalarSizeInBits(),
-                                               /*Unsigned=*/false)) {
+        } else if (!IsUnsigned && CVal == APInt::getSignedMinValue(
+                                              Src1VT.getScalarSizeInBits())) {
           IsCmpMinimum = true;
         }
       }
@@ -1764,7 +1762,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue MaskedOff = Node->getOperand(1);
       SDValue Mask = Node->getOperand(4);
 
-      // If vmsgeu_mask with 0 immediate, expand it to vmor mask, maskedoff.
+      // If vmsge(u) with minimum value, expand it to vmor mask, maskedoff.
       if (IsCmpMinimum) {
         // We don't need vmor if the MaskedOff and the Mask are the same
         // value.
