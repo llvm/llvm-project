@@ -2008,8 +2008,8 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
        << "() != " << propElement.getVar()->prop.getDefaultValue();
 }
 
-/// Elide the variadic segment size properties if necessary.
-/// Pushes elided attribute names in `elidedStorage`.
+/// Elide the variadic segment size attributes if necessary.
+/// This pushes elided attribute names in `elidedStorage`.
 static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
                                       MethodBody &body,
                                       const char *elidedStorage) {
