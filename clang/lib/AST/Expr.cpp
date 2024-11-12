@@ -4862,10 +4862,10 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
   setDependence(computeDependence(this));
-  if (hasWrappingOperand(Ctx))
-    setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
   if (hasNonWrappingOperand(Ctx))
     setType(Ctx.getAttributedType(attr::NoWraps, getType(), getType()));
+  else if (hasWrappingOperand(Ctx))
+    setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
 }
 
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
@@ -4884,10 +4884,10 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
   setDependence(computeDependence(this));
-  if (hasWrappingOperand(Ctx))
-    setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
   if (hasNonWrappingOperand(Ctx))
     setType(Ctx.getAttributedType(attr::NoWraps, getType(), getType()));
+  else if (hasWrappingOperand(Ctx))
+    setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
 }
 
 BinaryOperator *BinaryOperator::CreateEmpty(const ASTContext &C,
