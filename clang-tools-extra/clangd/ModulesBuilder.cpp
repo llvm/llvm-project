@@ -255,7 +255,7 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
         llvm::formatv("No compile command for {0}", ModuleUnitFileName));
 
   llvm::SmallString<256> ModuleFilesPrefix =
-        getUniqueModuleFilesPath(ModuleUnitFileName);
+      getUniqueModuleFilesPath(ModuleUnitFileName);
 
   Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
 
@@ -431,9 +431,8 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
       Cache.remove(ReqModuleName);
     }
 
-    llvm::Expected<ModuleFile> MF =
-        buildModuleFile(ModuleName, ModuleUnitFileName, getCDB(), TFS,
-                        BuiltModuleFiles);
+    llvm::Expected<ModuleFile> MF = buildModuleFile(
+        ModuleName, ModuleUnitFileName, getCDB(), TFS, BuiltModuleFiles);
     if (llvm::Error Err = MF.takeError())
       return Err;
 
