@@ -1170,7 +1170,7 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // "Result Type must be from OpTypeStruct. The struct must have two members,
   // and the two members must be the same type."
   Type *ResElemTy = cast<StructType>(ResTy)->getElementType(0);
-  ResTy = StructType::create(SmallVector<Type *, 2>{ResElemTy, ResElemTy});
+  ResTy = StructType::get(ResElemTy, ResElemTy);
   // Build SPIR-V types and constant(s) if needed.
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *StructType = GR.getOrCreateSPIRVType(
