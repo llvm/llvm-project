@@ -2062,7 +2062,6 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
-<<<<<<< HEAD
   if (!DL && MI == PrologEndLoc) {
     // In rare situations, we might want to place the end of the prologue
     // somewhere that doesn't have a source location already. It should be in
@@ -2073,11 +2072,9 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     return;
   }
 
-=======
   bool PrevInstInSameSection =
       (!PrevInstBB ||
        PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
->>>>>>> ac5931e8f979 (Re-add unnecessarily removed code)
   bool ForceIsStmt = ForceIsStmtInstrs.contains(MI);
   if (DL == PrevInstLoc && PrevInstInSameSection && !ForceIsStmt) {
     // If we have an ongoing unspecified location, nothing to do here.
@@ -2319,26 +2316,40 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
 void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   ForceIsStmtInstrs.clear();
 
-  // Here we try to find MBBs where the last line stepped on before entering
-  // it is always the same, and which line that is. Such a line exists if every
-  // predecessor has an instruction with source line N, which is the last valid
-  // source line to be seen before entering MBB, and if N is the same for all
-  // predecessors. If this is true, and the first instruction with a valid
-  // source line in MBB also has source line N, then that instruction should
-  // *not* use is_stmt. Otherwise, the first instruction with a valid source
-  // line in MBB should always use is_stmt, since we may step to it from a
-  // different line.
-  // First, collect the last stepped line for each MBB.
-  SmallDenseMap<std::pair<const MachineBasicBlock *, const MachineBasicBlock *>,
-                unsigned>
-      MBBExitLines;
+  // For this function, we try to find MBBs where the last source line in every
+  // block predecessor matches the first line seen in the block itself; for
+  // every such MBB, we set is_stmt=false on the first line in the block, and
+  // for every other block we set is_stmt=true on the first line.
+  // For example, if we have the block %bb.3, which has 2 predecesors %bb.1 and
+  // %bb.2:
+  //   bb.1:
+  //     $r3 = MOV64ri 12, debug-location !DILocation(line: 4)
+  //     JMP %bb.3, debug-location !DILocation(line: 5)
+  //   bb.2:
+  //     $r3 = MOV64ri 24, debug-location !DILocation(line: 5)
+  //     JMP %bb.3
+  //   bb.3:
+  //     $r2 = MOV64ri 1
+  //     $r1 = ADD $r2, $r3, debug-location !DILocation(line: 5)
+  // When we examine %bb.3, we first check to see if it contains any
+  // instructions with debug locations, and select the first such instruction;
+  // in this case, the ADD, with line=5. We then examine both of its
+  // predecessors to see what the last debug-location in them is. For each
+  // predecessor, if they do not contain any debug-locations, or if the last
+  // debug-location before jumping to %bb.3 does not have line=5, then the ADD
+  // in %bb.3 must use IsStmt. In this case, all predecessors have a
+  // debug-location with line=5 as the last debug-location before jumping to
+  // %bb.3, so we do not set is_stmt for the ADD instruction - we know that
+  // whichever MBB we have arrived from, the line has not changed.
+
   const auto *TII = MF->getSubtarget().getInstrInfo();
 
-  // We only need to examine MBBs that could have is_stmt set by this logic.
+  // We only need to the predecessors of MBBs that could have is_stmt set by
+  // this logic.
+  SmallDenseSet<MachineBasicBlock *, 4> PredMBBsToExamine;
+  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
   // We use const_cast even though we won't actually modify MF, because some
   // methods we need take a non-const MBB.
-  SmallSetVector<MachineBasicBlock *, 4> PredMBBsToExamine;
-  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
   for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
     if (MBB.empty() || MBB.pred_empty())
       continue;
@@ -2352,10 +2363,11 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
     }
   }
 
-  // For each predecessor MBB, we examine the last DebugLoc seen before each
-  // branch or logical fallthrough. We're generous with applying is_stmt: if
-  // there's an edge that TargetInstrInfo::analyzeBranch can't understand, we
-  // assume that all successor MBBs use the last DebugLoc seen.
+  // For each predecessor MBB, we examine the last line seen before each branch
+  // or logical fallthrough. We use analyzeBranch to handle cases where
+  // different branches have different outgoing lines (i.e. if there are
+  // multiple branches that each have their own source location); otherwise we
+  // just use the last line in the block.
   for (auto *MBB : PredMBBsToExamine) {
     auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
       auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
@@ -2440,8 +2452,7 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   CurFn = MF;
 
   auto *SP = MF->getFunction().getSubprogram();
-  assert(LScopes.empty() ||
-         SP == LScopes.getCurrentFunctionScope()->getScopeNode());
+  assert(LScopes.empty() || SP == LScopes.getCurrentFunctionScope()->getScopeNode());
   if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return;
 
