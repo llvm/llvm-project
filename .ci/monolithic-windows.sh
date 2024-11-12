@@ -28,11 +28,13 @@ fi
 
 sccache --zero-stats
 function at-exit {
-  python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
-    "windows-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
-
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
+
+  # If building fails there will be no results files.
+  shopt -s nullglob
+  python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
+    "windows-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
 }
 trap at-exit EXIT
 

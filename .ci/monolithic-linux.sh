@@ -29,11 +29,13 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
 fi
 
 function at-exit {
-  python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
-    "linux-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
-
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
+
+  # If building fails there will be no results files.
+  shopt -s nullglob
+  python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
+    "linux-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
 }
 trap at-exit EXIT
 
