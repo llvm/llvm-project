@@ -389,7 +389,7 @@ struct DynamicSection : Section {
 struct RawContentSection : Section {
   std::optional<llvm::yaml::Hex64> Info;
 
-  RawContentSection(ChunkKind Kind = ChunkKind::RawContent) : Section(Kind) {}
+  RawContentSection() : Section(ChunkKind::RawContent) {}
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::RawContent;
@@ -400,8 +400,10 @@ struct RawContentSection : Section {
 };
 
 /// Abstract base class for non-blob contents.
-struct CustomRawContentSection : RawContentSection {
-  CustomRawContentSection() : RawContentSection(ChunkKind::CustomRawContent) {}
+struct CustomRawContentSection : Section {
+  std::optional<llvm::yaml::Hex64> Info;
+
+  CustomRawContentSection() : Section(ChunkKind::CustomRawContent) {}
 
   /// Apply mappings.
   virtual void sectionMapping(yaml::IO &IO) = 0;
