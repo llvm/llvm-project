@@ -6664,11 +6664,15 @@ def err_builtin_counted_by_ref_invalid_lhs_use : Error<
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
 
+// __attribute__((wraps)) and __attribute__((no_wraps)) diagnostics:
 def warn_wraps_attr_maybe_lost : Warning<
   "'%select{wraps|no_wraps}0' attribute may be implicitly discarded when converted to %1">,
   InGroup<ImpDiscardedWrapsAttr>;
 def err_wraps_attr_var_decl_type_not_integer : Error<
   "cannot use attribute '%select{wraps|no_wraps}0' with non-integer type '%1'">;
+def err_wraps_attr_with_no_wraps_attr : Error<
+  "attribute 'wraps' cannot be used alongside 'no_wraps'">;
+
 
 let CategoryName = "ARC Semantic Issue" in {
 

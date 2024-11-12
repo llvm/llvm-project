@@ -6553,12 +6553,27 @@ static void handleWrapsAttr(QualType &Type, const ParsedAttr &Attr,
     return;
   }
 
-  if (NoWraps)
+  if (NoWraps) {
+    const AttributedType *AT = Type.getTypePtr()->getAs<AttributedType>();
+    while (AT) {
+      if (AT->getAttr()->getParsedKind() == ParsedAttr::AT_Wraps) {
+        S.Diag(Attr.getLoc(), diag::err_wraps_attr_with_no_wraps_attr);
+        Attr.setInvalid();
+        return;
+      }
+      AT = AT->getModifiedType().getTypePtr()->getAs<AttributedType>();
+    }
     Type =
         State.getAttributedType(::new (Ctx) NoWrapsAttr(Ctx, Attr), Type, Type);
-  else
+  } else {
+    if (Type.hasNoWrapsAttr()) {
+      S.Diag(Attr.getLoc(), diag::err_wraps_attr_with_no_wraps_attr);
+      Attr.setInvalid();
+      return;
+    }
     Type =
         State.getAttributedType(::new (Ctx) WrapsAttr(Ctx, Attr), Type, Type);
+  }
 }
 
 /// HandleAddressSpaceTypeAttribute - Process an address_space attribute on the

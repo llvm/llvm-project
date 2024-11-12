@@ -46,3 +46,10 @@ void useless_wraps_attribute(void) {
   // expected-error@+1 {{cannot use attribute 'no_wraps' with non-integer type}}
   float __attribute__((no_wraps)) B = 3.14;
 }
+
+void wraps_used_with_no_wraps(void) {
+  // expected-error@+1 {{attribute 'wraps' cannot be used alongside 'no_wraps'}}
+  unsigned char __attribute__((wraps)) __attribute__((no_wraps)) A;
+  // expected-error@+1 {{attribute 'wraps' cannot be used alongside 'no_wraps'}}
+  long long __attribute__((no_wraps)) __attribute__((wraps)) B;
+}

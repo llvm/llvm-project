@@ -57,18 +57,6 @@ void bar(myty C, qaz D) {
   ++D;
 }
 
-// If a type is marked as both `wraps` and `no_wraps`, `no_wraps` should take
-// precedence, but really users shouldn't be marking a type as both of these.
-// Let's introduce a warning at some point.
-typedef int __attribute__((wraps)) __attribute__((no_wraps)) both;
-
-// CHECK-LABEL: define dso_local void @jam
-void jam(both E) {
-// CHECK: %[[E:.*]] = load i32, ptr %E.addr
-// CHECK-NEXT: @llvm.sadd.with.overflow.i32(i32 %[[E]], i32 1)
-  ++E;
-}
-
 // PROMO-LABEL: define dso_local void @bux
 void bux(char __attribute__((wraps)) F) {
 // PROMO: %[[F:.*]] = load i8, ptr %F.addr
