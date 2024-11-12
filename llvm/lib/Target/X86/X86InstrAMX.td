@@ -304,6 +304,37 @@ let Predicates = [HasAMXFP8, In64BitMode] in {
                               [(int_x86_tdphf8ps timm:$src1, timm:$src2,
                                 timm:$src3)]>;
     }
+
+    let Constraints = "$src4 = $dst" in {
+      def PTDPBF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdpbf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+      def PTDPBHF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdpbhf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+      def PTDPHBF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdphbf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+      def PTDPHF8PSV : PseudoI<(outs TILE:$dst),
+                               (ins GR16:$src1, GR16:$src2, GR16:$src3,
+                                    TILE:$src4, TILE:$src5, TILE:$src6),
+                               [(set TILE:$dst,
+                                (int_x86_tdphf8ps_internal GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6))]>;
+    }
   }
 }
 
