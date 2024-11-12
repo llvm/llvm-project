@@ -59,6 +59,10 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %ashr_flag = llvm.ashr exact %arg0, %arg0 : i32
   %lshr_flag = llvm.lshr exact %arg0, %arg0 : i32
 
+// Integer disjoint flag.
+// CHECK: {{.*}} = llvm.or disjoint %[[I32]], %[[I32]] : i32
+  %or_flag = llvm.or disjoint %arg0, %arg0 : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32
