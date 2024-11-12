@@ -23,7 +23,7 @@
 
 
 
-# HTML-TOP: coverage\index.html
+# HTML-TOP: coverage\index.html -- this test now fails
 
 # ROOT: a0\a1\a2.cc
 # ROOT: b0\
