@@ -30,7 +30,7 @@ llvm.func @memset_inline() -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %memset_value = llvm.mlir.constant(42 : i8) : i8
-  // 16 bytes means it will span over the first 4 i32 entries
+  // 16 bytes means it will span over the first 4 i32 entries.
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = false, len = 4 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 16}> : (!llvm.ptr, i8) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
@@ -112,7 +112,7 @@ llvm.func @memset_inline_full() -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %memset_value = llvm.mlir.constant(42 : i8) : i8
-  // 40 bytes means it will span over the entire array
+  // 40 bytes means it will span over the entire array.
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = false, len = 4 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 40}> : (!llvm.ptr, i8) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
@@ -150,7 +150,7 @@ llvm.func @memset_inline_too_much() -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %memset_value = llvm.mlir.constant(42 : i8) : i8
-  // 41 bytes means it will span over the entire array, and then some
+  // 41 bytes means it will span over the entire array, and then some.
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = false, len = 41 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 41}> : (!llvm.ptr, i8) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
