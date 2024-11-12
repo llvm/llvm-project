@@ -1,11 +1,11 @@
-// REQUIRES: darwin
+// REQUIRES: target={{.*(darwin|aix).*}}
 
-// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -o %t.exe %s
+// RUN: %clang_profgen_cont -fcoverage-mapping -o %t.exe %s
 // RUN: echo "garbage" > %t.profraw
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe
 // RUN: llvm-profdata show --counts --all-functions %t.profraw | FileCheck %s -check-prefix=CHECK-COUNTS
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: llvm-cov report %t.exe -instr-profile %t.profdata | FileCheck %s -check-prefix=CHECK-COVERAGE
+// RUN: %if !target={{.*aix.*}} %{ llvm-cov report %t.exe -instr-profile %t.profdata | FileCheck %s -check-prefix=CHECK-COVERAGE %}
 
 // CHECK-COUNTS: Counters:
 // CHECK-COUNTS-NEXT:   main:
