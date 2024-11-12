@@ -4545,3 +4545,15 @@ multiclass sve_fp_2op_p_zd_fcvtz_pat<string op> {
 
 defm FCVTZS : sve_fp_2op_p_zd_fcvtz_pat<"int_aarch64_sve_fcvtzs">;
 defm FCVTZU : sve_fp_2op_p_zd_fcvtz_pat<"int_aarch64_sve_fcvtzu">;
+
+multiclass sve_fp_2op_p_zd_uscvtf_pat<string op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32i64), nxv4f32, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _ZPzZ_DtoS)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64i32), nxv2f64, nxv2i1, nxv4i32, !cast<Instruction>(NAME # _ZPzZ_StoD)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16i32), nxv8f16, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _ZPzZ_StoH)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16i64), nxv8f16, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _ZPzZ_DtoH)>;
+  }
+}
+
+defm SCVTF :  sve_fp_2op_p_zd_uscvtf_pat<"int_aarch64_sve_scvtf">;
+defm UCVTF :  sve_fp_2op_p_zd_uscvtf_pat<"int_aarch64_sve_ucvtf">;
