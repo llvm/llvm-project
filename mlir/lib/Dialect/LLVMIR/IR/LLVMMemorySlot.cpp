@@ -1037,11 +1037,10 @@ IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
   return op.getLenAttr();
 }
 template <class MemsetIntr>
-void createMemsetIntrToReplace(OpBuilder &builder, MemsetIntr toReplace,
-                               IntegerAttr memsetLenAttr,
-                               uint64_t newMemsetSize,
-                               DenseMap<Attribute, MemorySlot> &subslots,
-                               Attribute index) {
+void createMemsetIntr(OpBuilder &builder, MemsetIntr toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index) {
   Value newMemsetSizeValue =
       builder
           .create<LLVM::ConstantOp>(
@@ -1054,12 +1053,10 @@ void createMemsetIntrToReplace(OpBuilder &builder, MemsetIntr toReplace,
                                  toReplace.getIsVolatile());
 }
 template <>
-void createMemsetIntrToReplace(OpBuilder &builder,
-                               LLVM::MemsetInlineOp toReplace,
-                               IntegerAttr memsetLenAttr,
-                               uint64_t newMemsetSize,
-                               DenseMap<Attribute, MemorySlot> &subslots,
-                               Attribute index) {
+void createMemsetIntr(OpBuilder &builder, LLVM::MemsetInlineOp toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index) {
 
   auto newMemsetSizeValue =
       IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize);
@@ -1105,8 +1102,8 @@ memsetRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
     // Otherwise, only compute its offset within the original memset.
     if (subslots.contains(index)) {
       uint64_t newMemsetSize = std::min(memsetLen - covered, typeSize);
-      createMemsetIntrToReplace(builder, op, memsetLenAttr, newMemsetSize,
-                                subslots, index);
+      createMemsetIntr(builder, op, memsetLenAttr, newMemsetSize, subslots,
+                       index);
     }
 
     covered += typeSize;
