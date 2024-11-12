@@ -2682,6 +2682,33 @@ static Value *getExpandedStep(const InductionDescriptor &ID,
   return I->second;
 }
 
+/// Knowing that loop \p L would be fully unrolled after vectorisation, add
+/// instructions that will get simplified and thus should not have any cost to
+/// \p InstsToIgnore
+static void AddFullyUnrolledInstructionsToIgnore(
+    Loop *L, const LoopVectorizationLegality::InductionList &IL,
+    SmallPtrSetImpl<Instruction *> &InstsToIgnore) {
+  auto *Cmp = L->getLatchCmpInst();
+  if (!Cmp)
+    return;
+  InstsToIgnore.insert(Cmp);
+  for (const auto &[IV, IndDesc] : IL) {
+    // Get next iteration value of the induction variable
+    Instruction *IVInst =
+        cast<Instruction>(IV->getIncomingValueForBlock(L->getLoopLatch()));
+    bool IsSimplifiedAway = true;
+    // Check that this value used only to exit the loop
+    for (auto *UIV : IVInst->users()) {
+      if (UIV != IV && UIV != Cmp) {
+        IsSimplifiedAway = false;
+        break;
+      }
+    }
+    if (IsSimplifiedAway)
+      InstsToIgnore.insert(IVInst);
+  }
+}
+
 void InnerLoopVectorizer::createInductionResumeVPValues(
     const SCEV2ValueTy &ExpandedSCEVs, Value *MainVectorTripCount,
     SmallPtrSetImpl<PHINode *> *IVSubset) {
@@ -5592,19 +5619,13 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
 InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   InstructionCost Cost;
 
-  // If with the given VF loop gets fully unrolled, ignore the costs of
-  // comparison and induction instructions, as they'll get simplified away
-  SmallPtrSet<const Value *, 16> ValuesToIgnoreForVF;
+  // If with the given fixed width VF loop gets fully unrolled, ignore the costs
+  // of comparison and induction instructions, as they'll get simplified away
+  SmallPtrSet<Instruction *, 2> ValuesToIgnoreForVF;
   auto TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  auto *Cmp = TheLoop->getLatchCmpInst();
-  if (Cmp && TC == VF.getKnownMinValue()) {
-    ValuesToIgnoreForVF.insert(Cmp);
-    for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-      Instruction *IVInc = cast<Instruction>(
-          IV->getIncomingValueForBlock(TheLoop->getLoopLatch()));
-      ValuesToIgnoreForVF.insert(IVInc);
-    }
-  }
+  if (VF.isFixed() && TC == VF.getFixedValue())
+    AddFullyUnrolledInstructionsToIgnore(TheLoop, Legal->getInductionVars(),
+                                         ValuesToIgnoreForVF);
 
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
@@ -7298,16 +7319,10 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
     // If with the given VF loop gets fully unrolled, ignore the costs of
     // comparison and induction instructions, as they'll get simplified away
-    auto TC = CM.PSE.getSE()->getSmallConstantTripCount(OrigLoop);
-    auto *Cmp = OrigLoop->getLatchCmpInst();
-    if (Cmp && TC == VF.getKnownMinValue()) {
-      CostCtx.SkipCostComputation.insert(Cmp);
-      for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-        Instruction *IVInc = cast<Instruction>(
-            IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-        CostCtx.SkipCostComputation.insert(IVInc);
-      }
-    }
+    auto TC = PSE.getSE()->getSmallConstantTripCount(OrigLoop);
+    if (VF.isFixed() && TC == VF.getFixedValue())
+      AddFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
+                                           CostCtx.SkipCostComputation);
 
     for (Instruction *IVInst : IVInsts) {
       if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
