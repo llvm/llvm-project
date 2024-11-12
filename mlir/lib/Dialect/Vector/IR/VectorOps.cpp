@@ -1349,13 +1349,33 @@ LogicalResult vector::ExtractOp::verify() {
         "corresponding dynamic position) -- this can only happen due to an "
         "incorrect fold/rewrite");
   auto position = getMixedPosition();
-  if (position.size() > static_cast<unsigned>(getSourceVectorType().getRank()))
+  VectorType srcVecType = getSourceVectorType();
+  int64_t srcRank = srcVecType.getRank();
+  if (position.size() > static_cast<unsigned>(srcRank))
     return emitOpError(
         "expected position attribute of rank no greater than vector rank");
+
+  VectorType dstVecType = dyn_cast<VectorType>(getResult().getType());
+  if (dstVecType) {
+    int64_t srcRankMinusIndices = srcRank - getNumIndices();
+    int64_t dstRank = dstVecType.getRank();
+    if ((srcRankMinusIndices == 0 && dstRank != 1) ||
+        (srcRankMinusIndices != 0 && srcRankMinusIndices != dstRank)) {
+      return emitOpError(
+          "expected source rank minus number of indices to match "
+          "destination vector rank");
+    }
+  } else {
+    // Scalar result.
+    if (srcRank != getNumIndices())
+      return emitOpError("expected source rank to match number of indices "
+                         "for scalar result");
+  }
+
   for (auto [idx, pos] : llvm::enumerate(position)) {
     if (pos.is<Attribute>()) {
       int64_t constIdx = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
-      if (constIdx < 0 || constIdx >= getSourceVectorType().getDimSize(idx)) {
+      if (constIdx < 0 || constIdx >= srcVecType.getDimSize(idx)) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "

@@ -240,6 +240,13 @@ func.func @extract_0d(%a: vector<f32>) -> f32 {
   return %0 : f32
 }
 
+// CHECK-LABEL: @extract_single_element_vector
+func.func @extract_single_element_vector(%arg0: vector<4x8x3xf32>) -> vector<1xf32> {
+  // CHECK: vector.extract {{.*}}[0, 0, 0] : vector<1xf32> from vector<4x8x3xf32>
+  %1 = vector.extract %arg0[0, 0, 0] : vector<1xf32> from vector<4x8x3xf32>
+  return %1 : vector<1xf32>
+}
+
 // CHECK-LABEL: @insert_element_0d
 func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
   // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[] : vector<f32>

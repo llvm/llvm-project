@@ -192,6 +192,13 @@ func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
 
 // -----
 
+func.func @extract_scalar_missing_indices(%arg0: vector<4x8x1xf32>) {
+  // expected-error@+1 {{expected source rank to match number of indices for scalar result}}
+  %1 = vector.extract %arg0[0, 0] : f32 from vector<4x8x1xf32>
+}
+
+// -----
+
 func.func @insert_element(%arg0: f32, %arg1: vector<f32>) {
   %c = arith.constant 3 : i32
   // expected-error@+1 {{expected position to be empty with 0-D vector}}
