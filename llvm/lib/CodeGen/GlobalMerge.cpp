@@ -636,7 +636,7 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
       auto *II = dyn_cast<IntrinsicInst>(Pad);
       if (!Pad->isEHPad() &&
           !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
-         continue;
+        continue;
 
       // Keep globals used by landingpads, catchpads,
       // or intrinsics that require a plain global.
