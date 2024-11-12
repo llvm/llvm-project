@@ -386,7 +386,9 @@ int ValidExpressions() {
   return sum;
 }
 
+namespace gh115175 {
 template<class T>
 int ValidateTemplateTypeExpressions(T t) {
   return sizeof(t.val) / sizeof(t.val[0]);
 }
+} // namespace gh115175
