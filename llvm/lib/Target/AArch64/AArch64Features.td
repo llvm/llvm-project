@@ -243,7 +243,7 @@ def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO", "FEAT_LRCPC2",
 //===----------------------------------------------------------------------===//
 
 def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
-  "Enable alternative NZCV format for floating point comparisons">;
+  "Enable alternative NZCV format for floating point comparisons", [FeatureFlagM]>;
 
 def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
@@ -259,7 +259,7 @@ def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes", "FEAT_SPECRES",
   "Enable Armv8.5-A execution and data prediction invalidation instructions">;
 
 def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
-  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence">;
+  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence", [FeatureCCPP]>;
 
 def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
   "Enable Branch Target Identification">;
