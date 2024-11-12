@@ -542,7 +542,7 @@ if(MSVC)
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/STACK:10000000")
 elseif(MINGW OR CYGWIN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
@@ -1285,7 +1285,7 @@ elseif(LLVM_ENABLE_LTO)
   endif()
 endif()
 
-if(LLVM_ENABLE_FATLTO AND UNIX AND NOT APPLE)
+if(LLVM_ENABLE_FATLTO AND ((UNIX AND NOT APPLE) OR FUCHSIA))
   append("-ffat-lto-objects" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   if(NOT LINKER_IS_LLD_LINK)
     append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)

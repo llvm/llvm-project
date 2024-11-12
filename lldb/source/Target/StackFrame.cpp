@@ -13,9 +13,6 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -33,6 +30,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "lldb/lldb-enumerations.h"
 
@@ -1316,11 +1316,13 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
 
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1697,10 +1699,12 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1966,6 +1970,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
             const bool mixed_source_and_assembly = false;
             Disassembler::Disassemble(
                 target->GetDebugger(), target_arch, plugin_name, flavor,
+                target->GetDisassemblyCPU(), target->GetDisassemblyFeatures(),
                 exe_ctx, GetFrameCodeAddress(),
                 {Disassembler::Limit::Instructions, disasm_lines},
                 mixed_source_and_assembly, 0,

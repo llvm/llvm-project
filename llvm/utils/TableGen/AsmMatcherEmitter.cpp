@@ -1001,7 +1001,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     char Char = String[i];
     if (Variant.BreakCharacters.contains(Char)) {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), false);
+        addAsmOperand(String.substr(Prev, i - Prev), false);
         Prev = i;
         IsIsolatedToken = false;
       }
@@ -1010,7 +1010,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     }
     if (Variant.TokenizingCharacters.contains(Char)) {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        addAsmOperand(String.substr(Prev, i - Prev), IsIsolatedToken);
         InTok = false;
         IsIsolatedToken = false;
       }
@@ -1021,7 +1021,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     }
     if (Variant.SeparatorCharacters.contains(Char)) {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        addAsmOperand(String.substr(Prev, i - Prev), IsIsolatedToken);
         InTok = false;
       }
       Prev = i + 1;
@@ -1032,7 +1032,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
     switch (Char) {
     case '\\':
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), false);
+        addAsmOperand(String.substr(Prev, i - Prev), false);
         InTok = false;
         IsIsolatedToken = false;
       }
@@ -1045,7 +1045,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
 
     case '$': {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
+        addAsmOperand(String.substr(Prev, i - Prev), IsIsolatedToken);
         InTok = false;
         IsIsolatedToken = false;
       }
@@ -1059,7 +1059,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       size_t EndPos = String.find('}', i);
       assert(EndPos != StringRef::npos &&
              "Missing brace in operand reference!");
-      addAsmOperand(String.slice(i, EndPos + 1), IsIsolatedToken);
+      addAsmOperand(String.substr(i, EndPos + 1 - i), IsIsolatedToken);
       Prev = EndPos + 1;
       i = EndPos;
       IsIsolatedToken = false;
@@ -1208,7 +1208,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
                       "Record `" + Rec->getName() +
                           "' does not have a ParserMatchClass!\n");
 
-    if (DefInit *DI = dyn_cast<DefInit>(R->getValue())) {
+    if (const DefInit *DI = dyn_cast<DefInit>(R->getValue())) {
       const Record *MatchClass = DI->getDef();
       if (ClassInfo *CI = AsmOperandClasses[MatchClass])
         return CI;
@@ -1349,12 +1349,12 @@ void AsmMatcherInfo::buildRegisterClasses(
     } else
       CI->ValueName = CI->ValueName + "," + RC.getName();
 
-    Init *DiagnosticType = Def->getValueInit("DiagnosticType");
-    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
+    const Init *DiagnosticType = Def->getValueInit("DiagnosticType");
+    if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
       CI->DiagnosticType = std::string(SI->getValue());
 
-    Init *DiagnosticString = Def->getValueInit("DiagnosticString");
-    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
+    const Init *DiagnosticString = Def->getValueInit("DiagnosticString");
+    if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
       CI->DiagnosticString = std::string(SI->getValue());
 
     // If we have a diagnostic string but the diagnostic type is not specified
@@ -1398,9 +1398,9 @@ void AsmMatcherInfo::buildOperandClasses() {
     ClassInfo *CI = AsmOperandClasses[Rec];
     CI->Kind = ClassInfo::UserClass0 + Index;
 
-    ListInit *Supers = Rec->getValueAsListInit("SuperClasses");
-    for (Init *I : Supers->getValues()) {
-      DefInit *DI = dyn_cast<DefInit>(I);
+    const ListInit *Supers = Rec->getValueAsListInit("SuperClasses");
+    for (const Init *I : Supers->getValues()) {
+      const DefInit *DI = dyn_cast<DefInit>(I);
       if (!DI) {
         PrintError(Rec->getLoc(), "Invalid super class reference!");
         continue;
@@ -1417,8 +1417,8 @@ void AsmMatcherInfo::buildOperandClasses() {
     CI->ValueName = std::string(Rec->getName());
 
     // Get or construct the predicate method name.
-    Init *PMName = Rec->getValueInit("PredicateMethod");
-    if (StringInit *SI = dyn_cast<StringInit>(PMName)) {
+    const Init *PMName = Rec->getValueInit("PredicateMethod");
+    if (const StringInit *SI = dyn_cast<StringInit>(PMName)) {
       CI->PredicateMethod = std::string(SI->getValue());
     } else {
       assert(isa<UnsetInit>(PMName) && "Unexpected PredicateMethod field!");
@@ -1426,8 +1426,8 @@ void AsmMatcherInfo::buildOperandClasses() {
     }
 
     // Get or construct the render method name.
-    Init *RMName = Rec->getValueInit("RenderMethod");
-    if (StringInit *SI = dyn_cast<StringInit>(RMName)) {
+    const Init *RMName = Rec->getValueInit("RenderMethod");
+    if (const StringInit *SI = dyn_cast<StringInit>(RMName)) {
       CI->RenderMethod = std::string(SI->getValue());
     } else {
       assert(isa<UnsetInit>(RMName) && "Unexpected RenderMethod field!");
@@ -1435,29 +1435,29 @@ void AsmMatcherInfo::buildOperandClasses() {
     }
 
     // Get the parse method name or leave it as empty.
-    Init *PRMName = Rec->getValueInit("ParserMethod");
-    if (StringInit *SI = dyn_cast<StringInit>(PRMName))
+    const Init *PRMName = Rec->getValueInit("ParserMethod");
+    if (const StringInit *SI = dyn_cast<StringInit>(PRMName))
       CI->ParserMethod = std::string(SI->getValue());
 
     // Get the diagnostic type and string or leave them as empty.
-    Init *DiagnosticType = Rec->getValueInit("DiagnosticType");
-    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
+    const Init *DiagnosticType = Rec->getValueInit("DiagnosticType");
+    if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
       CI->DiagnosticType = std::string(SI->getValue());
-    Init *DiagnosticString = Rec->getValueInit("DiagnosticString");
-    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
+    const Init *DiagnosticString = Rec->getValueInit("DiagnosticString");
+    if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
       CI->DiagnosticString = std::string(SI->getValue());
     // If we have a DiagnosticString, we need a DiagnosticType for use within
     // the matcher.
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
       CI->DiagnosticType = CI->ClassName;
 
-    Init *IsOptional = Rec->getValueInit("IsOptional");
-    if (BitInit *BI = dyn_cast<BitInit>(IsOptional))
+    const Init *IsOptional = Rec->getValueInit("IsOptional");
+    if (const BitInit *BI = dyn_cast<BitInit>(IsOptional))
       CI->IsOptional = BI->getValue();
 
     // Get or construct the default method name.
-    Init *DMName = Rec->getValueInit("DefaultMethod");
-    if (StringInit *SI = dyn_cast<StringInit>(DMName)) {
+    const Init *DMName = Rec->getValueInit("DefaultMethod");
+    if (const StringInit *SI = dyn_cast<StringInit>(DMName)) {
       CI->DefaultMethod = std::string(SI->getValue());
     } else {
       assert(isa<UnsetInit>(DMName) && "Unexpected DefaultMethod field!");

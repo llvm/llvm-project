@@ -338,13 +338,6 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   };
 }
 
-static auto toJSONSorted(llvm::json::OStream &JOS,
-                         const llvm::StringSet<> &Set) {
-  SmallVector<StringRef> Strings(Set.keys());
-  llvm::sort(Strings);
-  return toJSONStrings(JOS, std::move(Strings));
-}
-
 // Technically, we don't need to sort the dependency list to get determinism.
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
@@ -472,7 +465,9 @@ public:
             JOS.attributeArray("command-line",
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
-            JOS.attributeArray("file-deps", toJSONSorted(JOS, MD.FileDeps));
+            JOS.attributeArray("file-deps", [&] {
+              MD.forEachFileDep([&](StringRef FileDep) { JOS.value(FileDep); });
+            });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));
             JOS.attribute("name", StringRef(MD.ID.ModuleName));
@@ -1080,10 +1075,15 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                  << NumExistsCalls << " exists() calls\n"
                  << NumIsLocalCalls << " isLocal() calls\n";
 
-  if (PrintTiming)
-    llvm::errs() << llvm::format(
-        "clang-scan-deps timing: %0.2fs wall, %0.2fs process\n",
-        T.getTotalTime().getWallTime(), T.getTotalTime().getProcessTime());
+  if (PrintTiming) {
+    llvm::errs() << "wall time [s]\t"
+                 << "process time [s]\t"
+                 << "instruction count\n";
+    const llvm::TimeRecord &R = T.getTotalTime();
+    llvm::errs() << llvm::format("%0.4f", R.getWallTime()) << "\t"
+                 << llvm::format("%0.4f", R.getProcessTime()) << "\t"
+                 << llvm::format("%llu", R.getInstructionsExecuted()) << "\n";
+  }
 
   if (RoundTripArgs)
     if (FD && FD->roundTripCommands(llvm::errs()))

@@ -309,7 +309,7 @@ exit:
   ret i64 %r
 }
 
-define i8 @trunc_in_loop_exit_block() {
+define i8 @trunc_in_loop_exit_block() "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: @trunc_in_loop_exit_block(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

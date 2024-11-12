@@ -269,6 +269,7 @@ IntegerAttr Builder::getIntegerAttr(Type type, int64_t value) {
   if (type.isIndex())
     return IntegerAttr::get(type, APInt(64, value));
   // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
   return IntegerAttr::get(type, APInt(type.getIntOrFloatBitWidth(), value,
                                       type.isSignedInteger(),
                                       /*implicitTrunc=*/true));

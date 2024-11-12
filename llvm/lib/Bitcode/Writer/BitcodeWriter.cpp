@@ -853,8 +853,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY;
   case Attribute::SanitizeRealtime:
     return bitc::ATTR_KIND_SANITIZE_REALTIME;
-  case Attribute::SanitizeRealtimeUnsafe:
-    return bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE;
+  case Attribute::SanitizeRealtimeBlocking:
+    return bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING;
   case Attribute::SpeculativeLoadHardening:
     return bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING;
   case Attribute::SwiftError:
@@ -1718,6 +1718,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::GEP_NUSW;
     if (GEP->hasNoUnsignedWrap())
       Flags |= 1 << bitc::GEP_NUW;
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
+    if (ICmp->hasSameSign())
+      Flags |= 1 << bitc::ICMP_SAME_SIGN;
   }
 
   return Flags;
@@ -1860,6 +1863,7 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
+  Record.push_back(N->getNumExtraInhabitants());
 
   Stream.EmitRecord(bitc::METADATA_BASIC_TYPE, Record, Abbrev);
   Record.clear();
@@ -1942,6 +1946,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawAllocated()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawRank()));
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
+  Record.push_back(N->getNumExtraInhabitants());
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();

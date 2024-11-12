@@ -98,7 +98,7 @@ class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
   LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
     "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
     overloadedOperands, traits, numResults, requiresAccessGroup,
-    requiresAliasAnalysis, 0, immArgPositions, immArgAttrNames>;
+    requiresAliasAnalysis, 0, 0, immArgPositions, immArgAttrNames>;
 
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
@@ -297,6 +297,24 @@ def ROCDL_SchedBarrier : ROCDL_IntrOp<"sched.barrier", [], [], [], 0>,
     "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_sched_barrier,builder.getInt32(op.getMask()));";
 }
 
+def ROCDL_SchedGroupBarrier : ROCDL_IntrOp<"sched.group.barrier", [], [], [], 0>,
+  Arguments<(ins I32Attr:$mask, I32Attr:$size, I32Attr:$groupId)> {
+  let results = (outs);
+  let assemblyFormat = "$mask `,` $size `,` $groupId attr-dict";
+  string llvmBuilder = [{
+    createIntrinsicCall(builder,
+      llvm::Intrinsic::amdgcn_sched_group_barrier,
+      {builder.getInt32(op.getMask()), builder.getInt32(op.getSize()), builder.getInt32(op.getGroupId())});
+  }];
+}
+
+def ROCDL_IglpOpt : ROCDL_IntrOp<"iglp.opt", [], [], [], 0>,
+  Arguments<(ins I32Attr:$variant)> {
+  let results = (outs);
+  let assemblyFormat = "$variant attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_iglp_opt,builder.getInt32(op.getVariant()));";
+}
 
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics

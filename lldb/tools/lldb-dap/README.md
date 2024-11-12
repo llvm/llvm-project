@@ -244,9 +244,9 @@ The escape character can be adjusted via the `commandEscapePrefix` configuration
 The `lldb-dap` tool includes additional custom commands to support the Debug
 Adapter Protocol features.
 
-#### `lldb-dap startDebugging`
+#### `lldb-dap start-debugging`
 
-Using the command `lldb-dap startDebugging` it is possible to trigger a
+Using the command `lldb-dap start-debugging` it is possible to trigger a
 reverse request to the client requesting a child debug session with the
 specified configuration. For example, this can be used to attached to forked or
 spawned processes. For more information see
@@ -255,7 +255,7 @@ spawned processes. For more information see
 The custom command has the following format:
 
 ```
-lldb-dap startDebugging <launch|attach> <configuration>
+lldb-dap start-debugging <launch|attach> <configuration>
 ```
 
 This will launch a server and then request a child debug session for a client.
@@ -264,7 +264,7 @@ This will launch a server and then request a child debug session for a client.
 {
   "program": "server",
   "postRunCommand": [
-    "lldb-dap startDebugging launch '{\"program\":\"client\"}'"
+    "lldb-dap start-debugging launch '{\"program\":\"client\"}'"
   ]
 }
 ```
@@ -289,6 +289,37 @@ is evaluated as a command.
 The initial repl-mode can be configured with the cli flag `--repl-mode=<mode>`
 and may also be adjusted at runtime using the lldb command
 `lldb-dap repl-mode <mode>`.
+
+#### `lldb-dap send-event`
+
+lldb-dap includes a command to trigger a Debug Adapter Protocol event
+from a script.
+
+The event maybe a custom DAP event or a standard event, if the event is not 
+handled internally by `lldb-dap`.
+
+This command has the format:
+
+```
+lldb-dap send-event <name> <body>?
+```
+
+For example you can use a launch configuration hook to trigger custom events like:
+
+```json
+{
+  "program": "exe",
+  "stopCommands": [
+    "lldb-dap send-event MyStopEvent",
+    "lldb-dap send-event MyStopEvent '{\"key\": 321}",
+  ]
+}
+```
+
+[See the specification](https://microsoft.github.io/debug-adapter-protocol/specification#Base_Protocol_Event) 
+for more details on Debug Adapter Protocol events and the VS Code 
+[debug.onDidReceiveDebugSessionCustomEvent](https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent) 
+API for handling a custom event from an extension.
 
 ## Contributing
 

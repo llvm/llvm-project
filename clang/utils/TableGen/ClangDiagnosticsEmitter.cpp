@@ -83,7 +83,7 @@ getCategoryFromDiagGroup(const Record *Group,
 static std::string getDiagnosticCategory(const Record *R,
                                          DiagGroupParentMap &DiagGroupParents) {
   // If the diagnostic is in a group, and that group has a category, use it.
-  if (DefInit *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
+  if (const auto *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
     // Check the diagnostic's diag group for a category.
     std::string CatName = getCategoryFromDiagGroup(Group->getDef(),
                                                    DiagGroupParents);
@@ -161,7 +161,7 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
 
   for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
     const Record *R = Diags[i];
-    DefInit *DI = dyn_cast<DefInit>(R->getValueInit("Group"));
+    const auto *DI = dyn_cast<DefInit>(R->getValueInit("Group"));
     if (!DI)
       continue;
     assert(R->getValueAsDef("Class")->getName() != "CLASS_NOTE" &&
@@ -359,7 +359,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     const Record *R = Diags[i];
     if (isExtension(R) && isOffByDefault(R)) {
       DiagsSet.insert(R);
-      if (DefInit *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
+      if (const auto *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
         const Record *GroupRec = Group->getDef();
         if (!isSubGroupOfGroup(GroupRec, "pedantic")) {
           markGroup(GroupRec);
@@ -378,13 +378,13 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     // Check if the group is implicitly in -Wpedantic.  If so,
     // the diagnostic should not be directly included in the -Wpedantic
     // diagnostic group.
-    if (DefInit *Group = dyn_cast<DefInit>(R->getValueInit("Group")))
+    if (const auto *Group = dyn_cast<DefInit>(R->getValueInit("Group")))
       if (groupInPedantic(Group->getDef()))
         continue;
 
     // The diagnostic is not included in a group that is (transitively) in
     // -Wpedantic.  Include it in -Wpedantic directly.
-    if (RecordVec *V = DiagsInPedantic.dyn_cast<RecordVec*>())
+    if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(R);
     else {
       DiagsInPedantic.get<RecordSet*>()->insert(R);
@@ -413,7 +413,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
-    if (RecordVec *V = GroupsInPedantic.dyn_cast<RecordVec*>())
+    if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(Group);
     else {
       GroupsInPedantic.get<RecordSet*>()->insert(Group);
@@ -1443,7 +1443,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
     // Check if this is an error that is accidentally in a warning
     // group.
     if (isError(R)) {
-      if (DefInit *Group = dyn_cast<DefInit>(R.getValueInit("Group"))) {
+      if (const auto *Group = dyn_cast<DefInit>(R.getValueInit("Group"))) {
         const Record *GroupRec = Group->getDef();
         const std::string &GroupName =
             std::string(GroupRec->getValueAsString("GroupName"));
@@ -1478,7 +1478,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 
     // Warning group associated with the diagnostic. This is stored as an index
     // into the alphabetically sorted warning group table.
-    if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
+    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       std::map<std::string, GroupInfo>::iterator I = DiagsInGroup.find(
           std::string(DI->getDef()->getValueAsString("GroupName")));
       assert(I != DiagsInGroup.end());

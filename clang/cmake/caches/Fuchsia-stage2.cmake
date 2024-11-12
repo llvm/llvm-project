@@ -368,6 +368,10 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi)
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
 endforeach()
 
 foreach(target riscv32-unknown-elf)
@@ -420,6 +424,10 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
 endforeach()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")

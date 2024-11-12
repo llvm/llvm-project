@@ -1,8 +1,8 @@
-REQUIRES: system-windows, msvc
+REQUIRES: target-windows, msvc
 RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/CompilandsTest.cpp.obj %S/Inputs/CompilandsTest.cpp
 RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/CompilandsTest.cpp.exe %T/CompilandsTest.cpp.obj
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %T/CompilandsTest.cpp.exe | FileCheck %s
-RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols %T/CompilandsTest.cpp.exe | FileCheck %s
+RUN: lldb-test symbols %T/CompilandsTest.cpp.exe | FileCheck %s
 
 ; Link default libraries
 

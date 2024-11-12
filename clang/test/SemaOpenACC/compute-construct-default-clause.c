@@ -16,25 +16,22 @@ void SingleOnly() {
   #pragma acc kernels self default(present) present(i) default(none) copy(i)
   while(0);
 
-  // expected-warning@+6{{OpenACC construct 'parallel loop' not yet implemented}}
   // expected-warning@+5{{OpenACC clause 'self' not yet implemented}}
   // expected-warning@+4{{OpenACC clause 'default' not yet implemented}}
   // expected-warning@+3{{OpenACC clause 'private' not yet implemented}}
   // expected-warning@+2{{OpenACC clause 'default' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
   #pragma acc parallel loop self default(present) private(i) default(none) copy(i)
-  while(0);
+  for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC construct 'serial loop' not yet implemented}}
+  // expected-warning@+2{{OpenACC clause 'self' not yet implemented, clause ignored}}
   // expected-error@+1{{expected '('}}
   #pragma acc serial loop self default private(i) default(none) if(i)
-  while(0);
+  for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+2{{OpenACC construct 'kernels loop' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
   #pragma acc kernels loop default(none)
-  while(0);
+  for(int i = 0; i < 5; ++i);
 
   // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
@@ -43,7 +40,7 @@ void SingleOnly() {
 
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
   #pragma acc loop default(none)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 
   // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
@@ -52,5 +49,5 @@ void SingleOnly() {
 
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
 #pragma acc loop default(present)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

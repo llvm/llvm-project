@@ -89,7 +89,7 @@ public:
   // The 1-indexed partition that this section is assigned to by the garbage
   // collector, or 0 if this section is dead. Normally there is only one
   // partition, so this will either be 0 or 1.
-  elf::Partition &getPartition() const;
+  elf::Partition &getPartition(Ctx &) const;
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
@@ -501,6 +501,9 @@ inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.starts_with(".debug");
 }
+
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                const InputSectionBase *);
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

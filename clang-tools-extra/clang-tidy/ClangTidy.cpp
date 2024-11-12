@@ -336,6 +336,7 @@ private:
   std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
+  void anchor() override {};
 };
 
 } // namespace
@@ -458,7 +459,6 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (!AnalyzerOptions.CheckersAndPackages.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), AnalyzerOptions);
     AnalyzerOptions.AnalysisDiagOpt = PD_NONE;
-    AnalyzerOptions.eagerlyAssumeBinOpBifurcation = true;
     std::unique_ptr<ento::AnalysisASTConsumer> AnalysisConsumer =
         ento::CreateAnalysisConsumer(Compiler);
     AnalysisConsumer->AddDiagnosticConsumer(

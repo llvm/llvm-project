@@ -528,9 +528,13 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV32-NEXT:    add t2, t2, t5
 ; RV32-NEXT:    add a0, a0, t2
 ; RV32-NEXT:    addi sp, s0, -128
+; RV32-NEXT:    .cfi_def_cfa sp, 128
 ; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 128
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_16xi32:
@@ -588,9 +592,13 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    add t2, t2, t5
 ; RV64-NEXT:    addw a0, a0, t2
 ; RV64-NEXT:    addi sp, s0, -128
+; RV64-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 128
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1
@@ -803,9 +811,13 @@ define i64 @explode_8xi64(<8 x i64> %v) {
 ; RV64-NEXT:    add a0, a0, a3
 ; RV64-NEXT:    add a0, a0, a5
 ; RV64-NEXT:    addi sp, s0, -128
+; RV64-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 128
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %e0 = extractelement <8 x i64> %v, i32 0
   %e1 = extractelement <8 x i64> %v, i32 1
@@ -989,7 +1001,20 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV32-NEXT:    lw s9, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s10, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s11, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
+; RV32-NEXT:    .cfi_restore s4
+; RV32-NEXT:    .cfi_restore s5
+; RV32-NEXT:    .cfi_restore s6
+; RV32-NEXT:    .cfi_restore s7
+; RV32-NEXT:    .cfi_restore s8
+; RV32-NEXT:    .cfi_restore s9
+; RV32-NEXT:    .cfi_restore s10
+; RV32-NEXT:    .cfi_restore s11
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_16xi64:
@@ -1042,9 +1067,13 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV64-NEXT:    add t4, t4, t5
 ; RV64-NEXT:    add a0, a0, t4
 ; RV64-NEXT:    addi sp, s0, -256
+; RV64-NEXT:    .cfi_def_cfa sp, 256
 ; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 256
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %e0 = extractelement <16 x i64> %v, i32 0
   %e1 = extractelement <16 x i64> %v, i32 1

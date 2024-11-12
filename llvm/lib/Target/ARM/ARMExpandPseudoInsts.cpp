@@ -1426,6 +1426,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
   // Use ScratchRegs to store the fp regs
   std::vector<std::tuple<unsigned, unsigned, unsigned>> ClearedFPRegs;
   std::vector<unsigned> NonclearedFPRegs;
+  bool ReturnsFPReg = false;
   for (const MachineOperand &Op : MBBI->operands()) {
     if (Op.isReg() && Op.isUse()) {
       Register Reg = Op.getReg();
@@ -1460,13 +1461,50 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
           NonclearedFPRegs.push_back(Reg);
         }
       }
+    } else if (Op.isReg() && Op.isDef()) {
+      Register Reg = Op.getReg();
+      if (ARM::SPRRegClass.contains(Reg) || ARM::DPRRegClass.contains(Reg) ||
+          ARM::QPRRegClass.contains(Reg))
+        ReturnsFPReg = true;
     }
   }
 
-  bool passesFPReg = (!NonclearedFPRegs.empty() || !ClearedFPRegs.empty());
+  bool PassesFPReg = (!NonclearedFPRegs.empty() || !ClearedFPRegs.empty());
 
-  if (passesFPReg)
+  if (PassesFPReg || ReturnsFPReg)
     assert(STI->hasFPRegs() && "Subtarget needs fpregs");
+
+  // CVE-2024-7883
+  //
+  // The VLLDM/VLSTM instructions set up lazy state preservation, but they
+  // execute as NOPs if the FP register file is not considered to contain
+  // secure data, represented by the CONTROL_S.SFPA bit. This means that the
+  // state of CONTROL_S.SFPA must be the same when these two instructions are
+  // executed. That might not be the case if we haven't used any FP
+  // instructions before the VLSTM, so CONTROL_S.SFPA is clear, but do have one
+  // before the VLLDM, which sets it..
+  //
+  // If we can't prove that SFPA will be the same for the VLSTM and VLLDM, we
+  // execute a "vmov s0, s0" instruction before the VLSTM to ensure that
+  // CONTROL_S.SFPA is set for both.
+  //
+  // That can only happen for callees which take no FP arguments (or we'd have
+  // inserted a VMOV above) and which return values in FP regs (so that we need
+  // to use a VMOV to back-up the return value before the VLLDM). It also can't
+  // happen if the call is dominated by other existing floating-point
+  // instructions, but we don't currently check for that case.
+  //
+  // These conditions mean that we only emit this instruction when using the
+  // hard-float ABI, which means we can assume that FP instructions are
+  // available, and don't need to make it conditional like we do for the
+  // CVE-2021-35465 workaround.
+  if (ReturnsFPReg && !PassesFPReg) {
+    bool S0Dead = !LiveRegs.contains(ARM::S0);
+    BuildMI(MBB, MBBI, DL, TII->get(ARM::VMOVS))
+        .addReg(ARM::S0, RegState::Define | getDeadRegState(S0Dead))
+        .addReg(ARM::S0, getUndefRegState(S0Dead))
+        .add(predOps(ARMCC::AL));
+  }
 
   // Lazy store all fp registers to the stack.
   // This executes as NOP in the absence of floating-point support.
@@ -1528,7 +1566,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
   }
   // restore FPSCR from stack and clear bits 0-4, 7, 28-31
   // The other bits are program global according to the AAPCS
-  if (passesFPReg) {
+  if (PassesFPReg) {
     BuildMI(MBB, MBBI, DL, TII->get(ARM::tLDRspi), SpareReg)
         .addReg(ARM::SP)
         .addImm(0x10)

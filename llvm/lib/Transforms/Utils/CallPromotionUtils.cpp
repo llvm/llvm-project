@@ -529,7 +529,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
 
       // Remove any incompatible attributes for the argument.
       AttrBuilder ArgAttrs(Ctx, CallerPAL.getParamAttrs(ArgNo));
-      ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
+      ArgAttrs.remove(AttributeFuncs::typeIncompatible(
+          FormalTy, CallerPAL.getParamAttrs(ArgNo)));
 
       // We may have a different byval/inalloca type.
       if (ArgAttrs.getByValType())
@@ -549,7 +550,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
   AttrBuilder RAttrs(Ctx, CallerPAL.getRetAttrs());
   if (!CallSiteRetTy->isVoidTy() && CallSiteRetTy != CalleeRetTy) {
     createRetBitCast(CB, CallSiteRetTy, RetBitCast);
-    RAttrs.remove(AttributeFuncs::typeIncompatible(CalleeRetTy));
+    RAttrs.remove(
+        AttributeFuncs::typeIncompatible(CalleeRetTy, CallerPAL.getRetAttrs()));
     AttributeChanged = true;
   }
 

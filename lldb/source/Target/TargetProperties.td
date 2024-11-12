@@ -157,6 +157,12 @@ let Definition = "target" in {
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,
     Desc<"The default disassembly flavor to use for x86 or x86-64 targets.">;
+  def DisassemblyCPU: Property<"disassembly-cpu", "String">,
+    DefaultStringValue<"">,
+    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu clang flag.">;
+  def DisassemblyFeatures: Property<"disassembly-features", "String">,
+    DefaultStringValue<"">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
@@ -201,6 +207,13 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def LaunchWorkingDir: Property<"launch-working-dir", "String">,
+    DefaultStringValue<"">,
+    Desc<"A default value for the working directory to use when launching processes. "
+         "It is ignored when empty. This setting is only used when the target is "
+         "launched. If you change this setting, the new value will only apply to "
+         "subsequent launches. Commands that take an explicit working directory "
+         "will override this setting.">;
 }
 
 let Definition = "process_experimental" in {

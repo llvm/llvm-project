@@ -46,18 +46,18 @@ define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
 ; PTX-NEXT:    mov.u64 %SPL, __local_depot1;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u64 %rd1, [load_padding_param_0];
-; PTX-NEXT:    st.u64 [%SP+0], %rd1;
+; PTX-NEXT:    st.u64 [%SP], %rd1;
 ; PTX-NEXT:    add.u64 %rd2, %SP, 0;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0+0], %rd2;
+; PTX-NEXT:    st.param.b64 [param0], %rd2;
 ; PTX-NEXT:    .param .b64 retval0;
 ; PTX-NEXT:    call.uni (retval0),
 ; PTX-NEXT:    escape,
 ; PTX-NEXT:    (
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    );
-; PTX-NEXT:    ld.param.b64 %rd3, [retval0+0];
+; PTX-NEXT:    ld.param.b64 %rd3, [retval0];
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
   %tmp = call ptr @escape(ptr nonnull align 16 %arg)
