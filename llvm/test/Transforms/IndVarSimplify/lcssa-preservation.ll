@@ -4,7 +4,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-define void @PR18642(i32 %x) {
+define void @PR18642(i32 %x, i1 %arg) {
 ; CHECK-LABEL: @PR18642(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
@@ -15,14 +15,12 @@ define void @PR18642(i32 %x) {
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    br i1 true, label [[INNER_HEADER]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       outer.latch:
-; CHECK-NEXT:    br i1 false, label [[OUTER_HEADER]], label [[EXIT_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[OUTER_HEADER]], label [[EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       exit.loopexit:
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ -2147483648, [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit.loopexit1:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[EXIT_PHI:%.*]] = phi i32 [ [[INC_LCSSA]], [[EXIT_LOOPEXIT]] ], [ undef, [[EXIT_LOOPEXIT1]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -43,7 +41,7 @@ inner.latch:
   br i1 %cmp2, label %inner.header, label %exit
 
 outer.latch:
-  br i1 undef, label %outer.header, label %exit
+  br i1 %arg, label %outer.header, label %exit
 
 exit:
   %exit.phi = phi i32 [ %inc, %inner.latch ], [ undef, %outer.latch ]
