@@ -4022,6 +4022,28 @@ def err_availability_unexpected_parameter: Error<
 def warn_unguarded_availability :
   Warning<"%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
+def err_unguarded_feature : Error<
+  "use of %0 requires feature '%1' to be %select{available|unavailable}2">;
+def err_label_in_conditionally_guarded_feature : Error<
+  "labels cannot appear in regions conditionally guarded by features">;
+def err_features_invalid_for_decl : Error<
+  "feature attributes cannot be applied to %0">;
+def err_features_invalid_name : Error<
+  "cannot find definition of feature attribute '%0'">;
+def err_features_invalid__arg : Error<
+  "invalid argument %0: must evaluate to 0 or 1">;
+def err_feature_invalid_for_decl : Error<
+  "feature attribute '%0(%1)' cannot be applied to this decl">;
+def err_feature_merge_incompatible : Error<
+  "cannot merge incompatible feature attribute to this decl">;
+def err_new_feature_redeclaration : Error<
+  "new feature attributes cannot be added to redeclarations">;
+def err_feature_invalid_added : Error<
+  "cannot add feature availability to this decl">;
+def note_feature_incompatible0 : Note<
+  "feature attribute %0">;
+def note_feature_incompatible1 : Note<
+  "is incompatible with %0">;
 def warn_unguarded_availability_unavailable :
   Warning<"%0 is unavailable">,
   InGroup<UnguardedAvailability>, DefaultIgnore;

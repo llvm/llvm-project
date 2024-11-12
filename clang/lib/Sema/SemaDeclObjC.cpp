@@ -1893,6 +1893,7 @@ ObjCCategoryDecl *SemaObjC::ActOnStartCategoryInterface(
   // checking for protocol uses.
   SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, CDecl, AttrList);
   SemaRef.AddPragmaAttributes(SemaRef.TUScope, CDecl);
+  SemaRef.copyFeatureAvailabilityCheck(CDecl, IDecl);
 
   if (NumProtoRefs) {
     diagnoseUseOfProtocols(SemaRef, CDecl, (ObjCProtocolDecl *const *)ProtoRefs,
@@ -1948,6 +1949,8 @@ ObjCCategoryImplDecl *SemaObjC::ActOnStartCategoryImplementation(
 
   SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, CDecl, Attrs);
   SemaRef.AddPragmaAttributes(SemaRef.TUScope, CDecl);
+  if (CatIDecl)
+    SemaRef.copyFeatureAvailabilityCheck(CDecl, CatIDecl);
 
   // FIXME: PushOnScopeChains?
   SemaRef.CurContext->addDecl(CDecl);
@@ -2082,6 +2085,7 @@ ObjCImplementationDecl *SemaObjC::ActOnStartClassImplementation(
 
   SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, IMPDecl, Attrs);
   SemaRef.AddPragmaAttributes(SemaRef.TUScope, IMPDecl);
+  SemaRef.copyFeatureAvailabilityCheck(IMPDecl, IDecl);
 
   if (CheckObjCDeclScope(IMPDecl)) {
     ActOnObjCContainerStartDefinition(IMPDecl);
@@ -5134,6 +5138,8 @@ Decl *SemaObjC::ActOnMethodDeclaration(
   // Insert the invisible arguments, self and _cmd!
   ObjCMethod->createImplicitParams(Context, ObjCMethod->getClassInterface());
 
+  SemaRef.copyFeatureAvailabilityCheck(ObjCMethod, cast<NamedDecl>(ClassDecl));
+
   SemaRef.ActOnDocumentableDecl(ObjCMethod);
 
   return ObjCMethod;
@@ -5706,6 +5712,7 @@ Decl *SemaObjC::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
 
   // Process attributes attached to the ivar.
   SemaRef.ProcessDeclAttributes(S, NewID, D);
+  SemaRef.copyFeatureAvailabilityCheck(NewID, EnclosingContext);
 
   if (D.isInvalidType())
     NewID->setInvalidDecl();

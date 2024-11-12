@@ -942,6 +942,96 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
   addTranslationUnitDecl();
 }
 
+ASTContext::AvailabilityDomainInfo
+ASTContext::getFeatureAvailInfo(StringRef FeatureName) const {
+  FeatureAvailKind Kind = getLangOpts().getFeatureAvailability(FeatureName);
+
+  if (Kind != FeatureAvailKind::None)
+    return {Kind};
+
+  auto I = AvailabilityDomainMap.find(FeatureName);
+  if (I != AvailabilityDomainMap.end())
+    return I->second;
+
+  return {};
+}
+
+std::pair<StringRef, ASTContext::AvailabilityDomainInfo>
+ASTContext::getFeatureAvailInfo(Decl *D) const {
+  auto *VD = cast<VarDecl>(D);
+  auto *Attr = VD->getAttr<AvailabilityDomainAttr>();
+  if (!Attr)
+    return {};
+  StringRef Name = Attr->getName()->getName();
+  auto *Init = cast<InitListExpr>(VD->getInit());
+  Expr::EvalResult Result;
+  FeatureAvailKind Kind;
+
+  if (!Init->getInit(0)->IgnoreParenImpCasts()->EvaluateAsInt(Result, *this))
+    llvm_unreachable("initializer doesn't evaluate to integer");
+  llvm::APSInt Res = Result.Val.getInt();
+  unsigned Val = Res.getExtValue();
+  switch (Val) {
+  case 0:
+    Kind = FeatureAvailKind::Available;
+    break;
+  case 1:
+    Kind = FeatureAvailKind::Unavailable;
+    break;
+  case 2:
+    Kind = FeatureAvailKind::Dynamic;
+    break;
+  default:
+    llvm_unreachable("invalid feature kind");
+  }
+
+  ASTContext::AvailabilityDomainInfo Info{Kind, nullptr};
+
+  if (Kind == FeatureAvailKind::Dynamic) {
+    Expr *FnExpr = Init->getInit(1);
+    auto *Call = CallExpr::Create(*this, FnExpr, {}, IntTy, VK_PRValue,
+                                  SourceLocation(), FPOptionsOverride());
+    Info.Call =
+        ImplicitCastExpr::Create(*this, BoolTy, CK_IntegralToBoolean, Call,
+                                 nullptr, VK_PRValue, FPOptionsOverride());
+  }
+
+  return {Name, Info};
+}
+
+std::pair<DomainAvailabilityAttr *, bool>
+ASTContext::checkNewFeatureAvailability(Decl *D, StringRef NewDomainName,
+                                        bool NewUnavailable) {
+  assert(!NewDomainName.empty());
+
+  for (auto *AA : D->specific_attrs<DomainAvailabilityAttr>()) {
+    if (AA->getDomain() != NewDomainName)
+      continue;
+    if (AA->getUnavailable() == NewUnavailable)
+      return {AA, true};
+    return {AA, false};
+  }
+
+  return {nullptr, true};
+}
+
+bool ASTContext::hasFeatureAvailabilityAttr(const Decl *D) const {
+  return !D->specific_attrs<DomainAvailabilityAttr>().empty();
+}
+
+bool ASTContext::hasUnavailableFeature(const Decl *D) const {
+  for (auto *AA : D->specific_attrs<DomainAvailabilityAttr>()) {
+    auto FeatureName = AA->getDomain();
+    auto FeatureInfo = getFeatureAvailInfo(FeatureName);
+    if (FeatureInfo.Kind == (AA->getUnavailable()
+                                 ? FeatureAvailKind::Available
+                                 : FeatureAvailKind::Unavailable))
+      return true;
+  }
+
+  return false;
+}
+
 void ASTContext::cleanup() {
   // Release the DenseMaps associated with DeclContext objects.
   // FIXME: Is this the ideal solution?

@@ -3486,6 +3486,10 @@ def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Disable implicit builtin knowledge of a specific function">;
+def ffeature_availability_EQ : Joined<["-"], "ffeature-availability=">, Group<f_Group>,
+  Visibility<[CC1Option]>,
+  HelpText<"feature availability">,
+  MarshallingInfoStringVector<LangOpts<"FeatureAvailability">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;

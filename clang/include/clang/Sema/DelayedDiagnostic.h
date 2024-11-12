@@ -125,7 +125,12 @@ private:
 /// the complete parsing of the current declaration.
 class DelayedDiagnostic {
 public:
-  enum DDKind : unsigned char { Availability, Access, ForbiddenType };
+  enum DDKind : unsigned char {
+    Availability,
+    FeatureAvailability,
+    Access,
+    ForbiddenType
+  };
 
   DDKind Kind;
   bool Triggered;
@@ -142,6 +147,9 @@ public:
                                             const ObjCPropertyDecl  *ObjCProperty,
                                             StringRef Msg,
                                             bool ObjCPropertyAccess);
+
+  static DelayedDiagnostic
+  makeFeatureAvailability(NamedDecl *D, ArrayRef<SourceLocation> Locs);
 
   static DelayedDiagnostic makeAccess(SourceLocation Loc,
                                       const AccessedEntity &Entity) {
@@ -201,6 +209,12 @@ public:
     return AvailabilityData.AR;
   }
 
+  const NamedDecl *getFeatureAvailabilityDecl() const {
+    assert(Kind == FeatureAvailability &&
+           "Not a feature availability diagnostic.");
+    return FeatureAvailabilityData.Decl;
+  }
+
   /// The diagnostic ID to emit.  Used like so:
   ///   Diag(diag.Loc, diag.getForbiddenTypeDiagnostic())
   ///     << diag.getForbiddenTypeOperand()
@@ -246,6 +260,10 @@ private:
     bool ObjCPropertyAccess;
   };
 
+  struct FAD {
+    const NamedDecl *Decl;
+  };
+
   struct FTD {
     unsigned Diagnostic;
     unsigned Argument;
@@ -254,6 +272,7 @@ private:
 
   union {
     struct AD AvailabilityData;
+    struct FAD FeatureAvailabilityData;
     struct FTD ForbiddenTypeData;
 
     /// Access control.

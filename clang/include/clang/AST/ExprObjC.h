@@ -1689,7 +1689,9 @@ public:
 /// be used in the condition of an \c if, but it is also usable as top level
 /// expressions.
 ///
-class ObjCAvailabilityCheckExpr : public Expr {
+class ObjCAvailabilityCheckExpr final
+    : public Expr,
+      private llvm::TrailingObjects<ObjCAvailabilityCheckExpr, char> {
 public:
   struct VersionAsWritten {
     /// Platform version canonicalized for use with availability checks.
@@ -1700,9 +1702,23 @@ public:
 
 private:
   friend class ASTStmtReader;
+  friend llvm::TrailingObjects<ObjCAvailabilityCheckExpr, char>;
 
   VersionAsWritten VersionToCheck;
   SourceLocation AtLoc, RParen;
+
+  void setHasDomainName(bool V) {
+    ObjCAvailabilityCheckExprBits.HasDomainName = V;
+  }
+
+  ObjCAvailabilityCheckExpr(SourceLocation AtLoc, SourceLocation RParen,
+                            QualType Ty, StringRef DomainName)
+      : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_PRValue, OK_Ordinary),
+        VersionToCheck(), AtLoc(AtLoc), RParen(RParen) {
+    setDependence(ExprDependence::None);
+    setHasDomainName(true);
+    strcpy(getTrailingObjects<char>(), DomainName.data());
+  }
 
 public:
   ObjCAvailabilityCheckExpr(VersionAsWritten VersionToCheck,
@@ -1711,10 +1727,21 @@ public:
       : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_PRValue, OK_Ordinary),
         VersionToCheck(VersionToCheck), AtLoc(AtLoc), RParen(RParen) {
     setDependence(ExprDependence::None);
+    setHasDomainName(false);
   }
 
+  static ObjCAvailabilityCheckExpr *
+  CreateAvailabilityFeatureCheck(SourceLocation AtLoc, SourceLocation RParen,
+                                 QualType Ty, StringRef DomainName,
+                                 const ASTContext &C);
+
   explicit ObjCAvailabilityCheckExpr(EmptyShell Shell)
-      : Expr(ObjCAvailabilityCheckExprClass, Shell) {}
+      : Expr(ObjCAvailabilityCheckExprClass, Shell) {
+    setHasDomainName(false);
+  }
+
+  static ObjCAvailabilityCheckExpr *
+  CreateEmpty(const ASTContext &C, Stmt::EmptyShell Empty, size_t FeaturesLen);
 
   SourceLocation getBeginLoc() const { return AtLoc; }
   SourceLocation getEndLoc() const { return RParen; }
@@ -1725,6 +1752,14 @@ public:
   VersionTuple getVersion() const { return VersionToCheck.Version; }
   VersionTuple getVersionAsWritten() const {
     return VersionToCheck.SourceVersion;
+  }
+
+  bool hasDomainName() const {
+    return ObjCAvailabilityCheckExprBits.HasDomainName;
+  }
+  StringRef getDomainName() const {
+    assert(hasDomainName());
+    return getTrailingObjects<char>();
   }
 
   child_range children() {

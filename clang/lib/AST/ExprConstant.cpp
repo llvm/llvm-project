@@ -12430,6 +12430,30 @@ public:
     return Success(E->getValue(), E);
   }
 
+  bool VisitObjCAvailabilityCheckExpr(const ObjCAvailabilityCheckExpr *E) {
+    if (!E->hasDomainName())
+      return false;
+    auto FeatureName = E->getDomainName();
+    auto FeatureInfo = Info.Ctx.getFeatureAvailInfo(FeatureName);
+    unsigned ResultInt;
+
+    switch (FeatureInfo.Kind) {
+    case FeatureAvailKind::Available:
+      ResultInt = 1;
+      break;
+    case FeatureAvailKind::Unavailable:
+      ResultInt = 0;
+      break;
+    case FeatureAvailKind::Dynamic:
+      return false;
+    case FeatureAvailKind::None:
+      llvm_unreachable("unexpected feature kind");
+    }
+
+    return Success(APSInt(APInt(Info.Ctx.getIntWidth(E->getType()), ResultInt)),
+                   E);
+  }
+
   bool CheckReferencedDecl(const Expr *E, const Decl *D);
   bool VisitDeclRefExpr(const DeclRefExpr *E) {
     if (CheckReferencedDecl(E, E->getDecl()))

@@ -21,6 +21,7 @@
 // CHECK-NEXT: ArmBuiltinAlias (SubjectMatchRule_function)
 // CHECK-NEXT: AssumeAligned (SubjectMatchRule_objc_method, SubjectMatchRule_function)
 // CHECK-NEXT: Availability ((SubjectMatchRule_record, SubjectMatchRule_enum, SubjectMatchRule_enum_constant, SubjectMatchRule_field, SubjectMatchRule_function, SubjectMatchRule_namespace, SubjectMatchRule_objc_category, SubjectMatchRule_objc_implementation, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_objc_protocol, SubjectMatchRule_record, SubjectMatchRule_type_alias, SubjectMatchRule_variable))
+// CHECK-NEXT: AvailabilityDomain (SubjectMatchRule_variable)
 // CHECK-NEXT: AvailableOnlyInDefaultEvalMethod (SubjectMatchRule_type_alias)
 // CHECK-NEXT: BPFFastCall (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: BPFPreserveAccessIndex (SubjectMatchRule_record)

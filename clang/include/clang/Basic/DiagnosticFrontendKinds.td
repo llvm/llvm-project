@@ -142,6 +142,9 @@ def err_fe_invalid_exception_model
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
+def err_feature_availability_flag_invalid_value : Error<
+  "invalid value '%0' passed to '-ffeature-availability='; expected <feature>:<on|off>">;
+
 def err_fe_incompatible_option_with_remote_cache : Error<
   "'%0' is incompatible with remote caching backend">;
 def err_fe_unable_to_load_include_tree : Error<

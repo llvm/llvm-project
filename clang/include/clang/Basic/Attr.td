@@ -1178,6 +1178,25 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
   let Documentation = [AvailabilityDocs];
 }
 
+def DomainAvailability : InheritableAttr {
+  // This attribute has no spellings as it is created implicitly when
+  // __attribute__((availability(domain:...))) is seen.
+  let Spellings = [Clang<"">];
+  let Args = [StringArgument<"domain">, BoolArgument<"unavailable">];
+  let AdditionalMembers = [{
+    std::string getFeatureAttributeStr() const;
+  }];
+  let Documentation = [Undocumented];
+}
+
+// This attribute is used to annotate structs of type `_AvailabilityDomain`.
+def AvailabilityDomain : InheritableAttr {
+  let Spellings = [Clang<"availability_domain">];
+  let Args = [IdentifierArgument<"name">];
+  let Subjects = SubjectList<[Var]>;
+  let Documentation = [Undocumented];
+}
+
 def ExternalSourceSymbol : InheritableAttr {
   let Spellings = [Clang<"external_source_symbol", /*allowInC=*/1,
                    /*version=*/20230206>];

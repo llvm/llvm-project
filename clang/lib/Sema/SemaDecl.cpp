@@ -3258,6 +3258,9 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     Diag(Old->getLocation(), diag::note_previous_declaration);
   }
 
+  if (auto *ND = dyn_cast<NamedDecl>(Old))
+    copyFeatureAvailabilityCheck(New, ND, true);
+
   if (!Old->hasAttrs())
     return;
 
@@ -15904,6 +15907,12 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
+  std::pair<StringRef, ASTContext::AvailabilityDomainInfo> ADInfo =
+      getASTContext().getFeatureAvailInfo(VD);
+
+  if (!ADInfo.first.empty())
+    getASTContext().addAvailabilityDomainMap(ADInfo.first, ADInfo.second);
+
   const DeclContext *DC = VD->getDeclContext();
   // If there's a #pragma GCC visibility in scope, and this isn't a class
   // member, set the visibility of this variable.
@@ -17541,6 +17550,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
     if (Body && FSI->HasPotentialAvailabilityViolations)
       DiagnoseUnguardedAvailabilityViolations(dcl);
+
+    if (Body && FSI->HasPotentialFeatureAvailabilityViolations)
+      DiagnoseUnguardedFeatureAvailabilityViolations(dcl);
 
     assert(!FSI->ObjCShouldCallSuper &&
            "This should only be set for ObjC methods, which should have been "
@@ -19923,6 +19935,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (D) {
     // FIXME: The current scope is almost... but not entirely... correct here.
     ProcessDeclAttributes(getCurScope(), NewFD, *D);
+    copyFeatureAvailabilityCheck(NewFD, Record);
 
     if (NewFD->hasAttrs())
       CheckAlignasUnderalignment(NewFD);
@@ -21072,6 +21085,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
+  copyFeatureAvailabilityCheck(New, TheEnumDecl);
   ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.

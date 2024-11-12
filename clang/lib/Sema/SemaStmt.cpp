@@ -646,6 +646,10 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
       TheDecl->setLocation(IdentLoc);
     }
   }
+
+  if (FunctionScopeInfo *Info = getCurFunctionAvailabilityContext())
+    Info->HasPotentialFeatureAvailabilityViolations = true;
+
   return LS;
 }
 

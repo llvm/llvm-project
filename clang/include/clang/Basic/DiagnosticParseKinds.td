@@ -1167,6 +1167,11 @@ def err_availability_expected_platform : Error<
 def err_availability_expected_environment : Error<
   "expected an environment name, e.g., 'compute'">;
 
+def err_features_domain_name : Error<
+  "expected a domain name">;
+def err_feature_invalid_availability_check : Error<
+  "cannot pass a domain argument along with other arguments">;
+
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<
   "expected a related Objective-C class name, e.g., 'NSColor'">;

@@ -2198,7 +2198,15 @@ public:
   /// Issue any -Wunguarded-availability warnings in \c FD
   void DiagnoseUnguardedAvailabilityViolations(Decl *FD);
 
+  void DiagnoseUnguardedFeatureAvailabilityViolations(Decl *FD);
+
   void handleDelayedAvailabilityCheck(sema::DelayedDiagnostic &DD, Decl *Ctx);
+
+  void handleDelayedFeatureAvailabilityCheck(sema::DelayedDiagnostic &DD,
+                                             Decl *Ctx);
+
+  void DiagnoseFeatureAvailabilityOfDecl(NamedDecl *D,
+                                         ArrayRef<SourceLocation> Locs);
 
   /// Retrieve the current function, if any, that should be analyzed for
   /// potential availability violations.
@@ -4947,6 +4955,11 @@ public:
 
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
+
+  void copyFeatureAvailability(Decl *Dst, Decl *Src);
+
+  void copyFeatureAvailabilityCheck(Decl *Dst, NamedDecl *Src,
+                                    bool Redeclaration = false);
 
   AvailabilityAttr *mergeAvailabilityAttr(
       NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,

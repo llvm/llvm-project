@@ -1329,6 +1329,55 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
   return VersionTuple(Major, Minor, Subminor);
 }
 
+void Parser::ParseFeatureAvailabilityAttribute(
+    IdentifierInfo &Availability, SourceLocation AvailabilityLoc,
+    ParsedAttributes &attrs, SourceLocation *endLoc, IdentifierInfo *ScopeName,
+    SourceLocation ScopeLoc, ParsedAttr::Form Form,
+    BalancedDelimiterTracker &T) {
+
+  if (Tok.isNot(tok::colon)) {
+    Diag(Tok, diag::err_expected) << tok::colon;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+
+  ConsumeToken();
+
+  if (Tok.isNot(tok::identifier)) {
+    Diag(Tok, diag::err_features_domain_name);
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+
+  ArgsVector ArgExprs;
+  IdentifierLoc *Feature = ParseIdentifierLoc();
+  ArgExprs.push_back(Feature);
+
+  if (ExpectAndConsume(tok::comma)) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+
+  if (Tok.isNot(tok::numeric_constant)) {
+    Diag(Tok, diag::err_expected) << tok::numeric_constant;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+
+  ExprResult ExprRes(Actions.ActOnNumericConstant(Tok, getCurScope()));
+  ArgExprs.push_back(ExprRes.get());
+
+  ConsumeToken();
+
+  // Closing ')'.
+  if (T.consumeClose())
+    return;
+
+  attrs.addNew(&Availability,
+               SourceRange(AvailabilityLoc, T.getCloseLocation()), ScopeName,
+               ScopeLoc, ArgExprs.data(), ArgExprs.size(), Form);
+}
+
 /// Parse the contents of the "availability" attribute.
 ///
 /// availability-attribute:
@@ -1378,6 +1427,11 @@ void Parser::ParseAvailabilityAttribute(
   }
   IdentifierLoc *Platform = ParseIdentifierLoc();
   if (const IdentifierInfo *const Ident = Platform->Ident) {
+    if (!Ident->getName().compare("domain")) {
+      ParseFeatureAvailabilityAttribute(Availability, AvailabilityLoc, attrs,
+                                        endLoc, ScopeName, ScopeLoc, Form, T);
+      return;
+    }
     // Disallow xrOS for availability attributes.
     if (Ident->getName().contains("xrOS") || Ident->getName().contains("xros"))
       Diag(Platform->Loc, diag::warn_availability_unknown_platform) << Ident;

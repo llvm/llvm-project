@@ -858,6 +858,12 @@ bool Decl::isWeakImported() const {
       if (CheckAvailability(getASTContext(), Availability, nullptr,
                             VersionTuple()) == AR_NotYetIntroduced)
         return true;
+    } else if (const auto *DA = dyn_cast<DomainAvailabilityAttr>(A)) {
+      auto DomainName = DA->getDomain();
+      auto FeatureInfo = getASTContext().getFeatureAvailInfo(DomainName);
+      if (FeatureInfo.Kind == FeatureAvailKind::Dynamic)
+        return true;
+      continue;
     }
   }
 

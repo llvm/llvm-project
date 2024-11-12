@@ -348,3 +348,26 @@ StringRef ObjCBridgedCastExpr::getBridgeKindName() const {
 
   llvm_unreachable("Invalid BridgeKind!");
 }
+
+ObjCAvailabilityCheckExpr *ObjCAvailabilityCheckExpr::CreateEmpty(
+    const ASTContext &C, Stmt::EmptyShell Empty, size_t FeaturesLen) {
+  ObjCAvailabilityCheckExpr *E = (ObjCAvailabilityCheckExpr *)C.Allocate(
+      totalSizeToAlloc<char>(FeaturesLen + 1),
+      alignof(ObjCAvailabilityCheckExpr));
+  new (E) ObjCAvailabilityCheckExpr(Empty);
+  bzero(E->getTrailingObjects<char>(), FeaturesLen + 1);
+  return E;
+}
+
+ObjCAvailabilityCheckExpr *
+ObjCAvailabilityCheckExpr::CreateAvailabilityFeatureCheck(SourceLocation AtLoc,
+                                                          SourceLocation RParen,
+                                                          QualType Ty,
+                                                          StringRef DomainName,
+                                                          const ASTContext &C) {
+  ObjCAvailabilityCheckExpr *E = (ObjCAvailabilityCheckExpr *)C.Allocate(
+      totalSizeToAlloc<char>(DomainName.size() + 1),
+      alignof(ObjCAvailabilityCheckExpr));
+  new (E) ObjCAvailabilityCheckExpr(AtLoc, RParen, Ty, DomainName);
+  return E;
+}

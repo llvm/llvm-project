@@ -2419,7 +2419,72 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   return nullptr;
 }
 
+static void handleFeatureAvailabilityAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  if (S.getLangOpts().CPlusPlus) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return;
+  }
+
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 0 << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  StringRef InvalidDecl;
+
+  if (isa<ObjCImplementationDecl>(D))
+    InvalidDecl = "ObjC class implementations";
+  else if (isa<ObjCCategoryImplDecl>(D))
+    InvalidDecl = "ObjC category implementations";
+  else if (auto *FD = dyn_cast<FieldDecl>(D)) {
+    if (FD->getParent())
+      InvalidDecl = "struct members";
+  }
+
+  if (!InvalidDecl.empty()) {
+    S.Diag(AL.getLoc(), diag::err_features_invalid_for_decl) << InvalidDecl;
+    return;
+  }
+
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+
+  if (S.Context.getFeatureAvailInfo(II->getName()).isInvalid()) {
+    S.Diag(AL.getLoc(), diag::err_features_invalid_name) << II->getName();
+    return;
+  }
+
+  int IsUnavailable =
+      AL.getArgAsExpr(1)->getIntegerConstantExpr(S.Context)->getExtValue();
+
+  if (IsUnavailable != 0 && IsUnavailable != 1) {
+    S.Diag(AL.getArgAsExpr(1)->getExprLoc(), diag::err_features_invalid__arg)
+        << IsUnavailable;
+    return;
+  }
+
+  auto p =
+      S.Context.checkNewFeatureAvailability(D, II->getName(), IsUnavailable);
+  if (!p.second) {
+    auto *AA = DomainAvailabilityAttr::Create(S.Context, II->getName(),
+                                              IsUnavailable, AL);
+    S.Diag(D->getBeginLoc(), diag::err_feature_invalid_added);
+    S.Diag(AL.getLoc(), diag::note_feature_incompatible0)
+        << AA->getFeatureAttributeStr();
+    S.Diag(p.first->getLocation(), diag::note_feature_incompatible1)
+        << p.first->getFeatureAttributeStr();
+  } else if (!p.first)
+    D->addAttr(DomainAvailabilityAttr::Create(S.Context, II->getName(),
+                                              IsUnavailable, AL));
+}
+
 static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.isAvailabilityAttribute()) {
+    handleFeatureAvailabilityAttr(S, D, AL);
+    return;
+  }
+
   if (isa<UsingDecl, UnresolvedUsingTypenameDecl, UnresolvedUsingValueDecl>(
           D)) {
     S.Diag(AL.getRange().getBegin(), diag::warn_deprecated_ignored_on_using)
@@ -2690,6 +2755,12 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       }
     }
   }
+}
+
+static void handleAvailabilityDomainAttr(Sema &S, Decl *D,
+                                         const ParsedAttr &AL) {
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  D->addAttr(::new (S.Context) AvailabilityDomainAttr(S.Context, AL, II));
 }
 
 static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
@@ -3847,6 +3918,55 @@ struct FormatAttrCommon {
   unsigned NumArgs;
   unsigned FormatStringIdx;
 };
+
+void Sema::copyFeatureAvailability(Decl *Dst, Decl *Src) {
+  if (Dst->isInvalidDecl())
+    return;
+
+  for (auto *AA : Src->specific_attrs<DomainAvailabilityAttr>()) {
+    auto *NewAttr = AA->clone(Context);
+    NewAttr->setInherited(true);
+    Dst->addAttr(NewAttr);
+  }
+}
+
+void Sema::copyFeatureAvailabilityCheck(Decl *Dst, NamedDecl *Src,
+                                        bool Redeclaration) {
+  if (Dst->isInvalidDecl())
+    return;
+
+  llvm::SmallDenseMap<StringRef, DomainAvailabilityAttr *> DstToAttr;
+
+  for (auto *AA : Dst->specific_attrs<DomainAvailabilityAttr>())
+    DstToAttr[AA->getDomain()] = AA;
+
+  for (auto *AA : Src->specific_attrs<DomainAvailabilityAttr>()) {
+    auto I = DstToAttr.find(AA->getDomain());
+    if (I == DstToAttr.end()) {
+      auto *NewAttr = AA->clone(Context);
+      NewAttr->setInherited(true);
+      Dst->addAttr(NewAttr);
+    } else {
+      if (I->second->getUnavailable() != AA->getUnavailable()) {
+        Diag(Dst->getBeginLoc(), diag::err_feature_merge_incompatible);
+        Diag(I->second->getLocation(), diag::note_feature_incompatible0)
+            << I->second->getFeatureAttributeStr();
+        Diag(AA->getLocation(), diag::note_feature_incompatible1)
+            << AA->getFeatureAttributeStr();
+        Dst->setInvalidDecl();
+      }
+      DstToAttr.erase(I);
+    }
+  }
+
+  if (Redeclaration) {
+    if (!DstToAttr.empty())
+      Dst->setInvalidDecl();
+    for (auto &P : DstToAttr)
+      Diag(P.second->getLocation(), diag::err_new_feature_redeclaration)
+          << P.second->getFeatureAttributeStr();
+  }
+}
 
 /// Handle __attribute__((format(type,idx,firstarg))) attributes based on
 /// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
@@ -8876,6 +8996,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
     break;
 
+  case ParsedAttr::AT_AvailabilityDomain:
+    handleAvailabilityDomainAttr(S, D, AL);
+    break;
+
   case ParsedAttr::AT_ArmNew:
     S.ARM().handleNewAttr(D, AL);
     break;
@@ -9323,6 +9447,12 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
         // the decl is invalid.
         if (!decl->isInvalidDecl())
           handleDelayedAvailabilityCheck(diag, decl);
+        break;
+
+      case DelayedDiagnostic::FeatureAvailability:
+        // Don't bother giving diagnostics if the decl is invalid.
+        if (!decl->isInvalidDecl())
+          handleDelayedFeatureAvailabilityCheck(diag, decl);
         break;
 
       case DelayedDiagnostic::Access:

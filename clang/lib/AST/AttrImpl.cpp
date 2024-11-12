@@ -270,6 +270,13 @@ unsigned AlignedAttr::getAlignment(ASTContext &Ctx) const {
   return Ctx.getTargetDefaultAlignForAttributeAligned();
 }
 
+std::string DomainAvailabilityAttr::getFeatureAttributeStr() const {
+  assert(!getDomain().empty() && "cannot be called if domain is empty");
+  std::string S = "__attribute__((availability(domain:";
+  S += getDomain().str() + ", " + (getUnavailable() ? '1' : '0') + ")))";
+  return S;
+}
+
 StringLiteral *FormatMatchesAttr::getFormatString() const {
   return cast<StringLiteral>(getExpectedFormat());
 }

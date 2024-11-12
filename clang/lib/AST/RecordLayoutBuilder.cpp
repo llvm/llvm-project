@@ -1849,6 +1849,9 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
 
 void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
                                              bool InsertExtraPadding) {
+  if (Context.hasUnavailableFeature(D))
+    return;
+
   auto *FieldClass = D->getType()->getAsCXXRecordDecl();
   bool IsOverlappingEmptyField =
       D->isPotentiallyOverlapping() && FieldClass->isEmpty();
@@ -3499,6 +3502,8 @@ uint64_t ASTContext::lookupFieldBitOffset(const ObjCInterfaceDecl *OID,
 
   for (const ObjCIvarDecl *IVD = Container->all_declared_ivar_begin();
        IVD; IVD = IVD->getNextIvar()) {
+    if (hasUnavailableFeature(IVD))
+      continue;
     if (Ivar == IVD)
       break;
     ++Index;

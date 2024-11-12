@@ -2930,27 +2930,26 @@ ExprResult Parser::ParseObjCAtExpression(SourceLocation AtLoc) {
       return ParsePostfixExpressionSuffix(ParseObjCSelectorExpression(AtLoc));
     case tok::objc_available:
       return ParseAvailabilityCheckExpr(AtLoc);
-      default: {
-        const char *str = nullptr;
-        // Only provide the @try/@finally/@autoreleasepool fixit when we're sure
-        // that this is a proper statement where such directives could actually
-        // occur.
-        if (GetLookAheadToken(1).is(tok::l_brace) &&
-            ExprStatementTokLoc == AtLoc) {
-          char ch = Tok.getIdentifierInfo()->getNameStart()[0];
-          str =
-            ch == 't' ? "try"
-                      : (ch == 'f' ? "finally"
-                                   : (ch == 'a' ? "autoreleasepool" : nullptr));
-        }
-        if (str) {
-          SourceLocation kwLoc = Tok.getLocation();
-          return ExprError(Diag(AtLoc, diag::err_unexpected_at) <<
-                             FixItHint::CreateReplacement(kwLoc, str));
-        }
-        else
-          return ExprError(Diag(AtLoc, diag::err_unexpected_at));
+    default: {
+      const char *str = nullptr;
+      // Only provide the @try/@finally/@autoreleasepool fixit when we're sure
+      // that this is a proper statement where such directives could actually
+      // occur.
+      if (GetLookAheadToken(1).is(tok::l_brace) &&
+          ExprStatementTokLoc == AtLoc) {
+        char ch = Tok.getIdentifierInfo()->getNameStart()[0];
+        str = ch == 't'
+                  ? "try"
+                  : (ch == 'f' ? "finally"
+                               : (ch == 'a' ? "autoreleasepool" : nullptr));
       }
+      if (str) {
+        SourceLocation kwLoc = Tok.getLocation();
+        return ExprError(Diag(AtLoc, diag::err_unexpected_at)
+                         << FixItHint::CreateReplacement(kwLoc, str));
+      } else
+        return ExprError(Diag(AtLoc, diag::err_unexpected_at));
+    }
     }
   }
 }

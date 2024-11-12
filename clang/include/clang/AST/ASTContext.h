@@ -26,6 +26,7 @@
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
@@ -821,6 +822,35 @@ public:
   PartialDiagnostic::DiagStorageAllocator &getDiagAllocator() {
     return DiagAllocator;
   }
+
+  struct AvailabilityDomainInfo {
+    FeatureAvailKind Kind = FeatureAvailKind::None;
+    ImplicitCastExpr *Call = nullptr;
+    bool isInvalid() const { return Kind == FeatureAvailKind::None; }
+  };
+
+  std::map<StringRef, AvailabilityDomainInfo> AvailabilityDomainMap;
+
+  void addAvailabilityDomainMap(StringRef Name, AvailabilityDomainInfo Info) {
+    AvailabilityDomainMap[Name] = Info;
+  }
+
+  std::pair<DomainAvailabilityAttr *, bool>
+  checkNewFeatureAvailability(Decl *D, StringRef DomainName, bool Unavailable);
+
+  bool hasFeatureAvailabilityAttr(const Decl *D) const;
+
+  // Retrieve availability domain information for a feature.
+  AvailabilityDomainInfo getFeatureAvailInfo(StringRef FeatureName) const;
+
+  // Retrieve feature name and availability domain information on a decl. If the
+  // decl doesn't have attribute availability_domain on it, the name will be
+  // empty and AvailabilityDomainInfo::Kind will be set to
+  // FeatureAvailKind::None.
+  std::pair<StringRef, AvailabilityDomainInfo>
+  getFeatureAvailInfo(Decl *D) const;
+
+  bool hasUnavailableFeature(const Decl *D) const;
 
   const TargetInfo &getTargetInfo() const { return *Target; }
   const TargetInfo *getAuxTargetInfo() const { return AuxTarget; }

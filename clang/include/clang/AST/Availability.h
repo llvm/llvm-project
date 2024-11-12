@@ -37,6 +37,8 @@ class AvailabilitySpec {
   /// Name of the platform that Version corresponds to.
   StringRef Platform;
 
+  StringRef DomainName;
+
   SourceLocation BeginLoc, EndLoc;
 
 public:
@@ -44,6 +46,9 @@ public:
                    SourceLocation BeginLoc, SourceLocation EndLoc)
       : Version(Version), Platform(Platform), BeginLoc(BeginLoc),
         EndLoc(EndLoc) {}
+
+  AvailabilitySpec(StringRef DomainName, SourceLocation Loc)
+      : DomainName(DomainName), BeginLoc(Loc), EndLoc(Loc) {}
 
   /// This constructor is used when representing the '*' case.
   AvailabilitySpec(SourceLocation StarLoc)
@@ -56,6 +61,9 @@ public:
 
   /// Returns true when this represents the '*' case.
   bool isOtherPlatformSpec() const { return Version.empty(); }
+
+  bool isDomainName() const { return !DomainName.empty(); }
+  StringRef getDomainName() const { return DomainName; }
 };
 
 class Decl;

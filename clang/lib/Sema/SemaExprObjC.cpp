@@ -5152,6 +5152,13 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     llvm::ArrayRef<AvailabilitySpec> AvailSpecs, SourceLocation AtLoc,
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
+
+  if (AvailSpecs.front().isDomainName()) {
+    auto Spec = AvailSpecs.front();
+    return ObjCAvailabilityCheckExpr::CreateAvailabilityFeatureCheck(
+        AtLoc, RParen, Context.BoolTy, Spec.getDomainName(), Context);
+  }
+
   auto FindSpecVersion = [&](StringRef Platform)
       -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
