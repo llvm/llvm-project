@@ -431,8 +431,8 @@ public:
   ///     Pass in true if this is a function know to throw
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, const AddressRange &range,
-           bool can_throw = false, bool generic_trampoline = false);
+           Type *func_type, bool can_throw = false, bool generic_trampoline = false,
+           Type *func_type, AddressRanges ranges);
 
   /// Destructor.
   ~Function() override;
@@ -664,8 +664,12 @@ protected:
   /// All lexical blocks contained in this function.
   Block m_block;
 
+  /// List of address ranges belonging to the function.
+  AddressRanges m_ranges;
+
   /// The function address range that covers the widest range needed to contain
-  /// all blocks
+  /// all blocks. DEPRECATED: do not use this field in new code as the range may
+  /// include addresses belonging to other functions.
   AddressRange m_range;
 
   /// The frame base expression for variables that are relative to the frame
