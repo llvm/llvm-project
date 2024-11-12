@@ -13,7 +13,7 @@ class TestSwiftOtherArchDylib(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @skipIf(archs=no_match(["arm64"]))
-    @skipTestIfFn("the swift.org toolchain cannot produce arm64e binaries")
+    @skipIf(archs=["arm64"], bugnumber="the swift.org toolchain cannot produce arm64e binaries")
     def test(self):
         """Test module import from dylibs with an architecture
            that uses a different SDK"""
