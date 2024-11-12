@@ -10,7 +10,7 @@
 ; RUN: --check-prefix=NO-EVL
 
 ; EVL: Cost of 2 for VF vscale x 4: WIDEN-INTRINSIC vp<%{{.+}}> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%{{.+}}>)
-; EVL: LV: Found an estimated cost of 0 for VF vscale x 4 For instruction:   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
+; EVL: LV: Found an estimated cost of 2 for VF vscale x 4 For instruction:   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
 
 ; NO-EVL: Cost of 0 for VF vscale x 4: EMIT vp<%{{.+}}> = select vp<%active.lane.mask>, ir<%add>, ir<%rdx>
 ; NO-EVL: LV: Found an estimated cost of 0 for VF vscale x 4 For instruction:   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
