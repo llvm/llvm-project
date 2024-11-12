@@ -1273,6 +1273,13 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::CustomRawContentSection &Section,
     ContiguousBlobAccumulator &CBA) {
+  if (Section.Info)
+    SHeader.sh_info = *Section.Info;
+
+  // If Section has Content, emit it w/o encoding other fields.
+  if (Section.Content)
+    return;
+
   std::string Storage = Section.encode();
   SHeader.sh_size = Storage.size();
   CBA.write(Storage.data(), Storage.size());
