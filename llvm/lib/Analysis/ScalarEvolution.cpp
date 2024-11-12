@@ -15238,8 +15238,8 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     return;
 
   using MinMaxPattern = std::pair<const SCEVConstant *, SCEVTypes>;
-  auto GetMinMaxConst = [&](unsigned In) -> MinMaxPattern {
-    const BasicBlock *InBlock = Phi.getIncomingBlock(In);
+  auto GetMinMaxConst = [&](unsigned IncomingIdx) -> MinMaxPattern {
+    const BasicBlock *InBlock = Phi.getIncomingBlock(IncomingIdx);
     if (!VisitedBlocks.insert(InBlock).second)
       return {nullptr, scCouldNotCompute};
     if (!IncomingGuards.contains(InBlock)) {
@@ -15249,7 +15249,7 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
       IncomingGuards.try_emplace(InBlock, std::move(G));
     }
     const LoopGuards &G = IncomingGuards.at(InBlock);
-    auto S = G.RewriteMap.find(SE.getSCEV(Phi.getIncomingValue(In)));
+    auto S = G.RewriteMap.find(SE.getSCEV(Phi.getIncomingValue(IncomingIdx)));
     if (S == G.RewriteMap.end())
       return {nullptr, scCouldNotCompute};
     auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S->second);
@@ -15687,9 +15687,8 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   if (Pair.second->hasNPredecessorsOrMore(2) &&
       Depth < MaxLoopGuardCollectionDepth) {
     SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
-    for (auto &Phi : Pair.second->phis()) {
+    for (auto &Phi : Pair.second->phis())
       collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
-    }
   }
 
   // Now apply the information from the collected conditions to
