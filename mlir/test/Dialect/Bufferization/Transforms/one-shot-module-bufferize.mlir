@@ -771,3 +771,28 @@ func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
   %0 = call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
   return %0 : tensor<5xf32>
 }
+
+// -----
+
+// The two func.return operands have different types after bufferization. Make
+// sure that memref.cast ops are inserted.
+
+// CHECK-LABEL: func @result_type_mismatch({{.*}}) -> memref<5xf32, strided<[?], offset: ?>>
+func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
+  // CHECK: %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<10xf32>
+  %t = tensor.empty() : tensor<10xf32>
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  // CHECK: %[[m0:.*]] = memref.subview %[[alloc]][0] [5] [2] : memref<10xf32> to memref<5xf32, strided<[2]>>
+  // CHECK: %[[cast0:.*]] = memref.cast %[[m0]] : memref<5xf32, strided<[2]>> to memref<5xf32, strided<[?], offset: ?>>
+  %0 = tensor.extract_slice %t[0][5][2] : tensor<10xf32> to tensor<5xf32>
+  // CHECK: return %[[cast0]] : memref<5xf32, strided<[?], offset: ?>
+  return %0 : tensor<5xf32>
+^bb2:
+  // CHECK: %[[m1:.*]] = memref.subview %[[alloc]][2] [5] [1] : memref<10xf32> to memref<5xf32, strided<[1], offset: 2>>
+  // CHECK: %[[cast1:.*]] = memref.cast %[[m1]] : memref<5xf32, strided<[1], offset: 2>> to memref<5xf32, strided<[?], offset: ?>>
+  %1 = tensor.extract_slice %t[2][5][1] : tensor<10xf32> to tensor<5xf32>
+  // CHECK: return %[[cast1]] : memref<5xf32, strided<[?], offset: ?>>
+  return %1 : tensor<5xf32>
+}
+
