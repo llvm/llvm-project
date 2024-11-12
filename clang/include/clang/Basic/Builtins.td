@@ -4792,6 +4792,24 @@ def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot4add_i8packed"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "int(unsigned int, unsigned int, int)";
+}
+
+def HLSLDot4AddU8Packed : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_dot4add_u8packed"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int(unsigned int, unsigned int, unsigned int)";
+}
+
+def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbithigh"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
   let Attributes = [NoThrow, Const];
@@ -4913,4 +4931,10 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
   let Spellings = ["__arithmetic_fence"];
   let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
+}
+
+def CountedByRef : Builtin {
+  let Spellings = ["__builtin_counted_by_ref"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "int(...)";
 }

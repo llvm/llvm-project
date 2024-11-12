@@ -1260,6 +1260,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp10m1f
+)
+
+add_fp_unittest(
   copysign_test
   SUITE
     libc-math-smoke-tests

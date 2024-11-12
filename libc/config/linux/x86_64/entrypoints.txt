@@ -244,6 +244,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlock2
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.msync
     libc.src.sys.mman.munlock
@@ -329,6 +330,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lseek
     libc.src.unistd.pathconf
     libc.src.unistd.pipe
+    libc.src.unistd.pipe2
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -415,6 +417,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f
+    libc.src.math.exp10m1f
     libc.src.math.exp2
     libc.src.math.exp2f
     libc.src.math.exp2m1f
