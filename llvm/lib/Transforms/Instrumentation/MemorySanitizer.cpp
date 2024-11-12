@@ -556,10 +556,10 @@ private:
   friend struct MemorySanitizerVisitor;
   friend struct VarArgHelperBase;
   friend struct VarArgAMD64Helper;
-  friend struct VarArgMIPS64Helper;
   friend struct VarArgAArch64Helper;
-  friend struct VarArgPowerPC64Helper;
+  friend struct VarArgPowerPCHelper;
   friend struct VarArgSystemZHelper;
+  friend struct VarArgGenericHelper;
 
   void initializeModule(Module &M);
   void initializeCallbacks(Module &M, const TargetLibraryInfo &TLI);
@@ -5342,31 +5342,29 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
   }
 };
 
-/// MIPS64-specific implementation of VarArgHelper.
+/// MIPS-specific implementation of VarArgHelper.
 /// NOTE: This is also used for LoongArch64.
-struct VarArgMIPS64Helper : public VarArgHelperBase {
+struct VarArgGenericHelper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
 
-  VarArgMIPS64Helper(Function &F, MemorySanitizer &MS,
-                     MemorySanitizerVisitor &MSV)
-      : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/8) {}
+  VarArgGenericHelper(Function &F, MemorySanitizer &MS,
+                      MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
+      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
     const DataLayout &DL = F.getDataLayout();
     for (Value *A :
          llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
-      Triple TargetTriple(F.getParent()->getTargetTriple());
-      Value *Base;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-      if (TargetTriple.getArch() == Triple::mips64) {
+      if (DL.isBigEndian()) {
         // Adjusting the shadow for argument with size < 8 to match the
         // placement of bits in big endian system
         if (ArgSize < 8)
           VAArgOffset += (8 - ArgSize);
       }
-      Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
+      Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
       VAArgOffset += ArgSize;
       VAArgOffset = alignTo(VAArgOffset, 8);
       if (!Base)
@@ -5665,14 +5663,14 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
   }
 };
 
-/// PowerPC64-specific implementation of VarArgHelper.
-struct VarArgPowerPC64Helper : public VarArgHelperBase {
+/// PowerPC-specific implementation of VarArgHelper.
+struct VarArgPowerPCHelper : public VarArgHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
 
-  VarArgPowerPC64Helper(Function &F, MemorySanitizer &MS,
-                        MemorySanitizerVisitor &MSV)
-      : VarArgHelperBase(F, MS, MSV, /*VAListTagSize=*/8) {}
+  VarArgPowerPCHelper(Function &F, MemorySanitizer &MS,
+                      MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
+      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     // For PowerPC, we need to deal with alignment of stack arguments -
@@ -6086,7 +6084,8 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
 
 // Loongarch64 is not a MIPS, but the current vargs calling convention matches
 // the MIPS.
-using VarArgLoongArch64Helper = VarArgMIPS64Helper;
+using VarArgMIPSHelper = VarArgGenericHelper;
+using VarArgLoongArch64Helper = VarArgGenericHelper;
 
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
@@ -6119,13 +6118,14 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
     return new VarArgSystemZHelper(Func, Msan, Visitor);
 
   if (TargetTriple.isPPC64())
-    return new VarArgPowerPC64Helper(Func, Msan, Visitor);
+    return new VarArgPowerPCHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
 
   if (TargetTriple.isMIPS64())
-    return new VarArgMIPS64Helper(Func, Msan, Visitor);
+    return new VarArgMIPSHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
 
   if (TargetTriple.isLoongArch64())
-    return new VarArgLoongArch64Helper(Func, Msan, Visitor);
+    return new VarArgLoongArch64Helper(Func, Msan, Visitor,
+                                       /*VAListTagSize=*/8);
 
   return new VarArgNoOpHelper(Func, Msan, Visitor);
 }
