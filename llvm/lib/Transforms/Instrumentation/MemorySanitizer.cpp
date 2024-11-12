@@ -6111,19 +6111,23 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   Triple TargetTriple(Func.getParent()->getTargetTriple());
   if (TargetTriple.getArch() == Triple::x86_64)
     return new VarArgAMD64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.isMIPS64())
-    return new VarArgMIPS64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == Triple::aarch64)
+
+  if (TargetTriple.isAArch64())
     return new VarArgAArch64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == Triple::ppc64 ||
-           TargetTriple.getArch() == Triple::ppc64le)
-    return new VarArgPowerPC64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == Triple::systemz)
+
+  if (TargetTriple.isSystemZ())
     return new VarArgSystemZHelper(Func, Msan, Visitor);
-  else if (TargetTriple.isLoongArch64())
+
+  if (TargetTriple.isPPC64())
+    return new VarArgPowerPC64Helper(Func, Msan, Visitor);
+
+  if (TargetTriple.isMIPS64())
+    return new VarArgMIPS64Helper(Func, Msan, Visitor);
+
+  if (TargetTriple.isLoongArch64())
     return new VarArgLoongArch64Helper(Func, Msan, Visitor);
-  else
-    return new VarArgNoOpHelper(Func, Msan, Visitor);
+
+  return new VarArgNoOpHelper(Func, Msan, Visitor);
 }
 
 bool MemorySanitizer::sanitizeFunction(Function &F, TargetLibraryInfo &TLI) {
