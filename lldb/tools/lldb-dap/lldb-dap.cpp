@@ -1615,8 +1615,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result =
-        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
+    auto result = RunLLDBCommandsVerbatim(g_dap.debugger, llvm::StringRef(),
+                                          {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
