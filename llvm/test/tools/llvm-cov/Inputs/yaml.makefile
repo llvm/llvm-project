@@ -2,7 +2,7 @@
 #
 # Usage:
 #   cd /path/to/llvm-project/llvm/test/tools/llvm-cov/Inputs
-#   PATH=/path/to/build/bin:$PATH make *.yaml
+#   PATH=/path/to/build/bin:$PATH make -f yaml.makefile *.yaml
 
 %.covmap.o: %.o
 	llvm-objcopy \
