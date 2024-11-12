@@ -1,0 +1,333 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         AA19D25F7410F1EA300000000E06000000000000B975BFDE464C3C13010101050906010314020201010C000D280302000C0012300000010200000C000D050011001230090202000000110012
+  - Name:            '__llvm_covfun (1)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         92691AC8D7253F8B300000000E06000000000000B975BFDE464C3C13010101010506010614020201010C000D280302000C0012300502010200000C000D050011001230000002000000110012
+  - Name:            '__llvm_covfun (2)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         9A7D6FA40D389A5B300000000E06000000000000B975BFDE464C3C13010101050906010914020201010C000D280302000C0012300000010200000C000D050011001230090202000000110012
+  - Name:            '__llvm_covfun (3)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         3CC016E1B5A95933300000000E06000000000000B975BFDE464C3C13010101010506010C14020201010C000D280302000C0012300502010200000C000D050011001230000002000000110012
+  - Name:            '__llvm_covfun (4)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         98207F8F78271E50300000000F06000000000000B975BFDE464C3C13010101050906010F14020201010C000D280302000C0012300000010002000C000D050011001230020902000000110012
+  - Name:            '__llvm_covfun (5)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         0969FC47730492F1300000000F06000000000000B975BFDE464C3C13010101010506011214020201010C000D280302000C0012300205010002000C000D050011001230000002000000110012
+  - Name:            '__llvm_covfun (6)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         0ECB0EF7963F6F79300000000F06000000000000B975BFDE464C3C13010101050906011514020201010C000D280302000C0012300000010002000C000D050011001230020902000000110012
+  - Name:            '__llvm_covfun (7)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         123E012CB073B24A300000000F06000000000000B975BFDE464C3C13010101010506011814020201010C000D280302000C0012300205010002000C000D050011001230000002000000110012
+  - Name:            '__llvm_covfun (8)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         C2EA1D70E059B55D460000008E83010000000000B975BFDE464C3C130101020D11050909011C1C020201010C000D01000C0012280403000C0017300000010300000C000D0D0011001230110203020000110012050016001730090602000000160017
+  - Name:            '__llvm_covfun (9)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         24244E16CFFB9F53460000008E83010000000000B975BFDE464C3C13010102010D050909011F1C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+  - Name:            '__llvm_covfun (10)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         CC9CCD1D2ED1627D460000008E83010000000000B975BFDE464C3C130101020D1105090901221C020201010C000D01000C0012280403000C0017300000010300000C000D0D0011001230110203020000110012050016001730090602000000160017
+  - Name:            '__llvm_covfun (11)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         69198FBDA5C488EE460000008E83010000000000B975BFDE464C3C13010102010D05090901251C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+  - Name:            '__llvm_covfun (12)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         A753680B241373ED46000000CF83010000000000B975BFDE464C3C130101020D1105090901281C020201010C000D01000C0012280403000C0017300000010003000C000D0D0011001230021103000200110012050016001730060902000000160017
+  - Name:            '__llvm_covfun (13)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         54BD46601EA033AC46000000CF83010000000000B975BFDE464C3C13010102010D050909012B1C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+  - Name:            '__llvm_covfun (14)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         39953E03B6ADA13B46000000CF83010000000000B975BFDE464C3C130101020D11050909012E1C020201010C000D01000C0012280403000C0017300000010003000C000D0D0011001230021103000200110012050016001730060902000000160017
+  - Name:            '__llvm_covfun (15)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         9BCFA8D8AA6B9E2046000000CF83010000000000B975BFDE464C3C13010102010D05090901311C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+  - Name:            '__llvm_covfun (16)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         4F2882F8142D1DD9460000008E83010000000000B975BFDE464C3C13010102010D0D110901351C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230110603020000110012050016001730000002000000160017
+  - Name:            '__llvm_covfun (17)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         98DB88AFB7497C76460000008E83010000000000B975BFDE464C3C13010102010D05090901381C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+  - Name:            '__llvm_covfun (18)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         596357935D55EEBA460000008E83010000000000B975BFDE464C3C13010102010D0D1109013B1C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230110603020000110012050016001730000002000000160017
+  - Name:            '__llvm_covfun (19)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         3237FBD998D0D824460000008E83010000000000B975BFDE464C3C13010102010D050909013E1C020201010C000D01000C0012280403000C0017300D02010300000C000D0D0011001230000003020000110012050016001730090602000000160017
+  - Name:            '__llvm_covfun (20)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         D656F1340A0C4ED846000000CF83010000000000B975BFDE464C3C13010102010D0D110901411C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230061103000200110012050016001730000002000000160017
+  - Name:            '__llvm_covfun (21)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         5E66CCF22EE6A4AC46000000CF83010000000000B975BFDE464C3C13010102010D05090901441C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+  - Name:            '__llvm_covfun (22)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         7C4DEA109976A2E846000000CF83010000000000B975BFDE464C3C13010102010D0D110901471C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230061103000200110012050016001730000002000000160017
+  - Name:            '__llvm_covfun (23)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         E25997DF8D6D856B46000000CF83010000000000B975BFDE464C3C13010102010D050909014A1C020201010C000D01000C0012280403000C001730020D010003000C000D0D0011001230000003000200110012050016001730060902000000160017
+  - Name:            '__llvm_covfun (24)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         FAD58DE7366495DB1D0000001800000000000000B975BFDE464C3C1301010005014F0121021004010001100901000110090100011009010001
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         000000001B000000000000000600000002180000166D6364632D636F6E73742D666F6C64696E672E63707000
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+    Content:         8402005F5A35636173653062015F5A35636173653162015F5A35636173653262015F5A35636173653362015F5A35636173653462015F5A35636173653562015F5A35636173653662015F5A35636173653762015F5A3563617365386262015F5A3563617365396262015F5A3563617365616262015F5A3563617365626262015F5A3563617365636262015F5A3563617365646262015F5A3563617365656262015F5A3563617365666262015F5A3563617365676262015F5A3563617365686262015F5A3563617365696262015F5A35636173656A6262015F5A35636173656B6262015F5A35636173656C6262015F5A35636173656D6262015F5A35636173656E6262016D61696E
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            '__llvm_covfun (1)'
+      - Name:            '__llvm_covfun (2)'
+      - Name:            '__llvm_covfun (3)'
+      - Name:            '__llvm_covfun (4)'
+      - Name:            '__llvm_covfun (5)'
+      - Name:            '__llvm_covfun (6)'
+      - Name:            '__llvm_covfun (7)'
+      - Name:            '__llvm_covfun (8)'
+      - Name:            '__llvm_covfun (9)'
+      - Name:            '__llvm_covfun (10)'
+      - Name:            '__llvm_covfun (11)'
+      - Name:            '__llvm_covfun (12)'
+      - Name:            '__llvm_covfun (13)'
+      - Name:            '__llvm_covfun (14)'
+      - Name:            '__llvm_covfun (15)'
+      - Name:            '__llvm_covfun (16)'
+      - Name:            '__llvm_covfun (17)'
+      - Name:            '__llvm_covfun (18)'
+      - Name:            '__llvm_covfun (19)'
+      - Name:            '__llvm_covfun (20)'
+      - Name:            '__llvm_covfun (21)'
+      - Name:            '__llvm_covfun (22)'
+      - Name:            '__llvm_covfun (23)'
+      - Name:            '__llvm_covfun (24)'
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+      - Name:            .symtab
+Symbols:
+  - Name:            __llvm_covmap
+    Type:            STT_SECTION
+    Section:         __llvm_covmap
+  - Name:            __llvm_prf_names
+    Type:            STT_SECTION
+    Section:         __llvm_prf_names
+  - Name:            __covrec_EAF110745FD219AAu
+    Type:            STT_OBJECT
+    Section:         __llvm_covfun
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_8B3F25D7C81A6992u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (1)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_5B9A380DA46F7D9Au
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (2)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_3359A9B5E116C03Cu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (3)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_501E27788F7F2098u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (4)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_F192047347FC6909u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (5)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_796F3F96F70ECB0Eu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (6)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_4AB273B02C013E12u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (7)'
+    Binding:         STB_WEAK
+    Size:            0x4C
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_5DB559E0701DEAC2u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (8)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_539FFBCF164E2424u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (9)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_7D62D12E1DCD9CCCu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (10)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_EE88C4A5BD8F1969u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (11)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_ED7313240B6853A7u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (12)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_AC33A01E6046BD54u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (13)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_3BA1ADB6033E9539u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (14)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_209E6BAAD8A8CF9Bu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (15)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_D91D2D14F882284Fu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (16)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_767C49B7AF88DB98u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (17)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_BAEE555D93576359u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (18)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_24D8D098D9FB3732u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (19)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_D84E0C0A34F156D6u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (20)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_ACA4E62EF2CC665Eu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (21)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_E8A2769910EA4D7Cu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (22)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_6B856D8DDF9759E2u
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (23)'
+    Binding:         STB_WEAK
+    Size:            0x62
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_DB956436E78DD5FAu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (24)'
+    Binding:         STB_WEAK
+    Size:            0x39
+    Other:           [ STV_HIDDEN ]
+...

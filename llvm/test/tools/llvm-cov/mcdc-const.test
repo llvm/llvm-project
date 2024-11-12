@@ -1,7 +1,8 @@
 // Test visualization of MC/DC constructs for constant-folded condition masking.
 
+// RUN: yaml2obj %S/Inputs/mcdc-const.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/mcdc-const.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=count --show-mcdc %S/Inputs/mcdc-const.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=CHECKGENERALCASE
+// RUN: llvm-cov show --show-branches=count --show-mcdc %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=CHECKGENERALCASE
 
 //      CHECKGENERALCASE:  ------------------
 // CHECKGENERALCASE-NEXT:  |  Branch (12:8): [True: 4, False: 1]
@@ -34,9 +35,10 @@
 // CHECKGENERALCASE-NEXT:  |
 // CHECKGENERALCASE-NEXT:  ------------------
 
+// RUN: yaml2obj %S/Inputs/mcdc-const-folding.yaml -o %t-folding.o
 // RUN: llvm-profdata merge %S/Inputs/mcdc-const-folding.proftext -o %t.profdata
-// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-const-folding.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=CHECKFULLCASE
-// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-const-folding.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-const-folding.cpp | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov show --show-mcdc %t-folding.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=CHECKFULLCASE
+// RUN: llvm-cov report --show-mcdc-summary %t-folding.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-const-folding.cpp | FileCheck %s -check-prefix=REPORT
 
 //      CHECKFULLCASE: |  1 { C,  -  = F      }
 //      CHECKFULLCASE: |  C1-Pair: constant folded

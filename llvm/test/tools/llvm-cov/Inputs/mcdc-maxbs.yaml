@@ -1,0 +1,57 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         8A68DC3E925EACF9B1000000C67EFC36662A3548DEBA335F42BD13F502010107010502151519111D1D210109090D1101031003020C0107000C05001A009B8080800805001B0023020024018380808008020103003C02000B0021280A04000B003B02000C0014301506010302000C0014150018002030190A03000200180020110025003B110026002E301D0E0204000026002E1D0032003A3021120400000032003A06010116003001001700212803020017002F30091601020000170021090025002F300D1A0200000025002F
+  - Name:            '__llvm_covfun (1)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         FAD58DE7366495DB2A0000005C83010000000000DEBA335F42BD13F5010101010506010B01020201010B0010200502000B0010050012009380808008050013001902001C001D
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    Content:         00000000110000000000000006000000020E00000C6D6364632D6D617862732E63000000
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+    Content:         0800737562016D61696E
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            '__llvm_covfun (1)'
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+      - Name:            .symtab
+Symbols:
+  - Name:            __llvm_covmap
+    Type:            STT_SECTION
+    Section:         __llvm_covmap
+  - Name:            __llvm_prf_names
+    Type:            STT_SECTION
+    Section:         __llvm_prf_names
+  - Name:            __covrec_F9AC5E923EDC688Au
+    Type:            STT_OBJECT
+    Section:         __llvm_covfun
+    Binding:         STB_WEAK
+    Size:            0xCD
+    Other:           [ STV_HIDDEN ]
+  - Name:            __covrec_DB956436E78DD5FAu
+    Type:            STT_OBJECT
+    Section:         '__llvm_covfun (1)'
+    Binding:         STB_WEAK
+    Size:            0x46
+    Other:           [ STV_HIDDEN ]
+...

@@ -1,6 +1,7 @@
 
+// RUN: yaml2obj %S/Inputs/branch-showBranchPercentage.yaml -o %t-branch-showBranchPercentage.o
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
-// RUN: llvm-cov export --format=text %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --format=text %t-branch-showBranchPercentage.o -instr-profile %t.profdata | FileCheck %s
 
 // CHECK: "branches":
 // CHECK: 14,7,14,15,1,5,0,0,4
@@ -21,8 +22,9 @@
 // CHECK: {"count":30,"covered":26,"notcovered":4,"percent":86.666666666666671}
 
 // Check recursive macro-expansions.
+// RUN: yaml2obj %S/Inputs/branch-macros.yaml -o %t-branch-macros.o
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
-// RUN: llvm-cov export --format=text %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
+// RUN: llvm-cov export --format=text %t-branch-macros.o -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
 
 // MACROS: "branches":
 // MACROS: 27,10,27,11,0,3,0,0,4

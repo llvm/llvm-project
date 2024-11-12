@@ -1,6 +1,8 @@
 # Test not to trigger the assertion failure in llvm-cov with empty bitmap.
 # REQUIRES: asserts
 
+// RUN: yaml2obj %S/Inputs/mcdc-maxbs.yaml -o %t.o
+
 # mcdc-maxbs.o contains the record:
 #
 # sub:
@@ -26,7 +28,7 @@
 # by trailing uninitialized garbage.
 
 # RUN: llvm-profdata merge %S/Inputs/mcdc-maxbs.proftext -o %t.profdata
-# RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-maxbs.o -instr-profile %t.profdata
+# RUN: llvm-cov report --show-mcdc-summary %t.o -instr-profile %t.profdata
 
 # Instructions for regenerating the test object:
 

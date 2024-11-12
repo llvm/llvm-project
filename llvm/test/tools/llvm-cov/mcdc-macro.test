@@ -1,7 +1,8 @@
 // Test visualization of MC/DC constructs for branches in macro expansions.
 
+// RUN: yaml2obj %S/Inputs/mcdc-macro.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/mcdc-macro.proftext -o %t.profdata
-// RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
+// RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %t.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
 
 // CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
 // CHECK:  |  |  |  Branch (3:11): [True: 1, False: 0]
