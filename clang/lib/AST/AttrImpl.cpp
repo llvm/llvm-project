@@ -270,4 +270,9 @@ unsigned AlignedAttr::getAlignment(ASTContext &Ctx) const {
   return Ctx.getTargetDefaultAlignForAttributeAligned();
 }
 
+StringLiteral *FormatMatchesAttr::getFormatString() const {
+  // This cannot go in headers because StringLiteral and Expr may be incomplete.
+  return cast<StringLiteral>(getExpectedFormat());
+}
+
 #include "clang/AST/AttrImpl.inc"
