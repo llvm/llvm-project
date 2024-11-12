@@ -3726,27 +3726,31 @@ void mlir::python::populateIRCore(py::module &m) {
           kValueReplaceAllUsesWithDocstring)
       .def(
           "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, py::object exceptions) {
+          [](PyValue &self, PyValue &with, PyOperation &exception) {
+            MlirValue selfValue = self.get();
+            MlirValue withValue = with.get();
+            MlirOperation exceptedUser = exception.get();
+
+            mlirValueReplaceAllUsesExceptWithSingle(selfValue, withValue,
+                                                    exceptedUser);
+          },
+          py::arg("with"), py::arg("exceptions"),
+          kValueReplaceAllUsesExceptDocstring)
+      .def(
+          "replace_all_uses_except",
+          [](PyValue &self, PyValue &with, py::list exceptions) {
             MlirValue selfValue = self.get();
             MlirValue withValue = with.get();
 
-            // Check if 'exceptions' is a list
-            if (py::isinstance<py::list>(exceptions)) {
-              // Convert Python list to a vector of MlirOperations
-              std::vector<MlirOperation> exceptionOps;
-              for (py::handle exception : exceptions) {
-                exceptionOps.push_back(exception.cast<PyOperation &>().get());
-              }
-              mlirValueReplaceAllUsesExceptWithSet(
-                  selfValue, withValue, exceptionOps.data(),
-                  static_cast<intptr_t>(exceptionOps.size()));
-            } else {
-              // Assume 'exceptions' is a single Operation
-              MlirOperation exceptedUser =
-                  exceptions.cast<PyOperation &>().get();
-              mlirValueReplaceAllUsesExceptWithSingle(selfValue, withValue,
-                                                      exceptedUser);
+            // Convert Python list to a SmallVector of MlirOperations
+            llvm::SmallVector<MlirOperation, 4> exceptionOps;
+            for (py::handle exception : exceptions) {
+              exceptionOps.push_back(exception.cast<PyOperation &>().get());
             }
+
+            mlirValueReplaceAllUsesExceptWithSet(
+                selfValue, withValue, exceptionOps.data(),
+                static_cast<intptr_t>(exceptionOps.size()));
           },
           py::arg("with"), py::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
