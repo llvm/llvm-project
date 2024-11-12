@@ -170,7 +170,7 @@ public:
   /// Sets the disjoint flag attribute for the exported instruction `inst`
   /// given the original operation `op`. Asserts if the operation does
   /// not implement the disjoint flag interface.
-  void setDisjointFlag(Operation *op, llvm::Value *inst);
+  void setDisjointFlag(Operation *op, llvm::Value *value);
 
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);

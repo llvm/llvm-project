@@ -1898,11 +1898,11 @@ void ModuleTranslation::setLoopMetadata(Operation *op,
   inst->setMetadata(llvm::LLVMContext::MD_loop, loopMD);
 }
 
-void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *inst) {
+void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *value) {
   auto iface = cast<DisjointFlagInterface>(op);
-  auto inst_disjoint = cast<llvm::PossiblyDisjointInst>(inst);
+  auto disjointInst = cast<llvm::PossiblyDisjointInst>(value);
 
-  inst_disjoint->setIsDisjoint(iface.getIsDisjoint());
+  disjointInst->setIsDisjoint(iface.getIsDisjoint());
 }
 
 llvm::Type *ModuleTranslation::convertType(Type type) {
