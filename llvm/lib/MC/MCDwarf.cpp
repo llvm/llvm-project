@@ -664,9 +664,9 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
 
   if (Directory.empty()) {
     // Separate the directory part from the basename of the FileName.
-    StringRef tFileName = sys::path::filename(FileName);
+    StringRef tFileName = sys::path::filename(FileName, PathStyle);
     if (!tFileName.empty()) {
-      Directory = sys::path::parent_path(FileName);
+      Directory = sys::path::parent_path(FileName, PathStyle);
       if (!Directory.empty())
         FileName = tFileName;
     }
@@ -939,7 +939,8 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
 static void EmitGenDwarfInfo(MCStreamer *MCOS,
                              const MCSymbol *AbbrevSectionSymbol,
                              const MCSymbol *LineSectionSymbol,
-                             const MCSymbol *RangesSymbol) {
+                             const MCSymbol *RangesSymbol,
+                             llvm::sys::path::Style Style) {
   MCContext &context = MCOS->getContext();
 
   MCOS->switchSection(context.getObjectFileInfo()->getDwarfInfoSection());
@@ -1037,7 +1038,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   const SmallVectorImpl<std::string> &MCDwarfDirs = context.getMCDwarfDirs();
   if (MCDwarfDirs.size() > 0) {
     MCOS->emitBytes(MCDwarfDirs[0]);
-    MCOS->emitBytes(sys::path::get_separator());
+    MCOS->emitBytes(sys::path::get_separator(Style));
   }
   const SmallVectorImpl<MCDwarfFile> &MCDwarfFiles = context.getMCDwarfFiles();
   // MCDwarfFiles might be empty if we have an empty source file.
@@ -1225,7 +1226,8 @@ void MCGenDwarfInfo::Emit(MCStreamer *MCOS) {
   EmitGenDwarfAbbrev(MCOS);
 
   // Output the data for .debug_info section.
-  EmitGenDwarfInfo(MCOS, AbbrevSectionSymbol, LineSectionSymbol, RangesSymbol);
+  EmitGenDwarfInfo(MCOS, AbbrevSectionSymbol, LineSectionSymbol, RangesSymbol,
+                   context.getPathStyle());
 }
 
 //

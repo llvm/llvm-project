@@ -21,6 +21,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
@@ -277,6 +278,7 @@ struct MCDwarfLineTableHeader {
   StringMap<unsigned> SourceIdMap;
   std::string CompilationDir;
   MCDwarfFile RootFile;
+  llvm::sys::path::Style PathStyle = llvm::sys::path::Style::native;
   bool HasAnySource = false;
 
 private:
@@ -311,7 +313,9 @@ public:
 
   void setRootFile(StringRef Directory, StringRef FileName,
                    std::optional<MD5::MD5Result> Checksum,
-                   std::optional<StringRef> Source) {
+                   std::optional<StringRef> Source,
+                   llvm::sys::path::Style S = llvm::sys::path::Style::native) {
+    PathStyle = S;
     CompilationDir = std::string(Directory);
     RootFile.Name = std::string(FileName);
     RootFile.DirIndex = 0;
@@ -342,10 +346,11 @@ class MCDwarfDwoLineTable {
 public:
   void maybeSetRootFile(StringRef Directory, StringRef FileName,
                         std::optional<MD5::MD5Result> Checksum,
-                        std::optional<StringRef> Source) {
+                        std::optional<StringRef> Source,
+                        llvm::sys::path::Style S) {
     if (!Header.RootFile.Name.empty())
       return;
-    Header.setRootFile(Directory, FileName, Checksum, Source);
+    Header.setRootFile(Directory, FileName, Checksum, Source, S);
   }
 
   unsigned getFile(StringRef Directory, StringRef FileName,
@@ -394,7 +399,9 @@ public:
 
   void setRootFile(StringRef Directory, StringRef FileName,
                    std::optional<MD5::MD5Result> Checksum,
-                   std::optional<StringRef> Source) {
+                   std::optional<StringRef> Source,
+                   llvm::sys::path::Style S) {
+    Header.PathStyle = S;
     Header.CompilationDir = std::string(Directory);
     Header.RootFile.Name = std::string(FileName);
     Header.RootFile.DirIndex = 0;

@@ -3429,7 +3429,8 @@ MCDwarfDwoLineTable *DwarfDebug::getDwoLineTable(const DwarfCompileUnit &CU) {
   const DICompileUnit *DIUnit = CU.getCUNode();
   SplitTypeUnitFileTable.maybeSetRootFile(
       DIUnit->getDirectory(), DIUnit->getFilename(),
-      getMD5AsBytes(DIUnit->getFile()), DIUnit->getSource());
+      getMD5AsBytes(DIUnit->getFile()), DIUnit->getSource(),
+      Asm->OutStreamer->getContext().getPathStyle());
   return &SplitTypeUnitFileTable;
 }
 

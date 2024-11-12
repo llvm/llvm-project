@@ -77,6 +77,9 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
+  if (TheTriple.isPS())
+    PathStyle = llvm::sys::path::Style::windows;
+
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
                                    ->getBufferIdentifier());
@@ -970,12 +973,12 @@ void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
   if (FileNameBuf.empty() || FileNameBuf == "-")
     FileNameBuf = "<stdin>";
   if (!getMainFileName().empty() && FileNameBuf != getMainFileName()) {
-    llvm::sys::path::remove_filename(FileNameBuf);
-    llvm::sys::path::append(FileNameBuf, getMainFileName());
+    llvm::sys::path::remove_filename(FileNameBuf, PathStyle);
+    llvm::sys::path::append(FileNameBuf, PathStyle, getMainFileName());
   }
   StringRef FileName = FileNameBuf;
   if (FileName.consume_front(getCompilationDir()))
-    if (llvm::sys::path::is_separator(FileName.front()))
+    if (llvm::sys::path::is_separator(FileName.front(), PathStyle))
       FileName = FileName.drop_front();
   assert(!FileName.empty());
   setMCLineTableRootFile(

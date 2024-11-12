@@ -335,6 +335,8 @@ private:
 
   MCTargetOptions const *TargetOptions;
 
+  llvm::sys::path::Style PathStyle = llvm::sys::path::Style::native;
+
   bool HadError = false;
 
   void reportCommon(SMLoc Loc,
@@ -721,6 +723,8 @@ public:
 
   void setDwarfCompileUnitID(unsigned CUIndex) { DwarfCompileUnitID = CUIndex; }
 
+  llvm::sys::path::Style getPathStyle() const { return PathStyle; }
+
   /// Specifies the "root" file and directory of the compilation unit.
   /// These are "file 0" and "directory 0" in DWARF v5.
   void setMCLineTableRootFile(unsigned CUID, StringRef CompilationDir,
@@ -728,7 +732,7 @@ public:
                               std::optional<MD5::MD5Result> Checksum,
                               std::optional<StringRef> Source) {
     getMCDwarfLineTable(CUID).setRootFile(CompilationDir, Filename, Checksum,
-                                          Source);
+                                          Source, PathStyle);
   }
 
   /// Reports whether MD5 checksum usage is consistent (all-or-none).
