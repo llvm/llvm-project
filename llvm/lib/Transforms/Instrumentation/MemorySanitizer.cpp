@@ -15,8 +15,8 @@
 /// We associate a few shadow bits with every byte of the application memory,
 /// poison the shadow of the malloc-ed or alloca-ed memory, load the shadow,
 /// bits on every memory read, propagate the shadow bits through some of the
-/// arithmetic instruction (including MOV), store the shadow bits on every
-/// memory write, report a bug on some other instructions (e.g. JMP) if the
+/// arithmetic instruction (including MOV), store the shadow bits on every memory
+/// write, report a bug on some other instructions (e.g. JMP) if the
 /// associated shadow is poisoned.
 ///
 /// But there are differences too. The first and the major one:
@@ -579,7 +579,7 @@ private:
 
   Triple TargetTriple;
   LLVMContext *C;
-  Type *IntptrTy; ///< Integer type with the size of a ptr in default AS.
+  Type *IntptrTy;  ///< Integer type with the size of a ptr in default AS.
   Type *OriginTy;
   PointerType *PtrTy; ///< Integer type with the size of a ptr in default AS.
 
@@ -840,8 +840,7 @@ static Constant *getOrInsertGlobal(Module &M, StringRef Name, Type *Ty) {
 }
 
 /// Insert declarations for userspace-specific functions and globals.
-void MemorySanitizer::createUserspaceApi(Module &M,
-                                         const TargetLibraryInfo &TLI) {
+void MemorySanitizer::createUserspaceApi(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(*C);
 
   // Create the callback.
@@ -911,8 +910,7 @@ void MemorySanitizer::createUserspaceApi(Module &M,
 }
 
 /// Insert extern declaration of runtime-provided functions and globals.
-void MemorySanitizer::initializeCallbacks(Module &M,
-                                          const TargetLibraryInfo &TLI) {
+void MemorySanitizer::initializeCallbacks(Module &M, const TargetLibraryInfo &TLI) {
   // Only do this once.
   if (CallbacksInitialized)
     return;
@@ -1247,7 +1245,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *End =
           IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
       auto [InsertPt, Index] =
-          SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
+        SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
       IRB.SetInsertPoint(InsertPt);
 
       Value *GEP = IRB.CreateGEP(MS.OriginTy, OriginPtr, Index);
@@ -1654,7 +1652,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (isa<ScalableVectorType>(V->getType()))
         return convertShadowToScalar(IRB.CreateOrReduce(V), IRB);
       unsigned BitWidth =
-          V->getType()->getPrimitiveSizeInBits().getFixedValue();
+        V->getType()->getPrimitiveSizeInBits().getFixedValue();
       return IRB.CreateBitCast(V, IntegerType::get(*MS.C, BitWidth));
     }
     return V;
@@ -1693,8 +1691,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Constant *constToIntPtr(Type *IntPtrTy, uint64_t C) const {
     if (VectorType *VectTy = dyn_cast<VectorType>(IntPtrTy)) {
       return ConstantVector::getSplat(
-          VectTy->getElementCount(),
-          constToIntPtr(VectTy->getElementType(), C));
+          VectTy->getElementCount(), constToIntPtr(VectTy->getElementType(), C));
     }
     assert(IntPtrTy == MS.IntptrTy);
     return ConstantInt::get(MS.IntptrTy, C);
@@ -2011,7 +2008,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               (void)Cpy;
 
               if (MS.TrackOrigins) {
-                Value *OriginPtr = getOriginPtrForArgument(EntryIRB, ArgOffset);
+                Value *OriginPtr =
+                    getOriginPtrForArgument(EntryIRB, ArgOffset);
                 // FIXME: OriginSize should be:
                 // alignTo(V % kMinOriginAlignment + Size, kMinOriginAlignment)
                 unsigned OriginSize = alignTo(Size, kMinOriginAlignment);
@@ -2034,7 +2032,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
                                                    kShadowTLSAlignment);
             if (MS.TrackOrigins) {
-              Value *OriginPtr = getOriginPtrForArgument(EntryIRB, ArgOffset);
+              Value *OriginPtr =
+                  getOriginPtrForArgument(EntryIRB, ArgOffset);
               setOrigin(A, EntryIRB.CreateLoad(MS.OriginTy, OriginPtr));
             }
           }
@@ -4652,11 +4651,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     IRBuilder<> IRBAfter(&*NextInsn);
     Value *RetvalShadow = IRBAfter.CreateAlignedLoad(
-        getShadowTy(&CB), getShadowPtrForRetval(IRBAfter), kShadowTLSAlignment,
-        "_msret");
+        getShadowTy(&CB), getShadowPtrForRetval(IRBAfter),
+        kShadowTLSAlignment, "_msret");
     setShadow(&CB, RetvalShadow);
     if (MS.TrackOrigins)
-      setOrigin(&CB, IRBAfter.CreateLoad(MS.OriginTy, getOriginPtrForRetval()));
+      setOrigin(&CB, IRBAfter.CreateLoad(MS.OriginTy,
+                                         getOriginPtrForRetval()));
   }
 
   bool isAMustTailRetVal(Value *RetVal) {
