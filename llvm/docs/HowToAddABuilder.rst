@@ -241,8 +241,9 @@ In order to use this "local testing" mode:
        buildbot-worker start --nodaemon <buildbot-worker-root-directory>
 
 * Either wait until the poller sets off a build, or alternatively force a
-  build to start in the web UI (which is also the best place to review the
-  build results).
+  build to start in the web UI.
+
+* Review the progress and results of the build in the web UI.
 
 This local testing configuration defaults to binding only to the loopback
 interface for security reasons.
