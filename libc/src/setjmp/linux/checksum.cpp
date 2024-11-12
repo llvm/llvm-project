@@ -15,8 +15,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace jmpbuf {
 // random bytes from https://www.random.org/cgi-bin/randbyte?nbytes=8&format=h
 // the cookie should not be zero otherwise it will be a bad seed as a multiplier
-__UINTPTR_TYPE__ value_mask = 0x3899'f0d3'5005'd953;
-__UINT64_TYPE__ checksum_cookie = 0xc7d9'd341'6afc'33f2;
+__UINTPTR_TYPE__ value_mask =
+    static_cast<__UINTPTR_TYPE__>(0x3899'f0d3'5005'd953ull);
+__UINTPTR_TYPE__ checksum_cookie =
+    static_cast<__UINTPTR_TYPE__>(0xc7d9'd341'6afc'33f2ull);
 
 // initialize the checksum state
 void initialize() {

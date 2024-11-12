@@ -51,7 +51,7 @@ typedef struct {
 #error "__jmp_buf not available for your target architecture."
 #endif
   // unused if checksum feature is not enabled.
-  __UINT64_TYPE__ __chksum;
+  __UINTPTR_TYPE__ __chksum;
 } __jmp_buf;
 
 typedef __jmp_buf jmp_buf[1];
