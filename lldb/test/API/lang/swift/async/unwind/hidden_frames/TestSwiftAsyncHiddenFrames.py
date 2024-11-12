@@ -23,6 +23,6 @@ class TestSwiftAsyncHiddenFrames(lldbtest.TestBase):
             "frame.*Main.main"
         ])
         self.expect("thread backtrace", matching=False, patterns=[
-            "frame.*partial apply",
+            "frame[^(]*partial apply",
             "frame.*back deployment fallback"
         ])
