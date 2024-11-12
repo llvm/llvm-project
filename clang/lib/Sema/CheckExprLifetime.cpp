@@ -482,8 +482,8 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
     if (RetT->isLValueReferenceType()) {
       ASTContext &Ctx = FD->getASTContext();
       QualType LHST;
-      auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isCXXInstanceMember())
+      auto *MD = cast<CXXMethodDecl>(FD);
+      if (MD->isCXXInstanceMember())
         LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
       else
         LHST = MD->getParamDecl(0)->getType();
