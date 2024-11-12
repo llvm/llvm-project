@@ -2,6 +2,9 @@
 ; RUN: llc -mattr=+sve,+bf16    < %s | FileCheck %s
 ; RUN: llc -mattr=+sve2p2,+bf16 < %s | FileCheck %s -check-prefix CHECK-2p2
 
+; RUN: llc -mattr=+sme,+bf16    -force-streaming < %s | FileCheck %s
+; RUN: llc -mattr=+sme2p2,+bf16 -force-streaming < %s | FileCheck %s -check-prefix CHECK-2p2
+
 target triple = "aarch64-linux"
 
 define <vscale x 8 x half> @test_svcvt_f16_f32_x_1(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
