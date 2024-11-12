@@ -55,7 +55,7 @@ add_header_library(
   common
   HDRS
     common.h
-    endian.h
+    endian_internal.h
     macros/properties/architectures.h
     macros/attributes.h
     macros/properties/cpu_features.h

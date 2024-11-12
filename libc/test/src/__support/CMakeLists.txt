@@ -57,11 +57,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  endian_test
+  endian_internal_test
   SUITE
     libc-support-tests
   SRCS
-    endian_test.cpp
+    endian_internal_test.cpp
   DEPENDS
     libc.src.__support.common
 )

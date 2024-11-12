@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
-#define LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ENDIAN_INTERNAL_H
+#define LLVM_LIBC_SRC___SUPPORT_ENDIAN_INTERNAL_H
 
 #include "common.h"
 #include "src/__support/macros/config.h"
@@ -143,4 +143,4 @@ using Endian = internal::Endian<__BYTE_ORDER__>;
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ENDIAN_INTERNAL_H
