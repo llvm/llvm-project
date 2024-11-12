@@ -6544,35 +6544,6 @@ bool InstCombinerImpl::replacedSelectWithOperand(SelectInst *SI,
   return false;
 }
 
-static std::optional<bool> compareKnownBits(ICmpInst::Predicate Pred,
-                                            const KnownBits &Op0,
-                                            const KnownBits &Op1) {
-  switch (Pred) {
-  case ICmpInst::ICMP_EQ:
-    return KnownBits::eq(Op0, Op1);
-  case ICmpInst::ICMP_NE:
-    return KnownBits::ne(Op0, Op1);
-  case ICmpInst::ICMP_ULT:
-    return KnownBits::ult(Op0, Op1);
-  case ICmpInst::ICMP_ULE:
-    return KnownBits::ule(Op0, Op1);
-  case ICmpInst::ICMP_UGT:
-    return KnownBits::ugt(Op0, Op1);
-  case ICmpInst::ICMP_UGE:
-    return KnownBits::uge(Op0, Op1);
-  case ICmpInst::ICMP_SLT:
-    return KnownBits::slt(Op0, Op1);
-  case ICmpInst::ICMP_SLE:
-    return KnownBits::sle(Op0, Op1);
-  case ICmpInst::ICMP_SGT:
-    return KnownBits::sgt(Op0, Op1);
-  case ICmpInst::ICMP_SGE:
-    return KnownBits::sge(Op0, Op1);
-  default:
-    llvm_unreachable("Unknown predicate");
-  }
-}
-
 /// Try to fold the comparison based on range information we can get by checking
 /// whether bits are known to be zero or one in the inputs.
 Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
@@ -6612,7 +6583,7 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     return new ICmpInst(
         Pred, Op0, ConstantExpr::getIntegerValue(Ty, Op1Known.getConstant()));
 
-  if (std::optional<bool> Res = compareKnownBits(Pred, Op0Known, Op1Known))
+  if (std::optional<bool> Res = ICmpInst::compare(Op0Known, Op1Known, Pred))
     return replaceInstUsesWith(I, ConstantInt::getBool(I.getType(), *Res));
 
   // Given the known and unknown bits, compute a range that the LHS could be
