@@ -1219,7 +1219,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   }
 
   StructType *StructArgTy = nullptr;
-  AllocaInst *Struct = nullptr;
+  Instruction *Struct = nullptr;
   unsigned NumAggregatedInputs = 0;
   if (AggregateArgs && !StructValues.empty()) {
     std::vector<Type *> ArgTypes;
@@ -1228,19 +1228,20 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
 
     // Allocate a struct at the beginning of this function
     StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
-    Struct = new AllocaInst(
+    auto *StructAlloca = new AllocaInst(
         StructArgTy, DL.getAllocaAddrSpace(), nullptr, "structArg",
         AllocationBlock ? AllocationBlock->getFirstInsertionPt()
                         : codeReplacer->getParent()->front().begin());
 
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
-          Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct);
-      params.push_back(StructSpaceCast);
+          StructAlloca, PointerType ::get(Context, 0), "structArg.ascast");
+      StructSpaceCast->insertAfter(StructAlloca);
+      Struct = StructSpaceCast;
     } else {
-      params.push_back(Struct);
+      Struct = StructAlloca;
     }
+    params.push_back(Struct);
     // Store aggregated inputs in the struct.
     for (unsigned i = 0, e = StructValues.size(); i != e; ++i) {
       if (inputs.contains(StructValues[i])) {
