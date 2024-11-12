@@ -170,8 +170,8 @@ void CatchSwitchAddHandler::revert(Tracker &Tracker) {
   LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
 }
 
-SwitchRemoveCase::SwitchRemoveCase(SwitchInst *Switch): Switch(Switch) {
-  for (const auto& C : Switch->cases()) {
+SwitchRemoveCase::SwitchRemoveCase(SwitchInst *Switch) : Switch(Switch) {
+  for (const auto &C : Switch->cases()) {
     Cases.push_back({C.getCaseValue(), C.getCaseSuccessor()});
   }
 }
