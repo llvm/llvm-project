@@ -6544,6 +6544,35 @@ bool InstCombinerImpl::replacedSelectWithOperand(SelectInst *SI,
   return false;
 }
 
+static std::optional<bool> compareKnownBits(ICmpInst::Predicate Pred,
+                                            const KnownBits &Op0,
+                                            const KnownBits &Op1) {
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+    return KnownBits::eq(Op0, Op1);
+  case ICmpInst::ICMP_NE:
+    return KnownBits::ne(Op0, Op1);
+  case ICmpInst::ICMP_ULT:
+    return KnownBits::ult(Op0, Op1);
+  case ICmpInst::ICMP_ULE:
+    return KnownBits::ule(Op0, Op1);
+  case ICmpInst::ICMP_UGT:
+    return KnownBits::ugt(Op0, Op1);
+  case ICmpInst::ICMP_UGE:
+    return KnownBits::uge(Op0, Op1);
+  case ICmpInst::ICMP_SLT:
+    return KnownBits::slt(Op0, Op1);
+  case ICmpInst::ICMP_SLE:
+    return KnownBits::sle(Op0, Op1);
+  case ICmpInst::ICMP_SGT:
+    return KnownBits::sgt(Op0, Op1);
+  case ICmpInst::ICMP_SGE:
+    return KnownBits::sge(Op0, Op1);
+  default:
+    llvm_unreachable("Unknown predicate");
+  }
+}
+
 /// Try to fold the comparison based on range information we can get by checking
 /// whether bits are known to be zero or one in the inputs.
 Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
@@ -6576,6 +6605,16 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
       return &I;
   }
 
+  if (!isa<Constant>(Op0) && Op0Known.isConstant())
+    return new ICmpInst(
+        Pred, ConstantExpr::getIntegerValue(Ty, Op0Known.getConstant()), Op1);
+  if (!isa<Constant>(Op1) && Op1Known.isConstant())
+    return new ICmpInst(
+        Pred, Op0, ConstantExpr::getIntegerValue(Ty, Op1Known.getConstant()));
+
+  if (std::optional<bool> Res = compareKnownBits(Pred, Op0Known, Op1Known))
+    return replaceInstUsesWith(I, ConstantInt::getBool(I.getType(), *Res));
+
   // Given the known and unknown bits, compute a range that the LHS could be
   // in.  Compute the Min, Max and RHS values based on the known bits. For the
   // EQ and NE we use unsigned values.
@@ -6592,14 +6631,6 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     Op1Min = Op1Known.getMinValue();
     Op1Max = Op1Known.getMaxValue();
   }
-
-  // If Min and Max are known to be the same, then SimplifyDemandedBits figured
-  // out that the LHS or RHS is a constant. Constant fold this now, so that
-  // code below can assume that Min != Max.
-  if (!isa<Constant>(Op0) && Op0Min == Op0Max)
-    return new ICmpInst(Pred, ConstantExpr::getIntegerValue(Ty, Op0Min), Op1);
-  if (!isa<Constant>(Op1) && Op1Min == Op1Max)
-    return new ICmpInst(Pred, Op0, ConstantExpr::getIntegerValue(Ty, Op1Min));
 
   // Don't break up a clamp pattern -- (min(max X, Y), Z) -- by replacing a
   // min/max canonical compare with some other compare. That could lead to
@@ -6682,13 +6713,9 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   // simplify this comparison.  For example, (x&4) < 8 is always true.
   switch (Pred) {
   default:
-    llvm_unreachable("Unknown icmp opcode!");
+    break;
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_NE: {
-    if (Op0Max.ult(Op1Min) || Op0Min.ugt(Op1Max))
-      return replaceInstUsesWith(
-          I, ConstantInt::getBool(I.getType(), Pred == CmpInst::ICMP_NE));
-
     // If all bits are known zero except for one, then we know at most one bit
     // is set. If the comparison is against zero, then this is a check to see if
     // *that* bit is set.
@@ -6728,67 +6755,19 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
                           ConstantInt::getNullValue(Op1->getType()));
     break;
   }
-  case ICmpInst::ICMP_ULT: {
-    if (Op0Max.ult(Op1Min)) // A <u B -> true if max(A) < min(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Min.uge(Op1Max)) // A <u B -> false if min(A) >= max(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    break;
-  }
-  case ICmpInst::ICMP_UGT: {
-    if (Op0Min.ugt(Op1Max)) // A >u B -> true if min(A) > max(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Max.ule(Op1Min)) // A >u B -> false if max(A) <= max(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    break;
-  }
-  case ICmpInst::ICMP_SLT: {
-    if (Op0Max.slt(Op1Min)) // A <s B -> true if max(A) < min(C)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Min.sge(Op1Max)) // A <s B -> false if min(A) >= max(C)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    break;
-  }
-  case ICmpInst::ICMP_SGT: {
-    if (Op0Min.sgt(Op1Max)) // A >s B -> true if min(A) > max(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Max.sle(Op1Min)) // A >s B -> false if max(A) <= min(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    break;
-  }
   case ICmpInst::ICMP_SGE:
-    assert(!isa<ConstantInt>(Op1) && "ICMP_SGE with ConstantInt not folded!");
-    if (Op0Min.sge(Op1Max)) // A >=s B -> true if min(A) >= max(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Max.slt(Op1Min)) // A >=s B -> false if max(A) < min(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     if (Op1Min == Op0Max) // A >=s B -> A == B if max(A) == min(B)
       return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
     break;
   case ICmpInst::ICMP_SLE:
-    assert(!isa<ConstantInt>(Op1) && "ICMP_SLE with ConstantInt not folded!");
-    if (Op0Max.sle(Op1Min)) // A <=s B -> true if max(A) <= min(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Min.sgt(Op1Max)) // A <=s B -> false if min(A) > max(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     if (Op1Max == Op0Min) // A <=s B -> A == B if min(A) == max(B)
       return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
     break;
   case ICmpInst::ICMP_UGE:
-    assert(!isa<ConstantInt>(Op1) && "ICMP_UGE with ConstantInt not folded!");
-    if (Op0Min.uge(Op1Max)) // A >=u B -> true if min(A) >= max(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Max.ult(Op1Min)) // A >=u B -> false if max(A) < min(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     if (Op1Min == Op0Max) // A >=u B -> A == B if max(A) == min(B)
       return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
     break;
   case ICmpInst::ICMP_ULE:
-    assert(!isa<ConstantInt>(Op1) && "ICMP_ULE with ConstantInt not folded!");
-    if (Op0Max.ule(Op1Min)) // A <=u B -> true if max(A) <= min(B)
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-    if (Op0Min.ugt(Op1Max)) // A <=u B -> false if min(A) > max(B)
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     if (Op1Max == Op0Min) // A <=u B -> A == B if min(A) == max(B)
       return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
     break;
