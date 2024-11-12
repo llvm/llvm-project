@@ -4894,10 +4894,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
             SourceRange SR = D.getDeclSpec().getSourceRange();
             if (Loc.isInvalid()) {
-              TypeSourceInfo *TSI = nullptr;
-              S.GetTypeFromParser(FTI.getTrailingReturnType(), &TSI);
-              TypeLoc TSILoc = TSI->getTypeLoc();
-              Loc = TSILoc.getBeginLoc();
+              Loc = FTI.getTrailingReturnTypeLoc();
               SR = D.getSourceRange();
             }
             S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
