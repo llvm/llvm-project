@@ -4579,3 +4579,13 @@ defm CLZ  : sve_int_un_pred_arit_bitwise_pat<AArch64clz_mt>;
 defm CNT  : sve_int_un_pred_arit_bitwise_pat<AArch64cnt_mt>;
 defm CNOT : sve_int_un_pred_arit_bitwise_pat<AArch64cnot_mt>;
 defm NOT  : sve_int_un_pred_arit_bitwise_pat<AArch64not_mt>;
+
+multiclass sve2_fp_flogb_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_UndefZero_Pat<nxv8i16, op, nxv8i16, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv4i32, op, nxv4i32, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv2i64, op, nxv2i64, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm FLOGB : sve2_fp_flogb_pat<int_aarch64_sve_flogb>;
