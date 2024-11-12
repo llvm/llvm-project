@@ -146,6 +146,21 @@ TEST(JSONTest, Object) {
   O.erase(D);
   EXPECT_EQ(O.size(), 2u);
   EXPECT_EQ(R"({"a":1,"c":3})", s(std::move(O)));
+
+  std::map<std::string, int> Map = {{"a", 1}, {"b", 2}, {"c", 3}};
+  Object ObjectFromMap(Map);
+  EXPECT_TRUE(ObjectFromMap.try_emplace("d", 4).second);
+  EXPECT_FALSE(ObjectFromMap.try_emplace("a", 4).second);
+
+  D = ObjectFromMap.find("d");
+  EXPECT_NE(D, ObjectFromMap.end());
+  E = ObjectFromMap.find("e");
+  EXPECT_EQ(E, ObjectFromMap.end());
+
+  ObjectFromMap.erase("b");
+  ObjectFromMap.erase(D);
+  EXPECT_EQ(ObjectFromMap.size(), 2u);
+  EXPECT_EQ(R"({"a":1,"c":3})", s(std::move(ObjectFromMap)));
 }
 
 TEST(JSONTest, Parse) {
