@@ -1014,8 +1014,8 @@ void mlirValueReplaceAllUsesExceptWithSet(MlirValue oldValue,
                                           MlirValue newValue,
                                           MlirOperation *exceptions,
                                           intptr_t numExceptions) {
-  auto oldValueCpp = unwrap(oldValue);
-  auto newValueCpp = unwrap(newValue);
+  Value oldValueCpp = unwrap(oldValue);
+  Value newValueCpp = unwrap(newValue);
 
   llvm::SmallPtrSet<mlir::Operation *, 4> exceptionSet;
   for (intptr_t i = 0; i < numExceptions; ++i) {
@@ -1028,9 +1028,9 @@ void mlirValueReplaceAllUsesExceptWithSet(MlirValue oldValue,
 void mlirValueReplaceAllUsesExceptWithSingle(MlirValue oldValue,
                                              MlirValue newValue,
                                              MlirOperation exceptedUser) {
-  auto oldValueCpp = unwrap(oldValue);
-  auto newValueCpp = unwrap(newValue);
-  auto exceptedUserCpp = unwrap(exceptedUser);
+  Value oldValueCpp = unwrap(oldValue);
+  Value newValueCpp = unwrap(newValue);
+  Operation *exceptedUserCpp = unwrap(exceptedUser);
 
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptedUserCpp);
 }
