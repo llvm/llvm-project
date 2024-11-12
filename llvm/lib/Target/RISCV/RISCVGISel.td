@@ -169,6 +169,12 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
+let Predicates = [IsRV64] in {
+// FIXME: Temporary until i32->i64 zext is no longer legal.
+def : Pat <(srl (zext GPR:$rs1), uimm5:$shamt),
+           (SRLIW GPR:$rs1, uimm5:$shamt)>;
+}
+
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
@@ -194,17 +200,6 @@ def : StPat<truncstorei16, SH, GPR, i32>;
 def : Pat<(anyext GPR:$src), (COPY GPR:$src)>;
 def : Pat<(sext GPR:$src), (ADDIW GPR:$src, 0)>;
 def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
-
-def : PatGprGpr<shl, SLLW, i32, i32>;
-def : PatGprGpr<srl, SRLW, i32, i32>;
-def : PatGprGpr<sra, SRAW, i32, i32>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 // Use sext if the sign bit of the input is 0.
 def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;

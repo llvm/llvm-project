@@ -147,12 +147,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
-      .legalFor({{s32, s32}, {sXLen, sXLen}})
+      .legalFor({{sXLen, sXLen}})
+      .customFor(ST.is64Bit(), {{s32, s32}})
       .widenScalarToNextPow2(0)
-      .clampScalar(1, s32, sXLen)
-      .clampScalar(0, s32, sXLen)
-      .minScalarSameAs(1, 0)
-      .maxScalarSameAs(1, 0);
+      .clampScalar(1, sXLen, sXLen)
+      .clampScalar(0, sXLen, sXLen);
 
   auto &ExtActions =
       getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
@@ -1166,6 +1165,12 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case TargetOpcode::G_ASHR:
+    return RISCV::G_SRAW;
+  case TargetOpcode::G_LSHR:
+    return RISCV::G_SRLW;
+  case TargetOpcode::G_SHL:
+    return RISCV::G_SLLW;
   case TargetOpcode::G_SDIV:
     return RISCV::G_DIVW;
   case TargetOpcode::G_UDIV:
@@ -1222,6 +1227,34 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
+  }
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_SHL: {
+    if (getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+      // We don't need a custom node for shift by constant. Just widen the
+      // source and the shift amount.
+      unsigned ExtOpc = TargetOpcode::G_ANYEXT;
+      if (MI.getOpcode() == TargetOpcode::G_ASHR)
+        ExtOpc = TargetOpcode::G_SEXT;
+      else if (MI.getOpcode() == TargetOpcode::G_LSHR)
+        ExtOpc = TargetOpcode::G_ZEXT;
+
+      Helper.Observer.changingInstr(MI);
+      Helper.widenScalarSrc(MI, sXLen, 1, ExtOpc);
+      Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ZEXT);
+      Helper.widenScalarDst(MI, sXLen);
+      Helper.Observer.changedInstr(MI);
+      return true;
+    }
+
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:
