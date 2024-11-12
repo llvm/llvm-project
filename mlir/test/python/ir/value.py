@@ -161,7 +161,7 @@ def testValueReplaceAllUsesWithExcept():
             op1 = Operation.create("custom.op1", operands=[value])
             op2 = Operation.create("custom.op2", operands=[value])
             value2 = Operation.create("custom.op3", results=[i32]).results[0]
-            value.replace_all_uses_except(value2, [op1])
+            value.replace_all_uses_except(value2, op1)
 
     assert len(list(value.uses)) == 1
 

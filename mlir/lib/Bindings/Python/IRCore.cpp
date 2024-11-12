@@ -3726,22 +3726,14 @@ void mlir::python::populateIRCore(py::module &m) {
           kValueReplaceAllUsesWithDocstring)
       .def(
           "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, PyOperation &exception) {
-            MlirValue selfValue = self.get();
-            MlirValue withValue = with.get();
-            MlirOperation exceptedUser = exception.get();
-
-            mlirValueReplaceAllUsesExceptWithSingle(selfValue, withValue,
-                                                    exceptedUser);
+          [](MlirValue self, MlirValue with, MlirOperation exception) {
+            mlirValueReplaceAllUsesExceptWithSingle(self, with, exception);
           },
           py::arg("with"), py::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, py::list exceptions) {
-            MlirValue selfValue = self.get();
-            MlirValue withValue = with.get();
-
+          [](MlirValue self, MlirValue with, py::list exceptions) {
             // Convert Python list to a SmallVector of MlirOperations
             llvm::SmallVector<MlirOperation, 4> exceptionOps;
             for (py::handle exception : exceptions) {
@@ -3749,7 +3741,7 @@ void mlir::python::populateIRCore(py::module &m) {
             }
 
             mlirValueReplaceAllUsesExceptWithSet(
-                selfValue, withValue, exceptionOps.data(),
+                self, with, exceptionOps.data(),
                 static_cast<intptr_t>(exceptionOps.size()));
           },
           py::arg("with"), py::arg("exceptions"),
