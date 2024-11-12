@@ -656,6 +656,15 @@ _storebe_i64(void * __P, long long __D) {
 #include <amxtransposeintrin.h>
 #endif
 
+#if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_MOVRS__)
+#include <amxmovrsintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AMX_MOVRS__) && defined(__AMX_TRANSPOSE__))
+#include <amxmovrstransposeintrin.h>
+#endif
+
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_AVX512__)
 #include <amxavx512intrin.h>
 #endif
