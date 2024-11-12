@@ -2062,16 +2062,6 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
-  if (!DL && MI == PrologEndLoc) {
-    // In rare situations, we might want to place the end of the prologue
-    // somewhere that doesn't have a source location already. It should be in
-    // the entry block.
-    assert(MI->getParent() == &*MI->getMF()->begin());
-    recordSourceLine(SP->getScopeLine(), 0, SP,
-                     DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT);
-    return;
-  }
-
   bool PrevInstInSameSection =
       (!PrevInstBB ||
        PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
@@ -2148,109 +2138,32 @@ static std::pair<const MachineInstr *, bool>
 findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
-  const auto &TII = *MF->getSubtarget().getInstrInfo();
-  const MachineInstr *NonTrivialInst = nullptr;
+  const MachineInstr *LineZeroLoc = nullptr;
   const Function &F = MF->getFunction();
 
   // Some instructions may be inserted into prologue after this function. Must
   // keep prologue for these cases.
   bool IsEmptyPrologue =
       !(F.hasPrologueData() || F.getMetadata(LLVMContext::MD_func_sanitize));
+  for (const auto &MBB : *MF) {
+    for (const auto &MI : MBB) {
+      if (!MI.isMetaInstruction()) {
+        if (!MI.getFlag(MachineInstr::FrameSetup) && MI.getDebugLoc()) {
+          // Scan forward to try to find a non-zero line number. The
+          // prologue_end marks the first breakpoint in the function after the
+          // frame setup, and a compiler-generated line 0 location is not a
+          // meaningful breakpoint. If none is found, return the first
+          // location after the frame setup.
+          if (MI.getDebugLoc().getLine())
+            return std::make_pair(&MI, IsEmptyPrologue);
 
-  // Helper lambda to examine each instruction and potentially return it
-  // as the prologue_end point.
-  auto ExamineInst = [&](const MachineInstr &MI)
-      -> std::optional<std::pair<const MachineInstr *, bool>> {
-    // Is this instruction trivial data shuffling or frame-setup?
-    bool isCopy = (TII.isCopyInstr(MI) ? true : false);
-    bool isTrivRemat = TII.isTriviallyReMaterializable(MI);
-    bool isFrameSetup = MI.getFlag(MachineInstr::FrameSetup);
-
-    if (!isFrameSetup && MI.getDebugLoc()) {
-      // Scan forward to try to find a non-zero line number. The
-      // prologue_end marks the first breakpoint in the function after the
-      // frame setup, and a compiler-generated line 0 location is not a
-      // meaningful breakpoint. If none is found, return the first
-      // location after the frame setup.
-      if (MI.getDebugLoc().getLine())
-        return std::make_pair(&MI, IsEmptyPrologue);
+          LineZeroLoc = &MI;
+        }
+        IsEmptyPrologue = false;
+      }
     }
-
-    // Keep track of the first "non-trivial" instruction seen, i.e. anything
-    // that doesn't involve shuffling data around or is a frame-setup.
-    if (!isCopy && !isTrivRemat && !isFrameSetup && !NonTrivialInst)
-      NonTrivialInst = &MI;
-
-    IsEmptyPrologue = false;
-    return std::nullopt;
-  };
-
-  // Examine all the instructions at the start of the function. This doesn't
-  // necessarily mean just the entry block: unoptimised code can fall-through
-  // into an initial loop, and it makes sense to put the initial breakpoint on
-  // the first instruction of such a loop. However, if we pass branches, we're
-  // better off synthesising an early prologue_end.
-  auto CurBlock = MF->begin();
-  auto CurInst = CurBlock->begin();
-  while (true) {
-    // Skip empty blocks, in rare cases the entry can be empty.
-    if (CurInst == CurBlock->end()) {
-      ++CurBlock;
-      CurInst = CurBlock->begin();
-      continue;
-    }
-
-    // Check whether this non-meta instruction a good position for prologue_end.
-    if (!CurInst->isMetaInstruction()) {
-      auto FoundInst = ExamineInst(*CurInst);
-      if (FoundInst)
-        return *FoundInst;
-    }
-
-    // Try to continue searching, but use a backup-location if substantive
-    // computation is happening.
-    auto NextInst = std::next(CurInst);
-    if (NextInst != CurInst->getParent()->end()) {
-      // Continue examining the current block.
-      CurInst = NextInst;
-      continue;
-    }
-
-    // We've reached the end of the block. Did we just look at a terminator?
-    if (CurInst->isTerminator()) {
-      // Some kind of "real" control flow is occurring. At the very least
-      // we would have to start exploring the CFG, a good signal that the
-      // prologue is over.
-      break;
-    }
-
-    // If we've already fallen through into a loop, don't fall through
-    // further, use a backup-location.
-    if (CurBlock->pred_size() > 1)
-      break;
-
-    // Fall-through from entry to the next block. This is common at -O0 when
-    // there's no initialisation in the function. Bail if we're also at the
-    // end of the function.
-    if (++CurBlock == MF->end())
-      break;
-    CurInst = CurBlock->begin();
   }
-
-  // We couldn't find any source-location, suggesting all meaningful information
-  // got optimised away. Set the prologue_end to be the first non-trivial
-  // instruction, which will get the scope line number. This is better than
-  // nothing.
-  // Only do this in the entry block, as we'll be giving it the scope line for
-  // the function. Return IsEmptyPrologue==true if we've picked the first
-  // instruction.
-  if (NonTrivialInst && NonTrivialInst->getParent() == &*MF->begin()) {
-    IsEmptyPrologue = NonTrivialInst == &*MF->begin()->begin();
-    return std::make_pair(NonTrivialInst, IsEmptyPrologue);
-  }
-
-  // If the entry path is empty, just don't have a prologue_end at all.
-  return std::make_pair(nullptr, IsEmptyPrologue);
+  return std::make_pair(LineZeroLoc, IsEmptyPrologue);
 }
 
 /// Register a source line with debug info. Returns the  unique label that was
@@ -2282,21 +2195,12 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   bool IsEmptyPrologue = PrologEnd.second;
 
   // If the prolog is empty, no need to generate scope line for the proc.
-  if (IsEmptyPrologue) {
-    // If there's nowhere to put a prologue_end flag, emit a scope line in case
-    // there are simply no source locations anywhere in the function.
-    if (PrologEndLoc) {
-      // Avoid trying to assign prologue_end to a line-zero location.
-      // Instructions with no DebugLoc at all are fine, they'll be given the
-      // scope line nuumber.
-      const DebugLoc &DL = PrologEndLoc->getDebugLoc();
-      if (!DL || DL->getLine() != 0)
-        return PrologEndLoc;
-
-      // Later, don't place the prologue_end flag on this line-zero location.
-      PrologEndLoc = nullptr;
-    }
-  }
+  if (IsEmptyPrologue)
+    // In degenerate cases, we can have functions with no source locations
+    // at all. These want a scope line, to avoid a totally empty function.
+    // Thus, only skip scope line if there's location to place prologue_end.
+    if (PrologEndLoc)
+      return PrologEndLoc;
 
   // Ensure the compile unit is created if the function is called before
   // beginFunction().
