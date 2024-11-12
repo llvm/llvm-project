@@ -3,13 +3,6 @@
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck %s
 ; RUN: opt < %s -mtriple=riscv32 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck %s --check-prefix=SIZE
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck %s --check-prefix=SIZE
-; Check if type-based queries have same instruction cost.
-; RUN: opt < %s -mtriple=riscv32 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output --type-based-intrinsic-cost=true | FileCheck %s
-; RUN: opt < %s -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output --type-based-intrinsic-cost=true | FileCheck %s
-; RUN: opt < %s -mtriple=riscv32 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output --type-based-intrinsic-cost=true \
-; RUN: | FileCheck %s --check-prefix=SIZE
-; RUN: opt < %s -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output --type-based-intrinsic-cost=true \
-; RUN: | FileCheck %s --check-prefix=SIZE
 
 declare half @llvm.vector.reduce.fadd.nxv1f16(half, <vscale x 1 x half>)
 

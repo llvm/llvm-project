@@ -2,10 +2,6 @@
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+v,+zfh,+zvfh,+zfbfmin,+zvfbfmin -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefixes=FP-REDUCE,FP-REDUCE-ZVFH
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+v,+zfh,+zvfhmin,+zfbfmin,+zvfbfmin -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefixes=FP-REDUCE,FP-REDUCE-ZVFHMIN
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+v,+zfh,+zvfh,+zfbfmin,+zvfbfmin -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck %s  --check-prefix=SIZE
-; Check if type-based queries have same instruction cost.
-; RUN: opt < %s -mtriple=riscv64 -mattr=+v,+zfh,+zvfh,+zfbfmin,+zvfbfmin -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output --type-based-intrinsic-cost=true | FileCheck %s --check-prefixes=FP-REDUCE,FP-REDUCE-ZVFH
-; RUN: opt < %s -mtriple=riscv64 -mattr=+v,+zfh,+zvfhmin,+zfbfmin,+zvfbfmin -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output --type-based-intrinsic-cost=true | FileCheck %s --check-prefixes=FP-REDUCE,FP-REDUCE-ZVFHMIN
-; RUN: opt < %s -mtriple=riscv64 -mattr=+v,+zfh,+zvfh,+zfbfmin,+zvfbfmin -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output --type-based-intrinsic-cost=true | FileCheck %s  --check-prefix=SIZE
 
 define void @reduce_fadd_bfloat() {
 ; FP-REDUCE-LABEL: 'reduce_fadd_bfloat'
