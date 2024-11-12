@@ -5521,8 +5521,9 @@ RISC-V:
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
 - ``S``: Alias for ``s``.
-- ``vr``: A vector register. (requires V extension).
-- ``vm``: A vector register for masking operand. (requires V extension).
+- ``vd``: A vector register, excluding ``v0`` (requires V extension).
+- ``vm``: The vector register ``v0`` (requires V extension).
+- ``vr``: A vector register (requires V extension).
 
 Sparc:
 
