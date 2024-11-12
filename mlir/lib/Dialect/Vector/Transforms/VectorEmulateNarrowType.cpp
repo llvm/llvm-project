@@ -45,9 +45,10 @@ using namespace mlir;
 #define DBGSNL() (llvm::dbgs() << "\n")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
-/// Returns a compressed mask. For example, when emulating `i8` with `i32` and
-/// when the number of source elements spans two `i32` elements, this method
-/// will compress `vector<8xi1>` into `vector<2xi1>`.
+/// Returns a compressed mask for the emulated vector. For example, when
+/// emulating an eight-element `i8` vector with `i32` (i.e. when the source
+/// elements span two dest elements), this method compresses `vector<8xi1>`
+/// into `vector<2xi1>`.
 ///
 /// The compressed/output mask value is set iff any mask in the corresponding
 /// `numSrcElemsPerDest` range of uncompressed/input masks is set. E.g., if
@@ -66,8 +67,7 @@ using namespace mlir;
 ///
 ///   %mask = [1, 1, 0, 0]
 ///
-/// `numFrontPadElems` is assumed to be strictly smaller than
-/// `numSrcElemsPerDest`.
+/// NOTE: `numFrontPadElems` must be strictly smaller than `numSrcElemsPerDest`.
 static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   Location loc, Value mask,
                                                   int numSrcElems,
