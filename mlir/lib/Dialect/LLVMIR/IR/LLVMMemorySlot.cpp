@@ -935,15 +935,15 @@ IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
   return op.getLenAttr();
 }
 
-/// Template function to create memset intrinsic
+/// Creates a memset intrinsic of that matches the `toReplace` intrinsic
+/// using the provided parameters. There are template specializations for
+/// MemsetOp and MemsetInlineOp.
 template <class MemsetIntr>
 void createMemsetIntr(OpBuilder &builder, MemsetIntr toReplace,
                       IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
                       DenseMap<Attribute, MemorySlot> &subslots,
                       Attribute index);
 
-/// Create memset intrinsic
-/// This is specialized for MemsetOp
 template <>
 void createMemsetIntr(OpBuilder &builder, LLVM::MemsetOp toReplace,
                       IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
@@ -961,8 +961,6 @@ void createMemsetIntr(OpBuilder &builder, LLVM::MemsetOp toReplace,
                                  toReplace.getIsVolatile());
 }
 
-/// Create memset intrinsic
-/// This is specialized for MemsetInlineOp
 template <>
 void createMemsetIntr(OpBuilder &builder, LLVM::MemsetInlineOp toReplace,
                       IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
