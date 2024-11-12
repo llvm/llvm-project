@@ -6168,6 +6168,31 @@ let TargetPrefix = "x86" in {
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty,
                          llvm_x86amx_ty, llvm_x86amx_ty], []>;
+
+  def int_x86_tdpbf8ps_internal :
+                ClangBuiltin<"__builtin_ia32_tdpbf8ps_internal">,
+                Intrinsic<[llvm_x86amx_ty],
+                          [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                           llvm_x86amx_ty, llvm_x86amx_ty, llvm_x86amx_ty],
+                          []>;
+  def int_x86_tdpbhf8ps_internal :
+                ClangBuiltin<"__builtin_ia32_tdpbhf8ps_internal">,
+                Intrinsic<[llvm_x86amx_ty],
+                          [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                           llvm_x86amx_ty, llvm_x86amx_ty, llvm_x86amx_ty],
+                          []>;
+  def int_x86_tdphbf8ps_internal :
+                ClangBuiltin<"__builtin_ia32_tdphbf8ps_internal">,
+                Intrinsic<[llvm_x86amx_ty],
+                          [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                           llvm_x86amx_ty, llvm_x86amx_ty, llvm_x86amx_ty],
+                          []>;
+  def int_x86_tdphf8ps_internal :
+                ClangBuiltin<"__builtin_ia32_tdphf8ps_internal">,
+                Intrinsic<[llvm_x86amx_ty],
+                          [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                           llvm_x86amx_ty, llvm_x86amx_ty, llvm_x86amx_ty],
+                          []>;
 }
 
 //===----------------------------------------------------------------------===//
