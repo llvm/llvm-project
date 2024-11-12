@@ -5451,16 +5451,6 @@ bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
   return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
 }
 
-bool NVPTXTargetLowering::noNaNsFPMath(MachineFunction &MF) const {
-  // Honor TargetOptions flags that explicitly say unsafe math is okay.
-  if (MF.getTarget().Options.NoNaNsFPMath)
-    return true;
-
-  // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
-  const Function &F = MF.getFunction();
-  return F.getFnAttribute("no-nans-fp-math").getValueAsBool();
-}
-
 static bool isConstZero(const SDValue &Operand) {
   const auto *Const = dyn_cast<ConstantSDNode>(Operand);
   return Const && Const->getZExtValue() == 0;

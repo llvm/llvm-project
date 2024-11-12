@@ -580,7 +580,6 @@ public:
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
   bool allowUnsafeFPMath(MachineFunction &MF) const;
-  bool noNaNsFPMath(MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {

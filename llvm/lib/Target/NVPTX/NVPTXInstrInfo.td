@@ -152,7 +152,6 @@ def allowFMA : Predicate<"allowFMA()">;
 def noFMA : Predicate<"!allowFMA()">;
 def allowUnsafeFPMath : Predicate<"allowUnsafeFPMath()">;
 def noUnsafeFPMath : Predicate<"!allowUnsafeFPMath()">;
-def noNaNsFPMath : Predicate<"noNaNsFPMath()">;
 
 def do_DIVF32_APPROX : Predicate<"getDivF32Level()==0">;
 def do_DIVF32_FULL : Predicate<"getDivF32Level()==1">;
@@ -3954,15 +3953,11 @@ def fpimm_any_zero : FPImmLeaf<fAny, [{
 def fpimm_positive_zero_v2f16 : PatFrag<(ops), (v2f16 (bitconvert (i32 0)))>;
 def fpimm_positive_zero_v2bf16 : PatFrag<(ops), (v2bf16 (bitconvert (i32 0)))>;
 
-// Patterns will only be used if FMA has a single use, in order to mitigate register pressure
-def NVPTX_fma_oneuse : PatFrag<(ops node:$a, node:$b, node:$c),
-                                  (fma node:$a, node:$b, node:$c), [{
-  return N->hasOneUse();
-}]>;
 // We can use the instruction flag nnan instead of relying on a function attribute
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
                                   (fma node:$a, node:$b, node:$c), [{
-  return N->hasOneUse() && N->getFlags().hasNoNaNs();
+  return N->hasOneUse() &&
+    (N->getFlags().hasNoNaNs() || TM.Options.NoNaNsFPMath);
 }]>;
 
 multiclass FMARELU<RegisterClass RC, string OpVecString = "">  {
@@ -3997,24 +3992,3 @@ def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int32Regs:$a, Int32Regs:$b,
   (FMARELU_F16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>;
 def : Pat<(v2bf16 (fmaxnum (NVPTX_fma_oneuse_and_nnan Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2bf16)),
   (FMARELU_BF16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>;
-
-// Use function attributes for noNaNsFPMath, instead of instruction flag
-def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
-  (FMARELU_F16_FTZ Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
-  Requires<[doF32FTZ, noNaNsFPMath]>;
-def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
-  (FMARELU_F16X2_FTZ Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
-  Requires<[doF32FTZ, noNaNsFPMath]>;
-// No FTZ
-def : Pat<(f16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
-  (FMARELU_F16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
-  Requires<[noNaNsFPMath]>;
-def : Pat<(bf16 (fmaxnum (NVPTX_fma_oneuse Int16Regs:$a, Int16Regs:$b, Int16Regs:$c), fpimm_any_zero)),
-  (FMARELU_BF16 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c)>,
-  Requires<[noNaNsFPMath]>;
-def : Pat<(v2f16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2f16)),
-  (FMARELU_F16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
-  Requires<[noNaNsFPMath]>;
-def : Pat<(v2bf16 (fmaxnum (NVPTX_fma_oneuse Int32Regs:$a, Int32Regs:$b, Int32Regs:$c), fpimm_positive_zero_v2bf16)),
-  (FMARELU_BF16X2 Int32Regs:$a, Int32Regs:$b, Int32Regs:$c)>,
-  Requires<[noNaNsFPMath]>;
