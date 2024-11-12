@@ -939,7 +939,7 @@ static bool areAllIndicesI32(const DestructurableMemorySlot &slot) {
 }
 
 //===----------------------------------------------------------------------===//
-// Interfaces for memset && memset.inline
+// Interfaces for memset and memset.inline
 //===----------------------------------------------------------------------===//
 
 template <class MemsetLike>
