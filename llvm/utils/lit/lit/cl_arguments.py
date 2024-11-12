@@ -169,7 +169,7 @@ def parse_args():
         "--report-failures-only",
         help="Only include unresolved, timed out, failed"
         " and unexpectedly passed tests in the report",
-        action="store_true"
+        action="store_true",
     )
     execution_group.add_argument(
         "--resultdb-output",
