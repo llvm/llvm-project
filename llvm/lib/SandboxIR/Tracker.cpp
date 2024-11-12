@@ -170,18 +170,25 @@ void CatchSwitchAddHandler::revert(Tracker &Tracker) {
   LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
 }
 
+SwitchRemoveCase::SwitchRemoveCase(SwitchInst *Switch): Switch(Switch) {
+  for (const auto& C : Switch->cases()) {
+    Cases.push_back({C.getCaseValue(), C.getCaseSuccessor()});
+  }
+}
+
 void SwitchRemoveCase::revert(Tracker &Tracker) {
-  // removeCase swaps the last case with the deleted one. To revert it, we use
-  // addCase (which adds the new case to the end), and swap the newly-added
-  // value and successor operands to the positions for the original case index.
-  Switch->addCase(Val, Dest);
-  auto ValUseA = Switch->getOperandUse(2 + Index * 2);
-  auto SucUseA = Switch->getOperandUse(2 + Index * 2 + 1);
-  unsigned NumOps = Switch->getNumOperands();
-  auto ValUseB = Switch->getOperandUse(NumOps - 2);
-  auto SucUseB = Switch->getOperandUse(NumOps - 2 + 1);
-  ValUseA.swap(ValUseB);
-  SucUseA.swap(SucUseB);
+  // llvm::SwitchInst doesn't give us any API to insert cases at a specific
+  // index. In order to preserve the original ordering, we save all of them and,
+  // when reverting, clear them all then insert them in the desired order. This
+  // still relies on the fact that `addCase` will insert them at the end, but it
+  // is documented to invalidate `case_end()` so it's probably okay.
+  unsigned NumCases = Switch->getNumCases();
+  for (unsigned I = 0; I < NumCases; ++I) {
+    Switch->removeCase(Switch->case_begin());
+  }
+  for (auto &Case : Cases) {
+    Switch->addCase(Case.Val, Case.Dest);
+  }
 }
 
 #ifndef NDEBUG
