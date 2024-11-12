@@ -9,7 +9,7 @@ declare float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a, <2 x bfloat> %b, floa
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s6, s[6:7], 0x0
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
@@ -23,34 +23,34 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ;
 ; GFX950-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
+; GFX950-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_load_dword s0, s[8:9], 0x0
-; GFX950-NEXT:    s_load_dword s1, s[10:11], 0x0
-; GFX950-NEXT:    s_load_dword s2, s[6:7], 0x0
+; GFX950-NEXT:    s_load_dword s0, s[12:13], 0x0
+; GFX950-NEXT:    s_load_dword s1, s[14:15], 0x0
+; GFX950-NEXT:    s_load_dword s2, s[10:11], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX950-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX950-NEXT:    v_dot2_f32_bf16 v1, s2, v1, v2 clamp
 ; GFX950-NEXT:    s_nop 2
-; GFX950-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX950-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX950-NEXT:    s_endpgm
 ;
 ; GFX950-ISEL-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
 ; GFX950-ISEL:       ; %bb.0: ; %entry
-; GFX950-ISEL-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
+; GFX950-ISEL-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; GFX950-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-ISEL-NEXT:    s_load_dword s0, s[8:9], 0x0
-; GFX950-ISEL-NEXT:    s_load_dword s1, s[10:11], 0x0
-; GFX950-ISEL-NEXT:    s_load_dword s2, s[6:7], 0x0
+; GFX950-ISEL-NEXT:    s_load_dword s0, s[12:13], 0x0
+; GFX950-ISEL-NEXT:    s_load_dword s1, s[14:15], 0x0
+; GFX950-ISEL-NEXT:    s_load_dword s2, s[10:11], 0x0
 ; GFX950-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX950-ISEL-NEXT:    v_dot2_f32_bf16 v0, s2, v0, v1 clamp
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-ISEL-NEXT:    s_nop 1
-; GFX950-ISEL-NEXT:    global_store_dword v1, v0, s[4:5]
+; GFX950-ISEL-NEXT:    global_store_dword v1, v0, s[8:9]
 ; GFX950-ISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -69,7 +69,7 @@ entry:
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_no_clamp:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s6, s[6:7], 0x0
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
@@ -83,34 +83,34 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
 ;
 ; GFX950-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_no_clamp:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
+; GFX950-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_load_dword s0, s[8:9], 0x0
-; GFX950-NEXT:    s_load_dword s1, s[10:11], 0x0
-; GFX950-NEXT:    s_load_dword s2, s[6:7], 0x0
+; GFX950-NEXT:    s_load_dword s0, s[12:13], 0x0
+; GFX950-NEXT:    s_load_dword s1, s[14:15], 0x0
+; GFX950-NEXT:    s_load_dword s2, s[10:11], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX950-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX950-NEXT:    v_dot2c_f32_bf16_e32 v2, s2, v1
 ; GFX950-NEXT:    s_nop 2
-; GFX950-NEXT:    global_store_dword v0, v2, s[4:5]
+; GFX950-NEXT:    global_store_dword v0, v2, s[8:9]
 ; GFX950-NEXT:    s_endpgm
 ;
 ; GFX950-ISEL-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_no_clamp:
 ; GFX950-ISEL:       ; %bb.0: ; %entry
-; GFX950-ISEL-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
+; GFX950-ISEL-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; GFX950-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-ISEL-NEXT:    s_load_dword s0, s[8:9], 0x0
-; GFX950-ISEL-NEXT:    s_load_dword s1, s[10:11], 0x0
-; GFX950-ISEL-NEXT:    s_load_dword s2, s[6:7], 0x0
+; GFX950-ISEL-NEXT:    s_load_dword s0, s[12:13], 0x0
+; GFX950-ISEL-NEXT:    s_load_dword s1, s[14:15], 0x0
+; GFX950-ISEL-NEXT:    s_load_dword s2, s[10:11], 0x0
 ; GFX950-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX950-ISEL-NEXT:    v_dot2c_f32_bf16_e32 v1, s2, v0
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    s_nop 1
-; GFX950-ISEL-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX950-ISEL-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX950-ISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,

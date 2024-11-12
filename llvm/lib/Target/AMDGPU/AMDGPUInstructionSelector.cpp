@@ -81,7 +81,7 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
 
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
   const TargetRegisterClass *RC =
-      RegClassOrBank.dyn_cast<const TargetRegisterClass*>();
+      dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
   if (RC) {
     const LLT Ty = MRI.getType(Reg);
     if (!Ty.isValid() || Ty.getSizeInBits() != 1)
@@ -91,7 +91,7 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
            RC->hasSuperClassEq(TRI.getBoolRC());
   }
 
-  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  const RegisterBank *RB = cast<const RegisterBank *>(RegClassOrBank);
   return RB->getID() == AMDGPU::VCCRegBankID;
 }
 
@@ -233,15 +233,15 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const RegClassOrRegBank &RegClassOrBank =
     MRI->getRegClassOrRegBank(DefReg);
 
-  const TargetRegisterClass *DefRC
-    = RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+  const TargetRegisterClass *DefRC =
+      dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
   if (!DefRC) {
     if (!DefTy.isValid()) {
       LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
       return false;
     }
 
-    const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+    const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
     DefRC = TRI.getRegClassForTypeOnBank(DefTy, RB);
     if (!DefRC) {
       LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
@@ -2429,11 +2429,11 @@ const RegisterBank *AMDGPUInstructionSelector::getArtifactRegBank(
   Register Reg, const MachineRegisterInfo &MRI,
   const TargetRegisterInfo &TRI) const {
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
+  if (auto *RB = dyn_cast<const RegisterBank *>(RegClassOrBank))
     return RB;
 
   // Ignore the type, since we don't use vcc in artifacts.
-  if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
+  if (auto *RC = dyn_cast<const TargetRegisterClass *>(RegClassOrBank))
     return &RBI.getRegBankFromRegClass(*RC, LLT());
   return nullptr;
 }
@@ -4175,7 +4175,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   unsigned Mods = 0;
   MachineInstr *MI = MRI.getVRegDef(Src);
 
-  if (MI && MI->getOpcode() == AMDGPU::G_FNEG &&
+  if (MI->getOpcode() == AMDGPU::G_FNEG &&
       // It's possible to see an f32 fneg here, but unlikely.
       // TODO: Treat f32 fneg as only high bit.
       MRI.getType(Src) == LLT::fixed_vector(2, 16)) {
@@ -4998,24 +4998,24 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   // offsets.
   std::optional<int> FI;
   Register VAddr = Root.getReg();
-  if (const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg())) {
-    Register PtrBase;
-    int64_t ConstOffset;
-    std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
-    if (ConstOffset != 0) {
-      if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
-          (!STI.privateMemoryResourceIsRangeChecked() ||
-           KB->signBitIsZero(PtrBase))) {
-        const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
-        if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
-          FI = PtrBaseDef->getOperand(1).getIndex();
-        else
-          VAddr = PtrBase;
-        Offset = ConstOffset;
-      }
-    } else if (RootDef->getOpcode() == AMDGPU::G_FRAME_INDEX) {
-      FI = RootDef->getOperand(1).getIndex();
+
+  const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+  Register PtrBase;
+  int64_t ConstOffset;
+  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
+  if (ConstOffset != 0) {
+    if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
+        (!STI.privateMemoryResourceIsRangeChecked() ||
+         KB->signBitIsZero(PtrBase))) {
+      const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
+      if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
+        FI = PtrBaseDef->getOperand(1).getIndex();
+      else
+        VAddr = PtrBase;
+      Offset = ConstOffset;
     }
+  } else if (RootDef->getOpcode() == AMDGPU::G_FRAME_INDEX) {
+    FI = RootDef->getOperand(1).getIndex();
   }
 
   return {{[=](MachineInstrBuilder &MIB) { // rsrc
@@ -5237,9 +5237,6 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (!RootDef)
-    return std::pair(Root.getReg(), 0);
-
   int64_t ConstAddr = 0;
 
   Register PtrBase;
@@ -5302,9 +5299,6 @@ std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
                                                   unsigned Size) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (!RootDef)
-    return std::pair(Root.getReg(), 0);
-
   int64_t ConstAddr = 0;
 
   Register PtrBase;

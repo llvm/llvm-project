@@ -20392,8 +20392,8 @@ Example:
 
 .. code-block:: text
 
-      %a = call i8 @llvm.fptoui.sat.i8.f32(float 123.9)              ; yields i8: 123
-      %b = call i8 @llvm.fptoui.sat.i8.f32(float -5.7)               ; yields i8:   0
+      %a = call i8 @llvm.fptoui.sat.i8.f32(float 123.875)            ; yields i8: 123
+      %b = call i8 @llvm.fptoui.sat.i8.f32(float -5.75)              ; yields i8:   0
       %c = call i8 @llvm.fptoui.sat.i8.f32(float 377.0)              ; yields i8: 255
       %d = call i8 @llvm.fptoui.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:   0
 
@@ -20445,8 +20445,8 @@ Example:
 
 .. code-block:: text
 
-      %a = call i8 @llvm.fptosi.sat.i8.f32(float 23.9)               ; yields i8:   23
-      %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.8)             ; yields i8: -128
+      %a = call i8 @llvm.fptosi.sat.i8.f32(float 23.875)             ; yields i8:   23
+      %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.75)            ; yields i8: -128
       %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
       %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
 
@@ -23002,7 +23002,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fmax.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fmax.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fmax.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -23072,7 +23072,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fmin.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fmin.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fmin.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -23142,7 +23142,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fmaximum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fmaximum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fmaximum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -23212,7 +23212,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fminimum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fminimum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fminimum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:

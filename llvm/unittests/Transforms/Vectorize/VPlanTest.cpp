@@ -731,10 +731,10 @@ TEST(VPBasicBlockTest, print) {
   }
 
   LLVMContext C;
-  auto *ScalarHeader = BasicBlock::Create(C, "");
-  // FIXME: This looks wrong.
-  auto ScalarHeaderVPBB = std::make_unique<VPIRBasicBlock>(ScalarHeader);
-  VPlan Plan(VPBB0, TC, VPBB1, ScalarHeaderVPBB.get());
+  auto *ScalarHeader = BasicBlock::Create(C, "scalar.header");
+  auto * ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
+  VPBlockUtils::connectBlocks(VPBB2, ScalarHeaderVPBB);
+  VPlan Plan(VPBB0, TC, VPBB1, ScalarHeaderVPBB);
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan.printDOT(OS);
@@ -761,6 +761,11 @@ compound=true
     "bb2:\l" +
     "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
     "  EMIT ret vp\<%5\>\l" +
+    "Successor(s): ir-bb\<scalar.header\>\l"
+  ]
+  N2 -> N3 [ label=""]
+  N3 [label =
+    "ir-bb\<scalar.header\>:\l" +
     "No successors\l"
   ]
 }
@@ -782,7 +787,7 @@ Successor(s): bb2
   const char *ExpectedBlock2Str = R"(bb2:
   EMIT vp<%5> = mul vp<%3>, vp<%2>
   EMIT ret vp<%5>
-No successors
+Successor(s): ir-bb<scalar.header>
 )";
   std::string Block2Dump;
   raw_string_ostream OS2(Block2Dump);
