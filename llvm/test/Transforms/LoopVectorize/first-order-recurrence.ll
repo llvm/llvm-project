@@ -2811,7 +2811,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; UNROLL-NO-VF-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
 ; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
-; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF26:![0-9]+]]
+; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = icmp ule i32 [[TMP1]], 1
+; UNROLL-NO-VF-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF26:![0-9]+]]
 ; UNROLL-NO-VF:       vector.ph:
 ; UNROLL-NO-VF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 2
@@ -3184,7 +3185,8 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; UNROLL-NO-VF-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
 ; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
-; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF26]]
+; UNROLL-NO-VF-NEXT:    [[TMP19:%.*]] = icmp ule i32 [[TMP1]], 1
+; UNROLL-NO-VF-NEXT:    br i1 [[TMP19]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF26]]
 ; UNROLL-NO-VF:       vector.ph:
 ; UNROLL-NO-VF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 2

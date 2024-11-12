@@ -2490,6 +2490,12 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
 
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
     CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
+  } else if (MinProfitableTripCount.isNonZero()) {
+    // Emit pure profitable runtime check. Don't execute the vectorized loop if
+    // trip count <= minimum profitable trip count.
+    Value *MinProfTC =
+        Builder.CreateElementCount(CountTy, MinProfitableTripCount);
+    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULE, Count, MinProfTC);
   }
 
   // Create new preheader for vector loop.

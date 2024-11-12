@@ -596,7 +596,8 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], ptr [[E:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; PRED-NEXT:    [[TMP5:%.*]] = icmp ule i64 [[TMP0]], 58
+; PRED-NEXT:    br i1 [[TMP5]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; PRED:       vector.memcheck:
 ; PRED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[E]], i64 4
 ; PRED-NEXT:    [[TMP1:%.*]] = shl i64 [[N]], 2
@@ -1299,7 +1300,8 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[SRC_3:%.*]], ptr noalias [[SRC_4:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED-NEXT:    [[TMP92:%.*]] = icmp ule i64 [[TMP0]], 27
+; PRED-NEXT:    br i1 [[TMP92]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
 ; PRED-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])

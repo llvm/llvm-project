@@ -101,7 +101,8 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X:%.*]], i64 [[M:%.*]], i64 [[CONV6:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CONV61:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule i64 [[N]], 7
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
@@ -229,7 +230,8 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[MUL_1_I:%.*]] = mul i64 [[X]], [[X]]
 ; CHECK-NEXT:    [[MUL_2_I:%.*]] = mul i64 [[MUL_1_I]], [[X]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule i64 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
