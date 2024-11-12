@@ -4516,3 +4516,20 @@ multiclass sve_bfloat_convert_pat<SDPatternOperator op> {
 }
 
 defm BFCVT : sve_bfloat_convert_pat<int_aarch64_sve_fcvt_bf16f32_v2>;
+
+multiclass sve2_fp_convert_up_long_pat<string op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f16), nxv4f32, nxv4i1, nxv8f16, !cast<Instruction>(NAME # _ZPzZ_HtoS)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _ZPzZ_StoD)>;
+  }
+}
+
+defm FCVTLT : sve2_fp_convert_up_long_pat<"int_aarch64_sve_fcvtlt">;
+
+multiclass sve2_fp_convert_down_odd_rounding_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_UndefZero_Pat<nxv4f32, op, nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _ZPzZ_DtoS)>;
+  }
+}
+
+defm FCVTX : sve2_fp_convert_down_odd_rounding_pat<int_aarch64_sve_fcvtx_f32f64>;
