@@ -669,8 +669,6 @@ static void HandleIntegerHumanModifier(unsigned ValNo,
   llvm::raw_svector_ostream Out(OutStr);
   for (const auto &[UnitSize, UnitSign] : Units) {
     if (ValNo >= UnitSize) {
-      // Out << llvm::formatv("{0:F}{1}", ValNo / static_cast<double>(UnitSize),
-                          //  UnitSign);
       Out << llvm::format("%0.2f%c", ValNo / static_cast<double>(UnitSize),
                           UnitSign);
       return;
