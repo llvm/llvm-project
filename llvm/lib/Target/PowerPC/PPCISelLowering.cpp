@@ -11301,13 +11301,13 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     break;
   }
 
+  SDValue GlueOp = CompNode.getValue(1);
   if (Subtarget.isISA3_1()) {
     SDValue SubRegIdx = DAG.getTargetConstant(Bitx, dl, MVT::i32);
     SDValue CR6Reg = DAG.getRegister(PPC::CR6, MVT::i32);
     SDValue CRBit =
         SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
-                                   CR6Reg, SubRegIdx, CompNode.getValue(1)),
-                0);
+                                   CR6Reg, SubRegIdx, GlueOp), 0);
     return DAG.getNode(SetOp, dl, MVT::i32, CRBit);
   }
 
@@ -11315,7 +11315,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   // This is flagged to the above dot comparison.
   SDValue Flags =
       DAG.getNode(PPCISD::MFOCRF, dl, MVT::i32,
-                  DAG.getRegister(PPC::CR6, MVT::i32), CompNode.getValue(1));
+                  DAG.getRegister(PPC::CR6, MVT::i32), GlueOp);
 
   // Shift the bit into the low position.
   Flags = DAG.getNode(ISD::SRL, dl, MVT::i32, Flags,
