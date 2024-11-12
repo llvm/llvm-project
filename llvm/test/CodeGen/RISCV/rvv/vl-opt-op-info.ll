@@ -11,14 +11,16 @@
 define <2 x i32> @vdot_lane_s32(<2 x i32> noundef %var_1, <8 x i8> noundef %var_3, <8 x i8> noundef %var_5, <8 x i16> %x) {
 ; CHECK-LABEL: vdot_lane_s32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v11, 0
 ; CHECK-NEXT:    vnsrl.wi v9, v11, 16
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vnsrl.wx v9, v10, a0
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
