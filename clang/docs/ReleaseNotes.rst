@@ -278,7 +278,7 @@ C2y Feature Support
   which adds the ``i`` and ``j`` suffixes for the creation of a ``_Complex``
   constant value. Clang has always supported these suffixes as a GNU extension,
   so ``-Wgnu-imaginary-constant`` no longer has effect in C modes, as this is
-  not a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
+  now a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
   modes.
 
 - Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
@@ -318,6 +318,7 @@ C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
 - Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+- Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -741,6 +742,7 @@ X86 Support
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
+- Support ISA of ``AMX-MOVRS``.
 - Support ISA of ``AMX-AVX512``.
 - Support ISA of ``AMX-TF32``.
 
@@ -867,6 +869,9 @@ New features
   attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
+
+- Introduced ``-warning-suppression-mappings`` flag to control diagnostic
+  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

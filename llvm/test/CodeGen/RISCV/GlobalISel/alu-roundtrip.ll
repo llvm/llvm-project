@@ -123,10 +123,7 @@ define i32 @subi_i32(i32 %a) {
 ;
 ; RV64IM-LABEL: subi_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    li a1, 1
-; RV64IM-NEXT:    slli a1, a1, 32
-; RV64IM-NEXT:    addi a1, a1, -1234
-; RV64IM-NEXT:    add a0, a0, a1
+; RV64IM-NEXT:    addi a0, a0, -1234
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i32 %a, 1234
