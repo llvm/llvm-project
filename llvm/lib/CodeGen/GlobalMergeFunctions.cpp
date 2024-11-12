@@ -102,7 +102,7 @@ bool isEligibleFunction(Function *F) {
   return true;
 }
 
-static bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
+static bool isEligibleInstructionForConstantSharing(const Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Load:
   case Instruction::Store:
@@ -114,10 +114,15 @@ static bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
   }
 }
 
+// This function takes an instruction, \p I, and an operand index, \p OpIdx.
+// It returns true if the operand should be ignored in the hash computation.
+// If \p OpIdx is out of range based on the other instruction context, it cannot
+// be ignored.
 static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
-  assert(OpIdx < I->getNumOperands() && "Invalid operand index");
+  if (OpIdx >= I->getNumOperands())
+    return false;
 
-  if (!isEligibleInstrunctionForConstantSharing(I))
+  if (!isEligibleInstructionForConstantSharing(I))
     return false;
 
   if (!isa<Constant>(I->getOperand(OpIdx)))
