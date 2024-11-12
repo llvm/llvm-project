@@ -127,7 +127,11 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
+#if __SIZEOF_LONG_DOUBLE__ == 12
+  using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
+#else
   using StorageType = UInt128;
+#endif
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;

@@ -146,20 +146,20 @@ define i64 @pack_i64_3(ptr %0, ptr %1) {
 define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: packh_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    slliw a1, a1, 8
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addiw a2, a2, -256
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: packh_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    andi a0, a0, 255
-; RV64ZBKB-NEXT:    slliw a1, a1, 8
 ; RV64ZBKB-NEXT:    lui a2, 16
 ; RV64ZBKB-NEXT:    addiw a2, a2, -256
+; RV64ZBKB-NEXT:    andi a0, a0, 255
+; RV64ZBKB-NEXT:    slli a1, a1, 8
 ; RV64ZBKB-NEXT:    and a1, a1, a2
 ; RV64ZBKB-NEXT:    or a0, a1, a0
 ; RV64ZBKB-NEXT:    ret

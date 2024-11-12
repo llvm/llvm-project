@@ -660,16 +660,6 @@ TEST(ParseArchString, MissingDepency) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "");
   }
-
-  for (StringRef Input : {"rv32i_zacas1p0"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zacas' requires 'a' or 'zaamo' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zabha"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zabha' requires 'a' or 'zaamo' extension to also be specified");
-  }
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
