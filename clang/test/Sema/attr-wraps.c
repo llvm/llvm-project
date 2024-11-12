@@ -41,8 +41,8 @@ int discard_test(void) {
 }
 
 void useless_wraps_attribute(void) {
-  // expected-warning@+1 {{using attribute 'wraps' with non-integer type}}
+  // expected-error@+1 {{cannot use attribute 'wraps' with non-integer type}}
   float __attribute__((wraps)) A = 3.14;
-  // expected-warning@+1 {{using attribute 'no_wraps' with non-integer type}}
+  // expected-error@+1 {{cannot use attribute 'no_wraps' with non-integer type}}
   float __attribute__((no_wraps)) B = 3.14;
 }

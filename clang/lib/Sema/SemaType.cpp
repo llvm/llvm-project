@@ -6547,7 +6547,7 @@ static void handleWrapsAttr(QualType &Type, const ParsedAttr &Attr,
     return;
 
   if (!Type->isIntegerType()) {
-    S.Diag(Attr.getLoc(), diag::warn_wraps_attr_var_decl_type_not_integer)
+    S.Diag(Attr.getLoc(), diag::err_wraps_attr_var_decl_type_not_integer)
         << (int)NoWraps << Type.getAsString();
     Attr.setInvalid();
     return;

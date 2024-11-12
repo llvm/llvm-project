@@ -8743,9 +8743,9 @@ when building with ``-fsanitize=signed-integer-overflow``:
   }
 
 ``wraps`` may also be used with function parameters or declarations of
-variables as well as members of structures. Using ``wraps`` on non-integer
-types will result in a ``-Wuseless-wraps-attribute`` warning. One may disable
-this warning with ``-Wno-useless-wraps-attribute``.
+variables as well as members of structures.
+
+Using ``wraps`` on non-integer types will result in an error.
 
 ``wraps`` persists through implicit type promotions and will be applied to the
 result type of arithmetic expressions containing a wrapping operand.
@@ -8790,24 +8790,21 @@ effectively re-enable instrumentation for specific types or variables.
 
 Like ``wraps``, ``no_wraps`` persists through implicit type promotions and will
 be automatically applied to the result type of arithmetic expressions
-containing a wrapping operand.
+containing a wrapping operand. ``-Wimplicitly-discarded-wraps-attribute``
+warnings can be caused in situations where the ``wraps`` attribute cannot
+persist through implicit type conversions. Disable this with
+``-Wno-implicitly-discarded-wraps-attribute``.
 
-If a type or variable is attributed by both ``wraps`` and ``no_wraps``, then
-``no_wraps`` takes precedence -- regardless of the order of attribution.
+
+Applying both ``__attribute__((wraps))`` and ``__attribute__((no_wraps))``
+results in an error, as you should only use one or the other.
 
 Note that ``no_wraps`` makes no guarantees about the definedness of arithmetic
 overflow. Instead, use ``-fwrapv`` or ``-fno-strict-overflow``.
 
 Like ``wraps``, ``no_wraps`` may also be used with function parameters or
-declarations of variables as well as members of structures. Using ``wraps`` on
-non-integer types will result in a `-Wuseless-wraps-attribute`. One may disable
-this warning with ``-Wno-useless-wraps-attribute``.
-
-``no_wraps`` also persists through implicit type promotions and will be applied
-to the result type of arithmetic expressions containing a wrapping operand.
-``-Wimplicitly-discarded-wraps-attribute`` warnings can be caused in situations
-where the ``wraps`` attribute cannot persist through implicit type conversions.
-Disable this with ``-Wno-implicitly-discarded-wraps-attribute``.
+declarations of variables as well as members of structures but can not be used
+with non-integer types.
 }];
 }
 
