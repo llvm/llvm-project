@@ -2714,3 +2714,31 @@ join:
   %cmp = icmp slt i32 %13, 0
   ret i1 %cmp
 }
+
+define i64 @wrong_gep_arg_into_phi(ptr noundef %ptr) {
+; CHECK-LABEL: @wrong_gep_arg_into_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[PTR_PN:%.*]] = phi ptr [ [[PTR:%.*]], [[ENTRY:%.*]] ], [ [[DOTPN:%.*]], [[FOR_COND]] ]
+; CHECK-NEXT:    [[DOTPN]] = getelementptr i8, ptr [[PTR_PN]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[DOTPN]], align 1
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i8 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[EXIT:%.*]], label [[FOR_COND]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %add.ptr = getelementptr i8, ptr %ptr, i64 1
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond, %entry
+  %.pn = phi ptr [ %add.ptr, %entry ], [ %incdec.ptr, %for.cond ]
+  %val = load i8, ptr %.pn, align 1
+  %cond = icmp ne i8 %val, 0
+  %incdec.ptr = getelementptr inbounds nuw i8, ptr %.pn, i64 1
+  br i1 %cond, label %for.cond, label %exit
+
+exit:                                             ; preds = %for.cond
+  ret i64 0
+}
