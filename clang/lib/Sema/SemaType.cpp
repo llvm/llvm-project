@@ -4887,16 +4887,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
+            // Attach a valid source location for diagnostics on functions with trailing
+            // return types missing 'auto'. Attempt to get the location from the declared
+            // type; if invalid, fall back to the trailing return type's location.s
             SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
             SourceRange SR = D.getDeclSpec().getSourceRange();
             if (Loc.isInvalid()) {
               TypeSourceInfo *TSI = nullptr;
               S.GetTypeFromParser(FTI.getTrailingReturnType(), &TSI);
-              if (TSI) {
-                TypeLoc TSILoc = TSI->getTypeLoc();
-                Loc = TSILoc.getBeginLoc();
-                SR = TSILoc.getSourceRange();
-              }
+              TypeLoc TSILoc = TSI->getTypeLoc();
+              Loc = TSILoc.getBeginLoc();
+              SR = TSILoc.getSourceRange();
             }
             S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
             D.setInvalidType(true);
