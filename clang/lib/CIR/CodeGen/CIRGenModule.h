@@ -15,20 +15,24 @@
 
 #include "CIRGenTypeCache.h"
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 class ASTContext;
 class CodeGenOptions;
 class Decl;
+class DiagnosticBuilder;
 class DiagnosticsEngine;
+class GlobalDecl;
 class LangOptions;
+class SourceLocation;
+class SourceRange;
 class TargetInfo;
-} // namespace clang
 
-using namespace clang;
-namespace cir {
+namespace CIRGen {
 
 /// This class organizes the cross-function state that is used while generating
 /// CIR code.
@@ -44,6 +48,10 @@ public:
   ~CIRGenModule() = default;
 
 private:
+  // TODO(CIR) 'builder' will change to CIRGenBuilderTy once that type is
+  // defined
+  mlir::OpBuilder builder;
+
   /// Hold Clang AST information.
   clang::ASTContext &astCtx;
 
@@ -52,11 +60,37 @@ private:
   /// A "module" matches a c/cpp source file: containing a list of functions.
   mlir::ModuleOp theModule;
 
+  clang::DiagnosticsEngine &diags;
+
   const clang::TargetInfo &target;
 
 public:
-  void buildTopLevelDecl(clang::Decl *decl);
+  mlir::ModuleOp getModule() const { return theModule; }
+
+  /// Helpers to convert the presumed location of Clang's SourceLocation to an
+  /// MLIR Location.
+  mlir::Location getLoc(clang::SourceLocation cLoc);
+  mlir::Location getLoc(clang::SourceRange cRange);
+
+  void emitTopLevelDecl(clang::Decl *decl);
+
+  /// Emit code for a single global function or variable declaration. Forward
+  /// declarations are emitted lazily.
+  void emitGlobal(clang::GlobalDecl gd);
+
+  void emitGlobalDefinition(clang::GlobalDecl gd,
+                            mlir::Operation *op = nullptr);
+  void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+
+  /// Helpers to emit "not yet implemented" error diagnostics
+  DiagnosticBuilder errorNYI(llvm::StringRef);
+  DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
+  DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef, llvm::StringRef);
+  DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);
+  DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef, llvm::StringRef);
 };
-} // namespace cir
+} // namespace CIRGen
+
+} // namespace clang
 
 #endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H

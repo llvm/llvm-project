@@ -83,7 +83,7 @@ getCategoryFromDiagGroup(const Record *Group,
 static std::string getDiagnosticCategory(const Record *R,
                                          DiagGroupParentMap &DiagGroupParents) {
   // If the diagnostic is in a group, and that group has a category, use it.
-  if (DefInit *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
+  if (const auto *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
     // Check the diagnostic's diag group for a category.
     std::string CatName = getCategoryFromDiagGroup(Group->getDef(),
                                                    DiagGroupParents);
@@ -153,15 +153,17 @@ static bool diagGroupBeforeByName(const Record *LHS, const Record *RHS) {
          RHS->getValueAsString("GroupName");
 }
 
+using DiagsInGroupTy = std::map<std::string, GroupInfo, std::less<>>;
+
 /// Invert the 1-[0/1] mapping of diags to group into a one to many
 /// mapping of groups to diags in the group.
 static void groupDiagnostics(ArrayRef<const Record *> Diags,
                              ArrayRef<const Record *> DiagGroups,
-                             std::map<std::string, GroupInfo> &DiagsInGroup) {
+                             DiagsInGroupTy &DiagsInGroup) {
 
   for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
     const Record *R = Diags[i];
-    DefInit *DI = dyn_cast<DefInit>(R->getValueInit("Group"));
+    const auto *DI = dyn_cast<DefInit>(R->getValueInit("Group"));
     if (!DI)
       continue;
     assert(R->getValueAsDef("Class")->getName() != "CLASS_NOTE" &&
@@ -256,14 +258,14 @@ class InferPedantic {
   DiagGroupParentMap &DiagGroupParents;
   ArrayRef<const Record *> Diags;
   const std::vector<const Record *> DiagGroups;
-  std::map<std::string, GroupInfo> &DiagsInGroup;
+  DiagsInGroupTy &DiagsInGroup;
   DenseSet<const Record *> DiagsSet;
   GMap GroupCount;
 public:
   InferPedantic(DiagGroupParentMap &DiagGroupParents,
                 ArrayRef<const Record *> Diags,
                 ArrayRef<const Record *> DiagGroups,
-                std::map<std::string, GroupInfo> &DiagsInGroup)
+                DiagsInGroupTy &DiagsInGroup)
       : DiagGroupParents(DiagGroupParents), Diags(Diags),
         DiagGroups(DiagGroups), DiagsInGroup(DiagsInGroup) {}
 
@@ -359,7 +361,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     const Record *R = Diags[i];
     if (isExtension(R) && isOffByDefault(R)) {
       DiagsSet.insert(R);
-      if (DefInit *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
+      if (const auto *Group = dyn_cast<DefInit>(R->getValueInit("Group"))) {
         const Record *GroupRec = Group->getDef();
         if (!isSubGroupOfGroup(GroupRec, "pedantic")) {
           markGroup(GroupRec);
@@ -378,13 +380,13 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     // Check if the group is implicitly in -Wpedantic.  If so,
     // the diagnostic should not be directly included in the -Wpedantic
     // diagnostic group.
-    if (DefInit *Group = dyn_cast<DefInit>(R->getValueInit("Group")))
+    if (const auto *Group = dyn_cast<DefInit>(R->getValueInit("Group")))
       if (groupInPedantic(Group->getDef()))
         continue;
 
     // The diagnostic is not included in a group that is (transitively) in
     // -Wpedantic.  Include it in -Wpedantic directly.
-    if (RecordVec *V = DiagsInPedantic.dyn_cast<RecordVec*>())
+    if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(R);
     else {
       DiagsInPedantic.get<RecordSet*>()->insert(R);
@@ -413,7 +415,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
-    if (RecordVec *V = GroupsInPedantic.dyn_cast<RecordVec*>())
+    if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
       V->push_back(Group);
     else {
       GroupsInPedantic.get<RecordSet*>()->insert(Group);
@@ -1426,7 +1428,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
   ArrayRef<const Record *> DiagGroups =
       Records.getAllDerivedDefinitions("DiagGroup");
 
-  std::map<std::string, GroupInfo> DiagsInGroup;
+  DiagsInGroupTy DiagsInGroup;
   groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
 
   DiagCategoryIDMap CategoryIDs(Records);
@@ -1443,7 +1445,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
     // Check if this is an error that is accidentally in a warning
     // group.
     if (isError(R)) {
-      if (DefInit *Group = dyn_cast<DefInit>(R.getValueInit("Group"))) {
+      if (const auto *Group = dyn_cast<DefInit>(R.getValueInit("Group"))) {
         const Record *GroupRec = Group->getDef();
         const std::string &GroupName =
             std::string(GroupRec->getValueAsString("GroupName"));
@@ -1478,7 +1480,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 
     // Warning group associated with the diagnostic. This is stored as an index
     // into the alphabetically sorted warning group table.
-    if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
+    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       std::map<std::string, GroupInfo>::iterator I = DiagsInGroup.find(
           std::string(DI->getDef()->getValueAsString("GroupName")));
       assert(I != DiagsInGroup.end());
@@ -1549,7 +1551,7 @@ static std::string getDiagCategoryEnum(StringRef name) {
 ///   }
 /// \endcode
 ///
-static void emitDiagSubGroups(std::map<std::string, GroupInfo> &DiagsInGroup,
+static void emitDiagSubGroups(DiagsInGroupTy &DiagsInGroup,
                               RecordVec &GroupsInPedantic, raw_ostream &OS) {
   OS << "static const int16_t DiagSubGroups[] = {\n"
      << "  /* Empty */ -1,\n";
@@ -1601,7 +1603,7 @@ static void emitDiagSubGroups(std::map<std::string, GroupInfo> &DiagsInGroup,
 ///   };
 /// \endcode
 ///
-static void emitDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
+static void emitDiagArrays(DiagsInGroupTy &DiagsInGroup,
                            RecordVec &DiagsInPedantic, raw_ostream &OS) {
   OS << "static const int16_t DiagArrays[] = {\n"
      << "  /* Empty */ -1,\n";
@@ -1653,7 +1655,7 @@ static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
 ///     static const char DiagGroupNames[];
 ///  #endif
 ///  \endcode
-static void emitAllDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
+static void emitAllDiagArrays(DiagsInGroupTy &DiagsInGroup,
                               RecordVec &DiagsInPedantic,
                               RecordVec &GroupsInPedantic,
                               const StringToOffsetTable &GroupNames,
@@ -1680,7 +1682,7 @@ static void emitAllDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
 ///  {/* deprecated */       1981,/* DiagArray1 */ 348, /* DiagSubGroup3 */  9},
 /// #endif
 /// \endcode
-static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
+static void emitDiagTable(DiagsInGroupTy &DiagsInGroup,
                           RecordVec &DiagsInPedantic,
                           RecordVec &GroupsInPedantic,
                           const StringToOffsetTable &GroupNames,
@@ -1782,7 +1784,7 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
   ArrayRef<const Record *> DiagGroups =
       Records.getAllDerivedDefinitions("DiagGroup");
 
-  std::map<std::string, GroupInfo> DiagsInGroup;
+  DiagsInGroupTy DiagsInGroup;
   groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
 
   // All extensions are implicitly in the "pedantic" group.  Record the
@@ -1856,11 +1858,11 @@ namespace docs {
 namespace {
 
 bool isRemarkGroup(const Record *DiagGroup,
-                   const std::map<std::string, GroupInfo> &DiagsInGroup) {
+                   const DiagsInGroupTy &DiagsInGroup) {
   bool AnyRemarks = false, AnyNonRemarks = false;
 
   std::function<void(StringRef)> Visit = [&](StringRef GroupName) {
-    auto &GroupInfo = DiagsInGroup.find(std::string(GroupName))->second;
+    auto &GroupInfo = DiagsInGroup.find(GroupName)->second;
     for (const Record *Diag : GroupInfo.DiagsInGroup)
       (isRemark(*Diag) ? AnyRemarks : AnyNonRemarks) = true;
     for (const auto &Name : GroupInfo.SubGroups)
@@ -1880,13 +1882,12 @@ std::string getDefaultSeverity(const Record *Diag) {
       Diag->getValueAsDef("DefaultSeverity")->getValueAsString("Name"));
 }
 
-std::set<std::string>
-getDefaultSeverities(const Record *DiagGroup,
-                     const std::map<std::string, GroupInfo> &DiagsInGroup) {
+std::set<std::string> getDefaultSeverities(const Record *DiagGroup,
+                                           const DiagsInGroupTy &DiagsInGroup) {
   std::set<std::string> States;
 
   std::function<void(StringRef)> Visit = [&](StringRef GroupName) {
-    auto &GroupInfo = DiagsInGroup.find(std::string(GroupName))->second;
+    auto &GroupInfo = DiagsInGroup.find(GroupName)->second;
     for (const Record *Diag : GroupInfo.DiagsInGroup)
       States.insert(getDefaultSeverity(Diag));
     for (const auto &Name : GroupInfo.SubGroups)
@@ -1940,7 +1941,7 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
   DiagGroupParentMap DGParentMap(Records);
 
-  std::map<std::string, GroupInfo> DiagsInGroup;
+  DiagsInGroupTy DiagsInGroup;
   groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
 
   // Compute the set of diagnostics that are in -Wpedantic.

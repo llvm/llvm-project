@@ -1,6 +1,7 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
@@ -37,6 +38,22 @@ protected:
       consumeError(JTMB.takeError());
       GTEST_SKIP();
     }
+
+    // COFF-ARM64 is not supported yet
+    auto Triple = JTMB->getTargetTriple();
+    if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
+      GTEST_SKIP();
+
+    // SystemZ is not supported yet.
+    if (Triple.isSystemZ())
+      GTEST_SKIP();
+
+    // 32-bit X86 is not supported yet.
+    if (Triple.isX86() && Triple.isArch32Bit())
+      GTEST_SKIP();
+
+    if (Triple.isPPC())
+      GTEST_SKIP();
 
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
@@ -112,7 +129,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
                           {ExecutorAddr(), JITSymbolFlags::Exported}}})),
                     Succeeded());
 
-  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *JD);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
   EXPECT_THAT_ERROR(RM.takeError(), Succeeded());
 
   ROLayer = std::make_unique<ReOptimizeLayer>(*ES, *DL, *CompileLayer, **RM);

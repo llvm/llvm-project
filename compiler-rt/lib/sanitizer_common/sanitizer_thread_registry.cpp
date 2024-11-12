@@ -27,6 +27,7 @@ ThreadContextBase::ThreadContextBase(u32 tid)
       detached(false),
       thread_type(ThreadType::Regular),
       parent_tid(0),
+      stack_id(0),
       next(0) {
   name[0] = '\0';
   atomic_store(&thread_destroyed, 0, memory_order_release);
@@ -88,14 +89,17 @@ void ThreadContextBase::SetStarted(tid_t _os_id, ThreadType _thread_type,
 }
 
 void ThreadContextBase::SetCreated(uptr _user_id, u64 _unique_id,
-                                   bool _detached, u32 _parent_tid, void *arg) {
+                                   bool _detached, u32 _parent_tid,
+                                   u32 _stack_tid, void *arg) {
   status = ThreadStatusCreated;
   user_id = _user_id;
   unique_id = _unique_id;
   detached = _detached;
   // Parent tid makes no sense for the main thread.
-  if (tid != kMainTid)
+  if (tid != kMainTid) {
     parent_tid = _parent_tid;
+    stack_id = _stack_tid;
+  }
   OnCreated(arg);
 }
 
@@ -143,7 +147,7 @@ uptr ThreadRegistry::GetMaxAliveThreads() {
 }
 
 u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
-                                 void *arg) {
+                                 u32 stack_tid, void *arg) {
   ThreadRegistryLock l(this);
   u32 tid = kInvalidTid;
   ThreadContextBase *tctx = QuarantinePop();
@@ -181,7 +185,8 @@ u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
     // positives later (e.g. if we join a wrong thread).
     CHECK(live_.try_emplace(user_id, tid).second);
   }
-  tctx->SetCreated(user_id, total_threads_++, detached, parent_tid, arg);
+  tctx->SetCreated(user_id, total_threads_++, detached, parent_tid, stack_tid,
+                   arg);
   return tid;
 }
 

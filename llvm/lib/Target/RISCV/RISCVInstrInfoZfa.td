@@ -35,6 +35,8 @@ def LoadFPImmOperand : AsmOperandClass {
 def loadfpimm : Operand<XLenVT> {
   let ParserMatchClass = LoadFPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_UIMM5";
+  let OperandNamespace = "RISCVOp";
 }
 
 def RTZArg : AsmOperandClass {
@@ -48,6 +50,8 @@ def rtzarg : Operand<XLenVT> {
   let ParserMatchClass = RTZArg;
   let PrintMethod = "printFRMArg";
   let DecoderMethod = "decodeRTZArg";
+  let OperandType = "OPERAND_RTZARG";
+  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//

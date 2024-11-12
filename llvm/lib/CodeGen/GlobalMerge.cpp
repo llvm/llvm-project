@@ -79,6 +79,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -118,6 +119,11 @@ GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
 static cl::opt<bool> GlobalMergeGroupByUse(
     "global-merge-group-by-use", cl::Hidden,
     cl::desc("Improve global merge pass to look at uses"), cl::init(true));
+
+static cl::opt<bool> GlobalMergeAllConst(
+    "global-merge-all-const", cl::Hidden,
+    cl::desc("Merge all const globals without looking at uses"),
+    cl::init(false));
 
 static cl::opt<bool> GlobalMergeIgnoreSingleUse(
     "global-merge-ignore-single-use", cl::Hidden,
@@ -197,12 +203,13 @@ public:
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
-                       bool MergeConstantGlobals)
+                       bool MergeConstantGlobals, bool MergeConstAggressive)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
+    Opt.MergeConstAggressive = MergeConstAggressive;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -263,7 +270,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
       });
 
   // If we want to just blindly group all globals together, do so.
-  if (!GlobalMergeGroupByUse) {
+  if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
     BitVector AllGlobals(Globals.size());
     AllGlobals.set();
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
@@ -626,10 +633,13 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       Instruction *Pad = BB.getFirstNonPHI();
-      if (!Pad->isEHPad())
+      auto *II = dyn_cast<IntrinsicInst>(Pad);
+      if (!Pad->isEHPad() &&
+          !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
         continue;
 
-      // Keep globals used by landingpads and catchpads.
+      // Keep globals used by landingpads, catchpads,
+      // or intrinsics that require a plain global.
       for (const Use &U : Pad->operands()) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
@@ -753,10 +763,14 @@ bool GlobalMergeImpl::run(Module &M) {
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
                                   bool MergeExternalByDefault,
-                                  bool MergeConstantByDefault) {
+                                  bool MergeConstantByDefault,
+                                  bool MergeConstAggressiveByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
+  bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
+                                  ? GlobalMergeAllConst
+                                  : MergeConstAggressiveByDefault;
   return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
-                         MergeConstant);
+                         MergeConstant, MergeConstAggressive);
 }

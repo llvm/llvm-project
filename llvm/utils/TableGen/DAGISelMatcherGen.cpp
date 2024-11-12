@@ -844,7 +844,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
     // children may themselves emit multiple MI operands.
     unsigned NumSubOps = 1;
     if (OperandNode->isSubClassOf("Operand")) {
-      DagInit *MIOpInfo = OperandNode->getValueAsDag("MIOperandInfo");
+      const DagInit *MIOpInfo = OperandNode->getValueAsDag("MIOperandInfo");
       if (unsigned NumArgs = MIOpInfo->getNumArgs())
         NumSubOps = NumArgs;
     }
@@ -902,8 +902,6 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // If this is the root instruction of a pattern that has physical registers in
   // its result pattern, add output VTs for them.  For example, X86 has:
   //   (set AL, (mul ...))
-  // This also handles implicit results like:
-  //   (implicit EFLAGS)
   if (isRoot && !Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
@@ -1038,7 +1036,7 @@ void MatcherGen::EmitResultCode() {
   //
   unsigned NumSrcResults = Pattern.getSrcPattern().getNumTypes();
 
-  // If the pattern also has (implicit) results, count them as well.
+  // If the pattern also has implicit results, count them as well.
   if (!Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.

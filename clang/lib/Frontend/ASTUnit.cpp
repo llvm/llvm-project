@@ -2359,7 +2359,7 @@ bool ASTUnit::Save(StringRef File) {
 
 static bool serializeUnit(ASTWriter &Writer, SmallVectorImpl<char> &Buffer,
                           Sema &S, raw_ostream &OS) {
-  Writer.WriteAST(S, std::string(), nullptr, "");
+  Writer.WriteAST(&S, std::string(), nullptr, "");
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -2699,8 +2699,6 @@ InputKind ASTUnit::getInputKind() const {
     Lang = Language::OpenCL;
   else if (LangOpts.CUDA)
     Lang = Language::CUDA;
-  else if (LangOpts.RenderScript)
-    Lang = Language::RenderScript;
   else if (LangOpts.CPlusPlus)
     Lang = LangOpts.ObjC ? Language::ObjCXX : Language::CXX;
   else

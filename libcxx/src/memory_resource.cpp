@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstddef>
 #include <memory>
 #include <memory_resource>
 
-#ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
+#if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <atomic>
-#elif !defined(_LIBCPP_HAS_NO_THREADS)
+#elif _LIBCPP_HAS_THREADS
 #  include <mutex>
 #  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #    pragma comment(lib, "pthread")
@@ -28,7 +29,7 @@ memory_resource::~memory_resource() = default;
 
 // new_delete_resource()
 
-#ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#if !_LIBCPP_HAS_ALIGNED_ALLOCATION
 static bool is_aligned_to(void* ptr, size_t align) {
   void* p2     = ptr;
   size_t space = 1;
@@ -39,7 +40,7 @@ static bool is_aligned_to(void* ptr, size_t align) {
 
 class _LIBCPP_EXPORTED_FROM_ABI __new_delete_memory_resource_imp : public memory_resource {
   void* do_allocate(size_t bytes, size_t align) override {
-#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
     return std::__libcpp_allocate(bytes, align);
 #else
     if (bytes == 0)
@@ -91,7 +92,7 @@ memory_resource* null_memory_resource() noexcept { return &res_init.resources.nu
 // default_memory_resource()
 
 static memory_resource* __default_memory_resource(bool set = false, memory_resource* new_res = nullptr) noexcept {
-#ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
+#if _LIBCPP_HAS_ATOMIC_HEADER
   static constinit atomic<memory_resource*> __res{&res_init.resources.new_delete_res};
   if (set) {
     new_res = new_res ? new_res : new_delete_resource();
@@ -100,7 +101,7 @@ static memory_resource* __default_memory_resource(bool set = false, memory_resou
   } else {
     return std::atomic_load_explicit(&__res, memory_order_acquire);
   }
-#elif !defined(_LIBCPP_HAS_NO_THREADS)
+#elif _LIBCPP_HAS_THREADS
   static constinit memory_resource* res = &res_init.resources.new_delete_res;
   static mutex res_lock;
   if (set) {

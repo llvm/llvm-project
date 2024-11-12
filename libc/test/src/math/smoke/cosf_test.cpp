@@ -35,3 +35,30 @@ TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcCosfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(max_denormal));
+}
+
+TEST_F(LlvmLibcCosfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(max_denormal));
+}
+
+TEST_F(LlvmLibcCosfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(max_denormal));
+}
+
+#endif

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify -Wno-unused %s
 // RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify -Wno-unused %s -frecovery-ast -frecovery-ast-type
 
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify -Wno-unused -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify -Wno-unused -frecovery-ast -frecovery-ast-type -fexperimental-new-constant-interpreter %s
+
 template <typename ...Ts>
 void f() {
   ((^ { Ts t; }), ...);

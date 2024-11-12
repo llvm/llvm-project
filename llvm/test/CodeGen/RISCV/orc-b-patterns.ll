@@ -339,8 +339,8 @@ define i32 @orc_b_i32_sub_shl8x_x_b1_both_used(i32  %x, ptr %arr) {
 ; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    slli a2, a0, 7
 ; CHECK-NEXT:    srli a3, a0, 1
-; CHECK-NEXT:    sw a2, 0(a1)
 ; CHECK-NEXT:    sub a0, a2, a3
+; CHECK-NEXT:    sw a2, 0(a1)
 ; CHECK-NEXT:    sw a3, 4(a1)
 ; CHECK-NEXT:    ret
 entry:
