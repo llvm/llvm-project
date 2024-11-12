@@ -65,6 +65,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -3876,33 +3877,38 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
         << AL.getRange();
     return nullptr;
   }
-  SmallVector<IdentifierInfo *, 1> ParamIdents;
-  SmallVector<SourceLocation, 1> ParamLocs;
-  for (unsigned I = 0; I < AL.getNumArgs(); ++I) {
+  unsigned N = AL.getNumArgs();
+  IdentifierInfo **ParamIdents = new (Context) IdentifierInfo *[N];
+  SourceLocation *ParamLocs = new (Context) SourceLocation[N];
+  bool IsValid = true;
+  for (unsigned I = 0; I < N; ++I) {
     if (AL.isArgExpr(I)) {
       Expr *E = AL.getArgAsExpr(I);
       Diag(E->getExprLoc(), diag::err_capture_by_attribute_argument_unknown)
           << E << E->getExprLoc();
+      IsValid = false;
       continue;
     }
     assert(AL.isArgIdent(I));
     IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
     if (IdLoc->Ident->getName() == ParamName) {
       Diag(IdLoc->Loc, diag::err_capture_by_references_itself) << IdLoc->Loc;
+      IsValid = false;
       continue;
     }
-    ParamIdents.push_back(IdLoc->Ident);
-    ParamLocs.push_back(IdLoc->Loc);
+    ParamIdents[I] = IdLoc->Ident;
+    ParamLocs[I] = IdLoc->Loc;
   }
-  SmallVector<int, 1> FakeParamIndices(ParamIdents.size(),
-                                       LifetimeCaptureByAttr::INVALID);
+  if (!IsValid)
+    return nullptr;
+  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
   LifetimeCaptureByAttr *CapturedBy = ::new (Context) LifetimeCaptureByAttr(
       Context, AL, FakeParamIndices.data(), FakeParamIndices.size());
-  CapturedBy->setArgs(std::move(ParamIdents), std::move(ParamLocs));
+  CapturedBy->setArgs(ParamIdents, ParamLocs);
   return CapturedBy;
 }
 
-static void HandleLifetimeCaptureByAttr(Sema &S, Decl *D,
+static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
   // Do not allow multiple attributes.
   if (D->hasAttr<LifetimeCaptureByAttr>()) {
@@ -3919,10 +3925,27 @@ static void HandleLifetimeCaptureByAttr(Sema &S, Decl *D,
 
 void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   bool HasImplicitThisParam = isInstanceMethod(FD);
-
-  llvm::StringMap<int> NameIdxMapping;
-  NameIdxMapping["global"] = LifetimeCaptureByAttr::GLOBAL;
-  NameIdxMapping["unknown"] = LifetimeCaptureByAttr::UNKNOWN;
+  SmallVector<LifetimeCaptureByAttr *, 1> Attrs;
+  for (ParmVarDecl *PVD : FD->parameters())
+    if (auto *A = PVD->getAttr<LifetimeCaptureByAttr>())
+      Attrs.push_back(A);
+  if (HasImplicitThisParam) {
+    TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+    if (!TSI)
+      return;
+    AttributedTypeLoc ATL;
+    for (TypeLoc TL = TSI->getTypeLoc();
+         (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+         TL = ATL.getModifiedLoc()) {
+      if (auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>())
+        Attrs.push_back(const_cast<LifetimeCaptureByAttr *>(A));
+    }
+  }
+  if (Attrs.empty())
+    return;
+  llvm::StringMap<int> NameIdxMapping = {
+      {"global", LifetimeCaptureByAttr::GLOBAL},
+      {"unknown", LifetimeCaptureByAttr::UNKNOWN}};
   int Idx = 0;
   if (HasImplicitThisParam) {
     NameIdxMapping["this"] = 0;
@@ -3936,9 +3959,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
         Diag(PVD->getLocation(), diag::err_capture_by_param_uses_reserved_name)
             << (PVD->getName() == "unknown");
   };
-  auto HandleCaptureBy = [&](LifetimeCaptureByAttr *CapturedBy) {
-    if (!CapturedBy)
-      return;
+  for (auto *CapturedBy : Attrs) {
     const auto &Entities = CapturedBy->getArgIdents();
     for (size_t I = 0; I < Entities.size(); ++I) {
       StringRef Name = Entities[I]->getName();
@@ -3956,22 +3977,6 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
         DisallowReservedParams(Name);
       CapturedBy->setParamIdx(I, It->second);
     }
-  };
-  for (ParmVarDecl *PVD : FD->parameters())
-    HandleCaptureBy(PVD->getAttr<LifetimeCaptureByAttr>());
-  if (!HasImplicitThisParam)
-    return;
-  TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return;
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>();
-    if (!A)
-      continue;
-    HandleCaptureBy(const_cast<LifetimeCaptureByAttr *>(A));
   }
 }
 
@@ -6753,7 +6758,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleCallbackAttr(S, D, AL);
     break;
   case ParsedAttr::AT_LifetimeCaptureBy:
-    HandleLifetimeCaptureByAttr(S, D, AL);
+    handleLifetimeCaptureByAttr(S, D, AL);
     break;
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
