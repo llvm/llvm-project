@@ -69,7 +69,7 @@ template <class Container,
           class GenInputs,
           typename std::enable_if<!std::is_trivial<typename Container::value_type>::value>::type* = nullptr>
 void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
-  auto v  = gen(1, 100);
+  auto v = gen(1, 100);
   c.resize(st.range(0), v[0]);
   auto in = gen(st.range(1), 32);
   benchmark::DoNotOptimize(&in);

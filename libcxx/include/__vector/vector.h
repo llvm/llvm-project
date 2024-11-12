@@ -1006,11 +1006,12 @@ vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __l
   pointer __cur = __begin_;
   for (; __first != __last && __cur != __end_; ++__first, (void)++__cur)
     *__cur = *__first;
-  if (__cur != __end_)
+  if (__cur != __end_) {
     __destruct_at_end(__cur);
-  else
+  } else {
     for (; __first != __last; ++__first)
       emplace_back(*__first);
+  }
 }
 
 template <class _Tp, class _Allocator>
