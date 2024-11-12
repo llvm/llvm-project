@@ -44,7 +44,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
@@ -457,11 +456,10 @@ const char *const Runtimes = R"(
 )";
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::create(std::unique_ptr<CompilerInstance> CI,
-                    std::unique_ptr<llvm::orc::LLJITBuilder> JB) {
+Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
   llvm::Error Err = llvm::Error::success();
-  auto Interp = std::unique_ptr<Interpreter>(
-      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
+  auto Interp =
+      std::unique_ptr<Interpreter>(new Interpreter(std::move(CI), Err));
   if (Err)
     return std::move(Err);
 
@@ -578,25 +576,6 @@ createJITTargetMachineBuilder(const std::string &TT) {
 
   // If the target backend is not registered, LLJITBuilder::create() will fail
   return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
-}
-
-llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-Interpreter::createLLJITBuilder(
-    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
-    llvm::StringRef OrcRuntimePath) {
-  const std::string &TT = EPC->getTargetTriple().getTriple();
-  auto JTMB = createJITTargetMachineBuilder(TT);
-  if (!JTMB)
-    return JTMB.takeError();
-  auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
-  if (!JB)
-    return JB.takeError();
-
-  (*JB)->setExecutorProcessControl(std::move(EPC));
-  (*JB)->setPlatformSetUp(
-      llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
-
-  return std::move(*JB);
 }
 
 llvm::Error Interpreter::CreateExecutor() {
@@ -723,11 +702,11 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
   if (!EE)
     return EE.takeError();
 
-  if (auto DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
-          EE->getExecutionSession(), name))
-    // FIXME: Eventually we should put each library in its own JITDylib and
-    //        turn off process symbols by default.
-    EE->getProcessSymbolsJITDylib()->addGenerator(std::move(*DLSG));
+  auto &DL = EE->getDataLayout();
+
+  if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
+          name, DL.getGlobalPrefix()))
+    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
 
