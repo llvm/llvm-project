@@ -141,13 +141,13 @@ public:
     SelectLike(Instruction *I, bool Inverted = false, unsigned CondIdx = 0)
         : I(I), Inverted(Inverted), CondIdx(CondIdx) {}
 
+
     Instruction *getI() { return I; }
     const Instruction *getI() const { return I; }
 
     Type *getType() const { return I->getType(); }
 
     unsigned getConditionOpIndex() { return CondIdx; };
-
     /// Return the true value for the SelectLike instruction. Note this may not
     /// exist for all SelectLike instructions. For example, for `or(zext(c), x)`
     /// the true value would be `or(x,1)`. As this value does not exist, nullptr
