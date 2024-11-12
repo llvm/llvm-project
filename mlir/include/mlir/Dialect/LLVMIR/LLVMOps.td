@@ -508,6 +508,40 @@ class LLVM_CastOp<string mnemonic, string instName, Type type,
       $_location, $_resultType, $arg);
   }];
 }
+class LLVM_CastOpWithNNegFlag<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<NonNegFlagInterface>], traits)>,
+    LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType, /*Name=*/\"\", op.getNonNeg());"> {
+  let arguments = (ins type:$arg, UnitAttr:$nonNeg);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "(`nneg` $nonNeg^)? $arg attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>(
+      $_location, $_resultType, $arg);
+    moduleImport.setNonNegFlag(inst, op);
+    $res = op;
+  }];
+}
+
+class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)>,
+    LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());"> {
+  let arguments = (ins type:$arg, EnumProperty<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$arg `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>(
+      $_location, $_resultType, $arg);
+    moduleImport.setIntegerOverflowFlags(inst, op);
+    $res = op;
+  }];
+}
+
 def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast", LLVM_AnyNonAggregate,
     LLVM_AnyNonAggregate, [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
   let hasFolder = 1;
@@ -531,19 +565,19 @@ def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
   let hasVerifier = 1;
 }
-def LLVM_ZExtOp : LLVM_CastOp<"zext", "ZExt",
+def LLVM_ZExtOp : LLVM_CastOpWithNNegFlag<"zext", "ZExt",
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
   let hasFolder = 1;
   let hasVerifier = 1;
 }
-def LLVM_TruncOp : LLVM_CastOp<"trunc", "Trunc",
+def LLVM_TruncOp : LLVM_CastOpWithOverflowFlag<"trunc", "Trunc",
                                LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
 def LLVM_SIToFPOp : LLVM_CastOp<"sitofp", "SIToFP",
                                 LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_UIToFPOp : LLVM_CastOp<"uitofp", "UIToFP",
+def LLVM_UIToFPOp : LLVM_CastOpWithNNegFlag<"uitofp", "UIToFP",
                                 LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "FPToSI",

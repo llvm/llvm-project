@@ -70,8 +70,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     const bool prefer_file_cache = true;
     DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(
-        m_arch, nullptr, nullptr, range.GetBaseAddress(), opcode_data,
-        opcode_size, 99999, prefer_file_cache));
+        m_arch, nullptr, nullptr, nullptr, nullptr, range.GetBaseAddress(),
+        opcode_data, opcode_size, 99999, prefer_file_cache));
 
     Log *log = GetLog(LLDBLog::Unwind);
 
