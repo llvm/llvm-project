@@ -1786,33 +1786,17 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
 // Diagnostic name index generation
 //===----------------------------------------------------------------------===//
 
-namespace {
-struct RecordIndexElement
-{
-  RecordIndexElement() {}
-  explicit RecordIndexElement(Record const &R)
-      : Name(std::string(R.getName())) {}
-
-  std::string Name;
-};
-} // end anonymous namespace.
-
 void clang::EmitClangDiagsIndexName(const RecordKeeper &Records,
                                     raw_ostream &OS) {
-  ArrayRef<const Record *> Diags =
+  std::vector<const Record *> Diags =
       Records.getAllDerivedDefinitions("Diagnostic");
 
-  std::vector<RecordIndexElement> Index;
-  Index.reserve(Diags.size());
-  for (const Record *R : Diags)
-    Index.push_back(RecordIndexElement(*R));
-
-  sort(Index, [](const RecordIndexElement &Lhs, const RecordIndexElement &Rhs) {
-    return Lhs.Name < Rhs.Name;
+  sort(Diags, [](const Record *Lhs, const Record *Rhs) {
+    return Lhs->getName() < Rhs->getName();
   });
 
-  for (const auto &Elem : Index)
-    OS << "DIAG_NAME_INDEX(" << Elem.Name << ")\n";
+  for (const Record *Elem : Diags)
+    OS << "DIAG_NAME_INDEX(" << Elem->getName() << ")\n";
 }
 
 //===----------------------------------------------------------------------===//
