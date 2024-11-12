@@ -477,12 +477,12 @@ lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
 
 llvm::json::Value DAP::CreateTopLevelScopes() {
   llvm::json::Array scopes;
-  scopes.emplace_back(CreateScope("Locals", VARREF_LOCALS,
-                                  g_dap.variables.locals.GetSize(), false));
+  scopes.emplace_back(
+      CreateScope("Locals", VARREF_LOCALS, variables.locals.GetSize(), false));
   scopes.emplace_back(CreateScope("Globals", VARREF_GLOBALS,
-                                  g_dap.variables.globals.GetSize(), false));
+                                  variables.globals.GetSize(), false));
   scopes.emplace_back(CreateScope("Registers", VARREF_REGS,
-                                  g_dap.variables.registers.GetSize(), false));
+                                  variables.registers.GetSize(), false));
   return llvm::json::Value(std::move(scopes));
 }
 
@@ -490,8 +490,8 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
   if (!expression.empty() &&
-      llvm::StringRef(expression).starts_with(g_dap.command_escape_prefix)) {
-    expression = expression.substr(g_dap.command_escape_prefix.size());
+      llvm::StringRef(expression).starts_with(command_escape_prefix)) {
+    expression = expression.substr(command_escape_prefix.size());
     return ReplMode::Command;
   }
 
@@ -531,7 +531,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
           << "Warning: Expression '" << term
           << "' is both an LLDB command and variable. It will be evaluated as "
              "a variable. To evaluate the expression as an LLDB command, use '"
-          << g_dap.command_escape_prefix << "' as a prefix.\n";
+          << command_escape_prefix << "' as a prefix.\n";
     }
 
     // Variables take preference to commands in auto, since commands can always
@@ -901,7 +901,7 @@ bool StartDebuggingRequestHandler::DoExecute(
     return false;
   }
 
-  g_dap.SendReverseRequest(
+  dap.SendReverseRequest(
       "startDebugging",
       llvm::json::Object{{"request", request},
                          {"configuration", std::move(*configuration)}},
@@ -925,7 +925,7 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   // If a new mode is not specified report the current mode.
   if (!command || llvm::StringRef(command[0]).empty()) {
     std::string mode;
-    switch (g_dap.repl_mode) {
+    switch (dap.repl_mode) {
     case ReplMode::Variable:
       mode = "variable";
       break;
@@ -946,11 +946,11 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   llvm::StringRef new_mode{command[0]};
 
   if (new_mode == "variable") {
-    g_dap.repl_mode = ReplMode::Variable;
+    dap.repl_mode = ReplMode::Variable;
   } else if (new_mode == "command") {
-    g_dap.repl_mode = ReplMode::Command;
+    dap.repl_mode = ReplMode::Command;
   } else if (new_mode == "auto") {
-    g_dap.repl_mode = ReplMode::Auto;
+    dap.repl_mode = ReplMode::Auto;
   } else {
     lldb::SBStream error_message;
     error_message.Printf("Invalid repl-mode '%s'. Expected one of 'variable', "
@@ -1022,7 +1022,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
     event.try_emplace("body", std::move(*body));
   }
 
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
   return true;
 }
@@ -1031,14 +1031,13 @@ void DAP::SetFrameFormat(llvm::StringRef format) {
   if (format.empty())
     return;
   lldb::SBError error;
-  g_dap.frame_format = lldb::SBFormat(format.str().c_str(), error);
+  frame_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
-    g_dap.SendOutput(
-        OutputType::Console,
-        llvm::formatv(
-            "The provided frame format '{0}' couldn't be parsed: {1}\n", format,
-            error.GetCString())
-            .str());
+    SendOutput(OutputType::Console,
+               llvm::formatv(
+                   "The provided frame format '{0}' couldn't be parsed: {1}\n",
+                   format, error.GetCString())
+                   .str());
   }
 }
 
@@ -1046,14 +1045,13 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
   if (format.empty())
     return;
   lldb::SBError error;
-  g_dap.thread_format = lldb::SBFormat(format.str().c_str(), error);
+  thread_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
-    g_dap.SendOutput(
-        OutputType::Console,
-        llvm::formatv(
-            "The provided thread format '{0}' couldn't be parsed: {1}\n",
-            format, error.GetCString())
-            .str());
+    SendOutput(OutputType::Console,
+               llvm::formatv(
+                   "The provided thread format '{0}' couldn't be parsed: {1}\n",
+                   format, error.GetCString())
+                   .str());
   }
 }
 
