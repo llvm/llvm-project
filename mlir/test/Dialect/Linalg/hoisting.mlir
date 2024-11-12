@@ -734,7 +734,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL:  func.func @hoist_vector_broadcasts
 //       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>, %[[POS:.+]]: index) -> vector<3x4xf32> {
-//       CHECK:        %[[EXTRACT:.+]] = vector.extract %[[VEC]][%[[POS]]] : vector<4xf32> from vector<3x4xf32>
+//       CHECK:        %[[EXTRACT:.+]] = vector.extract %[[VEC]][%[[POS]] : index] : vector<4xf32> from vector<3x4xf32>
 //       CHECK-NEXT:   %[[LOOP:.+]] = scf.for {{.*}} {
 //       CHECK-NEXT:     %[[USE:.+]] = "some_use"({{.*}}) : (vector<4xf32>) -> vector<4xf32>
 //       CHECK-NEXT:     scf.yield %[[USE]] : vector<4xf32>
@@ -744,7 +744,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @hoist_vector_broadcasts_dynamic(%lb : index, %ub : index, %step : index, %vec : vector<3x4xf32>, %pos: index) -> vector<3x4xf32> {
   %bcast_vec = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec) -> vector<3x4xf32> {
-    %extract = vector.extract %iarg[%pos] : vector<4xf32> from vector<3x4xf32>
+    %extract = vector.extract %iarg[%pos : index] : vector<4xf32> from vector<3x4xf32>
     %use = "some_use"(%extract) : (vector<4xf32>) -> vector<4xf32>
     %broadcast = vector.broadcast %use : vector<4xf32> to vector<3x4xf32>
     scf.yield %broadcast : vector<3x4xf32>

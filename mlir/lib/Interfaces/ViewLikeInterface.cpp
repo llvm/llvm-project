@@ -114,7 +114,8 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
                                  ArrayRef<bool> scalables, TypeRange valueTypes,
-                                 AsmParser::Delimiter delimiter) {
+                                 AsmParser::Delimiter delimiter,
+                                 bool hasSameTypeDynamicValues) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
   printer << leftDelimiter;
@@ -130,7 +131,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
       printer << "[";
     if (ShapedType::isDynamic(integer)) {
       printer << values[dynamicValIdx];
-      if (!valueTypes.empty())
+      if (!hasSameTypeDynamicValues && !valueTypes.empty())
         printer << " : " << valueTypes[dynamicValIdx];
       ++dynamicValIdx;
     } else {
@@ -142,6 +143,13 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
     scalableIndexIdx++;
   });
 
+  if (hasSameTypeDynamicValues && !valueTypes.empty()) {
+    assert(std::all_of(valueTypes.begin(), valueTypes.end(),
+                       [&](Type type) { return type == valueTypes[0]; }) &&
+           "Expected the same value types");
+    printer << " : " << valueTypes[0];
+  }
+
   printer << rightDelimiter;
 }
 
@@ -149,7 +157,8 @@ ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalables,
-    SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
+    SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter,
+    bool hasSameTypeDynamicValues) {
 
   SmallVector<int64_t, 4> integerVals;
   SmallVector<bool, 4> scalableVals;
@@ -163,7 +172,8 @@ ParseResult mlir::parseDynamicIndexList(
     if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
       integerVals.push_back(ShapedType::kDynamic);
-      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
+      if (!hasSameTypeDynamicValues && valueTypes &&
+          parser.parseColonType(valueTypes->emplace_back()))
         return failure();
     } else {
       int64_t integer;
@@ -178,10 +188,34 @@ ParseResult mlir::parseDynamicIndexList(
       return failure();
     return success();
   };
+  auto parseColonType = [&]() -> ParseResult {
+    if (hasSameTypeDynamicValues) {
+      assert(valueTypes && "Expected non-null value types");
+      assert(valueTypes->empty() && "Expected no parsed value types");
+
+      Type dynValType;
+      if (parser.parseOptionalColonType(dynValType))
+        return failure();
+
+      if (!dynValType && !values.empty())
+        return parser.emitError(parser.getNameLoc())
+               << "expected a type for dynamic indices";
+      if (dynValType) {
+        if (values.empty())
+          return parser.emitError(parser.getNameLoc())
+                 << "expected no type for constant indices";
+
+        // Broadcast the single type to all the dynamic values.
+        valueTypes->append(values.size(), dynValType);
+      }
+    }
+    return success();
+  };
   if (parser.parseCommaSeparatedList(delimiter, parseIntegerOrValue,
-                                     " in dynamic index list"))
+                                     parseColonType, " in dynamic index list"))
     return parser.emitError(parser.getNameLoc())
-           << "expected SSA value or integer";
+           << "expected a valid list of SSA values or integers";
+
   integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
   scalables = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
   return success();

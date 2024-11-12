@@ -794,16 +794,26 @@ public:
   };
 
   /// Parse a list of comma-separated items with an optional delimiter.  If a
-  /// delimiter is provided, then an empty list is allowed.  If not, then at
+  /// delimiter is provided, then an empty list is allowed. If not, then at
   /// least one element will be parsed.
+  ///
+  /// `parseSuffixFn` is an optional function to parse any suffix that can be
+  /// appended to the comma separated list within the delimiter.
   ///
   /// contextMessage is an optional message appended to "expected '('" sorts of
   /// diagnostics when parsing the delimeters.
-  virtual ParseResult
+  virtual ParseResult parseCommaSeparatedList(
+      Delimiter delimiter, function_ref<ParseResult()> parseElementFn,
+      std::optional<function_ref<ParseResult()>> parseSuffixFn = std::nullopt,
+      StringRef contextMessage = StringRef()) = 0;
+  ParseResult
   parseCommaSeparatedList(Delimiter delimiter,
                           function_ref<ParseResult()> parseElementFn,
-                          StringRef contextMessage = StringRef()) = 0;
-
+                          StringRef contextMessage) {
+    return parseCommaSeparatedList(delimiter, parseElementFn,
+                                   /*parseSuffixFn=*/std::nullopt,
+                                   contextMessage);
+  }
   /// Parse a comma separated list of elements that must have at least one entry
   /// in it.
   ParseResult
@@ -1318,6 +1328,9 @@ public:
   /// have at least one type.
   virtual ParseResult
   parseOptionalColonTypeList(SmallVectorImpl<Type> &result) = 0;
+
+  /// Parse an optional colon followed by a type.
+  virtual ParseResult parseOptionalColonType(Type &result) = 0;
 
   /// Parse a keyword followed by a type.
   ParseResult parseKeywordType(const char *keyword, Type &result) {

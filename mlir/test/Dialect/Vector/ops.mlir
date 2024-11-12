@@ -224,12 +224,26 @@ func.func @extract_const_idx(%arg0: vector<4x8x16xf32>)
 //  CHECK-SAME:   %[[VEC:.+]]: vector<4x8x16xf32>, %[[IDX:.+]]: index
 func.func @extract_val_idx(%arg0: vector<4x8x16xf32>, %idx: index)
                            -> (vector<8x16xf32>, vector<16xf32>, f32) {
-  // CHECK: vector.extract %[[VEC]][%[[IDX]]] : vector<8x16xf32> from vector<4x8x16xf32>
-  %0 = vector.extract %arg0[%idx] : vector<8x16xf32> from vector<4x8x16xf32>
-  // CHECK-NEXT: vector.extract %[[VEC]][%[[IDX]], %[[IDX]]] : vector<16xf32> from vector<4x8x16xf32>
-  %1 = vector.extract %arg0[%idx, %idx] : vector<16xf32> from vector<4x8x16xf32>
-  // CHECK-NEXT: vector.extract %[[VEC]][%[[IDX]], 5, %[[IDX]]] : f32 from vector<4x8x16xf32>
-  %2 = vector.extract %arg0[%idx, 5, %idx] : f32 from vector<4x8x16xf32>
+  // CHECK: vector.extract %[[VEC]][%[[IDX]] : index] : vector<8x16xf32> from vector<4x8x16xf32>
+  %0 = vector.extract %arg0[%idx : index] : vector<8x16xf32> from vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract %[[VEC]][%[[IDX]], %[[IDX]] : index] : vector<16xf32> from vector<4x8x16xf32>
+  %1 = vector.extract %arg0[%idx, %idx : index] : vector<16xf32> from vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract %[[VEC]][%[[IDX]], 5, %[[IDX]] : index] : f32 from vector<4x8x16xf32>
+  %2 = vector.extract %arg0[%idx, 5, %idx : index] : f32 from vector<4x8x16xf32>
+  return %0, %1, %2 : vector<8x16xf32>, vector<16xf32>, f32
+}
+
+// CHECK-LABEL: @extract_val_int
+//  CHECK-SAME:   %[[VEC:.+]]: vector<4x8x16xf32>, %[[I32_IDX:.+]]: i32, %[[I8_IDX:.+]]: i8
+func.func @extract_val_int(%arg0: vector<4x8x16xf32>, %i32_idx: i32,
+                           %i8_idx: i8)
+                           -> (vector<8x16xf32>, vector<16xf32>, f32) {
+  // CHECK: vector.extract %[[VEC]][%[[I32_IDX]] : i32] : vector<8x16xf32> from vector<4x8x16xf32>
+  %0 = vector.extract %arg0[%i32_idx : i32] : vector<8x16xf32> from vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract %[[VEC]][%[[I8_IDX]], %[[I8_IDX]] : i8] : vector<16xf32> from vector<4x8x16xf32>
+  %1 = vector.extract %arg0[%i8_idx, %i8_idx : i8] : vector<16xf32> from vector<4x8x16xf32>
+  // CHECK-NEXT: vector.extract %[[VEC]][%[[I8_IDX]], 5, %[[I8_IDX]] : i8] : f32 from vector<4x8x16xf32>
+  %2 = vector.extract %arg0[%i8_idx, 5, %i8_idx : i8] : f32 from vector<4x8x16xf32>
   return %0, %1, %2 : vector<8x16xf32>, vector<16xf32>, f32
 }
 
@@ -274,12 +288,25 @@ func.func @insert_const_idx(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>,
 //  CHECK-SAME:   %[[A:.+]]: f32, %[[B:.+]]: vector<16xf32>, %[[C:.+]]: vector<8x16xf32>, %[[IDX:.+]]: index
 func.func @insert_val_idx(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>,
                           %idx: index, %res: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
-  // CHECK: vector.insert %[[C]], %{{.*}}[%[[IDX]]] : vector<8x16xf32> into vector<4x8x16xf32>
-  %0 = vector.insert %c, %res[%idx] : vector<8x16xf32> into vector<4x8x16xf32>
-  // CHECK: vector.insert %[[B]], %{{.*}}[%[[IDX]], %[[IDX]]] : vector<16xf32> into vector<4x8x16xf32>
-  %1 = vector.insert %b, %res[%idx, %idx] : vector<16xf32> into vector<4x8x16xf32>
-  // CHECK: vector.insert %[[A]], %{{.*}}[%[[IDX]], 5, %[[IDX]]] : f32 into vector<4x8x16xf32>
-  %2 = vector.insert %a, %res[%idx, 5, %idx] : f32 into vector<4x8x16xf32>
+  // CHECK: vector.insert %[[C]], %{{.*}}[%[[IDX]] : index] : vector<8x16xf32> into vector<4x8x16xf32>
+  %0 = vector.insert %c, %res[%idx : index] : vector<8x16xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert %[[B]], %{{.*}}[%[[IDX]], %[[IDX]] : index] : vector<16xf32> into vector<4x8x16xf32>
+  %1 = vector.insert %b, %res[%idx, %idx : index] : vector<16xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert %[[A]], %{{.*}}[%[[IDX]], 5, %[[IDX]] : index] : f32 into vector<4x8x16xf32>
+  %2 = vector.insert %a, %res[%idx, 5, %idx : index] : f32 into vector<4x8x16xf32>
+  return %2 : vector<4x8x16xf32>
+}
+
+// CHECK-LABEL: @insert_val_int
+//  CHECK-SAME:   %[[A:.+]]: f32, %[[B:.+]]: vector<16xf32>, %[[C:.+]]: vector<8x16xf32>, %[[I32_IDX:.+]]: i32, %[[I8_IDX:.+]]: i8
+func.func @insert_val_int(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>,
+                          %i32_idx: i32, %i8_idx: i8, %res: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
+  // CHECK: vector.insert %[[C]], %{{.*}}[%[[I32_IDX]] : i32] : vector<8x16xf32> into vector<4x8x16xf32>
+  %0 = vector.insert %c, %res[%i32_idx : i32] : vector<8x16xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert %[[B]], %{{.*}}[%[[I8_IDX]], %[[I8_IDX]] : i8] : vector<16xf32> into vector<4x8x16xf32>
+  %1 = vector.insert %b, %res[%i8_idx, %i8_idx : i8] : vector<16xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert %[[A]], %{{.*}}[%[[I8_IDX]], 5, %[[I8_IDX]] : i8] : f32 into vector<4x8x16xf32>
+  %2 = vector.insert %a, %res[%i8_idx, 5, %i8_idx : i8] : f32 into vector<4x8x16xf32>
   return %2 : vector<4x8x16xf32>
 }
 

@@ -151,7 +151,7 @@ func.func @transfer_write_2d__out_of_bounds(%vector : vector<[4]x[4]xf32>, %dest
 // CHECK-NOT: arm_sme.store_tile_slice
 func.func @transfer_write_slice_unsupported_permutation(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
   %c0 = arith.constant 0 : index
-  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  %slice = vector.extract %vector[%slice_index : index] : vector<[4]xf32> from vector<[4]x[4]xf32>
   vector.transfer_write %slice, %dest[%slice_index, %c0] { permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
   return
 }
@@ -202,7 +202,7 @@ func.func @negative_vector_extract_to_psel_0(%a: index, %b: index, %index: index
 {
   // CHECK-NOT: arm_sve.psel
   %mask = vector.create_mask %a, %b : vector<[4]x[32]xi1>
-  %slice = vector.extract %mask[%index] : vector<[32]xi1> from vector<[4]x[32]xi1>
+  %slice = vector.extract %mask[%index : index] : vector<[32]xi1> from vector<[4]x[32]xi1>
   return %slice : vector<[32]xi1>
 }
 
@@ -215,7 +215,7 @@ func.func @negative_vector_extract_to_psel_1(%a: index, %b: index, %index: index
 {
   // CHECK-NOT: arm_sve.psel
   %mask = vector.create_mask %a, %b : vector<4x[8]xi1>
-  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<4x[8]xi1>
+  %slice = vector.extract %mask[%index : index] : vector<[8]xi1> from vector<4x[8]xi1>
   return %slice : vector<[8]xi1>
 }
 
@@ -227,7 +227,7 @@ func.func @negative_vector_extract_to_psel_1(%a: index, %b: index, %index: index
 func.func @negative_vector_extract_to_psel_2(%mask: vector<[4]x[8]xi1>, %index: index) -> vector<[8]xi1>
 {
   // CHECK-NOT: arm_sve.psel
-  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<[4]x[8]xi1>
+  %slice = vector.extract %mask[%index : index] : vector<[8]xi1> from vector<[4]x[8]xi1>
   return %slice : vector<[8]xi1>
 }
 
@@ -240,6 +240,6 @@ func.func @negative_vector_extract_to_psel_3(%a: index, %b: index, %index: index
 {
   // CHECK-NOT: arm_sve.psel
   %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
-  %el = vector.extract %mask[2, %index] : i1 from vector<[4]x[8]xi1>
+  %el = vector.extract %mask[2, %index : index] : i1 from vector<[4]x[8]xi1>
   return %el : i1
 }

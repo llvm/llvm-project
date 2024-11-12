@@ -501,13 +501,14 @@ struct VectorOuterProductToArmSMELowering
 ///
 /// Example:
 /// ```
-/// %el = vector.extract %tile[%row, %col]: i32 from vector<[4]x[4]xi32>
+/// %el = vector.extract %tile[%row, %col : index] : i32 from
+/// vector<[4]x[4]xi32>
 /// ```
 /// Becomes:
 /// ```
 /// %slice = arm_sme.extract_tile_slice %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
-/// %el = vector.extract %slice[%col] : i32 from vector<[4]xi32>
+/// %el = vector.extract %slice[%col : index] : i32 from vector<[4]xi32>
 /// ```
 struct VectorExtractToArmSMELowering
     : public OpRewritePattern<vector::ExtractOp> {
@@ -561,8 +562,9 @@ struct VectorExtractToArmSMELowering
 /// ```
 /// %slice = arm_sme.extract_tile_slice %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
-/// %new_slice = vector.insert %el, %slice[%col] : i32 into vector<[4]xi32>
-/// %new_tile = arm_sme.insert_tile_slice %new_slice, %tile[%row]
+/// %new_slice = vector.insert %el, %slice[%col : index] : i32 into
+/// vector<[4]xi32> %new_tile = arm_sme.insert_tile_slice %new_slice,
+/// %tile[%row]
 ///               : vector<[4]xi32> into vector<[4]x[4]xi32>
 /// ```
 struct VectorInsertToArmSMELowering

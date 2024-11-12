@@ -80,10 +80,10 @@ AsmParserCodeCompleteContext::~AsmParserCodeCompleteContext() = default;
 /// Parse a list of comma-separated items with an optional delimiter.  If a
 /// delimiter is provided, then an empty list is allowed.  If not, then at
 /// least one element will be parsed.
-ParseResult
-Parser::parseCommaSeparatedList(Delimiter delimiter,
-                                function_ref<ParseResult()> parseElementFn,
-                                StringRef contextMessage) {
+ParseResult Parser::parseCommaSeparatedList(
+    Delimiter delimiter, function_ref<ParseResult()> parseElementFn,
+    std::optional<function_ref<ParseResult()>> parseSuffixFn,
+    StringRef contextMessage) {
   switch (delimiter) {
   case Delimiter::None:
     break;
@@ -143,6 +143,9 @@ Parser::parseCommaSeparatedList(Delimiter delimiter,
     if (parseElementFn())
       return failure();
   }
+
+  if (parseSuffixFn && (*parseSuffixFn)())
+    return failure();
 
   switch (delimiter) {
   case Delimiter::None:
