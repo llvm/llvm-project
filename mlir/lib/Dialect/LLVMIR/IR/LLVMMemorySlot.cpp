@@ -904,6 +904,10 @@ std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemcpyInlineOp op) {
   return memIntrLen.getZExtValue();
 }
 
+/// Returns the length of the given memory intrinsic in bytes if it can be known
+/// at compile-time on a best-effort basis, nothing otherwise.
+/// Because MemsetInlineOp has its length encoded as an attribute, this requires
+/// specialized handling.
 template <>
 std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemsetInlineOp op) {
   APInt memIntrLen = op.getLen();
