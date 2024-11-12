@@ -1057,7 +1057,7 @@ SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg,
 }
 
 SPIRVType *SPIRVGlobalRegistry::getResultType(Register VReg) {
-  MachineInstr *Instr = CurMF->getRegInfo().getVRegDef(VReg);
+  MachineInstr *Instr = getVRegDef(CurMF->getRegInfo(), VReg);
   return getSPIRVTypeForVReg(Instr->getOperand(1).getReg());
 }
 
@@ -1146,7 +1146,7 @@ SPIRVGlobalRegistry::getScalarOrVectorComponentType(SPIRVType *Type) const {
   SPIRVType *ScalarType = getSPIRVTypeForVReg(ScalarReg);
   assert(isScalarOrVectorOfType(Type->getOperand(0).getReg(),
                                 ScalarType->getOpcode()));
-  return getSPIRVTypeForVReg(ScalarReg);
+  return ScalarType;
 }
 
 unsigned
