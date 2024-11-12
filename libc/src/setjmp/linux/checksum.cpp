@@ -23,9 +23,9 @@ void initialize() {
   union {
     struct {
       __UINTPTR_TYPE__ entropy0;
-      __UINT64_TYPE__ entropy1;
+      __UINTPTR_TYPE__ entropy1;
     };
-    char buffer[sizeof(__UINTPTR_TYPE__) + sizeof(__UINT64_TYPE__)];
+    char buffer[sizeof(__UINTPTR_TYPE__) * 2];
   };
   syscall_impl<long>(SYS_getrandom, buffer, sizeof(buffer), 0);
   // add in additional entropy
