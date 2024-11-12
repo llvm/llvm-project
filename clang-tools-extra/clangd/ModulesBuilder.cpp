@@ -247,13 +247,15 @@ bool IsModuleFilesUpToDate(
 llvm::Expected<ModuleFile>
 buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
                 const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
-                PathRef ModuleFilesPrefix,
                 const ReusablePrerequisiteModules &BuiltModuleFiles) {
   // Try cheap operation earlier to boil-out cheaply if there are problems.
   auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
   if (!Cmd)
     return llvm::createStringError(
         llvm::formatv("No compile command for {0}", ModuleUnitFileName));
+
+  llvm::SmallString<256> ModuleFilesPrefix =
+        getUniqueModuleFilesPath(ModuleUnitFileName);
 
   Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
 
@@ -304,7 +306,7 @@ bool ReusablePrerequisiteModules::canReuse(
   if (RequiredModules.empty())
     return true;
 
-  SmallVector<StringRef> BMIPaths;
+  llvm::SmallVector<llvm::StringRef> BMIPaths;
   for (auto &MF : RequiredModules)
     BMIPaths.push_back(MF->getModuleFilePath());
   return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
@@ -320,7 +322,7 @@ public:
   void add(StringRef ModuleName, std::shared_ptr<const ModuleFile> ModuleFile) {
     std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
 
-    ModuleFiles.insert_or_assign(ModuleName, ModuleFile);
+    ModuleFiles[ModuleName] = ModuleFile;
   }
 
   void remove(StringRef ModuleName);
@@ -341,22 +343,17 @@ ModuleFileCache::getModule(StringRef ModuleName) {
   if (Iter == ModuleFiles.end())
     return nullptr;
 
-  if (Iter->second.expired()) {
-    ModuleFiles.erase(Iter);
-    return nullptr;
-  }
+  if (auto Res = Iter->second.lock())
+    return Res;
 
-  return Iter->second.lock();
+  ModuleFiles.erase(Iter);
+  return nullptr;
 }
 
 void ModuleFileCache::remove(StringRef ModuleName) {
   std::lock_guard<std::mutex> Lock(ModuleFilesMutex);
 
-  auto Iter = ModuleFiles.find(ModuleName);
-  if (Iter == ModuleFiles.end())
-    return;
-
-  ModuleFiles.erase(Iter);
+  ModuleFiles.erase(ModuleName);
 }
 
 /// Collect the directly and indirectly required module names for \param
@@ -364,20 +361,20 @@ void ModuleFileCache::remove(StringRef ModuleName) {
 /// be the last element in \param ModuleNames.
 llvm::SmallVector<StringRef> getAllRequiredModules(ProjectModules &MDB,
                                                    StringRef ModuleName) {
-  llvm::SmallVector<StringRef> ModuleNames;
+  llvm::SmallVector<llvm::StringRef> ModuleNames;
   llvm::StringSet<> ModuleNamesSet;
 
-  auto traversal = [&](StringRef ModuleName, auto recursionHelper) -> void {
+  auto VisitDeps = [&](StringRef ModuleName, auto Visitor) -> void {
     ModuleNamesSet.insert(ModuleName);
 
     for (StringRef RequiredModuleName :
          MDB.getRequiredModules(MDB.getSourceForModuleName(ModuleName)))
       if (ModuleNamesSet.insert(RequiredModuleName).second)
-        recursionHelper(RequiredModuleName, recursionHelper);
+        Visitor(RequiredModuleName, Visitor);
 
     ModuleNames.push_back(ModuleName);
   };
-  traversal(ModuleName, traversal);
+  VisitDeps(ModuleName, VisitDeps);
 
   return ModuleNames;
 }
@@ -434,12 +431,9 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
       Cache.remove(ReqModuleName);
     }
 
-    llvm::SmallString<256> ModuleFilesPrefix =
-        getUniqueModuleFilesPath(ModuleUnitFileName);
-
     llvm::Expected<ModuleFile> MF =
         buildModuleFile(ModuleName, ModuleUnitFileName, getCDB(), TFS,
-                        ModuleFilesPrefix, BuiltModuleFiles);
+                        BuiltModuleFiles);
     if (llvm::Error Err = MF.takeError())
       return Err;
 
@@ -465,13 +459,7 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
   if (RequiredModuleNames.empty())
     return std::make_unique<ReusablePrerequisiteModules>();
 
-  llvm::SmallString<256> ModuleFilesPrefix = getUniqueModuleFilesPath(File);
-
-  log("Trying to build required modules for {0} in {1}", File,
-      ModuleFilesPrefix);
-
   auto RequiredModules = std::make_unique<ReusablePrerequisiteModules>();
-
   for (llvm::StringRef RequiredModuleName : RequiredModuleNames) {
     // Return early if there is any error.
     if (llvm::Error Err = Impl->getOrBuildModuleFile(
@@ -481,8 +469,6 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
       return std::make_unique<FailedPrerequisiteModules>();
     }
   }
-
-  log("Built required modules for {0} in {1}", File, ModuleFilesPrefix);
 
   return std::move(RequiredModules);
 }
