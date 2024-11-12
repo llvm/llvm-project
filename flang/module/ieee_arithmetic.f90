@@ -161,6 +161,11 @@ module ieee_arithmetic
 
 ! Define specifics with 1 or 2 INTEGER, LOGICAL, or REAL arguments for
 ! generic G.
+!
+! The result type of most function specifics is either a fixed type or
+! the type of the first argument. The result type of a SPECIFICS_rRR
+! function call is the highest precision argument type.
+
 #define SPECIFICS_I(G) \
   G(1) G(2) G(4) G(8) G(16)
 #define SPECIFICS_L(G) \
@@ -234,6 +239,13 @@ module ieee_arithmetic
   G(8,2) G(8,3) G(8,4) G(8,8) G(8,10) G(8,16) \
   G(10,2) G(10,3) G(10,4) G(10,8) G(10,10) G(10,16) \
   G(16,2) G(16,3) G(16,4) G(16,8) G(16,10) G(16,16)
+#define SPECIFICS_rRR(G) \
+  G(2,2,2) G(2,2,3) G(4,2,4) G(8,2,8) G(10,2,10) G(16,2,16) \
+  G(2,3,2) G(3,3,3) G(4,3,4) G(8,3,8) G(10,3,10) G(16,3,16) \
+  G(4,4,2) G(4,4,3) G(4,4,4) G(8,4,8) G(10,4,10) G(16,4,16) \
+  G(8,8,2) G(8,8,3) G(8,8,4) G(8,8,8) G(10,8,10) G(16,8,16) \
+  G(10,10,2) G(10,10,3) G(10,10,4) G(10,10,8) G(10,10,10) G(16,10,16) \
+  G(16,16,2) G(16,16,3) G(16,16,4) G(16,16,8) G(16,16,10) G(16,16,16)
 #else
 #define SPECIFICS_RR(G) \
   G(2,2) G(2,3) G(2,4) G(2,8) G(2,16) \
@@ -241,6 +253,12 @@ module ieee_arithmetic
   G(4,2) G(4,3) G(4,4) G(4,8) G(4,16) \
   G(8,2) G(8,3) G(8,4) G(8,8) G(8,16) \
   G(16,2) G(16,3) G(16,4) G(16,8) G(16,16)
+#define SPECIFICS_rRR(G) \
+  G(2,2,2) G(2,2,3) G(4,2,4) G(8,2,8) G(16,2,16) \
+  G(2,3,2) G(3,3,3) G(4,3,4) G(8,3,8) G(16,3,16) \
+  G(4,4,2) G(4,4,3) G(4,4,4) G(8,4,8) G(16,4,16) \
+  G(8,8,2) G(8,8,3) G(8,8,4) G(8,8,8) G(16,8,16) \
+  G(16,16,2) G(16,16,3) G(16,16,4) G(16,16,8) G(16,16,16)
 #endif
 #else
 #if __x86_64__
@@ -250,12 +268,23 @@ module ieee_arithmetic
   G(4,2) G(4,3) G(4,4) G(4,8) G(4,10) \
   G(8,2) G(8,3) G(8,4) G(8,8) G(8,10) \
   G(10,2) G(10,3) G(10,4) G(10,8) G(10,10)
+#define SPECIFICS_rRR(G) \
+  G(2,2,2) G(2,2,3) G(4,2,4) G(8,2,8) G(10,2,10) \
+  G(2,3,2) G(3,3,3) G(4,3,4) G(8,3,8) G(10,3,10) \
+  G(4,4,2) G(4,4,3) G(4,4,4) G(8,4,8) G(10,4,10) \
+  G(8,8,2) G(8,8,3) G(8,8,4) G(8,8,8) G(10,8,10) \
+  G(10,10,2) G(10,10,3) G(10,10,4) G(10,10,8) G(10,10,10)
 #else
 #define SPECIFICS_RR(G) \
   G(2,2) G(2,3) G(2,4) G(2,8) \
   G(3,2) G(3,3) G(3,4) G(3,8) \
   G(4,2) G(4,3) G(4,4) G(4,8) \
   G(8,2) G(8,3) G(8,4) G(8,8)
+#define SPECIFICS_rRR(G) \
+  G(2,2,2) G(2,2,3) G(4,2,4) G(8,2,8) \
+  G(2,3,2) G(3,3,3) G(4,3,4) G(8,3,8) \
+  G(4,4,2) G(4,4,3) G(4,4,4) G(8,4,8) \
+  G(8,8,2) G(8,8,3) G(8,8,4) G(8,8,8)
 #endif
 #endif
 
@@ -467,16 +496,16 @@ module ieee_arithmetic
   public :: ieee_quiet_ne
 #undef IEEE_QUIET_NE_R
 
-#define IEEE_REM_RR(XKIND, YKIND) \
-  elemental real(XKIND) function ieee_rem_a##XKIND##_a##YKIND(x, y); \
+#define IEEE_REM_rRR(RKIND, XKIND, YKIND) \
+  elemental real(RKIND) function ieee_rem_a##XKIND##_a##YKIND(x, y); \
     real(XKIND), intent(in) :: x; \
     real(YKIND), intent(in) :: y; \
   end function ieee_rem_a##XKIND##_a##YKIND;
   interface ieee_rem
-    SPECIFICS_RR(IEEE_REM_RR)
+    SPECIFICS_rRR(IEEE_REM_rRR)
   end interface ieee_rem
   public :: ieee_rem
-#undef IEEE_REM_RR
+#undef IEEE_REM_rRR
 
 #define IEEE_RINT_R(XKIND) \
   elemental real(XKIND) function ieee_rint_a##XKIND(x, round); \
