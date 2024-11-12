@@ -61,6 +61,9 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 /// All output from every command, including the prompt + the command
 /// is returned in the std::string return value.
 ///
+/// \param[in] debugger
+///     The debugger that will execute the lldb commands.
+///
 /// \param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
 ///     the prompt + command and command output. Can be NULL.
