@@ -225,9 +225,8 @@ public:
     /// instructions.
 
     // TODO: Range_size counts fully used-bundles. Further, iterating over
-    // anything other than the Bundles in a SeedContainer includes used seeds,
-    // so for now just check that removing all the seeds from a bundle also
-    // empties the bundle. Rework the iterator logic to clean this up.
+    // anything other than the Bundles in a SeedContainer includes used
+    // seeds. Rework the iterator logic to clean this up.
     iterator(BundleMapT &Map, BundleMapT::iterator MapIt, ValT *Vec, int VecIdx)
         : Map(&Map), MapIt(MapIt), Vec(Vec), VecIdx(VecIdx) {}
     value_type &operator*() {
