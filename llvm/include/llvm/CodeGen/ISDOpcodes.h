@@ -57,7 +57,10 @@ enum NodeType {
   /// been extended, and the second is a value type node indicating the width
   /// of the extension.
   /// NOTE: In case of the source value (or any vector element value) is
-  /// poisoned the assertion will not be true for that value.
+  /// poisoned the assertion will not be true for that value and the
+  /// corresponding result value will be poison. If a source value isn't
+  /// satisfying the condition being asserted (while not being poison), then
+  /// this is considered as immediate undefined behavior.
   AssertSext,
   AssertZext,
 
