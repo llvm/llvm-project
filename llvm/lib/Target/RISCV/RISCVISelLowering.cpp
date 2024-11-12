@@ -1339,11 +1339,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
-        // FIXME: mload, mstore, mgather, mscatter, vp_gather/scatter can be
-        // hoisted to here.
-        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
-        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
-                            ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+        setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                            ISD::MGATHER, ISD::MSCATTER},
+                           VT, Custom);
+        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER,
+                            ISD::VP_SCATTER, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
                             ISD::EXPERIMENTAL_VP_STRIDED_STORE},
                            VT, Custom);
 
@@ -1407,11 +1407,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::BUILD_VECTOR, ISD::SCALAR_TO_VECTOR}, VT,
                            Custom);
-
-        setOperationAction(
-            {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
-
-        setOperationAction({ISD::VP_GATHER, ISD::VP_SCATTER}, VT, Custom);
 
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
@@ -21514,7 +21509,12 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
   if (!isTypeLegal(VT))
     return false;
 
-  if (!isLegalElementTypeForRVV(VT.getScalarType()) ||
+  // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+  if (!(isLegalElementTypeForRVV(VT.getScalarType()) ||
+        (VT.getScalarType() == MVT::bf16 &&
+         Subtarget.hasVInstructionsBF16Minimal()) ||
+        (VT.getScalarType() == MVT::f16 &&
+         Subtarget.hasVInstructionsF16Minimal())) ||
       !allowsMemoryAccessForAlignment(VTy->getContext(), DL, VT, AddrSpace,
                                       Alignment))
     return false;
@@ -21554,7 +21554,10 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
+  if (!(isLegalElementTypeForRVV(ScalarType) ||
+        (ScalarType == MVT::bf16 && Subtarget.hasVInstructionsBF16Minimal()) ||
+        (ScalarType == MVT::f16 && Subtarget.hasVInstructionsF16Minimal())))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
@@ -21585,6 +21588,8 @@ static const Intrinsic::ID FixedVlsegIntrIds[] = {
 bool RISCVTargetLowering::lowerInterleavedLoad(
     LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
+  assert(Indices.size() == Shuffles.size());
+
   IRBuilder<> Builder(LI);
 
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
@@ -21594,6 +21599,27 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     return false;
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+
+  // If the segment load is going to be performed segment at a time anyways
+  // and there's only one element used, use a strided load instead.  This
+  // will be equally fast, and create less vector register pressure.
+  if (Indices.size() == 1 && !Subtarget.hasOptimizedSegmentLoadStore(Factor)) {
+    unsigned ScalarSizeInBytes = VTy->getScalarSizeInBits() / 8;
+    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
+    Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
+    Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
+    Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
+    Value *VL = Builder.getInt32(VTy->getNumElements());
+
+    CallInst *CI =
+        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                {VTy, BasePtr->getType(), Stride->getType()},
+                                {BasePtr, Stride, Mask, VL});
+    CI->addParamAttr(
+        0, Attribute::getWithAlignment(CI->getContext(), LI->getAlign()));
+    Shuffles[0]->replaceAllUsesWith(CI);
+    return true;
+  };
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
 

@@ -149,8 +149,10 @@ private:
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectBITOP3(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;
+  bool selectNamedBarrierInit(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
+  bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierLeave(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,

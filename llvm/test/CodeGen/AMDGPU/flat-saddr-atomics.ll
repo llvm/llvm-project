@@ -5584,7 +5584,7 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
 ; GFX1210-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[4:5]
-; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], -1, v[0:1]
+; GFX1210-GISEL-NEXT:    v_sub_nc_u64_e32 v[2:3], 1, v[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    s_or_b32 vcc_lo, vcc_lo, s0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -5698,7 +5698,7 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
 ; GFX1210-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[4:5]
-; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], -1, v[0:1]
+; GFX1210-GISEL-NEXT:    v_sub_nc_u64_e32 v[2:3], 1, v[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    s_or_b32 vcc_lo, vcc_lo, s0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -5792,7 +5792,7 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
 ; GFX1210-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[4:5]
-; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[0:1], -1, v[0:1]
+; GFX1210-GISEL-NEXT:    v_sub_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    s_or_b32 vcc_lo, vcc_lo, s0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -5890,7 +5890,7 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
 ; GFX1210-GISEL-NEXT:    v_cmp_gt_u64_e64 s0, v[0:1], v[4:5]
-; GFX1210-GISEL-NEXT:    v_add_nc_u64_e32 v[0:1], -1, v[0:1]
+; GFX1210-GISEL-NEXT:    v_sub_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    s_or_b32 vcc_lo, vcc_lo, s0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe

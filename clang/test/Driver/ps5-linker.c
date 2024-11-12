@@ -89,13 +89,13 @@
 
 // Test the driver's control over the JustMyCode behavior with linker flags.
 
-// RUN: %clang --target=x86_64-sie-ps5 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIB %s
-// RUN: %clang --target=x86_64-sie-ps5 -flto -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIB %s
+// RUN: %clang --target=x86_64-sie-ps5 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-JMC %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-JMC %s
 
 // CHECK: -plugin-opt=-enable-jmc-instrument
 
 // Check the default library name.
-// CHECK-LIB: "--whole-archive" "-lSceJmc_nosubmission" "--no-whole-archive"
+// CHECK-JMC: "--push-state" "--whole-archive" "-lSceJmc_nosubmission" "--pop-state"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.
 

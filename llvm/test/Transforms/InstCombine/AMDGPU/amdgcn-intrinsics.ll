@@ -1155,7 +1155,7 @@ define <2 x half> @constant_cvt_pkrtz() {
 ; Test constant values where rtz changes result
 define <2 x half> @constant_rtz_pkrtz() {
 ; CHECK-LABEL: @constant_rtz_pkrtz(
-; CHECK-NEXT:    ret <2 x half> <half 0xH7BFF, half 0xH7BFF>
+; CHECK-NEXT:    ret <2 x half> splat (half 0xH7BFF)
 ;
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 65535.0, float 65535.0)
   ret <2 x half> %cvt
