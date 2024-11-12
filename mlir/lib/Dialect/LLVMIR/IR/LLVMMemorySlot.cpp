@@ -1017,6 +1017,7 @@ memsetCanUsesBeRemoved(MemsetLike op, const MemorySlot &slot,
 
   return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
 }
+
 namespace {
 template <class MemsetLike>
 IntegerAttr createMemsetLenAttr(MemsetLike op) {
@@ -1037,7 +1038,6 @@ void createMemsetLikeToReplace(OpBuilder &builder, MemsetLike toReplace,
                                uint64_t newMemsetSize,
                                DenseMap<Attribute, MemorySlot> &subslots,
                                Attribute index) {
-
   Value newMemsetSizeValue =
       builder
           .create<LLVM::ConstantOp>(
@@ -1065,6 +1065,7 @@ void createMemsetLikeToReplace(OpBuilder &builder,
       newMemsetSizeValue, toReplace.getIsVolatile());
 }
 } // namespace
+
 template <class MemsetLike>
 static DeletionKind
 memsetRewire(MemsetLike op, const DestructurableMemorySlot &slot,
