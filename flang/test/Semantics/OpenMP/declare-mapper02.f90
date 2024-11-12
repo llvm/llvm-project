@@ -5,6 +5,6 @@ type, abstract :: t1
    integer :: y
 end type t1
 
-!ERROR: Type must not be abstract
+!ERROR: ABSTRACT derived type may not be used here
 !$omp declare mapper(mm : t1::x) map(x, x%y)
 end

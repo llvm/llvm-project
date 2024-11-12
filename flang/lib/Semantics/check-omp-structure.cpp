@@ -1440,12 +1440,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
       dir.source, llvm::omp::Directive::OMPD_declare_mapper);
   const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
   const auto &type = std::get<parser::TypeSpec>(spec.t);
-  if (const auto derivedTypeSpec{
-          std::get_if<parser::DerivedTypeSpec>(&type.u)}) {
-    if (derivedTypeSpec->derivedTypeSpec->typeSymbol().attrs().test(
-            Attr::ABSTRACT))
-      context_.Say(dir.source, "Type must not be abstract"_err_en_US);
-  } else {
+  if (!std::get_if<parser::DerivedTypeSpec>(&type.u)) {
     context_.Say(dir.source, "Type is not a derived type"_err_en_US);
   }
 }
