@@ -9,7 +9,7 @@ void CheckEnumerations() {
   // Check that non-vector 'mode' attribute is OK with enumeration types.
   typedef T __attribute__((mode(QI))) T1;
   typedef T T2 __attribute__((mode(HI)));
-  typedef T __attribute__((mode(V8SI))) T3; // expected-error{{mode 'V8SI' is not supported for enumeration types}}
+  typedef T __attribute__((mode(V8SI))) T3; // expected-error2{{mode 'V8SI' is not supported for enumeration types}}
   // expected-warning@-1{{specifying vector types with the 'mode' attribute is deprecated}}
 
   typedef enum __attribute__((mode(HI))) { A4, B4 } T4;
@@ -62,7 +62,7 @@ struct TemplatedStruct {
 
   // Check typedefs.
   typedef T __attribute__((mode(DI)))   T1;
-  typedef T __attribute__((mode(V8DI))) T2;   // expected-error{{mode 'V8DI' is not supported for enumeration types}}
+  typedef T __attribute__((mode(V8DI))) T2;   // expected-error2{{mode 'V8DI' is not supported for enumeration types}}
                                               // expected-warning@-1{{deprecated}}
 
   // Check parameters.

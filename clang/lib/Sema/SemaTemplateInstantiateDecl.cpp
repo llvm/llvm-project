@@ -990,6 +990,7 @@ Decl *
 TemplateDeclInstantiator::VisitLabelDecl(LabelDecl *D) {
   LabelDecl *Inst = LabelDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                                       D->getIdentifier());
+  SemaRef.InstantiateAttrs(TemplateArgs, D, Inst, LateAttrs, StartingScope);
   Owner->addDecl(Inst);
   return Inst;
 }
@@ -1009,6 +1010,7 @@ TemplateDeclInstantiator::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
                                  D->getQualifierLoc(),
                                  D->getTargetNameLoc(),
                                  D->getNamespace());
+  SemaRef.InstantiateAttrs(TemplateArgs, D, Inst, LateAttrs, StartingScope);
   Owner->addDecl(Inst);
   return Inst;
 }
@@ -1095,15 +1097,21 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
 
 Decl *TemplateDeclInstantiator::VisitTypedefDecl(TypedefDecl *D) {
   Decl *Typedef = InstantiateTypedefNameDecl(D, /*IsTypeAlias=*/false);
-  if (Typedef)
+  if (Typedef) {
+    SemaRef.InstantiateAttrs(TemplateArgs, D, Typedef, LateAttrs,
+                             StartingScope);
     Owner->addDecl(Typedef);
+  }
   return Typedef;
 }
 
 Decl *TemplateDeclInstantiator::VisitTypeAliasDecl(TypeAliasDecl *D) {
   Decl *Typedef = InstantiateTypedefNameDecl(D, /*IsTypeAlias=*/true);
-  if (Typedef)
+  if (Typedef) {
+    SemaRef.InstantiateAttrs(TemplateArgs, D, Typedef, LateAttrs,
+                             StartingScope);
     Owner->addDecl(Typedef);
+  }
   return Typedef;
 }
 
@@ -1160,8 +1168,10 @@ Decl *TemplateDeclInstantiator::InstantiateTypeAliasTemplateDecl(
 Decl *
 TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
   Decl *Inst = InstantiateTypeAliasTemplateDecl(D);
-  if (Inst)
+  if (Inst) {
+    SemaRef.InstantiateAttrs(TemplateArgs, D, Inst, LateAttrs, StartingScope);
     Owner->addDecl(Inst);
+  }
 
   return Inst;
 }
