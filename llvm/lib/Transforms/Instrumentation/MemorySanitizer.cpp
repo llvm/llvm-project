@@ -411,6 +411,10 @@ static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
+// mips32 Linux
+// FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
+// after picking good constants
+
 // mips64 Linux
 static const MemoryMapParams Linux_MIPS64_MemoryMapParams = {
     0,              // AndMask (not used)
@@ -418,6 +422,10 @@ static const MemoryMapParams Linux_MIPS64_MemoryMapParams = {
     0,              // ShadowBase (not used)
     0x002000000000, // OriginBase
 };
+
+// ppc32 Linux
+// FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
+// after picking good constants
 
 // ppc64 Linux
 static const MemoryMapParams Linux_PowerPC64_MemoryMapParams = {
@@ -435,6 +443,10 @@ static const MemoryMapParams Linux_S390X_MemoryMapParams = {
     0x1C0000000000, // OriginBase
 };
 
+// arm32 Linux
+// FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
+// after picking good constants
+
 // aarch64 Linux
 static const MemoryMapParams Linux_AArch64_MemoryMapParams = {
     0,               // AndMask (not used)
@@ -450,6 +462,10 @@ static const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0,              // ShadowBase (not used)
     0x100000000000, // OriginBase
 };
+
+// riscv32 Linux
+// FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
+// after picking good constants
 
 // aarch64 FreeBSD
 static const MemoryMapParams FreeBSD_AArch64_MemoryMapParams = {
