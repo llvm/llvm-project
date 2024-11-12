@@ -15231,20 +15231,28 @@ ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
 
 void ScalarEvolution::LoopGuards::collectFromPHI(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
-    const PHINode &Phi, SmallPtrSet<const BasicBlock *, 8> &VisitedBlocks,
+    const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+    SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
     unsigned Depth) {
   if (!SE.isSCEVable(Phi.getType()))
     return;
 
   using MinMaxPattern = std::pair<const SCEVConstant *, SCEVTypes>;
   auto GetMinMaxConst = [&](unsigned In) -> MinMaxPattern {
-    if (!VisitedBlocks.insert(Phi.getIncomingBlock(In)).second)
+    const BasicBlock *InBlock = Phi.getIncomingBlock(In);
+    if (!VisitedBlocks.insert(InBlock).second)
       return {nullptr, scCouldNotCompute};
-    LoopGuards G(SE);
-    collectFromBlock(SE, G, Phi.getParent(), Phi.getIncomingBlock(In),
-                     VisitedBlocks, Depth + 1);
-    const SCEV *S = G.RewriteMap[SE.getSCEV(Phi.getIncomingValue(In))];
-    auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S);
+    if (!IncomingGuards.contains(InBlock)) {
+      LoopGuards G(SE);
+      collectFromBlock(SE, G, Phi.getParent(), InBlock, VisitedBlocks,
+                       Depth + 1);
+      IncomingGuards.try_emplace(InBlock, std::move(G));
+    }
+    const LoopGuards &G = IncomingGuards.at(InBlock);
+    auto S = G.RewriteMap.find(SE.getSCEV(Phi.getIncomingValue(In)));
+    if (S == G.RewriteMap.end())
+      return {nullptr, scCouldNotCompute};
+    auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S->second);
     if (!SM)
       return {nullptr, scCouldNotCompute};
     if (const SCEVConstant *C0 = dyn_cast<SCEVConstant>(SM->getOperand(0)))
@@ -15289,7 +15297,7 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
 void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
-    SmallPtrSet<const BasicBlock *, 8> &VisitedBlocks, unsigned Depth) {
+    SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks, unsigned Depth) {
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,
@@ -15666,7 +15674,8 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     Terms.emplace_back(LoopEntryPredicate->getCondition(),
                        LoopEntryPredicate->getSuccessor(0) == Pair.second);
 
-    // If we are recursively collecting guards stop after 2 predecessors.
+    // If we are recursively collecting guards stop after 2
+    // predecessors to limit compile-time impact for now.
     if (Depth > 0 && Terms.size() == 2)
       break;
   }
@@ -15677,8 +15686,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // for the Phi.
   if (Pair.second->hasNPredecessorsOrMore(2) &&
       Depth < MaxLoopGuardCollectionDepth) {
+    SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
     for (auto &Phi : Pair.second->phis()) {
-      collectFromPHI(SE, Guards, Phi, VisitedBlocks, Depth);
+      collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
     }
   }
 

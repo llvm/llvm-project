@@ -1322,18 +1322,18 @@ public:
     static void
     collectFromBlock(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
                      const BasicBlock *Block, const BasicBlock *Pred,
-                     SmallPtrSet<const BasicBlock *, 8> &VisitedBlocks,
+                     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
                      unsigned Depth = 0);
 
     /// Collect loop guards in \p Guards, starting from PHINode \p
     /// Phi, by calling \p collectFromBlock on the incoming blocks of
     /// \Phi and trying to merge the found constraints into a single
     /// combined on for \p Phi.
-    static void
-    collectFromPHI(ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
-                   const PHINode &Phi,
-                   SmallPtrSet<const BasicBlock *, 8> &VisitedBlocks,
-                   unsigned Depth);
+    static void collectFromPHI(
+        ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+        const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
+        SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
+        unsigned Depth);
 
   public:
     /// Collect rewrite map for loop guards for loop \p L, together with flags
