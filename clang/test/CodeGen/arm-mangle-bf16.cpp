@@ -13,7 +13,7 @@ void foo(__bf16 b) {}
 
 struct bar;
 
-// CHECK:    define {{.*}}void @_Z10substituteu6__bf16R3barS0_
-// DEMANGLE: define {{.*}}void @substitute(__bf16, bar&, bar)
+// CHECK:    define {{.*}}void @_Z10substituteu6__bf16R3barS1_
+// DEMANGLE: define {{.*}}void @substitute(__bf16, bar&, bar&)
 void substitute(__bf16 a, bar &b, bar &c) {
 }

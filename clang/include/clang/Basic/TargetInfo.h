@@ -810,6 +810,10 @@ public:
   /// Return the mangled code of bfloat.
   virtual const char *getBFloat16Mangling() const { return "DF16b"; }
 
+  /// Returns whether to treat bfloat as a vendor extension type for the purpose
+  /// of Itanium C++ name mangling compression rules
+  virtual bool treatBFloat16AsVendorType() const { return false; }
+
   /// Return the value for the C99 FLT_EVAL_METHOD macro.
   virtual LangOptions::FPEvalMethodKind getFPEvalMethod() const {
     return LangOptions::FPEvalMethodKind::FEM_Source;

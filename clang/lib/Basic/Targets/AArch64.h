@@ -227,6 +227,9 @@ public:
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  bool treatBFloat16AsVendorType() const override { return true; }
+
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }

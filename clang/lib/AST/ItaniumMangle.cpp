@@ -2923,6 +2923,15 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
     return true;
   if (Ty->isSpecificBuiltinType(BuiltinType::ObjCSel))
     return true;
+  if (Ty->isSpecificBuiltinType(BuiltinType::BFloat16)) {
+    const TargetInfo *TI =
+        Ctx.getLangOpts().OpenMP && Ctx.getLangOpts().OpenMPIsTargetDevice
+            ? Ctx.getAuxTargetInfo()
+            : &Ctx.getTargetInfo();
+    // Some targets mangle bfloat16 as a vendor extension type, thus making them
+    // candidates for substitution
+    return TI->treatBFloat16AsVendorType();
+  }
   if (Ty->isOpenCLSpecificType())
     return true;
   // From Clang 18.0 we correctly treat SVE types as substitution candidates.
