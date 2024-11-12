@@ -1,4 +1,4 @@
-// REQUIRES: aarch64-registered-target,system-linux,host-arch-compatible
+// REQUIRES: aarch64-registered-target,system-linux,host-target-compatible
 // RUN: export LLVM_CPUINFO=%S/Inputs/cpunative/neoverse-v2
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace --check-prefix=CHECK-FEAT-NV2 --implicit-check-not=FEAT_ %s
 
