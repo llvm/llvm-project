@@ -1010,10 +1010,9 @@ void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
   unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
 }
 
-void mlirValueReplaceAllUsesExceptWithSet(MlirValue oldValue,
-                                          MlirValue newValue,
-                                          MlirOperation *exceptions,
-                                          intptr_t numExceptions) {
+void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
+                                   intptr_t numExceptions,
+                                   MlirOperation *exceptions) {
   Value oldValueCpp = unwrap(oldValue);
   Value newValueCpp = unwrap(newValue);
 
@@ -1023,16 +1022,6 @@ void mlirValueReplaceAllUsesExceptWithSet(MlirValue oldValue,
   }
 
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
-}
-
-void mlirValueReplaceAllUsesExceptWithSingle(MlirValue oldValue,
-                                             MlirValue newValue,
-                                             MlirOperation exceptedUser) {
-  Value oldValueCpp = unwrap(oldValue);
-  Value newValueCpp = unwrap(newValue);
-  Operation *exceptedUserCpp = unwrap(exceptedUser);
-
-  oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptedUserCpp);
 }
 
 //===----------------------------------------------------------------------===//

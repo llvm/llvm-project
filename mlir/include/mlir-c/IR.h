@@ -961,16 +961,9 @@ MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
 /// 'exceptions'. The 'exceptions' parameter is an array of MlirOperation
 /// pointers with a length of 'numExceptions'.
 MLIR_CAPI_EXPORTED void
-mlirValueReplaceAllUsesExceptWithSet(MlirValue of, MlirValue with,
-                                     MlirOperation *exceptions,
-                                     intptr_t numExceptions);
-
-/// Replace all uses of 'of' value with 'with' value, updating anything in the
-/// IR that uses 'of' to use 'with' instead, except if the user is
-/// 'exceptedUser'.
-MLIR_CAPI_EXPORTED void
-mlirValueReplaceAllUsesExceptWithSingle(MlirValue of, MlirValue with,
-                                        MlirOperation exceptedUser);
+mlirValueReplaceAllUsesExcept(MlirValue of, MlirValue with,
+                              intptr_t numExceptions,
+                              MlirOperation *exceptions);
 
 //===----------------------------------------------------------------------===//
 // OpOperand API.
