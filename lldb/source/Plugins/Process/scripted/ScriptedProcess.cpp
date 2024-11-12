@@ -288,8 +288,15 @@ Status ScriptedProcess::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                               MemoryRegionInfo &region) {
   Status error;
   if (auto region_or_err =
-          GetInterface().GetMemoryRegionContainingAddress(load_addr, error))
+          GetInterface().GetMemoryRegionContainingAddress(load_addr, error)) {
     region = *region_or_err;
+    if (region.GetRange().GetRangeBase() == 0 &&
+        (region.GetRange().GetByteSize() == 0 ||
+         region.GetRange().GetByteSize() == LLDB_INVALID_ADDRESS)) {
+      error = Status::FromErrorString(
+          "Invalid memory region from scripted process");
+    }
+  }
 
   return error;
 }
