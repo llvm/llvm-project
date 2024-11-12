@@ -163,6 +163,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .legalFor({s32});
     getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
     getActionDefinitionsBuilder(G_SET_FPMODE).customFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPMODE).custom();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
@@ -465,6 +466,18 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     auto FPModeBits = MIRBuilder.buildAnd(FPEnvTy, Modes, NotStatusBitMask);
     auto NewFPSCR = MIRBuilder.buildOr(FPEnvTy, StatusBits, FPModeBits);
     MIRBuilder.buildSetFPEnv(NewFPSCR);
+    break;
+  }
+  case G_RESET_FPMODE: {
+    // To get the default FP mode all control bits are cleared:
+    // FPSCR = FPSCR & (FPStatusBits | FPReservedBits)
+    LLT FPEnvTy = LLT::scalar(32);
+    auto FPEnv = MRI.createGenericVirtualRegister(FPEnvTy);
+    MIRBuilder.buildInstr(G_GET_FPENV).addDef({FPEnv});
+    auto NotModeBitMask = MIRBuilder.buildConstant(
+        FPEnvTy, ARM::FPStatusBits | ARM::FPReservedBits);
+    auto NewFPSCR = MIRBuilder.buildAnd(FPEnvTy, FPEnv, NotModeBitMask);
+    MIRBuilder.buildInstr(G_SET_FPENV).addUse(NewFPSCR.getReg(0));
     break;
   }
   }
