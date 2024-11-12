@@ -436,21 +436,31 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
 
   const auto *BaseDRE =
       dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  if (!BaseDRE)
+  const auto *SLiteral =
+      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts());
+  uint64_t size;
+
+  if (!BaseDRE && !SLiteral)
     return false;
-  if (!BaseDRE->getDecl())
-    return false;
-  const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseDRE->getDecl()->getType());
-  if (!CATy)
-    return false;
+
+  if (BaseDRE) {
+    if (!BaseDRE->getDecl())
+      return false;
+    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
+        BaseDRE->getDecl()->getType());
+    if (!CATy) {
+      return false;
+    }
+    size = CATy->getLimitedSize();
+  } else if (SLiteral) {
+    size = SLiteral->getLength() + 1;
+  }
 
   if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
     const APInt ArrIdx = IdxLit->getValue();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug
-    if (ArrIdx.isNonNegative() &&
-        ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
       return true;
   }
 
