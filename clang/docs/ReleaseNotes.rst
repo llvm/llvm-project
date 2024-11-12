@@ -662,6 +662,8 @@ Bug Fixes to AST Handling
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
 - Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
   sometimes incorrectly return null even if a comment was present. (#GH108145)
+- Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
+  and ``relatedalso`` comment commands.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -869,9 +871,6 @@ New features
   attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
-
-- Introduced ``-warning-suppression-mappings`` flag to control diagnostic
-  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

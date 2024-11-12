@@ -479,7 +479,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   // Clear out old caches and data.
   Diagnostics.Reset();
-  ProcessWarningOptions(Diagnostics, Clang->getDiagnosticOpts(), *VFS);
+  ProcessWarningOptions(Diagnostics, Clang->getDiagnosticOpts());
 
   VFS =
       createVFSFromCompilerInvocation(Clang->getInvocation(), Diagnostics, VFS);

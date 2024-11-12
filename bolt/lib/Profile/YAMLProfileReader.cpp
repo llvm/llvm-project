@@ -837,7 +837,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   const size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
   const size_t MatchedWithCallGraph = matchWithCallGraph(BC);
   const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
-  const size_t MatchedWithPseudoProbes = matchWithPseudoProbes(BC);
+  [[maybe_unused]] const size_t MatchedWithPseudoProbes =
+      matchWithPseudoProbes(BC);
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
