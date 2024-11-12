@@ -67,8 +67,8 @@ private:
             isa<ObjCIvarRegion, CXXDerivedObjectRegion>(r)) &&
            "Not a base");
   }
-
 public:
+
   bool isDirect() const { return P.getInt() & Direct; }
   bool hasSymbolicOffset() const { return P.getInt() & Symbolic; }
 
@@ -232,75 +232,27 @@ public:
 
   void printJson(raw_ostream &Out, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const {
-    using namespace llvm;
-    DenseMap<const MemRegion *, std::string> StringifyCache;
-    auto ToString = [&StringifyCache](const MemRegion *R) {
-      auto [Place, Inserted] = StringifyCache.try_emplace(R);
-      if (!Inserted)
-        return Place->second;
-      std::string Res;
-      raw_string_ostream OS(Res);
-      OS << R;
-      Place->second = Res;
-      return Res;
-    };
-
-    using Cluster =
-        std::pair<const MemRegion *, ImmutableMap<BindingKey, SVal>>;
-    using Binding = std::pair<BindingKey, SVal>;
-
-    const auto ClusterSortKey = [&ToString](const Cluster *C) {
-      const MemRegion *Key = C->first;
-      return std::tuple{isa<MemSpaceRegion>(Key), ToString(Key)};
-    };
-
-    const auto MemSpaceBeforeRegionName = [&ClusterSortKey](const Cluster *L,
-                                                            const Cluster *R) {
-      return ClusterSortKey(L) < ClusterSortKey(R);
-    };
-
-    const auto BindingSortKey = [&ToString](const Binding *BPtr) {
-      const BindingKey &Key = BPtr->first;
-      return std::tuple{Key.isDirect(), !Key.hasSymbolicOffset(),
-                        ToString(Key.getRegion()), Key.getOffset()};
-    };
-
-    const auto DefaultBindingBeforeDirectBindings =
-        [&BindingSortKey](const Binding *LPtr, const Binding *RPtr) {
-          return BindingSortKey(LPtr) < BindingSortKey(RPtr);
-        };
-
-    const auto AddrOf = [](const auto &Item) { return &Item; };
-
-    std::vector<const Cluster *> SortedClusters;
-    SortedClusters.reserve(std::distance(begin(), end()));
-    append_range(SortedClusters, map_range(*this, AddrOf));
-    llvm::sort(SortedClusters, MemSpaceBeforeRegionName);
-
-    for (auto [Idx, C] : llvm::enumerate(SortedClusters)) {
-      const auto &[BaseRegion, Bindings] = *C;
+    for (iterator I = begin(), E = end(); I != E; ++I) {
+      // TODO: We might need a .printJson for I.getKey() as well.
       Indent(Out, Space, IsDot)
-          << "{ \"cluster\": \"" << BaseRegion << "\", \"pointer\": \""
-          << (const void *)BaseRegion << "\", \"items\": [" << NL;
-
-      std::vector<const Binding *> SortedBindings;
-      SortedBindings.reserve(std::distance(Bindings.begin(), Bindings.end()));
-      append_range(SortedBindings, map_range(Bindings, AddrOf));
-      llvm::sort(SortedBindings, DefaultBindingBeforeDirectBindings);
+          << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
+          << (const void *)I.getKey() << "\", \"items\": [" << NL;
 
       ++Space;
-      for (auto [Idx, B] : llvm::enumerate(SortedBindings)) {
-        const auto &[Key, Value] = *B;
-        Indent(Out, Space, IsDot) << "{ " << Key << ", \"value\": ";
-        Value.printJson(Out, /*AddQuotes=*/true);
+      const ClusterBindings &CB = I.getData();
+      for (ClusterBindings::iterator CI = CB.begin(), CE = CB.end(); CI != CE;
+           ++CI) {
+        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": ";
+        CI.getData().printJson(Out, /*AddQuotes=*/true);
         Out << " }";
-        if (Idx != SortedBindings.size() - 1)
+        if (std::next(CI) != CE)
           Out << ',';
         Out << NL;
       }
+
       --Space;
       Indent(Out, Space, IsDot) << "]}";
-      if (Idx != SortedClusters.size() - 1)
+      if (std::next(I) != E)
         Out << ',';
       Out << NL;
     }
