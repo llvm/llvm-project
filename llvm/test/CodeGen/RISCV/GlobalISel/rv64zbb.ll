@@ -869,8 +869,8 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 define signext i32 @sextb_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: sextb_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    sraiw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: sextb_i32:
@@ -901,8 +901,8 @@ define i64 @sextb_i64(i64 %a) nounwind {
 define signext i32 @sexth_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: sexth_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 16
-; RV64I-NEXT:    sraiw a0, a0, 16
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: sexth_i32:

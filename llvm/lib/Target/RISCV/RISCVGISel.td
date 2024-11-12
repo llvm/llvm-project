@@ -218,11 +218,6 @@ def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
 // Zb* RV64 i32 patterns not used by SelectionDAG.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
-def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
-def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
-} // Predicates = [HasStdExtZbb, IsRV64]
-
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(shl (i64 (zext GPR:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
