@@ -314,6 +314,19 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
+                                              int64_t Address,
+                                              const MCDisassembler *Decoder) {
+  assert(isUInt<6>(Imm) && "Invalid immediate");
+
+  if (!Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) &&
+      !isUInt<5>(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
@@ -321,6 +334,14 @@ static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   if (Imm == 0)
     return MCDisassembler::Fail;
   return decodeUImmOperand<N>(Inst, Imm, Address, Decoder);
+}
+
+static DecodeStatus
+decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
+                                 const MCDisassembler *Decoder) {
+  if (Imm == 0)
+    return MCDisassembler::Fail;
+  return decodeUImmLog2XLenOperand(Inst, Imm, Address, Decoder);
 }
 
 template <unsigned N>

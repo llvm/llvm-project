@@ -660,16 +660,6 @@ TEST(ParseArchString, MissingDepency) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "");
   }
-
-  for (StringRef Input : {"rv32i_zacas1p0"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zacas' requires 'a' or 'zaamo' extension to also be specified");
-  }
-
-  for (StringRef Input : {"rv32i_zabha"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'zabha' requires 'a' or 'zaamo' extension to also be specified");
-  }
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -1027,6 +1017,7 @@ R"(All available -march extensions for RISC-V
     smaia                1.0
     smcdeleg             1.0
     smcsrind             1.0
+    smdbltrp             1.0
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
@@ -1038,6 +1029,7 @@ R"(All available -march extensions for RISC-V
     sscofpmf             1.0
     sscounterenw         1.0
     sscsrind             1.0
+    ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
     ssqosid              1.0

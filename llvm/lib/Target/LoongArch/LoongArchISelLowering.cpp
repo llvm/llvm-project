@@ -4229,11 +4229,10 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lasx_xvreplgr2vr_b:
   case Intrinsic::loongarch_lasx_xvreplgr2vr_h:
   case Intrinsic::loongarch_lasx_xvreplgr2vr_w:
-  case Intrinsic::loongarch_lasx_xvreplgr2vr_d: {
-    EVT ResTy = N->getValueType(0);
-    SmallVector<SDValue> Ops(ResTy.getVectorNumElements(), N->getOperand(1));
-    return DAG.getBuildVector(ResTy, DL, Ops);
-  }
+  case Intrinsic::loongarch_lasx_xvreplgr2vr_d:
+    return DAG.getNode(LoongArchISD::VREPLGR2VR, DL, N->getValueType(0),
+                       DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getGRLenVT(),
+                                   N->getOperand(1)));
   case Intrinsic::loongarch_lsx_vreplve_b:
   case Intrinsic::loongarch_lsx_vreplve_h:
   case Intrinsic::loongarch_lsx_vreplve_w:
@@ -4710,6 +4709,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VILVH)
     NODE_NAME_CASE(VSHUF4I)
     NODE_NAME_CASE(VREPLVEI)
+    NODE_NAME_CASE(VREPLGR2VR)
     NODE_NAME_CASE(XVPERMI)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
