@@ -419,18 +419,17 @@ let Predicates = [HasAMXMOVRS, In64BitMode], SchedRW = [WriteSystem] in {
                     "tileloaddrst1\t{$src1, $dst|$dst, $src1}",
                     []>, VEX, T8, PD;
 
-  let isPseudo = true, mayLoad = 1 in
-  def PTILELOADDRSV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
-                                                GR16:$src2,
-                                                opaquemem:$src3), []>;
-  let isPseudo = true, mayLoad = 1 in
-  def PTILELOADDRST1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+  let isPseudo = true, mayLoad = 1 in {
+    def PTILELOADDRSV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                   GR16:$src2,
                                                   opaquemem:$src3), []>;
-  let  usesCustomInserter = 1 in {
-    let mayLoad = 1 in
+    def PTILELOADDRST1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                                    GR16:$src2,
+                                                    opaquemem:$src3), []>;
+  }
+
+  let usesCustomInserter = 1, mayLoad = 1 in {
     def PTILELOADDRS : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
-    let mayLoad = 1 in
     def PTILELOADDRST1 : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
   }
 } // HasAMXMOVRS, In64BitMode

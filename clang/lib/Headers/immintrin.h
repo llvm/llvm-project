@@ -658,6 +658,10 @@ _storebe_i64(void * __P, long long __D) {
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__AMX_MOVRS__)
 #include <amxmovrsintrin.h>
+#endif
+
+#if !defined(__SCE__) || __has_feature(modules) ||                             \
+    (defined(__AMX_MOVRS__) && defined(__AMX_TRANSPOSE__))
 #include <amxmovrstransposeintrin.h>
 #endif
 

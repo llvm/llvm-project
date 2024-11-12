@@ -274,8 +274,8 @@ def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
                                      "Support AMX-FP8 instructions",
                                      [FeatureAMXTILE]>;
 def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
-                                     "Support AMX-MOVRS instructions",
-                                     [FeatureAMXTILE]>;
+                                       "Support AMX-MOVRS instructions",
+                                       [FeatureAMXTILE]>;
 def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
                                            "Support AMX amx-transpose instructions",
                                            [FeatureAMXTILE]>;

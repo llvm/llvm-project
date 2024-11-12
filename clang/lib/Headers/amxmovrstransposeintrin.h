@@ -1,5 +1,4 @@
-/* ===--- amxmovrstransposeintrin.h - AMX_MOVRS_TRANSPOSE intrinsics -*- C++
- * -*---------===
+/* ===--- amxmovrstransposeintrin.h - AMX_MOVRS_TRANSPOSE intrinsics --------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.

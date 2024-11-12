@@ -5343,7 +5343,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_t2rpntlvwz0rst1:
     case Intrinsic::x86_t2rpntlvwz1rs:
     case Intrinsic::x86_t2rpntlvwz1rst1:
-      if (!Subtarget->hasAMXTRANSPOSE() || !Subtarget->hasAMXMOVRS())
+      if (!Subtarget->hasAMXMOVRS())
         break;
       [[fallthrough]];
     case Intrinsic::x86_t2rpntlvwz0:
