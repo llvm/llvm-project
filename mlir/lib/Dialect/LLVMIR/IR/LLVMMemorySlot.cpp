@@ -942,8 +942,8 @@ static bool areAllIndicesI32(const DestructurableMemorySlot &slot) {
 // Interfaces for memset and memset.inline
 //===----------------------------------------------------------------------===//
 
-template <class MemsetLike>
-static bool memsetCanRewire(MemsetLike op, const DestructurableMemorySlot &slot,
+template <class MemsetIntr>
+static bool memsetCanRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
                             SmallPtrSetImpl<Attribute> &usedIndices,
                             SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
                             const DataLayout &dataLayout) {
@@ -962,8 +962,8 @@ static bool memsetCanRewire(MemsetLike op, const DestructurableMemorySlot &slot,
   return definitelyWritesOnlyWithinSlot(op, slot, dataLayout);
 }
 
-template <class MemsetLike>
-static Value memsetGetStored(MemsetLike op, const MemorySlot &slot,
+template <class MemsetIntr>
+static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
                              OpBuilder &builder) {
   // TODO: Support non-integer types.
   return TypeSwitch<Type, Value>(slot.elemType)
@@ -996,9 +996,9 @@ static Value memsetGetStored(MemsetLike op, const MemorySlot &slot,
       });
 }
 
-template <class MemsetLike>
+template <class MemsetIntr>
 static bool
-memsetCanUsesBeRemoved(MemsetLike op, const MemorySlot &slot,
+memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
                        SmallVectorImpl<OpOperand *> &newBlockingUses,
                        const DataLayout &dataLayout) {
@@ -1019,8 +1019,8 @@ memsetCanUsesBeRemoved(MemsetLike op, const MemorySlot &slot,
 }
 
 namespace {
-template <class MemsetLike>
-IntegerAttr createMemsetLenAttr(MemsetLike op) {
+template <class MemsetIntr>
+IntegerAttr createMemsetLenAttr(MemsetIntr op) {
   IntegerAttr memsetLenAttr;
   bool successfulMatch =
       matchPattern(op.getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
@@ -1032,8 +1032,8 @@ template <>
 IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
   return op.getLenAttr();
 }
-template <class MemsetLike>
-void createMemsetLikeToReplace(OpBuilder &builder, MemsetLike toReplace,
+template <class MemsetIntr>
+void createMemsetIntrToReplace(OpBuilder &builder, MemsetIntr toReplace,
                                IntegerAttr memsetLenAttr,
                                uint64_t newMemsetSize,
                                DenseMap<Attribute, MemorySlot> &subslots,
@@ -1050,7 +1050,7 @@ void createMemsetLikeToReplace(OpBuilder &builder, MemsetLike toReplace,
                                  toReplace.getIsVolatile());
 }
 template <>
-void createMemsetLikeToReplace(OpBuilder &builder,
+void createMemsetIntrToReplace(OpBuilder &builder,
                                LLVM::MemsetInlineOp toReplace,
                                IntegerAttr memsetLenAttr,
                                uint64_t newMemsetSize,
@@ -1066,9 +1066,9 @@ void createMemsetLikeToReplace(OpBuilder &builder,
 }
 } // namespace
 
-template <class MemsetLike>
+template <class MemsetIntr>
 static DeletionKind
-memsetRewire(MemsetLike op, const DestructurableMemorySlot &slot,
+memsetRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
              DenseMap<Attribute, MemorySlot> &subslots, OpBuilder &builder,
              const DataLayout &dataLayout) {
 
@@ -1102,7 +1102,7 @@ memsetRewire(MemsetLike op, const DestructurableMemorySlot &slot,
     // Otherwise, only compute its offset within the original memset.
     if (subslots.contains(index)) {
       uint64_t newMemsetSize = std::min(memsetLen - covered, typeSize);
-      createMemsetLikeToReplace(builder, op, memsetLenAttr, newMemsetSize,
+      createMemsetIntrToReplace(builder, op, memsetLenAttr, newMemsetSize,
                                 subslots, index);
     }
 
