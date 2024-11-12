@@ -692,9 +692,9 @@ void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
 void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
                                    Operation *op) const {
   auto iface = cast<DisjointFlagInterface>(op);
-  auto inst_disjoint = cast<llvm::PossiblyDisjointInst>(inst);
+  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
 
-  iface.setIsDisjoint(inst_disjoint->isDisjoint());
+  iface.setIsDisjoint(instDisjoint->isDisjoint());
 }
 
 void ModuleImport::setNonNegFlag(llvm::Instruction *inst, Operation *op) const {
