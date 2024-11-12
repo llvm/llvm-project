@@ -298,14 +298,14 @@ public:
   llvm::Expected<uint32_t> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scopej) {
     STUB_LOG();
-    return 0;
+    return llvm::createStringError("runtime not loaded");
   }
 
-  std::optional<std::string> GetEnumCaseName(CompilerType type,
+  llvm::Expected<std::string> GetEnumCaseName(CompilerType type,
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx) {
     STUB_LOG();
-    return {};
+    return llvm::createStringError("runtime not loaded");
   }
 
   std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
@@ -2417,7 +2417,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
   FORWARD(GetNumChildren, type, exe_scope);
 }
 
-std::optional<std::string> SwiftLanguageRuntime::GetEnumCaseName(
+llvm::Expected<std::string> SwiftLanguageRuntime::GetEnumCaseName(
     CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
   FORWARD(GetEnumCaseName, type, data, exe_ctx);
 }

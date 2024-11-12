@@ -952,15 +952,20 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
   return {SwiftLanguageRuntime::eFound, child_indexes.size()};
 }
 
-std::optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
+llvm::Expected<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
     CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
   using namespace swift::reflection;
   using namespace swift::remote;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr());
   if (!ti)
-    return {};
+    return llvm::createStringError("could not get runtime type info for " +
+                                   type.GetMangledTypeName().GetStringRef());
+
+  // FIXME: Not reported as an error. There seems to be an odd
+  // compiler optimization happening with single-case payload carrying
+  // enums, which report their type as the inner type.
   if (ti->getKind() != TypeInfoKind::Enum)
-    return {};
+    return "";
 
   auto *eti = llvm::cast<EnumTypeInfo>(ti);
   PushLocalBuffer((int64_t)data.GetDataStart(), data.GetByteSize());
@@ -972,7 +977,7 @@ std::optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
 
   // TODO: uncomment this after fixing projection for every type: rdar://138424904
   // LogUnimplementedTypeKind(__FUNCTION__, type);
-  return {};
+  return llvm::createStringError("unimplemented enum kind");
 }
 
 std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>

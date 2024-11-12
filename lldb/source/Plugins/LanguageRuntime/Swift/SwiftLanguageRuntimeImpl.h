@@ -134,7 +134,7 @@ public:
   std::optional<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx);
 
-  std::optional<std::string> GetEnumCaseName(CompilerType type,
+  llvm::Expected<std::string> GetEnumCaseName(CompilerType type,
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 

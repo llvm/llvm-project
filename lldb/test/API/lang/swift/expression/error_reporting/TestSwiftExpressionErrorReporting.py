@@ -3,7 +3,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-class TestSwiftExpressionErrorReportingy(TestBase):
+class TestSwiftExpressionErrorReporting(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
