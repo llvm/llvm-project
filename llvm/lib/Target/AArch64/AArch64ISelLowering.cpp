@@ -15878,9 +15878,9 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
         // meaning that it is impossible to get the bit pattern of -0.0.
         assert(Extended.getValueSizeInBits() == 64);
         Extended = DAG.getBitcast(MVT::f64, Extended);
-        Result = DAG.getNode(ISD::SETCC, DL, MVT::i32, Extended,
-                             DAG.getConstantFP(0.0, DL, MVT::f64),
-                             DAG.getCondCode(ISD::CondCode::SETOEQ));
+        Result =
+            DAG.getSetCC(DL, MVT::i32, Extended,
+                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETOEQ);
       } else {
         Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
       }
@@ -15893,9 +15893,9 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
         // handled here (see explanation above).
         assert(Extended.getValueSizeInBits() == 64);
         Extended = DAG.getBitcast(MVT::f64, Extended);
-        Result = DAG.getNode(ISD::SETCC, DL, MVT::i32, Extended,
-                             DAG.getConstantFP(0.0, DL, MVT::f64),
-                             DAG.getCondCode(ISD::CondCode::SETUNE));
+        Result =
+            DAG.getSetCC(DL, MVT::i32, Extended,
+                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETUNE);
       } else {
         Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
       }
