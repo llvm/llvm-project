@@ -294,8 +294,7 @@ protected:
     return nullptr;
   }
 
-  llvm::iterator_range<typename ClauseMapTy::iterator>
-  FindClauses(C type) {
+  llvm::iterator_range<typename ClauseMapTy::iterator> FindClauses(C type) {
     auto it{GetContext().clauseInfo.equal_range(type)};
     return llvm::make_range(it);
   }
