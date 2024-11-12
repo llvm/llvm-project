@@ -28,6 +28,7 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
@@ -1007,6 +1008,31 @@ MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
 
 void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
   unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
+}
+
+void mlirValueReplaceAllUsesExceptWithSet(MlirValue oldValue,
+                                          MlirValue newValue,
+                                          MlirOperation *exceptions,
+                                          intptr_t numExceptions) {
+  auto oldValueCpp = unwrap(oldValue);
+  auto newValueCpp = unwrap(newValue);
+
+  llvm::SmallPtrSet<mlir::Operation *, 4> exceptionSet;
+  for (intptr_t i = 0; i < numExceptions; ++i) {
+    exceptionSet.insert(unwrap(exceptions[i]));
+  }
+
+  oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
+}
+
+void mlirValueReplaceAllUsesExceptWithSingle(MlirValue oldValue,
+                                             MlirValue newValue,
+                                             MlirOperation exceptedUser) {
+  auto oldValueCpp = unwrap(oldValue);
+  auto newValueCpp = unwrap(newValue);
+  auto exceptedUserCpp = unwrap(exceptedUser);
+
+  oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptedUserCpp);
 }
 
 //===----------------------------------------------------------------------===//

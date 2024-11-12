@@ -178,6 +178,12 @@ static const char kValueReplaceAllUsesWithDocstring[] =
 the IR that uses 'self' to use the other value instead.
 )";
 
+static const char kValueReplaceAllUsesExceptDocstring[] =
+    R"("Replace all uses of this value with the 'with' value, except for those
+in 'exceptions'. 'exceptions' can be either a single operation or a list of
+operations.
+)";
+
 //------------------------------------------------------------------------------
 // Utilities.
 //------------------------------------------------------------------------------
@@ -3718,6 +3724,32 @@ void mlir::python::populateIRCore(py::module &m) {
             mlirValueReplaceAllUsesOfWith(self.get(), with.get());
           },
           kValueReplaceAllUsesWithDocstring)
+      .def(
+          "replace_all_uses_except",
+          [](PyValue &self, PyValue &with, py::object exceptions) {
+            MlirValue selfValue = self.get();
+            MlirValue withValue = with.get();
+
+            // Check if 'exceptions' is a list
+            if (py::isinstance<py::list>(exceptions)) {
+              // Convert Python list to a vector of MlirOperations
+              std::vector<MlirOperation> exceptionOps;
+              for (py::handle exception : exceptions) {
+                exceptionOps.push_back(exception.cast<PyOperation &>().get());
+              }
+              mlirValueReplaceAllUsesExceptWithSet(
+                  selfValue, withValue, exceptionOps.data(),
+                  static_cast<intptr_t>(exceptionOps.size()));
+            } else {
+              // Assume 'exceptions' is a single Operation
+              MlirOperation exceptedUser =
+                  exceptions.cast<PyOperation &>().get();
+              mlirValueReplaceAllUsesExceptWithSingle(selfValue, withValue,
+                                                      exceptedUser);
+            }
+          },
+          py::arg("with"), py::arg("exceptions"),
+          kValueReplaceAllUsesExceptDocstring)
       .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
            [](PyValue &self) { return self.maybeDownCast(); });
   PyBlockArgument::bind(m);
