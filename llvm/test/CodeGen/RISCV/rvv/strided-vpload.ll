@@ -765,9 +765,9 @@ declare <vscale x 16 x double> @llvm.experimental.vp.strided.load.nxv16f64.p0.i6
 define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vscale x 17 x i1> %mask, i32 zeroext %evl, ptr %hi_ptr) {
 ; CHECK-RV32-LABEL: strided_load_nxv17f64:
 ; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV32-NEXT:    csrr a2, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a2, 1
-; CHECK-RV32-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV32-NEXT:    mv a6, a3
 ; CHECK-RV32-NEXT:    bltu a3, a7, .LBB57_2
 ; CHECK-RV32-NEXT:  # %bb.1:
@@ -812,9 +812,9 @@ define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vsc
 ;
 ; CHECK-RV64-LABEL: strided_load_nxv17f64:
 ; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a4, 1
-; CHECK-RV64-NEXT:    vmv1r.v v8, v0
 ; CHECK-RV64-NEXT:    mv a6, a2
 ; CHECK-RV64-NEXT:    bltu a2, a7, .LBB57_2
 ; CHECK-RV64-NEXT:  # %bb.1:

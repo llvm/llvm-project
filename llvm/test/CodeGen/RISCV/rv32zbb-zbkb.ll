@@ -138,25 +138,25 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    srli a3, a3, 31
+; CHECK-NEXT:    slli a5, a2, 26
+; CHECK-NEXT:    srli a5, a5, 31
 ; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:    bnez a3, .LBB7_2
+; CHECK-NEXT:    bnez a5, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a0
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    sll a5, a4, a2
-; CHECK-NEXT:    bnez a3, .LBB7_4
+; CHECK-NEXT:    sll a3, a4, a2
+; CHECK-NEXT:    bnez a5, .LBB7_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB7_4:
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    not a6, a2
-; CHECK-NEXT:    srl a3, a1, a6
-; CHECK-NEXT:    or a3, a5, a3
+; CHECK-NEXT:    not a5, a2
+; CHECK-NEXT:    srl a1, a1, a5
+; CHECK-NEXT:    or a3, a3, a1
 ; CHECK-NEXT:    sll a0, a0, a2
 ; CHECK-NEXT:    srli a4, a4, 1
-; CHECK-NEXT:    srl a1, a4, a6
+; CHECK-NEXT:    srl a1, a4, a5
 ; CHECK-NEXT:    or a1, a0, a1
 ; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:    ret

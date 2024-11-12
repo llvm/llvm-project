@@ -135,9 +135,9 @@ declare <16 x half> @llvm.vp.nearbyint.v16f16(<16 x half>, <16 x i1>, i32)
 define <16 x half> @vp_nearbyint_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_nearbyint_v16f16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI6_0)
 ; CHECK-NEXT:    flh fa5, %lo(.LCPI6_0)(a1)
-; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v12, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
@@ -393,9 +393,9 @@ declare <4 x double> @llvm.vp.nearbyint.v4f64(<4 x double>, <4 x i1>, i32)
 define <4 x double> @vp_nearbyint_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_nearbyint_v4f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI18_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI18_0)(a1)
-; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v12, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
@@ -437,9 +437,9 @@ declare <8 x double> @llvm.vp.nearbyint.v8f64(<8 x double>, <8 x i1>, i32)
 define <8 x double> @vp_nearbyint_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_nearbyint_v8f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v12, v0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI20_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI20_0)(a1)
-; CHECK-NEXT:    vmv1r.v v12, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
@@ -481,9 +481,9 @@ declare <15 x double> @llvm.vp.nearbyint.v15f64(<15 x double>, <15 x i1>, i32)
 define <15 x double> @vp_nearbyint_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_nearbyint_v15f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v16, v0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI22_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI22_0)(a1)
-; CHECK-NEXT:    vmv1r.v v16, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v24, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
@@ -525,9 +525,9 @@ declare <16 x double> @llvm.vp.nearbyint.v16f64(<16 x double>, <16 x i1>, i32)
 define <16 x double> @vp_nearbyint_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_nearbyint_v16f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v16, v0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI24_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI24_0)(a1)
-; CHECK-NEXT:    vmv1r.v v16, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v24, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
@@ -578,9 +578,9 @@ define <32 x double> @vp_nearbyint_v32f64(<32 x double> %va, <32 x i1> %m, i32 z
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:  .LBB26_2:
+; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    lui a2, %hi(.LCPI26_0)
 ; CHECK-NEXT:    fld fa5, %lo(.LCPI26_0)(a2)
-; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v24, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu

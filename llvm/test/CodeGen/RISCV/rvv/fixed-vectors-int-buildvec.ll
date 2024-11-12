@@ -1091,9 +1091,10 @@ define <512 x i8> @buildvec_not_vid_v512i8_indices_overflow_2() vscale_range(16,
 define <8 x i32> @prefix_overwrite(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: prefix_overwrite:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    vmv.s.x v10, a2
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma

@@ -395,56 +395,56 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV32I-LABEL: fshr128_minsize:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a2, 0(a2)
-; RV32I-NEXT:    lw t2, 0(a1)
+; RV32I-NEXT:    lw t1, 0(a1)
 ; RV32I-NEXT:    lw a7, 4(a1)
-; RV32I-NEXT:    lw a3, 8(a1)
+; RV32I-NEXT:    lw a4, 8(a1)
 ; RV32I-NEXT:    lw a1, 12(a1)
-; RV32I-NEXT:    andi t1, a2, 64
+; RV32I-NEXT:    andi t2, a2, 64
 ; RV32I-NEXT:    mv t0, a7
-; RV32I-NEXT:    mv a4, t2
-; RV32I-NEXT:    beqz t1, .LBB10_2
+; RV32I-NEXT:    mv a3, t1
+; RV32I-NEXT:    beqz t2, .LBB10_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv t0, a1
-; RV32I-NEXT:    mv a4, a3
+; RV32I-NEXT:    mv a3, a4
 ; RV32I-NEXT:  .LBB10_2:
 ; RV32I-NEXT:    andi a6, a2, 32
-; RV32I-NEXT:    mv a5, a4
+; RV32I-NEXT:    mv a5, a3
 ; RV32I-NEXT:    bnez a6, .LBB10_13
 ; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    bnez t1, .LBB10_14
+; RV32I-NEXT:    bnez t2, .LBB10_14
 ; RV32I-NEXT:  .LBB10_4:
 ; RV32I-NEXT:    beqz a6, .LBB10_6
 ; RV32I-NEXT:  .LBB10_5:
-; RV32I-NEXT:    mv t0, a3
+; RV32I-NEXT:    mv t0, a4
 ; RV32I-NEXT:  .LBB10_6:
 ; RV32I-NEXT:    slli t3, t0, 1
-; RV32I-NEXT:    not t2, a2
-; RV32I-NEXT:    beqz t1, .LBB10_8
+; RV32I-NEXT:    not t1, a2
+; RV32I-NEXT:    beqz t2, .LBB10_8
 ; RV32I-NEXT:  # %bb.7:
 ; RV32I-NEXT:    mv a1, a7
 ; RV32I-NEXT:  .LBB10_8:
 ; RV32I-NEXT:    srl a7, a5, a2
-; RV32I-NEXT:    sll t1, t3, t2
+; RV32I-NEXT:    sll t2, t3, t1
 ; RV32I-NEXT:    srl t0, t0, a2
 ; RV32I-NEXT:    beqz a6, .LBB10_10
 ; RV32I-NEXT:  # %bb.9:
-; RV32I-NEXT:    mv a3, a1
+; RV32I-NEXT:    mv a4, a1
 ; RV32I-NEXT:  .LBB10_10:
-; RV32I-NEXT:    or a7, t1, a7
-; RV32I-NEXT:    slli t1, a3, 1
-; RV32I-NEXT:    sll t1, t1, t2
-; RV32I-NEXT:    or t0, t1, t0
-; RV32I-NEXT:    srl a3, a3, a2
+; RV32I-NEXT:    or a7, t2, a7
+; RV32I-NEXT:    slli t2, a4, 1
+; RV32I-NEXT:    sll t2, t2, t1
+; RV32I-NEXT:    or t0, t2, t0
+; RV32I-NEXT:    srl a4, a4, a2
 ; RV32I-NEXT:    beqz a6, .LBB10_12
 ; RV32I-NEXT:  # %bb.11:
-; RV32I-NEXT:    mv a1, a4
+; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:  .LBB10_12:
-; RV32I-NEXT:    slli a4, a1, 1
-; RV32I-NEXT:    sll a4, a4, t2
-; RV32I-NEXT:    or a3, a4, a3
+; RV32I-NEXT:    slli a3, a1, 1
+; RV32I-NEXT:    sll a3, a3, t1
+; RV32I-NEXT:    or a3, a3, a4
 ; RV32I-NEXT:    srl a1, a1, a2
 ; RV32I-NEXT:    slli a5, a5, 1
-; RV32I-NEXT:    sll a2, a5, t2
+; RV32I-NEXT:    sll a2, a5, t1
 ; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    sw a7, 0(a0)
 ; RV32I-NEXT:    sw t0, 4(a0)
@@ -453,9 +453,9 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB10_13:
 ; RV32I-NEXT:    mv a5, t0
-; RV32I-NEXT:    beqz t1, .LBB10_4
+; RV32I-NEXT:    beqz t2, .LBB10_4
 ; RV32I-NEXT:  .LBB10_14:
-; RV32I-NEXT:    mv a3, t2
+; RV32I-NEXT:    mv a4, t1
 ; RV32I-NEXT:    bnez a6, .LBB10_5
 ; RV32I-NEXT:    j .LBB10_6
 ;

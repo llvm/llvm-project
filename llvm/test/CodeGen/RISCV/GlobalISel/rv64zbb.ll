@@ -582,13 +582,13 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    call __muldi3
 ; RV64I-NEXT:    slli s0, s0, 32
 ; RV64I-NEXT:    srli s0, s0, 32
-; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    beqz s0, .LBB9_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    srliw a0, a1, 24
-; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    srliw a1, a0, 24
+; RV64I-NEXT:    addiw a1, a1, 1
 ; RV64I-NEXT:  .LBB9_2:
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

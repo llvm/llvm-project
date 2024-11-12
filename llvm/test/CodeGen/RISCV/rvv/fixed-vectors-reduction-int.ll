@@ -2324,9 +2324,9 @@ define i64 @vreduce_and_v64i64(ptr %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi a1, a0, 384
+; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
-; RV64-NEXT:    addi a2, a0, 384
-; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vle64.v v0, (a1)
@@ -2925,9 +2925,9 @@ define i64 @vreduce_or_v64i64(ptr %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi a1, a0, 384
+; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
-; RV64-NEXT:    addi a2, a0, 384
-; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vle64.v v0, (a1)
@@ -4161,9 +4161,9 @@ define i64 @vreduce_smin_v64i64(ptr %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi a1, a0, 384
+; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
-; RV64-NEXT:    addi a2, a0, 384
-; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vle64.v v0, (a1)
@@ -4763,9 +4763,9 @@ define i64 @vreduce_smax_v64i64(ptr %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi a1, a0, 384
+; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
-; RV64-NEXT:    addi a2, a0, 384
-; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vle64.v v0, (a1)
@@ -5365,9 +5365,9 @@ define i64 @vreduce_umin_v64i64(ptr %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi a1, a0, 384
+; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
-; RV64-NEXT:    addi a2, a0, 384
-; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vle64.v v0, (a1)
@@ -5966,9 +5966,9 @@ define i64 @vreduce_umax_v64i64(ptr %x) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    addi a1, a0, 384
+; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    addi a1, a0, 256
-; RV64-NEXT:    addi a2, a0, 384
-; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vle64.v v0, (a1)

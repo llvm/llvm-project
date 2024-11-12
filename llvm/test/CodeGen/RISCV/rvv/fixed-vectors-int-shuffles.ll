@@ -157,18 +157,20 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI11_0)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v16, 2
-; RV32-NEXT:    li a0, 5
-; RV32-NEXT:    lui a1, %hi(.LCPI11_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI11_0)
-; RV32-NEXT:    vle16.v v20, (a1)
-; RV32-NEXT:    vslide1down.vx v21, v16, a0
+; RV32-NEXT:    vle16.v v20, (a0)
+; RV32-NEXT:    vmv.v.i v21, 2
+; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; RV32-NEXT:    vrgatherei16.vv v16, v8, v20
 ; RV32-NEXT:    li a0, 164
 ; RV32-NEXT:    vmv.s.x v0, a0
+; RV32-NEXT:    li a0, 5
+; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32-NEXT:    vslide1down.vx v8, v21, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vrgatherei16.vv v16, v8, v20
-; RV32-NEXT:    vrgatherei16.vv v16, v12, v21, v0.t
+; RV32-NEXT:    vrgatherei16.vv v16, v12, v8, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v16
 ; RV32-NEXT:    ret
 ;

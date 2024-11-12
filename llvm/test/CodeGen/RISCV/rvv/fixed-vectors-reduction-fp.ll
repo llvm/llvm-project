@@ -2459,9 +2459,9 @@ define double @vreduce_fminimum_v64f64_nonans(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    addi a1, a0, 384
+; CHECK-NEXT:    vle64.v v16, (a1)
 ; CHECK-NEXT:    addi a1, a0, 256
-; CHECK-NEXT:    addi a2, a0, 384
-; CHECK-NEXT:    vle64.v v16, (a2)
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vle64.v v0, (a1)
@@ -3217,9 +3217,9 @@ define double @vreduce_fmaximum_v64f64_nonans(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    addi a1, a0, 384
+; CHECK-NEXT:    vle64.v v16, (a1)
 ; CHECK-NEXT:    addi a1, a0, 256
-; CHECK-NEXT:    addi a2, a0, 384
-; CHECK-NEXT:    vle64.v v16, (a2)
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vle64.v v0, (a1)

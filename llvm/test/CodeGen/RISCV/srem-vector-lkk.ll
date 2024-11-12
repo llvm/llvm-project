@@ -931,8 +931,8 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lh a2, 4(a1)
 ; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lh a2, 4(a1)
 ; RV32I-NEXT:    lh a0, 8(a1)
 ; RV32I-NEXT:    lh s1, 12(a1)
 ; RV32I-NEXT:    srli a1, a2, 17
@@ -1003,8 +1003,8 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lh a2, 8(a1)
 ; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    lh a2, 8(a1)
 ; RV64I-NEXT:    lh a0, 16(a1)
 ; RV64I-NEXT:    lh s1, 24(a1)
 ; RV64I-NEXT:    srli a1, a2, 49

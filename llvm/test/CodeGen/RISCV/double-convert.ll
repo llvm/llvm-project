@@ -1629,8 +1629,8 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI26_1)
 ; RV32IFD-NEXT:    fld fa4, %lo(.LCPI26_1)(a0)
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    neg a0, a0
 ; RV32IFD-NEXT:    fmax.d fa5, fa0, fa5
+; RV32IFD-NEXT:    neg a0, a0
 ; RV32IFD-NEXT:    fmin.d fa5, fa5, fa4
 ; RV32IFD-NEXT:    fcvt.w.d a1, fa5, rtz
 ; RV32IFD-NEXT:    and a0, a0, a1
@@ -1643,8 +1643,8 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI26_1)
 ; RV64IFD-NEXT:    fld fa4, %lo(.LCPI26_1)(a0)
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    neg a0, a0
 ; RV64IFD-NEXT:    fmax.d fa5, fa0, fa5
+; RV64IFD-NEXT:    neg a0, a0
 ; RV64IFD-NEXT:    fmin.d fa5, fa5, fa4
 ; RV64IFD-NEXT:    fcvt.l.d a1, fa5, rtz
 ; RV64IFD-NEXT:    and a0, a0, a1
@@ -1658,26 +1658,26 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI26_1)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI26_1+4)(a4)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI26_1)(a4)
-; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
-; RV32IZFINXZDINX-NEXT:    neg a6, a6
-; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a4
-; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    and a0, a6, a0
+; RV32IZFINXZDINX-NEXT:    fmax.d a2, a0, a2
+; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV32IZFINXZDINX-NEXT:    neg a0, a0
+; RV32IZFINXZDINX-NEXT:    fmin.d a2, a2, a4
+; RV32IZFINXZDINX-NEXT:    fcvt.w.d a1, a2, rtz
+; RV32IZFINXZDINX-NEXT:    and a0, a0, a1
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_s_sat_i16:
 ; RV64IZFINXZDINX:       # %bb.0: # %start
-; RV64IZFINXZDINX-NEXT:    feq.d a1, a0, a0
-; RV64IZFINXZDINX-NEXT:    neg a1, a1
+; RV64IZFINXZDINX-NEXT:    li a1, -505
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 53
 ; RV64IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI26_0)
 ; RV64IZFINXZDINX-NEXT:    ld a2, %lo(.LCPI26_0)(a2)
-; RV64IZFINXZDINX-NEXT:    li a3, -505
-; RV64IZFINXZDINX-NEXT:    slli a3, a3, 53
-; RV64IZFINXZDINX-NEXT:    fmax.d a0, a0, a3
-; RV64IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
-; RV64IZFINXZDINX-NEXT:    fcvt.l.d a0, a0, rtz
-; RV64IZFINXZDINX-NEXT:    and a0, a1, a0
+; RV64IZFINXZDINX-NEXT:    fmax.d a1, a0, a1
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    neg a0, a0
+; RV64IZFINXZDINX-NEXT:    fmin.d a1, a1, a2
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a1, rtz
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i16:
@@ -2004,8 +2004,8 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI30_1)
 ; RV32IFD-NEXT:    fld fa4, %lo(.LCPI30_1)(a0)
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    neg a0, a0
 ; RV32IFD-NEXT:    fmax.d fa5, fa0, fa5
+; RV32IFD-NEXT:    neg a0, a0
 ; RV32IFD-NEXT:    fmin.d fa5, fa5, fa4
 ; RV32IFD-NEXT:    fcvt.w.d a1, fa5, rtz
 ; RV32IFD-NEXT:    and a0, a0, a1
@@ -2018,8 +2018,8 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI30_1)
 ; RV64IFD-NEXT:    fld fa4, %lo(.LCPI30_1)(a0)
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    neg a0, a0
 ; RV64IFD-NEXT:    fmax.d fa5, fa0, fa5
+; RV64IFD-NEXT:    neg a0, a0
 ; RV64IFD-NEXT:    fmin.d fa5, fa5, fa4
 ; RV64IFD-NEXT:    fcvt.l.d a1, fa5, rtz
 ; RV64IFD-NEXT:    and a0, a0, a1
@@ -2033,12 +2033,12 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI30_1)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI30_1+4)(a4)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI30_1)(a4)
-; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
-; RV32IZFINXZDINX-NEXT:    neg a6, a6
-; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a4
-; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    and a0, a6, a0
+; RV32IZFINXZDINX-NEXT:    fmax.d a2, a0, a2
+; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV32IZFINXZDINX-NEXT:    neg a0, a0
+; RV32IZFINXZDINX-NEXT:    fmin.d a2, a2, a4
+; RV32IZFINXZDINX-NEXT:    fcvt.w.d a1, a2, rtz
+; RV32IZFINXZDINX-NEXT:    and a0, a0, a1
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_s_sat_i8:

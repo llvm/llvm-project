@@ -542,8 +542,8 @@ declare <3 x double> @llvm.experimental.vp.strided.load.v3f64.p0.i32(ptr, i32, <
 define <32 x double> @strided_vpload_v32f64(ptr %ptr, i32 signext %stride, <32 x i1> %m, i32 zeroext %evl) nounwind {
 ; CHECK-LABEL: strided_vpload_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a4, 16
 ; CHECK-NEXT:    vmv1r.v v9, v0
+; CHECK-NEXT:    li a4, 16
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    bltu a2, a4, .LBB45_2
 ; CHECK-NEXT:  # %bb.1:
@@ -598,8 +598,8 @@ declare <32 x double> @llvm.experimental.vp.strided.load.v32f64.p0.i32(ptr, i32,
 define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_load_v33f64:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    li a5, 32
 ; CHECK-RV32-NEXT:    vmv1r.v v8, v0
+; CHECK-RV32-NEXT:    li a5, 32
 ; CHECK-RV32-NEXT:    mv a3, a4
 ; CHECK-RV32-NEXT:    bltu a4, a5, .LBB47_2
 ; CHECK-RV32-NEXT:  # %bb.1:
@@ -648,8 +648,8 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 ;
 ; CHECK-RV64-LABEL: strided_load_v33f64:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    li a5, 32
 ; CHECK-RV64-NEXT:    vmv1r.v v8, v0
+; CHECK-RV64-NEXT:    li a5, 32
 ; CHECK-RV64-NEXT:    mv a4, a3
 ; CHECK-RV64-NEXT:    bltu a3, a5, .LBB47_2
 ; CHECK-RV64-NEXT:  # %bb.1:
