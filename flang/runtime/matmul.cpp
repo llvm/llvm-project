@@ -31,11 +31,6 @@
 namespace {
 using namespace Fortran::runtime;
 
-// Suppress the warnings about calling __host__-only std::complex operators,
-// defined in C++ STD header files, from __device__ code.
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
-
 // General accumulator for any type and stride; this is not used for
 // contiguous numeric cases.
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
@@ -112,8 +107,6 @@ inline RT_API_ATTRS void MatrixTimesMatrix(
   }
 }
 
-RT_DIAG_POP
-
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline RT_API_ATTRS void MatrixTimesMatrixHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
@@ -138,9 +131,6 @@ inline RT_API_ATTRS void MatrixTimesMatrixHelper(
     }
   }
 }
-
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Contiguous numeric matrix*vector multiplication
 //   matrix(rows,n) * column vector(n) -> column vector(rows)
@@ -179,8 +169,6 @@ inline RT_API_ATTRS void MatrixTimesVector(
   }
 }
 
-RT_DIAG_POP
-
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline RT_API_ATTRS void MatrixTimesVectorHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
@@ -193,9 +181,6 @@ inline RT_API_ATTRS void MatrixTimesVectorHelper(
         product, rows, n, x, y, *xColumnByteStride);
   }
 }
-
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Contiguous numeric vector*matrix multiplication
 //   row vector(n) * matrix(n,cols) -> row vector(cols)
@@ -235,8 +220,6 @@ inline RT_API_ATTRS void VectorTimesMatrix(
   }
 }
 
-RT_DIAG_POP
-
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool SPARSE_COLUMNS = false>
 inline RT_API_ATTRS void VectorTimesMatrixHelper(
@@ -250,9 +233,6 @@ inline RT_API_ATTRS void VectorTimesMatrixHelper(
         product, n, cols, x, y, *yColumnByteStride);
   }
 }
-
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
 
 // Implements an instance of MATMUL for given argument types.
 template <bool IS_ALLOCATING, TypeCategory RCAT, int RKIND, typename XT,
@@ -344,9 +324,9 @@ static inline RT_API_ATTRS void DoMatmul(
             // TODO: try using CUTLASS for device.
           } else if constexpr (std::is_same_v<XT, double>) {
             // TODO: call BLAS-3 DGEMM
-          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
             // TODO: call BLAS-3 CGEMM
-          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
             // TODO: call BLAS-3 ZGEMM
           }
         }
@@ -361,9 +341,9 @@ static inline RT_API_ATTRS void DoMatmul(
             // TODO: call BLAS-2 SGEMV(x,y)
           } else if constexpr (std::is_same_v<XT, double>) {
             // TODO: call BLAS-2 DGEMV(x,y)
-          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
             // TODO: call BLAS-2 CGEMV(x,y)
-          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
             // TODO: call BLAS-2 ZGEMV(x,y)
           }
         }
@@ -377,9 +357,9 @@ static inline RT_API_ATTRS void DoMatmul(
             // TODO: call BLAS-2 SGEMV(y,x)
           } else if constexpr (std::is_same_v<XT, double>) {
             // TODO: call BLAS-2 DGEMV(y,x)
-          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
             // TODO: call BLAS-2 CGEMV(y,x)
-          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
             // TODO: call BLAS-2 ZGEMV(y,x)
           }
         }
@@ -440,8 +420,6 @@ static inline RT_API_ATTRS void DoMatmul(
     }
   }
 }
-
-RT_DIAG_POP
 
 template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
     int YKIND>

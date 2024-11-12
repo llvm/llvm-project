@@ -20,14 +20,14 @@ end subroutine
 ! CHECK-LABEL: tan_testc
 subroutine tan_testc(z)
   complex :: z
-! CHECK: fir.call @fir.tan.contract.z4.z4
+! CHECK: fir.call @fir.tan.contract.z32.z32
   z = tan(z)
 end subroutine
 
 ! CHECK-LABEL: tan_testcd
 subroutine tan_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.tan.contract.z8.z8
+! CHECK: fir.call @fir.tan.contract.z64.z64
   z = tan(z)
 end subroutine
 
@@ -48,14 +48,14 @@ end subroutine
 ! CHECK-LABEL: atan_testc
 subroutine atan_testc(z)
   complex :: z
-! CHECK: fir.call @fir.atan.contract.z4.z4
+! CHECK: fir.call @fir.atan.contract.z32.z32
   z = atan(z)
 end subroutine
 
 ! CHECK-LABEL: atan_testcd
 subroutine atan_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.atan.contract.z8.z8
+! CHECK: fir.call @fir.atan.contract.z64.z64
   z = atan(z)
 end subroutine
 
@@ -76,14 +76,14 @@ end subroutine
 ! CHECK-LABEL: cos_testc
 subroutine cos_testc(z)
   complex :: z
-! CHECK: fir.call @fir.cos.contract.z4.z4
+! CHECK: fir.call @fir.cos.contract.z32.z32
   z = cos(z)
 end subroutine
 
 ! CHECK-LABEL: cos_testcd
 subroutine cos_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.cos.contract.z8.z8
+! CHECK: fir.call @fir.cos.contract.z64.z64
   z = cos(z)
 end subroutine
 
@@ -104,14 +104,14 @@ end subroutine
 ! CHECK-LABEL: cosh_testc
 subroutine cosh_testc(z)
   complex :: z
-! CHECK: fir.call @fir.cosh.contract.z4.z4
+! CHECK: fir.call @fir.cosh.contract.z32.z32
   z = cosh(z)
 end subroutine
 
 ! CHECK-LABEL: cosh_testcd
 subroutine cosh_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.cosh.contract.z8.z8
+! CHECK: fir.call @fir.cosh.contract.z64.z64
   z = cosh(z)
 end subroutine
 
@@ -132,14 +132,14 @@ end subroutine
 ! CHECK-LABEL: sin_testc
 subroutine sin_testc(z)
   complex :: z
-! CHECK: fir.call @fir.sin.contract.z4.z4
+! CHECK: fir.call @fir.sin.contract.z32.z32
   z = sin(z)
 end subroutine
 
 ! CHECK-LABEL: sin_testcd
 subroutine sin_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.sin.contract.z8.z8
+! CHECK: fir.call @fir.sin.contract.z64.z64
   z = sin(z)
 end subroutine
 
@@ -160,14 +160,14 @@ end subroutine
 ! CHECK-LABEL: sinh_testc
 subroutine sinh_testc(z)
   complex :: z
-! CHECK: fir.call @fir.sinh.contract.z4.z4
+! CHECK: fir.call @fir.sinh.contract.z32.z32
   z = sinh(z)
 end subroutine
 
 ! CHECK-LABEL: sinh_testcd
 subroutine sinh_testcd(z)
   complex(kind=8) :: z
-! CHECK: fir.call @fir.sinh.contract.z8.z8
+! CHECK: fir.call @fir.sinh.contract.z64.z64
   z = sinh(z)
 end subroutine
 
@@ -177,11 +177,11 @@ end subroutine
 ! CHECK-LABEL: @fir.tan.contract.f64.f64
 ! CHECK: math.tan %{{.*}} : f64
 
-! CHECK-LABEL: @fir.tan.contract.z4.z4
+! CHECK-LABEL: @fir.tan.contract.z32.z32
 ! CMPLX-FAST: complex.tan %{{.*}} : complex<f32>
 ! CMPLX-PRECISE: fir.call @ctanf
 
-! CHECK-LABEL: @fir.tan.contract.z8.z8
+! CHECK-LABEL: @fir.tan.contract.z64.z64
 ! CMPLX-FAST: complex.tan %{{.*}} : complex<f64>
 ! CMPLX-PRECISE: fir.call @ctan
 
@@ -191,10 +191,10 @@ end subroutine
 ! CHECK-LABEL: @fir.atan.contract.f64.f64
 ! CHECK: math.atan %{{.*}} : f64
 
-! CHECK-LABEL: @fir.atan.contract.z4.z4
+! CHECK-LABEL: @fir.atan.contract.z32.z32
 ! CHECK: fir.call @catanf
 
-! CHECK-LABEL: @fir.atan.contract.z8.z8
+! CHECK-LABEL: @fir.atan.contract.z64.z64
 ! CHECK: fir.call @catan
 
 ! CHECK-LABEL: @fir.cos.contract.f32.f32
@@ -203,11 +203,11 @@ end subroutine
 ! CHECK-LABEL: @fir.cos.contract.f64.f64
 ! CHECK: math.cos %{{.*}} : f64
 
-! CHECK-LABEL: @fir.cos.contract.z4.z4
+! CHECK-LABEL: @fir.cos.contract.z32.z32
 ! CMPLX-FAST: complex.cos %{{.*}} : complex<f32>
 ! CMPLX-PRECISE: fir.call @ccosf
 
-! CHECK-LABEL: @fir.cos.contract.z8.z8
+! CHECK-LABEL: @fir.cos.contract.z64.z64
 ! CMPLX-FAST: complex.cos %{{.*}} : complex<f64>
 ! CMPLX-PRECISE: fir.call @ccos
 
@@ -217,10 +217,10 @@ end subroutine
 ! CHECK-LABEL: @fir.cosh.contract.f64.f64
 ! CHECK: fir.call {{.*}}cosh
 
-! CHECK-LABEL: @fir.cosh.contract.z4.z4
+! CHECK-LABEL: @fir.cosh.contract.z32.z32
 ! CHECK: fir.call @ccoshf
 
-! CHECK-LABEL: @fir.cosh.contract.z8.z8
+! CHECK-LABEL: @fir.cosh.contract.z64.z64
 ! CHECK: fir.call @ccosh
 
 ! CHECK-LABEL: @fir.sin.contract.f32.f32
@@ -229,11 +229,11 @@ end subroutine
 ! CHECK-LABEL: @fir.sin.contract.f64.f64
 ! CHECK: math.sin %{{.*}} : f64
 
-! CHECK-LABEL: @fir.sin.contract.z4.z4
+! CHECK-LABEL: @fir.sin.contract.z32.z32
 ! CMPLX-FAST: complex.sin %{{.*}} : complex<f32>
 ! CMPLX-PRECISE: fir.call @csinf
 
-! CHECK-LABEL: @fir.sin.contract.z8.z8
+! CHECK-LABEL: @fir.sin.contract.z64.z64
 ! CMPLX-FAST: complex.sin %{{.*}} : complex<f64>
 ! CMPLX-PRECISE: fir.call @csin
 
@@ -243,8 +243,8 @@ end subroutine
 ! CHECK-LABEL: @fir.sinh.contract.f64.f64
 ! CHECK: fir.call {{.*}}sinh
 
-! CHECK-LABEL: @fir.sinh.contract.z4.z4
+! CHECK-LABEL: @fir.sinh.contract.z32.z32
 ! CHECK: fir.call @csinhf
 
-! CHECK-LABEL: @fir.sinh.contract.z8.z8
+! CHECK-LABEL: @fir.sinh.contract.z64.z64
 ! CHECK: fir.call @csinh

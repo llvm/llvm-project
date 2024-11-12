@@ -9,6 +9,7 @@
 #include "SnippetFile.h"
 #include "BenchmarkRunner.h"
 #include "Error.h"
+#include "LlvmState.h"
 #include "Target.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -16,6 +17,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -35,10 +37,9 @@ namespace {
 // An MCStreamer that reads a BenchmarkCode definition from a file.
 class BenchmarkCodeStreamer : public MCStreamer, public AsmCommentConsumer {
 public:
-  explicit BenchmarkCodeStreamer(
-      MCContext *Context, const DenseMap<StringRef, MCRegister> &RegNameToRegNo,
-      BenchmarkCode *Result)
-      : MCStreamer(*Context), RegNameToRegNo(RegNameToRegNo), Result(Result) {}
+  explicit BenchmarkCodeStreamer(MCContext *Context, const LLVMState &State,
+                                 BenchmarkCode *Result)
+      : MCStreamer(*Context), State(State), Result(Result) {}
 
   // Implementation of the MCStreamer interface. We only care about
   // instructions.
@@ -207,15 +208,17 @@ private:
                     Align ByteAlignment, SMLoc Loc) override {}
 
   unsigned findRegisterByName(const StringRef RegName) const {
-    auto Iter = RegNameToRegNo.find(RegName);
-    if (Iter != RegNameToRegNo.end())
-      return Iter->second;
-    errs() << "'" << RegName
-           << "' is not a valid register name for the target\n";
-    return 0;
+    std::optional<MCRegister> RegisterNumber =
+        State.getRegisterNumberFromName(RegName);
+    if (!RegisterNumber.has_value()) {
+      errs() << "'" << RegName
+             << "' is not a valid register name for the target\n";
+      return MCRegister::NoRegister;
+    }
+    return *RegisterNumber;
   }
 
-  const DenseMap<StringRef, MCRegister> &RegNameToRegNo;
+  const LLVMState &State;
   BenchmarkCode *const Result;
   unsigned InvalidComments = 0;
 };
@@ -248,8 +251,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
       TM.getTarget().createMCObjectFileInfo(Context, /*PIC=*/false));
   Context.setObjectFileInfo(ObjectFileInfo.get());
   Context.initInlineSourceManager();
-  BenchmarkCodeStreamer Streamer(&Context, State.getRegNameToRegNoMapping(),
-                                 &Result);
+  BenchmarkCodeStreamer Streamer(&Context, State, &Result);
 
   std::string Error;
   raw_string_ostream ErrorStream(Error);

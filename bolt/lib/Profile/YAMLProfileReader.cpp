@@ -49,11 +49,6 @@ llvm::cl::opt<bool>
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
-
-llvm::cl::opt<bool> ProfileUsePseudoProbes(
-    "profile-use-pseudo-probes",
-    cl::desc("Use pseudo probes for profile generation and matching"),
-    cl::Hidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -243,9 +238,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     BB.setExecutionCount(YamlBB.ExecCount);
 
     for (const yaml::bolt::CallSiteInfo &YamlCSI : YamlBB.CallSites) {
-      BinaryFunction *Callee = YamlCSI.DestId < YamlProfileToFunction.size()
-                                   ? YamlProfileToFunction[YamlCSI.DestId]
-                                   : nullptr;
+      BinaryFunction *Callee = YamlProfileToFunction.lookup(YamlCSI.DestId);
       bool IsFunction = Callee ? true : false;
       MCSymbol *CalleeSymbol = nullptr;
       if (IsFunction)
@@ -648,11 +641,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     // equal number of blocks.
     if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
       continue;
-    auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
-    if (NamespaceToBFsIt == NamespaceToBFs.end())
-      NamespaceToBFs[Namespace] = {BF};
-    else
-      NamespaceToBFsIt->second.push_back(BF);
+    NamespaceToBFs[Namespace].push_back(BF);
   }
 
   // Iterates through all profiled functions and binary functions belonging to
@@ -712,7 +701,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       break;
     }
   }
-  YamlProfileToFunction.resize(YamlBP.Functions.size() + 1);
+  YamlProfileToFunction.reserve(YamlBP.Functions.size());
 
   // Computes hash for binary functions.
   if (opts::MatchProfileWithFunctionHash) {
@@ -765,12 +754,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   NormalizeByCalls = usesEvent("branches");
   uint64_t NumUnused = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
-    if (YamlBF.Id >= YamlProfileToFunction.size()) {
-      // Such profile was ignored.
-      ++NumUnused;
-      continue;
-    }
-    if (BinaryFunction *BF = YamlProfileToFunction[YamlBF.Id])
+    if (BinaryFunction *BF = YamlProfileToFunction.lookup(YamlBF.Id))
       parseFunctionProfile(*BF, YamlBF);
     else
       ++NumUnused;

@@ -1017,6 +1017,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     return exitCode
 
 
+def findColor(line, curr_color):
+    start = line.rfind("\33[")
+    if start == -1:
+        return curr_color
+    end = line.find("m", start + 2)
+    if end == -1:
+        return curr_color
+    match = line[start : end + 1]
+    # "\33[0m" means "reset all formatting". Sometimes the 0 is skipped.
+    if match == "\33[m" or match == "\33[0m":
+        return None
+    return match
+
+
 def formatOutput(title, data, limit=None):
     if not data.strip():
         return ""
@@ -1027,8 +1041,18 @@ def formatOutput(title, data, limit=None):
         msg = ""
     ndashes = 30
     # fmt: off
-    out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
-    out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
+    out = f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    curr_color = None
+    for line in data.splitlines():
+        if curr_color:
+            out += "\33[0m"
+        out += "# | "
+        if curr_color:
+            out += curr_color
+        out += line + "\n"
+        curr_color = findColor(line, curr_color)
+    if curr_color:
+        out += "\33[0m"  # prevent unterminated formatting from leaking
     out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
     # fmt: on
     return out
@@ -1370,10 +1394,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions = []
     substitutions.extend(test.config.substitutions)
     tmpName = tmpBase + ".tmp"
-    baseName = os.path.basename(tmpBase)
+    tmpBaseName = os.path.basename(tmpBase)
+    sourceBaseName = os.path.basename(sourcepath)
 
     substitutions.append(("%{pathsep}", os.pathsep))
-    substitutions.append(("%basename_t", baseName))
+    substitutions.append(("%basename_t", tmpBaseName))
+
+    substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{t:stem}", tmpBaseName))
 
     substitutions.extend(
         [

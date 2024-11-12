@@ -21,11 +21,11 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 #include <cassert>
 
@@ -79,7 +79,7 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
   } else if (auto *II = dyn_cast<InvokeInst>(CB)) {
     NewCB = InvokeInst::Create(NewCallee->getFunctionType(), NewCallee,
                                II->getNormalDest(), II->getUnwindDest(),
-                               NewArgs, std::nullopt, "", NewCBInsertPt);
+                               NewArgs, {}, "", NewCBInsertPt);
   } else {
     llvm_unreachable("CallBase should either be Call or Invoke!");
   }
@@ -93,7 +93,15 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
 
   NewCB->removeFnAttr(llvm::Attribute::CoroElideSafe);
   CB->replaceAllUsesWith(NewCB);
-  CB->eraseFromParent();
+
+  InlineFunctionInfo IFI;
+  InlineResult IR = InlineFunction(*NewCB, IFI);
+  if (IR.isSuccess()) {
+    CB->eraseFromParent();
+  } else {
+    NewCB->replaceAllUsesWith(CB);
+    NewCB->eraseFromParent();
+  }
 }
 
 PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
@@ -111,15 +119,8 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
     Function *Callee = &N.getFunction();
     Function *NewCallee = Callee->getParent()->getFunction(
         (Callee->getName() + ".noalloc").str());
-    if (!NewCallee) {
+    if (!NewCallee)
       continue;
-    }
-
-    auto FramePtrArgPosition = NewCallee->arg_size() - 1;
-    auto FrameSize =
-        NewCallee->getParamDereferenceableBytes(FramePtrArgPosition);
-    auto FrameAlign =
-        NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
 
     SmallVector<CallBase *, 4> Users;
     for (auto *U : Callee->users()) {
@@ -128,14 +129,22 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
           Users.push_back(CB);
       }
     }
+    auto FramePtrArgPosition = NewCallee->arg_size() - 1;
+    auto FrameSize =
+        NewCallee->getParamDereferenceableBytes(FramePtrArgPosition);
+    auto FrameAlign =
+        NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
 
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(*Callee);
 
     for (auto *CB : Users) {
       auto *Caller = CB->getFunction();
-      if (Caller && Caller->isPresplitCoroutine() &&
-          CB->hasFnAttr(llvm::Attribute::CoroElideSafe)) {
+      if (!Caller)
+        continue;
 
+      bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
+      bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
+      if (IsCallerPresplitCoroutine && HasAttr) {
         auto *CallerN = CG.lookup(*Caller);
         auto *CallerC = CG.lookupSCC(*CallerN);
         processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
@@ -143,13 +152,29 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
         ORE.emit([&]() {
           return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
                  << "'" << ore::NV("callee", Callee->getName())
-                 << "' elided in '" << ore::NV("caller", Caller->getName());
+                 << "' elided in '" << ore::NV("caller", Caller->getName())
+                 << "'";
         });
+
+        FAM.invalidate(*Caller, PreservedAnalyses::none());
         Changed = true;
         updateCGAndAnalysisManagerForCGSCCPass(CG, *CallerC, *CallerN, AM, UR,
                                                FAM);
+
+      } else {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "CoroAnnotationElide",
+                                          Caller)
+                 << "'" << ore::NV("callee", Callee->getName())
+                 << "' not elided in '" << ore::NV("caller", Caller->getName())
+                 << "' (caller_presplit="
+                 << ore::NV("caller_presplit", IsCallerPresplitCoroutine)
+                 << ", elide_safe_attr=" << ore::NV("elide_safe_attr", HasAttr)
+                 << ")";
+        });
       }
     }
   }
+
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

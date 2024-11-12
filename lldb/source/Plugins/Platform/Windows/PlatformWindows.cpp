@@ -341,9 +341,9 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   diagnostics.Clear();
   if (!invocation->WriteFunctionArguments(context, injected_parameters,
                                           parameters, diagnostics)) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: unable to write function parameters: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        eExpressionSetupError,
+        "LoadLibrary error: unable to write function parameters:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -384,9 +384,9 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
       invocation->ExecuteFunction(context, &injected_parameters, options,
                                   diagnostics, value);
   if (result != eExpressionCompleted) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: failed to execute LoadLibrary helper: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        eExpressionSetupError,
+        "LoadLibrary error: failed to execute LoadLibrary helper:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 

@@ -118,7 +118,7 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
 
     RegIsGPR64 = GPR64RegClass->contains(MO.getReg());
     if (!MO.isDead()) {
-      // It is a GPR64 live Def, we are sure it is live. */
+      // It is a GPR64 live Def, we are sure it is live.
       if (RegIsGPR64)
         return true;
       // It is a GPR32 live Def, we are unsure whether it is really dead due to
@@ -153,6 +153,10 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
 }
 
 void BPFMIPreEmitChecking::processAtomicInsts() {
+  if (MF->getSubtarget<BPFSubtarget>().getHasJmp32())
+    return;
+
+  // Only check for cpu version 1 and 2.
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != BPF::XADDW && MI.getOpcode() != BPF::XADDD)

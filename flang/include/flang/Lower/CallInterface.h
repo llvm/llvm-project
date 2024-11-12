@@ -42,6 +42,10 @@ namespace mlir {
 class Location;
 }
 
+namespace fir {
+class FortranProcedureFlagsEnumAttr;
+}
+
 namespace Fortran::lower {
 class AbstractConverter;
 class SymMap;
@@ -235,10 +239,16 @@ public:
     return characteristic && characteristic->CanBeCalledViaImplicitInterface();
   }
 
+  /// Translate Fortran procedure attributes into FIR attribute.
+  /// Return attribute is nullptr if the procedure has no attributes.
+  fir::FortranProcedureFlagsEnumAttr
+  getProcedureAttrs(mlir::MLIRContext *) const;
+
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
   /// CRTP handle.
   T &side() { return *static_cast<T *>(this); }
+  const T &side() const { return *static_cast<const T *>(this); }
   /// Entry point to be called by child ctor to analyze the signature and
   /// create/find the mlir::func::FuncOp. Child needs to be initialized first.
   void declare();

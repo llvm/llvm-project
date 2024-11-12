@@ -3,16 +3,16 @@
 
 ; CHECK-DAG: OpName %[[#GetScope:]] "_Z8getScopev"
 ; CHECK-DAG: %[[#Long:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#ScopeDevice:]] = OpConstant %[[#Long]] 1
 ; CHECK-DAG: %[[#WrkGrpConst2:]] = OpConstant %[[#Long]] 2
-; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Long]] 3
+; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#Long]]
 ; CHECK-DAG: %[[#InvocationConst4:]] = OpConstant %[[#Long]] 4
 ; CHECK-DAG: %[[#Const8:]] = OpConstant %[[#Long]] 8
 ; CHECK-DAG: %[[#Const16:]] = OpConstant %[[#Long]] 16
+; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Long]] 3
 ; CHECK-DAG: %[[#Const912:]] = OpConstant %[[#Long]] 912
-; CHECK: OpMemoryBarrier %[[#ScopeDevice]] %[[#WrkGrpConst2]]
-; CHECK: OpMemoryBarrier %[[#ScopeDevice]] %[[#InvocationConst4]]
-; CHECK: OpMemoryBarrier %[[#ScopeDevice]] %[[#Const8]]
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#WrkGrpConst2]]
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#InvocationConst4]]
+; CHECK: OpMemoryBarrier %[[#ScopeAllSvmDevices]] %[[#Const8]]
 ; CHECK: OpMemoryBarrier %[[#InvocationConst4]] %[[#Const16]]
 ; CHECK: OpMemoryBarrier %[[#WrkGrpConst2]] %[[#InvocationConst4]]
 ; CHECK: OpFunctionEnd

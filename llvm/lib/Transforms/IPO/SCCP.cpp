@@ -278,6 +278,7 @@ static bool runIPSCCP(
   SmallVector<ReturnInst*, 8> ReturnsToZap;
 
   Solver.inferReturnAttributes();
+  Solver.inferArgAttributes();
   for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
     assert(!F->getReturnType()->isVoidTy() &&
            "should not track void functions");

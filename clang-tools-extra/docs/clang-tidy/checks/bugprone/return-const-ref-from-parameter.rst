@@ -12,6 +12,15 @@ after the call. When the function returns such a parameter also as constant refe
 then the returned reference can be used after the object it refers to has been
 destroyed.
 
+This issue can be resolved by declaring an overload of the problematic function
+where the ``const &`` parameter is instead declared as ``&&``. The developer has
+to ensure that the implementation of that function does not produce a
+use-after-free, the exact error that this check is warning against.
+Marking such an ``&&`` overload as ``deleted``, will silence the warning as 
+well. In the case of different ``const &`` parameters being returned depending
+on the control flow of the function, an overload where all problematic
+``const &`` parameters have been declared as ``&&`` will resolve the issue.
+
 Example
 -------
 

@@ -36,6 +36,15 @@ entry:
   ret half %c
 }
 
+define fp128 @sin_fp128(fp128 %a) {
+; CHECK-LABEL: sin_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b sinl
+entry:
+  %c = call fp128 @llvm.sin.fp128(fp128 %a)
+  ret fp128 %c
+}
+
 define <1 x double> @sin_v1f64(<1 x double> %x) {
 ; CHECK-LABEL: sin_v1f64:
 ; CHECK:       // %bb.0:
@@ -1273,6 +1282,28 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @sin_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: sin_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl sinl
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl sinl
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.sin.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
 define double @cos_f64(double %a) {
 ; CHECK-LABEL: cos_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -1305,6 +1336,15 @@ define half @cos_f16(half %a) {
 entry:
   %c = call half @llvm.cos.f16(half %a)
   ret half %c
+}
+
+define fp128 @cos_fp128(fp128 %a) {
+; CHECK-LABEL: cos_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b cosl
+entry:
+  %c = call fp128 @llvm.cos.fp128(fp128 %a)
+  ret fp128 %c
 }
 
 define <1 x double> @cos_v1f64(<1 x double> %x) {
@@ -2544,6 +2584,28 @@ entry:
   ret <16 x half> %c
 }
 
+define <2 x fp128> @cos_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: cos_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl cosl
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl cosl
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.cos.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
+}
+
 ; This is testing that we do not produce incorrect tailcall lowerings
 define i64 @donttailcall(double noundef %x, double noundef %y) {
 ; CHECK-LABEL: donttailcall:
@@ -2568,6 +2630,8 @@ declare <2 x double> @llvm.cos.v2f64(<2 x double>)
 declare <2 x double> @llvm.sin.v2f64(<2 x double>)
 declare <2 x float> @llvm.cos.v2f32(<2 x float>)
 declare <2 x float> @llvm.sin.v2f32(<2 x float>)
+declare <2 x fp128> @llvm.cos.v2fp128(<2 x fp128>)
+declare <2 x fp128> @llvm.sin.v2fp128(<2 x fp128>)
 declare <3 x double> @llvm.cos.v3f64(<3 x double>)
 declare <3 x double> @llvm.sin.v3f64(<3 x double>)
 declare <3 x float> @llvm.cos.v3f32(<3 x float>)
@@ -2588,5 +2652,7 @@ declare double @llvm.cos.f64(double)
 declare double @llvm.sin.f64(double)
 declare float @llvm.cos.f32(float)
 declare float @llvm.sin.f32(float)
+declare fp128 @llvm.cos.fp128(fp128)
+declare fp128 @llvm.sin.fp128(fp128)
 declare half @llvm.cos.f16(half)
 declare half @llvm.sin.f16(half)

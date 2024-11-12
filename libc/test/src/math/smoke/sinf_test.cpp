@@ -13,7 +13,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -36,3 +35,30 @@ TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcSinfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(max_denormal));
+}
+
+TEST_F(LlvmLibcSinfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(max_denormal));
+}
+
+TEST_F(LlvmLibcSinfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinf(max_denormal));
+}
+
+#endif

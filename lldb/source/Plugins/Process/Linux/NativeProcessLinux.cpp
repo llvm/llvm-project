@@ -829,8 +829,11 @@ void NativeProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
   thread.SetStoppedByBreakpoint();
   FixupBreakpointPCAsNeeded(thread);
 
-  if (m_threads_stepping_with_breakpoint.find(thread.GetID()) !=
-      m_threads_stepping_with_breakpoint.end())
+  NativeRegisterContextLinux &reg_ctx = thread.GetRegisterContext();
+  auto stepping_with_bp_it =
+      m_threads_stepping_with_breakpoint.find(thread.GetID());
+  if (stepping_with_bp_it != m_threads_stepping_with_breakpoint.end() &&
+      stepping_with_bp_it->second == reg_ctx.GetPC())
     thread.SetStoppedByTrace();
 
   StopRunningThreads(thread.GetID());

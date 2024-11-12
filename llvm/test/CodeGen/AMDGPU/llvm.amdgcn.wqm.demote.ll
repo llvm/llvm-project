@@ -216,8 +216,8 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GFX10-32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-32-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10-32-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX10-32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s0, 1, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s2, s0
 ; GFX10-32-NEXT:    s_xor_b32 s0, exec_lo, s2
 ; GFX10-32-NEXT:    s_cbranch_execz .LBB2_3

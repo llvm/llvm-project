@@ -200,7 +200,12 @@ struct ValueInfo {
     return getRef()->second.SummaryList;
   }
 
+  // Even if the index is built with GVs available, we may not have one for
+  // summary entries synthesized for profiled indirect call targets.
+  bool hasName() const { return !haveGVs() || getValue(); }
+
   StringRef name() const {
+    assert(!haveGVs() || getRef()->second.U.GV);
     return haveGVs() ? getRef()->second.U.GV->getName()
                      : getRef()->second.U.Name;
   }
@@ -1544,14 +1549,7 @@ public:
         continue; // skip over non-root nodes
       Edges.push_back(std::make_pair(P.first, CalleeInfo{}));
     }
-    if (Edges.empty()) {
-      // Failed to find root - return an empty node
-      return FunctionSummary::makeDummyFunctionSummary(
-          SmallVector<FunctionSummary::EdgeTy, 0>());
-    }
-    auto CallGraphRoot =
-        FunctionSummary::makeDummyFunctionSummary(std::move(Edges));
-    return CallGraphRoot;
+    return FunctionSummary::makeDummyFunctionSummary(std::move(Edges));
   }
 
   bool withGlobalValueDeadStripping() const {

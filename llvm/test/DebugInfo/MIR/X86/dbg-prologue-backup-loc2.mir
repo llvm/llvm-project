@@ -27,7 +27,7 @@
 # CHECK-NEXT:   movl    %edi, %edx
 # CHECK-NEXT:   .loc    0 0 0 is_stmt 0
 # CHECK-NEXT:   .Ltmp0:
-# CHECK-NEXT:   .p2align        4, 0x90
+# CHECK-NEXT:   .p2align        4
 # CHECK-NEXT:   .LBB0_1:
 # CHECK-LABEL:  addl    %esi, %edx
 

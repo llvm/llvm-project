@@ -64,6 +64,9 @@ class SwitchInst;
 class ConstantInt;
 class ShuffleVectorInst;
 class CmpInst;
+class Module;
+class GlobalVariable;
+
 /// The base class for IR Change classes.
 class IRChangeBase {
 protected:

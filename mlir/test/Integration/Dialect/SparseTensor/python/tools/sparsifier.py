@@ -13,8 +13,17 @@ from typing import Sequence
 class Sparsifier:
     """Sparsifier class for compiling and building MLIR modules."""
 
-    def __init__(self, options: str, opt_level: int, shared_libs: Sequence[str]):
-        pipeline = f"builtin.module(sparsifier{{{options} reassociate-fp-reductions=1 enable-index-optimizations=1}})"
+    def __init__(
+        self,
+        extras: str,
+        options: str,
+        opt_level: int,
+        shared_libs: Sequence[str],
+    ):
+        pipeline = (
+            f"builtin.module({extras}sparsifier{{{options} reassociate-fp-reductions=1"
+            " enable-index-optimizations=1})"
+        )
         self.pipeline = pipeline
         self.opt_level = opt_level
         self.shared_libs = shared_libs

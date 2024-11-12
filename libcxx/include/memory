@@ -182,8 +182,8 @@ public:
     raw_storage_iterator  operator++(int);
 };
 
-template <class T> pair<T*,ptrdiff_t> get_temporary_buffer(ptrdiff_t n) noexcept;
-template <class T> void               return_temporary_buffer(T* p) noexcept;
+template <class T> pair<T*,ptrdiff_t> get_temporary_buffer(ptrdiff_t n) noexcept; // deprecated in C++17, removed in C++20
+template <class T> void               return_temporary_buffer(T* p) noexcept;     // deprecated in C++17, removed in C++20
 
 template <class T> T* addressof(T& r) noexcept;
 template <class T> T* addressof(const T&& r) noexcept = delete;

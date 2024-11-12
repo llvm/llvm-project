@@ -231,9 +231,6 @@ void SerializeGPUModuleBase::addControlVariables(
     llvm::Module &module, AMDGCNLibraries libs, bool wave64, bool daz,
     bool finiteOnly, bool unsafeMath, bool fastMath, bool correctSqrt,
     StringRef abiVer) {
-  // Return if no device libraries are required.
-  if (libs == AMDGCNLibraries::None)
-    return;
   // Helper function for adding control variables.
   auto addControlVariable = [&module](StringRef name, uint32_t value,
                                       uint32_t bitwidth) {
@@ -252,6 +249,13 @@ void SerializeGPUModuleBase::addControlVariables(
     controlVariable->setAlignment(llvm::MaybeAlign(bitwidth / 8));
     controlVariable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   };
+
+  int abi = 500;
+  abiVer.getAsInteger(0, abi);
+  module.addModuleFlag(llvm::Module::Error, "amdhsa_code_object_version", abi);
+  // Return if no device libraries are required.
+  if (libs == AMDGCNLibraries::None)
+    return;
   // Add ocml related control variables.
   if (any(libs & AMDGCNLibraries::Ocml)) {
     addControlVariable("__oclc_finite_only_opt", finiteOnly || fastMath, 8);
@@ -263,7 +267,6 @@ void SerializeGPUModuleBase::addControlVariables(
   // Add ocml or ockl related control variables.
   if (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl))) {
     addControlVariable("__oclc_wavefrontsize64", wave64, 8);
-
     // Get the ISA version.
     llvm::AMDGPU::IsaVersion isaVersion = llvm::AMDGPU::getIsaVersion(chip);
     // Add the ISA control variable.
@@ -271,8 +274,6 @@ void SerializeGPUModuleBase::addControlVariables(
                        isaVersion.Minor + 100 * isaVersion.Stepping +
                            1000 * isaVersion.Major,
                        32);
-    int abi = 500;
-    abiVer.getAsInteger(0, abi);
     addControlVariable("__oclc_ABI_version", abi, 32);
   }
 }

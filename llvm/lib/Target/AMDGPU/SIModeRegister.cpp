@@ -181,7 +181,7 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       if (TII->getSubtarget().hasTrue16BitInsts()) {
         MachineBasicBlock &MBB = *MI.getParent();
         MachineInstrBuilder B(*MBB.getParent(), MI);
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_fake16_e64));
         MachineOperand Src0 = MI.getOperand(1);
         MI.removeOperand(1);
         B.addImm(0); // src0_modifiers

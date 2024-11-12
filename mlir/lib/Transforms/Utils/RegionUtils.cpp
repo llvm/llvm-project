@@ -709,8 +709,7 @@ static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
   DenseMap<Value, unsigned> firstValueToIdx;
   for (unsigned j = 0; j < numArgs; ++j) {
     Value newArg = newArguments[0][j];
-    if (!firstValueToIdx.contains(newArg))
-      firstValueToIdx[newArg] = j;
+    firstValueToIdx.try_emplace(newArg, j);
   }
 
   // Go through the first list of arguments (list 0).

@@ -250,6 +250,26 @@ define void @no_counters() {
   call void @bar()
   ret void
 }
+
+; Ensure "calls" to inline asm don't get callsite-instrumented.
+define void @inlineasm() {
+; INSTRUMENT-LABEL: define void @inlineasm() {
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @inlineasm, i64 742261418966908927, i32 1, i32 0)
+; INSTRUMENT-NEXT:    call void asm "nop", ""()
+; INSTRUMENT-NEXT:    ret void
+;
+; LOWERING-LABEL: define void @inlineasm(
+; LOWERING-SAME: ) !guid [[META6:![0-9]+]] {
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @inlineasm, i64 -3771893999295659109, i32 1, i32 0)
+; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
+; LOWERING-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; LOWERING-NEXT:    call void asm "nop", ""()
+; LOWERING-NEXT:    ret void
+;
+  call void asm "nop", ""()
+  ret void
+}
 ;.
 ; LOWERING: attributes #[[ATTR0:[0-9]+]] = { nounwind }
 ; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -262,4 +282,5 @@ define void @no_counters() {
 ; LOWERING: [[META3]] = !{i64 -3006003237940970099}
 ; LOWERING: [[META4]] = !{i64 5679753335911435902}
 ; LOWERING: [[META5]] = !{i64 5458232184388660970}
+; LOWERING: [[META6]] = !{i64 -3771893999295659109}
 ;.

@@ -18,7 +18,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
@@ -690,13 +689,9 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
     return InstDesc(Kind == RecurKind::SMax, I);
   if (match(I, m_SMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::SMin, I);
-  if (match(I, m_OrdFMin(m_Value(), m_Value())))
+  if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_OrdFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax, I);
-  if (match(I, m_UnordFMin(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_UnordFMax(m_Value(), m_Value())))
+  if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
   if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);

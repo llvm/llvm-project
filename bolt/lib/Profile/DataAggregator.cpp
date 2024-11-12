@@ -88,7 +88,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
-extern cl::opt<bool> ProfileUsePseudoProbes;
+extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
@@ -638,8 +638,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
                                             : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    if (getBranchData(BF) || getFuncSampleData(BF.getNames()))
+    FuncBranchData *FBD = getBranchData(BF);
+    if (FBD || getFuncSampleData(BF.getNames())) {
       BF.markProfiled(Flags);
+      if (FBD)
+        BF.RawBranchCount = FBD->getNumExecutedBranches();
+    }
   }
 
   for (auto &FuncBranches : NamesToBranches)
@@ -774,42 +778,75 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
-                              uint64_t Mispreds) {
-  bool IsReturn = false;
-  auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
-    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
-      Addr -= Func->getAddress();
-      if (IsFrom) {
-        auto checkReturn = [&](auto MaybeInst) {
-          IsReturn = MaybeInst && BC->MIB->isReturn(*MaybeInst);
-        };
-        if (Func->hasInstructions())
-          checkReturn(Func->getInstructionAtOffset(Addr));
-        else
-          checkReturn(Func->disassembleInstructionAtOffset(Addr));
-      }
-
-      if (BAT)
-        Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
-
-      if (BinaryFunction *ParentFunc = getBATParentFunction(*Func)) {
-        Func = ParentFunc;
-        if (IsFrom)
-          NumColdSamples += Count;
-      }
-
-      return Func;
-    }
-    return nullptr;
+                              uint64_t Mispreds, bool IsPreagg) {
+  // Returns whether \p Offset in \p Func contains a return instruction.
+  auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
+    auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
+    return Func.hasInstructions()
+               ? isReturn(Func.getInstructionAtOffset(Offset))
+               : isReturn(Func.disassembleInstructionAtOffset(Offset));
   };
 
-  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  // Returns whether \p Offset in \p Func may be a call continuation excluding
+  // entry points and landing pads.
+  auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
+    // No call continuation at a function start.
+    if (!Offset)
+      return false;
+
+    // FIXME: support BAT case where the function might be in empty state
+    // (split fragments declared non-simple).
+    if (!Func.hasCFG())
+      return false;
+
+    // The offset should not be an entry point or a landing pad.
+    const BinaryBasicBlock *ContBB = Func.getBasicBlockAtOffset(Offset);
+    return ContBB && !ContBB->isEntryPoint() && !ContBB->isLandingPad();
+  };
+
+  // Mutates \p Addr to an offset into the containing function, performing BAT
+  // offset translation and parent lookup.
+  //
+  // Returns the containing function (or BAT parent) and whether the address
+  // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
+  auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
+    BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+    if (!Func)
+      return std::pair{Func, false};
+
+    Addr -= Func->getAddress();
+
+    bool IsRetOrCallCont =
+        IsFrom ? checkReturn(*Func, Addr) : checkCallCont(*Func, Addr);
+
+    if (BAT)
+      Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
+
+    BinaryFunction *ParentFunc = getBATParentFunction(*Func);
+    if (!ParentFunc)
+      return std::pair{Func, IsRetOrCallCont};
+
+    if (IsFrom)
+      NumColdSamples += Count;
+
+    return std::pair{ParentFunc, IsRetOrCallCont};
+  };
+
+  uint64_t ToOrig = To;
+  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
+  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/ false);
+  if (!FromFunc && !ToFunc)
+    return false;
+
+  // Record call to continuation trace.
+  if (IsPreagg && FromFunc != ToFunc && (IsReturn || IsCallCont)) {
+    LBREntry First{ToOrig - 1, ToOrig - 1, false};
+    LBREntry Second{ToOrig, ToOrig, false};
+    return doTrace(First, Second, Count);
+  }
   // Ignore returns.
   if (IsReturn)
     return true;
-  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
-  if (!FromFunc && !ToFunc)
-    return false;
 
   // Treat recursive control transfers as inter-branches.
   if (FromFunc == ToFunc && To != 0) {
@@ -826,10 +863,19 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(Second.From);
   if (!FromFunc || !ToFunc) {
     LLVM_DEBUG({
-      dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
-             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
-             << " and ending in " << ToFunc->getPrintName()
-             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+      dbgs() << "Out of range trace starting in ";
+      if (FromFunc)
+        dbgs() << formatv("{0} @ {1:x}", *FromFunc,
+                          First.To - FromFunc->getAddress());
+      else
+        dbgs() << Twine::utohexstr(First.To);
+      dbgs() << " and ending in ";
+      if (ToFunc)
+        dbgs() << formatv("{0} @ {1:x}", *ToFunc,
+                          Second.From - ToFunc->getAddress());
+      else
+        dbgs() << Twine::utohexstr(Second.From);
+      dbgs() << '\n';
     });
     NumLongRangeTraces += Count;
     return false;
@@ -844,6 +890,12 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
     });
     return false;
   }
+
+  // Set ParentFunc to BAT parent function or FromFunc itself.
+  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
+  if (!ParentFunc)
+    ParentFunc = FromFunc;
+  ParentFunc->SampleCountInBytes += Count * (Second.From - First.To);
 
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
@@ -864,13 +916,12 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
   for (auto [From, To] : *FTs) {
     if (BAT) {
       From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
       To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
     }
-    doIntraBranch(ParentFunc ? *ParentFunc : *FromFunc, From, To, Count, false);
+    doIntraBranch(*ParentFunc, From, To, Count, false);
   }
 
   return true;
@@ -1611,7 +1662,8 @@ void DataAggregator::processBranchEvents() {
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
     const TakenBranchInfo &Info = AggrLBR.second;
-    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
+    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount,
+             /*IsPreagg*/ false);
   }
 }
 
@@ -1772,7 +1824,7 @@ void DataAggregator::processPreAggregated() {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds);
+               AggrEntry.Mispreds, /*IsPreagg*/ true);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
@@ -2043,7 +2095,8 @@ std::error_code DataAggregator::parseMMapEvents() {
             // size of the mapping, but we know it should not exceed the segment
             // alignment value. Hence we are performing an approximate check.
             return SegInfo.Address >= MMapInfo.MMapAddress &&
-                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment;
+                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment &&
+                   SegInfo.IsExecutable;
           });
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
@@ -2300,7 +2353,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   yaml::bolt::BinaryProfile BP;
 
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   // Fill out the header info.
   BP.Header.Version = 1;
@@ -2321,6 +2374,12 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
                                            : BinaryFunction::PF_LBR;
 
+  // Add probe inline tree nodes.
+  YAMLProfileWriter::InlineTreeDesc InlineTree;
+  if (PseudoProbeDecoder)
+    std::tie(BP.PseudoProbeDesc, InlineTree) =
+        YAMLProfileWriter::convertPseudoProbeDesc(*PseudoProbeDecoder);
+
   if (!opts::BasicAggregation) {
     // Convert profile for functions not covered by BAT
     for (auto &BFI : BC.getBinaryFunctions()) {
@@ -2329,8 +2388,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       if (BAT->isBATFunction(Function.getAddress()))
         continue;
-      BP.Functions.emplace_back(
-          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
+      BP.Functions.emplace_back(YAMLProfileWriter::convert(
+          Function, /*UseDFS=*/false, InlineTree, BAT));
     }
 
     for (const auto &KV : NamesToBranches) {
@@ -2403,16 +2462,22 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
       if (PseudoProbeDecoder) {
-        if ((YamlBF.GUID = BF->getGUID())) {
-          const MCPseudoProbeFuncDesc *FuncDesc =
-              PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
-          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+        DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
+            InlineTreeNodeId;
+        if (BF->getGUID()) {
+          std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+              YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
+                                                     InlineTree, BF->getGUID());
         }
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();
         BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
         Fragments.insert(BF);
+        DenseMap<
+            uint32_t,
+            std::vector<std::reference_wrapper<const MCDecodedPseudoProbe>>>
+            BlockProbes;
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
           for (const MCDecodedPseudoProbe &Probe :
@@ -2421,17 +2486,24 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
             const unsigned BlockIndex = getBlock(InputOffset).second;
-            YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
-                yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
-                                            Probe.getType()});
+            BlockProbes[BlockIndex].emplace_back(Probe);
           }
         }
+
+        for (auto &[Block, Probes] : BlockProbes) {
+          YamlBF.Blocks[Block].PseudoProbes =
+              YAMLProfileWriter::writeBlockProbes(Probes, InlineTreeNodeId);
+        }
       }
-      // Drop blocks without a hash, won't be useful for stale matching.
-      llvm::erase_if(YamlBF.Blocks,
-                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-                       return YamlBB.Hash == (yaml::Hex64)0;
-                     });
+      // Skip printing if there's no profile data
+      llvm::erase_if(
+          YamlBF.Blocks, [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+            auto HasCount = [](const auto &SI) { return SI.Count; };
+            bool HasAnyCount = YamlBB.ExecCount ||
+                               llvm::any_of(YamlBB.Successors, HasCount) ||
+                               llvm::any_of(YamlBB.CallSites, HasCount);
+            return !HasAnyCount;
+          });
       BP.Functions.emplace_back(YamlBF);
     }
   }
