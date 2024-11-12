@@ -496,6 +496,9 @@ private:
 
   /// Mapping from a source location entry to whether it is affecting or not.
   llvm::BitVector IsSLocAffecting;
+  /// Mapping from a source location entry to whether it must be included as
+  /// input file.
+  llvm::BitVector IsSLocFileEntryAffecting;
 
   /// Mapping from \c FileID to an index into the FileID adjustment table.
   std::vector<FileID> NonAffectingFileIDs;
@@ -561,7 +564,7 @@ private:
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec,
                                uint64_t MacroOffsetsBase);
-  void WriteSubmodules(Module *WritingModule, ASTContext &Context);
+  void WriteSubmodules(Module *WritingModule, ASTContext *Context);
 
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
@@ -582,7 +585,7 @@ private:
   void WriteComments(ASTContext &Context);
   void WriteSelectors(Sema &SemaRef);
   void WriteReferencedSelectorsPool(Sema &SemaRef);
-  void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
+  void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver *IdResolver,
                             bool IsModule);
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
@@ -639,7 +642,7 @@ private:
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
-  ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
+  ASTFileSignature WriteASTCore(Sema *SemaPtr, StringRef isysroot,
                                 Module *WritingModule);
 
 public:
@@ -659,10 +662,13 @@ public:
   /// include timestamps in the output file.
   time_t getTimestampForOutput(const FileEntry *E) const;
 
-  /// Write a precompiled header for the given semantic analysis.
+  /// Write a precompiled header or a module with the AST produced by the
+  /// \c Sema object, or a dependency scanner module with the preprocessor state
+  /// produced by the \c Preprocessor object.
   ///
-  /// \param SemaRef a reference to the semantic analysis object that processed
-  /// the AST to be written into the precompiled header.
+  /// \param Subject The \c Sema object that processed the AST to be written, or
+  /// in the case of a dependency scanner module the \c Preprocessor that holds
+  /// the state.
   ///
   /// \param WritingModule The module that we are writing. If null, we are
   /// writing a precompiled header.
@@ -673,8 +679,9 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(Sema &SemaRef, StringRef OutputFile,
-                            Module *WritingModule, StringRef isysroot,
+  ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
+                            StringRef OutputFile, Module *WritingModule,
+                            StringRef isysroot,
                             bool ShouldCacheASTInMemory = false);
 
   /// Emit a token.
@@ -922,9 +929,9 @@ class PCHGenerator : public SemaConsumer {
   void anchor() override;
 
   Preprocessor &PP;
+  llvm::PointerUnion<Sema *, Preprocessor *> Subject;
   std::string OutputFile;
   std::string isysroot;
-  Sema *SemaPtr;
   std::shared_ptr<PCHBuffer> Buffer;
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
@@ -939,9 +946,7 @@ protected:
   bool isComplete() const { return Buffer->IsComplete; }
   PCHBuffer *getBufferPtr() { return Buffer.get(); }
   StringRef getOutputFile() const { return OutputFile; }
-  DiagnosticsEngine &getDiagnostics() const {
-    return SemaPtr->getDiagnostics();
-  }
+  DiagnosticsEngine &getDiagnostics() const;
   Preprocessor &getPreprocessor() { return PP; }
 
   virtual Module *getEmittingModule(ASTContext &Ctx);
@@ -957,7 +962,7 @@ public:
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
-  void InitializeSema(Sema &S) override { SemaPtr = &S; }
+  void InitializeSema(Sema &S) override;
   void HandleTranslationUnit(ASTContext &Ctx) override;
   void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;
