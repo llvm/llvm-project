@@ -400,6 +400,8 @@ class DwarfDebug : public DebugHandlerBase {
                               SmallPtrSet<const MDNode *, 2>>;
   DenseMap<const DILocalScope *, MDNodeSet> LocalDeclsPerLS;
 
+  SmallDenseSet<const MachineInstr *> ForceIsStmtInstrs;
+
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
 
@@ -726,6 +728,8 @@ private:
 
   /// Emit the reference to the section.
   void emitSectionReference(const DwarfCompileUnit &CU);
+
+  void findForceIsStmtInstrs(const MachineFunction *MF);
 
 protected:
   /// Gather pre-function debug information.

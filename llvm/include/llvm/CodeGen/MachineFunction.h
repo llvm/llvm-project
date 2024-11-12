@@ -468,7 +468,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
