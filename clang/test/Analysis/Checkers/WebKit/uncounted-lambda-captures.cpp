@@ -1,8 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
-//#include "mock-types.h"
 
 struct RefCountable {
-//  static Ref<RefCountable> create();
   void ref() {}
   void deref() {}
   void method();
@@ -22,22 +20,22 @@ template <typename Callback> void call(Callback callback) {
 void raw_ptr() {
   RefCountable* ref_countable = make_obj();
   auto foo1 = [ref_countable](){
-    // expected-warning@-1{{Captured raw-pointer 'ref_countable' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
     ref_countable->method();
   };
   auto foo2 = [&ref_countable](){
-    // expected-warning@-1{{Captured raw-pointer 'ref_countable' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
     ref_countable->method();
   };
   auto foo3 = [&](){
     ref_countable->method();
-    // expected-warning@-1{{Implicitly captured raw-pointer 'ref_countable' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
     ref_countable = nullptr;
   };
 
   auto foo4 = [=](){
     ref_countable->method();
-    // expected-warning@-1{{Implicitly captured raw-pointer 'ref_countable' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   };
 
   call(foo1);
@@ -56,13 +54,13 @@ void references() {
   RefCountable automatic;
   RefCountable& ref_countable_ref = automatic;
   auto foo1 = [ref_countable_ref](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Captured reference 'ref_countable_ref' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo2 = [&ref_countable_ref](){ ref_countable_ref.method(); };
-  // expected-warning@-1{{Captured reference 'ref_countable_ref' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo3 = [&](){ ref_countable_ref.method(); };
-  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo4 = [=](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
 
   call(foo1);
   call(foo2);
@@ -115,7 +113,7 @@ void noescape_lambda() {
     otherObj->method();
   }, [&](RefCountable& obj) {
     otherObj->method();
-    // expected-warning@-1{{Implicitly captured raw-pointer 'otherObj' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured raw-pointer 'otherObj' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   });
   ([&] {
     someObj->method();
@@ -145,7 +143,7 @@ struct RefCountableWithLambdaCapturingThis {
   void method_captures_this_unsafe() {
     auto lambda = [&]() {
       nonTrivial();
-      // expected-warning@-1{{Implicitly captured raw-pointer 'this' to ref-counted / CheckedPtr capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Implicitly captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
     };
     call(lambda);
   }

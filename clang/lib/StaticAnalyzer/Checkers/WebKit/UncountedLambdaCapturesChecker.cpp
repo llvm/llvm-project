@@ -55,7 +55,7 @@ public:
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) {
         llvm::SaveAndRestore SavedDecl(ClsType);
         ClsType = CXXMD->getThisType();
-        return Base::TraverseDecl(CXXMD);
+        return Base::TraverseCXXMethodDecl(CXXMD);
       }
 
       bool shouldCheckThis() {
@@ -95,7 +95,7 @@ public:
           unsigned ArgIndex = 0;
           for (auto *Param : Callee->parameters()) {
             if (ArgIndex >= CE->getNumArgs())
-              break;
+              return true;
             auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
             if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape) {
               if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg)) {
@@ -182,7 +182,7 @@ public:
     }
 
     printQuotedQualifiedName(Os, Capture.getCapturedVar());
-    Os << " to ref-counted / CheckedPtr capable type is unsafe.";
+    Os << " to ref-counted type or CheckedPtr-capable type is unsafe.";
 
     PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -199,8 +199,8 @@ public:
       Os << "Implicitly captured ";
     }
 
-    Os << "raw-pointer 'this' to ref-counted / CheckedPtr capable type is "
-          "unsafe.";
+    Os << "raw-pointer 'this' to ref-counted type or CheckedPtr-capable type "
+          "is unsafe.";
 
     PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
