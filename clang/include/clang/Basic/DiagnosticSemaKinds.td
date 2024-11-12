@@ -12689,7 +12689,7 @@ def err_acc_clause_after_device_type
             "%select{'%3'|compute}2 construct">;
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
-            "'%1' clause on a 'loop' construct">;
+            "'%1' clause on a '%2' construct">;
 def err_acc_reduction_num_gangs_conflict
     : Error<
           "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
