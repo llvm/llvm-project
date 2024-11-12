@@ -4519,6 +4519,36 @@ static bool parseStepSize(Parser &P, SemaOpenMP::OpenMPVarListDataTy &Data,
   return false;
 }
 
+/// Parse 'allocate' clause modifiers.
+///   If allocator-modifier exists, return an expression for it and set
+///   Data field noting modifier was specified.
+///
+static ExprResult
+parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
+                                   SemaOpenMP::OpenMPVarListDataTy &Data) {
+  const Token &Tok = P.getCurToken();
+  Preprocessor &PP = P.getPreprocessor();
+  ExprResult Tail;
+  auto Modifier = static_cast<OpenMPAllocateClauseModifier>(
+      getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), P.getLangOpts()));
+  if (Modifier == OMPC_ALLOCATE_allocator) {
+    Data.AllocClauseModifier = Modifier;
+    P.ConsumeToken();
+    BalancedDelimiterTracker AllocateT(P, tok::l_paren,
+                                       tok::annot_pragma_openmp_end);
+    if (Tok.is(tok::l_paren)) {
+      AllocateT.consumeOpen();
+      Tail = P.ParseAssignmentExpression();
+      AllocateT.consumeClose();
+    } else {
+      P.Diag(Tok, diag::err_expected) << tok::l_paren;
+    }
+  } else {
+    Tail = P.ParseAssignmentExpression();
+  }
+  return Tail;
+}
+
 /// Parses clauses with list.
 bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                                 OpenMPClauseKind Kind,
@@ -4800,23 +4830,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // iterator(iterators-definition)
     ExprResult Tail;
     if (Kind == OMPC_allocate) {
-      auto Modifier = static_cast<OpenMPAllocateClauseModifier>(
-          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), getLangOpts()));
-      if (Modifier == OMPC_ALLOCATE_allocator) {
-        Data.AllocClauseModifier = Modifier;
-        ConsumeToken();
-        BalancedDelimiterTracker AllocateT(*this, tok::l_paren,
-                                           tok::annot_pragma_openmp_end);
-        if (Tok.is(tok::l_paren)) {
-          AllocateT.consumeOpen();
-          Tail = ParseAssignmentExpression();
-          AllocateT.consumeClose();
-        } else {
-          Diag(Tok, diag::err_expected) << tok::l_paren;
-        }
-      } else {
-        Tail = ParseAssignmentExpression();
-      }
+      Tail = parseOpenMPAllocateClauseModifiers(*this, Kind, Data);
     } else {
       HasIterator = true;
       EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);

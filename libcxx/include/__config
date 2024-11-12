@@ -858,7 +858,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if !_LIBCPP_HAS_THREADS && _LIBCPP_HAS_THREAD_API_EXTERNAL
-#    error _LIBCPP_HAS_THREAD_API_EXTERNAL may not be true when _LIBCPP_HAS_THREADS is true.
+#    error _LIBCPP_HAS_THREAD_API_EXTERNAL may only be true when _LIBCPP_HAS_THREADS is true.
 #  endif
 
 #  if !_LIBCPP_HAS_MONOTONIC_CLOCK && _LIBCPP_HAS_THREADS
