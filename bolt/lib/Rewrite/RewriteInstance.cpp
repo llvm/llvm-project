@@ -2111,64 +2111,6 @@ void RewriteInstance::adjustCommandLineOptions() {
   }
 }
 
-namespace {
-template <typename ELFT>
-int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
-                            const RelocationRef &RelRef) {
-  using ELFShdrTy = typename ELFT::Shdr;
-  using Elf_Rela = typename ELFT::Rela;
-  int64_t Addend = 0;
-  const ELFFile<ELFT> &EF = Obj->getELFFile();
-  DataRefImpl Rel = RelRef.getRawDataRefImpl();
-  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
-  switch (RelocationSection->sh_type) {
-  default:
-    llvm_unreachable("unexpected relocation section type");
-  case ELF::SHT_REL:
-    break;
-  case ELF::SHT_RELA: {
-    const Elf_Rela *RelA = Obj->getRela(Rel);
-    Addend = RelA->r_addend;
-    break;
-  }
-  }
-
-  return Addend;
-}
-
-int64_t getRelocationAddend(const ELFObjectFileBase *Obj,
-                            const RelocationRef &Rel) {
-  return getRelocationAddend(cast<ELF64LEObjectFile>(Obj), Rel);
-}
-
-template <typename ELFT>
-uint32_t getRelocationSymbol(const ELFObjectFile<ELFT> *Obj,
-                             const RelocationRef &RelRef) {
-  using ELFShdrTy = typename ELFT::Shdr;
-  uint32_t Symbol = 0;
-  const ELFFile<ELFT> &EF = Obj->getELFFile();
-  DataRefImpl Rel = RelRef.getRawDataRefImpl();
-  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
-  switch (RelocationSection->sh_type) {
-  default:
-    llvm_unreachable("unexpected relocation section type");
-  case ELF::SHT_REL:
-    Symbol = Obj->getRel(Rel)->getSymbol(EF.isMips64EL());
-    break;
-  case ELF::SHT_RELA:
-    Symbol = Obj->getRela(Rel)->getSymbol(EF.isMips64EL());
-    break;
-  }
-
-  return Symbol;
-}
-
-uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
-                             const RelocationRef &Rel) {
-  return getRelocationSymbol(cast<ELF64LEObjectFile>(Obj), Rel);
-}
-} // anonymous namespace
-
 bool RewriteInstance::analyzeRelocation(
     const RelocationRef &Rel, uint64_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
@@ -2196,7 +2138,7 @@ bool RewriteInstance::analyzeRelocation(
     return true;
 
   ExtractedValue = Relocation::extractValue(RType, *Value, Rel.getOffset());
-  Addend = getRelocationAddend(InputFile, Rel);
+  Addend = BinaryContext::getRelocationAddend(InputFile, Rel);
 
   const bool IsPCRelative = Relocation::isPCRelative(RType);
   const uint64_t PCRelOffset = IsPCRelative && !IsAArch64 ? Rel.getOffset() : 0;
@@ -2396,7 +2338,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     StringRef SymbolName = "<none>";
     MCSymbol *Symbol = nullptr;
     uint64_t SymbolAddress = 0;
-    const uint64_t Addend = getRelocationAddend(InputFile, Rel);
+    const uint64_t Addend = BinaryContext::getRelocationAddend(InputFile, Rel);
 
     symbol_iterator SymbolIter = Rel.getSymbol();
     if (SymbolIter != InputFile->symbol_end()) {
@@ -2421,7 +2363,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       IsJmpRelocation[RType] = true;
 
     if (Symbol)
-      SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
+      SymbolIndex[Symbol] = BinaryContext::getRelocationSymbol(InputFile, Rel);
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }

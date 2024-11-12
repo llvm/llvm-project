@@ -1626,6 +1626,8 @@ bool BinaryFunction::scanExternalRefs() {
     if (!BC.HasRelocations)
       continue;
 
+    BC.processInstructionForFuncReferences(Instruction);
+
     if (BranchTargetSymbol) {
       BC.MIB->replaceBranchTarget(Instruction, BranchTargetSymbol,
                                   Emitter.LocalCtx.get());

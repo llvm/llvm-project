@@ -31,11 +31,21 @@ protected:
   }
 
 public:
-  explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
+  explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass, bool IsSafeICF)
+      : BinaryFunctionPass(PrintPass), IsSafeICF(IsSafeICF) {}
 
   const char *getName() const override { return "identical-code-folding"; }
   Error runOnFunctions(BinaryContext &BC) override;
+
+private:
+  /// Create a skip list of functions that should not be folded.
+  Error createFoldSkipList(BinaryContext &BC);
+  /// Processes relocations in the .data section to identify function
+  /// references.
+  void processDataRelocations(BinaryContext &BC,
+                              const SectionRef &SecRefRelData);
+
+  bool IsSafeICF;
 };
 
 } // namespace bolt

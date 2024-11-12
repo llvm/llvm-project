@@ -428,6 +428,9 @@ private:
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
 
+  /// Indicates if the function is safe to fold.
+  bool IsSafeToICF{true};
+
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
     assert(BB->getIndex() < BasicBlocks.size());
@@ -816,6 +819,12 @@ public:
 
     return nullptr;
   }
+
+  /// Indicates if the function is safe to fold.
+  bool isSafeToICF() const { return IsSafeToICF; }
+
+  /// Sets the function is not safe to fold.
+  void setUnsetToICF() { IsSafeToICF = false; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;

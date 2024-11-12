@@ -75,7 +75,62 @@ cl::opt<std::string> CompDirOverride(
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
+
+cl::opt<bool> ICF("icf", cl::desc("fold functions with identical code"),
+                  cl::cat(BoltOptCategory));
+
+cl::opt<bool> SafeICF("safe-icf",
+                      cl::desc("Enable safe identical code folding"),
+                      cl::cat(BoltOptCategory));
 } // namespace opts
+
+namespace {
+template <typename ELFT>
+int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
+                            const RelocationRef &RelRef) {
+  using ELFShdrTy = typename ELFT::Shdr;
+  using Elf_Rela = typename ELFT::Rela;
+  int64_t Addend = 0;
+  const ELFFile<ELFT> &EF = Obj->getELFFile();
+  DataRefImpl Rel = RelRef.getRawDataRefImpl();
+  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
+  switch (RelocationSection->sh_type) {
+  default:
+    llvm_unreachable("unexpected relocation section type");
+  case ELF::SHT_REL:
+    break;
+  case ELF::SHT_RELA: {
+    const Elf_Rela *RelA = Obj->getRela(Rel);
+    Addend = RelA->r_addend;
+    break;
+  }
+  }
+
+  return Addend;
+}
+
+template <typename ELFT>
+uint32_t getRelocationSymbol(const ELFObjectFile<ELFT> *Obj,
+                             const RelocationRef &RelRef) {
+  using ELFShdrTy = typename ELFT::Shdr;
+  uint32_t Symbol = 0;
+  const ELFFile<ELFT> &EF = Obj->getELFFile();
+  DataRefImpl Rel = RelRef.getRawDataRefImpl();
+  const ELFShdrTy *RelocationSection = cantFail(EF.getSection(Rel.d.a));
+  switch (RelocationSection->sh_type) {
+  default:
+    llvm_unreachable("unexpected relocation section type");
+  case ELF::SHT_REL:
+    Symbol = Obj->getRel(Rel)->getSymbol(EF.isMips64EL());
+    break;
+  case ELF::SHT_RELA:
+    Symbol = Obj->getRela(Rel)->getSymbol(EF.isMips64EL());
+    break;
+  }
+
+  return Symbol;
+}
+} // anonymous namespace
 
 namespace llvm {
 namespace bolt {
@@ -154,6 +209,16 @@ BinaryContext::~BinaryContext() {
   for (std::pair<const uint64_t, JumpTable *> JTI : JumpTables)
     delete JTI.second;
   clearBinaryData();
+}
+
+uint32_t BinaryContext::getRelocationSymbol(const ELFObjectFileBase *Obj,
+                                            const RelocationRef &Rel) {
+  return ::getRelocationSymbol(cast<ELF64LEObjectFile>(Obj), Rel);
+}
+
+int64_t BinaryContext::getRelocationAddend(const ELFObjectFileBase *Obj,
+                                           const RelocationRef &Rel) {
+  return ::getRelocationAddend(cast<ELF64LEObjectFile>(Obj), Rel);
 }
 
 /// Create BinaryContext for a given architecture \p ArchName and
@@ -1943,6 +2008,27 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
     OS << ":" << Row.Column;
   if (Row.Discriminator)
     OS << " discriminator:" << Row.Discriminator;
+}
+
+static bool skipInstruction(const MCInst &Inst, const BinaryContext &BC) {
+  const bool IsX86 = BC.isX86();
+  return (BC.MIB->isPseudo(Inst) || BC.MIB->isUnconditionalBranch(Inst) ||
+          (IsX86 && BC.MIB->isConditionalBranch(Inst)) ||
+          BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst));
+}
+void BinaryContext::processInstructionForFuncReferences(const MCInst &Inst) {
+  if (!opts::SafeICF || skipInstruction(Inst, *this))
+    return;
+  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
+    if (Op.isExpr()) {
+      const MCExpr &Expr = *Op.getExpr();
+      if (Expr.getKind() == MCExpr::SymbolRef) {
+        const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+        if (BinaryFunction *BF = getFunctionForSymbol(&Symbol))
+          BF->setUnsetToICF();
+      }
+    }
+  }
 }
 
 void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,

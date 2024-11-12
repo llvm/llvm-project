@@ -29,6 +29,7 @@ namespace opts {
 extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
 extern cl::opt<bool> ICF;
+extern cl::opt<bool> SafeICF;
 
 static cl::opt<bool> IgnoreLTOSuffix(
     "ignore-lto-suffix",
@@ -698,7 +699,7 @@ void RewriteInstance::compare(RewriteInstance &RI2) {
 
   // Pre-pass ICF
   if (opts::ICF) {
-    IdenticalCodeFolding ICF(opts::NeverPrint);
+    IdenticalCodeFolding ICF(opts::NeverPrint, opts::SafeICF);
     outs() << "BOLT-DIFF: Starting ICF pass for binary 1";
     BC->logBOLTErrorsAndQuitOnFatal(ICF.runOnFunctions(*BC));
     outs() << "BOLT-DIFF: Starting ICF pass for binary 2";

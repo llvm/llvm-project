@@ -1,0 +1,21 @@
+## Check that BOLT handles correctly folding functions with --icf-safe that can be referenced.
+
+# REQUIRES: system-linux
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %p/Inputs/mainSafeICFTest3LocalVarO0.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %p/Inputs/helperSafeICF.s    -o %t2.o
+# RUN: %clang %cflags %t1.o %t2.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt --no-threads %t.exe --icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --safe-icf -debug -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+
+## Check that BOLT successfully folded a function with jump table:
+# ICFCHECK:      ICF iteration 1
+# ICFCHECK-NEXT: folding _Z6barAddii into _Z6fooAddii
+# ICFCHECK-NEXT: folding _Z6barMulii into _Z6fooMulii
+# ICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
+
+# SAFEICFCHECK:      skipping function _Z6barAddii
+# SAFEICFCHECK-NEXT: skipping function _Z6barMulii
+# SAFEICFCHECK-NEXT: skipping function _Z6fooMulii
+# SAFEICFCHECK-NEXT: ICF iteration 1
+# SAFEICFCHECK-NEXT: folding _Z6barSubii into _Z6fooSubii
+# SAFEICFCHECK-NEXT: ===---------

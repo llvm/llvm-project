@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IdenticalCodeFolding.h"
+#include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
@@ -31,6 +33,7 @@ using namespace bolt;
 namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
+extern cl::opt<unsigned> Verbosity;
 
 static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
@@ -341,6 +344,75 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 
+void IdenticalCodeFolding::processDataRelocations(
+    BinaryContext &BC, const SectionRef &SecRefRelData) {
+  for (const RelocationRef &Rel : SecRefRelData.relocations()) {
+    symbol_iterator SymbolIter = Rel.getSymbol();
+    const ObjectFile *OwningObj = Rel.getObject();
+    assert(SymbolIter != OwningObj->symbol_end() &&
+           "relocation Symbol expected");
+    const SymbolRef &Symbol = *SymbolIter;
+    const uint64_t SymbolAddress = cantFail(Symbol.getAddress());
+    const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
+    if (!ELFObj)
+      assert(false && "Only ELFObjectFileBase is supported");
+    const int64_t Addend = BinaryContext::getRelocationAddend(ELFObj, Rel);
+    BinaryFunction *BF = BC.getBinaryFunctionAtAddress(SymbolAddress + Addend);
+    if (!BF)
+      continue;
+    BF->setUnsetToICF();
+  }
+}
+
+Error IdenticalCodeFolding::createFoldSkipList(BinaryContext &BC) {
+  Error ErrorStatus = Error::success();
+  ErrorOr<BinarySection &> SecRelData = BC.getUniqueSectionByName(".rela.data");
+  if (!BC.HasRelocations)
+    ErrorStatus = joinErrors(
+        std::move(ErrorStatus),
+        createFatalBOLTError(Twine("BOLT-ERROR: Binary built without "
+                                   "relocations. Safe ICF is not supported")));
+  if (ErrorStatus)
+    return ErrorStatus;
+  if (SecRelData) {
+    SectionRef SecRefRelData = SecRelData->getSectionRef();
+    processDataRelocations(BC, SecRefRelData);
+  }
+
+  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+    if (BF.getState() == BinaryFunction::State::CFG) {
+      for (const BinaryBasicBlock *BB : BF.getLayout().blocks())
+        for (const MCInst &Inst : *BB)
+          BC.processInstructionForFuncReferences(Inst);
+    }
+  };
+  ParallelUtilities::PredicateTy SkipFunc =
+      [&](const BinaryFunction &BF) -> bool { return (bool)ErrorStatus; };
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, SkipFunc,
+      "markUnsafe", /*ForceSequential*/ false, 2);
+
+  LLVM_DEBUG({
+    std::vector<StringRef> Vect;
+    std::mutex PrintMutex;
+    ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+      if (BF.isSafeToICF())
+        return;
+      std::lock_guard<std::mutex> Lock(PrintMutex);
+      Vect.push_back(BF.getOneName());
+    };
+    ParallelUtilities::PredicateTy SkipFunc =
+        [&](const BinaryFunction &BF) -> bool { return false; };
+    ParallelUtilities::runOnEachFunction(
+        BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, SkipFunc,
+        "markUnsafe", /*ForceSequential*/ false, 2);
+    llvm::sort(Vect);
+    for (const auto &FuncName : Vect)
+      dbgs() << "BOLT-DEBUG: skipping function " << FuncName << '\n';
+  });
+  return ErrorStatus;
+}
+
 Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   const size_t OriginalFunctionCount = BC.getBinaryFunctions().size();
   uint64_t NumFunctionsFolded = 0;
@@ -350,6 +422,9 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   std::atomic<uint64_t> NumFoldedLastIteration{0};
   CongruentBucketsMap CongruentBuckets;
 
+  auto SkipFuncShared = [&](const BinaryFunction &BF) {
+    return !shouldOptimize(BF) || !BF.isSafeToICF();
+  };
   // Hash all the functions
   auto hashFunctions = [&]() {
     NamedRegionTimer HashFunctionsTimer("hashing", "hashing", "ICF breakdown",
@@ -369,7 +444,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     };
 
     ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-      return !shouldOptimize(BF);
+      return SkipFuncShared(BF);
     };
 
     ParallelUtilities::runOnEachFunction(
@@ -385,7 +460,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                            "ICF breakdown", opts::TimeICF);
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &BF = BFI.second;
-      if (!this->shouldOptimize(BF))
+      if (SkipFuncShared(BF))
         continue;
       CongruentBuckets[&BF].emplace(&BF);
     }
@@ -475,7 +550,11 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
     LLVM_DEBUG(SinglePass.stopTimer());
   };
-
+  if (IsSafeICF) {
+    if (Error Err = createFoldSkipList(BC)) {
+      return Err;
+    }
+  }
   hashFunctions();
   createCongruentBuckets();
 
