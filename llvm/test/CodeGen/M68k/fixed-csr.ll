@@ -9,4 +9,4 @@ define noundef i32 @foo() {
 declare void @llvm.write_register.i32(metadata, i32)
 
 !llvm.named.register.a0 = !{!0}
-!0 = !{!"a0"}
+!0 = !{!"d2"}
