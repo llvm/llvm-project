@@ -578,7 +578,6 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
   }
 
   CC = getRISCVCCFromICmp(Pred);
-  return;
 }
 
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
