@@ -795,8 +795,8 @@ struct AllocMatchInfo {
   bool Matched = false;
 };
 
-DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> memprof::extractCallsFromIR(
-    Module &M, function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
+memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   auto GetOffset = [](const DILocation *DIL) {
@@ -820,8 +820,7 @@ DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> memprof::extractCallsFromIR(
           continue;
 
         StringRef CalleeName = CalledFunction->getName();
-        bool IsAlloc =
-            isAllocationWithHotColdVariant(CalledFunction, GetTLI(F));
+        bool IsAlloc = isAllocationWithHotColdVariant(CalledFunction, TLI);
         for (const DILocation *DIL = I.getDebugLoc(); DIL;
              DIL = DIL->getInlinedAt()) {
           StringRef CallerName = DIL->getSubprogramLinkageName();

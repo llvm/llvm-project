@@ -88,8 +88,7 @@ using CallEdgeTy = std::pair<LineLocation, uint64_t>;
 // Extract all calls from the IR.  Arrange them in a map from caller GUIDs to a
 // list of call sites, each of the form {LineLocation, CalleeGUID}.
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
-extractCallsFromIR(Module &M,
-                   function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
+extractCallsFromIR(Module &M, const TargetLibraryInfo &GetTLI);
 
 } // namespace memprof
 } // namespace llvm

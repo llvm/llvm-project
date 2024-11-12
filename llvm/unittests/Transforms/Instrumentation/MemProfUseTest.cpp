@@ -82,16 +82,12 @@ declare !dbg !19 void @_Z2f3v()
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   ASSERT_TRUE(M);
 
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
-  PassBuilder PB;
-  PB.registerFunctionAnalyses(FAM);
+  auto *F = M->getFunction("_Z3foov");
+  ASSERT_NE(F, nullptr);
 
-  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
-  auto Calls = extractCallsFromIR(*M, GetTLI);
+  TargetLibraryInfoWrapperPass WrapperPass;
+  auto &TLI = WrapperPass.getTLI(*F);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly one caller.
   ASSERT_THAT(Calls, SizeIs(1));
@@ -188,16 +184,12 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   ASSERT_TRUE(M);
 
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
-  PassBuilder PB;
-  PB.registerFunctionAnalyses(FAM);
+  auto *F = M->getFunction("_Z3foov");
+  ASSERT_NE(F, nullptr);
 
-  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
-  auto Calls = extractCallsFromIR(*M, GetTLI);
+  TargetLibraryInfoWrapperPass WrapperPass;
+  auto &TLI = WrapperPass.getTLI(*F);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly 4 callers.
   ASSERT_THAT(Calls, SizeIs(4));
@@ -287,16 +279,12 @@ attributes #2 = { builtin allocsize(0) }
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   ASSERT_TRUE(M);
 
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
-  PassBuilder PB;
-  PB.registerFunctionAnalyses(FAM);
+  auto *F = M->getFunction("_Z3foov");
+  ASSERT_NE(F, nullptr);
 
-  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
-  auto Calls = extractCallsFromIR(*M, GetTLI);
+  TargetLibraryInfoWrapperPass WrapperPass;
+  auto &TLI = WrapperPass.getTLI(*F);
+  auto Calls = extractCallsFromIR(*M, TLI);
 
   // Expect exactly one caller.
   ASSERT_THAT(Calls, SizeIs(1));
