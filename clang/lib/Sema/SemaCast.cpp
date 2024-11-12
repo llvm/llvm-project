@@ -3283,8 +3283,8 @@ void CastOperation::CheckBuiltinBitCast() {
   CharUnits SourceSize = Self.Context.getTypeSizeInChars(SrcType);
   if (DestSize != SourceSize) {
     Self.Diag(OpRange.getBegin(), diag::err_bit_cast_type_size_mismatch)
-      << SrcType << (int)SourceSize.getQuantity()
-      << DestType << (int)DestSize.getQuantity();
+        << SrcType << (int)SourceSize.getQuantity() << DestType
+        << (int)DestSize.getQuantity();
     SrcExpr = ExprError();
     return;
   }
