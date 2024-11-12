@@ -2420,7 +2420,6 @@ static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
   G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 }
 
-
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
