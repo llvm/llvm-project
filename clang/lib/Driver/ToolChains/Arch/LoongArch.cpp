@@ -14,6 +14,7 @@
 #include "clang/Driver/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include <string>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -135,10 +136,15 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     Features.push_back("+lsx");
 
   std::string ArchName;
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    ArchName = A->getValue();
+  const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
+  if (MArch)
+    ArchName = MArch->getValue();
   ArchName = postProcessTargetCPUString(ArchName, Triple);
   llvm::LoongArch::getArchFeatures(ArchName, Features);
+  if ((std::string)(MArch->getValue()) == "native")
+    for (auto &F : llvm::sys::getHostCPUFeatures())
+      Features.push_back(
+          Args.MakeArgString((F.second ? "+" : "-") + F.first()));
 
   // Select floating-point features determined by -mdouble-float,
   // -msingle-float, -msoft-float and -mfpu.
