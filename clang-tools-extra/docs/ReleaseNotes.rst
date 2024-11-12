@@ -175,7 +175,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
-  subtracting from a pointer directly or when used to scale a numeric value.
+  subtracting from a pointer directly or when used to scale a numeric value and
+  fix false positive when sizeof expression with template types.
 
 - Improved :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone/throw-keyword-missing>` by fixing a false positive
