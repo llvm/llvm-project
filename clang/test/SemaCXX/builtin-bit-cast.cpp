@@ -24,7 +24,7 @@ void test1() {
 
 void test2() {
   constexpr int i = 0;
-  // expected-error@+1{{__builtin_bit_cast source size does not equal destination size (4 vs 1)}}
+  // expected-error@+1{{size of '__builtin_bit_cast' source type 'const int' does not match destination type 'char' (4 vs 1 bytes)}}
   constexpr char c = __builtin_bit_cast(char, i);
 }
 
