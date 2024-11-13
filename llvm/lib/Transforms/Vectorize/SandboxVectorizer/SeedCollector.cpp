@@ -159,13 +159,19 @@ template bool isValidMemSeed<StoreInst>(StoreInst *LSI);
 
 SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
     : StoreSeeds(SE), LoadSeeds(SE), Ctx(BB->getContext()) {
-  // TODO: Register a callback for updating the Collector data structures upon
-  // instr removal
 
   bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
   bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
   if (!CollectStores && !CollectLoads)
     return;
+
+  EraseCallbackID = Ctx.registerEraseInstrCallback([this](Instruction *I) {
+    if (auto SI = dyn_cast<StoreInst>(I))
+      StoreSeeds.erase(SI);
+    else if (auto LI = dyn_cast<LoadInst>(I))
+      LoadSeeds.erase(LI);
+  });
+
   // Actually collect the seeds.
   for (auto &I : *BB) {
     if (StoreInst *SI = dyn_cast<StoreInst>(&I))
@@ -181,8 +187,7 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE)
 }
 
 SeedCollector::~SeedCollector() {
-  // TODO: Unregister the callback for updating the seed datastructures upon
-  // instr removal
+  Ctx.unregisterEraseInstrCallback(EraseCallbackID);
 }
 
 #ifndef NDEBUG
