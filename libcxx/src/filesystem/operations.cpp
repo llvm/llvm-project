@@ -109,25 +109,22 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
   const bool sym_status2 = bool(options & copy_options::copy_symlinks);
 
   error_code m_ec1;
-  StatT f_st = {};
+  StatT f_st;
   const file_status f =
       sym_status || sym_status2 ? detail::posix_lstat(from, f_st, &m_ec1) : detail::posix_stat(from, f_st, &m_ec1);
   if (m_ec1)
     return err.report(m_ec1);
 
-  StatT t_st          = {};
+  StatT t_st;
   const file_status t = sym_status ? detail::posix_lstat(to, t_st, &m_ec1) : detail::posix_stat(to, t_st, &m_ec1);
 
   if (not status_known(t))
     return err.report(m_ec1);
 
   if (!exists(f) || is_other(f) || is_other(t) || (is_directory(f) && is_regular_file(t)) ||
-      detail::stat_equivalent(f_st, t_st)) {
+      (exists(t) && detail::stat_equivalent(f_st, t_st))) {
     return err.report(errc::function_not_supported);
   }
-
-  if (ec)
-    ec->clear();
 
   if (is_symlink(f)) {
     if (bool(copy_options::skip_symlinks & options)) {
@@ -166,14 +163,14 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
       return;
     }
     error_code m_ec2;
-    for (; it != directory_iterator(); it.increment(m_ec2)) {
-      if (m_ec2) {
-        return err.report(m_ec2);
-      }
+    for (; !m_ec2 && it != directory_iterator(); it.increment(m_ec2)) {
       __copy(it->path(), to / it->path().filename(), options | copy_options::__in_recursive_copy, ec);
       if (ec && *ec) {
         return;
       }
+    }
+    if (m_ec2) {
+      return err.report(m_ec2);
     }
   }
 }
@@ -257,7 +254,7 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
 #endif // copy_file_impl implementation
 
 } // end anonymous namespace
-} // end namespace detail
+} // namespace detail
 
 bool __copy_file(const path& from, const path& to, copy_options options, error_code* ec) {
   using detail::FileDescriptor;
@@ -735,7 +732,7 @@ uintmax_t remove_all_impl(path const& p, error_code& ec) {
   return count;
 }
 
-} // end namespace
+} // namespace
 
 uintmax_t __remove_all(const path& p, error_code* ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
@@ -830,7 +827,7 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
   return 0;
 }
 
-} // end namespace
+} // namespace
 
 uintmax_t __remove_all(const path& p, error_code* ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
@@ -936,23 +933,28 @@ path __weakly_canonical(const path& p, error_code* ec) {
   --PP;
   vector<string_view_t> DNEParts;
 
-  while (PP.State != PathParser::PS_BeforeBegin) {
+  error_code m_ec;
+  while (PP.State_ != PathParser::PS_BeforeBegin) {
     tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
-    error_code m_ec;
     file_status st = __status(tmp, &m_ec);
     if (!status_known(st)) {
       return err.report(m_ec);
     } else if (exists(st)) {
-      result = __canonical(tmp, ec);
+      result = __canonical(tmp, &m_ec);
+      if (m_ec) {
+        return err.report(m_ec);
+      }
       break;
     }
     DNEParts.push_back(*PP);
     --PP;
   }
-  if (PP.State == PathParser::PS_BeforeBegin)
-    result = __canonical("", ec);
-  if (ec)
-    ec->clear();
+  if (PP.State_ == PathParser::PS_BeforeBegin) {
+    result = __canonical("", &m_ec);
+    if (m_ec) {
+      return err.report(m_ec);
+    }
+  }
   if (DNEParts.empty())
     return result;
   for (auto It = DNEParts.rbegin(); It != DNEParts.rend(); ++It)

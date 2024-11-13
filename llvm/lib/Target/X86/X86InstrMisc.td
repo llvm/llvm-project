@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defining the misc X86 instructions.
-// 
+//
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -823,27 +823,27 @@ multiclass ATOMIC_SWAP<bits<8> opc8, bits<8> opc, string mnemonic, string frag> 
                       !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
                       [(set
                          GR8:$dst,
-                         (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))]>;
+                         (!cast<PatFrag>(frag # "_i8") addr:$ptr, GR8:$val))]>;
     def NAME#16rm : I<opc, MRMSrcMem, (outs GR16:$dst),
                       (ins GR16:$val, i16mem:$ptr),
                       !strconcat(mnemonic, "{w}\t{$val, $ptr|$ptr, $val}"),
                       [(set
                          GR16:$dst,
-                         (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))]>,
+                         (!cast<PatFrag>(frag # "_i16") addr:$ptr, GR16:$val))]>,
                       OpSize16;
     def NAME#32rm : I<opc, MRMSrcMem, (outs GR32:$dst),
                       (ins GR32:$val, i32mem:$ptr),
                       !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                       [(set
                          GR32:$dst,
-                         (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>,
+                         (!cast<PatFrag>(frag # "_i32") addr:$ptr, GR32:$val))]>,
                       OpSize32;
     def NAME#64rm : RI<opc, MRMSrcMem, (outs GR64:$dst),
                        (ins GR64:$val, i64mem:$ptr),
                        !strconcat(mnemonic, "{q}\t{$val, $ptr|$ptr, $val}"),
                        [(set
                          GR64:$dst,
-                         (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))]>;
+                         (!cast<PatFrag>(frag # "_i64") addr:$ptr, GR64:$val))]>;
   }
 }
 
@@ -1163,14 +1163,12 @@ multiclass Lzcnt<bits<8> o, string m, SDPatternOperator node, X86TypeInfo t,
                  SchedWrite schedrr, SchedWrite schedrm, string suffix = ""> {
   def rr#suffix : ITy<o, MRMSrcReg, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1), m, unaryop_ndd_args,
-                      [(set t.RegClass:$dst, (node t.RegClass:$src1)),
-                                              (implicit EFLAGS)]>,
+                      [(set t.RegClass:$dst, (node t.RegClass:$src1))]>,
                   TB, Sched<[schedrr]>;
   let mayLoad = 1 in
     def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
                         (ins t.MemOperand:$src1), m, unaryop_ndd_args,
-                        [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1))),
-                                                (implicit EFLAGS)]>,
+                        [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1)))]>,
                     TB, Sched<[schedrm]>;
 }
 

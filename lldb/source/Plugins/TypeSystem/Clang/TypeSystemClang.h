@@ -22,12 +22,14 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -49,7 +51,6 @@ class ModuleMap;
 
 namespace lldb_private {
 
-class ClangASTMetadata;
 class ClangASTSource;
 class Declaration;
 
@@ -66,11 +67,13 @@ public:
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
-  /// The Layout is as follows:
+  /// The payload is used for typedefs and ptrauth types.
+  /// For typedefs, the Layout is as follows:
   /// \verbatim
   /// bit 0..30 ... Owning Module ID.
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
+  /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
   Type::Payload m_payload = 0;
 
 public:
@@ -159,7 +162,7 @@ public:
   llvm::StringRef getDisplayName() const { return m_display_name; }
 
   /// Returns the clang::ASTContext instance managed by this TypeSystemClang.
-  clang::ASTContext &getASTContext();
+  clang::ASTContext &getASTContext() const;
 
   clang::MangleContext *getMangleContext();
 
@@ -188,11 +191,11 @@ public:
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
   void SetMetadataAsUserID(const clang::Type *type, lldb::user_id_t user_id);
 
-  void SetMetadata(const clang::Decl *object, ClangASTMetadata &meta_data);
+  void SetMetadata(const clang::Decl *object, ClangASTMetadata meta_data);
 
-  void SetMetadata(const clang::Type *object, ClangASTMetadata &meta_data);
-  ClangASTMetadata *GetMetadata(const clang::Decl *object);
-  ClangASTMetadata *GetMetadata(const clang::Type *object);
+  void SetMetadata(const clang::Type *object, ClangASTMetadata meta_data);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
+  std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
 
   void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
                               clang::AccessSpecifier access);
@@ -250,6 +253,8 @@ public:
   CompilerType GetTypeForDecl(clang::TagDecl *decl);
 
   CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
+
+  CompilerType GetTypeForDecl(clang::ValueDecl *value_decl);
 
   template <typename RecordDeclType>
   CompilerType
@@ -320,13 +325,13 @@ public:
                                                bool is_framework = false,
                                                bool is_explicit = false);
 
-  CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
-                                OptionalClangModuleID owning_module,
-                                lldb::AccessType access_type,
-                                llvm::StringRef name, int kind,
-                                lldb::LanguageType language,
-                                ClangASTMetadata *metadata = nullptr,
-                                bool exports_symbols = false);
+  CompilerType
+  CreateRecordType(clang::DeclContext *decl_ctx,
+                   OptionalClangModuleID owning_module,
+                   lldb::AccessType access_type, llvm::StringRef name, int kind,
+                   lldb::LanguageType language,
+                   std::optional<ClangASTMetadata> metadata = std::nullopt,
+                   bool exports_symbols = false);
 
   class TemplateParameterInfos {
   public:
@@ -450,11 +455,10 @@ public:
 
   bool BaseSpecifierIsEmpty(const clang::CXXBaseSpecifier *b);
 
-  CompilerType CreateObjCClass(llvm::StringRef name,
-                               clang::DeclContext *decl_ctx,
-                               OptionalClangModuleID owning_module,
-                               bool isForwardDecl, bool isInternal,
-                               ClangASTMetadata *metadata = nullptr);
+  CompilerType
+  CreateObjCClass(llvm::StringRef name, clang::DeclContext *decl_ctx,
+                  OptionalClangModuleID owning_module, bool isInternal,
+                  std::optional<ClangASTMetadata> metadata = std::nullopt);
 
   // Returns a mask containing bits from the TypeSystemClang::eTypeXXX
   // enumerations
@@ -493,7 +497,8 @@ public:
   // Array Types
 
   CompilerType CreateArrayType(const CompilerType &element_type,
-                               size_t element_count, bool is_vector);
+                               std::optional<size_t> element_count,
+                               bool is_vector);
 
   // Enumeration Types
   CompilerType CreateEnumerationType(llvm::StringRef name,
@@ -559,6 +564,8 @@ public:
   std::vector<lldb_private::CompilerContext>
   DeclGetCompilerContext(void *opaque_decl) override;
 
+  Scalar DeclGetConstantValue(void *opaque_decl) override;
+
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   // CompilerDeclContext override functions
@@ -608,8 +615,9 @@ public:
   static clang::NamespaceDecl *
   DeclContextGetAsNamespaceDecl(const CompilerDeclContext &dc);
 
-  static ClangASTMetadata *DeclContextGetMetaData(const CompilerDeclContext &dc,
-                                                  const clang::Decl *object);
+  static std::optional<ClangASTMetadata>
+  DeclContextGetMetaData(const CompilerDeclContext &dc,
+                         const clang::Decl *object);
 
   static clang::ASTContext *
   DeclContextGetTypeSystemClang(const CompilerDeclContext &dc);
@@ -647,6 +655,10 @@ public:
 
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
+
+  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
+  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
+  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
 
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
@@ -788,6 +800,9 @@ public:
 
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                  uint32_t payload) override;
+
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
@@ -868,9 +883,12 @@ public:
                                           size_t idx,
                                           uint32_t *bit_offset_ptr) override;
 
+  CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
+                                      llvm::StringRef name) override;
+
   static uint32_t GetNumPointeeChildren(clang::QualType type);
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,
@@ -896,6 +914,9 @@ public:
                                 llvm::StringRef name,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
+
+  CompilerType GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                                           llvm::StringRef name) override;
 
   bool IsTemplateType(lldb::opaque_compiler_type_t type) override;
 
@@ -983,7 +1004,7 @@ public:
                                    const char *property_setter_name,
                                    const char *property_getter_name,
                                    uint32_t property_attributes,
-                                   ClangASTMetadata *metadata);
+                                   ClangASTMetadata metadata);
 
   static clang::ObjCMethodDecl *AddMethodToObjCObjectType(
       const CompilerType &type,
@@ -1146,6 +1167,15 @@ private:
   bool IsTypeImpl(lldb::opaque_compiler_type_t type,
                   llvm::function_ref<bool(clang::QualType)> predicate) const;
 
+  /// Emits information about this TypeSystem into the expression log.
+  ///
+  /// Helper method that is used in \ref TypeSystemClang::TypeSystemClang
+  /// on creation of a new instance.
+  void LogCreation() const;
+
+  std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                         ExecutionContextScope *exe_scope);
+
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
   std::unique_ptr<clang::ASTContext> m_ast_up;
@@ -1269,12 +1299,12 @@ public:
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output) override;
 
-  UserExpression *
-  GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
-                    lldb::LanguageType language,
-                    Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options,
-                    ValueObject *ctx_obj) override;
+  UserExpression *GetUserExpression(llvm::StringRef expr,
+                                    llvm::StringRef prefix,
+                                    SourceLanguage language,
+                                    Expression::ResultType desired_type,
+                                    const EvaluateExpressionOptions &options,
+                                    ValueObject *ctx_obj) override;
 
   FunctionCaller *GetFunctionCaller(const CompilerType &return_type,
                                     const Address &function_address,

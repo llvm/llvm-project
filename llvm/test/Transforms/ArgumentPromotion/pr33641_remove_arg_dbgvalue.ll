@@ -4,7 +4,7 @@
 ; dbg.value which still used the removed argument.
 
 ; The %p argument should be removed, and the use of it in dbg.value should be
-; changed to undef.
+; changed to poison.
 
 %fun_t = type ptr
 define void @foo() {
@@ -15,7 +15,7 @@ define void @foo() {
 
 define internal void @bar(ptr %p) {
 ; CHECK-LABEL: define {{.*}}void @bar()
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata !3, metadata !DIExpression()), !dbg !5
+; CHECK-NEXT:    #dbg_value(ptr poison, !3, !DIExpression(), !5
   call void @llvm.dbg.value(metadata ptr %p, metadata !3, metadata !DIExpression()), !dbg !5
   ret void
 }

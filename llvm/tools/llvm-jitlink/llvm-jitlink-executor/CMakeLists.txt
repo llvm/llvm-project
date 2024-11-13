@@ -9,6 +9,6 @@ add_llvm_utility(llvm-jitlink-executor
 
   DEPENDS
   intrinsics_gen
-)
 
-export_executable_symbols(llvm-jitlink-executor)
+  EXPORT_SYMBOLS
+)

@@ -300,8 +300,12 @@ module m01
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' is not definable
     !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
     call intentinout_arr(a(j))
-    call asynchronous_arr(a(j)) ! ok
-    call volatile_arr(a(j)) ! ok
+    !WARNING: Actual argument associated with ASYNCHRONOUS dummy argument 'x=' is not definable
+    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    call asynchronous_arr(a(j))
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'x=' is not definable
+    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    call volatile_arr(a(j))
   end subroutine
 
   subroutine coarr(x)

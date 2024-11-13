@@ -23,8 +23,8 @@
 int main(int, char**) {
     int a[] = {1, 2, 3};
     forward_iterator<int *> it(a+1);
-    std::next(it, 1);  // should work fine
-    std::next(it, 0);  // should work fine
+    (void)std::next(it, 1); // should work fine
+    (void)std::next(it, 0); // should work fine
     TEST_LIBCPP_ASSERT_FAILURE(std::next(it, -1), "Attempt to next(it, n) with negative n on a non-bidirectional iterator");
 
     return 0;

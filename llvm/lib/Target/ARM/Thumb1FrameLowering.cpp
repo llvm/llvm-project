@@ -39,7 +39,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <iterator>
 #include <vector>
@@ -149,8 +148,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const ThumbRegisterInfo *RegInfo =
       static_cast<const ThumbRegisterInfo *>(STI.getRegisterInfo());
   const Thumb1InstrInfo &TII =
@@ -161,6 +159,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   assert(NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  assert(STI.getPushPopSplitVariation(MF) == ARMSubtarget::SplitR7 &&
+         "Must use R7 spilt for Thumb1");
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -222,11 +222,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
-      if (STI.splitFramePushPop(MF)) {
-        GPRCS2Size += 4;
-        break;
-      }
-      [[fallthrough]];
+      GPRCS2Size += 4;
+      break;
     case ARM::LR:
       if (HasFrameRecordArea) {
         FRSize += 4;
@@ -366,9 +363,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.splitFramePushPop(MF))
-          break;
-        [[fallthrough]];
+        break;
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -1044,9 +1039,9 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
         continue;
 
       if (Reg == ARM::LR) {
-        if (!MBB.succ_empty() ||
-            MI->getOpcode() == ARM::TCRETURNdi ||
-            MI->getOpcode() == ARM::TCRETURNri)
+        if (!MBB.succ_empty() || MI->getOpcode() == ARM::TCRETURNdi ||
+            MI->getOpcode() == ARM::TCRETURNri ||
+            MI->getOpcode() == ARM::TCRETURNrinotr12)
           // LR may only be popped into PC, as part of return sequence.
           // If this isn't the return sequence, we'll need emitPopSpecialFixUp
           // to restore LR the hard way.

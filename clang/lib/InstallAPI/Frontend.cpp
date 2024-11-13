@@ -23,7 +23,8 @@ std::pair<GlobalRecord *, FrontendAttrs *> FrontendRecordsSlice::addGlobal(
 
   GlobalRecord *GR =
       llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
-  auto Result = FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {GR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {GR, &(Result.first->second)};
 }
 
@@ -39,8 +40,8 @@ FrontendRecordsSlice::addObjCInterface(StringRef Name, RecordLinkage Linkage,
 
   ObjCInterfaceRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {ObjCR, &(Result.first->second)};
 }
 
@@ -51,8 +52,8 @@ FrontendRecordsSlice::addObjCCategory(StringRef ClassToExtend,
                                       const Decl *D, HeaderType Access) {
   ObjCCategoryRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {ObjCR, &(Result.first->second)};
 }
 
@@ -67,8 +68,8 @@ std::pair<ObjCIVarRecord *, FrontendAttrs *> FrontendRecordsSlice::addObjCIVar(
     Linkage = RecordLinkage::Internal;
   ObjCIVarRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
 
   return {ObjCR, &(Result.first->second)};
 }
@@ -93,7 +94,7 @@ InstallAPIContext::findAndRecordFile(const FileEntry *FE,
   // included. This is primarily to resolve headers found
   // in a different location than what passed directly as input.
   StringRef IncludeName = PP.getHeaderSearchInfo().getIncludeNameForHeader(FE);
-  auto BackupIt = KnownIncludes.find(IncludeName.str());
+  auto BackupIt = KnownIncludes.find(IncludeName);
   if (BackupIt != KnownIncludes.end()) {
     KnownFiles[FE] = BackupIt->second;
     return BackupIt->second;
@@ -106,7 +107,7 @@ InstallAPIContext::findAndRecordFile(const FileEntry *FE,
 }
 
 void InstallAPIContext::addKnownHeader(const HeaderFile &H) {
-  auto FE = FM->getFile(H.getPath());
+  auto FE = FM->getOptionalFileRef(H.getPath());
   if (!FE)
     return; // File does not exist.
   KnownFiles[*FE] = H.getType();

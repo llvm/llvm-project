@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFunction.h"
+#include "lldb/API/SBAddressRange.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
@@ -124,8 +125,9 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
       const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          module_sp->GetArchitecture(), nullptr, flavor, *target_sp,
-          m_opaque_ptr->GetAddressRange(), force_live_memory));
+          module_sp->GetArchitecture(), nullptr, flavor,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *target_sp, m_opaque_ptr->GetAddressRange(), force_live_memory));
     }
   }
   return sb_instructions;
@@ -158,6 +160,19 @@ SBAddress SBFunction::GetEndAddress() {
     }
   }
   return addr;
+}
+
+lldb::SBAddressRangeList SBFunction::GetRanges() {
+  LLDB_INSTRUMENT_VA(this);
+
+  lldb::SBAddressRangeList ranges;
+  if (m_opaque_ptr) {
+    lldb::SBAddressRange range;
+    (*range.m_opaque_up) = m_opaque_ptr->GetAddressRange();
+    ranges.Append(std::move(range));
+  }
+
+  return ranges;
 }
 
 const char *SBFunction::GetArgumentName(uint32_t arg_idx) {

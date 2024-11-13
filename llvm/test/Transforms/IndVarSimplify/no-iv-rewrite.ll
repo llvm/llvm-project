@@ -213,7 +213,7 @@ define void @maxvisitor(i32 %limit, ptr %base) nounwind {
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[VAL]], [[MAX]]
 ; CHECK-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    br label [[LOOP_INC]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LOOP_INC]]
@@ -260,11 +260,13 @@ define void @identityphi(i32 %limit) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[CONTROL:%.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[CONTROL:%.*]] ]
+; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[CONTROL]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CONTROL]]
 ; CHECK:       control:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[LIMIT:%.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = phi i32 [ [[IV]], [[LOOP]] ], [ undef, [[IF_THEN]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

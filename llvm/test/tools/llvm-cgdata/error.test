@@ -1,0 +1,41 @@
+# Test various error cases
+
+# Synthesize a header only cgdata.
+# struct Header {
+#   uint64_t Magic;
+#   uint32_t Version;
+#   uint32_t DataKind;
+#   uint64_t OutlinedHashTreeOffset;
+#   uint64_t StableFunctionMapOffset;
+# }
+RUN: touch %t_empty.cgdata
+RUN: not llvm-cgdata --show %t_empty.cgdata 2>&1 | FileCheck %s --check-prefix=EMPTY
+EMPTY: {{.}}cgdata: empty codegen data
+
+# Not a magic.
+RUN: printf '\xff' > %t_malformed.cgdata
+RUN: not llvm-cgdata --show %t_malformed.cgdata 2>&1 | FileCheck %s --check-prefix=MALFORMED
+MALFORMED: {{.}}cgdata: malformed codegen data
+
+# The minimum header size is 24.
+RUN: printf '\xffcgdata\x81' > %t_corrupt.cgdata
+RUN: not llvm-cgdata --show %t_corrupt.cgdata 2>&1 | FileCheck %s  --check-prefix=CORRUPT
+CORRUPT: {{.}}cgdata: invalid codegen data (file header is corrupt)
+
+# The current version 2 while the header says 3.
+RUN: printf '\xffcgdata\x81' > %t_version.cgdata
+RUN: printf '\x03\x00\x00\x00' >> %t_version.cgdata
+RUN: printf '\x00\x00\x00\x00' >> %t_version.cgdata
+RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_version.cgdata
+RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_version.cgdata
+RUN: not llvm-cgdata --show %t_version.cgdata 2>&1 | FileCheck %s  --check-prefix=BAD_VERSION
+BAD_VERSION: {{.}}cgdata: unsupported codegen data version
+
+# Header says an outlined hash tree, but the file ends after the header.
+RUN: printf '\xffcgdata\x81' > %t_eof.cgdata
+RUN: printf '\x02\x00\x00\x00' >> %t_eof.cgdata
+RUN: printf '\x01\x00\x00\x00' >> %t_eof.cgdata
+RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_eof.cgdata
+RUN: printf '\x20\x00\x00\x00\x00\x00\x00\x00' >> %t_eof.cgdata
+RUN: not llvm-cgdata --show %t_eof.cgdata 2>&1 | FileCheck %s  --check-prefix=EOF
+EOF: {{.}}cgdata: end of File

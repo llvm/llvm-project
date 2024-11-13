@@ -12,6 +12,7 @@
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 
 // The file defines a set of utilities/classes that might be
@@ -57,6 +58,11 @@
 #define STD_STRCMP_UNSUPPORTED 1
 #endif
 
+#if !defined(STD_TOUPPER_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_TOUPPER_UNSUPPORTED 1
+#endif
+
 namespace Fortran::runtime {
 
 #if STD_FILL_N_UNSUPPORTED
@@ -76,7 +82,7 @@ using std::fill_n;
 #if STD_MEMMOVE_UNSUPPORTED
 // Provides alternative implementation for std::memmove(), if
 // it is not supported.
-static inline RT_API_ATTRS void memmove(
+static inline RT_API_ATTRS void *memmove(
     void *dest, const void *src, std::size_t count) {
   char *to{reinterpret_cast<char *>(dest)};
   const char *from{reinterpret_cast<const char *>(src)};
@@ -97,6 +103,7 @@ static inline RT_API_ATTRS void memmove(
       *--to = *--from;
     }
   }
+  return dest;
 }
 #else // !STD_MEMMOVE_UNSUPPORTED
 using std::memmove;
@@ -194,6 +201,19 @@ static inline RT_API_ATTRS int strcmp(const char *lhs, const char *rhs) {
 #else // !STD_STRCMP_UNSUPPORTED
 using std::strcmp;
 #endif // !STD_STRCMP_UNSUPPORTED
+
+#if STD_TOUPPER_UNSUPPORTED
+// Provides alternative implementation for std::toupper(), if
+// it is not supported.
+static inline RT_API_ATTRS int toupper(int ch) {
+  if (ch >= 'a' && ch <= 'z') {
+    return ch - 'a' + 'A';
+  }
+  return ch;
+}
+#else // !STD_TOUPPER_UNSUPPORTED
+using std::toupper;
+#endif // !STD_TOUPPER_UNSUPPORTED
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_

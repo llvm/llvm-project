@@ -457,7 +457,11 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo6_xor_multi_use:
@@ -478,7 +482,10 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %x = xor i64 -1, %a
   %cmp = icmp ult i64 %x, %b
@@ -757,8 +764,8 @@ define i1 @uaddo_i42_increment_illegal_type(i42 %x, ptr %p) {
 ; RV64-NEXT:    slli a0, a2, 22
 ; RV64-NEXT:    srli a3, a0, 22
 ; RV64-NEXT:    seqz a0, a3
-; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    sh a3, 4(a1)
 ; RV64-NEXT:    ret
   %a = add i42 %x, 1
@@ -1117,7 +1124,16 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
+; RV32-NEXT:    .cfi_restore s4
+; RV32-NEXT:    .cfi_restore s5
+; RV32-NEXT:    .cfi_restore s6
 ; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: usubo_ult_cmp_dominates_i64:
@@ -1161,7 +1177,14 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore s1
+; RV64-NEXT:    .cfi_restore s2
+; RV64-NEXT:    .cfi_restore s3
+; RV64-NEXT:    .cfi_restore s4
 ; RV64-NEXT:    addi sp, sp, 48
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 entry:
   br i1 %cond, label %t, label %f
@@ -1241,14 +1264,14 @@ define i64 @foo2(ptr %p) {
 define void @PR41129(ptr %p64) {
 ; RV32-LABEL: PR41129:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a2, 4(a0)
 ; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a2, 4(a0)
 ; RV32-NEXT:    or a3, a1, a2
 ; RV32-NEXT:    beqz a3, .LBB37_2
 ; RV32-NEXT:  # %bb.1: # %false
 ; RV32-NEXT:    andi a1, a1, 7
-; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB37_2: # %true
 ; RV32-NEXT:    seqz a3, a1

@@ -657,6 +657,14 @@ CALL CO_REDUCE
 CALL CO_SUM
 ```
 
+### Inquiry Functions
+ACCESS (GNU extension) is not supported on Windows. Otherwise:
+```
+CHARACTER(LEN=*) :: path = 'path/to/file'
+IF (ACCESS(path, 'rwx')) &
+  ...
+```
+
 ## Non-standard intrinsics
 ### PGI
 ```
@@ -692,13 +700,14 @@ IBCHNG, ISHA, ISHC, ISHL, IXOR
 IARG, IARGC, NARGS, NUMARG
 BADDRESS, IADDR
 CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
-MALLOC
+MALLOC, FREE
 ```
 
 ### Library subroutine 
 ```
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
+CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -756,11 +765,11 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Coarray intrinsic functions | COSHAPE |
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
-| Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC |
+| Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC, FREE, GETUID, GETGID |
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG |
+| Library subroutines | FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
@@ -885,16 +894,17 @@ used in constant expressions have currently no folding support at all.
 ##### `CMDSTAT`:
 
 - Synchronous execution:
-  - -2: No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
-  - -1: The processor does not support command line execution.
+  - -2: `ASYNC_NO_SUPPORT_ERR` - No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
+  - -1: `NO_SUPPORT_ERR` - The processor does not support command line execution. (system returns -1 with errno `ENOENT`)
+  - 0: `CMD_EXECUTED` - Command executed with no error.
   - \+ (positive value): An error condition occurs.
-    - 1: Fork Error (occurs only on POSIX-compatible systems).
-    - 2: Execution Error (command exits with status -1).
-    - 3: Invalid Command Error (determined by the exit code depending on the system).
-      - On Windows: exit code is 1.
-      - On POSIX-compatible systems: exit code is 127 or 126.
-    - 4: Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
-  - 0: Otherwise.
+    - 1: `FORK_ERR` - Fork Error (occurs only on POSIX-compatible systems).
+    - 2: `EXECL_ERR` - Execution Error (system returns -1 with other errno).
+    - 3: `COMMAND_EXECUTION_ERR` - Invalid Command Error (exit code 1).
+    - 4: `COMMAND_CANNOT_EXECUTE_ERR` - Command Cannot Execute Error (Linux exit code 126).
+    - 5: `COMMAND_NOT_FOUND_ERR` - Command Not Found Error (Linux exit code 127).
+    - 6: `INVALID_CL_ERR` - Invalid Command Line Error (covers all other non-zero exit codes).
+    - 7: `SIGNAL_ERR` - Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
 - Asynchronous execution:
   - 0 will always be assigned.
 
@@ -908,3 +918,145 @@ used in constant expressions have currently no folding support at all.
   - If a condition occurs that would assign a nonzero value to `CMDSTAT` but the `CMDSTAT` variable is not present, error termination is initiated.
     - On POSIX-compatible systems, the child process (async process) will be terminated with no effect on the parent process (continues).
     - On Windows, error termination is not initiated.
+
+### Non-Standard Intrinsics: ETIME
+
+#### Description
+`ETIME(VALUES, TIME)` returns the number of seconds of runtime since the start of the process’s execution in *TIME*. *VALUES* returns the user and system components of this time in `VALUES(1)` and `VALUES(2)` respectively. *TIME* is equal to `VALUES(1) + VALUES(2)`.
+
+On some systems, the underlying timings are represented using types with sufficiently small limits that overflows (wrap around) are possible, such as 32-bit types. Therefore, the values returned by this intrinsic might be, or become, negative, or numerically less than previous values, during a single run of the compiled program.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*VALUES* and *TIME* are `INTENT(OUT)` and provide the following:
+
+
+|               |                                   |
+|---------------|-----------------------------------|
+| `VALUES(1)`   | User time in seconds.             |
+| `VALUES(2)`   | System time in seconds.           |
+| `TIME`        | Run time since start in seconds.  |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL ETIME(VALUES, TIME)`
+- **Arguments:**
+- **Return value** Elapsed time in seconds since the start of program execution.
+
+| Argument   | Description                                                           |
+|------------|-----------------------------------------------------------------------|
+| `VALUES`   | The type shall be REAL(4), DIMENSION(2).                              |
+| `TIME`     | The type shall be REAL(4).                                            |
+
+#### Example
+Here is an example usage from [Gfortran ETIME](https://gcc.gnu.org/onlinedocs/gfortran/ETIME.html)
+```Fortran
+program test_etime
+    integer(8) :: i, j
+    real, dimension(2) :: tarray
+    real :: result
+    call ETIME(tarray, result)
+    print *, result
+    print *, tarray(1)
+    print *, tarray(2)   
+    do i=1,100000000    ! Just a delay
+        j = i * i - i
+    end do
+    call ETIME(tarray, result)
+    print *, result
+    print *, tarray(1)
+    print *, tarray(2)
+end program test_etime
+```
+
+### Non-Standard Intrinsics: GETCWD
+
+#### Description
+`GETCWD(C, STATUS)` returns current working directory.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | Current work directory. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL GETCWD(C, STATUS)`, `STATUS = GETCWD(C)`
+
+#### Example
+```Fortran
+PROGRAM example_getcwd
+  CHARACTER(len=255) :: cwd
+  INTEGER :: status
+  CALL getcwd(cwd, status)
+  PRINT *, cwd
+  PRINT *, status
+END PROGRAM
+```
+
+### Non-standard Intrinsics: RENAME
+`RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
+
+This intrinsic is provided in both subroutine and function form; however, only one form can be used in any given program unit.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL RENAME(SRC, DST[, STATUS])`
+- **Arguments:**
+- **Return value** status code (0: success, non-zero for errors)
+
+| Argument | Description                       |
+|----------|-----------------------------------|
+| `SRC`    | Source path                       |
+| `DST`    | Destination path                  |
+| `STATUS` | Status code (for subroutine form) |
+
+The status code returned by both the subroutine and function form corresponds to the value of `errno` if the invocation of `rename(2)` was not successful.
+
+#### Example
+
+Function form:
+```
+program rename_func
+    implicit none
+    integer :: status
+    status = rename('src', 'dst')
+    print *, 'status:', status
+    status = rename('dst', 'src')
+    print *, 'status:', status
+end program rename_func
+```
+
+Subroutine form:
+```
+program rename_proc
+    implicit none
+    integer :: status
+    call rename('src', 'dst', status)
+    print *, 'status:', status
+    call rename('dst', 'src')
+end program rename_proc
+```
+
+### Non-standard Intrinsics: SECOND
+This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
+function form.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL SECOND(TIME)` or `TIME = SECOND()`
+- **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
+                          seconds is written
+- **RETURN value:** same as TIME argument

@@ -18,9 +18,7 @@ define <vscale x 4 x i32> @test_vloxei(ptr %ptr, <vscale x 4 x i8> %offset, i64 
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -40,9 +38,7 @@ define <vscale x 4 x i32> @test_vloxei2(ptr %ptr, <vscale x 4 x i8> %offset, i64
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 14, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 14)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -62,9 +58,7 @@ define <vscale x 4 x i32> @test_vloxei3(ptr %ptr, <vscale x 4 x i8> %offset, i64
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 26, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 26)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -87,9 +81,7 @@ define <vscale x 4 x i32> @test_vloxei4(ptr %ptr, <vscale x 4 x i8> %offset, <vs
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = call <vscale x 4 x i64> @llvm.vp.zext.nxvi64.nxv1i8(<vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i32 %vl)
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %vl.i64 = zext i32 %vl to i64
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
@@ -116,9 +108,7 @@ define <vscale x 4 x i32> @test_vloxei5(ptr %ptr, <vscale x 4 x i8> %offset, i64
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i16>
-  %shamt = insertelement <vscale x 4 x i16> undef, i16 12, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i16> %shamt, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i16> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i16> %offset.ext, splat (i16 12)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i16(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -141,9 +131,7 @@ define <vscale x 4 x i32> @test_vloxei6(ptr %ptr, <vscale x 4 x i7> %offset, i64
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i7> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -164,9 +152,7 @@ define <vscale x 4 x i32> @test_vloxei7(ptr %ptr, <vscale x 4 x i1> %offset, i64
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i1> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 2, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 2)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -194,9 +180,7 @@ define <vscale x 4 x i32> @test_vloxei_mask(ptr %ptr, <vscale x 4 x i8> %offset,
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vloxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -223,9 +207,7 @@ define <vscale x 4 x i32> @test_vluxei(ptr %ptr, <vscale x 4 x i8> %offset, i64 
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vluxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -253,9 +235,7 @@ define <vscale x 4 x i32> @test_vluxei_mask(ptr %ptr, <vscale x 4 x i8> %offset,
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   %res = call <vscale x 4 x i32> @llvm.riscv.vluxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> undef,
     ptr %ptr,
@@ -282,9 +262,7 @@ define void @test_vsoxei(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i8> %o
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   call void @llvm.riscv.vsoxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
     ptr %ptr,
@@ -311,9 +289,7 @@ define void @test_vsoxei_mask(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   call void @llvm.riscv.vsoxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
     ptr %ptr,
@@ -340,9 +316,7 @@ define void @test_vsuxei(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i8> %o
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   call void @llvm.riscv.vsuxei.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
     ptr %ptr,
@@ -369,9 +343,7 @@ define void @test_vsuxei_mask(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
-  %shamt = insertelement <vscale x 4 x i64> undef, i64 4, i32 0
-  %shamt.vec = shufflevector <vscale x 4 x i64> %shamt, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %shl = shl <vscale x 4 x i64> %offset.ext, %shamt.vec
+  %shl = shl <vscale x 4 x i64> %offset.ext, splat (i64 4)
   call void @llvm.riscv.vsuxei.mask.nxv4i32.nxv4i64(
     <vscale x 4 x i32> %val,
     ptr %ptr,

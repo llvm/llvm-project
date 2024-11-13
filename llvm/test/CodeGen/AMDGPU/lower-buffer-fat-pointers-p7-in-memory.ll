@@ -31,13 +31,13 @@ define void @vector_copy(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @vector_copy
 ; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x i160>, ptr [[A]], align 128
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i160> [[X]], <i160 32, i160 32, i160 32, i160 32>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i160> [[X]], splat (i160 32)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i160> [[TMP1]] to <4 x i128>
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr <4 x i128> [[TMP2]] to <4 x ptr addrspace(8)>
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc <4 x i160> [[X]] to <4 x i32>
 ; CHECK-NEXT:    [[B1:%.*]] = getelementptr <4 x i160>, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[X_PTR_INT_RSRC:%.*]] = ptrtoint <4 x ptr addrspace(8)> [[X_PTR_RSRC]] to <4 x i160>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i160> [[X_PTR_INT_RSRC]], <i160 32, i160 32, i160 32, i160 32>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i160> [[X_PTR_INT_RSRC]], splat (i160 32)
 ; CHECK-NEXT:    [[X_PTR_INT_OFF:%.*]] = zext <4 x i32> [[X_PTR_OFF]] to <4 x i160>
 ; CHECK-NEXT:    [[X_PTR_INT:%.*]] = or <4 x i160> [[TMP3]], [[X_PTR_INT_OFF]]
 ; CHECK-NEXT:    store <4 x i160> [[X_PTR_INT]], ptr [[B1]], align 128

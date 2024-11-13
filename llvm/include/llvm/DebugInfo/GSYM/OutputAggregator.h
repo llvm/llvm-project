@@ -57,15 +57,11 @@ public:
   }
 
   // For multi-threaded usage, we can collect stuff in another aggregator,
-  // then merge it in here
+  // then merge it in here. Note that this is *not* thread safe. It is up to
+  // the caller to ensure that this is only called from one thread at a time.
   void Merge(const OutputAggregator &other) {
-    for (auto &&[name, count] : other.Aggregation) {
-      auto it = Aggregation.find(name);
-      if (it == Aggregation.end())
-        Aggregation.emplace(name, count);
-      else
-        it->second += count;
-    }
+    for (auto &&[name, count] : other.Aggregation)
+      Aggregation[name] += count;
   }
 };
 

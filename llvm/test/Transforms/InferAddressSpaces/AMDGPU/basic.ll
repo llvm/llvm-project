@@ -182,4 +182,22 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @atomicrmw_add_global_to_flat_preserve_amdgpu_md(
+; CHECK-NEXT: %ret = atomicrmw add ptr addrspace(1) %global.ptr, i32 %y seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+define i32 @atomicrmw_add_global_to_flat_preserve_amdgpu_md(ptr addrspace(1) %global.ptr, i32 %y) #0 {
+  %cast = addrspacecast ptr addrspace(1) %global.ptr to ptr
+  %ret = atomicrmw add ptr %cast, i32 %y seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i32 %ret
+}
+
+; Make sure there's no assert
+; CHECK-LABEL: @try_infer_getelementptr_constant_null(
+; CHECK-NEXT: %ce = getelementptr i8, ptr getelementptr inbounds (i8, ptr null, i64 8), i64 0
+define ptr @try_infer_getelementptr_constant_null() {
+  %ce = getelementptr i8, ptr getelementptr inbounds (i8, ptr null, i64 8), i64 0
+  ret ptr %ce
+}
+
 attributes #0 = { nounwind }
+
+!0 = !{}

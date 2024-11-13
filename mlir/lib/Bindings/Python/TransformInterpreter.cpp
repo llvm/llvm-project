@@ -82,6 +82,21 @@ static void populateTransformInterpreterSubmodule(py::module &m) {
       py::arg("payload_root"), py::arg("transform_root"),
       py::arg("transform_module"),
       py::arg("transform_options") = PyMlirTransformOptions());
+
+  m.def(
+      "copy_symbols_and_merge_into",
+      [](MlirOperation target, MlirOperation other) {
+        mlir::python::CollectDiagnosticsToStringScope scope(
+            mlirOperationGetContext(target));
+
+        MlirLogicalResult result = mlirMergeSymbolsIntoFromClone(target, other);
+        if (mlirLogicalResultIsFailure(result)) {
+          throw py::value_error(
+              "Failed to merge symbols.\nDiagnostic message " +
+              scope.takeMessage());
+        }
+      },
+      py::arg("target"), py::arg("other"));
 }
 
 PYBIND11_MODULE(_mlirTransformInterpreter, m) {

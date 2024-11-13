@@ -432,15 +432,15 @@ exit:
 ; In the function below, the condition %c.1 results in a range [7, 6), which
 ; can be used as a widening bound. It does not fully contain the range we get
 ; from combining it with the information from %tmp12.
-define void @foo(ptr %arg) {
+define void @foo(ptr %arg, i8 %x) {
 ; SCCP-LABEL: @foo(
 ; SCCP-NEXT:  bb:
-; SCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
+; SCCP-NEXT:    [[TMP:%.*]] = zext i8 [[X:%.*]] to i32
 ; SCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; SCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
-; SCCP-NEXT:    i32 1, label [[BB3:%.*]]
-; SCCP-NEXT:    i32 2, label [[BB4:%.*]]
-; SCCP-NEXT:    i32 4, label [[BB19:%.*]]
+; SCCP-NEXT:      i32 1, label [[BB3:%.*]]
+; SCCP-NEXT:      i32 2, label [[BB4:%.*]]
+; SCCP-NEXT:      i32 4, label [[BB19:%.*]]
 ; SCCP-NEXT:    ]
 ; SCCP:       bb3:
 ; SCCP-NEXT:    unreachable
@@ -449,7 +449,7 @@ define void @foo(ptr %arg) {
 ; SCCP-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3
 ; SCCP-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 3, [[TMP6]]
 ; SCCP-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
-; SCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
+; SCCP-NEXT:    [[TMP9:%.*]] = trunc nuw nsw i64 [[TMP8]] to i32
 ; SCCP-NEXT:    [[TMP10:%.*]] = zext nneg i32 [[TMP9]] to i64
 ; SCCP-NEXT:    br label [[BB11:%.*]]
 ; SCCP:       bb11:
@@ -472,12 +472,12 @@ define void @foo(ptr %arg) {
 ;
 ; IPSCCP-LABEL: @foo(
 ; IPSCCP-NEXT:  bb:
-; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
+; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 [[X:%.*]] to i32
 ; IPSCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; IPSCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
-; IPSCCP-NEXT:    i32 1, label [[BB3:%.*]]
-; IPSCCP-NEXT:    i32 2, label [[BB4:%.*]]
-; IPSCCP-NEXT:    i32 4, label [[BB19:%.*]]
+; IPSCCP-NEXT:      i32 1, label [[BB3:%.*]]
+; IPSCCP-NEXT:      i32 2, label [[BB4:%.*]]
+; IPSCCP-NEXT:      i32 4, label [[BB19:%.*]]
 ; IPSCCP-NEXT:    ]
 ; IPSCCP:       bb3:
 ; IPSCCP-NEXT:    unreachable
@@ -486,7 +486,7 @@ define void @foo(ptr %arg) {
 ; IPSCCP-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3
 ; IPSCCP-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 3, [[TMP6]]
 ; IPSCCP-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
-; IPSCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
+; IPSCCP-NEXT:    [[TMP9:%.*]] = trunc nuw nsw i64 [[TMP8]] to i32
 ; IPSCCP-NEXT:    [[TMP10:%.*]] = zext nneg i32 [[TMP9]] to i64
 ; IPSCCP-NEXT:    br label [[BB11:%.*]]
 ; IPSCCP:       bb11:
@@ -508,7 +508,7 @@ define void @foo(ptr %arg) {
 ; IPSCCP-NEXT:    ret void
 ;
 bb:
-  %tmp = zext i8 undef to i32
+  %tmp = zext i8 %x to i32
   %tmp2 = load i64, ptr %arg, align 8
   switch i32 %tmp, label %bb20 [
   i32 1, label %bb3
@@ -615,7 +615,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
 ; SCCP-NEXT:    br i1 [[TMP22]], label [[BB23:%.*]], label [[BB25:%.*]]
 ; SCCP:       bb23:
-; SCCP-NEXT:    [[TMP24:%.*]] = trunc i32 [[TMP3]] to i16
+; SCCP-NEXT:    [[TMP24:%.*]] = trunc nuw i32 [[TMP3]] to i16
 ; SCCP-NEXT:    store i16 [[TMP24]], ptr [[TMP17]], align 2
 ; SCCP-NEXT:    br label [[BB31]]
 ; SCCP:       bb25:
@@ -639,7 +639,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    br i1 [[C_2]], label [[BB39:%.*]], label [[BB58:%.*]]
 ; SCCP:       bb39:
 ; SCCP-NEXT:    [[TMP40:%.*]] = add nsw i32 [[TMP11]], -1
-; SCCP-NEXT:    [[TMP41:%.*]] = trunc i32 [[TMP3]] to i16
+; SCCP-NEXT:    [[TMP41:%.*]] = trunc nuw i32 [[TMP3]] to i16
 ; SCCP-NEXT:    store i16 [[TMP41]], ptr @global.11, align 1
 ; SCCP-NEXT:    [[TMP43:%.*]] = add i32 [[TMP7]], [[TMP40]]
 ; SCCP-NEXT:    [[TMP44:%.*]] = mul i32 [[TMP43]], 4
@@ -697,7 +697,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
 ; IPSCCP-NEXT:    br i1 [[TMP22]], label [[BB23:%.*]], label [[BB25:%.*]]
 ; IPSCCP:       bb23:
-; IPSCCP-NEXT:    [[TMP24:%.*]] = trunc i32 [[TMP3]] to i16
+; IPSCCP-NEXT:    [[TMP24:%.*]] = trunc nuw i32 [[TMP3]] to i16
 ; IPSCCP-NEXT:    store i16 [[TMP24]], ptr [[TMP17]], align 2
 ; IPSCCP-NEXT:    br label [[BB31]]
 ; IPSCCP:       bb25:
@@ -720,7 +720,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[C_2:%.*]] = icmp eq i32 [[TMP11]], 8
 ; IPSCCP-NEXT:    br i1 [[C_2]], label [[BB39:%.*]], label [[BB58:%.*]]
 ; IPSCCP:       bb39:
-; IPSCCP-NEXT:    [[TMP41:%.*]] = trunc i32 [[TMP3]] to i16
+; IPSCCP-NEXT:    [[TMP41:%.*]] = trunc nuw i32 [[TMP3]] to i16
 ; IPSCCP-NEXT:    store i16 [[TMP41]], ptr @global.11, align 1
 ; IPSCCP-NEXT:    [[TMP43:%.*]] = add i32 [[TMP7]], 7
 ; IPSCCP-NEXT:    [[TMP44:%.*]] = mul i32 [[TMP43]], 4

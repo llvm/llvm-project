@@ -6,8 +6,9 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
 def libc_internal_target(name):
     return name + ".__internal__"
@@ -21,13 +22,14 @@ def libc_common_copts():
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
     ]
 
-def _libc_library(name, hidden, copts = [], deps = [], **kwargs):
+def _libc_library(name, hidden, copts = [], deps = [], local_defines = [], **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       copts: The special compiler options for the target.
       deps: The list of target dependencies if any.
+      local_defines: The list of target local_defines if any.
       hidden: Whether the symbols should be explicitly hidden or not.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
@@ -40,6 +42,7 @@ def _libc_library(name, hidden, copts = [], deps = [], **kwargs):
     native.cc_library(
         name = name,
         copts = copts + libc_common_copts(),
+        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
         linkstatic = 1,
         **kwargs
@@ -126,7 +129,6 @@ def libc_function(
 
 def libc_math_function(
         name,
-        specializations = None,
         additional_deps = None):
     """Add a target for a math function.
 
@@ -139,14 +141,6 @@ def libc_math_function(
                        math function.
     """
     additional_deps = additional_deps or []
-    specializations = specializations or ["generic"]
-    select_map = {}
-    if "generic" in specializations:
-        select_map["//conditions:default"] = ["src/math/generic/" + name + ".cpp"]
-    if "aarch64" in specializations:
-        select_map[PLATFORM_CPU_ARM64] = ["src/math/aarch64/" + name + ".cpp"]
-    if "x86_64" in specializations:
-        select_map[PLATFORM_CPU_X86_64] = ["src/math/x86_64/" + name + ".cpp"]
 
     #TODO(michaelrj): Fix the floating point dependencies
     OLD_FPUTIL_DEPS = [
@@ -163,7 +157,7 @@ def libc_math_function(
     ]
     libc_function(
         name = name,
-        srcs = selects.with_or(select_map),
+        srcs = ["src/math/generic/" + name + ".cpp"],
         hdrs = ["src/math/" + name + ".h"],
         deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
     )

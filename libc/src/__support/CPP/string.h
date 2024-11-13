@@ -9,16 +9,19 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This class mimics std::string but does not intend to be a full fledged
@@ -225,6 +228,6 @@ LIBC_INLINE string to_string(unsigned long long value) {
 // LIBC_INLINE string to_string(long double value);
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H

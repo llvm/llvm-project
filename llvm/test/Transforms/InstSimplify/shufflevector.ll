@@ -11,7 +11,7 @@ define <4 x i32> @const_folding(<4 x i32> %x) {
 
 define <4 x i32> @const_folding1(<4 x i32> %x) {
 ; CHECK-LABEL: @const_folding1(
-; CHECK-NEXT:    ret <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    ret <4 x i32> splat (i32 5)
 ;
   %shuf = shufflevector <4 x i32> <i32 5, i32 4, i32 5, i32 4>, <4 x i32> %x, <4 x i32> zeroinitializer
   ret <4 x i32> %shuf
@@ -249,18 +249,18 @@ define <8 x i64> @PR30630(<8 x i64> %x) {
 ;         ret <2 x float> zeroinitializer
 define <2 x float> @PR32872(<2 x float> %x) {
 ; CHECK-LABEL: @PR32872(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> zeroinitializer, <4 x float> [[TMP1]], <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    ret <2 x float> [[TMP4]]
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUF2:%.*]] = shufflevector <4 x float> zeroinitializer, <4 x float> [[SHUF]], <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    ret <2 x float> [[SHUF2]]
 ;
-  %tmp1 = shufflevector <2 x float> %x, <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
-  %tmp4 = shufflevector <4 x float> zeroinitializer, <4 x float> %tmp1, <2 x i32> <i32 4, i32 5>
-  ret <2 x float> %tmp4
+  %shuf = shufflevector <2 x float> %x, <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+  %shuf2 = shufflevector <4 x float> zeroinitializer, <4 x float> %shuf, <2 x i32> <i32 4, i32 5>
+  ret <2 x float> %shuf2
 }
 
 define <5 x i8> @splat_inserted_constant(<4 x i8> %x) {
 ; CHECK-LABEL: @splat_inserted_constant(
-; CHECK-NEXT:    ret <5 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    ret <5 x i8> splat (i8 42)
 ;
   %ins3 = insertelement <4 x i8> %x, i8 42, i64 3
   %splat5 = shufflevector <4 x i8> %ins3, <4 x i8> undef, <5 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3>
@@ -283,4 +283,57 @@ define <2 x i8> @splat_inserted_constant_not_canonical(<3 x i8> %x, <3 x i8> %y)
   %ins2 = insertelement <3 x i8> %x, i8 23, i7 2
   %splat2 = shufflevector <3 x i8> %y, <3 x i8> %ins2, <2 x i32> <i32 undef, i32 5>
   ret <2 x i8> %splat2
+}
+
+define <4 x i32> @fold_identity(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity(
+; CHECK-NEXT:    ret <4 x i32> [[X:%.*]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_identity2(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    ret <4 x i32> [[SHL]]
+;
+  %shl = shl <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %shuf = shufflevector <4 x i32> %shl, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_identity3(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret <4 x i32> [[SHL]]
+;
+  %shl = shl <4 x i32> %x, %x
+  %shuf = shufflevector <4 x i32> %shl, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @not_fold_identity(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_identity(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[SHUF]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @not_fold_identity2(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_identity2(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[SHUF]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
 }

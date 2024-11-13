@@ -90,7 +90,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMCLowerPrePassPass(PR);
   initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
-  initializeWebAssemblyDAGToDAGISelPass(PR);
+  initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -128,11 +128,15 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                                        "n32:64-S128-ni:1:10:20"),
           TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
           getEffectiveCodeModel(CM, CodeModel::Large), OL),
-      TLOF(new WebAssemblyTargetObjectFile()) {
+      TLOF(new WebAssemblyTargetObjectFile()),
+      UsesMultivalueABI(Options.MCOptions.getABIName() == "experimental-mv") {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
-  // 'unreachable' instructions which is meant for that case.
+  // 'unreachable' instructions which is meant for that case. Formerly, we also
+  // needed to add checks to SP failure emission in the instruction selection
+  // backends, but this has since been tied to TrapUnreachable and is no longer
+  // necessary.
   this->Options.TrapUnreachable = true;
   this->Options.NoTrapAfterNoreturn = false;
 
@@ -201,8 +205,7 @@ public:
   bool runOnModule(Module &M) override {
     FeatureBitset Features = coalesceFeatures(M);
 
-    std::string FeatureStr =
-        getFeatureString(Features, WasmTM->getTargetFeatureString());
+    std::string FeatureStr = getFeatureString(Features);
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -230,27 +233,41 @@ public:
 
 private:
   FeatureBitset coalesceFeatures(const Module &M) {
-    FeatureBitset Features =
-        WasmTM
-            ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                               std::string(WasmTM->getTargetFeatureString()))
-            ->getFeatureBits();
-    for (auto &F : M)
+    // Union the features of all defined functions. Start with an empty set, so
+    // that if a feature is disabled in every function, we'll compute it as
+    // disabled. If any function lacks a target-features attribute, it'll
+    // default to the target CPU from the `TargetMachine`.
+    FeatureBitset Features;
+    bool AnyDefinedFuncs = false;
+    for (auto &F : M) {
+      if (F.isDeclaration())
+        continue;
+
       Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
+      AnyDefinedFuncs = true;
+    }
+
+    // If we have no defined functions, use the target CPU from the
+    // `TargetMachine`.
+    if (!AnyDefinedFuncs) {
+      Features =
+          WasmTM
+              ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                                 std::string(WasmTM->getTargetFeatureString()))
+              ->getFeatureBits();
+    }
+
     return Features;
   }
 
-  static std::string getFeatureString(const FeatureBitset &Features,
-                                      StringRef TargetFS) {
+  static std::string getFeatureString(const FeatureBitset &Features) {
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
         Ret += (StringRef("+") + KV.Key + ",").str();
+      else
+        Ret += (StringRef("-") + KV.Key + ",").str();
     }
-    SubtargetFeatures TF{TargetFS};
-    for (std::string const &F : TF.getFeatures())
-      if (!SubtargetFeatures::isEnabled(F))
-        Ret += F + ",";
     return Ret;
   }
 
@@ -291,6 +308,17 @@ private:
     bool Stripped = false;
     for (auto &GV : M.globals()) {
       if (GV.isThreadLocal()) {
+        // replace `@llvm.threadlocal.address.pX(GV)` with `GV`.
+        for (Use &U : make_early_inc_range(GV.uses())) {
+          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+            if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
+                II->getArgOperand(0) == &GV) {
+              II->replaceAllUsesWith(&GV);
+              II->eraseFromParent();
+            }
+          }
+        }
+
         Stripped = true;
         GV.setThreadLocal(false);
       }
@@ -373,18 +401,36 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
+using WebAssembly::WasmEnableExnref;
 using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
-  // Before checking, we make sure TargetOptions.ExceptionModel is the same as
+
+  // You can't enable two modes of EH at the same time
+  if (WasmEnableEmEH && WasmEnableEH)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+  // You can't enable two modes of SjLj at the same time
+  if (WasmEnableEmSjLj && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (WasmEnableEmEH && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+  if (WasmEnableExnref && !WasmEnableEH)
+    report_fatal_error(
+        "-wasm-enable-exnref should be used with -wasm-enable-eh");
+
+  // Here we make sure TargetOptions.ExceptionModel is the same as
   // MCAsmInfo.ExceptionsType. Normally these have to be the same, because clang
   // stores the exception model info in LangOptions, which is later transferred
   // to TargetOptions and MCAsmInfo. But when clang compiles bitcode directly,
   // clang's LangOptions is not used and thus the exception model info is not
   // correctly transferred to TargetOptions and MCAsmInfo, so we make sure we
-  // have the correct exception model in WebAssemblyMCAsmInfo constructor.
-  // But in this case TargetOptions is still not updated, so we make sure they
-  // are the same.
+  // have the correct exception model in WebAssemblyMCAsmInfo constructor. But
+  // in this case TargetOptions is still not updated, so we make sure they are
+  // the same.
   TM->Options.ExceptionModel = TM->getMCAsmInfo()->getExceptionHandlingType();
 
   // Basic Correctness checking related to -exception-model
@@ -406,18 +452,6 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
         "-exception-model=wasm only allowed with at least one of "
         "-wasm-enable-eh or -wasm-enable-sjlj");
 
-  // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
-  // You can't enable two modes of SjLj at the same time
-  if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
-        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
-  // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
   // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
   // measure, but some code will error out at compile time in this combination.
   // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
@@ -472,16 +506,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
-  WebAssemblyTargetMachine *WasmTM =
-      static_cast<WebAssemblyTargetMachine *>(TM);
-  const WebAssemblySubtarget *Subtarget =
-      WasmTM->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                               std::string(WasmTM->getTargetFeatureString()));
-  if (Subtarget->hasReferenceTypes()) {
-    // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
-    // loads and stores are promoted to local.gets/local.sets.
-    addPass(createWebAssemblyRefTypeMem2Local());
-  }
+  // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
+  // loads and stores are promoted to local.gets/local.sets.
+  addPass(createWebAssemblyRefTypeMem2Local());
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
@@ -506,6 +533,10 @@ bool WebAssemblyPassConfig::addInstSelector() {
 
   // Eliminate range checks and add default targets to br_table instructions.
   addPass(createWebAssemblyFixBrTableDefaults());
+
+  // unreachable is terminator, non-terminator instruction after it is not
+  // allowed.
+  addPass(createWebAssemblyCleanCodeAfterTrap());
 
   return false;
 }
@@ -537,6 +568,7 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&StackMapLivenessID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
+  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.

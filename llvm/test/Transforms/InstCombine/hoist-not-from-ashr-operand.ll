@@ -34,21 +34,21 @@ define i8 @t1(i8 %x, i8 %y) {
 define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t2_vec(
 ; CHECK-NEXT:    [[NOT_X_NOT:%.*]] = ashr <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[ASHR:%.*]] = xor <2 x i8> [[NOT_X_NOT]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[ASHR:%.*]] = xor <2 x i8> [[NOT_X_NOT]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i8> [[ASHR]]
 ;
   %not_x = xor <2 x i8> %x, <i8 -1, i8 -1>
   %ashr = ashr <2 x i8> %not_x, %y
   ret <2 x i8> %ashr
 }
-; Note that we must sanitize undef elts of -1 constant to -1 or 0.
-define <2 x i8> @t3_vec_undef(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @t3_vec_undef(
+; Note that we must sanitize poison elts of -1 constant to -1 or 0.
+define <2 x i8> @t3_vec_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @t3_vec_poison(
 ; CHECK-NEXT:    [[NOT_X_NOT:%.*]] = ashr <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[ASHR:%.*]] = xor <2 x i8> [[NOT_X_NOT]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[ASHR:%.*]] = xor <2 x i8> [[NOT_X_NOT]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i8> [[ASHR]]
 ;
-  %not_x = xor <2 x i8> %x, <i8 -1, i8 undef>
+  %not_x = xor <2 x i8> %x, <i8 -1, i8 poison>
   %ashr = ashr <2 x i8> %not_x, %y
   ret <2 x i8> %ashr
 }

@@ -476,7 +476,7 @@ bb3:
 }
 
 ; Don't remove redundant store in a loop with a may-alias store.
-define i32 @test32(i1 %c, ptr %p, i32 %i) {
+define i32 @test32(i1 %c, ptr %p, i32 %i, i1 %arg) {
 ; CHECK-LABEL: @test32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
@@ -484,7 +484,7 @@ define i32 @test32(i1 %c, ptr %p, i32 %i) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB1]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -495,7 +495,7 @@ bb1:
   store i32 %v, ptr %p, align 4
   ; Might read and overwrite value at %p
   call void @unknown_func()
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 bb2:
   ret i32 0
 }
@@ -789,4 +789,17 @@ define i32 @test48(ptr %P, ptr noalias %Q, ptr %R) {
   store i32 3, ptr %Q
   %l = load i32, ptr %R
   ret i32 %l
+}
+
+define void @test49() {
+; CHECK-LABEL: @test49(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr readonly null, i8 0, i64 0, i1 false)
+; CHECK-NEXT:    store ptr null, ptr null, align 8
+; CHECK-NEXT:    ret void
+;
+bb:
+  call void @llvm.memset.p0.i64(ptr readonly null, i8 0, i64 0, i1 false)
+  store ptr null, ptr null, align 8
+  ret void
 }

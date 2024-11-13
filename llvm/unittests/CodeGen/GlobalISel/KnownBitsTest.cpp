@@ -745,6 +745,120 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsConstant) {
   EXPECT_EQ(3u, Info.computeNumSignBits(CopyRegNeg32));
 }
 
+TEST_F(AArch64GISelMITest, TestNumSignBitsXOR) {
+  StringRef MIRString = "  %c1:_(s8) = G_CONSTANT i8 1\n"
+                        "  %cn1:_(s8) = G_CONSTANT i8 -1\n"
+                        "  %c127:_(s8) = G_CONSTANT i8 127\n"
+                        "  %c32:_(s8) = G_CONSTANT i8 32\n"
+                        "  %cn32:_(s8) = G_CONSTANT i8 -32\n"
+
+                        "  %xor1:_(s8) = G_XOR %c1, %cn1\n"
+                        "  %Copy1:_(s8) = COPY %xor1\n"
+
+                        "  %xor2:_(s8) = G_XOR %c1, %c32\n"
+                        "  %Copy2:_(s8) = COPY %xor2\n"
+
+                        "  %xor3:_(s8) = G_XOR %c32, %c127\n"
+                        "  %Copy3:_(s8) = COPY %xor3\n"
+
+                        "  %xor4:_(s8) = G_XOR %cn32, %c127\n"
+                        "  %Copy4:_(s8) = COPY %xor4\n"
+
+                        "  %xor5:_(s8) = G_XOR %c127, %cn32\n"
+                        "  %Copy5:_(s8) = COPY %xor5\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register Copy1 = Copies[Copies.size() - 5];
+  Register Copy2 = Copies[Copies.size() - 4];
+  Register Copy3 = Copies[Copies.size() - 3];
+  Register Copy4 = Copies[Copies.size() - 2];
+  Register Copy5 = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(7u, Info.computeNumSignBits(Copy1));
+  EXPECT_EQ(2u, Info.computeNumSignBits(Copy2));
+  EXPECT_EQ(1u, Info.computeNumSignBits(Copy3));
+  EXPECT_EQ(1u, Info.computeNumSignBits(Copy4));
+  EXPECT_EQ(1u, Info.computeNumSignBits(Copy5));
+}
+
+TEST_F(AArch64GISelMITest, TestNumSignBitsOR) {
+  StringRef MIRString = "  %c1:_(s8) = G_CONSTANT i8 1\n"
+                        "  %cn1:_(s8) = G_CONSTANT i8 -1\n"
+                        "  %c127:_(s8) = G_CONSTANT i8 127\n"
+                        "  %c32:_(s8) = G_CONSTANT i8 32\n"
+                        "  %cn32:_(s8) = G_CONSTANT i8 -32\n"
+
+                        "  %or1:_(s8) = G_OR %c1, %cn1\n"
+                        "  %Copy1:_(s8) = COPY %or1\n"
+
+                        "  %or2:_(s8) = G_OR %c1, %c32\n"
+                        "  %Copy2:_(s8) = COPY %or2\n"
+
+                        "  %or3:_(s8) = G_OR %c32, %c127\n"
+                        "  %Copy3:_(s8) = COPY %or3\n"
+
+                        "  %or4:_(s8) = G_OR %cn32, %c127\n"
+                        "  %Copy4:_(s8) = COPY %or4\n"
+
+                        "  %or5:_(s8) = G_OR %c127, %cn32\n"
+                        "  %Copy5:_(s8) = COPY %or5\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register Copy1 = Copies[Copies.size() - 5];
+  Register Copy2 = Copies[Copies.size() - 4];
+  Register Copy3 = Copies[Copies.size() - 3];
+  Register Copy4 = Copies[Copies.size() - 2];
+  Register Copy5 = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(8u, Info.computeNumSignBits(Copy1));
+  EXPECT_EQ(2u, Info.computeNumSignBits(Copy2));
+  EXPECT_EQ(1u, Info.computeNumSignBits(Copy3));
+  EXPECT_EQ(8u, Info.computeNumSignBits(Copy4));
+  EXPECT_EQ(8u, Info.computeNumSignBits(Copy5));
+}
+
+TEST_F(AArch64GISelMITest, TestNumSignBitsAND) {
+  StringRef MIRString = "  %c1:_(s8) = G_CONSTANT i8 1\n"
+                        "  %cn1:_(s8) = G_CONSTANT i8 -1\n"
+                        "  %c127:_(s8) = G_CONSTANT i8 127\n"
+                        "  %c32:_(s8) = G_CONSTANT i8 32\n"
+                        "  %cn32:_(s8) = G_CONSTANT i8 -32\n"
+
+                        "  %and1:_(s8) = G_AND %c1, %cn1\n"
+                        "  %Copy1:_(s8) = COPY %and1\n"
+
+                        "  %and2:_(s8) = G_AND %c1, %c32\n"
+                        "  %Copy2:_(s8) = COPY %and2\n"
+
+                        "  %and3:_(s8) = G_AND %c32, %c127\n"
+                        "  %Copy3:_(s8) = COPY %and3\n"
+
+                        "  %and4:_(s8) = G_AND %cn32, %c127\n"
+                        "  %Copy4:_(s8) = COPY %and4\n"
+
+                        "  %and5:_(s8) = G_AND %c127, %cn32\n"
+                        "  %Copy5:_(s8) = COPY %and5\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register Copy1 = Copies[Copies.size() - 5];
+  Register Copy2 = Copies[Copies.size() - 4];
+  Register Copy3 = Copies[Copies.size() - 3];
+  Register Copy4 = Copies[Copies.size() - 2];
+  Register Copy5 = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(7u, Info.computeNumSignBits(Copy1));
+  EXPECT_EQ(8u, Info.computeNumSignBits(Copy2));
+  EXPECT_EQ(2u, Info.computeNumSignBits(Copy3));
+  EXPECT_EQ(1u, Info.computeNumSignBits(Copy4));
+  EXPECT_EQ(1u, Info.computeNumSignBits(Copy5));
+}
+
 TEST_F(AArch64GISelMITest, TestNumSignBitsSext) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
                         "  %4:_(s8) = G_LOAD %3 :: (load (s8))\n"

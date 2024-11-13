@@ -192,7 +192,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -677,7 +676,7 @@ LoopPredication::widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
     LLVM_DEBUG(dbgs() << "Range check IV is not affine!\n");
     return std::nullopt;
   }
-  auto *Step = RangeCheckIV->getStepRecurrence(*SE);
+  const SCEV *Step = RangeCheckIV->getStepRecurrence(*SE);
   // We cannot just compare with latch IV step because the latch and range IVs
   // may have different types.
   if (!isSupportedStep(Step)) {
@@ -845,7 +844,7 @@ std::optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
     return std::nullopt;
   }
 
-  auto *Step = Result->IV->getStepRecurrence(*SE);
+  const SCEV *Step = Result->IV->getStepRecurrence(*SE);
   if (!isSupportedStep(Step)) {
     LLVM_DEBUG(dbgs() << "Unsupported loop stride(" << *Step << ")!\n");
     return std::nullopt;
@@ -1193,10 +1192,10 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
 
   // There is nothing to do if the module doesn't use guards
   auto *GuardDecl =
-      M->getFunction(Intrinsic::getName(Intrinsic::experimental_guard));
+      Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
   bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
-  auto *WCDecl = M->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  auto *WCDecl = Intrinsic::getDeclarationIfExists(
+      M, Intrinsic::experimental_widenable_condition);
   bool HasWidenableConditions =
       PredicateWidenableBranchGuards && WCDecl && !WCDecl->use_empty();
   if (!HasIntrinsicGuards && !HasWidenableConditions)

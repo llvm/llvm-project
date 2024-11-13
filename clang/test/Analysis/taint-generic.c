@@ -1,57 +1,53 @@
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -DFILE_IS_STRUCT \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
+// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast \
-// RUN:   -Wno-incompatible-library-redeclaration -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \
+// RUN:     optin.taint.TaintPropagation:Config=justguessit \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
 
 // CHECK-INVALID-FILE: (frontend): invalid input for checker option
-// CHECK-INVALID-FILE-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-FILE-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
 // CHECK-INVALID-FILE-SAME:        'justguessit'
 
-// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
-// RUN:   -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
 // RUN:   2>&1 | FileCheck -DMSG=%errc_EINVAL %s -check-prefix=CHECK-ILL-FORMED
 
 // CHECK-ILL-FORMED: (frontend): invalid input for checker option
-// CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-ILL-FORMED-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: [[MSG]]
 
-// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
-// RUN:   -verify %s \
-// RUN:   -analyzer-checker=alpha.security.taint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-config \
-// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
 
 // CHECK-INVALID-ARG: (frontend): invalid input for checker option
-// CHECK-INVALID-ARG-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-ARG-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-INVALID-ARG-SAME:        that expects an argument number for propagation
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
@@ -63,6 +59,7 @@ void clang_analyzer_isTainted_char(char);
 void clang_analyzer_isTainted_wchar(wchar_t);
 void clang_analyzer_isTainted_charp(char*);
 void clang_analyzer_isTainted_int(int);
+void clang_analyzer_dump_int(int);
 
 int coin();
 
@@ -305,15 +302,21 @@ void testGets_s(void) {
 
 void testTaintedBufferSize(void) {
   size_t ts;
+  // The functions malloc, calloc, bcopy and memcpy are not taint sinks in the
+  // default config of GenericTaintChecker (because that would cause too many
+  // false positives).
+  // FIXME: We should generate warnings when a value passed to these functions
+  // is tainted and _can be very large_ (because that's exploitable). This
+  // functionality probably belongs to the checkers that do more detailed
+  // modeling of these functions (MallocChecker and CStringChecker).
   scanf("%zd", &ts);
-
-  int *buf1 = (int*)malloc(ts*sizeof(int)); // expected-warning {{Untrusted data is used to specify the buffer size}}
-  char *dst = (char*)calloc(ts, sizeof(char)); //expected-warning {{Untrusted data is used to specify the buffer size}}
-  bcopy(buf1, dst, ts); // expected-warning {{Untrusted data is used to specify the buffer size}}
-  __builtin_memcpy(dst, buf1, (ts + 4)*sizeof(char)); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  int *buf1 = (int*)malloc(ts*sizeof(int)); // warn here, ts is unbounded and tainted
+  char *dst = (char*)calloc(ts, sizeof(char)); // warn here, ts is unbounded tainted
+  bcopy(buf1, dst, ts); // no warning here, since the size of buf1, dst equals ts. Cannot overflow.
+  __builtin_memcpy(dst, buf1, (ts + 4)*sizeof(char)); // warn here, dst overflows (whatever the value of ts)
 
   // If both buffers are trusted, do not issue a warning.
-  char *dst2 = (char*)malloc(ts*sizeof(char)); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  char *dst2 = (char*)malloc(ts*sizeof(char)); // warn here, ts in unbounded
   strncat(dst2, dst, ts); // no-warning
 }
 
@@ -353,7 +356,7 @@ void testStruct(void) {
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
   read(sock, &tainted, sizeof(tainted));
-  __builtin_memcpy(buffer, tainted.buf, tainted.length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted.length); // expected-warning {{YES }}
 }
 
 void testStructArray(void) {
@@ -368,17 +371,17 @@ void testStructArray(void) {
   __builtin_memset(srcbuf, 0, sizeof(srcbuf));
 
   read(sock, &tainted[0], sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{YES}}
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   read(sock, &tainted, sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{YES}}
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   // If we taint element 1, we should not raise an alert on taint for element 0 or element 2
   read(sock, &tainted[1], sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // no-warning
-  __builtin_memcpy(dstbuf, srcbuf, tainted[2].length); // no-warning
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{NO}}
+  clang_analyzer_isTainted_int(tainted[2].length); // expected-warning {{NO}}
 }
 
 void testUnion(void) {
@@ -399,6 +402,14 @@ int testDivByZero(void) {
   int x;
   scanf("%d", &x);
   return 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+int testTaintedDivFP(void) {
+  int x;
+  scanf("%d", &x);
+  if (!x)
+    return 0;
+  return 5/x; // x cannot be 0, so no tainted warning either
 }
 
 // Zero-sized VLAs.
@@ -453,7 +464,53 @@ unsigned radar11369570_hanging(const unsigned char *arr, int l) {
     longcmp(a, t, c);
     l -= 12;
   }
-  return 5/a; // expected-warning {{Division by a tainted value, possibly zero}}
+  return 5/a; // FIXME: Should be a "div by tainted" warning here.
+}
+
+// This computation used to take a very long time.
+void complex_taint_queries(const int *p) {
+  int tainted = 0;
+  scanf("%d", &tainted);
+
+  // Make "tmp" tainted.
+  int tmp = tainted + tainted;
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{YES}}
+
+  // Make "tmp" SymExpr a lot more complicated by applying computation.
+  // This should balloon the symbol complexity.
+  tmp += p[0] + p[0];
+  tmp += p[1] + p[1];
+  tmp += p[2] + p[2];
+  clang_analyzer_dump_int(tmp); // expected-warning{{((((conj_}} symbol complexity: 8
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{YES}}
+
+  tmp += p[3] + p[3];
+  clang_analyzer_dump_int(tmp); // expected-warning{{(((((conj_}} symbol complexity: 10
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} 10 is already too complex to be traversed
+
+  tmp += p[4] + p[4];
+  tmp += p[5] + p[5];
+  tmp += p[6] + p[6];
+  tmp += p[7] + p[7];
+  tmp += p[8] + p[8];
+  tmp += p[9] + p[9];
+  tmp += p[10] + p[10];
+  tmp += p[11] + p[11];
+  tmp += p[12] + p[12];
+  tmp += p[13] + p[13];
+  tmp += p[14] + p[14];
+  tmp += p[15] + p[15];
+
+  // The SymExpr still holds the full history of the computation, yet, "isTainted" doesn't traverse the tree as the complexity is over the threshold.
+  clang_analyzer_dump_int(tmp);
+  // expected-warning@-1{{(((((((((((((((((conj_}} symbol complexity: 34
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} FIXME: Ideally, this should still result in "tainted".
+
+  // By making it even one step more complex, then it would hit the "max-symbol-complexity"
+  // threshold and the engine would cut the SymExpr and replace it by a new conjured symbol.
+  tmp += p[16];
+  clang_analyzer_dump_int(tmp); // expected-warning{{conj_}} symbol complexity: 1
+  clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}}
 }
 
 // Check that we do not assert of the following code.

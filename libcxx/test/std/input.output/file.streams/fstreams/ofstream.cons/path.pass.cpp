@@ -15,7 +15,9 @@
 // plate <class charT, class traits = char_traits<charT> >
 // class basic_ofstream
 
-// explicit basic_ofstream(const filesystem::path& s, ios_base::openmode mode = ios_base::out);
+// template<class T>
+// explicit basic_ofstream(const T& s, ios_base::openmode mode = ios_base::out); // Since C++17
+// Constraints: is_same_v<T, filesystem::path> is true
 
 #include <cassert>
 #include <filesystem>
@@ -23,12 +25,42 @@
 #include <type_traits>
 
 #include "platform_support.h"
+#include "operator_hijacker.h"
 #include "test_macros.h"
+#include "test_iterators.h"
 
 namespace fs = std::filesystem;
 
+template <class CharT>
+constexpr bool test_non_convert_to_path() {
+  // String types
+  static_assert(!std::is_constructible_v<std::ofstream, std::basic_string_view<CharT>>);
+  static_assert(!std::is_constructible_v<std::ofstream, const std::basic_string_view<CharT>>);
+
+  // Char* pointers
+  if constexpr (!std::is_same_v<CharT, char> && !std::is_same_v<CharT, fs::path::value_type>)
+    static_assert(!std::is_constructible_v<std::ofstream, const CharT*>);
+
+  // Iterators
+  static_assert(!std::is_convertible_v<std::ofstream, cpp17_input_iterator<const CharT*>>);
+
+  return true;
+}
+
+static_assert(test_non_convert_to_path<char>());
+
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && !defined(TEST_HAS_OPEN_WITH_WCHAR)
+static_assert(test_non_convert_to_path<wchar_t>());
+#endif // !TEST_HAS_NO_WIDE_CHARACTERS && !TEST_HAS_OPEN_WITH_WCHAR
+
+#ifndef TEST_HAS_NO_CHAR8_T
+static_assert(test_non_convert_to_path<char8_t>());
+#endif // TEST_HAS_NO_CHAR8_T
+
+static_assert(test_non_convert_to_path<char16_t>());
+static_assert(test_non_convert_to_path<char32_t>());
+
 int main(int, char**) {
-  fs::path p = get_temp_file_name();
   {
     static_assert(!std::is_convertible<fs::path, std::ofstream>::value,
                   "ctor should be explicit");
@@ -36,6 +68,7 @@ int main(int, char**) {
                                         std::ios_base::openmode>::value,
                   "");
   }
+  fs::path p = get_temp_file_name();
   {
     std::ofstream stream(p);
     stream << 3.25;
@@ -46,8 +79,38 @@ int main(int, char**) {
     stream >> x;
     assert(x == 3.25);
   }
+  std::remove(p.string().c_str());
+
   {
-    std::ifstream stream(p, std::ios_base::out);
+    std::basic_ofstream<char, operator_hijacker_char_traits<char> > stream(p);
+    stream << "3.25";
+  }
+  {
+    std::ifstream stream(p);
+    double x = 0;
+    stream >> x;
+    assert(x == 3.25);
+  }
+  std::remove(p.string().c_str());
+
+  {
+    std::ofstream stream(p, std::ios_base::out);
+    stream << 3.25;
+  }
+  {
+    std::ifstream stream(p);
+    double x = 0;
+    stream >> x;
+    assert(x == 3.25);
+  }
+  std::remove(p.string().c_str());
+
+  {
+    std::basic_ofstream<char, operator_hijacker_char_traits<char> > stream(p, std::ios_base::out);
+    stream << "3.25";
+  }
+  {
+    std::ifstream stream(p);
     double x = 0;
     stream >> x;
     assert(x == 3.25);
@@ -65,8 +128,38 @@ int main(int, char**) {
     stream >> x;
     assert(x == 3.25);
   }
+  std::remove(p.string().c_str());
+
   {
-    std::wifstream stream(p, std::ios_base::out);
+    std::basic_ofstream<wchar_t, operator_hijacker_char_traits<wchar_t> > stream(p);
+    stream << L"3.25";
+  }
+  {
+    std::wifstream stream(p);
+    double x = 0;
+    stream >> x;
+    assert(x == 3.25);
+  }
+  std::remove(p.string().c_str());
+
+  {
+    std::wofstream stream(p, std::ios_base::out);
+    stream << 3.25;
+  }
+  {
+    std::wifstream stream(p);
+    double x = 0;
+    stream >> x;
+    assert(x == 3.25);
+  }
+  std::remove(p.string().c_str());
+
+  {
+    std::basic_ofstream<wchar_t, operator_hijacker_char_traits<wchar_t> > stream(p, std::ios_base::out);
+    stream << L"3.25";
+  }
+  {
+    std::wifstream stream(p);
     double x = 0;
     stream >> x;
     assert(x == 3.25);

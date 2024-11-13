@@ -33,12 +33,17 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void onEndOfTranslationUnit() override;
 
-private:
-  void handleMoveFix(const ParmVarDecl &Var, const DeclRefExpr &CopyArgument,
-                     const ASTContext &Context);
+protected:
+  // Create diagnostics. These are virtual so that derived classes can change
+  // behaviour.
+  virtual void handleMoveFix(const ParmVarDecl &Param,
+                             const DeclRefExpr &CopyArgument,
+                             ASTContext &Context);
+  virtual void handleConstRefFix(const FunctionDecl &Function,
+                                 const ParmVarDecl &Param, ASTContext &Context);
 
-  llvm::DenseMap<const FunctionDecl *, FunctionParmMutationAnalyzer>
-      MutationAnalyzers;
+private:
+  ExprMutationAnalyzer::Memoized MutationAnalyzerCache;
   utils::IncludeInserter Inserter;
   const std::vector<StringRef> AllowedTypes;
 };

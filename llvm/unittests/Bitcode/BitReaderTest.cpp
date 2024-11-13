@@ -38,7 +38,7 @@ std::unique_ptr<Module> parseAssembly(LLVMContext &Context,
 
   // A failure here means that the test itself is buggy.
   if (!M)
-    report_fatal_error(OS.str().c_str());
+    report_fatal_error(ErrMsg.c_str());
 
   return M;
 }
@@ -160,7 +160,7 @@ TEST(BitReaderTest, MaterializeConstrainedFPStrictFP) {
   LLVMContext Context;
   std::unique_ptr<Module> M = getLazyModuleFromAssembly(
       Context, Mem,
-      "define double @foo(double %a) {\n"
+      "define double @foo(double %a) strictfp {\n"
       "  %result = call double @llvm.experimental.constrained.sqrt.f64(double "
       "%a, metadata !\"round.tonearest\", metadata !\"fpexcept.strict\") "
       "strictfp\n"

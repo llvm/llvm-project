@@ -221,7 +221,7 @@ void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
   OutBufCur = OutBufStart;
-  flush_tied_then_write(OutBufStart, Length);
+  write_impl(OutBufStart, Length);
 }
 
 raw_ostream &raw_ostream::write(unsigned char C) {
@@ -229,7 +229,7 @@ raw_ostream &raw_ostream::write(unsigned char C) {
   if (LLVM_UNLIKELY(OutBufCur >= OutBufEnd)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        flush_tied_then_write(reinterpret_cast<char *>(&C), 1);
+        write_impl(reinterpret_cast<char *>(&C), 1);
         return *this;
       }
       // Set up a buffer and start over.
@@ -249,7 +249,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
   if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        flush_tied_then_write(Ptr, Size);
+        write_impl(Ptr, Size);
         return *this;
       }
       // Set up a buffer and start over.
@@ -265,7 +265,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
     if (LLVM_UNLIKELY(OutBufCur == OutBufStart)) {
       assert(NumBytes != 0 && "undefined behavior");
       size_t BytesToWrite = Size - (Size % NumBytes);
-      flush_tied_then_write(Ptr, BytesToWrite);
+      write_impl(Ptr, BytesToWrite);
       size_t BytesRemaining = Size - BytesToWrite;
       if (BytesRemaining > size_t(OutBufEnd - OutBufCur)) {
         // Too much left over to copy into our buffer.
@@ -304,12 +304,6 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   }
 
   OutBufCur += Size;
-}
-
-void raw_ostream::flush_tied_then_write(const char *Ptr, size_t Size) {
-  if (TiedStream)
-    TiedStream->flush();
-  write_impl(Ptr, Size);
 }
 
 // Formatted output.
@@ -742,6 +736,9 @@ static bool write_console_impl(int FD, StringRef Data) {
 #endif
 
 void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
+  if (TiedStream)
+    TiedStream->flush();
+
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
@@ -846,6 +843,10 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   if (IsWindowsConsole)
     return 0;
   return raw_ostream::preferred_buffer_size();
+#elif defined(__MVS__)
+  // The buffer size on z/OS is defined with macro BUFSIZ, which can be
+  // retrieved by invoking function raw_ostream::preferred_buffer_size().
+  return raw_ostream::preferred_buffer_size();
 #else
   assert(FD >= 0 && "File not yet open!");
   struct stat statbuf;
@@ -897,7 +898,7 @@ raw_fd_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
 #ifdef __MVS__
-  EC = enableAutoConversion(STDOUT_FILENO);
+  EC = enablezOSAutoConversion(STDOUT_FILENO);
   assert(!EC);
 #endif
   static raw_fd_ostream S("-", EC, sys::fs::OF_None);
@@ -906,9 +907,9 @@ raw_fd_ostream &llvm::outs() {
 }
 
 raw_fd_ostream &llvm::errs() {
-  // Set standard error to be unbuffered and tied to outs() by default.
+  // Set standard error to be unbuffered.
 #ifdef __MVS__
-  std::error_code EC = enableAutoConversion(STDERR_FILENO);
+  std::error_code EC = enablezOSAutoConversion(STDERR_FILENO);
   assert(!EC);
 #endif
   static raw_fd_ostream S(STDERR_FILENO, false, true);
@@ -975,6 +976,10 @@ void raw_svector_ostream::write_impl(const char *Ptr, size_t Size) {
 void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
                                       uint64_t Offset) {
   memcpy(OS.data() + Offset, Ptr, Size);
+}
+
+bool raw_svector_ostream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_SVecStream;
 }
 
 //===----------------------------------------------------------------------===//

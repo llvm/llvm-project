@@ -136,12 +136,10 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
       // Otherwise check if we previously had exactly one relocation at this
       // offset. If so, we now have a second one and move it from the TargetMap
       // into the Multiple set.
-      auto It = BlockEdges.TargetMap.find(E.getOffset());
-      if (It != BlockEdges.TargetMap.end()) {
+      auto [It, Inserted] = BlockEdges.TargetMap.try_emplace(E.getOffset(), E);
+      if (!Inserted) {
         BlockEdges.TargetMap.erase(It);
         BlockEdges.Multiple.insert(E.getOffset());
-      } else {
-        BlockEdges.TargetMap[E.getOffset()] = EdgeTarget(E);
       }
     }
 

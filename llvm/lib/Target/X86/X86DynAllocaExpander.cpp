@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -27,7 +26,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -65,12 +63,17 @@ private:
   bool NoStackArgProbe = false;
 
   StringRef getPassName() const override { return "X86 DynAlloca Expander"; }
+
+public:
   static char ID;
 };
 
 char X86DynAllocaExpander::ID = 0;
 
 } // end anonymous namespace
+
+INITIALIZE_PASS(X86DynAllocaExpander, "x86-dyn-alloca-expander",
+                "X86 DynAlloca Expander", false, false)
 
 FunctionPass *llvm::createX86DynAllocaExpander() {
   return new X86DynAllocaExpander();

@@ -443,8 +443,7 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
 /// d1) and return vector<16x2x64>
 static VectorType getDistributedType(VectorType originalType, AffineMap map,
                                      int64_t warpSize) {
-  SmallVector<int64_t> targetShape(originalType.getShape().begin(),
-                                   originalType.getShape().end());
+  SmallVector<int64_t> targetShape(originalType.getShape());
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     unsigned position = map.getDimPosition(i);
     if (targetShape[position] % warpSize != 0) {
@@ -1293,8 +1292,7 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
     (void)distributedDim;
 
     // Yield source vector from warp op.
-    SmallVector<int64_t> newDistributedShape(extractSrcType.getShape().begin(),
-                                             extractSrcType.getShape().end());
+    SmallVector<int64_t> newDistributedShape(extractSrcType.getShape());
     for (int i = 0; i < distributedType.getRank(); ++i)
       newDistributedShape[i + extractOp.getNumIndices()] =
           distributedType.getDimSize(i);
@@ -1562,8 +1560,7 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     // Compute the distributed source vector type.
     VectorType srcVecType = cast<VectorType>(insertOp.getSourceType());
-    SmallVector<int64_t> distrSrcShape(srcVecType.getShape().begin(),
-                                       srcVecType.getShape().end());
+    SmallVector<int64_t> distrSrcShape(srcVecType.getShape());
     // E.g.: vector.insert %s, %d [2] : vector<96xf32> into vector<128x96xf32>
     // Case 1: distrDestDim = 1 (dim of size 96). In that case, each lane will
     //         insert a smaller vector<3xf32>.
@@ -1692,6 +1689,9 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
           }
         });
 
+    if (llvm::is_contained(distTypes, Type{}))
+      return failure();
+
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, escapingValues.getArrayRef(), distTypes,
@@ -1720,7 +1720,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), newOperands);
-    rewriter.setInsertionPoint(newForOp.getBody(), newForOp.getBody()->begin());
+    rewriter.setInsertionPointToStart(newForOp.getBody());
 
     SmallVector<Value> warpInput(newForOp.getRegionIterArgs().begin(),
                                  newForOp.getRegionIterArgs().end());
@@ -1747,7 +1747,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
       yieldOperands.push_back(operand);
     rewriter.eraseOp(forOp.getBody()->getTerminator());
     rewriter.mergeBlocks(forOp.getBody(), innerWarp.getBody(), argMapping);
-    rewriter.setInsertionPoint(innerWarp.getBody(), innerWarp.getBody()->end());
+    rewriter.setInsertionPointToEnd(innerWarp.getBody());
     rewriter.create<vector::YieldOp>(innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
     if (!innerWarp.getResults().empty())

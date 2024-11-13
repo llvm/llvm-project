@@ -7,48 +7,30 @@ target triple = "aarch64-unknown-linux-gnu"
 $test_single_bb_resolver.resolver = comdat any
 $test_multi_bb_resolver.resolver = comdat any
 $test_caller_feats_not_implied.resolver = comdat any
-$test_same_priority_callers.resolver = comdat any
 $foo.resolver = comdat any
 $bar.resolver = comdat any
 $goo.resolver = comdat any
-$baz.resolver = comdat any
 
 @__aarch64_cpu_features = external local_unnamed_addr global { i64 }
-
-@test_single_bb_resolver.ifunc = weak_odr alias i32 (), ptr @test_single_bb_resolver
-@test_multi_bb_resolver.ifunc = weak_odr alias i32 (), ptr @test_multi_bb_resolver
-@test_caller_feats_not_implied.ifunc = weak_odr alias i32 (), ptr @test_caller_feats_not_implied
-@test_same_priority_callers.ifunc = weak_odr alias i32 (), ptr @test_same_priority_callers
-@foo.ifunc = weak_odr alias i32 (), ptr @foo
-@bar.ifunc = weak_odr alias i32 (), ptr @bar
-@goo.ifunc = weak_odr alias i32 (), ptr @goo
-@baz.ifunc = weak_odr alias i32 (), ptr @baz
 
 @test_single_bb_resolver = weak_odr ifunc i32 (), ptr @test_single_bb_resolver.resolver
 @test_multi_bb_resolver = weak_odr ifunc i32 (), ptr @test_multi_bb_resolver.resolver
 @test_caller_feats_not_implied = weak_odr ifunc i32 (), ptr @test_caller_feats_not_implied.resolver
-@test_same_priority_callers = weak_odr ifunc i32 (), ptr @test_same_priority_callers.resolver
 @foo = weak_odr ifunc i32 (), ptr @foo.resolver
 @bar = weak_odr ifunc i32 (), ptr @bar.resolver
 @goo = weak_odr ifunc i32 (), ptr @goo.resolver
-@baz = weak_odr ifunc i32 (), ptr @baz.resolver
 
 declare void @__init_cpu_features_resolver() local_unnamed_addr
 
-declare i32 @test_single_bb_resolver._Msve() #2
+declare i32 @test_single_bb_resolver.default() #0
 
-declare i32 @test_single_bb_resolver._Msve2() #3
+declare i32 @test_single_bb_resolver._Msve() #1
 
-define i32 @test_single_bb_resolver.default() #1 {
-; CHECK-LABEL: define i32 @test_single_bb_resolver.default(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
-entry:
-  ret i32 0
-}
+declare i32 @test_single_bb_resolver._Msve2() #2
 
 define weak_odr ptr @test_single_bb_resolver.resolver() #0 comdat {
 ; CHECK-LABEL: define weak_odr ptr @test_single_bb_resolver.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -61,9 +43,9 @@ resolver_entry:
   ret ptr %common.ret.op
 }
 
-define i32 @foo._Msve() #2 {
+define i32 @foo._Msve() #1 {
 ; CHECK-LABEL: define i32 @foo._Msve(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_single_bb_resolver._Msve()
 ;
 entry:
@@ -72,23 +54,20 @@ entry:
   ret i32 %add
 }
 
-define i32 @foo._Msve2() #3 {
+define i32 @foo._Msve2() #2 {
 ; CHECK-LABEL: define i32 @foo._Msve2(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK:    [[CALL1:%.*]] = tail call i32 @test_single_bb_resolver._Msve2()
-; CHECK:    [[CALL2:%.*]] = tail call i32 @test_single_bb_resolver._Msve2()
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK:    [[CALL:%.*]] = tail call i32 @test_single_bb_resolver._Msve2()
 ;
 entry:
-  %call1 = tail call i32 @test_single_bb_resolver()
-  %call2 = tail call i32 @test_single_bb_resolver()
-  %added = add nsw i32 %call1, %call2
-  %add = add nsw i32 %added, 20
+  %call = tail call i32 @test_single_bb_resolver()
+  %add = add nsw i32 %call, 20
   ret i32 %add
 }
 
-define i32 @foo.default() #1 {
+define i32 @foo.default() #0 {
 ; CHECK-LABEL: define i32 @foo.default(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_single_bb_resolver.default()
 ;
 entry:
@@ -99,7 +78,7 @@ entry:
 
 define weak_odr ptr @foo.resolver() #0 comdat {
 ; CHECK-LABEL: define weak_odr ptr @foo.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
+; CHECK-SAME: ) #[[ATTR0]] comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -112,37 +91,17 @@ resolver_entry:
   ret ptr %common.ret.op
 }
 
-define i32 @test_multi_bb_resolver._Mmops() #4 {
-; CHECK-LABEL: define i32 @test_multi_bb_resolver._Mmops(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
-entry:
-  ret i32 3
-}
+declare i32 @test_multi_bb_resolver._Mmops() #3
 
-define i32 @test_multi_bb_resolver._Msve2() #3 {
-; CHECK-LABEL: define i32 @test_multi_bb_resolver._Msve2(
-; CHECK-SAME: ) #[[ATTR1]] {
-entry:
-  ret i32 2
-}
+declare i32 @test_multi_bb_resolver._Msve2() #2
 
-define i32 @test_multi_bb_resolver._Msve() #2 {
-; CHECK-LABEL: define i32 @test_multi_bb_resolver._Msve(
-; CHECK-SAME: ) #[[ATTR0]] {
-entry:
-  ret i32 1
-}
+declare i32 @test_multi_bb_resolver._Msve() #1
 
-define i32 @test_multi_bb_resolver.default() #1 {
-; CHECK-LABEL: define i32 @test_multi_bb_resolver.default(
-; CHECK-SAME: ) #[[ATTR2]] {
-entry:
-  ret i32 0
-}
+declare i32 @test_multi_bb_resolver.default() #0
 
 define weak_odr ptr @test_multi_bb_resolver.resolver() #0 comdat {
 ; CHECK-LABEL: define weak_odr ptr @test_multi_bb_resolver.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
+; CHECK-SAME: ) #[[ATTR0]] comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -166,9 +125,9 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @bar._MmopsMsve2() #5 {
+define i32 @bar._MmopsMsve2() #4 {
 ; CHECK-LABEL: define i32 @bar._MmopsMsve2(
-; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver._Mmops()
 ;
 entry:
@@ -177,9 +136,9 @@ entry:
   ret i32 %add
 }
 
-define i32 @bar._Mmops() #4 {
+define i32 @bar._Mmops() #3 {
 ; CHECK-LABEL: define i32 @bar._Mmops(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver._Mmops()
 ;
 entry:
@@ -188,9 +147,9 @@ entry:
   ret i32 %add
 }
 
-define i32 @bar._Msve() #2 {
+define i32 @bar._Msve() #1 {
 ; CHECK-LABEL: define i32 @bar._Msve(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver()
 ;
 entry:
@@ -199,9 +158,9 @@ entry:
   ret i32 %add
 }
 
-define i32 @bar.default() #1 {
+define i32 @bar.default() #0 {
 ; CHECK-LABEL: define i32 @bar.default(
-; CHECK-SAME: ) #[[ATTR2]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver.default()
 ;
 entry:
@@ -212,7 +171,7 @@ entry:
 
 define weak_odr ptr @bar.resolver() #0 comdat {
 ; CHECK-LABEL: define weak_odr ptr @bar.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
+; CHECK-SAME: ) #[[ATTR0]] comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -225,37 +184,17 @@ resolver_entry:
   ret ptr %common.ret.op
 }
 
-define i32 @test_caller_feats_not_implied._Mmops() #4 {
-; CHECK-LABEL: define i32 @test_caller_feats_not_implied._Mmops(
-; CHECK-SAME: ) #[[ATTR4]] {
-entry:
-  ret i32 3
-}
+declare i32 @test_caller_feats_not_implied._Mmops() #3
 
-define i32 @test_caller_feats_not_implied._Msme() #6 {
-; CHECK-LABEL: define i32 @test_caller_feats_not_implied._Msme(
-; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
-entry:
-  ret i32 2
-}
+declare i32 @test_caller_feats_not_implied._Msme() #5
 
-define i32 @test_caller_feats_not_implied._Msve() #2 {
-; CHECK-LABEL: define i32 @test_caller_feats_not_implied._Msve(
-; CHECK-SAME: ) #[[ATTR0]] {
-entry:
-  ret i32 1
-}
+declare i32 @test_caller_feats_not_implied._Msve() #1
 
-define i32 @test_caller_feats_not_implied.default() #1 {
-; CHECK-LABEL: define i32 @test_caller_feats_not_implied.default(
-; CHECK-SAME: ) #[[ATTR2]] {
-entry:
-  ret i32 0
-}
+declare i32 @test_caller_feats_not_implied.default() #0
 
 define weak_odr ptr @test_caller_feats_not_implied.resolver() #0 comdat {
 ; CHECK-LABEL: define weak_odr ptr @test_caller_feats_not_implied.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
+; CHECK-SAME: ) #[[ATTR0]] comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -279,9 +218,9 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @goo._Mmops() #4 {
+define i32 @goo._Mmops() #3 {
 ; CHECK-LABEL: define i32 @goo._Mmops(
-; CHECK-SAME: ) #[[ATTR4]] {
+; CHECK-SAME: ) #[[ATTR3]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_caller_feats_not_implied._Mmops()
 ;
 entry:
@@ -289,9 +228,9 @@ entry:
   ret i32 %call
 }
 
-define i32 @goo._Msve() #2 {
+define i32 @goo._Msve() #1 {
 ; CHECK-LABEL: define i32 @goo._Msve(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_caller_feats_not_implied()
 ;
 entry:
@@ -299,9 +238,9 @@ entry:
   ret i32 %call
 }
 
-define i32 @goo.default() #1 {
+define i32 @goo.default() #0 {
 ; CHECK-LABEL: define i32 @goo.default(
-; CHECK-SAME: ) #[[ATTR2]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_caller_feats_not_implied()
 ;
 entry:
@@ -311,7 +250,7 @@ entry:
 
 define weak_odr ptr @goo.resolver() #0 comdat {
 ; CHECK-LABEL: define weak_odr ptr @goo.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
+; CHECK-SAME: ) #[[ATTR0]] comdat {
 resolver_entry:
   tail call void @__init_cpu_features_resolver()
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
@@ -324,89 +263,9 @@ resolver_entry:
   ret ptr %common.ret.op
 }
 
-define i32 @test_same_priority_callers._Msve() #2 {
-; CHECK-LABEL: define i32 @test_same_priority_callers._Msve(
-; CHECK-SAME: ) #[[ATTR0]] {
-entry:
-  ret i32 1
-}
-
-define i32 @test_same_priority_callers.default() #1 {
-; CHECK-LABEL: define i32 @test_same_priority_callers.default(
-; CHECK-SAME: ) #[[ATTR2]] {
-entry:
-  ret i32 0
-}
-
-define weak_odr ptr @test_same_priority_callers.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @test_same_priority_callers.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
-resolver_entry:
-  tail call void @__init_cpu_features_resolver()
-  %0 = load i64, ptr @__aarch64_cpu_features, align 8
-  %1 = and i64 %0, 1073741824
-  %.not = icmp eq i64 %1, 0
-  %test_same_priority_callers._Msve.test_same_priority_callers.default = select i1 %.not, ptr @test_same_priority_callers.default, ptr @test_same_priority_callers._Msve
-  ret ptr %test_same_priority_callers._Msve.test_same_priority_callers.default
-}
-
-define dso_local i32 @baz._Msve() #2 {
-; CHECK-LABEL: define dso_local i32 @baz._Msve(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_same_priority_callers._Msve()
-;
-entry:
-  %call = tail call i32 @test_same_priority_callers()
-  ret i32 %call
-}
-
-define i32 @baz._Maes() #1 {
-; CHECK-LABEL: define i32 @baz._Maes(
-; CHECK-SAME: ) #[[ATTR2]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_same_priority_callers()
-;
-entry:
-  %call = tail call i32 @test_same_priority_callers()
-  ret i32 %call
-}
-
-; This isn't a bug in globalopt, but rather a problematic input.
-; The 'aes' extension does not add any target features on top
-; of what is inherited from the command line.
-;
-; What happens is that since baz._Maes and baz.default have the same priority,
-; globalopt tries to optimize the call in baz.default first and succeeds leaving
-; the remaining call in baz._Maes pointing to the resolver.
-;
-define dso_local i32 @baz.default() #1 {
-; CHECK-LABEL: define dso_local i32 @baz.default(
-; CHECK-SAME: ) #[[ATTR2]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_same_priority_callers.default()
-;
-entry:
-  %call = tail call i32 @test_same_priority_callers()
-  ret i32 %call
-}
-
-define weak_odr ptr @baz.resolver() #0 comdat {
-; CHECK-LABEL: define weak_odr ptr @baz.resolver(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] comdat {
-resolver_entry:
-  tail call void @__init_cpu_features_resolver()
-  %0 = load i64, ptr @__aarch64_cpu_features, align 8
-  %1 = and i64 %0, 1073741824
-  %.not = icmp eq i64 %1, 0
-  %2 = and i64 %0, 16384
-  %.not3 = icmp eq i64 %2, 0
-  %baz._Maes.baz.default = select i1 %.not3, ptr @baz.default, ptr @baz._Maes
-  %common.ret.op = select i1 %.not, ptr %baz._Maes.baz.default, ptr @baz._Msve
-  ret ptr %common.ret.op
-}
-
-attributes #0 = { "target-features"="+fmv" }
-attributes #1 = { "target-features"="+fmv,+fp-armv8,+neon,+outline-atomics,+v8a" }
-attributes #2 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+v8a" }
-attributes #3 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+v8a" }
-attributes #4 = { "target-features"="+fmv,+fp-armv8,+mops,+neon,+outline-atomics,+v8a" }
-attributes #5 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+mops,+neon,+outline-atomics,+sve,+sve2,+v8a" }
-attributes #6 = { "target-features"="+bf16,+fp-armv8,+neon,+outline-atomics,+sme,+v8a" }
+attributes #0 = { "target-features"="+fmv,+fp-armv8,+neon,+outline-atomics,+v8a" }
+attributes #1 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+v8a" }
+attributes #2 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+v8a" }
+attributes #3 = { "target-features"="+fmv,+fp-armv8,+mops,+neon,+outline-atomics,+v8a" }
+attributes #4 = { "target-features"="+fmv,+fp-armv8,+fullfp16,+mops,+neon,+outline-atomics,+sve,+sve2,+v8a" }
+attributes #5 = { "target-features"="+bf16,+fmv,+fp-armv8,+neon,+outline-atomics,+sme,+v8a" }

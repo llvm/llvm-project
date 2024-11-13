@@ -630,6 +630,17 @@ bool MemRegion::canPrintPrettyAsExpr() const {
   return false;
 }
 
+StringRef MemRegion::getKindStr() const {
+  switch (getKind()) {
+#define REGION(Id, Parent)                                                     \
+  case Id##Kind:                                                               \
+    return #Id;
+#include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
+#undef REGION
+  }
+  llvm_unreachable("Unkown kind!");
+}
+
 void MemRegion::printPretty(raw_ostream &os) const {
   assert(canPrintPretty() && "This region cannot be printed pretty.");
   os << "'";
@@ -711,6 +722,13 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
   SmallString<50> buf;
   llvm::raw_svector_ostream os(buf);
 
+  // Enclose subject with single quotes if needed.
+  auto QuoteIfNeeded = [UseQuotes](const Twine &Subject) -> std::string {
+    if (UseQuotes)
+      return ("'" + Subject + "'").str();
+    return Subject.str();
+  };
+
   // Obtain array indices to add them to the variable name.
   const ElementRegion *ER = nullptr;
   while ((ER = R->getAs<ElementRegion>())) {
@@ -740,12 +758,20 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
   }
 
   // Get variable name.
-  if (R && R->canPrintPrettyAsExpr()) {
-    R->printPrettyAsExpr(os);
-    if (UseQuotes)
-      return (llvm::Twine("'") + os.str() + ArrayIndices + "'").str();
-    else
-      return (llvm::Twine(os.str()) + ArrayIndices).str();
+  if (R) {
+    // MemRegion can be pretty printed.
+    if (R->canPrintPrettyAsExpr()) {
+      R->printPrettyAsExpr(os);
+      return QuoteIfNeeded(llvm::Twine(os.str()) + ArrayIndices);
+    }
+
+    // FieldRegion may have ElementRegion as SuperRegion.
+    if (const auto *FR = R->getAs<FieldRegion>()) {
+      std::string Super = FR->getSuperRegion()->getDescriptiveName(false);
+      if (Super.empty())
+        return "";
+      return QuoteIfNeeded(Super + "." + FR->getDecl()->getName());
+    }
   }
 
   return VariableName;
@@ -1068,7 +1094,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
             T = getContext().VoidTy;
           if (!T->getAs<FunctionType>()) {
             FunctionProtoType::ExtProtoInfo Ext;
-            T = getContext().getFunctionType(T, std::nullopt, Ext);
+            T = getContext().getFunctionType(T, {}, Ext);
           }
           T = getContext().getBlockPointerType(T);
 
@@ -1155,10 +1181,10 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   return getSubRegion<CompoundLiteralRegion>(CL, sReg);
 }
 
-const ElementRegion*
+const ElementRegion *
 MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
-                                   const SubRegion* superRegion,
-                                   ASTContext &Ctx){
+                                   const SubRegion *superRegion,
+                                   const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
   llvm::FoldingSetNodeID ID;

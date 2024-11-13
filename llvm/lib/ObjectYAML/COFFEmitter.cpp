@@ -125,15 +125,12 @@ struct COFFParser {
   }
 
   unsigned getStringIndex(StringRef Str) {
-    StringMap<unsigned>::iterator i = StringTableMap.find(Str);
-    if (i == StringTableMap.end()) {
-      unsigned Index = StringTable.size();
+    auto [It, Inserted] = StringTableMap.try_emplace(Str, StringTable.size());
+    if (Inserted) {
       StringTable.append(Str.begin(), Str.end());
       StringTable.push_back(0);
-      StringTableMap[Str] = Index;
-      return Index;
     }
-    return i->second;
+    return It->second;
   }
 
   COFFYAML::Object &Obj;
@@ -359,9 +356,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
       SizeOfInitializedData += S.Header.SizeOfRawData;
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
       SizeOfUninitializedData += S.Header.SizeOfRawData;
-    if (S.Name.equals(".text"))
+    if (S.Name == ".text")
       Header->BaseOfCode = S.Header.VirtualAddress; // RVA
-    else if (S.Name.equals(".data"))
+    else if (S.Name == ".data")
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
       SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);

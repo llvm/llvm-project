@@ -35,9 +35,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __includes {
-
-struct __fn {
+struct __includes {
   template <input_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
             input_iterator _Iter2,
@@ -45,7 +43,7 @@ struct __fn {
             class _Proj1                                                                           = identity,
             class _Proj2                                                                           = identity,
             indirect_strict_weak_order<projected<_Iter1, _Proj1>, projected<_Iter2, _Proj2>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -69,7 +67,7 @@ struct __fn {
             class _Proj2 = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range1>, _Proj1>, projected<iterator_t<_Range2>, _Proj2>>
                 _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Range1&& __range1, _Range2&& __range2, _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     return std::__includes(
         ranges::begin(__range1),
@@ -82,10 +80,8 @@ struct __fn {
   }
 };
 
-} // namespace __includes
-
 inline namespace __cpo {
-inline constexpr auto includes = __includes::__fn{};
+inline constexpr auto includes = __includes{};
 } // namespace __cpo
 } // namespace ranges
 

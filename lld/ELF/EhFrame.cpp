@@ -41,8 +41,9 @@ public:
 
 private:
   template <class P> void failOn(const P *loc, const Twine &msg) {
-    fatal("corrupted .eh_frame: " + msg + "\n>>> defined in " +
-          isec->getObjMsg((const uint8_t *)loc - isec->content().data()));
+    Fatal(ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
+               << isec->getObjMsg((const uint8_t *)loc -
+                                  isec->content().data());
   }
 
   uint8_t readByte();
@@ -97,11 +98,11 @@ void EhReader::skipLeb128() {
   failOn(errPos, "corrupted CIE (failed to read LEB128)");
 }
 
-static size_t getAugPSize(unsigned enc) {
+static size_t getAugPSize(Ctx &ctx, unsigned enc) {
   switch (enc & 0x0f) {
   case DW_EH_PE_absptr:
   case DW_EH_PE_signed:
-    return config->wordsize;
+    return ctx.arg.wordsize;
   case DW_EH_PE_udata2:
   case DW_EH_PE_sdata2:
     return 2;
@@ -119,7 +120,7 @@ void EhReader::skipAugP() {
   uint8_t enc = readByte();
   if ((enc & 0xf0) == DW_EH_PE_aligned)
     failOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
-  size_t size = getAugPSize(enc);
+  size_t size = getAugPSize(isec->getCtx(), enc);
   if (size == 0)
     failOn(d.data() - 1, "unknown FDE encoding");
   if (size >= d.size())

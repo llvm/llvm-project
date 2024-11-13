@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -o - %s | FileCheck %s
-; RUN: llc -march=bpfeb -o - %s | FileCheck %s
+; RUN: llc -march=bpfel -mcpu=v1 -o - %s | FileCheck %s
+; RUN: llc -march=bpfeb -mcpu=v1 -o - %s | FileCheck %s
 ; Source code:
 ;   struct ipv6_key_t {
 ;     unsigned pid;

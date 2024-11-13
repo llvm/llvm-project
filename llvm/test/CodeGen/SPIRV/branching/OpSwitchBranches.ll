@@ -1,4 +1,8 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 define i32 @test_switch_branches(i32 %a) {
 entry:
@@ -10,32 +14,38 @@ entry:
     i32 3, label %case3
   ]
 
-; CHECK-SPIRV:      %[[#CASE1]] = OpLabel
 case1:
   store i32 1, ptr %alloc
-; CHECK-SPIRV:      OpBranch %[[#END:]]
   br label %end
 
-; CHECK-SPIRV:      %[[#CASE2]] = OpLabel
 case2:
   store i32 2, ptr %alloc
-; CHECK-SPIRV:      OpBranch %[[#END]]
   br label %end
 
-; CHECK-SPIRV:      %[[#CASE3]] = OpLabel
 case3:
   store i32 3, ptr %alloc
-; CHECK-SPIRV:      OpBranch %[[#END]]
   br label %end
 
-; CHECK-SPIRV:      %[[#DEFAULT]] = OpLabel
 default:
   store i32 0, ptr %alloc
-; CHECK-SPIRV:      OpBranch %[[#END]]
   br label %end
 
-; CHECK-SPIRV:      %[[#END]] = OpLabel
 end:
   %result = load i32, ptr %alloc
   ret i32 %result
+
+; CHECK-SPIRV:      %[[#DEFAULT]] = OpLabel
+; CHECK-SPIRV:      OpBranch %[[#END:]]
+
+; CHECK-SPIRV:      %[[#CASE1]] = OpLabel
+; CHECK-SPIRV:      OpBranch %[[#END]]
+
+; CHECK-SPIRV:      %[[#CASE2]] = OpLabel
+; CHECK-SPIRV:      OpBranch %[[#END]]
+
+; CHECK-SPIRV:      %[[#CASE3]] = OpLabel
+; CHECK-SPIRV:      OpBranch %[[#END]]
+
+; CHECK-SPIRV:      %[[#END]] = OpLabel
+; CHECK-SPIRV:                  OpReturnValue
 }

@@ -16,6 +16,7 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -40,6 +41,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -85,6 +87,7 @@ enum class FloatModeKind {
 struct TransferrableTargetInfo {
   unsigned char PointerWidth, PointerAlign;
   unsigned char BoolWidth, BoolAlign;
+  unsigned char ShortWidth, ShortAlign;
   unsigned char IntWidth, IntAlign;
   unsigned char HalfWidth, HalfAlign;
   unsigned char BFloat16Width, BFloat16Align;
@@ -95,6 +98,10 @@ struct TransferrableTargetInfo {
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
+
+  // This is an optional parameter for targets that
+  // don't use 'LongLongAlign' for '_BitInt' max alignment
+  std::optional<unsigned> BitIntMaxAlign;
 
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
@@ -254,9 +261,6 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasBuiltinMSVaList : 1;
-
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsRenderScriptTarget : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
@@ -491,13 +495,10 @@ public:
   unsigned getCharWidth() const { return 8; } // FIXME
   unsigned getCharAlign() const { return 8; } // FIXME
 
-  /// Return the size of 'signed short' and 'unsigned short' for this
-  /// target, in bits.
-  unsigned getShortWidth() const { return 16; } // FIXME
-
-  /// Return the alignment of 'signed short' and 'unsigned short' for
-  /// this target.
-  unsigned getShortAlign() const { return 16; } // FIXME
+  /// getShortWidth/Align - Return the size of 'signed short' and
+  /// 'unsigned short' for this target, in bits.
+  unsigned getShortWidth() const { return ShortWidth; }
+  unsigned getShortAlign() const { return ShortAlign; }
 
   /// getIntWidth/Align - Return the size of 'signed int' and 'unsigned int' for
   /// this target, in bits.
@@ -516,6 +517,22 @@ public:
 
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
+
+  /// getBitIntMaxAlign() - Returns the maximum possible alignment of
+  /// '_BitInt' and 'unsigned _BitInt'.
+  unsigned getBitIntMaxAlign() const {
+    return BitIntMaxAlign.value_or(LongLongAlign);
+  }
+
+  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
+  /// 'unsigned _BitInt' for this target, in bits.
+  unsigned getBitIntWidth(unsigned NumBits) const {
+    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
+  }
+  unsigned getBitIntAlign(unsigned NumBits) const {
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                getBitIntMaxAlign());
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.
@@ -1011,9 +1028,6 @@ public:
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
 
-  /// Returns true for RenderScript.
-  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
-
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
   bool hasAArch64SVETypes() const { return HasAArch64SVETypes; }
@@ -1379,19 +1393,13 @@ public:
     return true;
   }
 
-  /// For given feature return dependent ones.
-  virtual StringRef getFeatureDependencies(StringRef Feature) const {
-    return StringRef();
-  }
-
-  struct BranchProtectionInfo {
+  class BranchProtectionInfo {
+  public:
     LangOptions::SignReturnAddressScopeKind SignReturnAddr;
     LangOptions::SignReturnAddressKeyKind SignKey;
     bool BranchTargetEnforcement;
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
-
-    BranchProtectionInfo() = default;
 
     const char *getSignReturnAddrStr() const {
       switch (SignReturnAddr) {
@@ -1413,6 +1421,27 @@ public:
         return "b_key";
       }
       llvm_unreachable("Unexpected SignReturnAddressKeyKind");
+    }
+
+    BranchProtectionInfo()
+        : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
+          SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
+          BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
+          GuardedControlStack(false) {}
+
+    BranchProtectionInfo(const LangOptions &LangOpts) {
+      SignReturnAddr =
+          LangOpts.hasSignReturnAddress()
+              ? (LangOpts.isSignReturnAddressScopeAll()
+                     ? LangOptions::SignReturnAddressScopeKind::All
+                     : LangOptions::SignReturnAddressScopeKind::NonLeaf)
+              : LangOptions::SignReturnAddressScopeKind::None;
+      SignKey = LangOpts.isSignReturnAddressWithAKey()
+                    ? LangOptions::SignReturnAddressKeyKind::AKey
+                    : LangOptions::SignReturnAddressKeyKind::BKey;
+      BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
+      BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
+      GuardedControlStack = LangOpts.GuardedControlStack;
     }
   };
 
@@ -1460,7 +1489,8 @@ public:
   /// Identify whether this target supports multiversioning of functions,
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
-    return getTriple().isX86() || getTriple().isAArch64();
+    return getTriple().isX86() || getTriple().isAArch64() ||
+           getTriple().isRISCV();
   }
 
   /// Identify whether this target supports IFuncs.
@@ -1690,6 +1720,13 @@ public:
   virtual bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
+  /// Get the target default CFBranchLabelScheme scheme
+  virtual CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const;
+
+  virtual bool
+  checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
+                                    DiagnosticsEngine &Diags) const;
+
   /// Check if the target supports CFProtection return.
   virtual bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
@@ -1792,6 +1829,15 @@ public:
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
 
+  /// The first value in the pair is the minimum offset between two objects to
+  /// avoid false sharing (destructive interference). The second value in the
+  /// pair is maximum size of contiguous memory to promote true sharing
+  /// (constructive interference). Neither of these values are considered part
+  /// of the ABI and can be changed by targets at any time.
+  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
+    return std::make_pair(64, 64);
+  }
+
 protected:
   /// Copy type and layout related info.
   void copyAuxTarget(const TargetInfo *Aux);
@@ -1806,11 +1852,9 @@ protected:
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
-  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const {
-    return std::nullopt;
-  }
+  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const { return {}; }
 
- private:
+private:
   // Assert the values for the fractional and integral bits for each fixed point
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;

@@ -40,9 +40,9 @@ registers:
   - { id: 7, class: float32regs }
 body: |
   bb.0.entry:
-    %0 = LD_f32_avar 0, 4, 1, 2, 32, &test_param_0
+    %0 = LD_f32_avar 0, 0, 4, 1, 2, 32, &test_param_0
     %1 = CVT_f64_f32 %0, 0
-    %2 = LD_i32_avar 0, 4, 1, 0, 32, &test_param_1
+    %2 = LD_i32_avar 0, 0, 4, 1, 0, 32, &test_param_1
   ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 3.250000e+00
     %3 = FADD_rnf64ri %1, double 3.250000e+00
     %4 = CVT_f32_f64 %3, 5
@@ -66,9 +66,9 @@ registers:
   - { id: 7, class: float32regs }
 body: |
   bb.0.entry:
-    %0 = LD_f32_avar 0, 4, 1, 2, 32, &test2_param_0
+    %0 = LD_f32_avar 0, 0, 4, 1, 2, 32, &test2_param_0
     %1 = CVT_f64_f32 %0, 0
-    %2 = LD_i32_avar 0, 4, 1, 0, 32, &test2_param_1
+    %2 = LD_i32_avar 0, 0, 4, 1, 0, 32, &test2_param_1
   ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 0x7FF8000000000000
     %3 = FADD_rnf64ri %1, double 0x7FF8000000000000
     %4 = CVT_f32_f64 %3, 5

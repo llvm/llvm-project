@@ -14,13 +14,10 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionELF.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
@@ -66,6 +63,7 @@ public:
         {"fixup_aarch64_ldst_imm12_scale16", 10, 12, 0},
         {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, PCRelFlagVal},
         {"fixup_aarch64_movw", 5, 16, 0},
+        {"fixup_aarch64_pcrel_branch9", 5, 9,  PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch14", 5, 14, PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch16", 5, 16, PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch19", 5, 19, PCRelFlagVal},
@@ -90,9 +88,8 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                            uint64_t Value) const override;
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
@@ -121,6 +118,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 2;
 
   case AArch64::fixup_aarch64_movw:
+  case AArch64::fixup_aarch64_pcrel_branch9:
   case AArch64::fixup_aarch64_pcrel_branch14:
   case AArch64::fixup_aarch64_pcrel_branch16:
   case AArch64::fixup_aarch64_add_imm12:
@@ -308,6 +306,14 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     }
     return Value;
   }
+  case AArch64::fixup_aarch64_pcrel_branch9:
+    // Signed 11-bit(9bits + 2 shifts) label
+    if (!isInt<11>(SignedValue))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    // Low two bits are not encoded (4-byte alignment assumed).
+    if (Value & 0b11)
+      Ctx.reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
+    return (Value >> 2) & 0x1ff;
   case AArch64::fixup_aarch64_pcrel_branch14:
     // Signed 16-bit immediate
     if (!isInt<16>(SignedValue))
@@ -392,6 +398,7 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
     return 8;
 
   case AArch64::fixup_aarch64_movw:
+  case AArch64::fixup_aarch64_pcrel_branch9:
   case AArch64::fixup_aarch64_pcrel_branch14:
   case AArch64::fixup_aarch64_pcrel_branch16:
   case AArch64::fixup_aarch64_add_imm12:
@@ -483,9 +490,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 }
 
 bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                             uint64_t Value,
-                                             const MCRelaxableFragment *DF,
-                                             const MCAsmLayout &Layout) const {
+                                             uint64_t Value) const {
   // FIXME:  This isn't correct for AArch64. Just moving the "generic" logic
   // into the targets for now.
   //
@@ -602,7 +607,7 @@ public:
   }
 
   /// Generate the compact unwind encoding from the CFI directives.
-  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty())
@@ -612,10 +617,10 @@ public:
       return CU::UNWIND_ARM64_MODE_DWARF;
 
     bool HasFP = false;
-    unsigned StackSize = 0;
+    uint64_t StackSize = 0;
 
-    uint32_t CompactUnwindEncoding = 0;
-    int CurOffset = 0;
+    uint64_t CompactUnwindEncoding = 0;
+    int64_t CurOffset = 0;
     for (size_t i = 0, e = Instrs.size(); i != e; ++i) {
       const MCCFIInstruction &Inst = Instrs[i];
 
@@ -625,7 +630,7 @@ public:
         return CU::UNWIND_ARM64_MODE_DWARF;
       case MCCFIInstruction::OpDefCfa: {
         // Defines a frame pointer.
-        unsigned XReg =
+        MCRegister XReg =
             getXRegFromWReg(*MRI.getLLVMRegNum(Inst.getRegister(), true));
 
         // Other CFA registers than FP are not supported by compact unwind.
@@ -649,8 +654,8 @@ public:
           return CU::UNWIND_ARM64_MODE_DWARF;
         CurOffset = FPPush.getOffset();
 
-        unsigned LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
-        unsigned FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
+        MCRegister LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
+        MCRegister FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
 
         LRReg = getXRegFromWReg(LRReg);
         FPReg = getXRegFromWReg(FPReg);
@@ -672,7 +677,7 @@ public:
       case MCCFIInstruction::OpOffset: {
         // Registers are saved in pairs. We expect there to be two consecutive
         // `.cfi_offset' instructions with the appropriate registers specified.
-        unsigned Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
+        MCRegister Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         if (i + 1 == e)
           return CU::UNWIND_ARM64_MODE_DWARF;
 
@@ -683,7 +688,7 @@ public:
         const MCCFIInstruction &Inst2 = Instrs[++i];
         if (Inst2.getOperation() != MCCFIInstruction::OpOffset)
           return CU::UNWIND_ARM64_MODE_DWARF;
-        unsigned Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
+        MCRegister Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
 
         if (Inst2.getOffset() != CurOffset - 8)
           return CU::UNWIND_ARM64_MODE_DWARF;

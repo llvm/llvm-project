@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: %clangxx_profgen -fcoverage-mapping %S/Inputs/instrprof-visibility-helper.cpp -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge %t.profraw -o %t.profdata

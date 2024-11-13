@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -46,12 +47,14 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <memory>
 #include <optional>
 #include <set>
 #include <system_error>
+
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
@@ -332,9 +335,11 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
 
-  ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
+  auto VFS = llvm::vfs::getRealFileSystem();
+  ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
 
-  Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
+  Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags,
+                   /*Title=*/"clang LLVM compiler", VFS);
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path

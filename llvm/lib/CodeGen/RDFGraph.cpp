@@ -8,6 +8,7 @@
 //
 // Target-independent, SSA-based data flow graph for register data flow (RDF).
 //
+#include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -18,7 +19,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFRegisters.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -29,7 +29,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -264,7 +263,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P) {
   MachineBasicBlock *BB = P.Obj.Addr->getCode();
   unsigned NP = BB->pred_size();
   std::vector<int> Ns;
-  auto PrintBBs = [&OS](std::vector<int> Ns) -> void {
+  auto PrintBBs = [&OS](const std::vector<int> &Ns) -> void {
     unsigned N = Ns.size();
     for (int I : Ns) {
       OS << "%bb." << I;
@@ -913,7 +912,7 @@ void DataFlowGraph::build(const Config &config) {
   // Collect function live-ins and entry block live-ins.
   MachineBasicBlock &EntryB = *EA.Addr->getCode();
   assert(EntryB.pred_empty() && "Function entry block has predecessors");
-  for (std::pair<unsigned, unsigned> P : MRI.liveins())
+  for (std::pair<MCRegister, Register> P : MRI.liveins())
     LiveIns.insert(RegisterRef(P.first));
   if (MRI.tracksLiveness()) {
     for (auto I : EntryB.liveins())

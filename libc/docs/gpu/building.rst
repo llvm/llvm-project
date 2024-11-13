@@ -33,7 +33,8 @@ The simplest way to build the GPU libc is to use the existing LLVM runtimes
 support. This will automatically handle bootstrapping an up-to-date ``clang``
 compiler and using it to build the C library. The following CMake invocation
 will instruct it to build the ``libc`` runtime targeting both AMD and NVIDIA
-GPUs.
+GPUs. The ``LIBC_GPU_BUILD`` option can also be enabled to add the relevant
+arguments automatically.
 
 .. code-block:: sh
 
@@ -62,9 +63,13 @@ targeting the default host environment as well.
 Runtimes cross build
 --------------------
 
+.. note::
+  These instructions need to be updated for new headergen. They may be
+  inaccurate.
+
 For users wanting more direct control over the build process, the build steps
 can be done manually instead. This build closely follows the instructions in the
-:ref:`main documentation<runtimes_cross_build>` but is specialized for the GPU
+:ref:`main documentation<full_cross_build>` but is specialized for the GPU
 build. We follow the same steps to first build the libc tools and a suitable
 compiler. These tools must all be up-to-date with the libc source.
 
@@ -150,25 +155,6 @@ Build overview
 Once installed, the GPU build will create several files used for different
 targets. This section will briefly describe their purpose.
 
-**lib/<host-triple>/libcgpu-amdgpu.a or lib/libcgpu-amdgpu.a**
-  A static library containing fat binaries supporting AMD GPUs. These are built
-  using the support described in the `clang documentation
-  <https://clang.llvm.org/docs/OffloadingDesign.html>`_. These are intended to
-  be static libraries included natively for offloading languages like CUDA, HIP,
-  or OpenMP. This implements the standard C library.
-
-**lib/<host-triple>/libmgpu-amdgpu.a or lib/libmgpu-amdgpu.a**
-  A static library containing fat binaries that implements the standard math
-  library for AMD GPUs.
-
-**lib/<host-triple>/libcgpu-nvptx.a or lib/libcgpu-nvptx.a**
-  A static library containing fat binaries that implement the standard C library
-  for NVIDIA GPUs.
-
-**lib/<host-triple>/libmgpu-nvptx.a or lib/libmgpu-nvptx.a**
-  A static library containing fat binaries that implement the standard math
-  library for NVIDIA GPUs.
-
 **include/<target-triple>**
   The include directory where all of the generated headers for the target will
   go. These definitions are strictly for the GPU when being targeted directly.
@@ -233,6 +219,10 @@ standard runtime build.
 **LLVM_LIBC_FULL_BUILD**:BOOL
   This flag controls whether or not the libc build will generate its own
   headers. This must always be on when targeting the GPU.
+
+**LIBC_GPU_BUILD**:BOOL
+  Shorthand for enabling GPU support. Equivalent to enabling support for both
+  AMDGPU and NVPTX builds for ``libc``.
 
 **LIBC_GPU_TEST_ARCHITECTURE**:STRING
   Sets the architecture used to build the GPU tests for, such as ``gfx90a`` or

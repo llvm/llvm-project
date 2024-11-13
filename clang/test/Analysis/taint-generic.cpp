@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -analyzer-config alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml -Wno-format-security -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1  -analyzer-checker=optin.taint,core,alpha.security.ArrayBoundV2 -analyzer-config optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml -Wno-format-security -verify -std=c++11 %s
 
 #define BUFSIZE 10
 int Buffer[BUFSIZE];

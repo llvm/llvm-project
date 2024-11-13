@@ -84,11 +84,9 @@
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -278,6 +276,9 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
+
+  if (!LHS->getType()->isIntegerTy())
+    return false;
 
   // Canonicalize to the `Index Pred Invariant` comparison
   if (IsLoopInvariant(LHS)) {

@@ -61,3 +61,11 @@ define i32 @noubfiz32(i32 %v) {
   %add = add i32 %shl, %and
   ret i32 %add
 }
+
+define i64 @lsl32_not_ubfiz64(i64 %v) {
+; CHECK-LABEL: lsl32_not_ubfiz64:
+; CHECK: lsl	w0, w0, #6
+  %shl = shl i64 %v, 6
+  %and = and i64 %shl, 4294967295
+  ret i64 %and
+}

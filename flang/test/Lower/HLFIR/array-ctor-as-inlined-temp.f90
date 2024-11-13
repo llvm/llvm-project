@@ -57,26 +57,26 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_3B:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2x!fir.complex<8>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_4:.*]] = fir.allocmem !fir.array<2xcomplex<f64>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.complex<8>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.complex<8>>>, !fir.heap<!fir.array<2x!fir.complex<8>>>)
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2xcomplex<f64>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xcomplex<f64>>>, !fir.heap<!fir.array<2xcomplex<f64>>>)
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 42 : i32
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> f64
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f64
-! CHECK:  %[[VAL_10:.*]] = fir.undefined !fir.complex<8>
-! CHECK:  %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_8]], [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-! CHECK:  %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_9]], [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
+! CHECK:  %[[VAL_10:.*]] = fir.undefined complex<f64>
+! CHECK:  %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_8]], [0 : index] : (complex<f64>, f64) -> complex<f64>
+! CHECK:  %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_9]], [1 : index] : (complex<f64>, f64) -> complex<f64>
 ! CHECK:  %[[VAL_13:.*]] = arith.addi %[[VAL_3]], %[[VAL_3B]] : index
-! CHECK:  %[[VAL_14:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_3]])  : (!fir.heap<!fir.array<2x!fir.complex<8>>>, index) -> !fir.ref<!fir.complex<8>>
-! CHECK:  hlfir.assign %[[VAL_12]] to %[[VAL_14]] : !fir.complex<8>, !fir.ref<!fir.complex<8>>
-! CHECK:  %[[VAL_15:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.complex<4>) -> !fir.complex<8>
-! CHECK:  %[[VAL_17:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_13]])  : (!fir.heap<!fir.array<2x!fir.complex<8>>>, index) -> !fir.ref<!fir.complex<8>>
-! CHECK:  hlfir.assign %[[VAL_16]] to %[[VAL_17]] : !fir.complex<8>, !fir.ref<!fir.complex<8>>
+! CHECK:  %[[VAL_14:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_3]])  : (!fir.heap<!fir.array<2xcomplex<f64>>>, index) -> !fir.ref<complex<f64>>
+! CHECK:  hlfir.assign %[[VAL_12]] to %[[VAL_14]] : complex<f64>, !fir.ref<complex<f64>>
+! CHECK:  %[[VAL_15:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (complex<f32>) -> complex<f64>
+! CHECK:  %[[VAL_17:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_13]])  : (!fir.heap<!fir.array<2xcomplex<f64>>>, index) -> !fir.ref<complex<f64>>
+! CHECK:  hlfir.assign %[[VAL_16]] to %[[VAL_17]] : complex<f64>, !fir.ref<complex<f64>>
 ! CHECK:  %[[VAL_18:.*]] = arith.constant true
-! CHECK:  %[[VAL_19:.*]] = hlfir.as_expr %[[VAL_6]]#0 move %[[VAL_18]] : (!fir.heap<!fir.array<2x!fir.complex<8>>>, i1) -> !hlfir.expr<2x!fir.complex<8>>
+! CHECK:  %[[VAL_19:.*]] = hlfir.as_expr %[[VAL_6]]#0 move %[[VAL_18]] : (!fir.heap<!fir.array<2xcomplex<f64>>>, i1) -> !hlfir.expr<2xcomplex<f64>>
 ! CHECK:  fir.call
-! CHECK:  hlfir.destroy %[[VAL_19]] : !hlfir.expr<2x!fir.complex<8>>
+! CHECK:  hlfir.destroy %[[VAL_19]] : !hlfir.expr<2xcomplex<f64>>
 
 subroutine test_simple_logical(a, b)
   logical :: a, b
@@ -116,7 +116,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_implied_do(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca index
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_implied_doEn"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i64>
@@ -178,9 +178,9 @@ end subroutine
 ! CHECK-SAME:                                          %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "ub"},
 ! CHECK-SAME:                                          %[[VAL_2:.*]]: !fir.ref<i64> {fir.bindc_name = "stride"}) {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca index
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_strided_implied_doElb"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_strided_implied_doEstride"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_strided_implied_doEub"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i64>
@@ -241,8 +241,8 @@ end subroutine
 ! CHECK-SAME:                                         %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                         %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "m"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca index
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_nested_implied_doEm"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_nested_implied_doEn"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEm"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>

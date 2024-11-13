@@ -32,7 +32,10 @@ class LocationAttr : public Attribute {
 public:
   using Attribute::Attribute;
 
-  /// Walk all of the locations nested under, and including, the current.
+  /// Walk all of the locations nested directly under, and including, the
+  /// current. This means that if a location is nested under a non-location
+  /// attribute, it will *not* be walked by this method. This walk is performed
+  /// in pre-order to get this behavior.
   WalkResult walk(function_ref<WalkResult(Location)> walkFn);
 
   /// Return an instance of the given location type if one is nested under the
@@ -78,14 +81,17 @@ public:
 
   /// Type casting utilities on the underlying location.
   template <typename U>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const {
     return llvm::isa<U>(*this);
   }
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const {
     return llvm::dyn_cast<U>(*this);
   }
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const {
     return llvm::cast<U>(*this);
   }
@@ -154,7 +160,7 @@ public:
   /// Support llvm style casting.
   static bool classof(Attribute attr) {
     auto fusedLoc = llvm::dyn_cast<FusedLoc>(attr);
-    return fusedLoc && fusedLoc.getMetadata().isa_and_nonnull<MetadataT>();
+    return fusedLoc && mlir::isa_and_nonnull<MetadataT>(fusedLoc.getMetadata());
   }
 };
 

@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -86,12 +87,9 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
-  const ThinOrFullLTOPhase LTOPhase;
 
 public:
-  PseudoProbeManager(const Module &M,
-                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
-      : LTOPhase(LTOPhase) {
+  PseudoProbeManager(const Module &M) {
     if (NamedMDNode *FuncInfo =
             M.getNamedMetadata(PseudoProbeDescMetadataName)) {
       for (const auto *Operand : FuncInfo->operands()) {
@@ -140,13 +138,9 @@ public:
     // be different and result in different checksums. So we should use the
     // state from the new (available_externally) function, which is saved in its
     // attribute.
-    assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink ||
-            IsAvailableExternallyLinkage || !Desc ||
-            profileIsHashMismatched(*Desc, Samples) ==
-                F.hasFnAttribute("profile-checksum-mismatch")) &&
-           "In post-link, profile checksum matching state doesn't match the "
-           "internal function's 'profile-checksum-mismatch' attribute.");
-    (void)LTOPhase;
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
     if (IsAvailableExternallyLinkage || !Desc)
       return !F.hasFnAttribute("profile-checksum-mismatch");
 
@@ -160,6 +154,22 @@ extern cl::opt<bool> SampleProfileUseProfi;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
+
+static inline void
+buildTopDownFuncOrder(LazyCallGraph &CG,
+                      std::vector<Function *> &FunctionOrderList) {
+  CG.buildRefSCCs();
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &C : RC) {
+      for (LazyCallGraph::Node &N : C) {
+        Function &F = N.getFunction();
+        if (!skipProfileForFunction(F))
+          FunctionOrderList.push_back(&F);
+      }
+    }
+  }
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
 }
 
 template <typename FT> class SampleProfileLoaderBaseImpl {
@@ -439,9 +449,6 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
   return R;
 }
 
-// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
-// of non-probe instruction. So if all instructions of the BB give error_code,
-// tell the inference algorithm to infer the BB weight.
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
@@ -454,17 +461,13 @@ SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
     return std::error_code();
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
-  // If none of the instruction has FunctionSample, we choose to return zero
-  // value sample to indicate the BB is cold. This could happen when the
-  // instruction is from inlinee and no profile data is found.
-  // FIXME: This should not be affected by the source drift issue as 1) if the
-  // newly added function is top-level inliner, it won't match the CFG checksum
-  // in the function profile or 2) if it's the inlinee, the inlinee should have
-  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
-  // we can improve it by adding a switch for profile-sample-block-accurate for
-  // block level counts in the future.
-  if (!FS)
-    return 0;
+  if (!FS) {
+    // If we can't find the function samples for a probe, it could be due to the
+    // probe is later optimized away or the inlining context is mismatced. We
+    // treat it as unknown, leaving it to profile inference instead of forcing a
+    // zero count.
+    return std::error_code();
+  }
 
   auto R = FS->findSamplesAt(Probe->Id, Probe->Discriminator);
   if (R) {
@@ -856,9 +859,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         LLVM_DEBUG(dbgs() << "Set self-referential edge weight to: ";
                    printEdgeWeight(dbgs(), SelfReferentialEdge));
       }
-      if (UpdateBlockCount && !VisitedBlocks.count(EC) && TotalWeight > 0) {
+      if (UpdateBlockCount && TotalWeight > 0 &&
+          VisitedBlocks.insert(EC).second) {
         BlockWeights[EC] = TotalWeight;
-        VisitedBlocks.insert(EC);
         Changed = true;
       }
     }

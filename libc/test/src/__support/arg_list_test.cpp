@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/properties/os.h"
 
 #include "test/UnitTest/Test.h"
 
@@ -120,7 +121,7 @@ TEST(LlvmLibcArgListTest, TestStructTypes) {
 }
 
 // Test vector extensions from clang.
-#if __has_attribute(ext_vector_type)
+#if !defined(LIBC_TARGET_OS_IS_WINDOWS) && __has_attribute(ext_vector_type)
 
 using int1 = int __attribute__((ext_vector_type(1)));
 using int2 = int __attribute__((ext_vector_type(2)));

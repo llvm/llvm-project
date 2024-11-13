@@ -5,11 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14
-
-// ALLOW_RETRIES: 2
 
 // <shared_mutex>
 
@@ -17,51 +15,95 @@
 
 // void lock();
 
+#include <shared_mutex>
+#include <atomic>
 #include <cassert>
 #include <chrono>
-#include <cstdlib>
-#include <shared_mutex>
 #include <thread>
+#include <vector>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-std::shared_mutex m;
-
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-ms WaitTime = ms(250);
-
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
-ms Tolerance = ms(50);
-#else
-ms Tolerance = ms(50 * 5);
-#endif
-
-void f()
-{
-    time_point t0 = Clock::now();
+int main(int, char**) {
+  // Exclusive-lock a mutex that is not locked yet. This should succeed.
+  {
+    std::shared_mutex m;
     m.lock();
-    time_point t1 = Clock::now();
     m.unlock();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within tolerance
-}
+  }
 
-int main(int, char**)
-{
+  // Exclusive-lock a mutex that is already locked exclusively. This should block until it is unlocked.
+  {
+    std::atomic<bool> ready(false);
+    std::shared_mutex m;
     m.lock();
-    std::thread t = support::make_test_thread(f);
-    std::this_thread::sleep_for(WaitTime);
+    std::atomic<bool> is_locked_from_main(true);
+
+    std::thread t = support::make_test_thread([&] {
+      ready = true;
+      m.lock();
+      assert(!is_locked_from_main);
+      m.unlock();
+    });
+
+    while (!ready)
+      /* spin */;
+
+    // We would rather signal this after we unlock, but that would create a race condition.
+    // We instead signal it before we unlock, which means that it's technically possible for the thread
+    // to take the lock while we're still holding it and for the test to still pass.
+    is_locked_from_main = false;
     m.unlock();
+
     t.join();
+  }
+
+  // Exclusive-lock a mutex that is already share-locked. This should block until it is unlocked.
+  {
+    std::atomic<bool> ready(false);
+    std::shared_mutex m;
+    m.lock_shared();
+    std::atomic<bool> is_locked_from_main(true);
+
+    std::thread t = support::make_test_thread([&] {
+      ready = true;
+      m.lock();
+      assert(!is_locked_from_main);
+      m.unlock();
+    });
+
+    while (!ready)
+      /* spin */;
+
+    // We would rather signal this after we unlock, but that would create a race condition.
+    // We instead signal it before we unlock, which means that it's technically possible for
+    // the thread to take the lock while we're still holding it and for the test to still pass.
+    is_locked_from_main = false;
+    m.unlock_shared();
+
+    t.join();
+  }
+
+  // Make sure that at most one thread can acquire the mutex concurrently.
+  {
+    std::atomic<int> counter = 0;
+    std::shared_mutex mutex;
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 10; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        mutex.lock();
+        counter++;
+        assert(counter == 1);
+        counter--;
+        mutex.unlock();
+      }));
+    }
+
+    for (auto& t : threads)
+      t.join();
+  }
 
   return 0;
 }

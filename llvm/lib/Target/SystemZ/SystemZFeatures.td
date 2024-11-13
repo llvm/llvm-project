@@ -246,6 +246,11 @@ def FeatureInsertReferenceBitsMultiple : SystemZFeature<
   "Assume that the insert-reference-bits-multiple facility is installed"
 >;
 
+def FeatureTestPendingExternalInterruption : SystemZFeature<
+  "test-pending-external-interruption", "TestPendingExternalInterruption", (all_of FeatureTestPendingExternalInterruption),
+  "Assume that the test-pending-external-interruption facility is installed"
+>;
+
 def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMiscellaneousExtensions2,
     FeatureGuardedStorage,
@@ -253,7 +258,8 @@ def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMessageSecurityAssist8,
     FeatureVectorEnhancements1,
     FeatureVectorPackedDecimal,
-    FeatureInsertReferenceBitsMultiple
+    FeatureInsertReferenceBitsMultiple,
+    FeatureTestPendingExternalInterruption
 ]>;
 
 //===----------------------------------------------------------------------===//

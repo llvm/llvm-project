@@ -55,4 +55,8 @@ std::string getTagType(TagTypeKind AS);
 } // namespace doc
 } // namespace clang
 
+namespace llvm {
+extern template class Registry<clang::doc::Generator>;
+} // namespace llvm
+
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_GENERATOR_H

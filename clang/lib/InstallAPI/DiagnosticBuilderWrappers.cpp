@@ -48,7 +48,7 @@ const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
           Stream << PV.second.getAsString();
       });
   Stream << " ]";
-  DB.AddString(Stream.str());
+  DB.AddString(PlatformAsString);
   return DB;
 }
 
@@ -81,8 +81,9 @@ const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
     return DB;
   case FileType::Invalid:
   case FileType::All:
-    llvm_unreachable("Unexpected file type for diagnostics.");
+    break;
   }
+  llvm_unreachable("Unexpected file type for diagnostics.");
 }
 
 const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
@@ -90,7 +91,7 @@ const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   std::string VersionString;
   raw_string_ostream OS(VersionString);
   OS << Version;
-  DB.AddString(OS.str());
+  DB.AddString(VersionString);
   return DB;
 }
 
@@ -101,7 +102,7 @@ operator<<(const clang::DiagnosticBuilder &DB,
   raw_string_ostream OS(IFAsString);
 
   OS << LibAttr.getKey() << " [ " << LibAttr.getValue() << " ]";
-  DB.AddString(OS.str());
+  DB.AddString(IFAsString);
   return DB;
 }
 

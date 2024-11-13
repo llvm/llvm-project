@@ -19,11 +19,13 @@
 
 namespace Fortran::runtime::io {
 
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS ExternalFileUnit *defaultInput{nullptr}; // unit 5
 RT_VAR_ATTRS ExternalFileUnit *defaultOutput{nullptr}; // unit 6
 RT_VAR_ATTRS ExternalFileUnit *errorOutput{nullptr}; // unit 0 extension
 RT_OFFLOAD_VAR_GROUP_END
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
@@ -146,6 +148,24 @@ std::size_t ExternalFileUnit::GetNextInputBytes(
   return p ? length : 0;
 }
 
+std::size_t ExternalFileUnit::ViewBytesInRecord(
+    const char *&p, bool forward) const {
+  p = nullptr;
+  auto recl{recordLength.value_or(positionInRecord)};
+  if (forward) {
+    if (positionInRecord < recl) {
+      p = Frame() + recordOffsetInFrame_ + positionInRecord;
+      return recl - positionInRecord;
+    }
+  } else {
+    if (positionInRecord <= recl) {
+      p = Frame() + recordOffsetInFrame_ + positionInRecord;
+    }
+    return positionInRecord - leftTabLimit.value_or(0);
+  }
+  return 0;
+}
+
 const char *ExternalFileUnit::FrameNextInput(
     IoErrorHandler &handler, std::size_t bytes) {
   RUNTIME_CHECK(handler, isUnformatted.has_value() && !*isUnformatted);
@@ -263,8 +283,10 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     furthestPositionInRecord =
         std::max(furthestPositionInRecord, positionInRecord);
     frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
+    recordOffsetInFrame_ = 0;
   }
   BeginRecord();
+  leftTabLimit.reset();
 }
 
 bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {

@@ -48,4 +48,5 @@ merge_label:
 ; CHECK: [[MERGE_LABEL]] = OpLabel
 ; CHECK-NEXT: [[V:%.+]] = OpPhi [[I32]] [[V1]] [[TRUE_LABEL]] [[V2]] [[FALSE_LABEL]]
 ; CHECK: OpReturnValue [[V]]
+
 ; CHECK-NEXT: OpFunctionEnd

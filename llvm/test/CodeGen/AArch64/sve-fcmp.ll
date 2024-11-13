@@ -374,8 +374,8 @@ define <vscale x 4 x i1> @one_zero(<vscale x 4 x float> %x) {
 define <vscale x 4 x i1> @ueq_zero(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: ueq_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmuo p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
@@ -540,6 +540,122 @@ define %svboolx2 @and_of_multiuse_fcmp_olt_zero(<vscale x 4 x i1> %pg, <vscale x
 ; CHECK-NEXT:    ret
   %cmp = fcmp olt <vscale x 4 x float> %x, zeroinitializer
   %and = and <vscale x 4 x i1> %pg, %cmp
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define <vscale x 8 x i1> @logical_and_oeq_zero_pred(<vscale x 8 x i1> %pg, <vscale x 8 x half> %x) {
+; CHECK-LABEL: logical_and_oeq_zero_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    ret
+  %y = fcmp oeq <vscale x 8 x half> %x, zeroinitializer
+  %z = select <vscale x 8 x i1> %pg, <vscale x 8 x i1> %y, <vscale x 8 x i1> zeroinitializer
+ ret <vscale x 8 x i1> %z
+}
+
+define <vscale x 4 x i1> @logical_and_ogt_zero_pred(<vscale x 4 x i1> %pg, <vscale x 4 x half> %x) {
+; CHECK-LABEL: logical_and_ogt_zero_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    ret
+  %y = fcmp ogt <vscale x 4 x half> %x, zeroinitializer
+  %z = select <vscale x 4 x i1> %pg, <vscale x 4 x i1> %y, <vscale x 4 x i1> zeroinitializer
+  ret <vscale x 4 x i1> %z
+}
+
+define <vscale x 2 x i1> @logical_and_oge_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x half> %x) {
+; CHECK-LABEL: logical_and_oge_zero_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    ret
+  %y = fcmp oge <vscale x 2 x half> %x, zeroinitializer
+  %z = select <vscale x 2 x i1> %pg, <vscale x 2 x i1> %y, <vscale x 2 x i1> zeroinitializer
+  ret <vscale x 2 x i1> %z
+}
+
+define <vscale x 4 x i1> @logical_and_olt_zero_pred(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
+; CHECK-LABEL: logical_and_olt_zero_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmlt p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    ret
+  %y = fcmp olt <vscale x 4 x float> %x, zeroinitializer
+  %z = select <vscale x 4 x i1> %pg, <vscale x 4 x i1> %y, <vscale x 4 x i1> zeroinitializer
+  ret <vscale x 4 x i1> %z
+}
+
+define <vscale x 2 x i1> @logical_and_ole_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x float> %x) {
+; CHECK-LABEL: logical_and_ole_zero_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmle p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    ret
+  %y = fcmp ole <vscale x 2 x float> %x, zeroinitializer
+  %z = select <vscale x 2 x i1> %pg, <vscale x 2 x i1> %y, <vscale x 2 x i1> zeroinitializer
+  ret <vscale x 2 x i1> %z
+}
+
+define <vscale x 2 x i1> @logical_and_une_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x double> %x) {
+; CHECK-LABEL: logical_and_une_zero_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmne p0.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    ret
+  %y = fcmp une <vscale x 2 x double> %x, zeroinitializer
+  %z = select <vscale x 2 x i1> %pg, <vscale x 2 x i1> %y, <vscale x 2 x i1> zeroinitializer
+  ret <vscale x 2 x i1> %z
+}
+
+define %svboolx2 @logical_and_of_multiuse_fcmp_ogt(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+; CHECK-LABEL: logical_and_of_multiuse_fcmp_ogt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmgt p1.s, p1/z, z0.s, z1.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp ogt <vscale x 4 x float> %x, %y
+  %and = select <vscale x 4 x i1> %pg, <vscale x 4 x i1> %cmp, <vscale x 4 x i1> zeroinitializer
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define %svboolx2 @logical_and_of_multiuse_fcmp_ogt_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
+; CHECK-LABEL: logical_and_of_multiuse_fcmp_ogt_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmgt p1.s, p1/z, z0.s, #0.0
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp ogt <vscale x 4 x float> %x, zeroinitializer
+  %and = select <vscale x 4 x i1> %pg, <vscale x 4 x i1> %cmp, <vscale x 4 x i1> zeroinitializer
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define %svboolx2 @logical_and_of_multiuse_fcmp_olt(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+; CHECK-LABEL: logical_and_of_multiuse_fcmp_olt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmgt p1.s, p1/z, z1.s, z0.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp olt <vscale x 4 x float> %x, %y
+  %and = select <vscale x 4 x i1> %pg, <vscale x 4 x i1> %cmp, <vscale x 4 x i1> zeroinitializer
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define %svboolx2 @logical_and_of_multiuse_fcmp_olt_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
+; CHECK-LABEL: logical_and_of_multiuse_fcmp_olt_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmlt p1.s, p1/z, z0.s, #0.0
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp olt <vscale x 4 x float> %x, zeroinitializer
+  %and = select <vscale x 4 x i1> %pg, <vscale x 4 x i1> %cmp, <vscale x 4 x i1> zeroinitializer
   %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
   %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
   ret %svboolx2 %ins.2

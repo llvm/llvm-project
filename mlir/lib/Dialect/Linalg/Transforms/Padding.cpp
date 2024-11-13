@@ -72,8 +72,10 @@ static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
     // Otherwise, try to compute a constant upper bound for the size value.
     FailureOr<int64_t> upperBound =
         ValueBoundsConstraintSet::computeConstantBound(
-            presburger::BoundType::UB, opOperand->get(),
-            /*dim=*/i, /*stopCondition=*/nullptr, /*closedUB=*/true);
+            presburger::BoundType::UB,
+            {opOperand->get(),
+             /*dim=*/i},
+            /*stopCondition=*/nullptr, /*closedUB=*/true);
     if (failed(upperBound)) {
       LLVM_DEBUG(DBGS() << "----could not compute a bounding box for padding");
       return failure();
@@ -86,7 +88,7 @@ static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
 }
 
 /// Pad the `opOperand` in the "paddingDimensions" using the padding value and
-/// the nofold flag found in "paddingValues" and "packPaddings", respectively.
+/// the nofold flag found in "paddingValues" and "nofoldFlags", respectively.
 ///
 /// Exit early and return the `opOperand` value if it already has the requested
 /// shape. i.e.:
@@ -115,8 +117,8 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
 
   // Return the unpadded operand if padding to a static shape is not needed and
   // if the nofold flag is not set.
-  bool nofold = opOperand->getOperandNumber() < options.packPaddings.size()
-                    ? options.packPaddings[opOperand->getOperandNumber()]
+  bool nofold = opOperand->getOperandNumber() < options.nofoldFlags.size()
+                    ? bool(options.nofoldFlags[opOperand->getOperandNumber()])
                     : false;
   if (!nofold && alreadyHasRequestedShape)
     return opOperand->get();
@@ -297,7 +299,7 @@ mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
     }
 
     tensor::PadOp hoistedOp;
-    SmallVector<GenericOp> transposeOps;
+    SmallVector<TransposeOp> transposeOps;
     SmallVector<int64_t> transposeVector =
         en.index() < options.transposePaddings.size()
             ? options.transposePaddings[en.index()]

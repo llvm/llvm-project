@@ -18,9 +18,9 @@
 #define MAX_THREADS 256
 
 #if defined VERBOSE
-#define PRINTF printf
+#define PRINTF(...) printf(__VA_ARGS__)
 #else
-#define PRINTF
+#define PRINTF(...)
 #endif
 
 LOOP_TYPE0 iLB, iUB;
@@ -106,12 +106,21 @@ int test() {
   unsigned scalarCount = 0;
   unsigned uselessThreadsOpenMP = 0;
   unsigned usefulThreadsOpenMP = 0;
-  unsigned chunkSizesOpenmp[MAX_THREADS] = {0};
 
-  unsigned num_threads = omp_get_max_threads();
+  // Use half of the available threads/logical processors.
+  unsigned num_threads = omp_get_max_threads() / 2;
+
+  // Make sure num_threads is not 0 after the division in case
+  // omp_get_max_threads() returns 1.
+  if (num_threads == 0)
+    num_threads = 1;
+
   if (num_threads > MAX_THREADS)
     num_threads = MAX_THREADS;
-  omp_set_num_threads(num_threads);
+
+  unsigned long *chunkSizesOpenmp =
+      (unsigned long *)malloc(sizeof(unsigned long) * num_threads);
+  memset(chunkSizesOpenmp, 0, sizeof(unsigned long) * num_threads);
 
   // count iterations and allocate space
   LOOP { ++trueCount; }
@@ -129,10 +138,10 @@ int test() {
   // perform and record OpenMP iterations and thread use
 #pragma omp parallel num_threads(num_threads)
   {
+    unsigned gtid = omp_get_thread_num();
 #pragma omp for collapse(3) private(i, j, k)
     LOOP {
       unsigned count;
-      unsigned gtid = omp_get_thread_num();
 #pragma omp atomic update
       ++chunkSizesOpenmp[gtid];
 #pragma omp atomic capture
@@ -197,5 +206,6 @@ int test() {
   // clean up space
   FreeSpace(openmpSpace);
   FreeSpace(scalarSpace);
+  free(chunkSizesOpenmp);
   return pass;
 }

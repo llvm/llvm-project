@@ -15,7 +15,7 @@
 ;; - make sure that there are BTF but no DWARF sections in %t.o
 ;; - check llvm-objdump output when only BTF is present
 
-; RUN: llc --mtriple bpfel %t.ll --filetype=obj -o %t
+; RUN: llc --mtriple bpfel -mcpu=v1 %t.ll --filetype=obj -o %t
 ; RUN: llvm-objdump --no-show-raw-insn -S %t | FileCheck %s
 ; RUN: llvm-strip --strip-debug %t
 ; RUN: llvm-objdump --section-headers %t \
@@ -24,7 +24,7 @@
 
 ;; Next, check bpfeb (big endian):
 
-; RUN: llc --mtriple bpfeb %t.ll --filetype=obj -o %t
+; RUN: llc --mtriple bpfeb -mcpu=v1 %t.ll --filetype=obj -o %t
 ; RUN: llvm-strip --strip-debug %t
 ; RUN: llvm-objdump --no-show-raw-insn -S %t | FileCheck %s
 

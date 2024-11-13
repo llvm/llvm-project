@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -15,7 +16,8 @@
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class LogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -76,7 +78,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0l)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0l)
         continue;
 
       int exponent;

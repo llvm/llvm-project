@@ -9,19 +9,17 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H
 
-// TODO: Use this include once the include headers are also using quotes.
-// #include "include/llvm-libc-types/sigset_t.h"
-// #include "include/llvm-libc-types/struct_epoll_event.h"
-// #include "include/llvm-libc-types/struct_timespec.h"
+#include "hdr/types/sigset_t.h"
+#include "hdr/types/struct_epoll_event.h"
+#include "hdr/types/struct_timespec.h"
+#include "src/__support/macros/config.h"
 
-#include <sys/epoll.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: sigmask and timeout should be nullable
 int epoll_pwait2(int epfd, epoll_event *events, int maxevents,
                  const timespec *timeout, const sigset_t *sigmask);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H

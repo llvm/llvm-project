@@ -1,7 +1,7 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -fdebug-unparse %s | FileCheck %s --check-prefix="UNPARSE"
+! RUN: %flang_fc1 %openmp_flags -fdebug-dump-parse-tree %s | FileCheck %s
+! RUN: %flang_fc1 %openmp_flags -fdebug-unparse %s | FileCheck %s --check-prefix="UNPARSE"
 ! Ensures associated declarative OMP allocations are nested in their
 ! corresponding executable allocate directive
 
@@ -17,6 +17,19 @@ program allocate_tree
 !$omp allocate
     allocate(w, xarray(4), zarray(t, z))
 end program allocate_tree
+
+!CHECK: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
+!CHECK-NEXT: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!CHECK-NEXT: | | | AttrSpec -> Allocatable
+!CHECK-NEXT: | | | EntityDecl
+!CHECK-NEXT: | | | | Name = 'w'
+!CHECK-NEXT: | | | EntityDecl
+!CHECK-NEXT: | | | | Name = 'xarray'
+!CHECK-NEXT: | | | | ArraySpec -> DeferredShapeSpecList -> int = '1'
+!CHECK-NEXT: | | | EntityDecl
+!CHECK-NEXT: | | | | Name = 'zarray'
+!CHECK-NEXT: | | | | ArraySpec -> DeferredShapeSpecList -> int = '2'
+
 
 !CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPExecutableAllocate
 !CHECK-NEXT: | | | Verbatim

@@ -19,8 +19,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $w0
     %2:_(<4 x s32>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     %4:_(<4 x s32>) = G_SHUFFLE_VECTOR %1(<4 x s32>), %2, shufflemask(0, 0, 0, 0)
     $q0 = COPY %4(<4 x s32>)
     RET_ReallyLR implicit $q0
@@ -44,8 +44,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s64) = COPY $x0
     %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s64)
     %4:_(<2 x s64>) = G_SHUFFLE_VECTOR %1(<2 x s64>), %2, shufflemask(0, 0)
     $q0 = COPY %4(<2 x s64>)
     RET_ReallyLR implicit $q0
@@ -69,8 +69,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s32) = COPY $w0
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     %4:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2, shufflemask(0, 0)
     $d0 = COPY %4(<2 x s32>)
     RET_ReallyLR implicit $d0
@@ -94,8 +94,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $s0
     %2:_(<4 x s32>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     %4:_(<4 x s32>) = G_SHUFFLE_VECTOR %1(<4 x s32>), %2, shufflemask(0, 0, 0, 0)
     $q0 = COPY %4(<4 x s32>)
     RET_ReallyLR implicit $q0
@@ -119,8 +119,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s64) = COPY $d0
     %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s64)
     %4:_(<2 x s64>) = G_SHUFFLE_VECTOR %1(<2 x s64>), %2, shufflemask(0, 0)
     $q0 = COPY %4(<2 x s64>)
     RET_ReallyLR implicit $q0
@@ -144,8 +144,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s32) = COPY $s0
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     %4:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2, shufflemask(0, 0)
     $d0 = COPY %4(<2 x s32>)
     RET_ReallyLR implicit $d0
@@ -172,8 +172,8 @@ body:             |
     %0:_(s64) = COPY $d0
     %2:_(<2 x s64>) = G_IMPLICIT_DEF
     %6:_(<2 x s64>) = COPY %2
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %6, %0(s64), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %6, %0(s64), %3(s64)
     %7:_(<2 x s64>) = COPY %1
     %4:_(<2 x s64>) = G_SHUFFLE_VECTOR %7(<2 x s64>), %2, shufflemask(0, 0)
     $q0 = COPY %4(<2 x s64>)
@@ -194,15 +194,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s64), [[C]](s64)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY [[IVEC]](<2 x s64>)
     ; CHECK-NEXT: $q0 = COPY [[COPY1]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s64) = COPY $x0
     %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s64)
     %4:_(<2 x s64>) = G_SHUFFLE_VECTOR %1(<2 x s64>), %2, shufflemask(0, 1)
     $q0 = COPY %4(<2 x s64>)
     RET_ReallyLR implicit $q0
@@ -230,8 +230,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s64) = COPY $x0
     %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %2, %0(s64), %3(s64)
     %4:_(<2 x s64>) = G_SHUFFLE_VECTOR %1(<2 x s64>), %2, shufflemask(-1, -1)
     $q0 = COPY %4(<2 x s64>)
     RET_ReallyLR implicit $q0
@@ -258,8 +258,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $s0
     %2:_(<4 x s32>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     %4:_(<4 x s32>) = G_SHUFFLE_VECTOR %1(<4 x s32>), %2, shufflemask(0, -1, 0, 0)
     $q0 = COPY %4(<4 x s32>)
     RET_ReallyLR implicit $q0
@@ -273,22 +273,20 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $s0
-    ; Check a non-splat mask with an undef value. We shouldn't get a G_DUP here.
-    ;
     ; CHECK-LABEL: name: not_all_zeros_with_undefs
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s32), [[C]](s64)
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[IVEC]](<4 x s32>), [[DEF]], shufflemask(undef, 0, 0, 3)
     ; CHECK-NEXT: $q0 = COPY [[SHUF]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $s0
     %2:_(<4 x s32>) = G_IMPLICIT_DEF
-    %3:_(s32) = G_CONSTANT i32 0
-    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 0
+    %1:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     %4:_(<4 x s32>) = G_SHUFFLE_VECTOR %1(<4 x s32>), %2, shufflemask(-1, 0, 0, 3)
     $q0 = COPY %4(<4 x s32>)
     RET_ReallyLR implicit $q0
@@ -311,8 +309,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:_(s16) = COPY $h0
     %undef:_(<4 x s16>) = G_IMPLICIT_DEF
-    %cst:_(s32) = G_CONSTANT i32 0
-    %ins:_(<4 x s16>) = G_INSERT_VECTOR_ELT %undef, %copy(s16), %cst(s32)
+    %cst:_(s64) = G_CONSTANT i64 0
+    %ins:_(<4 x s16>) = G_INSERT_VECTOR_ELT %undef, %copy(s16), %cst(s64)
     %splat:_(<4 x s16>) = G_SHUFFLE_VECTOR %ins(<4 x s16>), %undef, shufflemask(0, 0, 0, 0)
     $d0 = COPY %splat(<4 x s16>)
     RET_ReallyLR implicit $d0
@@ -335,8 +333,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:_(s32) = COPY $w0
     %undef:_(<8 x s8>) = G_IMPLICIT_DEF
-    %cst:_(s32) = G_CONSTANT i32 0
-    %ins:_(<8 x s8>) = G_INSERT_VECTOR_ELT %undef, %copy(s32), %cst(s32)
+    %cst:_(s64) = G_CONSTANT i64 0
+    %ins:_(<8 x s8>) = G_INSERT_VECTOR_ELT %undef, %copy(s32), %cst(s64)
     %splat:_(<8 x s8>) = G_SHUFFLE_VECTOR %ins(<8 x s8>), %undef, shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
     $d0 = COPY %splat(<8 x s8>)
     RET_ReallyLR implicit $d0
@@ -357,7 +355,21 @@ body:             |
     ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %lane:_(s32) = COPY $w0
-    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_DUP %lane(s32)
+    ; CHECK-NEXT: %b:_(s32) = COPY $w1
+    ; CHECK-NEXT: %c:_(s32) = COPY $w2
+    ; CHECK-NEXT: %d:_(s32) = COPY $w3
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], %lane(s32), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[IVEC1:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], %b(s32), [[C1]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[IVEC2:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC1]], %c(s32), [[C2]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[IVEC3:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC2]], %d(s32), [[C3]](s64)
+    ; CHECK-NEXT: %buildvec:_(<4 x s32>) = COPY [[IVEC3]](<4 x s32>)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_DUPLANE32 %buildvec, [[C4]](s64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lane:_(s32) = COPY $w0
@@ -367,5 +379,59 @@ body:             |
     %undef:_(<4 x s32>) = G_IMPLICIT_DEF
     %buildvec:_(<4 x s32>) = G_BUILD_VECTOR %lane, %b, %c, %d
     %shuf:_(<4 x s32>) = G_SHUFFLE_VECTOR %buildvec(<4 x s32>), %undef, shufflemask(0, 0, 0, 0)
+    $q0 = COPY %shuf(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            build_vector_rhs
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $w0, $w1, $w2, $w3, $w4
+    ; The G_SHUFFLE_VECTOR is fed by a G_BUILD_VECTOR, and the 0th input
+    ; operand is not a constant. We should get a G_DUP.
+    ;
+    ; CHECK-LABEL: name: build_vector
+    ; CHECK: liveins: $w0, $w1, $w2, $w3, $w4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lane_0:_(s32) = COPY $w0
+    ; CHECK-NEXT: %lane_1:_(s32) = COPY $w1
+    ; CHECK-NEXT: %b:_(s32) = COPY $w2
+    ; CHECK-NEXT: %c:_(s32) = COPY $w3
+    ; CHECK-NEXT: %d:_(s32) = COPY $w4
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], %lane_0(s32), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[IVEC1:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], %b(s32), [[C1]](s64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[IVEC2:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC1]], %c(s32), [[C2]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[IVEC3:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC2]], %d(s32), [[C3]](s64)
+    ; CHECK-NEXT: %buildvec0:_(<4 x s32>) = COPY [[IVEC3]](<4 x s32>)
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC4:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF1]], %lane_1(s32), [[C4]](s64)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[IVEC5:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC4]], %b(s32), [[C5]](s64)
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[IVEC6:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC5]], %c(s32), [[C6]](s64)
+    ; CHECK-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[IVEC7:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[IVEC6]], %d(s32), [[C7]](s64)
+    ; CHECK-NEXT: %buildvec1:_(<4 x s32>) = COPY [[IVEC7]](<4 x s32>)
+    ; CHECK-NEXT: %shuf:_(<4 x s32>) = G_SHUFFLE_VECTOR %buildvec0(<4 x s32>), %buildvec1, shufflemask(4, 4, 4, 4)
+    ; CHECK-NEXT: $q0 = COPY %shuf(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %lane_0:_(s32) = COPY $w0
+    %lane_1:_(s32) = COPY $w1
+    %b:_(s32) = COPY $w2
+    %c:_(s32) = COPY $w3
+    %d:_(s32) = COPY $w4
+    %buildvec0:_(<4 x s32>) = G_BUILD_VECTOR %lane_0(s32), %b(s32), %c(s32), %d(s32)
+    %buildvec1:_(<4 x s32>) = G_BUILD_VECTOR %lane_1(s32), %b(s32), %c(s32), %d(s32)
+    %shuf:_(<4 x s32>) = G_SHUFFLE_VECTOR %buildvec0(<4 x s32>), %buildvec1, shufflemask(4, 4, 4, 4)
     $q0 = COPY %shuf(<4 x s32>)
     RET_ReallyLR implicit $q0

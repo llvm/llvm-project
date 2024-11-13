@@ -12,9 +12,11 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
+#include <thread>
 
 using namespace lldb_private;
 
@@ -75,6 +77,44 @@ TEST_F(MainLoopTest, ReadObject) {
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(handle);
   ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
+TEST_F(MainLoopTest, NoSpuriousReads) {
+  // Write one byte into the socket.
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_TRUE(socketpair[0]->Write(&X, len).Success());
+
+  MainLoop loop;
+
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      socketpair[1],
+      [this](MainLoopBase &) {
+        if (callback_count == 0) {
+          // Read the byte back the first time we're called. After that, the
+          // socket is empty, and we should not be called anymore.
+          char X;
+          size_t len = sizeof(X);
+          EXPECT_THAT_ERROR(socketpair[1]->Read(&X, len).ToError(),
+                            llvm::Succeeded());
+          EXPECT_EQ(len, sizeof(X));
+        }
+        ++callback_count;
+      },
+      error);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  // Terminate the loop after one second.
+  std::thread terminate_thread([&loop] {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    loop.AddPendingCallback(
+        [](MainLoopBase &loop) { loop.RequestTermination(); });
+  });
+  ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+  terminate_thread.join();
+
+  // Make sure the callback was called only once.
   ASSERT_EQ(1u, callback_count);
 }
 
@@ -154,9 +194,6 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
     add_callback2.set_value();
   });
   Status error;
-  auto socket_handle = loop.RegisterReadObject(
-      socketpair[1], [](MainLoopBase &) {}, error);
-  ASSERT_TRUE(socket_handle);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   bool callback2_called = false;
   std::thread callback2_adder([&]() {
@@ -172,15 +209,18 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
   ASSERT_TRUE(callback2_called);
 }
 
-// Regression test for assertion failure if a lot of callbacks end up
-// being queued after loop exits.
-TEST_F(MainLoopTest, PendingCallbackAfterLoopExited) {
+TEST_F(MainLoopTest, ManyPendingCallbacks) {
   MainLoop loop;
   Status error;
-  ASSERT_TRUE(loop.Run().Success());
-  // Try to fill the pipe buffer in.
+  // Try to fill up the pipe buffer and make sure bad things don't happen. This
+  // is a regression test for the case where writing to the interrupt pipe
+  // caused a deadlock when the pipe filled up (either because the main loop was
+  // not running, because it was slow, or because it was busy/blocked doing
+  // something else).
   for (int i = 0; i < 65536; ++i)
-    loop.AddPendingCallback([&](MainLoopBase &loop) {});
+    loop.AddPendingCallback(
+        [&](MainLoopBase &loop) { loop.RequestTermination(); });
+  ASSERT_TRUE(loop.Run().Success());
 }
 
 #ifdef LLVM_ON_UNIX

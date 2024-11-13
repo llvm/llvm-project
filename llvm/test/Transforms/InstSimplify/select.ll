@@ -25,11 +25,11 @@ define <2 x i1> @bool_true_or_false_vec(<2 x i1> %cond) {
   ret <2 x i1> %s
 }
 
-define <2 x i1> @bool_true_or_false_vec_undef(<2 x i1> %cond) {
-; CHECK-LABEL: @bool_true_or_false_vec_undef(
+define <2 x i1> @bool_true_or_false_vec_poison(<2 x i1> %cond) {
+; CHECK-LABEL: @bool_true_or_false_vec_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[COND:%.*]]
 ;
-  %s = select <2 x i1> %cond, <2 x i1> <i1 undef, i1 true>, <2 x i1> <i1 false, i1 undef>
+  %s = select <2 x i1> %cond, <2 x i1> <i1 poison, i1 true>, <2 x i1> <i1 false, i1 poison>
   ret <2 x i1> %s
 }
 
@@ -65,27 +65,27 @@ define <2 x i32> @equal_arms_vec(<2 x i1> %cond, <2 x i32> %x) {
   ret <2 x i32> %V
 }
 
-define <2 x i32> @equal_arms_vec_undef(<2 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_undef(
-; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 42>
+define <2 x i32> @equal_arms_vec_poison(<2 x i1> %cond) {
+; CHECK-LABEL: @equal_arms_vec_poison(
+; CHECK-NEXT:    ret <2 x i32> splat (i32 42)
 ;
-  %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 undef>, <2 x i32> <i32 undef, i32 42>
+  %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 poison>, <2 x i32> <i32 poison, i32 42>
   ret <2 x i32> %V
 }
 
-define <3 x float> @equal_arms_vec_less_undef(<3 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_less_undef(
+define <3 x float> @equal_arms_vec_less_poison(<3 x i1> %cond) {
+; CHECK-LABEL: @equal_arms_vec_less_poison(
 ; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float 4.200000e+01, float 4.300000e+01>
 ;
-  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float 43.0>, <3 x float> <float 42.0, float 42.0, float 43.0>
+  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float poison, float 43.0>, <3 x float> <float 42.0, float 42.0, float 43.0>
   ret <3 x float> %V
 }
 
-define <3 x float> @equal_arms_vec_more_undef(<3 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_more_undef(
-; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float undef, float 4.300000e+01>
+define <3 x float> @equal_arms_vec_more_poison(<3 x i1> %cond) {
+; CHECK-LABEL: @equal_arms_vec_more_poison(
+; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float poison, float 4.300000e+01>
 ;
-  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float undef>, <3 x float> <float undef, float undef, float 43.0>
+  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float poison, float poison>, <3 x float> <float poison, float poison, float 43.0>
   ret <3 x float> %V
 }
 
@@ -113,19 +113,19 @@ define <2 x i8> @vsel_mixedvec() {
   ret <2 x i8> %s
 }
 
-define <3 x i8> @vsel_undef_true_op(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @vsel_undef_true_op(
+define <3 x i8> @vsel_poison_true_op(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @vsel_poison_true_op(
 ; CHECK-NEXT:    ret <3 x i8> [[X:%.*]]
 ;
-  %s = select <3 x i1><i1 1, i1 undef, i1 1>, <3 x i8> %x, <3 x i8> %y
+  %s = select <3 x i1><i1 1, i1 poison, i1 1>, <3 x i8> %x, <3 x i8> %y
   ret <3 x i8> %s
 }
 
-define <3 x i4> @vsel_undef_false_op(<3 x i4> %x, <3 x i4> %y) {
-; CHECK-LABEL: @vsel_undef_false_op(
+define <3 x i4> @vsel_poison_false_op(<3 x i4> %x, <3 x i4> %y) {
+; CHECK-LABEL: @vsel_poison_false_op(
 ; CHECK-NEXT:    ret <3 x i4> [[Y:%.*]]
 ;
-  %s = select <3 x i1><i1 0, i1 undef, i1 undef>, <3 x i4> %x, <3 x i4> %y
+  %s = select <3 x i1><i1 0, i1 poison, i1 poison>, <3 x i4> %x, <3 x i4> %y
   ret <3 x i4> %s
 }
 
@@ -319,7 +319,7 @@ define i32 @test11(i32 %X) {
 
 define <2 x i8> @test11vec(<2 x i8> %X) {
 ; CHECK-LABEL: @test11vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 127)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %cmp = icmp sgt <2 x i8> %X, <i8 -1, i8 -1>
@@ -712,8 +712,8 @@ define i1 @and_cmps(i32 %x) {
 
 define <2 x i1> @and_cmps_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @and_cmps_vector(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 92, i32 92>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 92)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], splat (i32 11)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -985,13 +985,13 @@ define i1 @expand_binop_undef(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true)
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
   %cmp = icmp eq i32 %arg, 0
-  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
+  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
   %shifted = lshr i32 %arg, %trailing
   %r1.sroa.0.1 = select i1 %cmp, i32 0, i32 %shifted
   ret i32 %r1.sroa.0.1
@@ -1087,13 +1087,10 @@ define i32 @select_ctpop_zero(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME: This is safe to fold.
 define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @select_ctpop_zero_vec(
-; CHECK-NEXT:    [[T0:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[T0]], <2 x i32> zeroinitializer, <2 x i32> [[T1]]
-; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;
   %t0 = icmp eq <2 x i32> %x, zeroinitializer
   %t1 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)
@@ -1105,19 +1102,19 @@ define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
 define <2 x i32> @select_vector_reverse(<2 x i32> %x) {
 ; CHECK-LABEL: @select_vector_reverse(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[REV:%.*]] = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> [[X]])
+; CHECK-NEXT:    [[REV:%.*]] = call <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32> [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> [[REV]]
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %cmp = icmp eq <2 x i32> %x, zeroinitializer
-  %rev = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> %x)
+  %rev = call <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32> %x)
   %sel = select <2 x i1> %cmp, <2 x i32> zeroinitializer, <2 x i32> %rev
   ret <2 x i32> %sel
 }
 
 declare i32 @llvm.ctpop.i32(i32)
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
-declare <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32>)
+declare <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32>)
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @vec_select_no_equivalence(

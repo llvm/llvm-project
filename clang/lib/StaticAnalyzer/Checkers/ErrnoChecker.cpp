@@ -42,7 +42,6 @@ public:
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
-  void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const;
 
   /// Indicates if a read (load) of \c errno is allowed in a non-condition part
   /// of \c if, \c switch, loop and conditional statements when the errno
@@ -205,7 +204,7 @@ void ErrnoChecker::checkPreCall(const CallEvent &Call,
   // Probably 'strerror'?
   if (CallF->isExternC() && CallF->isGlobal() &&
       C.getSourceManager().isInSystemHeader(CallF->getLocation()) &&
-      !isErrno(CallF)) {
+      !isErrnoLocationCall(Call)) {
     if (getErrnoState(C.getState()) == MustBeChecked) {
       std::optional<ento::Loc> ErrnoLoc = getErrnoLoc(C.getState());
       assert(ErrnoLoc && "ErrnoLoc should exist if an errno state is set.");

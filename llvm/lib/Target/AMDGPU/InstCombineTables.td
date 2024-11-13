@@ -1,5 +1,4 @@
-include "llvm/TableGen/SearchableTable.td"
-include "llvm/IR/Intrinsics.td"
+include "AMDGPU.td"
 
 def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let FilterClass = "AMDGPUImageDMaskIntrinsic";

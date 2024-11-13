@@ -21,6 +21,12 @@ void foo() {
 
 // CHECK: ---
 // CHECK-NEXT: - Callback: PragmaDirective
+// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
+// CHECK-NEXT:   Introducer: PIK_HashPragma
+// CHECK-NEXT: - Callback: PragmaDirective
+// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
+// CHECK-NEXT:   Introducer: PIK_HashPragma
+// CHECK-NEXT: - Callback: PragmaDirective
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-general.cpp:3:1"
 // CHECK-NEXT:   Introducer: PIK_HashPragma
 // CHECK-NEXT: - Callback: PragmaDiagnosticPush

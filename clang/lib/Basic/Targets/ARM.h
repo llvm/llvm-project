@@ -225,6 +225,10 @@ public:
   bool hasBitIntType() const override { return true; }
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {
@@ -304,17 +308,6 @@ protected:
 
 public:
   DarwinARMTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-};
-
-// 32-bit RenderScript is armv7 with width and align of 'long' set to 8-bytes
-class LLVM_LIBRARY_VISIBILITY RenderScript32TargetInfo
-    : public ARMleTargetInfo {
-public:
-  RenderScript32TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

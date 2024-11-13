@@ -699,6 +699,28 @@ define <4 x double> @shuffle_v4f64_0437(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %shuffle
 }
 
+; PR91433
+define <4 x double> @shuffle_v4f64_2303(<4 x double> %a) {
+; AVX1-LABEL: shuffle_v4f64_2303:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v4f64_2303:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,3]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v4f64_2303:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,3]
+; AVX512VL-NEXT:    retq
+  %shuffle = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 3>
+  ret <4 x double> %shuffle
+}
+
 define <4 x double> @shuffle_v4f64_0z3z(<4 x double> %a, <4 x double> %b) {
 ; ALL-LABEL: shuffle_v4f64_0z3z:
 ; ALL:       # %bb.0:
@@ -1784,6 +1806,21 @@ define <4 x double> @broadcast_v4f64_0000_from_v2i64(<2 x i64> %a0) {
   %2 = bitcast <4 x i64> %1 to <4 x double>
   %3 = shufflevector <4 x double> %2, <4 x double> undef, <4 x i32> zeroinitializer
   ret <4 x double> %3
+}
+
+; PR114959
+define <4 x double> @concat_v4f64_0213_broadcasts(ptr %src) {
+; ALL-LABEL: concat_v4f64_0213_broadcasts:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
+; ALL-NEXT:    retq
+  %src.hi = getelementptr inbounds i8, ptr %src, i64 32
+  %lo = load <2 x double>, ptr %src, align 1
+  %hi = load <2 x double>, ptr %src.hi, align 1
+  %shuffle = shufflevector <2 x double> %lo, <2 x double> %hi, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %shuffle
 }
 
 define <4 x double> @bitcast_v4f64_0426(<4 x double> %a, <4 x double> %b) {

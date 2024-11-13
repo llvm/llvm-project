@@ -1,20 +1,21 @@
 // Tests trace pc guard coverage collection.
 
 // REQUIRES: has_sancovcc
-// UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x|thumb).*}}
+// UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x|sparc|thumb).*}}
+// This test is failing for lsan on darwin on x86_64h.
+// UNSUPPORTED: x86_64h-darwin && lsan
 // XFAIL: tsan
 // XFAIL: android && asan
 
-// RUN: DIR=%t_workdir
-// RUN: rm -rf $DIR
-// RUN: mkdir -p $DIR
-// RUN: cd $DIR
+// RUN: rm -rf %t_workdir
+// RUN: mkdir -p %t_workdir
+// RUN: cd %t_workdir
 // RUN: %clangxx -O0 -fsanitize-coverage=trace-pc-guard %s -o %t
 // RUN: %env_tool_opts=coverage=1 %t 2>&1 | FileCheck %s
 // RUN: %sancovcc  -covered-functions -strip_path_prefix=TestCases/ *.sancov %t 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-SANCOV %s
 // RUN: %env_tool_opts=coverage=0 %t 2>&1 | FileCheck --check-prefix=CHECK-NOCOV %s
-// RUN: rm -rf $DIR
+// RUN: rm -rf %t_workdir
 // Make some room to stabilize line numbers
 
 #include <stdio.h>

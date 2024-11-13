@@ -1,7 +1,7 @@
 name: Release Task
 
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
@@ -27,6 +27,8 @@ jobs:
   release-create:
     name: Create a New Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # For creating the release.
     needs: validate-tag
 
     steps:
@@ -55,6 +57,8 @@ jobs:
 
   release-doxygen:
     name: Build and Upload Release Doxygen
+    permissions:
+      contents: write
     needs:
       - validate-tag
       - release-create
@@ -62,6 +66,9 @@ jobs:
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
   release-lit:
     name: Release Lit
@@ -69,13 +76,48 @@ jobs:
     uses: ./.github/workflows/release-lit.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
   release-binaries:
     name: Build Release Binaries
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     needs:
       - validate-tag
       - release-create
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - ubuntu-22.04
+          - windows-2022
+          - macos-13
+          - macos-14
+
     uses: ./.github/workflows/release-binaries.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+      runs-on: ${{ matrix.runs-on }}
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+
+  release-sources:
+    name: Package Release Sources
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    needs:
+      - validate-tag
+    uses: ./.github/workflows/release-sources.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}

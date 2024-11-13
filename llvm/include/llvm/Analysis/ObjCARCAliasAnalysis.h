@@ -23,7 +23,6 @@
 #define LLVM_ANALYSIS_OBJCARCALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
 namespace objcarc {

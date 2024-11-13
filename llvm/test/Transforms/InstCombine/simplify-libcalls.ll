@@ -29,10 +29,10 @@ define void @foo(ptr %P, ptr %X) {
 
 define ptr @test1() {
 ; CHECK32-LABEL: @test1(
-; CHECK32-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @str, i32 0, i32 3)
+; CHECK32-NEXT:    ret ptr getelementptr inbounds (i8, ptr @str, i32 3)
 ;
 ; CHECK16-LABEL: @test1(
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([5 x i8], ptr @str, i32 0, i32 2), i32 103)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds (i8, ptr @str, i32 2), i32 103)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
   %tmp3 = tail call ptr @strchr( ptr getelementptr ([5 x i8], ptr @str, i32 0, i32 2), i32 103 )              ; <ptr> [#uses=1]
@@ -45,10 +45,10 @@ declare ptr @strchr(ptr, i32)
 
 define ptr @test2() {
 ; CHECK32-LABEL: @test2(
-; CHECK32-NEXT:    ret ptr getelementptr inbounds ([8 x i8], ptr @str1, i32 0, i32 7)
+; CHECK32-NEXT:    ret ptr getelementptr inbounds (i8, ptr @str1, i32 7)
 ;
 ; CHECK16-LABEL: @test2(
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([8 x i8], ptr @str1, i32 0, i32 2), i32 0)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds (i8, ptr @str1, i32 2), i32 0)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
   %tmp3 = tail call ptr @strchr( ptr getelementptr ([8 x i8], ptr @str1, i32 0, i32 2), i32 0 )               ; <ptr> [#uses=1]
@@ -62,7 +62,7 @@ define ptr @test3() {
 ;
 ; CHECK16-LABEL: @test3(
 ; CHECK16-NEXT:  entry:
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([5 x i8], ptr @str2, i32 0, i32 1), i32 80)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds (i8, ptr @str2, i32 1), i32 80)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
 entry:
@@ -341,6 +341,18 @@ define signext i32 @emit_stpncpy() {
   i32 noundef 2, i32 noundef 5)
   ret i32 0
 }
+
+define void @simplify_memset_chk_pr112633(ptr %p, i32 %conv) {
+; CHECK-LABEL: @simplify_memset_chk_pr112633(
+; CHECK-NEXT:    [[CALL_I:%.*]] = tail call ptr @__memset_chk(ptr [[P:%.*]], i32 range(i32 0, 123) [[CONV:%.*]], i64 1, i64 1)
+; CHECK-NEXT:    ret void
+;
+  %call.i = tail call ptr @__memset_chk(ptr %p, i32 range(i32 0, 123) %conv, i64 1, i64 1)
+  ret void
+}
+
+declare ptr @__memset_chk(ptr, i32, i64, i64)
+
 
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

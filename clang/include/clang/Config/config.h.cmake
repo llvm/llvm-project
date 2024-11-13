@@ -83,4 +83,7 @@
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #cmakedefine01 CLANG_SPAWN_CC1
 
+/* Whether CIR is built into Clang */
+#cmakedefine01 CLANG_ENABLE_CIR
+
 #endif

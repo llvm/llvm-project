@@ -338,6 +338,127 @@ define half @cos_f16(half %x) #0 {
   ret half %val
 }
 
+define half @tan_f16(half %x) #0 {
+; CHECK-LABEL: tan_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.tan.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @asin_f16(half %x) #0 {
+; CHECK-LABEL: asin_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl asinf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.asin.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @acos_f16(half %x) #0 {
+; CHECK-LABEL: acos_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl acosf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.acos.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @atan_f16(half %x) #0 {
+; CHECK-LABEL: atan_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl atanf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.atan.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @atan2_f16(half %x, half %y) #0 {
+; CHECK-LABEL: atan2_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.atan2.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sinh_f16(half %x) #0 {
+; CHECK-LABEL: sinh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl sinhf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.sinh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @cosh_f16(half %x) #0 {
+; CHECK-LABEL: cosh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl coshf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.cosh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @tanh_f16(half %x) #0 {
+; CHECK-LABEL: tanh_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl tanhf
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.tanh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
 define half @pow_f16(half %x, half %y) #0 {
 ; CHECK-LABEL: pow_f16:
 ; CHECK:       // %bb.0:
@@ -474,7 +595,7 @@ define i32 @lrint_f16(half %x) #0 {
 ; CHECK-FP16-NEXT:    frintx h0, h0
 ; CHECK-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i32 @llvm.experimental.constrained.lrint.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %val = call i32 @llvm.experimental.constrained.lrint.i32.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
@@ -491,7 +612,7 @@ define i64 @llrint_f16(half %x) #0 {
 ; CHECK-FP16-NEXT:    frintx h0, h0
 ; CHECK-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i64 @llvm.experimental.constrained.llrint.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %val = call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i64 %val
 }
 
@@ -572,7 +693,7 @@ define i32 @lround_f16(half %x) #0 {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtas w0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i32 @llvm.experimental.constrained.lround.f16(half %x, metadata !"fpexcept.strict") #0
+  %val = call i32 @llvm.experimental.constrained.lround.i32.f16(half %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
@@ -587,7 +708,7 @@ define i64 @llround_f16(half %x) #0 {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtas x0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call i64 @llvm.experimental.constrained.llround.f16(half %x, metadata !"fpexcept.strict") #0
+  %val = call i64 @llvm.experimental.constrained.llround.i64.f16(half %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }
 
@@ -1147,6 +1268,7 @@ declare half @llvm.experimental.constrained.sqrt.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.powi.f16(half, i32, metadata, metadata)
 declare half @llvm.experimental.constrained.sin.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.cos.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.tan.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.pow.f16(half, half, metadata, metadata)
 declare half @llvm.experimental.constrained.log.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.log10.f16(half, metadata, metadata)
@@ -1155,14 +1277,14 @@ declare half @llvm.experimental.constrained.exp.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.exp2.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.rint.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.nearbyint.f16(half, metadata, metadata)
-declare i32 @llvm.experimental.constrained.lrint.f16(half, metadata, metadata)
-declare i64 @llvm.experimental.constrained.llrint.f16(half, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f16(half, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.maxnum.f16(half, half, metadata)
 declare half @llvm.experimental.constrained.minnum.f16(half, half, metadata)
 declare half @llvm.experimental.constrained.ceil.f16(half, metadata)
 declare half @llvm.experimental.constrained.floor.f16(half, metadata)
-declare i32 @llvm.experimental.constrained.lround.f16(half, metadata)
-declare i64 @llvm.experimental.constrained.llround.f16(half, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f16(half, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f16(half, metadata)
 declare half @llvm.experimental.constrained.round.f16(half, metadata)
 declare half @llvm.experimental.constrained.roundeven.f16(half, metadata)
 declare half @llvm.experimental.constrained.trunc.f16(half, metadata)

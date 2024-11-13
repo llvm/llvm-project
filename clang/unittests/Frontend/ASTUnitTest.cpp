@@ -92,8 +92,8 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(ASTFileName.str()), PCHContainerOps->getRawReader(),
-      ASTUnit::LoadEverything, Diags, FileSystemOptions(), HSOpts);
+      ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
+      Diags, FileSystemOptions(), HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
@@ -168,9 +168,9 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
 
   std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
-      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
-      false, SkipFunctionBodiesScope::None, false, true, false, false,
-      std::nullopt, &ErrUnit, nullptr);
+      CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false, false,
+      SkipFunctionBodiesScope::None, false, true, false, false, std::nullopt,
+      &ErrUnit, nullptr);
 
   ASSERT_EQ(AST, nullptr);
   ASSERT_NE(ErrUnit, nullptr);
@@ -195,9 +195,9 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
 
   std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
-      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
-      false, SkipFunctionBodiesScope::None, false, true, false, false,
-      std::nullopt, &ErrUnit, nullptr);
+      CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false, false,
+      SkipFunctionBodiesScope::None, false, true, false, false, std::nullopt,
+      &ErrUnit, nullptr);
 
   ASSERT_NE(AST, nullptr);
   ASSERT_FALSE(Diags->hasErrorOccurred());

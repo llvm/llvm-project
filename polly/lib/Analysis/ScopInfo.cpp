@@ -533,6 +533,9 @@ MemoryAccess::getReductionOperatorStr(MemoryAccess::ReductionType RT) {
   case MemoryAccess::RT_NONE:
     llvm_unreachable("Requested a reduction operator string for a memory "
                      "access which isn't a reduction");
+  case MemoryAccess::RT_BOTTOM:
+    llvm_unreachable("Requested a reduction operator string for a internal "
+                     "reduction type!");
   case MemoryAccess::RT_ADD:
     return "+";
   case MemoryAccess::RT_MUL:
@@ -915,10 +918,15 @@ isl::id MemoryAccess::getId() const { return Id; }
 
 raw_ostream &polly::operator<<(raw_ostream &OS,
                                MemoryAccess::ReductionType RT) {
-  if (RT == MemoryAccess::RT_NONE)
+  switch (RT) {
+  case MemoryAccess::RT_NONE:
+  case MemoryAccess::RT_BOTTOM:
     OS << "NONE";
-  else
+    break;
+  default:
     OS << MemoryAccess::getReductionOperatorStr(RT);
+    break;
+  }
   return OS;
 }
 
@@ -1810,11 +1818,9 @@ std::pair<std::string, std::string> Scop::getEntryExitStr() const {
   raw_string_ostream EntryStr(EntryName);
 
   R.getEntry()->printAsOperand(EntryStr, false);
-  EntryStr.str();
 
   if (R.getExit()) {
     R.getExit()->printAsOperand(ExitStr, false);
-    ExitStr.str();
   } else
     ExitName = "FunctionExit";
 

@@ -24,9 +24,9 @@ class Value;
 ///
 bool isSafeToDestroyConstant(const Constant *C);
 
-/// As we analyze each global, keep track of some information about it.  If we
-/// find out that the address of the global is taken, none of this info will be
-/// accurate.
+/// As we analyze each global or thread-local variable, keep track of some
+/// information about it.  If we find out that the address of the global is
+/// taken, none of this info will be accurate.
 struct GlobalStatus {
   /// True if the global's address is used in a comparison.
   bool IsCompared = false;

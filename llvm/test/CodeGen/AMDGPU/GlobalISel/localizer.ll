@@ -7,7 +7,7 @@
 define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-LABEL: localize_constants:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x0
+; GFX9-NEXT:    s_load_dword s1, s[8:9], 0x0
 ; GFX9-NEXT:    s_mov_b32 s0, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_xor_b32 s1, s1, 1
@@ -95,7 +95,7 @@ bb2:
 define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-LABEL: localize_globals:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x0
+; GFX9-NEXT:    s_load_dword s1, s[8:9], 0x0
 ; GFX9-NEXT:    s_mov_b32 s0, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_xor_b32 s1, s1, 1

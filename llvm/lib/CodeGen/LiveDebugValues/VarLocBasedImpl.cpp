@@ -86,7 +86,7 @@
 /// lookup the VarLoc in the VarLocMap. Rather than operate directly on machine
 /// locations, the dataflow analysis in this pass identifies locations by their
 /// indices in the VarLocMap, meaning all the variable locations in a block can
-/// be described by a sparse vector of VarLocMap indicies.
+/// be described by a sparse vector of VarLocMap indices.
 ///
 /// All the storage for the dataflow analysis is local to the ExtendRanges
 /// method and passed down to helper methods. "OutLocs" and "InLocs" record the
@@ -144,7 +144,6 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -238,6 +237,10 @@ struct LocIndex {
   /// giving a each target index/offset pair its own u32_location_t if this
   /// becomes a problem.
   static constexpr u32_location_t kWasmLocation = kFirstInvalidRegLocation + 2;
+
+  /// The first location that is reserved for VarLocs with locations of kind
+  /// VirtualRegisterKind.
+  static constexpr u32_location_t kFirstVirtualRegLocation = 1 << 31;
 
   LocIndex(u32_location_t Location, u32_index_t Index)
       : Location(Location), Index(Index) {}
@@ -810,9 +813,10 @@ private:
         VL.getDescribingRegs(Locations);
         assert(all_of(Locations,
                       [](auto RegNo) {
-                        return RegNo < LocIndex::kFirstInvalidRegLocation;
+                        return (RegNo < LocIndex::kFirstInvalidRegLocation) ||
+                               (LocIndex::kFirstVirtualRegLocation <= RegNo);
                       }) &&
-               "Physreg out of range?");
+               "Physical or virtual register out of range?");
         if (VL.containsSpillLocs())
           Locations.push_back(LocIndex::kSpillLocation);
         if (VL.containsWasmLocs())
@@ -1240,9 +1244,9 @@ void VarLocBasedLDV::getUsedRegs(const VarLocSet &CollectFrom,
       LocIndex::rawIndexForReg(LocIndex::kFirstRegLocation);
   uint64_t FirstInvalidIndex =
       LocIndex::rawIndexForReg(LocIndex::kFirstInvalidRegLocation);
-  for (auto It = CollectFrom.find(FirstRegIndex),
-            End = CollectFrom.find(FirstInvalidIndex);
-       It != End;) {
+  uint64_t FirstVirtualRegIndex =
+      LocIndex::rawIndexForReg(LocIndex::kFirstVirtualRegLocation);
+  auto doGetUsedRegs = [&](VarLocSet::const_iterator &It) {
     // We found a VarLoc ID for a VarLoc that lives in a register. Figure out
     // which register and add it to UsedRegs.
     uint32_t FoundReg = LocIndex::fromRawInteger(*It).Location;
@@ -1255,6 +1259,16 @@ void VarLocBasedLDV::getUsedRegs(const VarLocSet &CollectFrom,
     // guaranteed to move on to the next register (or to end()).
     uint64_t NextRegIndex = LocIndex::rawIndexForReg(FoundReg + 1);
     It.advanceToLowerBound(NextRegIndex);
+  };
+  for (auto It = CollectFrom.find(FirstRegIndex),
+            End = CollectFrom.find(FirstInvalidIndex);
+       It != End;) {
+    doGetUsedRegs(It);
+  }
+  for (auto It = CollectFrom.find(FirstVirtualRegIndex),
+            End = CollectFrom.end();
+       It != End;) {
+    doGetUsedRegs(It);
   }
 }
 
@@ -1312,7 +1326,7 @@ void VarLocBasedLDV::cleanupEntryValueTransfers(
     return;
 
   auto TransRange = EntryValTransfers.equal_range(TRInst);
-  for (auto &TDPair : llvm::make_range(TransRange.first, TransRange.second)) {
+  for (auto &TDPair : llvm::make_range(TransRange)) {
     const VarLoc &EmittedEV = VarLocIDs[TDPair.second];
     if (std::tie(EntryVL.Var, EntryVL.Locs[0].Value.RegNo, EntryVL.Expr) ==
         std::tie(EmittedEV.Var, EmittedEV.Locs[0].Value.RegNo,
@@ -1789,14 +1803,14 @@ void VarLocBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI,
   if (isLocationSpill(MI, MF, Reg)) {
     TKind = TransferKind::TransferSpill;
     LLVM_DEBUG(dbgs() << "Recognized as spill: "; MI.dump(););
-    LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)
+    LLVM_DEBUG(dbgs() << "Register: " << Reg.id() << " " << printReg(Reg, TRI)
                       << "\n");
   } else {
     if (!(Loc = isRestoreInstruction(MI, MF, Reg)))
       return;
     TKind = TransferKind::TransferRestore;
     LLVM_DEBUG(dbgs() << "Recognized as restore: "; MI.dump(););
-    LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)
+    LLVM_DEBUG(dbgs() << "Register: " << Reg.id() << " " << printReg(Reg, TRI)
                       << "\n");
   }
   // Check if the register or spill location is the location of a debug value.
@@ -1952,11 +1966,9 @@ void VarLocBasedLDV::accumulateFragmentMap(MachineInstr &MI,
   // If this is the first sighting of this variable, then we are guaranteed
   // there are currently no overlapping fragments either. Initialize the set
   // of seen fragments, record no overlaps for the current one, and return.
-  auto SeenIt = SeenFragments.find(MIVar.getVariable());
-  if (SeenIt == SeenFragments.end()) {
-    SmallSet<FragmentInfo, 4> OneFragment;
-    OneFragment.insert(ThisFragment);
-    SeenFragments.insert({MIVar.getVariable(), OneFragment});
+  auto [SeenIt, Inserted] = SeenFragments.try_emplace(MIVar.getVariable());
+  if (Inserted) {
+    SeenIt->second.insert(ThisFragment);
 
     OverlappingFragments.insert({{MIVar.getVariable(), ThisFragment}, {}});
     return;

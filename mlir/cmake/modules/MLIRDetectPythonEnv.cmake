@@ -19,7 +19,7 @@ macro(mlir_configure_python_dev_packages)
   set(_python_development_component Development.Module)
 
   find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
-    COMPONENTS Interpreter ${_python_development_component} NumPy REQUIRED)
+    COMPONENTS Interpreter ${_python_development_component} REQUIRED)
   unset(_python_development_component)
   message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
   message(STATUS "Found python libraries: ${Python3_LIBRARIES}")

@@ -87,17 +87,13 @@ private:
 };
 
 static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
-
-  FN = FN.substr(0, len);
-
+  if (FN.length() > len)
+    FN.resize(len);
   auto strLen = FN.length();
   while (strLen > 0) {
-    if (auto it = nameObj.find(FN); it != nameObj.end()) {
-      FN = FN.substr(0, --len);
-    } else {
-      nameObj.insert(FN);
+    if (nameObj.insert(FN).second)
       break;
-    }
+    FN.resize(--len);
     strLen--;
   }
 }

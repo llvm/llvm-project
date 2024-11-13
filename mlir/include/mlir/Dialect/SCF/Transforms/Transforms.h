@@ -18,8 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
-
-struct LogicalResult;
 class Region;
 class RewriterBase;
 class Operation;
@@ -28,9 +26,21 @@ class Value;
 namespace scf {
 
 class IfOp;
+class ForallOp;
 class ForOp;
 class ParallelOp;
 class WhileOp;
+
+/// Try converting scf.forall into a set of nested scf.for loops.
+/// The newly created scf.for ops will be returned through the `results`
+/// vector if provided.
+LogicalResult forallToForLoop(RewriterBase &rewriter, ForallOp forallOp,
+                              SmallVectorImpl<Operation *> *results = nullptr);
+
+/// Try converting scf.forall into an scf.parallel loop.
+/// The conversion is only supported for forall operations with no results.
+LogicalResult forallToParallelLoop(RewriterBase &rewriter, ForallOp forallOp,
+                                   ParallelOp *result = nullptr);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
@@ -218,9 +228,20 @@ FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
 ///   } else {
 ///     scf.yield %pre_val : i64
 ///   }
+///
+/// Failure mechanism is not implemented for this function, so it currently
+/// always returns a `WhileOp` operation: a new one if the transformation took
+/// place or the input `whileOp` if the loop was already in a `do-while` form
+/// and `forceCreateCheck` is `false`.
 FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
                                                 RewriterBase &rewriter,
                                                 bool forceCreateCheck = false);
+
+/// Try to uplift `scf.while` op to `scf.for`.
+/// Uplifitng expects a specific ops pattern:
+///  * `before` block consisting of single arith.cmp op
+///  * `after` block containing arith.addi
+FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
 
 } // namespace scf
 } // namespace mlir

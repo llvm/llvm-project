@@ -46,6 +46,33 @@ std::optional<PatternType> PatternType::get(ArrayRef<SMLoc> DiagLoc,
     return PT;
   }
 
+  if (R->isSubClassOf(VariadicClassName)) {
+    const int64_t Min = R->getValueAsInt("MinArgs");
+    const int64_t Max = R->getValueAsInt("MaxArgs");
+
+    if (Min == 0) {
+      PrintError(
+          DiagLoc,
+          DiagCtx +
+              ": minimum number of arguments must be greater than zero in " +
+              VariadicClassName);
+      return std::nullopt;
+    }
+
+    if (Max <= Min && Max != 0) {
+      PrintError(DiagLoc, DiagCtx + ": maximum number of arguments (" +
+                              Twine(Max) +
+                              ") must be zero, or greater "
+                              "than the minimum number of arguments (" +
+                              Twine(Min) + ") in " + VariadicClassName);
+      return std::nullopt;
+    }
+
+    PatternType PT(PT_VariadicPack);
+    PT.Data.VPTI = {unsigned(Min), unsigned(Max)};
+    return PT;
+  }
+
   PrintError(DiagLoc, DiagCtx + ": unknown type '" + R->getName() + "'");
   return std::nullopt;
 }
@@ -66,6 +93,11 @@ const Record *PatternType::getLLTRecord() const {
   return Data.Def;
 }
 
+VariadicPackTypeInfo PatternType::getVariadicPackTypeInfo() const {
+  assert(isVariadicPack());
+  return Data.VPTI;
+}
+
 bool PatternType::operator==(const PatternType &Other) const {
   if (Kind != Other.Kind)
     return false;
@@ -77,6 +109,8 @@ bool PatternType::operator==(const PatternType &Other) const {
     return Data.Def == Other.Data.Def;
   case PT_TypeOf:
     return Data.Str == Other.Data.Str;
+  case PT_VariadicPack:
+    return Data.VPTI == Other.Data.VPTI;
   }
 
   llvm_unreachable("Unknown Type Kind");
@@ -90,6 +124,10 @@ std::string PatternType::str() const {
     return Data.Def->getName().str();
   case PT_TypeOf:
     return (TypeOfClassName + "<$" + getTypeOfOpName() + ">").str();
+  case PT_VariadicPack:
+    return (VariadicClassName + "<" + Twine(Data.VPTI.Min) + "," +
+            Twine(Data.VPTI.Max) + ">")
+        .str();
   }
 
   llvm_unreachable("Unknown type!");
@@ -145,6 +183,8 @@ CXXPattern::CXXPattern(const StringInit &Code, StringRef Name)
 const CXXPredicateCode &
 CXXPattern::expandCode(const CodeExpansions &CE, ArrayRef<SMLoc> Locs,
                        function_ref<void(raw_ostream &)> AddComment) const {
+  assert(!IsApply && "'apply' CXX patterns should be handled differently!");
+
   std::string Result;
   raw_string_ostream OS(Result);
 
@@ -153,8 +193,6 @@ CXXPattern::expandCode(const CodeExpansions &CE, ArrayRef<SMLoc> Locs,
 
   CodeExpander Expander(RawCode, CE, Locs, /*ShowExpansions*/ false);
   Expander.emit(OS);
-  if (IsApply)
-    return CXXPredicateCode::getApplyCode(std::move(Result));
   return CXXPredicateCode::getMatchCode(std::move(Result));
 }
 
@@ -344,7 +382,7 @@ bool CodeGenInstructionPattern::hasVariadicDefs() const {
   if (I.variadicOpsAreDefs)
     return true;
 
-  DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
+  const DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
   if (OutOps->arg_empty())
     return false;
 
@@ -525,6 +563,7 @@ bool PatFrag::checkSemantics() {
       case Pattern::K_CXX:
         continue;
       case Pattern::K_CodeGenInstruction:
+        // TODO: Allow VarArgs?
         if (cast<CodeGenInstructionPattern>(Pat.get())->diagnoseAllSpecialTypes(
                 Def.getLoc(), PatternType::SpecialTyClassName +
                                   " is not supported in " + ClassName))

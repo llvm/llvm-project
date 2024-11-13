@@ -5,7 +5,6 @@
 
   @arm_cmplx_conj_f32_mve.cmplx_conj_sign = internal constant [4 x float] [float 1.000000e+00, float -1.000000e+00, float 1.000000e+00, float -1.000000e+00], align 4
 
-  ; Function Attrs: nounwind
   define hidden void @arm_cmplx_conj_f32_mve(ptr %pSrc, ptr %pDst, i32 %blockSize) local_unnamed_addr #0 {
   entry:
     ret void
@@ -37,28 +36,32 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: arm_cmplx_conj_f32_mve
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r4
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
-  ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   $r4 = t2MOVi16 target-flags(arm-lo16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
-  ; CHECK:   $r4 = t2MOVTi16 killed $r4, target-flags(arm-hi16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg, $noreg
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 0, $noreg, $noreg
-  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
-  ; CHECK:   MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 0, killed $noreg, $noreg
-  ; CHECK:   renamable $r1, dead $cpsr = nuw tADDi8 killed renamable $r1, 16, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 16, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -8
+  ; CHECK-NEXT:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r4 = t2MOVi16 target-flags(arm-lo16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r4 = t2MOVTi16 killed $r4, target-flags(arm-hi16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg, $noreg
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 0, $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT:   MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 0, killed $noreg, $noreg
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = nuw tADDi8 killed renamable $r1, 16, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 16, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
   bb.0:
     successors: %bb.1(0x80000000)
     liveins: $r0, $r1, $r2, $r4, $lr

@@ -37,7 +37,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   RegisterTargetMachine<M68kTargetMachine> X(getTheM68kTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
-  initializeM68kDAGToDAGISelPass(*PR);
+  initializeM68kDAGToDAGISelLegacyPass(*PR);
   initializeM68kExpandPseudoPass(*PR);
   initializeM68kGlobalBaseRegPass(*PR);
   initializeM68kCollapseMOVEMPass(*PR);
@@ -87,8 +87,6 @@ CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
                                        bool JIT) {
   if (!CM) {
     return CodeModel::Small;
-  } else if (CM == CodeModel::Large) {
-    llvm_unreachable("Large code model is not supported");
   } else if (CM == CodeModel::Kernel) {
     llvm_unreachable("Kernel code model is not implemented yet");
   }

@@ -12,12 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MCInstLower.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -184,9 +186,12 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
                                                     MCSymbol *Sym) const {
   uint32_t RefFlags = 0;
 
-  if (MO.getTargetFlags() & AArch64II::MO_GOT)
-    RefFlags |= AArch64MCExpr::VK_GOT;
-  else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
+  if (MO.getTargetFlags() & AArch64II::MO_GOT) {
+    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+    RefFlags |= (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+                     ? AArch64MCExpr::VK_GOT_AUTH
+                     : AArch64MCExpr::VK_GOT);
+  } else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     TLSModel::Model Model;
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();

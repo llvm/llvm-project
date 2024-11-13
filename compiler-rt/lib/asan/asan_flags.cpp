@@ -11,14 +11,16 @@
 // ASan flag parsing logic.
 //===----------------------------------------------------------------------===//
 
-#include "asan_activation.h"
 #include "asan_flags.h"
+
+#include "asan_activation.h"
 #include "asan_interface_internal.h"
 #include "asan_stack.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_win_interception.h"
 #include "ubsan/ubsan_flags.h"
 #include "ubsan/ubsan_platform.h"
 
@@ -47,7 +49,21 @@ static void RegisterAsanFlags(FlagParser *parser, Flags *f) {
 #undef ASAN_FLAG
 }
 
-void InitializeFlags() {
+static void DisplayHelpMessages(FlagParser *parser) {
+  // TODO(eugenis): dump all flags at verbosity>=2?
+  if (Verbosity()) {
+    ReportUnrecognizedFlags();
+  }
+
+  if (common_flags()->help) {
+    parser->PrintFlagDescriptions();
+  }
+}
+
+static void InitializeDefaultFlags() {
+  Flags *f = flags();
+  FlagParser asan_parser;
+
   // Set the default values and prepare for parsing ASan and common flags.
   SetCommonFlagsDefaults();
   {
@@ -60,10 +76,8 @@ void InitializeFlags() {
     cf.exitcode = 1;
     OverrideCommonFlags(cf);
   }
-  Flags *f = flags();
   f->SetDefaults();
 
-  FlagParser asan_parser;
   RegisterAsanFlags(&asan_parser, f);
   RegisterCommonFlags(&asan_parser);
 
@@ -126,13 +140,12 @@ void InitializeFlags() {
 
   InitializeCommonFlags();
 
-  // TODO(eugenis): dump all flags at verbosity>=2?
-  if (Verbosity()) ReportUnrecognizedFlags();
+  // TODO(samsonov): print all of the flags (ASan, LSan, common).
+  DisplayHelpMessages(&asan_parser);
+}
 
-  if (common_flags()->help) {
-    // TODO(samsonov): print all of the flags (ASan, LSan, common).
-    asan_parser.PrintFlagDescriptions();
-  }
+static void ProcessFlags() {
+  Flags *f = flags();
 
   // Flag validation:
   if (!CAN_SANITIZE_LEAKS && common_flags()->detect_leaks) {
@@ -197,6 +210,67 @@ void InitializeFlags() {
     Report("WARNING: strndup* interceptors are enabled even though "
            "replace_str=0. Use intercept_strndup=0 to disable them.");
   }
+}
+
+void InitializeFlags() {
+  InitializeDefaultFlags();
+  ProcessFlags();
+
+#if SANITIZER_WINDOWS
+  // On Windows, weak symbols are emulated by having the user program
+  // register which weak functions are defined.
+  // The ASAN DLL will initialize flags prior to user module initialization,
+  // so __asan_default_options will not point to the user definition yet.
+  // We still want to ensure we capture when options are passed via
+  // __asan_default_options, so we add a callback to be run
+  // when it is registered with the runtime.
+
+  // There is theoretically time between the initial ProcessFlags and
+  // registering the weak callback where a weak function could be added and we
+  // would miss it, but in practice, InitializeFlags will always happen under
+  // the loader lock (if built as a DLL) and so will any calls to
+  // __sanitizer_register_weak_function.
+  AddRegisterWeakFunctionCallback(
+      reinterpret_cast<uptr>(__asan_default_options), []() {
+        FlagParser asan_parser;
+
+        RegisterAsanFlags(&asan_parser, flags());
+        RegisterCommonFlags(&asan_parser);
+        asan_parser.ParseString(__asan_default_options());
+
+        DisplayHelpMessages(&asan_parser);
+        ProcessFlags();
+      });
+
+#  if CAN_SANITIZE_UB
+  AddRegisterWeakFunctionCallback(
+      reinterpret_cast<uptr>(__ubsan_default_options), []() {
+        FlagParser ubsan_parser;
+
+        __ubsan::RegisterUbsanFlags(&ubsan_parser, __ubsan::flags());
+        RegisterCommonFlags(&ubsan_parser);
+        ubsan_parser.ParseString(__ubsan_default_options());
+
+        // To match normal behavior, do not print UBSan help.
+        ProcessFlags();
+      });
+#  endif
+
+#  if CAN_SANITIZE_LEAKS
+  AddRegisterWeakFunctionCallback(
+      reinterpret_cast<uptr>(__lsan_default_options), []() {
+        FlagParser lsan_parser;
+
+        __lsan::RegisterLsanFlags(&lsan_parser, __lsan::flags());
+        RegisterCommonFlags(&lsan_parser);
+        lsan_parser.ParseString(__lsan_default_options());
+
+        // To match normal behavior, do not print LSan help.
+        ProcessFlags();
+      });
+#  endif
+
+#endif
 }
 
 }  // namespace __asan

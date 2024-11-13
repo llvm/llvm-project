@@ -32,19 +32,20 @@ class LTO;
 }
 
 namespace lld::elf {
-
+struct Ctx;
 class BitcodeFile;
 class InputFile;
 
 class BitcodeCompiler {
 public:
-  BitcodeCompiler();
+  BitcodeCompiler(Ctx &ctx);
   ~BitcodeCompiler();
 
   void add(BitcodeFile &f);
   std::vector<InputFile *> compile();
 
 private:
+  Ctx &ctx;
   std::unique_ptr<llvm::lto::LTO> ltoObj;
   // An array of (module name, native relocatable file content) pairs.
   SmallVector<std::pair<std::string, SmallString<0>>, 0> buf;

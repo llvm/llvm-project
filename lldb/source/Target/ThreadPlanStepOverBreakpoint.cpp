@@ -103,6 +103,13 @@ bool ThreadPlanStepOverBreakpoint::ShouldStop(Event *event_ptr) {
 
 bool ThreadPlanStepOverBreakpoint::StopOthers() { return true; }
 
+// This thread plan does a single instruction step over a breakpoint instruction
+// and needs to not resume other threads, so return false to stop the
+// ThreadPlanSingleThreadTimeout from timing out and trying to resume all
+// threads. If all threads gets resumed before we disable, single step and
+// re-enable the breakpoint, we can miss breakpoints on other threads.
+bool ThreadPlanStepOverBreakpoint::SupportsResumeOthers() { return false; }
+
 StateType ThreadPlanStepOverBreakpoint::GetPlanRunState() {
   return eStateStepping;
 }

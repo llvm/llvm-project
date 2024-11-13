@@ -13,9 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/API.h"
-#include "clang/AST/RawCommentList.h"
-#include "clang/Basic/Module.h"
-#include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
@@ -54,7 +51,36 @@ RecordContext *APIRecord::castToRecordContext(const APIRecord *Record) {
   }
 }
 
+bool RecordContext::IsWellFormed() const {
+  // Check that First and Last are both null or both non-null.
+  return (First == nullptr) == (Last == nullptr);
+}
+
+void RecordContext::stealRecordChain(RecordContext &Other) {
+  assert(IsWellFormed());
+  // Other's record chain is empty, nothing to do
+  if (Other.First == nullptr && Other.Last == nullptr)
+    return;
+
+  // If we don't have an empty chain append Other's chain into ours.
+  if (First)
+    Last->NextInContext = Other.First;
+  else
+    First = Other.First;
+
+  Last = Other.Last;
+
+  for (auto *StolenRecord = Other.First; StolenRecord != nullptr;
+       StolenRecord = StolenRecord->getNextInContext())
+    StolenRecord->Parent = SymbolReference(cast<APIRecord>(this));
+
+  // Delete Other's chain to ensure we don't accidentally traverse it.
+  Other.First = nullptr;
+  Other.Last = nullptr;
+}
+
 void RecordContext::addToRecordChain(APIRecord *Record) const {
+  assert(IsWellFormed());
   if (!First) {
     First = Record;
     Last = Record;
@@ -63,6 +89,22 @@ void RecordContext::addToRecordChain(APIRecord *Record) const {
 
   Last->NextInContext = Record;
   Last = Record;
+}
+
+void RecordContext::removeFromRecordChain(APIRecord *Record) {
+  APIRecord *Prev = nullptr;
+  for (APIRecord *Curr = First; Curr != Record; Curr = Curr->NextInContext)
+    Prev = Curr;
+
+  if (Prev)
+    Prev->NextInContext = Record->NextInContext;
+  else
+    First = Record->NextInContext;
+
+  if (Last == Record)
+    Last = Prev;
+
+  Record->NextInContext = nullptr;
 }
 
 APIRecord *APISet::findRecordForUSR(StringRef USR) const {
@@ -94,7 +136,37 @@ SymbolReference APISet::createSymbolReference(StringRef Name, StringRef USR,
   return SymbolReference(copyString(Name), copyString(USR), copyString(Source));
 }
 
+void APISet::removeRecord(StringRef USR) {
+  auto Result = USRBasedLookupTable.find(USR);
+  if (Result != USRBasedLookupTable.end()) {
+    auto *Record = Result->getSecond().get();
+    auto &ParentReference = Record->Parent;
+    auto *ParentRecord = const_cast<APIRecord *>(ParentReference.Record);
+    if (!ParentRecord)
+      ParentRecord = findRecordForUSR(ParentReference.USR);
+
+    if (auto *ParentCtx = llvm::cast_if_present<RecordContext>(ParentRecord)) {
+      ParentCtx->removeFromRecordChain(Record);
+      if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record))
+        ParentCtx->stealRecordChain(*RecordAsCtx);
+    } else {
+      auto *It = llvm::find(TopLevelRecords, Record);
+      if (It != TopLevelRecords.end())
+        TopLevelRecords.erase(It);
+      if (auto *RecordAsCtx = llvm::dyn_cast<RecordContext>(Record)) {
+        for (const auto *Child = RecordAsCtx->First; Child != nullptr;
+             Child = Child->getNextInContext())
+          TopLevelRecords.push_back(Child);
+      }
+    }
+    USRBasedLookupTable.erase(Result);
+  }
+}
+
+void APISet::removeRecord(APIRecord *Record) { removeRecord(Record->USR); }
+
 APIRecord::~APIRecord() {}
+TagRecord::~TagRecord() {}
 RecordRecord::~RecordRecord() {}
 RecordFieldRecord::~RecordFieldRecord() {}
 ObjCContainerRecord::~ObjCContainerRecord() {}

@@ -1,21 +1,31 @@
 // RUN: %clang_cc1 -triple i386-pc-win32 -target-cpu pentium4 \
 // RUN:     -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
-// RUN:     -ffreestanding -fsyntax-only -Werror \
+// RUN:     -ffreestanding -fsyntax-only -Werror -Wsystem-headers \
 // RUN:     -isystem %S/Inputs/include %s
 
 // RUN: %clang_cc1 -triple i386-pc-win32 -target-cpu broadwell \
 // RUN:     -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
-// RUN:     -ffreestanding -emit-obj -o /dev/null -Werror \
+// RUN:     -ffreestanding -emit-obj -o /dev/null -Werror -Wsystem-headers \
 // RUN:     -isystem %S/Inputs/include %s
 
 // RUN: %clang_cc1 -triple x86_64-pc-win32  \
 // RUN:     -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
-// RUN:     -ffreestanding -emit-obj -o /dev/null -Werror \
+// RUN:     -ffreestanding -emit-obj -o /dev/null -Werror -Wsystem-headers \
 // RUN:     -isystem %S/Inputs/include %s
 
 // RUN: %clang_cc1 -triple thumbv7--windows \
 // RUN:     -fms-compatibility -fms-compatibility-version=17.00 \
-// RUN:     -ffreestanding -fsyntax-only -Werror \
+// RUN:     -ffreestanding -fsyntax-only -Werror -Wsystem-headers \
+// RUN:     -isystem %S/Inputs/include %s
+
+// RUN: %clang_cc1 -triple aarch64--windows \
+// RUN:     -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN:     -ffreestanding -fsyntax-only -Werror -Wsystem-headers \
+// RUN:     -isystem %S/Inputs/include %s
+
+// RUN: %clang_cc1 -triple arm64ec--windows \
+// RUN:     -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN:     -ffreestanding -fsyntax-only -Werror -Wsystem-headers \
 // RUN:     -isystem %S/Inputs/include %s
 
 // REQUIRES: x86-registered-target
@@ -41,7 +51,7 @@ void f() {
   __stosd(0, 0, 0);
   __stosw(0, 0, 0);
 
-#ifdef _M_X64
+#if defined(_M_X64) && !defined(_M_ARM64EC)
   __movsq(0, 0, 0);
   __stosq(0, 0, 0);
 #endif
@@ -49,7 +59,7 @@ void f() {
   int info[4];
   __cpuid(info, 0);
   __cpuidex(info, 0, 0);
-#if defined(_M_X64) || defined(_M_IX86)
+#if (defined(_M_X64) && !defined(_M_ARM64EC)) || defined(_M_IX86)
   _xgetbv(0);
 #endif
   __halt();

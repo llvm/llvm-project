@@ -10,11 +10,16 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <memory>
 #include <random>
@@ -30,25 +35,65 @@ static cl::opt<int>
 static cl::opt<float>
     RandomRate("lower-allow-check-random-rate",
                cl::desc("Probability value in the range [0.0, 1.0] of "
-                        "unconditional pseudo-random checks removal."));
+                        "unconditional pseudo-random checks."));
 
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
 
+struct RemarkInfo {
+  ore::NV Kind;
+  ore::NV F;
+  ore::NV BB;
+  explicit RemarkInfo(IntrinsicInst *II)
+      : Kind("Kind", II->getArgOperand(0)),
+        F("Function", II->getParent()->getParent()),
+        BB("Block", II->getParent()->getName()) {}
+};
+
+static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
+                       bool Removed) {
+  if (Removed) {
+    ORE.emit([&]() {
+      RemarkInfo Info(II);
+      return OptimizationRemark(DEBUG_TYPE, "Removed", II)
+             << "Removed check: Kind=" << Info.Kind << " F=" << Info.F
+             << " BB=" << Info.BB;
+    });
+  } else {
+    ORE.emit([&]() {
+      RemarkInfo Info(II);
+      return OptimizationRemarkMissed(DEBUG_TYPE, "Allowed", II)
+             << "Allowed check: Kind=" << Info.Kind << " F=" << Info.F
+             << " BB=" << Info.BB;
+    });
+  }
+}
+
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
-                             const ProfileSummaryInfo *PSI) {
+                             const ProfileSummaryInfo *PSI,
+                             OptimizationRemarkEmitter &ORE) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
-  // TODO:
-  // https://github.com/llvm/llvm-project/pull/84858#discussion_r1520603139
-  auto ShouldRemove = [&](bool IsHot) {
-    if (!RandomRate.getNumOccurrences())
-      return IsHot;
+  auto GetRng = [&]() -> RandomNumberGenerator & {
     if (!Rng)
       Rng = F.getParent()->createRNG(F.getName());
-    std::bernoulli_distribution D(RandomRate);
-    return D(*Rng);
+    return *Rng;
+  };
+
+  auto ShouldRemoveHot = [&](const BasicBlock &BB) {
+    return HotPercentileCutoff.getNumOccurrences() && PSI &&
+           PSI->isHotCountNthPercentile(
+               HotPercentileCutoff, BFI.getBlockProfileCount(&BB).value_or(0));
+  };
+
+  auto ShouldRemoveRandom = [&]() {
+    return RandomRate.getNumOccurrences() &&
+           !std::bernoulli_distribution(RandomRate)(GetRng());
+  };
+
+  auto ShouldRemove = [&](const BasicBlock &BB) {
+    return ShouldRemoveRandom() || ShouldRemoveHot(BB);
   };
 
   for (BasicBlock &BB : F) {
@@ -62,19 +107,14 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
-        bool IsHot = false;
-        if (PSI) {
-          uint64_t Count = BFI.getBlockProfileCount(&BB).value_or(0);
-          IsHot = PSI->isHotCountNthPercentile(HotPercentileCutoff, Count);
-        }
-
-        bool ToRemove = ShouldRemove(IsHot);
+        bool ToRemove = ShouldRemove(BB);
         ReplaceWithValue.push_back({
             II,
             ToRemove,
         });
         if (ToRemove)
           ++NumChecksRemoved;
+        emitRemark(II, ORE, ToRemove);
         break;
       }
       default:
@@ -99,9 +139,11 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   BlockFrequencyInfo &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
+  OptimizationRemarkEmitter &ORE =
+      AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI) ? PreservedAnalyses::none()
-                                       : PreservedAnalyses::all();
+  return removeUbsanTraps(F, BFI, PSI, ORE) ? PreservedAnalyses::none()
+                                            : PreservedAnalyses::all();
 }
 
 bool LowerAllowCheckPass::IsRequested() {

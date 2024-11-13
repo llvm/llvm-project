@@ -17,6 +17,7 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
+#include <__utility/is_valid_range.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,29 +33,36 @@ struct __is_less_than_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>()
 };
 
 template <class _Tp, class _Up, __enable_if_t<__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool __is_pointer_in_range(
-    const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
-  if (__libcpp_is_constant_evaluated()) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__builtin_constant_p(__begin <= __end), "__begin and __end do not form a range");
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+__is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__begin, __end), "[__begin, __end) is not a valid range");
 
+  if (__libcpp_is_constant_evaluated()) {
     // If this is not a constant during constant evaluation we know that __ptr is not part of the allocation where
     // [__begin, __end) is.
     if (!__builtin_constant_p(__begin <= __ptr && __ptr < __end))
       return false;
   }
 
-  // Checking this for unrelated pointers is technically UB, but no compiler optimizes based on it (currently).
   return !__less<>()(__ptr, __begin) && __less<>()(__ptr, __end);
 }
 
 template <class _Tp, class _Up, __enable_if_t<!__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool __is_pointer_in_range(
-    const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+__is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   if (__libcpp_is_constant_evaluated())
     return false;
 
   return reinterpret_cast<const char*>(__begin) <= reinterpret_cast<const char*>(__ptr) &&
          reinterpret_cast<const char*>(__ptr) < reinterpret_cast<const char*>(__end);
+}
+
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+__is_overlapping_range(const _Tp* __begin, const _Tp* __end, const _Up* __begin2) {
+  auto __size = __end - __begin;
+  auto __end2 = __begin2 + __size;
+  return std::__is_pointer_in_range(__begin, __end, __begin2) || std::__is_pointer_in_range(__begin2, __end2, __begin);
 }
 
 _LIBCPP_END_NAMESPACE_STD

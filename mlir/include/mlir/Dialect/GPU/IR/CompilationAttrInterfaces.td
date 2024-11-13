@@ -37,17 +37,21 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
         is meant to be used for passing additional options that are not in the
         attribute.
       }],
-      "std::optional<SmallVector<char, 0>>", "serializeToObject",
-      (ins "Operation*":$module, "const gpu::TargetOptions&":$options)>,
+      "std::optional<::mlir::SmallVector<char, 0>>", "serializeToObject",
+      (ins "::mlir::Operation*":$module,
+           "const ::mlir::gpu::TargetOptions&":$options)>,
     InterfaceMethod<[{
         Creates a GPU object attribute from a binary string.
 
+        The `module` parameter must be a `GPUModuleOp` and can be used to
+        retrieve additional information like the list of kernels in the binary.
         The `object` parameter is a binary string. The `options` parameter is
         meant to be used for passing additional options that are not in the
         attribute.
-      }], "Attribute", "createObject",
-        (ins "const SmallVector<char, 0>&":$object,
-             "const gpu::TargetOptions&":$options)>
+      }], "::mlir::Attribute", "createObject",
+        (ins "::mlir::Operation *":$module,
+             "const ::llvm::SmallVector<char, 0> &":$object,
+             "const ::mlir::gpu::TargetOptions &":$options)>
   ];
 }
 
@@ -112,9 +116,10 @@ def OffloadingLLVMTranslationAttrInterface :
         The first argument has to be a GPU binary operation.
         If the function fails at any point, it must return `failure`.
       }],
-      "LogicalResult", "embedBinary",
-      (ins "Operation*":$binaryOp, "llvm::IRBuilderBase&":$hostBuilder,
-           "LLVM::ModuleTranslation&":$hostModuleTranslation)
+      "::llvm::LogicalResult", "embedBinary",
+      (ins "::mlir::Operation*":$binaryOp,
+           "::llvm::IRBuilderBase&":$hostBuilder,
+           "::mlir::LLVM::ModuleTranslation&":$hostModuleTranslation)
     >,
     InterfaceMethod<[{
         Translates a `gpu.launch_func` op into a sequence of LLVM IR
@@ -128,10 +133,10 @@ def OffloadingLLVMTranslationAttrInterface :
         respectively. If the function fails at any point, it must return
         `failure`.
       }],
-      "LogicalResult", "launchKernel",
-      (ins "Operation*":$launchFunc, "Operation*":$binaryOp,
-           "llvm::IRBuilderBase&":$hostBuilder,
-           "LLVM::ModuleTranslation&":$hostModuleTranslation)
+      "::llvm::LogicalResult", "launchKernel",
+      (ins "::mlir::Operation*":$launchFunc, "::mlir::Operation*":$binaryOp,
+           "::llvm::IRBuilderBase&":$hostBuilder,
+           "::mlir::LLVM::ModuleTranslation&":$hostModuleTranslation)
     >
   ];
 }

@@ -251,10 +251,9 @@ static int run(int argc, char **argv) {
   // resolutions and apply them in the order observed.
   std::map<std::pair<std::string, std::string>, std::list<SymbolResolution>>
       CommandLineResolutions;
-  for (std::string R : SymbolResolutions) {
-    StringRef Rest = R;
-    StringRef FileName, SymbolName;
-    std::tie(FileName, Rest) = Rest.split(',');
+  for (StringRef R : SymbolResolutions) {
+    StringRef Rest, FileName, SymbolName;
+    std::tie(FileName, Rest) = R.split(',');
     if (Rest.empty()) {
       llvm::errs() << "invalid resolution: " << R << '\n';
       return 1;
@@ -347,7 +346,8 @@ static int run(int argc, char **argv) {
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend = createWriteIndexesThinBackend(/*OldPrefix=*/"",
+    Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
+                                            /*OldPrefix=*/"",
                                             /*NewPrefix=*/"",
                                             /*NativeObjectPrefix=*/"",
                                             ThinLTOEmitImports,

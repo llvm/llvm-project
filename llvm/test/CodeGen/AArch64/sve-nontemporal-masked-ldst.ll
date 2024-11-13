@@ -9,7 +9,7 @@ define <4 x i32> @masked_load_v4i32(ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %load = call <4 x i32> @llvm.masked.load.v4i32(ptr %a, i32 1, <4 x i1> %mask, <4 x i32> undef), !nontemporal !0
@@ -25,7 +25,7 @@ define void @masked_store_v4i32(<4 x i32> %x, ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    stnt1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4i32.p0(<4 x i32> %x, ptr %a, i32 1, <4 x i1> %mask), !nontemporal !0
   ret void
@@ -43,7 +43,8 @@ define <4 x i32> @load_v4i32(ptr %a) nounwind {
 define void @store_v4i32(<4 x i32> %x, ptr %a) nounwind {
 ; CHECK-LABEL: store_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    stnp d0, d1, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4i32.p0(<4 x i32> %x, ptr %a, i32 1, <4 x i1> <i1 1, i1 1, i1 1, i1 1>), !nontemporal !0
   ret void
@@ -52,7 +53,7 @@ define void @store_v4i32(<4 x i32> %x, ptr %a) nounwind {
 define <vscale x 4 x i32> @masked_load_nxv4i32(ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef), !nontemporal !0
   ret <vscale x 4 x i32> %load
@@ -61,7 +62,7 @@ define <vscale x 4 x i32> @masked_load_nxv4i32(ptr %a, <vscale x 4 x i1> %mask) 
 define void @masked_store_nxv4i32(<vscale x 4 x i32> %x, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    stnt1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %x, ptr %a, i32 1, <vscale x 4 x i1> %mask), !nontemporal !0
   ret void

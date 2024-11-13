@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel | FileCheck %s
+; RUN: llc < %s -march=bpfel -mcpu=v1 | FileCheck %s
 
 define zeroext i16 @add(ptr nocapture %a, i16 zeroext %n) nounwind readonly {
 entry:

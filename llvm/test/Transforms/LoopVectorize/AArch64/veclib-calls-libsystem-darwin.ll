@@ -291,6 +291,487 @@ for.end:
   ret void
 }
 
+declare float @sinf(float) nounwind readnone
+define void @sinf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @sinf_v4f32(
+; CHECK: call <4 x float> @_simd_sin_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @sinf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @sin(double) nounwind readnone
+define void @sin_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @sin_v2f64(
+; CHECK: call <2 x double> @_simd_sin_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @sin(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @tanf(float) nounwind readnone
+define void @tanf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tanf_v4f32(
+; CHECK: call <4 x float> @_simd_tan_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @tanf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @tan(double) nounwind readnone
+define void @tan_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tan_v2f64(
+; CHECK: call <2 x double> @_simd_tan_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @tan(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.tan.f32(float) nounwind readnone
+define void @tan_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tan_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_tan_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.tan.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.tan.f64(double) nounwind readnone
+define void @tan_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tan_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_tan_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.tan.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.acos.f32(float) nounwind readnone
+define void @acos_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @acos_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_acos_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.acos.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.acos.f64(double) nounwind readnone
+define void @acos_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @acos_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_acos_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.acos.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.asin.f32(float) nounwind readnone
+define void @asin_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @asin_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_asin_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.asin.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.asin.f64(double) nounwind readnone
+define void @asin_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @asin_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_asin_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.asin.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.atan.f32(float) nounwind readnone
+define void @atan_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @atan_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_atan_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.atan.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.atan.f64(double) nounwind readnone
+define void @atan_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @atan_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_atan_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.atan.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.atan2.f32(float, float) nounwind readnone
+define void @atan2_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @atan2_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_atan2_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.atan2.f32(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.atan2.f64(double, double) nounwind readnone
+define void @atan2_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @atan2_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_atan2_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.atan2.f64(double %lv, double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.cosh.f32(float) nounwind readnone
+define void @cosh_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @cosh_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_cosh_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.cosh.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.cosh.f64(double) nounwind readnone
+define void @cosh_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @cosh_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_cosh_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.cosh.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.sinh.f32(float) nounwind readnone
+define void @sinh_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @sinh_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_sinh_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.sinh.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.sinh.f64(double) nounwind readnone
+define void @sinh_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @sinh_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_sinh_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.sinh.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @llvm.tanh.f32(float) nounwind readnone
+define void @tanh_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tanh_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_tanh_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.tanh.f32(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.tanh.f64(double) nounwind readnone
+define void @tanh_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tanh_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_tanh_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.tanh.f64(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+
 declare float @cbrtf(float) nounwind readnone
 define void @cbrtf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cbrtf_v4f32(

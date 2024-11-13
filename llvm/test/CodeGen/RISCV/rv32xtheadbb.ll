@@ -209,8 +209,8 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-NEXT:    addi s4, a0, %lo(.LCPI3_0)
+; RV32I-NEXT:    lui s4, %hi(.LCPI3_0)
+; RV32I-NEXT:    addi s4, s4, %lo(.LCPI3_0)
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    mv a1, s3
@@ -264,6 +264,37 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    ret
   %1 = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   ret i64 %1
+}
+
+define i32 @sexti1_i32(i32 %a) nounwind {
+; RV32I-LABEL: sexti1_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    ret
+  %shl = shl i32 %a, 31
+  %shr = ashr exact i32 %shl, 31
+  ret i32 %shr
+}
+
+define i32 @sexti1_i32_2(i1 %a) nounwind {
+; RV32I-LABEL: sexti1_i32_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32_2:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    ret
+  %sext = sext i1 %a to i32
+  ret i32 %sext
 }
 
 define i32 @sextb_i32(i32 %a) nounwind {

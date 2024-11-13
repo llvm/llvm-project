@@ -51,25 +51,14 @@ source_set("sources") {
   ]
 }
 
-source_set("weak_interception") {
+source_set("runtime_thunk") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [ "ubsan_win_weak_interception.cpp" ]
-  defines = [ "SANITIZER_DYNAMIC" ]
-}
-
-source_set("dll_thunk") {
-  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [ "ubsan_win_dll_thunk.cpp" ]
-  defines = [ "SANITIZER_DLL_THUNK" ]
-}
-
-source_set("dynamic_runtime_thunk") {
-  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  defines = [ "SANITIZER_DYNAMIC_RUNTIME_THUNK" ]
-  sources = [ "ubsan_win_dynamic_runtime_thunk.cpp" ]
+  sources = [ "ubsan_win_runtime_thunk.cpp" ]
+  defines = [
+    "SANITIZER_DYNAMIC_RUNTIME_THUNK",
+    "SANITIZER_STATIC_RUNTIME_THUNK",
+  ]
 }
 
 source_set("standalone_sources") {

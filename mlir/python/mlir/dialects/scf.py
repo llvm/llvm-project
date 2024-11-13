@@ -87,7 +87,7 @@ class IfOp(IfOp):
         operands.append(cond)
         results = []
         results.extend(results_)
-        super().__init__(results, cond)
+        super().__init__(results, cond, loc=loc, ip=ip)
         self.regions[0].blocks.append(*[])
         if hasElse:
             self.regions[1].blocks.append(*[])
@@ -132,8 +132,8 @@ def for_(
     iter_args = tuple(for_op.inner_iter_args)
     with InsertionPoint(for_op.body):
         if len(iter_args) > 1:
-            yield iv, iter_args
+            yield iv, iter_args, for_op.results
         elif len(iter_args) == 1:
-            yield iv, iter_args[0]
+            yield iv, iter_args[0], for_op.results[0]
         else:
             yield iv

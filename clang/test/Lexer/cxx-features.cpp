@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -std=c++98 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fsized-deallocation -verify %s
+// RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify %s
 
 //
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -frelaxed-template-template-args -DRELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -DCONCEPTS_TS=1 -verify %s
-// RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
-// RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify -fsized-deallocation %s
-// RUN: %clang_cc1 -std=c++2a -fno-char8_t -DNO_EXCEPTIONS -DNO_CHAR8_T -verify -fsized-deallocation %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fno-relaxed-template-template-args -DNO_RELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -DCONCEPTS_TS=1 -verify %s
+// RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
+// RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify %s
+// RUN: %clang_cc1 -std=c++2a -fno-char8_t -DNO_EXCEPTIONS -DNO_CHAR8_T -verify %s
 
 // expected-no-diagnostics
 
@@ -33,6 +33,18 @@
 #endif
 
 // --- C++26 features ---
+
+#if check(variadic_friend, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_variadic_friend"
+#endif
+
+#if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_deleted_function"
+#endif
+
+#if check(pack_indexing, 202311, 202311, 202311, 202311, 202311, 202311, 202311)
+#error "wrong value for __cpp_pack_indexing"
+#endif
 
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_placeholder_variables"
@@ -85,7 +97,7 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
-#if check(concepts, 0, 0, 0, 0, 201907, 201907, 201907)
+#if check(concepts, 0, 0, 0, 0, 202002, 202002, 202002)
 #error "wrong value for __cpp_concepts"
 #endif
 
@@ -218,7 +230,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 201606, 201606, 201606, 201606)
+#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
@@ -227,8 +239,8 @@
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 
-#if defined(RELAXED_TEMPLATE_TEMPLATE_ARGS) \
-    ? check(template_template_args, 0, 0, 0, 201611, 201611, 201611, 201611) \
+#if !defined(NO_RELAXED_TEMPLATE_TEMPLATE_ARGS) \
+    ? check(template_template_args, 201611, 201611, 201611, 201611, 201611, 201611, 201611) \
     : check(template_template_args, 0, 0, 0, 0, 0, 0, 0)
 #error "wrong value for __cpp_template_template_args"
 #endif
@@ -305,7 +317,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202306)
+#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 
@@ -313,7 +325,7 @@
 #error "wrong value for __cpp_range_based_for"
 #endif
 
-#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 202306)
+#if check(static_assert, 0, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_static_assert"
 #endif
 

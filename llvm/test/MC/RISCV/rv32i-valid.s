@@ -373,3 +373,32 @@ csrrsi t2, 0xfff, 31
 # CHECK-ASM-AND-OBJ: csrrci t1, sscratch, 5
 # CHECK-ASM: encoding: [0x73,0xf3,0x02,0x14]
 csrrci t1, 0x140, 5
+
+## Check that we can use an absolute symbol value as a CSR number
+# CHECK-ASM-AND-OBJ: csrrs a0, fflags, zero
+# CHECK-ASM: encoding: [0x73,0x25,0x10,0x00]
+.set fflags_abs_sym, 1
+csrr a0, fflags_abs_sym
+# CHECK-ASM-AND-OBJ: csrrs a0, frm, zero
+# CHECK-ASM: encoding: [0x73,0x25,0x20,0x00]
+csrr a0, (fflags_abs_sym+1)
+# CHECK-ASM-AND-OBJ: csrrs a0, frm, zero
+# CHECK-ASM: encoding: [0x73,0x25,0x20,0x00]
+.equ fplus_one_abs_sym, fflags_abs_sym + 1
+csrr a0, fplus_one_abs_sym
+
+## Check that redefining the value is allowed
+# CHECK-ASM-AND-OBJ: csrrs a0, fflags, zero
+# CHECK-ASM: encoding: [0x73,0x25,0x10,0x00]
+.set csr_index, 1
+csrr a0, csr_index
+# CHECK-ASM-AND-OBJ: csrrs a0, frm, zero
+# CHECK-ASM: encoding: [0x73,0x25,0x20,0x00]
+.set csr_index, 2
+csrr a0, csr_index
+
+## Check that select the CSR first.
+.set frm, 1
+# CHECK-ASM-AND-OBJ: csrrs a0, frm, zero
+# CHECK-ASM: encoding: [0x73,0x25,0x20,0x00]
+csrr a0, frm

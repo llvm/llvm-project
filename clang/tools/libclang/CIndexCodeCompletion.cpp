@@ -601,15 +601,15 @@ namespace {
       AllocatedResults.Contexts = getContextsForContextKind(contextKind, S);
       
       AllocatedResults.Selector = "";
-      ArrayRef<IdentifierInfo *> SelIdents = Context.getSelIdents();
-      for (ArrayRef<IdentifierInfo *>::iterator I = SelIdents.begin(),
-                                                E = SelIdents.end();
+      ArrayRef<const IdentifierInfo *> SelIdents = Context.getSelIdents();
+      for (ArrayRef<const IdentifierInfo *>::iterator I = SelIdents.begin(),
+                                                      E = SelIdents.end();
            I != E; ++I) {
-        if (IdentifierInfo *selIdent = *I)
+        if (const IdentifierInfo *selIdent = *I)
           AllocatedResults.Selector += selIdent->getName();
         AllocatedResults.Selector += ":";
       }
-      
+
       QualType baseType = Context.getBaseType();
       NamedDecl *D = nullptr;
 

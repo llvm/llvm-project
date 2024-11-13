@@ -14,7 +14,9 @@ _TOOLS = {
     "dsymutil": "//llvm:dsymutil-lib",
     "lld": "//lld:lld-lib",
     "llvm-ar": "//llvm:llvm-ar-lib",
+    "llvm-cgdata": "//llvm:llvm-cgdata-lib",
     "llvm-cxxfilt": "//llvm:llvm-cxxfilt-lib",
+    "llvm-debuginfod-find": "//llvm:llvm-debuginfod-find-lib",
     "llvm-dwp": "//llvm:llvm-dwp-lib",
     "llvm-gsymutil": "//llvm:llvm-gsymutil-lib",
     "llvm-ifs": "//llvm:llvm-ifs-lib",
@@ -37,8 +39,9 @@ _TOOLS = {
 # aliases for a given tool.
 _EXTRA_ALIASES = {
     "clang": ["clang++", "clang-cl", "clang-cpp"],
-    "lld": ["lld-link", "ld.lld", "ld64.lld", "wasm-ld"],
+    "lld": ["ld", "lld-link", "ld.lld", "ld64.lld", "wasm-ld"],
     "llvm-ar": ["ranlib", "lib", "dlltool"],
+    "llvm-cxxfilt": ["c++filt"],
     "llvm-objcopy": ["bitcode-strip", "install-name-tool", "strip"],
     "llvm-objdump": ["otool"],
     "llvm-rc": ["windres"],

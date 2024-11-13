@@ -12,7 +12,7 @@
 //
 // CHECK-ROUND-LABEL: func.func @sparse_expand(
 // CHECK-ROUND-SAME:  %[[A:.*]]: tensor<100xf64, #sparse{{[0-9]*}}>) -> tensor<10x10xf64, #sparse{{[0-9]*}}>
-//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<100xf64, #sparse{{[0-9]*}}> into tensor<10x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] output_shape [10, 10] : tensor<100xf64, #sparse{{[0-9]*}}> into tensor<10x10xf64, #sparse{{[0-9]*}}>
 //      CHECK-ROUND:  return %[[E]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @sparse_expand(
@@ -20,10 +20,10 @@
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[B:.*]] = bufferization.alloc_tensor()
-// CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
-// CHECK:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
-// CHECK:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-DAG:     %[[B:.*]] = bufferization.alloc_tensor()
+// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK:         %[[RET:.*]] = scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] iter_args(%[[R:.*]] = %[[B]])
@@ -39,7 +39,7 @@
 // CHECK:         return %[[NT1]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10xf64, #SparseMatrix> {
-  %0 = tensor.expand_shape %arg0 [[0, 1]] :
+  %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [10, 10] :
     tensor<100xf64, #SparseVector> into tensor<10x10xf64, #SparseMatrix>
   return %0 : tensor<10x10xf64, #SparseMatrix>
 }
@@ -57,12 +57,12 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[B:.*]] = bufferization.alloc_tensor()
-// CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
-// CHECK:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
-// CHECK:         %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
-// CHECK:         %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
-// CHECK:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-DAG:     %[[B:.*]] = bufferization.alloc_tensor()
+// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK:         %[[RET:.*]] = scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] iter_args(%[[A0:.*]] = %[[B]])
@@ -76,9 +76,9 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK:             %[[T:.*]] = arith.muli %[[SI0]], %[[C10]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
 // CHECK:             %[[R1:.*]] = tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[DI]]]
-// CHECK              scf.yield %[[R1]]
-// CHECK            }
-// CHECK            scf.yield %[[RET_1]]
+// CHECK:             scf.yield %[[R1]]
+// CHECK:           }
+// CHECK:           scf.yield %[[RET_1]]
 // CHECK:         }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:    sparse_tensor.convert
@@ -94,8 +94,8 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // roundtrip:
 //
 // CHECK-ROUND-LABEL: func.func @dynamic_sparse_expand(
-// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<?xf64, #sparse{{[0-9]*}}>) -> tensor<?x10xf64, #sparse{{[0-9]*}}>
-//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<?xf64, #sparse{{[0-9]*}}> into tensor<?x10xf64, #sparse{{[0-9]*}}>
+// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<?xf64, #sparse{{[0-9]*}}>, %[[SZ0:.*]]: index) -> tensor<?x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] output_shape [%[[SZ0]], 10] : tensor<?xf64, #sparse{{[0-9]*}}> into tensor<?x10xf64, #sparse{{[0-9]*}}>
 //      CHECK-ROUND:  return %[[E]] : tensor<?x10xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @dynamic_sparse_expand(
@@ -103,12 +103,12 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[SD:.*]] = sparse_tensor.lvl %[[S]], %[[C0]]
-// CHECK:         %[[DD0:.*]] = arith.divui %[[SD]], %[[C10]] : index
-// CHECK:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
-// CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
-// CHECK:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
-// CHECK:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-DAG:     %[[SD:.*]] = sparse_tensor.lvl %[[S]], %[[C0]]
+// CHECK-DAG:     %[[DD0:.*]] = arith.divui %[[SD]], %[[C10]] : index
+// CHECK-DAG:     %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
+// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK:         %[[RET:.*]] = scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] iter_args(%[[R:.*]] = %[[B]])
@@ -127,8 +127,8 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-NOT:     sparse_tensor.convert
 // CHECK:         return %[[NT1]] : tensor<?x10xf64, #sparse{{[0-9]*}}>
 //
-func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?x10xf64, #SparseMatrix> {
-  %0 = tensor.expand_shape %arg0 [[0, 1]] :
+func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>, %sz0: index) -> tensor<?x10xf64, #SparseMatrix> {
+  %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [%sz0, 10] :
     tensor<?xf64, #SparseVector> into tensor<?x10xf64, #SparseMatrix>
   return %0 : tensor<?x10xf64, #SparseMatrix>
 }
@@ -146,14 +146,14 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[SD1:.*]] = sparse_tensor.lvl %[[S]], %[[C1]]
-// CHECK:         %[[DD0:.*]] = arith.muli %[[SD1]], %[[C10]] : index
-// CHECK:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
-// CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
-// CHECK:         %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
-// CHECK:         %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
-// CHECK:         %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
-// CHECK:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-DAG:     %[[SD1:.*]] = sparse_tensor.lvl %[[S]], %[[C1]]
+// CHECK-DAG:     %[[DD0:.*]] = arith.muli %[[SD1]], %[[C10]] : index
+// CHECK-DAG:     %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
+// CHECK-DAG:     %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[I0:.*]] = sparse_tensor.coordinates %[[S]] {level = 0 : index}
+// CHECK-DAG:     %[[P1:.*]] = sparse_tensor.positions %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[I1:.*]] = sparse_tensor.coordinates %[[S]] {level = 1 : index}
+// CHECK-DAG:     %[[V:.*]] = sparse_tensor.values %[[S]]
 // CHECK:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK:         %[[RET:.*]] = scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] iter_args(%[[R0:.*]] = %[[B]])
@@ -170,9 +170,9 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK:             %[[T4:.*]] = arith.muli %[[SI1]], %[[T3]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T2]], %[[T4]] : index
 // CHECK:             %[[NT:.*]] = tensor.insert %[[SV]] into %[[R1]]{{\[}}%[[DI]]]
-// CHECK              scf.yield %[[NT]]
-// CHECK            }
-// CHECK            scf.yield %[[RET_1]]
+// CHECK:             scf.yield %[[NT]]
+// CHECK:           }
+// CHECK:           scf.yield %[[RET_1]]
 // CHECK:        }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:    sparse_tensor.convert

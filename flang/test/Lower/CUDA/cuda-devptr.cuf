@@ -1,0 +1,48 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran specific type
+
+module cudafct
+  use __fortran_builtins, only : c_devptr => __builtin_c_devptr
+contains
+  function c_devloc(x)
+    use iso_c_binding, only: c_loc
+    type(c_devptr) :: c_devloc
+    !dir$ ignore_tkr (tkr) x
+    real, target, device :: x
+    c_devloc%cptr = c_loc(x)
+  end function
+end
+
+subroutine sub1()
+  use iso_c_binding
+  use __fortran_builtins, only : c_devptr => __builtin_c_devptr
+
+  type(c_ptr) :: ptr
+  type(c_devptr) :: dptr
+  print*,ptr
+  print*,dptr
+end
+
+! CHECK-LABEL: func.func @_QPsub1()
+! CHECK-COUNT-2: %{{.*}} = fir.call @_FortranAioOutputDerivedType
+
+subroutine sub2()
+  use cudafct
+  use iso_c_binding, only: c_f_pointer
+  
+  real(4), device :: a(8, 10)
+  real(4), device, pointer :: x(:)
+  call c_f_pointer(c_devloc(a), x, (/80/))
+end
+
+! CHECK-LABEL: func.func @_QPsub2()
+! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK: %[[CPTR:.*]] = fir.field_index cptr, !fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
+! CHECK: %[[CPTR_COORD:.*]] = fir.coordinate_of %{{.*}}#1, %[[CPTR]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+! CHECK: %[[ADDRESS:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+! CHECK: %[[ADDRESS_COORD:.*]] = fir.coordinate_of %[[CPTR_COORD]], %[[ADDRESS]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK: %[[ADDRESS_LOADED:.*]] = fir.load %[[ADDRESS_COORD]] : !fir.ref<i64>
+! CHECK: %[[ADDRESS_IDX:.*]] = fir.convert %[[ADDRESS_LOADED]] : (i64) -> !fir.ptr<!fir.array<?xf32>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ADDRESS_IDX]](%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK: fir.store %[[EMBOX]] to %[[X]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

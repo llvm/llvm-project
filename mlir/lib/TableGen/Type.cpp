@@ -18,6 +18,7 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::Record;
 
 TypeConstraint::TypeConstraint(const llvm::DefInit *init)
     : TypeConstraint(init->getDef()) {}
@@ -42,7 +43,7 @@ StringRef TypeConstraint::getVariadicOfVariadicSegmentSizeAttr() const {
 // Returns the builder call for this constraint if this is a buildable type,
 // returns std::nullopt otherwise.
 std::optional<StringRef> TypeConstraint::getBuilderCall() const {
-  const llvm::Record *baseType = def;
+  const Record *baseType = def;
   if (isVariableLength())
     baseType = baseType->getValueAsDef("baseType");
 
@@ -50,7 +51,7 @@ std::optional<StringRef> TypeConstraint::getBuilderCall() const {
   const llvm::RecordVal *builderCall = baseType->getValue("builderCall");
   if (!builderCall || !builderCall->getValue())
     return std::nullopt;
-  return TypeSwitch<llvm::Init *, std::optional<StringRef>>(
+  return TypeSwitch<const llvm::Init *, std::optional<StringRef>>(
              builderCall->getValue())
       .Case<llvm::StringInit>([&](auto *init) {
         StringRef value = init->getValue();
@@ -59,23 +60,12 @@ std::optional<StringRef> TypeConstraint::getBuilderCall() const {
       .Default([](auto *) { return std::nullopt; });
 }
 
-// Return the C++ class name for this type (which may just be ::mlir::Type).
-std::string TypeConstraint::getCPPClassName() const {
-  StringRef className = def->getValueAsString("cppClassName");
-
-  // If the class name is already namespace resolved, use it.
-  if (className.contains("::"))
-    return className.str();
-
-  // Otherwise, check to see if there is a namespace from a dialect to prepend.
-  if (const llvm::RecordVal *value = def->getValue("dialect")) {
-    Dialect dialect(cast<const llvm::DefInit>(value->getValue())->getDef());
-    return (dialect.getCppNamespace() + "::" + className).str();
-  }
-  return className.str();
+// Return the C++ type for this type (which may just be ::mlir::Type).
+StringRef TypeConstraint::getCppType() const {
+  return def->getValueAsString("cppType");
 }
 
-Type::Type(const llvm::Record *record) : TypeConstraint(record) {}
+Type::Type(const Record *record) : TypeConstraint(record) {}
 
 Dialect Type::getDialect() const {
   return Dialect(def->getValueAsDef("dialect"));

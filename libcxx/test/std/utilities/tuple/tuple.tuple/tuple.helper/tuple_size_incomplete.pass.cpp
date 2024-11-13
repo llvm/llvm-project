@@ -31,9 +31,8 @@ template <class T> constexpr bool is_complete() { return is_complete<T>(0); }
 struct Dummy1 {};
 struct Dummy2 {};
 
-namespace std {
-template <> struct tuple_size<Dummy1> : public integral_constant<std::size_t, 0> {};
-}
+template <>
+struct std::tuple_size<Dummy1> : public integral_constant<std::size_t, 0> {};
 
 template <class T>
 void test_complete() {

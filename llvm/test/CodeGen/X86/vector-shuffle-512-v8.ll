@@ -2189,13 +2189,21 @@ define <4 x i64> @test_v8i64_1257 (<8 x i64> %v) {
 }
 
 define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
-; ALL-LABEL: test_v8i64_2_5:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; ALL-NEXT:    vzeroupper
-; ALL-NEXT:    ret{{[l|q]}}
+; AVX512F-LABEL: test_v8i64_2_5:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovaps {{.*#+}} xmm1 = [2,5]
+; AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8i64_2_5:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vmovaps {{.*#+}} xmm1 = [2,0,5,0]
+; AVX512F-32-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-32-NEXT:    vzeroupper
+; AVX512F-32-NEXT:    retl
   %res = shufflevector <8 x i64> %v, <8 x i64> undef, <2 x i32> <i32 2, i32 5>
   ret <2 x i64> %res
 }

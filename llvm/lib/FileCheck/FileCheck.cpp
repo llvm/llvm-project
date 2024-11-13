@@ -298,7 +298,7 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
     ++I;
 
   if (I == Str.size())
-    return ErrorDiagnostic::get(SM, Str.slice(I, StringRef::npos),
+    return ErrorDiagnostic::get(SM, Str.substr(I),
                                 StringRef("empty ") +
                                     (IsPseudo ? "pseudo " : "global ") +
                                     "variable name");
@@ -374,7 +374,7 @@ Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
 Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
     StringRef Name, bool IsPseudo, std::optional<size_t> LineNumber,
     FileCheckPatternContext *Context, const SourceMgr &SM) {
-  if (IsPseudo && !Name.equals("@LINE"))
+  if (IsPseudo && Name != "@LINE")
     return ErrorDiagnostic::get(
         SM, Name, "invalid pseudo numeric variable '" + Name + "'");
 
@@ -624,7 +624,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
   ExpressionFormat ExplicitFormat = ExpressionFormat();
   unsigned Precision = 0;
 
-  // Parse format specifier (NOTE: ',' is also an argument seperator).
+  // Parse format specifier (NOTE: ',' is also an argument separator).
   size_t FormatSpecEnd = Expr.find(',');
   size_t FunctionStart = Expr.find('(');
   if (FormatSpecEnd != StringRef::npos && FormatSpecEnd < FunctionStart) {
@@ -1488,7 +1488,7 @@ std::string Check::FileCheckType::getModifiersDescription() const {
   if (isLiteralMatch())
     OS << "LITERAL";
   OS << '}';
-  return OS.str();
+  return Ret;
 }
 
 std::string Check::FileCheckType::getDescription(StringRef Prefix) const {

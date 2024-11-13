@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 #define _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__string/constexpr_c_functions.h>
@@ -21,11 +21,9 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_trivially_assignable.h>
-#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

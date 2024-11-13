@@ -14,6 +14,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibCxxQueue.cpp
   LibCxxRangesRefView.cpp
   LibCxxSliceArray.cpp
+  LibCxxProxyArray.cpp
   LibCxxSpan.cpp
   LibCxxTuple.cpp
   LibCxxUnorderedMap.cpp
@@ -32,6 +33,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang

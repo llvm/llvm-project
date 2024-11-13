@@ -60,7 +60,7 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
                          const linalg::BufferizeToAllocationOptions &options) {
   auto tensorType = dyn_cast<RankedTensorType>(tensorSource.getType());
   assert(tensorType && "expected ranked tensor");
-  assert(memrefDest.getType().isa<MemRefType>() && "expected ranked memref");
+  assert(isa<MemRefType>(memrefDest.getType()) && "expected ranked memref");
 
   switch (options.memcpyOp) {
   case linalg::BufferizeToAllocationOptions::MemcpyOp::
@@ -496,10 +496,10 @@ Value linalg::bufferizeToAllocation(
       if (op == nestedOp)
         return;
       if (llvm::any_of(nestedOp->getOperands(),
-                       [](Value v) { return v.getType().isa<TensorType>(); }))
+                       [](Value v) { return isa<TensorType>(v.getType()); }))
         llvm_unreachable("ops with nested tensor ops are not supported yet");
       if (llvm::any_of(nestedOp->getResults(),
-                       [](Value v) { return v.getType().isa<TensorType>(); }))
+                       [](Value v) { return isa<TensorType>(v.getType()); }))
         llvm_unreachable("ops with nested tensor ops are not supported yet");
     });
   }
@@ -508,7 +508,7 @@ Value linalg::bufferizeToAllocation(
   // Gather tensor results.
   SmallVector<OpResult> tensorResults;
   for (OpResult result : op->getResults()) {
-    if (!result.getType().isa<TensorType>())
+    if (!isa<TensorType>(result.getType()))
       continue;
     // Unranked tensors are not supported
     if (!isa<RankedTensorType>(result.getType()))

@@ -12,6 +12,7 @@
 
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_MAJOR
 
 using namespace mlir;
 
@@ -52,7 +53,7 @@ void spirv::appendModuleHeader(SmallVectorImpl<uint32_t> &header,
   // +-------------------------------------------------------------------------+
   header.push_back(spirv::kMagicNumber);
   header.push_back((majorVersion << 16) | (minorVersion << 8));
-  header.push_back(kGeneratorNumber);
+  header.push_back((kGeneratorNumber << 16) | LLVM_VERSION_MAJOR);
   header.push_back(idBound); // <id> bound
   header.push_back(0);       // Schema (reserved word)
 }

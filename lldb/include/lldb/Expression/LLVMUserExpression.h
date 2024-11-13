@@ -52,7 +52,7 @@ public:
   };
 
   LLVMUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                     llvm::StringRef prefix, lldb::LanguageType language,
+                     llvm::StringRef prefix, SourceLanguage language,
                      ResultType desired_type,
                      const EvaluateExpressionOptions &options);
   ~LLVMUserExpression() override;

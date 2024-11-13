@@ -169,15 +169,16 @@ def AnyAttr : Attr<CPred<"true">, "any attribute"> {
 
 // Any attribute from the given list
 class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
-                string cppClassName = "::mlir::Attribute",
+                string cppType = "::mlir::Attribute",
                 string fromStorage = "$_self"> : Attr<
     // Satisfy any of the allowed attribute's condition
     Or<!foreach(allowedattr, allowedAttrs, allowedattr.predicate)>,
     !if(!eq(summary, ""),
         !interleave(!foreach(t, allowedAttrs, t.summary), " or "),
         summary)> {
-    let returnType = cppClassName;
+    let returnType = cppType;
     let convertFromStorage = fromStorage;
+    list<Attr> allowedAttributes = allowedAttrs;
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
@@ -369,7 +370,7 @@ def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
 }
 
 class TypeAttrOf<Type ty>
-   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.summary,
+   : TypeAttrBase<ty.cppType, "type attribute of " # ty.summary,
                     ty.predicate> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
@@ -743,6 +744,8 @@ class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
   let isOptional = attr.isOptional;
 
   let baseAttr = attr;
+
+  list<AttrConstraint> attrConstraints = constraints;
 }
 
 // An AttrConstraint that holds if all attr constraints specified in
@@ -755,7 +758,7 @@ class AllAttrOf<list<AttrConstraint> constraints> : AttrConstraint<
 
 class IntNEQValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() != " # n>,
-    "whose minimum value is " # n>;
+    "whose value is not " # n>;
 
 class IntMinValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() >= " # n>,
@@ -773,6 +776,10 @@ def IntPositive : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getValue().isStrictlyPositive()">,
     "whose value is positive">;
 
+class ArrayMaxCount<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() <= " # n>,
+    "with at most " # n # " elements">;
+
 class ArrayMinCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() >= " # n>,
     "with at least " # n # " elements">;
@@ -784,6 +791,14 @@ class ArrayCount<int n> : AttrConstraint<
 class DenseArrayCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() == " #n>,
     "with exactly " # n # " elements">;
+
+class DenseArrayMaxCt<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() <= " # n>,
+    "with at most " # n # " elements">;
+
+class DenseArrayMinCt<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() >= " # n>,
+    "with at least " # n # " elements">;
 
 class DenseArrayStrictlyPositive<DenseArrayAttrBase arrayType> : AttrConstraint<
   CPred<"::llvm::all_of(::llvm::cast<" # arrayType #">($_self).asArrayRef(), "

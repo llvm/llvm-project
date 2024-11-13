@@ -112,15 +112,14 @@ template<typename T, template<typename> class X = T::template apply>
 int array4[is_same<X4<add_pointer>, 
                    X4<add_pointer, add_pointer::apply> >::value? 1 : -1];
 
-template<int> struct X5 {}; // expected-note{{has a different type 'int'}}
+template<int> struct X5 {};
 template<long> struct X5b {};
 template<typename T, 
-         template<T> class B = X5> // expected-error{{template template argument has different}} \
-                                   // expected-note{{previous non-type template parameter}}
+         template<T> class B = X5>
   struct X6 {};
 
 X6<int> x6a;
-X6<long> x6b; // expected-note{{while checking a default template argument}}
+X6<long> x6b;
 X6<long, X5b> x6c;
 
 
@@ -230,3 +229,55 @@ namespace unevaluated {
   template<int = 0> int f(int = a); // expected-warning 0-1{{extension}}
   int k = sizeof(f());
 }
+
+#if __cplusplus >= 201103L
+namespace GH68490 {
+
+template <typename T> struct S {
+  template <typename U>
+  constexpr int SizeOfU(int param = sizeof(U)) const;
+
+  template <typename U>
+  constexpr int SizeOfT(int param = sizeof(T)) const;
+};
+
+template <typename T> struct S<T *> {
+  template <typename U>
+  constexpr int SizeOfU(int param = sizeof(U)) const;
+
+  template <typename U>
+  constexpr int SizeOfT(int param = sizeof(T *)) const;
+};
+
+template <typename T>
+template <typename U>
+constexpr int S<T *>::SizeOfU(int param) const {
+  return param;
+}
+
+template <typename T>
+template <typename U>
+constexpr int S<T *>::SizeOfT(int param) const {
+  return param;
+}
+
+template <>
+template <typename T>
+constexpr int S<int>::SizeOfU(int param) const {
+  return param;
+}
+
+template <>
+template <typename T>
+constexpr int S<int>::SizeOfT(int param) const {
+  return param;
+}
+
+static_assert(S<int>().SizeOfU<char>() == sizeof(char), "");
+static_assert(S<int>().SizeOfT<char>() == sizeof(int), "");
+static_assert(S<short *>().SizeOfU<char>() == sizeof(char), "");
+static_assert(S<short *>().SizeOfT<char>() == sizeof(short *), "");
+
+} // namespace GH68490
+
+#endif
