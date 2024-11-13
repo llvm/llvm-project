@@ -17,6 +17,8 @@ entry:
   %select = load i1, ptr @select
 ; CHECK:  %arr = load [3 x float], ptr @arr
   %arr    = load [3 x float], ptr @arr
+; CHECK:  %scalable = load <vscale x 3 x float>, ptr @vec
+  %scalable = load <vscale x 3 x float>, ptr @vec
 
 ; CHECK:  %a = fadd float %x, %y
   %a = fadd float %x, %y
@@ -46,10 +48,14 @@ entry:
   %g = fpext float %x to double
 ; CHECK: %g_vec = fpext <3 x float> %vec to <3 x double>
   %g_vec = fpext <3 x float> %vec to <3 x double>
+; CHECK: %g_scalable = fpext <vscale x 3 x float> %scalable to <vscale x 3 x double>
+  %g_scalable = fpext <vscale x 3 x float> %scalable to <vscale x 3 x double>
 ; CHECK: %h = fptrunc float %x to half
   %h = fptrunc float %x to half
 ; CHECK: %h_vec = fptrunc <3 x float> %vec to <3 x half>
   %h_vec = fptrunc <3 x float> %vec to <3 x half>
+; CHECK: %h_scalable = fptrunc <vscale x 3 x float> %scalable to <vscale x 3 x half>
+  %h_scalable = fptrunc <vscale x 3 x float> %scalable to <vscale x 3 x half>
 ; CHECK:  ret float %f
   ret  float %f
 }
@@ -63,6 +69,8 @@ entry:
   %select = load i1, ptr @select
 ; CHECK:  %arr = load [3 x float], ptr @arr
   %arr    = load [3 x float], ptr @arr
+; CHECK:  %scalable = load <vscale x 3 x float>, ptr @vec
+  %scalable = load <vscale x 3 x float>, ptr @vec
 
 ; CHECK:  %a = fadd nnan float %x, %y
   %a = fadd nnan float %x, %y
@@ -92,10 +100,14 @@ entry:
   %g = fpext nnan float %x to double
 ; CHECK: %g_vec = fpext nnan <3 x float> %vec to <3 x double>
   %g_vec = fpext nnan <3 x float> %vec to <3 x double>
+; CHECK: %g_scalable = fpext nnan <vscale x 3 x float> %scalable to <vscale x 3 x double>
+  %g_scalable = fpext nnan <vscale x 3 x float> %scalable to <vscale x 3 x double>
 ; CHECK: %h = fptrunc nnan float %x to half
   %h = fptrunc nnan float %x to half
 ; CHECK: %h_vec = fptrunc nnan <3 x float> %vec to <3 x half>
   %h_vec = fptrunc nnan <3 x float> %vec to <3 x half>
+; CHECK: %h_scalable = fptrunc nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
+  %h_scalable = fptrunc nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
 ; CHECK:  ret float %f
   ret float %f
 }
@@ -151,6 +163,8 @@ entry:
   %select = load i1, ptr @select
 ; CHECK:  %arr = load [3 x float], ptr @arr
   %arr    = load [3 x float], ptr @arr
+; CHECK:  %scalable = load <vscale x 3 x float>, ptr @vec
+  %scalable = load <vscale x 3 x float>, ptr @vec
 
 ; CHECK:  %a = fadd nnan ninf float %x, %y
   %a = fadd ninf nnan float %x, %y
@@ -176,10 +190,14 @@ entry:
   %f = fpext ninf nnan float %x to double
 ; CHECK: %f_vec = fpext nnan ninf <3 x float> %vec to <3 x double>
   %f_vec = fpext ninf nnan <3 x float> %vec to <3 x double>
+; CHECK: %f_scalable = fpext nnan ninf <vscale x 3 x float> %scalable to <vscale x 3 x double>
+  %f_scalable = fpext ninf nnan <vscale x 3 x float> %scalable to <vscale x 3 x double>
 ; CHECK: %g = fptrunc nnan ninf float %x to half
   %g = fptrunc ninf nnan float %x to half
 ; CHECK: %g_vec = fptrunc nnan ninf <3 x float> %vec to <3 x half>
   %g_vec = fptrunc ninf nnan <3 x float> %vec to <3 x half>
+; CHECK: %g_scalable = fptrunc nnan ninf <vscale x 3 x float> %scalable to <vscale x 3 x half>
+  %g_scalable = fptrunc ninf nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
 ; CHECK:  ret float %e
   ret float %e
 }

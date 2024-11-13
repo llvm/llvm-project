@@ -11837,7 +11837,7 @@ Syntax:
 
 ::
 
-      <result> = fptrunc <ty> <value> to <ty2>             ; yields ty2
+      <result> = fptrunc [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -11869,6 +11869,10 @@ the low order bits leads to an all-0 payload, this cannot be represented as a
 signaling NaN (it would represent an infinity instead), so in that case
 "Unchanged NaN propagation" is not possible.
 
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations.
+
 Example:
 """"""""
 
@@ -11887,7 +11891,7 @@ Syntax:
 
 ::
 
-      <result> = fpext <ty> <value> to <ty2>             ; yields ty2
+      <result> = fpext [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -11915,6 +11919,10 @@ NaN values follow the usual :ref:`NaN behaviors <floatnan>`, except that _if_ a
 NaN payload is propagated from the input ("Quieting NaN propagation" or
 "Unchanged NaN propagation" cases), then it is copied to the high order bits of
 the resulting payload, and the remaining low order bits are zero.
+
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations.
 
 Example:
 """"""""
