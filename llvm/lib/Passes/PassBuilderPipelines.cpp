@@ -359,14 +359,16 @@ void PassBuilder::invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
     C(FPM, Level);
 }
 void PassBuilder::invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
-                                                  OptimizationLevel Level) {
+                                                  OptimizationLevel Level,
+                                                  ThinOrFullLTOPhase Phase) {
   for (auto &C : OptimizerEarlyEPCallbacks)
-    C(MPM, Level);
+    C(MPM, Level, Phase);
 }
 void PassBuilder::invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
-                                                 OptimizationLevel Level) {
+                                                 OptimizationLevel Level,
+                                                 ThinOrFullLTOPhase Phase) {
   for (auto &C : OptimizerLastEPCallbacks)
-    C(MPM, Level);
+    C(MPM, Level, Phase);
 }
 void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {
@@ -384,9 +386,9 @@ void PassBuilder::invokePipelineStartEPCallbacks(ModulePassManager &MPM,
     C(MPM, Level);
 }
 void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
-    ModulePassManager &MPM, OptimizationLevel Level) {
+    ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase Phase) {
   for (auto &C : PipelineEarlySimplificationEPCallbacks)
-    C(MPM, Level);
+    C(MPM, Level, Phase);
 }
 
 // Helper to add AnnotationRemarksPass.
@@ -982,8 +984,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
-    MainCGPipeline.addPass(
-        createCGSCCToFunctionPassAdaptor(CoroAnnotationElidePass()));
+    MainCGPipeline.addPass(CoroAnnotationElidePass());
   }
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
@@ -1034,7 +1035,8 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
-    MPM.addPass(createModuleToFunctionPassAdaptor(CoroAnnotationElidePass()));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(CoroAnnotationElidePass()));
   }
 
   return MPM;
@@ -1140,7 +1142,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
 
-  invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
+  invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
@@ -1464,7 +1466,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (EnableGlobalAnalyses)
     MPM.addPass(RecomputeGlobalsAAPass());
 
-  invokeOptimizerEarlyEPCallbacks(MPM, Level);
+  invokeOptimizerEarlyEPCallbacks(MPM, Level, LTOPhase);
 
   FunctionPassManager OptimizePM;
   // Scheduling LoopVersioningLICM when inlining is over, because after that
@@ -1559,7 +1561,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  invokeOptimizerLastEPCallbacks(MPM, Level);
+  invokeOptimizerLastEPCallbacks(MPM, Level, LTOPhase);
 
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff
@@ -1716,8 +1718,10 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // Handle Optimizer{Early,Last}EPCallbacks added by clang on PreLink. Actual
   // optimization is going to be done in PostLink stage, but clang can't add
   // callbacks there in case of in-process ThinLTO called by linker.
-  invokeOptimizerEarlyEPCallbacks(MPM, Level);
-  invokeOptimizerLastEPCallbacks(MPM, Level);
+  invokeOptimizerEarlyEPCallbacks(MPM, Level,
+                                  /*Phase=*/ThinOrFullLTOPhase::ThinLTOPreLink);
+  invokeOptimizerLastEPCallbacks(MPM, Level,
+                                 /*Phase=*/ThinOrFullLTOPhase::ThinLTOPreLink);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
@@ -1855,6 +1859,15 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
+    // Promoting by-reference arguments to by-value exposes more constants to
+    // IPSCCP.
+    CGSCCPassManager CGPM;
+    CGPM.addPass(PostOrderFunctionAttrsPass());
+    CGPM.addPass(ArgumentPromotionPass());
+    CGPM.addPass(
+        createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
@@ -1866,10 +1879,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // they may target at run-time. This should follow IPSCCP.
     MPM.addPass(CalledValuePropagationPass());
   }
-
-  // Now deduce any function attributes based in the current code.
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
 
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
@@ -2153,7 +2162,20 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
-  invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
+  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
+    // Explicitly disable sample loader inlining and use flattened profile in O0
+    // pipeline.
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
+                                        PGOOpt->ProfileRemappingFile,
+                                        ThinOrFullLTOPhase::None, nullptr,
+                                        /*DisableSampleProfileInlining=*/true,
+                                        /*UseFlattenedProfile=*/true));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  }
+
+  invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 
   // Build a minimal pipeline based on the semantics required by LLVM,
   // which is just that always inlining occurs. Further, disable generating
@@ -2198,7 +2220,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  invokeOptimizerEarlyEPCallbacks(MPM, Level);
+  invokeOptimizerEarlyEPCallbacks(MPM, Level, Phase);
 
   if (!VectorizerStartEPCallbacks.empty()) {
     FunctionPassManager FPM;
@@ -2216,7 +2238,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   CoroPM.addPass(GlobalDCEPass());
   MPM.addPass(CoroConditionalWrapper(std::move(CoroPM)));
 
-  invokeOptimizerLastEPCallbacks(MPM, Level);
+  invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);

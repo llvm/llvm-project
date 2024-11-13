@@ -122,13 +122,14 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           ; yields i32:%1
+    %1 = add i32 %0, %0           /* yields i32:%1 */
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
 lexical features of LLVM:
 
 #. Comments are delimited with a '``;``' and go until the end of line.
+   Alternatively, comments can start with ``/*`` and terminate with ``*/``.
 #. Unnamed temporaries are created when the result of a computation is
    not assigned to a named value.
 #. By default, unnamed temporaries are numbered sequentially (using a
@@ -2497,11 +2498,6 @@ For example:
     function with a tail call. The prototype of a thunk should not be used for
     optimization purposes. The caller is expected to cast the thunk prototype to
     match the thunk target prototype.
-
-``"tls-load-hoist"``
-    This attribute indicates that the function will try to reduce redundant
-    tls address calculation by hoisting tls variable.
-
 ``uwtable[(sync|async)]``
     This attribute indicates that the ABI being targeted requires that
     an unwind table entry be produced for this function even if we can
@@ -4386,7 +4382,7 @@ is defined inline with other types (e.g. ``[2 x {i32, i32}]``) whereas
 identified types are always defined at the top level with a name.
 Literal types are uniqued by their contents and can never be recursive
 or opaque since there is no way to write one. Identified types can be
-recursive, can be opaqued, and are never uniqued.
+opaqued and are never uniqued. Identified types must not be recursive.
 
 :Syntax:
 
@@ -5525,8 +5521,9 @@ RISC-V:
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
 - ``S``: Alias for ``s``.
-- ``vr``: A vector register. (requires V extension).
-- ``vm``: A vector register for masking operand. (requires V extension).
+- ``vd``: A vector register, excluding ``v0`` (requires V extension).
+- ``vm``: The vector register ``v0`` (requires V extension).
+- ``vr``: A vector register (requires V extension).
 
 Sparc:
 
@@ -15752,16 +15749,17 @@ all types however.
 
 ::
 
-      declare float     @llvm.atan2.f32(float  %X, float %Y)
-      declare double    @llvm.atan2.f64(double %X, double %Y)
-      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %X, x86_fp80 %Y)
-      declare fp128     @llvm.atan2.f128(fp128 %X, fp128 %Y)
-      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %X, ppc_fp128 %Y)
+      declare float     @llvm.atan2.f32(float  %Y, float %X)
+      declare double    @llvm.atan2.f64(double %Y, double %X)
+      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %Y, x86_fp80 %X)
+      declare fp128     @llvm.atan2.f128(fp128 %Y, fp128 %X)
+      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %Y, ppc_fp128 %X)
 
 Overview:
 """""""""
 
-The '``llvm.atan2.*``' intrinsics return the arctangent of the operand.
+The '``llvm.atan2.*``' intrinsics return the arctangent of ``Y/X`` accounting
+for the quadrant.
 
 Arguments:
 """"""""""
@@ -20396,8 +20394,8 @@ Example:
 
 .. code-block:: text
 
-      %a = call i8 @llvm.fptoui.sat.i8.f32(float 123.9)              ; yields i8: 123
-      %b = call i8 @llvm.fptoui.sat.i8.f32(float -5.7)               ; yields i8:   0
+      %a = call i8 @llvm.fptoui.sat.i8.f32(float 123.875)            ; yields i8: 123
+      %b = call i8 @llvm.fptoui.sat.i8.f32(float -5.75)              ; yields i8:   0
       %c = call i8 @llvm.fptoui.sat.i8.f32(float 377.0)              ; yields i8: 255
       %d = call i8 @llvm.fptoui.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:   0
 
@@ -20449,8 +20447,8 @@ Example:
 
 .. code-block:: text
 
-      %a = call i8 @llvm.fptosi.sat.i8.f32(float 23.9)               ; yields i8:   23
-      %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.8)             ; yields i8: -128
+      %a = call i8 @llvm.fptosi.sat.i8.f32(float 23.875)             ; yields i8:   23
+      %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.75)            ; yields i8: -128
       %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
       %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
 
@@ -23006,7 +23004,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fmax.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fmax.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fmax.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -23076,7 +23074,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fmin.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fmin.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fmin.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -23146,7 +23144,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fmaximum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fmaximum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fmaximum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -23216,7 +23214,7 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare float @llvm.vp.reduce.fminimum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare float @llvm.vp.reduce.fminimum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, i32 <vector_length>)
       declare double @llvm.vp.reduce.fminimum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
 
 Overview:
@@ -27262,6 +27260,42 @@ Semantics:
 This function returns the arctangent of the specified operand, returning the
 same values as the libm ``atan`` functions would, and handles error
 conditions in the same way.
+
+'``llvm.experimental.constrained.atan2``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.atan2(<type> <op1>,
+                                           <type> <op2>,
+                                           metadata <rounding mode>,
+                                           metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.atan2``' intrinsic returns the arctangent
+of ``<op1>`` divided by ``<op2>`` accounting for the quadrant.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers of the
+same type.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the quadrant-specific arctangent using the specified
+operands, returning the same values as the libm ``atan2`` functions would, and
+handles error conditions in the same way.
 
 '``llvm.experimental.constrained.sinh``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

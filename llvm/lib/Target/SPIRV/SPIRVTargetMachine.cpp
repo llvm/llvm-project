@@ -55,14 +55,14 @@ static std::string computeDataLayout(const Triple &TT) {
   // memory model used for graphics: PhysicalStorageBuffer64. But it shouldn't
   // mean anything.
   if (Arch == Triple::spirv32)
-    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
-           "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1";
+    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+           "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
-    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-           "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0";
-  return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-         "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1";
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-n32:64-S32-G1-P4-A0";
+  return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+         "v512:512-v1024:1024-n8:16:32:64-G1";
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {

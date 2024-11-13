@@ -66,6 +66,48 @@ public:
     }
     return true;
   }
+
+  /// \Returns the number of vector lanes of \p Ty or 1 if not a vector.
+  /// NOTE: It asserts that \p Ty is a fixed vector type.
+  static unsigned getNumLanes(Type *Ty) {
+    assert(!isa<ScalableVectorType>(Ty) && "Expect scalar or fixed vector");
+    if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Ty))
+      return FixedVecTy->getNumElements();
+    return 1u;
+  }
+
+  /// \Returns the expected vector lanes of \p V or 1 if not a vector.
+  /// NOTE: It asserts that \p V is a fixed vector.
+  static unsigned getNumLanes(Value *V) {
+    return VecUtils::getNumLanes(Utils::getExpectedType(V));
+  }
+
+  /// \Returns the total number of lanes across all values in \p Bndl.
+  static unsigned getNumLanes(ArrayRef<Value *> Bndl) {
+    unsigned Lanes = 0;
+    for (Value *V : Bndl)
+      Lanes += getNumLanes(V);
+    return Lanes;
+  }
+
+  /// \Returns <NumElts x ElemTy>.
+  /// It works for both scalar and vector \p ElemTy.
+  static Type *getWideType(Type *ElemTy, unsigned NumElts) {
+    if (ElemTy->isVectorTy()) {
+      auto *VecTy = cast<FixedVectorType>(ElemTy);
+      ElemTy = VecTy->getElementType();
+      NumElts = VecTy->getNumElements() * NumElts;
+    }
+    return FixedVectorType::get(ElemTy, NumElts);
+  }
+  static Instruction *getLowest(ArrayRef<Instruction *> Instrs) {
+    Instruction *LowestI = Instrs.front();
+    for (auto *I : drop_begin(Instrs)) {
+      if (LowestI->comesBefore(I))
+        LowestI = I;
+    }
+    return LowestI;
+  }
 };
 
 } // namespace llvm::sandboxir

@@ -15,12 +15,10 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
 #include "rtsan/rtsan.h"
-#include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
 
@@ -33,11 +31,11 @@ extern "C" {
 typedef int32_t OSSpinLock;
 void OSSpinLockLock(volatile OSSpinLock *__lock);
 }
-#endif
+#endif // TARGET_OS_MAC
 
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_INTERCEPT_MEMALIGN || SANITIZER_INTERCEPT_PVALLOC
 #include <malloc.h>
@@ -504,7 +502,75 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
 }
 #endif
 
+INTERCEPTOR(void *, mmap, void *addr, size_t length, int prot, int flags,
+            int fd, off_t offset) {
+  __rtsan_notify_intercepted_call("mmap");
+  return REAL(mmap)(addr, length, prot, flags, fd, offset);
+}
+
+#if SANITIZER_INTERCEPT_MMAP64
+INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
+            int fd, off64_t offset) {
+  __rtsan_notify_intercepted_call("mmap64");
+  return REAL(mmap64)(addr, length, prot, flags, fd, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MMAP64
+#endif // SANITIZER_INTERCEPT_MMAP64
+
+INTERCEPTOR(int, munmap, void *addr, size_t length) {
+  __rtsan_notify_intercepted_call("munmap");
+  return REAL(munmap)(addr, length);
+}
+
+INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
+  __rtsan_notify_intercepted_call("shm_open");
+  return REAL(shm_open)(name, oflag, mode);
+}
+
+INTERCEPTOR(int, shm_unlink, const char *name) {
+  __rtsan_notify_intercepted_call("shm_unlink");
+  return REAL(shm_unlink)(name);
+}
+
 // Sockets
+INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
+            const struct addrinfo *hints, struct addrinfo **res) {
+  __rtsan_notify_intercepted_call("getaddrinfo");
+  return REAL(getaddrinfo)(node, service, hints, res);
+}
+
+INTERCEPTOR(int, getnameinfo, const struct sockaddr *sa, socklen_t salen,
+            char *host, socklen_t hostlen, char *serv, socklen_t servlen,
+            int flags) {
+  __rtsan_notify_intercepted_call("getnameinfo");
+  return REAL(getnameinfo)(sa, salen, host, hostlen, serv, servlen, flags);
+}
+
+INTERCEPTOR(int, bind, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("bind");
+  return REAL(bind)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, listen, int socket, int backlog) {
+  __rtsan_notify_intercepted_call("listen");
+  return REAL(listen)(socket, backlog);
+}
+
+INTERCEPTOR(int, accept, int socket, struct sockaddr *address,
+            socklen_t *address_len) {
+  __rtsan_notify_intercepted_call("accept");
+  return REAL(accept)(socket, address, address_len);
+}
+
+INTERCEPTOR(int, connect, int socket, const struct sockaddr *address,
+            socklen_t address_len) {
+  __rtsan_notify_intercepted_call("connect");
+  return REAL(connect)(socket, address, address_len);
+}
+
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   __rtsan_notify_intercepted_call("socket");
   return REAL(socket)(domain, type, protocol);
@@ -558,6 +624,11 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(valloc);
   RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
+  INTERCEPT_FUNCTION(mmap);
+  RTSAN_MAYBE_INTERCEPT_MMAP64;
+  INTERCEPT_FUNCTION(munmap);
+  INTERCEPT_FUNCTION(shm_open);
+  INTERCEPT_FUNCTION(shm_unlink);
 #if SANITIZER_INTERCEPT_MEMALIGN
   INTERCEPT_FUNCTION(memalign);
 #endif
@@ -613,14 +684,20 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
 
-  INTERCEPT_FUNCTION(socket);
+  INTERCEPT_FUNCTION(accept);
+  INTERCEPT_FUNCTION(bind);
+  INTERCEPT_FUNCTION(connect);
+  INTERCEPT_FUNCTION(getaddrinfo);
+  INTERCEPT_FUNCTION(getnameinfo);
+  INTERCEPT_FUNCTION(listen);
+  INTERCEPT_FUNCTION(recv);
+  INTERCEPT_FUNCTION(recvfrom);
+  INTERCEPT_FUNCTION(recvmsg);
   INTERCEPT_FUNCTION(send);
   INTERCEPT_FUNCTION(sendmsg);
   INTERCEPT_FUNCTION(sendto);
-  INTERCEPT_FUNCTION(recv);
-  INTERCEPT_FUNCTION(recvmsg);
-  INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
+  INTERCEPT_FUNCTION(socket);
 }
 
 #endif // SANITIZER_POSIX

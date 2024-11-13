@@ -965,15 +965,14 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #  include <__chrono/year_month_day.h>
 #  include <__chrono/year_month_weekday.h>
 
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_LOCALIZATION
 #    include <__chrono/formatter.h>
 #    include <__chrono/ostream.h>
 #    include <__chrono/parser_std_format_spec.h>
 #    include <__chrono/statically_widen.h>
 #  endif
 
-#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 #    include <__chrono/leap_second.h>
 #    include <__chrono/time_zone.h>
 #    include <__chrono/time_zone_link.h>
@@ -1014,7 +1013,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
 #  include <charconv>
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_LOCALIZATION
 #    include <locale>
 #    include <ostream>
 #  endif

@@ -548,6 +548,22 @@ func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
 
 // -----
 
+func.func @linearize(%idx: index, %basis0: index, %basis1 :index) -> index {
+  // expected-error@+1 {{'affine.linearize_index' op should be passed an index for each basis element}}
+  %0 = affine.linearize_index [%idx] by (%basis0, %basis1) : index
+  return %0 : index
+}
+
+// -----
+
+func.func @linearize_empty() -> index {
+  // expected-error@+1 {{'affine.linearize_index' op basis should not be empty}}
+  %0 = affine.linearize_index [] by () : index
+  return %0 : index
+}
+
+// -----
+
 func.func @dynamic_dimension_index() {
   "unknown.region"() ({
     %idx = "unknown.test"() : () -> (index)

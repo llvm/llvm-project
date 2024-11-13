@@ -524,8 +524,11 @@ LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) const {
     return failure();
   if (!(*converted)) // Conversion to default is 0.
     return 0;
-  if (auto explicitSpace = llvm::dyn_cast_if_present<IntegerAttr>(*converted))
-    return explicitSpace.getInt();
+  if (auto explicitSpace = dyn_cast_if_present<IntegerAttr>(*converted)) {
+    if (explicitSpace.getType().isIndex() ||
+        explicitSpace.getType().isSignlessInteger())
+      return explicitSpace.getInt();
+  }
   return failure();
 }
 

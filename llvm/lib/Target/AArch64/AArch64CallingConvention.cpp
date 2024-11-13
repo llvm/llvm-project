@@ -17,7 +17,6 @@
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/CallingConv.h"
 using namespace llvm;
 
 static const MCPhysReg XRegList[] = {AArch64::X0, AArch64::X1, AArch64::X2,

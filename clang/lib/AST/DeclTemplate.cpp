@@ -320,16 +320,16 @@ bool TemplateDecl::isTypeAlias() const {
 void RedeclarableTemplateDecl::anchor() {}
 
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
-  if (CommonBase *C = getCommonPtrInternal())
-    return C;
+  if (Common)
+    return Common;
 
   // Walk the previous-declaration chain until we either find a declaration
   // with a common pointer or we run out of previous declarations.
   SmallVector<const RedeclarableTemplateDecl *, 2> PrevDecls;
   for (const RedeclarableTemplateDecl *Prev = getPreviousDecl(); Prev;
        Prev = Prev->getPreviousDecl()) {
-    if (CommonBase *C = Prev->getCommonPtrInternal()) {
-      setCommonPtr(C);
+    if (Prev->Common) {
+      Common = Prev->Common;
       break;
     }
 
@@ -337,18 +337,18 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   }
 
   // If we never found a common pointer, allocate one now.
-  if (!getCommonPtrInternal()) {
+  if (!Common) {
     // FIXME: If any of the declarations is from an AST file, we probably
     // need an update record to add the common data.
 
-    setCommonPtr(newCommon(getASTContext()));
+    Common = newCommon(getASTContext());
   }
 
   // Update any previous declarations we saw with the common pointer.
   for (const RedeclarableTemplateDecl *Prev : PrevDecls)
-    Prev->setCommonPtr(getCommonPtrInternal());
+    Prev->Common = Common;
 
-  return getCommonPtrInternal();
+  return Common;
 }
 
 void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
@@ -458,17 +458,19 @@ void FunctionTemplateDecl::addSpecialization(
 }
 
 void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
+  using Base = RedeclarableTemplateDecl;
+
   // If we haven't created a common pointer yet, then it can just be created
   // with the usual method.
-  if (!getCommonPtrInternal())
+  if (!Base::Common)
     return;
 
-  Common *ThisCommon = static_cast<Common *>(getCommonPtrInternal());
+  Common *ThisCommon = static_cast<Common *>(Base::Common);
   Common *PrevCommon = nullptr;
   SmallVector<FunctionTemplateDecl *, 8> PreviousDecls;
   for (; Prev; Prev = Prev->getPreviousDecl()) {
-    if (CommonBase *C = Prev->getCommonPtrInternal()) {
-      PrevCommon = static_cast<Common *>(C);
+    if (Prev->Base::Common) {
+      PrevCommon = static_cast<Common *>(Prev->Base::Common);
       break;
     }
     PreviousDecls.push_back(Prev);
@@ -478,7 +480,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   // use this common pointer.
   if (!PrevCommon) {
     for (auto *D : PreviousDecls)
-      D->setCommonPtr(ThisCommon);
+      D->Base::Common = ThisCommon;
     return;
   }
 
@@ -486,7 +488,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   assert(ThisCommon->Specializations.size() == 0 &&
          "Can't merge incompatible declarations!");
 
-  setCommonPtr(PrevCommon);
+  Base::Common = PrevCommon;
 }
 
 //===----------------------------------------------------------------------===//
@@ -993,17 +995,7 @@ ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
-  return SpecializedTemplate.get<ClassTemplateDecl *>()->getMostRecentDecl();
-}
-
-llvm::PointerUnion<ClassTemplateDecl *,
-                   ClassTemplatePartialSpecializationDecl *>
-ClassTemplateSpecializationDecl::getSpecializedTemplateOrPartial() const {
-  if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-    return PartialSpec->PartialSpecialization->getMostRecentDecl();
-
-  return SpecializedTemplate.get<ClassTemplateDecl *>()->getMostRecentDecl();
+  return SpecializedTemplate.get<ClassTemplateDecl*>();
 }
 
 SourceRange
@@ -1293,39 +1285,6 @@ VarTemplateDecl::newCommon(ASTContext &C) const {
   return CommonPtr;
 }
 
-void VarTemplateDecl::mergePrevDecl(VarTemplateDecl *Prev) {
-  // If we haven't created a common pointer yet, then it can just be created
-  // with the usual method.
-  if (!getCommonPtrInternal())
-    return;
-
-  Common *ThisCommon = static_cast<Common *>(getCommonPtrInternal());
-  Common *PrevCommon = nullptr;
-  SmallVector<VarTemplateDecl *, 8> PreviousDecls;
-  for (; Prev; Prev = Prev->getPreviousDecl()) {
-    if (CommonBase *C = Prev->getCommonPtrInternal()) {
-      PrevCommon = static_cast<Common *>(C);
-      break;
-    }
-    PreviousDecls.push_back(Prev);
-  }
-
-  // If the previous redecl chain hasn't created a common pointer yet, then just
-  // use this common pointer.
-  if (!PrevCommon) {
-    for (auto *D : PreviousDecls)
-      D->setCommonPtr(ThisCommon);
-    return;
-  }
-
-  // Ensure we don't leak any important state.
-  assert(ThisCommon->Specializations.empty() &&
-         ThisCommon->PartialSpecializations.empty() &&
-         "Can't merge incompatible declarations!");
-
-  setCommonPtr(PrevCommon);
-}
-
 VarTemplateSpecializationDecl *
 VarTemplateDecl::findSpecialization(ArrayRef<TemplateArgument> Args,
                                     void *&InsertPos) {
@@ -1448,16 +1407,7 @@ VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
-  return SpecializedTemplate.get<VarTemplateDecl *>()->getMostRecentDecl();
-}
-
-llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
-VarTemplateSpecializationDecl::getSpecializedTemplateOrPartial() const {
-  if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-    return PartialSpec->PartialSpecialization->getMostRecentDecl();
-
-  return SpecializedTemplate.get<VarTemplateDecl *>()->getMostRecentDecl();
+  return SpecializedTemplate.get<VarTemplateDecl *>();
 }
 
 SourceRange VarTemplateSpecializationDecl::getSourceRange() const {

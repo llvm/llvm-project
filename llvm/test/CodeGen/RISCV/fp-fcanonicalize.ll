@@ -29,7 +29,9 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV64-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV64-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 16
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_f16:
@@ -51,7 +53,9 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV32-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV32-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call half @llvm.canonicalize.f16(half %x)
   ret half %z
@@ -77,7 +81,9 @@ define half @fcanonicalize_f16_nnan(half %x) {
 ; CHECK-NOFP16-RV64-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV64-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 16
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_f16_nnan:
@@ -99,7 +105,9 @@ define half @fcanonicalize_f16_nnan(half %x) {
 ; CHECK-NOFP16-RV32-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV32-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call nnan half @llvm.canonicalize.f16(half %x)
   ret half %z
@@ -137,7 +145,11 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 32
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_v2f16:
@@ -171,7 +183,11 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %x)
   ret <2 x half> %z
@@ -209,7 +225,11 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 32
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_v2f16_nnan:
@@ -243,7 +263,11 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call nnan <2 x half> @llvm.canonicalize.v2f16(<2 x half> %x)
   ret <2 x half> %z
@@ -322,7 +346,16 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs2
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 64
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_v4f16:
@@ -403,7 +436,17 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs3
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 64
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %x)
   ret <4 x half> %z
@@ -482,7 +525,16 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs2
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 64
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_v4f16_nnan:
@@ -563,7 +615,17 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs3
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 64
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call nnan <4 x half> @llvm.canonicalize.v4f16(<4 x half> %x)
   ret <4 x half> %z
@@ -706,7 +768,24 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s4
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s5
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s6
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s7
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs2
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs3
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs4
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs5
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs6
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 128
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_v8f16:
@@ -855,7 +934,25 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fld fs5, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs6, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s4
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s5
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s6
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s7
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs3
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs4
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs5
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs6
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs7
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 112
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %x)
   ret <8 x half> %z
@@ -998,7 +1095,24 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV64-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s4
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s5
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s6
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s7
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs2
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs3
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs4
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs5
+; CHECK-NOFP16-RV64-NEXT:    .cfi_restore fs6
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 128
+; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV64-NEXT:    ret
 ;
 ; CHECK-FP16-RV32-LABEL: fcanonicalize_v8f16_nnan:
@@ -1147,7 +1261,25 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fld fs5, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs6, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOFP16-RV32-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s3
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s4
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s5
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s6
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s7
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs1
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs2
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs3
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs4
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs5
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs6
+; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs7
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 112
+; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
   %z = call nnan <8 x half> @llvm.canonicalize.v8f16(<8 x half> %x)
   ret <8 x half> %z
