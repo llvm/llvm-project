@@ -316,3 +316,28 @@ end
 !PARSE-TREE: | | | | Designator -> DataRef -> Name = 'k'
 !PARSE-TREE: | | bool = 'true'
 
+subroutine f100(x, y)
+  integer :: x(10)
+  integer :: y
+  integer, parameter :: p = 23
+  !$omp target map(mapper(xx), from: x)
+  x = x + 1
+  !$omp end target
+end
+
+!UNPARSE: SUBROUTINE f100 (x, y)
+!UNPARSE:  INTEGER x(10_4)
+!UNPARSE:  INTEGER y
+!UNPARSE:  INTEGER, PARAMETER :: p = 23_4
+!UNPARSE: !$OMP TARGET  MAP(MAPPER(XX), FROM: X)
+!UNPARSE:   x=x+1_4
+!UNPARSE: !$OMP END TARGET
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OmpBeginBlockDirective
+!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
+!PARSE-TREE: | | OmpMapperIdentifier -> Name = 'xx'
+!PARSE-TREE: | | Type = From
+!PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
+

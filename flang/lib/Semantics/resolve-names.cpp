@@ -1471,6 +1471,8 @@ public:
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &);
 
+  bool Pre(const parser::OmpMapClause &);
+
   void Post(const parser::OmpBeginLoopDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1637,6 +1639,14 @@ bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   EndDeclTypeSpec();
   PopScope();
   return false;
+}
+
+bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
+  const auto &mid{std::get<parser::OmpMapperIdentifier>(x.t)};
+  if (const auto &mapperName{mid.v})
+    mapperName->symbol =
+        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
+  return true;
 }
 
 // Walk the parse tree and resolve names to symbols.
