@@ -423,6 +423,14 @@ public:
     return &I;
   }
 
+  /// Replace operand of a call-like instruction and add old operand to the
+  /// worklist. Also drop poison generating and UB implying parameter
+  /// attributes.
+  Instruction *replaceArgOperand(CallBase &I, unsigned OpNum, Value *V) {
+    I.dropPoisonGeneratingAndUBImplyingParamAttrs(OpNum);
+    return replaceOperand(I, OpNum, V);
+  }
+
   /// Replace use and add the previously used value to the worklist.
   void replaceUse(Use &U, Value *NewValue) {
     Value *OldOp = U;
