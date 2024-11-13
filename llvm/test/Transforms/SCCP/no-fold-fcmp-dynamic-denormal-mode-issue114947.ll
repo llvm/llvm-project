@@ -109,8 +109,7 @@ define <vscale x 2 x i1> @fold_fcmp_nondenormal_double_ieee_dynamic_scalable_vec
 define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalaable_vector_splat() #0 {
 ; CHECK-LABEL: define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalaable_vector_splat(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 0x8000000000000, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), zeroinitializer
-; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ;
   %cmp = fcmp une <vscale x 2 x double> splat (double 0x8000000000000), zeroinitializer
   ret <vscale x 2 x i1> %cmp
