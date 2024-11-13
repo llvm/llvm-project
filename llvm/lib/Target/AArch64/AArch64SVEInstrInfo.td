@@ -4296,7 +4296,7 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   // Floating-point invert exponent, zeroing predicate
   defm FRECPX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b01100, "frecpx">;
   // Floating-point square root, zeroing predicate
-  defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
+  defm FSQRT_ZPzZ  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
 
   // SVE2p2 integer unary arithmetic (bitwise), zeroing predicate
   defm CLS_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b000, "cls">;
@@ -4589,3 +4589,33 @@ multiclass sve2_fp_flogb_pat<SDPatternOperator op> {
 }
 
 defm FLOGB : sve2_fp_flogb_pat<int_aarch64_sve_flogb>;
+
+multiclass sve_fp_2op_p_zd_HSD_pat<SDPatternOperator op> {
+  let Predicates = [HasSVEorSME, NotHasSVE2p2orSME2p2] in {
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Pseudo>(NAME # _ZPmZ_H_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Pseudo>(NAME # _ZPmZ_H_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv2f16, op, nxv2i1, nxv2f16, !cast<Pseudo>(NAME # _ZPmZ_H_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Pseudo>(NAME # _ZPmZ_S_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Pseudo>(NAME # _ZPmZ_S_UNDEF)>;
+    defm : SVE_1_Op_PassthruUndef_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Pseudo>(NAME # _ZPmZ_D_UNDEF)>;
+  }
+
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2f16, op, nxv2i1, nxv2f16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    def : SVE_1_Op_PassthruUndefZero_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm FRINTN : sve_fp_2op_p_zd_HSD_pat<AArch64frintn_mt>;
+defm FRINTP : sve_fp_2op_p_zd_HSD_pat<AArch64frintp_mt>;
+defm FRINTM : sve_fp_2op_p_zd_HSD_pat<AArch64frintm_mt>;
+defm FRINTZ : sve_fp_2op_p_zd_HSD_pat<AArch64frintz_mt>;
+defm FRINTA : sve_fp_2op_p_zd_HSD_pat<AArch64frinta_mt>;
+defm FRINTX : sve_fp_2op_p_zd_HSD_pat<AArch64frintx_mt>;
+defm FRINTI : sve_fp_2op_p_zd_HSD_pat<AArch64frinti_mt>;
+defm FRECPX : sve_fp_2op_p_zd_HSD_pat<AArch64frecpx_mt>;
+defm FSQRT  : sve_fp_2op_p_zd_HSD_pat<AArch64fsqrt_mt>;
