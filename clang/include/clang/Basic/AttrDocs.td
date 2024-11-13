@@ -8727,7 +8727,8 @@ The ``signed-integer-overflow``, ``unsigned-integer-overflow``,
 ``implicit-signed-integer-truncation`` and the
 ``implicit-unsigned-integer-truncation`` sanitizers will not instrument
 arithmetic containing any operands attributed by ``wraps``. Similarly, the
-``-Winteger-overflow`` warning is disabled for these instances.
+``-Winteger-overflow`` and ``-Wconstant-conversion`` warnings are disabled for
+these instances.
 
 The following example shows how one may disable ``signed-integer-overflow``
 sanitizer instrumentation using ``__attribute__((wraps))`` on a type definition
@@ -8763,10 +8764,16 @@ non-wrapping. This may serve as a helpful annotation to readers of code that
 particular arithmetic expressions involving these types or variables are not
 meant to wrap-around.
 
+``no_wraps`` only interacts with sanitizers and
+`Sanitizer special case lists <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_ but,
+unlike ``wraps``, it does not modify the signed overflow behavior of types it
+affects. Instead, you should use ``-fwrapv`` or ``-fno-wrapv`` to define signed
+overflow behavior at the language level in combination with ``wraps`` for
+type-level modifications.
+
 When overflow or truncation sanitizer instrumentation is modified at the
-type-level through `SSCLs
-<https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_, ``no_wraps`` or
-``wraps`` may be used to override sanitizer behavior.
+type-level through `SSCLs <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_,
+``no_wraps`` or ``wraps`` may be used to override sanitizer behavior.
 
 For example, one may specify an ignorelist (with ``-fsanitize-ignorelist=``) to
 disable the ``signed-integer-overflow`` sanitizer for all types:
@@ -8797,7 +8804,7 @@ attribute cannot persist through implicit type conversions. Disable this with
 
 Applying both ``__attribute__((wraps))`` and ``__attribute__((no_wraps))``
 results in an error, as you should only use one or the other. Arithmetic binary
-operators containing both a `wraps` and `no_wraps`-attributed type will only
+operators containing both `wraps` and `no_wraps`-attributed types will only
 persist the `no_wraps` attribute towards the final resulting type.
 
 Like ``wraps``, ``no_wraps`` may also be used with function parameters or
