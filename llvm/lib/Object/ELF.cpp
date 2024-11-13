@@ -838,8 +838,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       RangeBaseAddress = *AddressOrErr;
       NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
     }
-    uint32_t TotalNumBlocks = 0;
     std::vector<BBAddrMap::BBRangeEntry> BBRangeEntries;
+    uint32_t TotalNumBlocks = 0;
     for (uint32_t BBRangeIndex = 0; BBRangeIndex < NumBBRanges;
          ++BBRangeIndex) {
       uint32_t PrevBBEndOffset = 0;
