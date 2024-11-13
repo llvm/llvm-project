@@ -959,8 +959,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       continue;
 
     // Cannot combine poison and divisions.
-    if (AnyPoison && (I->isIntDivRem() || I->isArithmeticShift() ||
-                      I->getOpcode() == Instruction::FDiv ||
+    if (AnyPoison && (I->isIntDivRem() || I->getOpcode() == Instruction::FDiv ||
                       I->getOpcode() == Instruction::FRem || isa<CallInst>(I)))
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
