@@ -58,7 +58,7 @@ void test8(B *b) {
 }
 
 // CHECK: {
-// CHECK-NEXT:    "clang-compiler-version": "clang version
+// CHECK-NEXT:    "clang-compiler-version": "{{.*}}clang version
 // CHECK-NEXT:    "format-version": 1,
 // CHECK-NEXT:    "target": "arm64-apple-macosx15.0.0",
 // CHECK-NEXT:    "references": [
