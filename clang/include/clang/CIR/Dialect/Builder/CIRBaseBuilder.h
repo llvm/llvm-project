@@ -560,7 +560,7 @@ public:
   // Block handling helpers
   // ----------------------
   //
-  OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
+  static OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
           return mlir::isa<cir::AllocaOp, cir::LabelOp>(&op);

@@ -152,3 +152,19 @@ void pass_eq_128(EQ_128 s) {}
 // LLVM:   store ptr %0, ptr %[[#V1]], align 8
 // LLVM:   %[[#V2:]] = load ptr, ptr %[[#V1]], align 8
 void pass_gt_128(GT_128 s) {}
+
+// CHECK: cir.func @passS(%arg0: !cir.array<!u64i x 2> 
+// CHECK:   %[[#V0:]] = cir.alloca !ty_S, !cir.ptr<!ty_S>, [""] {alignment = 4 : i64}
+// CHECK:   %[[#V1:]] = cir.alloca !cir.array<!u64i x 2>, !cir.ptr<!cir.array<!u64i x 2>>, ["tmp"] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %[[#V1]] : !cir.array<!u64i x 2>, !cir.ptr<!cir.array<!u64i x 2>>
+// CHECK:   %[[#V2:]] = cir.cast(bitcast, %[[#V1]] : !cir.ptr<!cir.array<!u64i x 2>>), !cir.ptr<!void>
+// CHECK:   %[[#V3:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_S>), !cir.ptr<!void>
+// CHECK:   %[[#V4:]] = cir.const #cir.int<12> : !u64i
+// CHECK:   cir.libc.memcpy %[[#V4]] bytes from %[[#V2]] to %[[#V3]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+
+// LLVM: void @passS([2 x i64] %[[#ARG:]])
+// LLVM:   %[[#V1:]] = alloca %struct.S, i64 1, align 4
+// LLVM:   %[[#V2:]] = alloca [2 x i64], i64 1, align 8
+// LLVM:   store [2 x i64] %[[#ARG]], ptr %[[#V2]], align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[#V1]], ptr %[[#V2]], i64 12, i1 false)
+void passS(S s) {}
