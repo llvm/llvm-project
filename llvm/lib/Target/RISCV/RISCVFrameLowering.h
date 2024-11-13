@@ -83,6 +83,12 @@ public:
                      uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
                      uint64_t ProbeSize) const;
 
+  MachineBasicBlock *emitStackProbeInline(MachineFunction &MF,
+                                          MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI,
+                                          DebugLoc DL, Register TargetReg,
+                                          bool IsRVV) const;
+
 protected:
   const RISCVSubtarget &STI;
 
