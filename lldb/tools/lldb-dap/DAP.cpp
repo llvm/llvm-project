@@ -10,11 +10,14 @@
 #include <cstdarg>
 #include <fstream>
 #include <mutex>
-#include <sstream>
 
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -71,21 +74,21 @@ void DAP::PopulateExceptionBreakpoints() {
     exception_breakpoints = std::vector<ExceptionBreakpoint>{};
 
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
-      exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
+      exception_breakpoints->emplace_back(*this, "cpp_catch", "C++ Catch",
                                           lldb::eLanguageTypeC_plus_plus);
-      exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
+      exception_breakpoints->emplace_back(*this, "cpp_throw", "C++ Throw",
                                           lldb::eLanguageTypeC_plus_plus);
     }
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
-      exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
-                                          lldb::eLanguageTypeObjC);
-      exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
-                                          lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back(
+          *this, "objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back(
+          *this, "objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC);
     }
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
-      exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
+      exception_breakpoints->emplace_back(*this, "swift_catch", "Swift Catch",
                                           lldb::eLanguageTypeSwift);
-      exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
+      exception_breakpoints->emplace_back(*this, "swift_throw", "Swift Throw",
                                           lldb::eLanguageTypeSwift);
     }
     // Besides handling the hardcoded list of languages from above, we try to
@@ -116,7 +119,7 @@ void DAP::PopulateExceptionBreakpoints() {
             raw_throw_keyword ? raw_throw_keyword : "throw";
 
         exception_breakpoints->emplace_back(
-            raw_lang_name + "_" + throw_keyword,
+            *this, raw_lang_name + "_" + throw_keyword,
             capitalized_lang_name + " " + capitalize(throw_keyword), lang);
       }
 
@@ -127,7 +130,7 @@ void DAP::PopulateExceptionBreakpoints() {
             raw_catch_keyword ? raw_catch_keyword : "catch";
 
         exception_breakpoints->emplace_back(
-            raw_lang_name + "_" + catch_keyword,
+            *this, raw_lang_name + "_" + catch_keyword,
             capitalized_lang_name + " " + capitalize(catch_keyword), lang);
       }
     }
@@ -483,20 +486,20 @@ llvm::json::Value DAP::CreateTopLevelScopes() {
   return llvm::json::Value(std::move(scopes));
 }
 
-ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
-                                               std::string &expression) {
-  // Include the escape hatch prefix.
+ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
+                             bool partial_expression) {
+  // Check for the escape hatch prefix.
   if (!expression.empty() &&
       llvm::StringRef(expression).starts_with(g_dap.command_escape_prefix)) {
     expression = expression.substr(g_dap.command_escape_prefix.size());
-    return ExpressionContext::Command;
+    return ReplMode::Command;
   }
 
   switch (repl_mode) {
   case ReplMode::Variable:
-    return ExpressionContext::Variable;
+    return ReplMode::Variable;
   case ReplMode::Command:
-    return ExpressionContext::Command;
+    return ReplMode::Command;
   case ReplMode::Auto:
     // To determine if the expression is a command or not, check if the first
     // term is a variable or command. If it's a variable in scope we will prefer
@@ -509,6 +512,12 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
     //   int var and expression "va" > command
     std::pair<llvm::StringRef, llvm::StringRef> token =
         llvm::getToken(expression);
+
+    // If the first token is not fully finished yet, we can't
+    // determine whether this will be a variable or a lldb command.
+    if (partial_expression && token.second.empty())
+      return ReplMode::Auto;
+
     std::string term = token.first.str();
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
     bool term_is_command = interpreter.CommandExists(term.c_str()) ||
@@ -527,9 +536,9 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
 
     // Variables take preference to commands in auto, since commands can always
     // be called using the command_escape_prefix
-    return term_is_variable  ? ExpressionContext::Variable
-           : term_is_command ? ExpressionContext::Command
-                             : ExpressionContext::Variable;
+    return term_is_variable  ? ReplMode::Variable
+           : term_is_command ? ReplMode::Command
+                             : ReplMode::Variable;
   }
 
   llvm_unreachable("enum cases exhausted.");
@@ -539,7 +548,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<std::string> commands) {
   bool required_command_failed = false;
   std::string output =
-      ::RunLLDBCommands(prefix, commands, required_command_failed);
+      ::RunLLDBCommands(debugger, prefix, commands, required_command_failed);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;
 }
@@ -683,7 +692,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
-    auto handler_pos = request_handlers.find(std::string(command));
+    auto handler_pos = request_handlers.find(command);
     if (handler_pos != request_handlers.end()) {
       handler_pos->second(object);
       return true; // Success
@@ -860,42 +869,35 @@ int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
 bool StartDebuggingRequestHandler::DoExecute(
     lldb::SBDebugger debugger, char **command,
     lldb::SBCommandReturnObject &result) {
-  // Command format like: `startDebugging <launch|attach> <configuration>`
+  // Command format like: `start-debugging <launch|attach> <configuration>`
   if (!command) {
-    result.SetError("Invalid use of startDebugging");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("Invalid use of start-debugging, expected format "
+                    "`start-debugging <launch|attach> <configuration>`.");
     return false;
   }
 
   if (!command[0] || llvm::StringRef(command[0]).empty()) {
-    result.SetError("startDebugging request type missing.");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("start-debugging request type missing.");
     return false;
   }
 
   if (!command[1] || llvm::StringRef(command[1]).empty()) {
-    result.SetError("configuration missing.");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("start-debugging debug configuration missing.");
     return false;
   }
 
   llvm::StringRef request{command[0]};
   std::string raw_configuration{command[1]};
 
-  int i = 2;
-  while (command[i]) {
-    raw_configuration.append(" ").append(command[i]);
-  }
-
   llvm::Expected<llvm::json::Value> configuration =
       llvm::json::parse(raw_configuration);
 
   if (!configuration) {
     llvm::Error err = configuration.takeError();
-    std::string msg =
-        "Failed to parse json configuration: " + llvm::toString(std::move(err));
+    std::string msg = "Failed to parse json configuration: " +
+                      llvm::toString(std::move(err)) + "\n\n" +
+                      raw_configuration;
     result.SetError(msg.c_str());
-    result.SetStatus(lldb::eReturnStatusFailed);
     return false;
   }
 
@@ -963,6 +965,68 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   return true;
 }
 
+// Sends a DAP event with an optional body.
+//
+// See
+// https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent
+bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
+                                        char **command,
+                                        lldb::SBCommandReturnObject &result) {
+  // Command format like: `send-event <name> <body>?`
+  if (!command || !command[0] || llvm::StringRef(command[0]).empty()) {
+    result.SetError("Not enough arguments found, expected format "
+                    "`lldb-dap send-event <name> <body>?`.");
+    return false;
+  }
+
+  llvm::StringRef name{command[0]};
+  // Events that are stateful and should be handled by lldb-dap internally.
+  const std::array internal_events{"breakpoint", "capabilities", "continued",
+                                   "exited",     "initialize",   "loadedSource",
+                                   "module",     "process",      "stopped",
+                                   "terminated", "thread"};
+  if (std::find(internal_events.begin(), internal_events.end(), name) !=
+      std::end(internal_events)) {
+    std::string msg =
+        llvm::formatv("Invalid use of lldb-dap send-event, event \"{0}\" "
+                      "should be handled by lldb-dap internally.",
+                      name)
+            .str();
+    result.SetError(msg.c_str());
+    return false;
+  }
+
+  llvm::json::Object event(CreateEventObject(name));
+
+  if (command[1] && !llvm::StringRef(command[1]).empty()) {
+    // See if we have unused arguments.
+    if (command[2]) {
+      result.SetError(
+          "Additional arguments found, expected `lldb-dap send-event "
+          "<name> <body>?`.");
+      return false;
+    }
+
+    llvm::StringRef raw_body{command[1]};
+
+    llvm::Expected<llvm::json::Value> body = llvm::json::parse(raw_body);
+
+    if (!body) {
+      llvm::Error err = body.takeError();
+      std::string msg = "Failed to parse custom event body: " +
+                        llvm::toString(std::move(err));
+      result.SetError(msg.c_str());
+      return false;
+    }
+
+    event.try_emplace("body", std::move(*body));
+  }
+
+  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
+  return true;
+}
+
 void DAP::SetFrameFormat(llvm::StringRef format) {
   if (format.empty())
     return;
@@ -996,7 +1060,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
-    if (bp.second.id == bp_id)
+    if (bp.second.bp.GetID() == bp_id)
       return &bp.second;
   }
   return nullptr;

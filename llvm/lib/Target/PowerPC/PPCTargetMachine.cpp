@@ -150,7 +150,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
-  initializePPCMergeStringPoolPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -503,13 +502,9 @@ bool PPCPassConfig::addPreISel() {
   // Specifying the command line option overrides the AIX default.
   if ((EnableGlobalMerge.getNumOccurrences() > 0)
           ? EnableGlobalMerge
-          : (TM->getTargetTriple().isOSAIX() &&
-             getOptLevel() != CodeGenOptLevel::None))
-    addPass(
-        createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true));
-
-  if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
-    addPass(createPPCMergeStringPoolPass());
+          : getOptLevel() != CodeGenOptLevel::None)
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+                                  true));
 
   if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
@@ -521,7 +516,7 @@ bool PPCPassConfig::addPreISel() {
 }
 
 bool PPCPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);

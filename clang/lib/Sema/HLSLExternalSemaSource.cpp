@@ -14,8 +14,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/AttrKinds.h"
-#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -117,33 +115,30 @@ struct BuiltinTypeDeclBuilder {
     if (Record->isCompleteDefinition())
       return *this;
 
+    ASTContext &Ctx = S.getASTContext();
     TypeSourceInfo *ElementTypeInfo = nullptr;
 
-    QualType Ty = Record->getASTContext().VoidPtrTy;
+    QualType ElemTy = Ctx.Char8Ty;
     if (Template) {
       if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
               Template->getTemplateParameters()->getParam(0))) {
-        Ty = Record->getASTContext().getPointerType(
-            QualType(TTD->getTypeForDecl(), 0));
-        QualType ElemType = QualType(TTD->getTypeForDecl(), 0);
-        ElementTypeInfo = S.getASTContext().getTrivialTypeSourceInfo(
-            ElemType, SourceLocation());
+        ElemTy = QualType(TTD->getTypeForDecl(), 0);
       }
     }
+    ElementTypeInfo = Ctx.getTrivialTypeSourceInfo(ElemTy, SourceLocation());
 
     // add handle member with resource type attributes
     QualType AttributedResTy = QualType();
     SmallVector<const Attr *> Attrs = {
-        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
-        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr,
-        RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Record->getASTContext())
-                  : nullptr,
-        ElementTypeInfo ? HLSLContainedTypeAttr::CreateImplicit(
-                              Record->getASTContext(), ElementTypeInfo)
-                        : nullptr};
-    Attr *ResourceAttr =
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
-    if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
+        HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
+        IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
+        RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
+        ElementTypeInfo
+            ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
+            : nullptr};
+    Attr *ResourceAttr = HLSLResourceAttr::CreateImplicit(Ctx, RK);
+    if (CreateHLSLAttributedResourceType(S, Ctx.HLSLResourceTy, Attrs,
+                                         AttributedResTy))
       addMemberVariable("h", AttributedResTy, {ResourceAttr}, Access);
     return *this;
   }
@@ -167,16 +162,7 @@ struct BuiltinTypeDeclBuilder {
                                VD, false, NameInfo, Ty, VK_PRValue);
   }
 
-  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
-    return IntegerLiteral::Create(
-        AST,
-        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
-                    static_cast<uint8_t>(RC)),
-        AST.UnsignedCharTy, SourceLocation());
-  }
-
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S,
-                                                      ResourceClass RC) {
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S) {
     if (Record->isCompleteDefinition())
       return *this;
     ASTContext &AST = Record->getASTContext();
@@ -211,17 +197,15 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
     if (Record->isCompleteDefinition())
       return *this;
-    assert(Fields.count("h") > 0 &&
-           "Subscript operator must be added after the handle.");
 
-    FieldDecl *Handle = Fields["h"];
     ASTContext &AST = Record->getASTContext();
-
-    assert(Handle->getType().getCanonicalType() != AST.VoidPtrTy &&
-           "Not yet supported for void pointer handles.");
-
-    QualType ElemTy =
-        QualType(Handle->getType()->getPointeeOrArrayElementType(), 0);
+    QualType ElemTy = AST.Char8Ty;
+    if (Template) {
+      if (const auto *TTD = dyn_cast<TemplateTypeParmDecl>(
+              Template->getTemplateParameters()->getParam(0))) {
+        ElemTy = QualType(TTD->getTypeForDecl(), 0);
+      }
+    }
     QualType ReturnTy = ElemTy;
 
     FunctionProtoType::ExtProtoInfo ExtInfo;
@@ -257,22 +241,23 @@ struct BuiltinTypeDeclBuilder {
     auto FnProtoLoc = TSInfo->getTypeLoc().getAs<FunctionProtoTypeLoc>();
     FnProtoLoc.setParam(0, IdxParam);
 
+    // FIXME: Placeholder to make sure we return the correct type - create
+    // field of element_type and return reference to it. This field will go
+    // away once indexing into resources is properly implemented in
+    // llvm/llvm-project#95956.
+    if (Fields.count("e") == 0) {
+      addMemberVariable("e", ElemTy, {});
+    }
+    FieldDecl *ElemFieldDecl = Fields["e"];
+
     auto *This =
         CXXThisExpr::Create(AST, SourceLocation(),
                             MethodDecl->getFunctionObjectParameterType(), true);
-    auto *HandleAccess = MemberExpr::CreateImplicit(
-        AST, This, false, Handle, Handle->getType(), VK_LValue, OK_Ordinary);
-
-    auto *IndexExpr = DeclRefExpr::Create(
-        AST, NestedNameSpecifierLoc(), SourceLocation(), IdxParam, false,
-        DeclarationNameInfo(IdxParam->getDeclName(), SourceLocation()),
-        AST.UnsignedIntTy, VK_PRValue);
-
-    auto *Array =
-        new (AST) ArraySubscriptExpr(HandleAccess, IndexExpr, ElemTy, VK_LValue,
-                                     OK_Ordinary, SourceLocation());
-
-    auto *Return = ReturnStmt::Create(AST, SourceLocation(), Array, nullptr);
+    Expr *ElemField = MemberExpr::CreateImplicit(
+        AST, This, false, ElemFieldDecl, ElemFieldDecl->getType(), VK_LValue,
+        OK_Ordinary);
+    auto *Return =
+        ReturnStmt::Create(AST, SourceLocation(), ElemField, nullptr);
 
     MethodDecl->setBody(CompoundStmt::Create(AST, {Return}, FPOptionsOverride(),
                                              SourceLocation(),
@@ -484,7 +469,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV, bool RawBuffer) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember(S, RC, RK, IsROV, RawBuffer)
-      .addDefaultHandleConstructor(S, RC);
+      .addDefaultHandleConstructor(S);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
@@ -517,8 +502,53 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWStructuredBuffer")
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "AppendStructuredBuffer")
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConsumeStructuredBuffer")
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+          .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
+                                "RasterizerOrderedStructuredBuffer")
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false,
+                    ResourceKind::TypedBuffer, /*IsROV=*/true,
                     /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .completeDefinition();

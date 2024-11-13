@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
 
 
 #include <immintrin.h>
@@ -457,28 +461,28 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i a, int const *b, __m256i c, __m2
 
 __m128i test_mm_i32gather_epi64(long long const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i32gather_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> zeroinitializer, ptr %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> zeroinitializer, ptr %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
   return _mm_i32gather_epi64(b, c, 2);
 }
 
 __m128i test_mm_mask_i32gather_epi64(__m128i a, long long const *b, __m128i c, __m128i d) {
   // CHECK-LABEL: test_mm_mask_i32gather_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> %{{.*}}, ptr %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> %{{.*}}, ptr %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
   return _mm_mask_i32gather_epi64(a, b, c, d, 2);
 }
 
 __m256i test_mm256_i32gather_epi64(long long const *b, __m128i c) {
   // X64-LABEL: test_mm256_i32gather_epi64
-  // X64: call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> zeroinitializer, ptr %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // X64: call {{.*}}<4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> zeroinitializer, ptr %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   //
   // X86-LABEL: test_mm256_i32gather_epi64
-  // X86: call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // X86: call {{.*}}<4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   return _mm256_i32gather_epi64(b, c, 2);
 }
 
 __m256i test_mm256_mask_i32gather_epi64(__m256i a, long long const *b, __m128i c, __m256i d) {
   // CHECK-LABEL: test_mm256_mask_i32gather_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   return _mm256_mask_i32gather_epi64(a, b, c, d, 2);
 }
 
@@ -592,28 +596,28 @@ __m128i test_mm256_mask_i64gather_epi32(__m128i a, int const *b, __m256i c, __m1
 
 __m128i test_mm_i64gather_epi64(long long const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i64gather_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> zeroinitializer, ptr %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> zeroinitializer, ptr %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
   return _mm_i64gather_epi64(b, c, 2);
 }
 
 __m128i test_mm_mask_i64gather_epi64(__m128i a, long long const *b, __m128i c, __m128i d) {
   // CHECK-LABEL: test_mm_mask_i64gather_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> %{{.*}}, ptr %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> %{{.*}}, ptr %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i8 2)
   return _mm_mask_i64gather_epi64(a, b, c, d, 2);
 }
 
 __m256i test_mm256_i64gather_epi64(long long const *b, __m256i c) {
   // X64-LABEL: test_mm256_i64gather_epi64
-  // X64: call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> zeroinitializer, ptr %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // X64: call {{.*}}<4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> zeroinitializer, ptr %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   //
   // X86-LABEL: test_mm256_i64gather_epi64
-  // X86: call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // X86: call {{.*}}<4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   return _mm256_i64gather_epi64(b, c, 2);
 }
 
 __m256i test_mm256_mask_i64gather_epi64(__m256i a, long long const *b, __m256i c, __m256i d) {
   // CHECK-LABEL: test_mm256_mask_i64gather_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   return _mm256_mask_i64gather_epi64(a, b, c, d, 2);
 }
 
@@ -745,13 +749,13 @@ __m256i test_mm256_maskload_epi32(int const *a, __m256i m) {
 
 __m128i test_mm_maskload_epi64(long long const *a, __m128i m) {
   // CHECK-LABEL: test_mm_maskload_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.maskload.q(ptr %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.maskload.q(ptr %{{.*}}, <2 x i64> %{{.*}})
   return _mm_maskload_epi64(a, m);
 }
 
 __m256i test_mm256_maskload_epi64(long long const *a, __m256i m) {
   // CHECK-LABEL: test_mm256_maskload_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.maskload.q.256(ptr %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.maskload.q.256(ptr %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_maskload_epi64(a, m);
 }
 
@@ -853,7 +857,7 @@ __m256i test_mm256_min_epu32(__m256i a, __m256i b) {
 
 int test_mm256_movemask_epi8(__m256i a) {
   // CHECK-LABEL: test_mm256_movemask_epi8
-  // CHECK: call i32 @llvm.x86.avx2.pmovmskb(<32 x i8> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx2.pmovmskb(<32 x i8> %{{.*}})
   return _mm256_movemask_epi8(a);
 }
 
@@ -865,18 +869,18 @@ __m256i test_mm256_mpsadbw_epu8(__m256i x, __m256i y) {
 
 __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mul_epi32
-  // CHECK: shl <4 x i64> %{{.*}}, <i64 32, i64 32, i64 32, i64 32>
-  // CHECK: ashr <4 x i64> %{{.*}}, <i64 32, i64 32, i64 32, i64 32>
-  // CHECK: shl <4 x i64> %{{.*}}, <i64 32, i64 32, i64 32, i64 32>
-  // CHECK: ashr <4 x i64> %{{.*}}, <i64 32, i64 32, i64 32, i64 32>
+  // CHECK: shl <4 x i64> %{{.*}}, splat (i64 32)
+  // CHECK: ashr <4 x i64> %{{.*}}, splat (i64 32)
+  // CHECK: shl <4 x i64> %{{.*}}, splat (i64 32)
+  // CHECK: ashr <4 x i64> %{{.*}}, splat (i64 32)
   // CHECK: mul <4 x i64> %{{.*}}, %{{.*}}
   return _mm256_mul_epi32(a, b);
 }
 
 __m256i test_mm256_mul_epu32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mul_epu32
-  // CHECK: and <4 x i64> %{{.*}}, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  // CHECK: and <4 x i64> %{{.*}}, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  // CHECK: and <4 x i64> %{{.*}}, splat (i64 4294967295)
+  // CHECK: and <4 x i64> %{{.*}}, splat (i64 4294967295)
   // CHECK: mul <4 x i64> %{{.*}}, %{{.*}}
   return _mm256_mul_epu32(a, b);
 }
@@ -967,13 +971,13 @@ __m256i test_mm256_permutevar8x32_epi32(__m256i a, __m256i b) {
 
 __m256 test_mm256_permutevar8x32_ps(__m256 a, __m256i b) {
   // CHECK-LABEL: test_mm256_permutevar8x32_ps
-  // CHECK: call <8 x float> @llvm.x86.avx2.permps(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx2.permps(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_permutevar8x32_ps(a, b);
 }
 
 __m256i test_mm256_sad_epu8(__m256i x, __m256i y) {
   // CHECK-LABEL: test_mm256_sad_epu8
-  // CHECK: call <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_sad_epu8(x, y);
 }
 
@@ -1045,13 +1049,13 @@ __m256i test_mm256_slli_epi32_2(__m256i a, int b) {
 
 __m256i test_mm256_slli_epi64(__m256i a) {
   // CHECK-LABEL: test_mm256_slli_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pslli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.pslli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
   return _mm256_slli_epi64(a, 3);
 }
 
 __m256i test_mm256_slli_epi64_2(__m256i a, int b) {
   // CHECK-LABEL: test_mm256_slli_epi64_2
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pslli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.pslli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
   return _mm256_slli_epi64(a, b);
 }
 
@@ -1075,13 +1079,13 @@ __m256i test_mm256_sllv_epi32(__m256i a, __m256i b) {
 
 __m128i test_mm_sllv_epi64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_sllv_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_sllv_epi64(a, b);
 }
 
 __m256i test_mm256_sllv_epi64(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_sllv_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_sllv_epi64(a, b);
 }
 
@@ -1147,7 +1151,7 @@ __m256i test_mm256_srl_epi32(__m256i a, __m128i b) {
 
 __m256i test_mm256_srl_epi64(__m256i a, __m128i b) {
   // CHECK-LABEL: test_mm256_srl_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm256_srl_epi64(a, b);
 }
 
@@ -1177,13 +1181,13 @@ __m256i test_mm256_srli_epi32_2(__m256i a, int b) {
 
 __m256i test_mm256_srli_epi64(__m256i a) {
   // CHECK-LABEL: test_mm256_srli_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
   return _mm256_srli_epi64(a, 3);
 }
 
 __m256i test_mm256_srli_epi64_2(__m256i a, int b) {
   // CHECK-LABEL: test_mm256_srli_epi64_2
-  // CHECK: call <4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> %{{.*}}, i32 %{{.*}})
   return _mm256_srli_epi64(a, b);
 }
 
@@ -1207,13 +1211,13 @@ __m256i test_mm256_srlv_epi32(__m256i a, __m256i b) {
 
 __m128i test_mm_srlv_epi64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_srlv_epi64
-  // CHECK: call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_srlv_epi64(a, b);
 }
 
 __m256i test_mm256_srlv_epi64(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_srlv_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_srlv_epi64(a, b);
 }
 

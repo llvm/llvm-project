@@ -17,6 +17,7 @@
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/PFTBuilder.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
+#include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
@@ -263,9 +264,7 @@ void insertChildMapInfoIntoParent(
     std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs) {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
   for (auto indices : parentMemberIndices) {
     bool parentExists = false;
     size_t parentIdx;
@@ -321,11 +320,6 @@ void insertChildMapInfoIntoParent(
 
       mapOperands.push_back(mapOp);
       mapSyms.push_back(indices.first);
-
-      if (mapSymTypes)
-        mapSymTypes->push_back(mapOp.getType());
-      if (mapSymLocs)
-        mapSymLocs->push_back(mapOp.getLoc());
     }
   }
 }
@@ -354,6 +348,18 @@ semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
           [&](const parser::Name &name) { sym = name.symbol; }},
       ompObject.u);
   return sym;
+}
+
+void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
+                                     mlir::Location loc) {
+  using Lastprivate = omp::clause::Lastprivate;
+  auto &maybeMod =
+      std::get<std::optional<Lastprivate::LastprivateModifier>>(lastp.t);
+  if (maybeMod) {
+    assert(*maybeMod == Lastprivate::LastprivateModifier::Conditional &&
+           "Unexpected lastprivate modifier");
+    TODO(loc, "lastprivate clause with CONDITIONAL modifier");
+  }
 }
 
 } // namespace omp

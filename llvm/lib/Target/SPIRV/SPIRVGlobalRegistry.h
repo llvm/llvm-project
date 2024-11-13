@@ -152,8 +152,9 @@ public:
   }
 
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
+                      const SPIRVInstrInfo *TII,
                       MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, MMI);
+    DT.buildDepsGraph(Graph, TII, MMI);
   }
 
   void setBound(unsigned V) { Bound = V; }
@@ -352,6 +353,9 @@ public:
   SPIRVType *getSPIRVTypeForVReg(Register VReg,
                                  const MachineFunction *MF = nullptr) const;
 
+  // Return the result type of the instruction defining the register.
+  SPIRVType *getResultType(Register VReg);
+
   // Whether the given VReg has a SPIR-V type mapped to it yet.
   bool hasSPIRVTypeForVReg(Register VReg) const {
     return getSPIRVTypeForVReg(VReg) != nullptr;
@@ -387,6 +391,12 @@ public:
   unsigned getScalarOrVectorComponentCount(Register VReg) const;
   unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
 
+  // Return the component type in a vector if the argument is associated with
+  // a vector type. Returns the argument itself for other types, and nullptr
+  // for a missing type.
+  SPIRVType *getScalarOrVectorComponentType(Register VReg) const;
+  SPIRVType *getScalarOrVectorComponentType(SPIRVType *Type) const;
+
   // For vectors or scalars of booleans, integers and floats, return the scalar
   // type's bitwidth. Otherwise calls llvm_unreachable().
   unsigned getScalarOrVectorBitWidth(const SPIRVType *Type) const;
@@ -405,6 +415,8 @@ public:
 
   // Gets the storage class of the pointer type assigned to this vreg.
   SPIRV::StorageClass::StorageClass getPointerStorageClass(Register VReg) const;
+  SPIRV::StorageClass::StorageClass
+  getPointerStorageClass(const SPIRVType *Type) const;
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }
@@ -516,6 +528,9 @@ public:
                                SPIRV::LinkageType::LinkageType LinkageType,
                                MachineIRBuilder &MIRBuilder,
                                bool IsInstSelector);
+  Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
+                                                uint32_t Set, uint32_t Binding,
+                                                MachineIRBuilder &MIRBuilder);
 
   // Convenient helpers for getting types with check for duplicates.
   SPIRVType *getOrCreateSPIRVIntegerType(unsigned BitWidth,

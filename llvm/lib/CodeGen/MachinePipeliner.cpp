@@ -1415,14 +1415,12 @@ private:
         auto Reg = Use.RegUnit;
         if (!TargetRegs.contains(Reg))
           continue;
-        auto Ite = LastUseMI.find(Reg);
-        if (Ite == LastUseMI.end()) {
-          LastUseMI[Reg] = MI;
-        } else {
+        auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
+        if (!Inserted) {
           MachineInstr *Orig = Ite->second;
           MachineInstr *New = MI;
           if (InstrScore(Orig) < InstrScore(New))
-            LastUseMI[Reg] = New;
+            Ite->second = New;
         }
       }
     }

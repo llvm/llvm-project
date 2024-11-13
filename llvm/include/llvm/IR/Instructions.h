@@ -48,6 +48,7 @@ class APInt;
 class BasicBlock;
 class ConstantInt;
 class DataLayout;
+struct KnownBits;
 class StringRef;
 class Type;
 class Value;
@@ -1117,7 +1118,7 @@ public:
   /// the base GEP pointer.
   bool accumulateConstantOffset(const DataLayout &DL, APInt &Offset) const;
   bool collectOffset(const DataLayout &DL, unsigned BitWidth,
-                     MapVector<Value *, APInt> &VariableOffsets,
+                     SmallMapVector<Value *, APInt, 4> &VariableOffsets,
                      APInt &ConstantOffset) const;
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1164,6 +1165,8 @@ class ICmpInst: public CmpInst {
             getOperand(0)->getType()->isPtrOrPtrVectorTy()) &&
            "Invalid operand types for ICmp instruction");
   }
+
+  enum { SameSign = (1 << 0) };
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1223,6 +1226,15 @@ public:
   /// This is a static version that you can use without an instruction.
   /// Return the unsigned version of the predicate.
   static Predicate getUnsignedPredicate(Predicate pred);
+
+  void setSameSign(bool B = true) {
+    SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
+  }
+
+  /// An icmp instruction, which can be marked as "samesign", indicating that
+  /// the two operands have the same sign. This means that we can convert
+  /// "slt" to "ult" and vice versa, which enables more optimizations.
+  bool hasSameSign() const { return SubclassOptionalData & SameSign; }
 
   /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
@@ -1293,6 +1305,11 @@ public:
   /// Return result of `LHS Pred RHS` comparison.
   static bool compare(const APInt &LHS, const APInt &RHS,
                       ICmpInst::Predicate Pred);
+
+  /// Return result of `LHS Pred RHS`, if it can be determined from the
+  /// KnownBits. Otherwise return nullopt.
+  static std::optional<bool> compare(const KnownBits &LHS, const KnownBits &RHS,
+                                     ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -4947,6 +4964,16 @@ inline Align getLoadStoreAlignment(const Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getAlign();
   return cast<StoreInst>(I)->getAlign();
+}
+
+/// A helper function that set the alignment of load or store instruction.
+inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    LI->setAlignment(NewAlign);
+  else
+    cast<StoreInst>(I)->setAlignment(NewAlign);
 }
 
 /// A helper function that returns the address space of the pointer operand of

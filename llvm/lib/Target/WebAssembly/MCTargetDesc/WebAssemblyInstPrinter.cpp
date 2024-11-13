@@ -38,8 +38,7 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
                                                const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
-void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
-                                          MCRegister Reg) const {
+void WebAssemblyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   assert(Reg.id() != WebAssembly::UnusedReg);
   // Note that there's an implicit local.get/local.set here!
   OS << "$" << Reg.id();
@@ -58,7 +57,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     // operand isn't a symbol, then we have an MVP compilation unit, and the
     // table shouldn't appear in the output.
     OS << "\t";
-    OS << getMnemonic(MI).first;
+    OS << getMnemonic(*MI).first;
     OS << " ";
 
     assert(MI->getNumOperands() == 2);

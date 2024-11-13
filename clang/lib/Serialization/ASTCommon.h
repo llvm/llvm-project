@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Serialization/ASTBitCodes.h"
 
 namespace clang {
@@ -99,6 +100,8 @@ inline bool isPartOfPerModuleInitializer(const Decl *D) {
     return !isTemplateInstantiation(VD->getTemplateSpecializationKind());
   return false;
 }
+
+void updateModuleTimestamp(StringRef ModuleFilename);
 
 } // namespace serialization
 

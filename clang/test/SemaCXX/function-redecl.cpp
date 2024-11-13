@@ -61,7 +61,7 @@ void B::Notypocorrection(int) { // expected-error {{out-of-line definition of 'N
 }
 
 struct X { int f(); };
-struct Y : public X {};
+struct Y : public X {}; // expected-note {{defined here}}
 int Y::f() { return 3; } // expected-error {{out-of-line definition of 'f' does not match any declaration in 'Y'}}
 
 namespace test1 {
@@ -70,7 +70,7 @@ struct Foo {
 };
 }
 
-class Bar {
+class Bar { // expected-note {{defined here}}
   void f(test1::Foo::Inner foo) const; // expected-note {{member declaration does not match because it is const qualified}}
 };
 
@@ -80,7 +80,8 @@ void Bar::f(Foo::Inner foo) { // expected-error {{out-of-line definition of 'f' 
   (void)foo;
 }
 
-class Crash {
+class Crash { // expected-note {{defined here}}
+              // expected-note@-1 {{defined here}}
  public:
   void GetCart(int count) const;
 };
@@ -89,7 +90,8 @@ void Crash::cart(int count) const {} // expected-error {{out-of-line definition 
 // ...while this one crashed clang
 void Crash::chart(int count) const {} // expected-error {{out-of-line definition of 'chart' does not match any declaration in 'Crash'}}
 
-class TestConst {
+class TestConst { // expected-note {{defined here}}
+                  // expected-note@-1 {{defined here}}
  public:
   int getit() const; // expected-note {{member declaration does not match because it is const qualified}}
   void setit(int); // expected-note {{member declaration does not match because it is not const qualified}}
@@ -102,7 +104,7 @@ int TestConst::getit() { // expected-error {{out-of-line definition of 'getit' d
 void TestConst::setit(int) const { // expected-error {{out-of-line definition of 'setit' does not match any declaration in 'TestConst'}}
 }
 
-struct J { int typo() const; };
+struct J { int typo() const; }; // expected-note {{defined here}}
 int J::typo_() { return 3; } // expected-error {{out-of-line definition of 'typo_' does not match any declaration in 'J'}}
 
 // Ensure we correct the redecl of Foo::isGood to Bar::Foo::isGood and not
@@ -126,7 +128,7 @@ bool Foo::isGood() { // expected-error {{out-of-line definition of 'isGood' does
 void Foo::beEvil() {} // expected-error {{out-of-line definition of 'beEvil' does not match any declaration in namespace 'redecl_typo::Foo'; did you mean 'BeEvil'?}}
 }
 
-struct CVQualFun {
+struct CVQualFun { // expected-note {{defined here}}
   void func(int a, int &b); // expected-note {{type of 2nd parameter of member declaration does not match definition ('int &' vs 'int')}}
 };
 

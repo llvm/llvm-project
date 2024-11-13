@@ -376,6 +376,7 @@ class LLVM_ABI MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -467,7 +468,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
@@ -867,6 +867,10 @@ public:
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
 
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
+
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
   void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
@@ -1194,6 +1198,9 @@ public:
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
 
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }

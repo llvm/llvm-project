@@ -290,7 +290,7 @@ protected:
                                              tagged_range->GetByteSize(), tags);
 
     if (status.Fail()) {
-      result.SetError(status);
+      result.SetError(std::move(status));
       return;
     }
 

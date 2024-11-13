@@ -96,3 +96,51 @@ body:             |
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit-def $x0
 ...
+---
+name:            mul_to_shl_16_nuw_nsw
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: mul_to_shl_16_nuw_nsw
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = nuw nsw G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit-def $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = G_CONSTANT i64 16
+    %2:_(s64) = nuw nsw G_MUL %0, %1(s64)
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit-def $x0
+...
+---
+name:            mul_to_shl_int_min_nuw_nsw
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: mul_to_shl_int_min_nuw_nsw
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = nuw G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit-def $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = G_CONSTANT i64 -9223372036854775808
+    %2:_(s64) = nuw nsw G_MUL %0, %1(s64)
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit-def $x0
+...

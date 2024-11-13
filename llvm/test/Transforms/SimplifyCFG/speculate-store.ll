@@ -201,11 +201,8 @@ define i64 @load_before_store_noescape_byval(ptr byval([2 x i32]) %a, i64 %i, i3
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[V2]]
 ;
@@ -235,11 +232,8 @@ define i64 @load_before_store_noescape_malloc(i64 %i, i32 %b)  {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[V2]]
 ;
@@ -267,11 +261,8 @@ define i64 @load_before_store_noescape_writable(ptr noalias writable dereference
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[V2]]
 ;

@@ -38,7 +38,6 @@
 #include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
 #include "Common/InfoByHwMode.h"
-#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -314,7 +313,7 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
 
 class GlobalISelEmitter final : public GlobalISelMatchTableExecutorEmitter {
 public:
-  explicit GlobalISelEmitter(RecordKeeper &RK);
+  explicit GlobalISelEmitter(const RecordKeeper &RK);
 
   void emitAdditionalImpl(raw_ostream &OS) override;
 
@@ -335,18 +334,18 @@ public:
 private:
   std::string ClassName;
 
-  RecordKeeper &RK;
+  const RecordKeeper &RK;
   const CodeGenDAGPatterns CGP;
   const CodeGenTarget &Target;
   CodeGenRegBank &CGRegs;
 
-  std::vector<Record *> AllPatFrags;
+  ArrayRef<const Record *> AllPatFrags;
 
   /// Keep track of the equivalence between SDNodes and Instruction by mapping
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
   /// check for attributes on the relation such as CheckMMOIsNonAtomic.
   /// This is defined using 'GINodeEquiv' in the target description.
-  DenseMap<const Record *, Record *> NodeEquivs;
+  DenseMap<const Record *, const Record *> NodeEquivs;
 
   /// Keep track of the equivalence between ComplexPattern's and
   /// GIComplexOperandMatcher. Map entries are specified by subclassing
@@ -379,8 +378,8 @@ private:
   void gatherTypeIDValues();
   void gatherNodeEquivs();
 
-  Record *findNodeEquiv(const Record *N) const;
-  const CodeGenInstruction *getEquivNode(Record &Equiv,
+  const Record *findNodeEquiv(const Record *N) const;
+  const CodeGenInstruction *getEquivNode(const Record &Equiv,
                                          const TreePatternNode &N) const;
 
   Error importRulePredicates(RuleMatcher &M,
@@ -461,6 +460,9 @@ private:
   std::optional<const CodeGenRegisterClass *>
   inferRegClassFromPattern(const TreePatternNode &N);
 
+  Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
+                          unsigned InsnID, const TreePatternNode &Dst);
+
   /// Return the size of the MemoryVT in this predicate, if possible.
   std::optional<unsigned>
   getMemSizeBitsFromPredicate(const TreePredicateFn &Predicate);
@@ -472,7 +474,7 @@ private:
                        InstructionMatcher &InsnMatcher, bool &HasAddedMatcher);
 };
 
-StringRef getPatFragPredicateEnumName(Record *R) { return R->getName(); }
+StringRef getPatFragPredicateEnumName(const Record *R) { return R->getName(); }
 
 void GlobalISelEmitter::gatherOpcodeValues() {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
@@ -484,32 +486,35 @@ void GlobalISelEmitter::gatherTypeIDValues() {
 
 void GlobalISelEmitter::gatherNodeEquivs() {
   assert(NodeEquivs.empty());
-  for (Record *Equiv : RK.getAllDerivedDefinitions("GINodeEquiv"))
+  for (const Record *Equiv : RK.getAllDerivedDefinitions("GINodeEquiv"))
     NodeEquivs[Equiv->getValueAsDef("Node")] = Equiv;
 
   assert(ComplexPatternEquivs.empty());
-  for (Record *Equiv : RK.getAllDerivedDefinitions("GIComplexPatternEquiv")) {
-    Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
+  for (const Record *Equiv :
+       RK.getAllDerivedDefinitions("GIComplexPatternEquiv")) {
+    const Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
     if (!SelDAGEquiv)
       continue;
     ComplexPatternEquivs[SelDAGEquiv] = Equiv;
   }
 
   assert(SDNodeXFormEquivs.empty());
-  for (Record *Equiv : RK.getAllDerivedDefinitions("GISDNodeXFormEquiv")) {
-    Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
+  for (const Record *Equiv :
+       RK.getAllDerivedDefinitions("GISDNodeXFormEquiv")) {
+    const Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
     if (!SelDAGEquiv)
       continue;
     SDNodeXFormEquivs[SelDAGEquiv] = Equiv;
   }
 }
 
-Record *GlobalISelEmitter::findNodeEquiv(const Record *N) const {
+const Record *GlobalISelEmitter::findNodeEquiv(const Record *N) const {
   return NodeEquivs.lookup(N);
 }
 
 const CodeGenInstruction *
-GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode &N) const {
+GlobalISelEmitter::getEquivNode(const Record &Equiv,
+                                const TreePatternNode &N) const {
   if (N.getNumChildren() >= 1) {
     // setcc operation maps to two different G_* instructions based on the type.
     if (!Equiv.isValueUnset("IfFloatingPoint") &&
@@ -536,7 +541,7 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode &N) const {
   return &Target.getInstruction(Equiv.getValueAsDef("I"));
 }
 
-GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
+GlobalISelEmitter::GlobalISelEmitter(const RecordKeeper &RK)
     : GlobalISelMatchTableExecutorEmitter(), RK(RK), CGP(RK),
       Target(CGP.getTargetInfo()), CGRegs(Target.getRegBank()) {
   ClassName = Target.getName().str() + "InstructionSelector";
@@ -576,8 +581,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
       SmallVector<unsigned, 4> ParsedAddrSpaces;
 
-      for (Init *Val : AddrSpaces->getValues()) {
-        IntInit *IntVal = dyn_cast<IntInit>(Val);
+      for (const Init *Val : AddrSpaces->getValues()) {
+        const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           return failedImport("Address space is not an integer");
         ParsedAddrSpaces.push_back(IntVal->getValue());
@@ -721,7 +726,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     const TreePatternNode &Src, unsigned &TempOpIdx) {
   const auto SavedFlags = Rule.setGISelFlags(Src.getGISelFlagsRecord());
 
-  Record *SrcGIEquivOrNull = nullptr;
+  const Record *SrcGIEquivOrNull = nullptr;
   const CodeGenInstruction *SrcGIOrNull = nullptr;
 
   // Start with the defined operands (i.e., the results of the root operator).
@@ -942,7 +947,7 @@ Error GlobalISelEmitter::importComplexPatternOperandMatcher(
 // Get the name to use for a pattern operand. For an anonymous physical register
 // input, this should use the register name.
 static StringRef getSrcChildName(const TreePatternNode &SrcChild,
-                                 Record *&PhysReg) {
+                                 const Record *&PhysReg) {
   StringRef SrcChildName = SrcChild.getName();
   if (SrcChildName.empty() && SrcChild.isLeaf()) {
     if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild.getLeafValue())) {
@@ -962,7 +967,7 @@ Error GlobalISelEmitter::importChildMatcher(
     const TreePatternNode &SrcChild, bool OperandIsAPointer,
     bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
 
-  Record *PhysReg = nullptr;
+  const Record *PhysReg = nullptr;
   std::string SrcChildName = std::string(getSrcChildName(SrcChild, PhysReg));
   if (!SrcChild.isLeaf() &&
       SrcChild.getOperator()->isSubClassOf("ComplexPattern")) {
@@ -1009,6 +1014,15 @@ Error GlobalISelEmitter::importChildMatcher(
 
         return Error::success();
       }
+    }
+  } else if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild.getLeafValue())) {
+    auto *ChildRec = ChildDefInit->getDef();
+    if (ChildRec->isSubClassOf("ValueType") && !SrcChild.hasName()) {
+      // An unnamed ValueType as in (sext_inreg GPR:$foo, i8). GISel represents
+      // this as a literal constant with the scalar size.
+      MVT::SimpleValueType VT = llvm::getValueType(ChildRec);
+      OM.addPredicate<LiteralIntOperandMatcher>(MVT(VT).getScalarSizeInBits());
+      return Error::success();
     }
   }
 
@@ -1196,7 +1210,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       auto &Child = DstChild.getChild(0);
       auto I = SDNodeXFormEquivs.find(DstChild.getOperator());
       if (I != SDNodeXFormEquivs.end()) {
-        Record *XFormOpc = DstChild.getOperator()->getValueAsDef("Opcode");
+        const Record *XFormOpc =
+            DstChild.getOperator()->getValueAsDef("Opcode");
         if (XFormOpc->getName() == "timm") {
           // If this is a TargetConstant, there won't be a corresponding
           // instruction to transform. Instead, this will refer directly to an
@@ -1406,103 +1421,10 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
-  // We need to make sure that when we import an INSERT_SUBREG as a
-  // subinstruction that it ends up being constrained to the correct super
-  // register and subregister classes.
-  auto OpName = Target.getInstruction(Dst.getOperator()).TheDef->getName();
-  if (OpName == "INSERT_SUBREG") {
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from INSERT_SUBREG operand #1");
-    std::optional<const CodeGenRegisterClass *> SuperClass =
-        inferSuperRegisterClassForNode(Dst.getExtType(0), Dst.getChild(0),
-                                       Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for INSERT_SUBREG operand #0");
-    // The destination and the super register source of an INSERT_SUBREG must
-    // be the same register class.
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 1, **SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 2, **SubClass);
-    return InsertPtOrError.get();
-  }
+  if (auto Error =
+          constrainOperands(InsertPt, M, DstMIBuilder.getInsnID(), Dst))
+    return std::move(Error);
 
-  if (OpName == "EXTRACT_SUBREG") {
-    // EXTRACT_SUBREG selects into a subregister COPY but unlike most
-    // instructions, the result register class is controlled by the
-    // subregisters of the operand. As a result, we must constrain the result
-    // class rather than check that it's already the right one.
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class from EXTRACT_SUBREG operand #0");
-
-    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
-    if (!SubIdx)
-      return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
-
-    const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-    assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, *SrcRCDstRCPair->second);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 1, *SrcRCDstRCPair->first);
-
-    // We're done with this pattern!  It's eligible for GISel emission; return
-    // it.
-    return InsertPtOrError.get();
-  }
-
-  // Similar to INSERT_SUBREG, we also have to handle SUBREG_TO_REG as a
-  // subinstruction.
-  if (OpName == "SUBREG_TO_REG") {
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from SUBREG_TO_REG child #1");
-    auto SuperClass =
-        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for SUBREG_TO_REG operand #0");
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 2, **SubClass);
-    return InsertPtOrError.get();
-  }
-
-  if (OpName == "REG_SEQUENCE") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-    M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
-
-    unsigned Num = Dst.getNumChildren();
-    for (unsigned I = 1; I != Num; I += 2) {
-      const TreePatternNode &SubRegChild = Dst.getChild(I + 1);
-
-      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
-      if (!SubIdx)
-        return failedImport("REG_SEQUENCE child is not a subreg index");
-
-      const auto SrcRCDstRCPair =
-          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-      assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-      M.insertAction<ConstrainOperandToRegClassAction>(
-          InsertPt, DstMIBuilder.getInsnID(), I, *SrcRCDstRCPair->second);
-    }
-
-    return InsertPtOrError.get();
-  }
-
-  M.insertAction<ConstrainOperandsToDefinitionAction>(InsertPt,
-                                                      DstMIBuilder.getInsnID());
   return InsertPtOrError.get();
 }
 
@@ -1791,6 +1713,116 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
   return Error::success();
 }
 
+Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
+                                           RuleMatcher &M, unsigned InsnID,
+                                           const TreePatternNode &Dst) {
+  const Record *DstOp = Dst.getOperator();
+  const CodeGenInstruction &DstI = Target.getInstruction(DstOp);
+  StringRef DstIName = DstI.TheDef->getName();
+
+  if (DstIName == "COPY_TO_REGCLASS") {
+    // COPY_TO_REGCLASS does not provide operand constraints itself but the
+    // result is constrained to the class given by the second child.
+    const Record *DstIOpRec =
+        getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
+
+    if (DstIOpRec == nullptr)
+      return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
+
+    M.insertAction<ConstrainOperandToRegClassAction>(
+        InsertPt, InsnID, 0, Target.getRegisterClass(DstIOpRec));
+  } else if (DstIName == "EXTRACT_SUBREG") {
+    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
+    if (!SuperClass)
+      return failedImport(
+          "Cannot infer register class from EXTRACT_SUBREG operand #0");
+
+    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
+    if (!SubIdx)
+      return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
+
+    // It would be nice to leave this constraint implicit but we're required
+    // to pick a register class so constrain the result to a register class
+    // that can hold the correct MVT.
+    //
+    // FIXME: This may introduce an extra copy if the chosen class doesn't
+    //        actually contain the subregisters.
+    const auto SrcRCDstRCPair =
+        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+    if (!SrcRCDstRCPair) {
+      return failedImport("subreg index is incompatible "
+                          "with inferred reg class");
+    }
+
+    assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     *SrcRCDstRCPair->second);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
+                                                     *SrcRCDstRCPair->first);
+  } else if (DstIName == "INSERT_SUBREG") {
+    // We need to constrain the destination, a super regsister source, and a
+    // subregister source.
+    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
+    if (!SubClass)
+      return failedImport(
+          "Cannot infer register class from INSERT_SUBREG operand #1");
+    auto SuperClass = inferSuperRegisterClassForNode(
+        Dst.getExtType(0), Dst.getChild(0), Dst.getChild(2));
+    if (!SuperClass)
+      return failedImport(
+          "Cannot infer register class for INSERT_SUBREG operand #0");
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     **SuperClass);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
+                                                     **SuperClass);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
+                                                     **SubClass);
+  } else if (DstIName == "SUBREG_TO_REG") {
+    // We need to constrain the destination and subregister source.
+    // Attempt to infer the subregister source from the first child. If it has
+    // an explicitly given register class, we'll use that. Otherwise, we will
+    // fail.
+    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
+    if (!SubClass)
+      return failedImport(
+          "Cannot infer register class from SUBREG_TO_REG child #1");
+    // We don't have a child to look at that might have a super register node.
+    auto SuperClass =
+        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
+    if (!SuperClass)
+      return failedImport(
+          "Cannot infer register class for SUBREG_TO_REG operand #0");
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     **SuperClass);
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
+                                                     **SubClass);
+  } else if (DstIName == "REG_SEQUENCE") {
+    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
+
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
+                                                     **SuperClass);
+
+    unsigned Num = Dst.getNumChildren();
+    for (unsigned I = 1; I != Num; I += 2) {
+      const TreePatternNode &SubRegChild = Dst.getChild(I + 1);
+
+      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
+      if (!SubIdx)
+        return failedImport("REG_SEQUENCE child is not a subreg index");
+
+      const auto SrcRCDstRCPair =
+          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+
+      M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, I,
+                                                       *SrcRCDstRCPair->second);
+    }
+  } else {
+    M.insertAction<ConstrainOperandsToDefinitionAction>(InsertPt, InsnID);
+  }
+
+  return Error::success();
+}
+
 std::optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) {
   assert(Leaf.isLeaf() && "Expected leaf?");
@@ -2019,7 +2051,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   auto &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
 
-  unsigned DstNumDefs = DstI.Operands.NumDefs,
+  // Count both implicit and explicit defs in the dst instruction.
+  // This avoids errors importing patterns that have inherent implicit defs.
+  unsigned DstExpDefs = DstI.Operands.NumDefs,
+           DstNumDefs = DstI.ImplicitDefs.size() + DstExpDefs,
            SrcNumDefs = Src.getExtTypes().size();
   if (DstNumDefs < SrcNumDefs) {
     if (DstNumDefs != 0)
@@ -2041,7 +2076,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // The root of the match also has constraints on the register bank so that it
   // matches the result instruction.
   unsigned OpIdx = 0;
-  unsigned N = std::min(DstNumDefs, SrcNumDefs);
+  unsigned N = std::min(DstExpDefs, SrcNumDefs);
   for (unsigned I = 0; I < N; ++I) {
     const TypeSetByHwMode &VTy = Src.getExtType(I);
 
@@ -2083,9 +2118,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
       MatchedRC = *MaybeRegClass;
-    } else if (MatchedRC.get<const Record *>()->isSubClassOf("RegisterOperand"))
-      MatchedRC = MatchedRC.get<const Record *>()->getValueAsDef("RegClass");
-    else if (!MatchedRC.get<const Record *>()->isSubClassOf("RegisterClass"))
+    } else if (cast<const Record *>(MatchedRC)->isSubClassOf("RegisterOperand"))
+      MatchedRC = cast<const Record *>(MatchedRC)->getValueAsDef("RegClass");
+    else if (!cast<const Record *>(MatchedRC)->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" + to_string(Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
@@ -2095,10 +2130,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     // GIM_CheckIsSameOperand predicates by the defineOperand method.
     OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
-    if (MatchedRC.is<const Record *>())
-      MatchedRC = &Target.getRegisterClass(MatchedRC.get<const Record *>());
+    if (auto *R = dyn_cast<const Record *>(MatchedRC))
+      MatchedRC = &Target.getRegisterClass(R);
     OM.addPredicate<RegisterBankOperandMatcher>(
-        *MatchedRC.get<const CodeGenRegisterClass *>());
+        *cast<const CodeGenRegisterClass *>(MatchedRC));
     ++OpIdx;
   }
 
@@ -2117,106 +2152,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
   // Constrain the registers to classes. This is normally derived from the
   // emitted instruction but a few instructions require special handling.
-  if (DstIName == "COPY_TO_REGCLASS") {
-    // COPY_TO_REGCLASS does not provide operand constraints itself but the
-    // result is constrained to the class given by the second child.
-    const Record *DstIOpRec =
-        getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
-
-    if (DstIOpRec == nullptr)
-      return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
-
-    M.addAction<ConstrainOperandToRegClassAction>(
-        0, 0, Target.getRegisterClass(DstIOpRec));
-  } else if (DstIName == "EXTRACT_SUBREG") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class from EXTRACT_SUBREG operand #0");
-
-    auto SubIdx = inferSubRegIndexForNode(Dst.getChild(1));
-    if (!SubIdx)
-      return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
-
-    // It would be nice to leave this constraint implicit but we're required
-    // to pick a register class so constrain the result to a register class
-    // that can hold the correct MVT.
-    //
-    // FIXME: This may introduce an extra copy if the chosen class doesn't
-    //        actually contain the subregisters.
-    assert(Src.getExtTypes().size() == 1 &&
-           "Expected Src of EXTRACT_SUBREG to have one result type");
-
-    const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-    if (!SrcRCDstRCPair) {
-      return failedImport("subreg index is incompatible "
-                          "with inferred reg class");
-    }
-
-    assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0,
-                                                  *SrcRCDstRCPair->second);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 1, *SrcRCDstRCPair->first);
-  } else if (DstIName == "INSERT_SUBREG") {
-    assert(Src.getExtTypes().size() == 1 &&
-           "Expected Src of INSERT_SUBREG to have one result type");
-    // We need to constrain the destination, a super regsister source, and a
-    // subregister source.
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from INSERT_SUBREG operand #1");
-    auto SuperClass = inferSuperRegisterClassForNode(
-        Src.getExtType(0), Dst.getChild(0), Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for INSERT_SUBREG operand #0");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 1, **SuperClass);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-  } else if (DstIName == "SUBREG_TO_REG") {
-    // We need to constrain the destination and subregister source.
-    assert(Src.getExtTypes().size() == 1 &&
-           "Expected Src of SUBREG_TO_REG to have one result type");
-
-    // Attempt to infer the subregister source from the first child. If it has
-    // an explicitly given register class, we'll use that. Otherwise, we will
-    // fail.
-    auto SubClass = inferRegClassFromPattern(Dst.getChild(1));
-    if (!SubClass)
-      return failedImport(
-          "Cannot infer register class from SUBREG_TO_REG child #1");
-    // We don't have a child to look at that might have a super register node.
-    auto SuperClass =
-        inferSuperRegisterClass(Src.getExtType(0), Dst.getChild(2));
-    if (!SuperClass)
-      return failedImport(
-          "Cannot infer register class for SUBREG_TO_REG operand #0");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
-    M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-  } else if (DstIName == "REG_SEQUENCE") {
-    auto SuperClass = inferRegClassFromPattern(Dst.getChild(0));
-
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
-
-    unsigned Num = Dst.getNumChildren();
-    for (unsigned I = 1; I != Num; I += 2) {
-      TreePatternNode &SubRegChild = Dst.getChild(I + 1);
-
-      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
-      if (!SubIdx)
-        return failedImport("REG_SEQUENCE child is not a subreg index");
-
-      const auto SrcRCDstRCPair =
-          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
-
-      M.addAction<ConstrainOperandToRegClassAction>(0, I,
-                                                    *SrcRCDstRCPair->second);
-    }
-  } else {
-    M.addAction<ConstrainOperandsToDefinitionAction>(0);
-  }
+  if (auto Error =
+          constrainOperands(M.actions_end(), M, DstMIBuilder.getInsnID(), Dst))
+    return std::move(Error);
 
   // Erase the root.
   unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
@@ -2290,65 +2228,65 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
-  std::vector<Record *> MatchedRecords;
+  std::vector<const Record *> MatchedRecords;
   std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [&](Record *R) {
+               std::back_inserter(MatchedRecords), [](const Record *R) {
                  return !R->getValueAsString("GISelPredicateCode").empty();
                });
-  emitMIPredicateFnsImpl<Record *>(
+  emitMIPredicateFnsImpl<const Record *>(
       OS,
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
       "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
       "  const auto &Operands = State.RecordedOperands;\n"
       "  (void)Operands;\n"
       "  (void)MRI;",
-      ArrayRef<Record *>(MatchedRecords), &getPatFragPredicateEnumName,
-      [&](Record *R) { return R->getValueAsString("GISelPredicateCode"); },
+      ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
+      [](const Record *R) { return R->getValueAsString("GISelPredicateCode"); },
       "PatFrag predicates.");
 }
 
 void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
-  std::vector<Record *> MatchedRecords;
+  std::vector<const Record *> MatchedRecords;
   std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [&](Record *R) {
+               std::back_inserter(MatchedRecords), [](const Record *R) {
                  bool Unset;
                  return !R->getValueAsString("ImmediateCode").empty() &&
                         !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
                         !R->getValueAsBit("IsAPInt");
                });
-  emitImmPredicateFnsImpl<Record *>(
-      OS, "I64", "int64_t", ArrayRef<Record *>(MatchedRecords),
+  emitImmPredicateFnsImpl<const Record *>(
+      OS, "I64", "int64_t", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
-      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      [](const Record *R) { return R->getValueAsString("ImmediateCode"); },
       "PatFrag predicates.");
 }
 
 void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
-  std::vector<Record *> MatchedRecords;
+  std::vector<const Record *> MatchedRecords;
   std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [&](Record *R) {
+               std::back_inserter(MatchedRecords), [](const Record *R) {
                  bool Unset;
                  return !R->getValueAsString("ImmediateCode").empty() &&
                         R->getValueAsBitOrUnset("IsAPFloat", Unset);
                });
-  emitImmPredicateFnsImpl<Record *>(
-      OS, "APFloat", "const APFloat &", ArrayRef<Record *>(MatchedRecords),
-      &getPatFragPredicateEnumName,
-      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+  emitImmPredicateFnsImpl<const Record *>(
+      OS, "APFloat", "const APFloat &",
+      ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
+      [](const Record *R) { return R->getValueAsString("ImmediateCode"); },
       "PatFrag predicates.");
 }
 
 void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
-  std::vector<Record *> MatchedRecords;
+  std::vector<const Record *> MatchedRecords;
   std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [&](Record *R) {
+               std::back_inserter(MatchedRecords), [](const Record *R) {
                  return !R->getValueAsString("ImmediateCode").empty() &&
                         R->getValueAsBit("IsAPInt");
                });
-  emitImmPredicateFnsImpl<Record *>(
-      OS, "APInt", "const APInt &", ArrayRef<Record *>(MatchedRecords),
+  emitImmPredicateFnsImpl<const Record *>(
+      OS, "APInt", "const APInt &", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
-      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      [](const Record *R) { return R->getValueAsString("ImmediateCode"); },
       "PatFrag predicates.");
 }
 
@@ -2461,7 +2399,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     return A->getName() < B->getName();
   };
 
-  std::vector<Record *> ComplexPredicates =
+  std::vector<const Record *> ComplexPredicates =
       RK.getAllDerivedDefinitions("GIComplexOperandMatcher");
   llvm::sort(ComplexPredicates, OrderByName);
 

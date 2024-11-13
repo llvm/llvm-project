@@ -587,7 +587,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
     for (auto *MI : Defs) {
-      auto MBB = MI->getParent();
+      auto *MBB = MI->getParent();
       MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB, TII);
       MachineBasicBlock::reverse_iterator B(BoundaryMI);
       // Check if B should actually be a boundary. If not set the previous
@@ -769,7 +769,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   lowerVGPR2SGPRCopies(MF);
   // Postprocessing
   fixSCCCopies(MF);
-  for (auto MI : S2VCopies) {
+  for (auto *MI : S2VCopies) {
     // Check if it is still valid
     if (MI->isCopy()) {
       const TargetRegisterClass *SrcRC, *DstRC;
@@ -778,12 +778,12 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
         tryChangeVGPRtoSGPRinCopy(*MI, TRI, TII);
     }
   }
-  for (auto MI : RegSequences) {
+  for (auto *MI : RegSequences) {
     // Check if it is still valid
     if (MI->isRegSequence())
       foldVGPRCopyIntoRegSequence(*MI, TRI, TII, *MRI);
   }
-  for (auto MI : PHINodes) {
+  for (auto *MI : PHINodes) {
     processPHINode(*MI);
   }
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
@@ -968,7 +968,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
     }
-    for (auto U : Users) {
+    for (auto *U : Users) {
       if (TII->isSALU(*U))
         Info.SChain.insert(U);
       AnalysisWorklist.push_back(U);
@@ -996,7 +996,7 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
   // of the same register.
   SmallSet<std::pair<Register, unsigned>, 4> SrcRegs;
   for (auto J : Info->Siblings) {
-    auto InfoIt = V2SCopies.find(J);
+    auto *InfoIt = V2SCopies.find(J);
     if (InfoIt != V2SCopies.end()) {
       MachineInstr *SiblingCopy = InfoIt->second.Copy;
       if (SiblingCopy->isImplicitDef())
@@ -1031,12 +1031,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
-    auto CurInfoIt = V2SCopies.find(CurID);
+    auto *CurInfoIt = V2SCopies.find(CurID);
     if (CurInfoIt != V2SCopies.end()) {
       V2SCopyInfo C = CurInfoIt->second;
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
-        auto SibInfoIt = V2SCopies.find(S);
+        auto *SibInfoIt = V2SCopies.find(S);
         if (SibInfoIt != V2SCopies.end()) {
           V2SCopyInfo &SI = SibInfoIt->second;
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());

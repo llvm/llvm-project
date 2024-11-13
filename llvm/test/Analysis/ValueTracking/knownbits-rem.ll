@@ -104,11 +104,7 @@ define i8 @srem_low_bits_know2(i8 %xx, i8 %yy) {
 
 define i8 @srem_high_bits_know(i8 %xx, i8 %yy) {
 ; CHECK-LABEL: @srem_high_bits_know(
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], -2
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY:%.*]], -4
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[REM]], -2
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -2
 ;
   %x = or i8 %xx, -2
   %y = and i8 %yy, -4
@@ -119,11 +115,7 @@ define i8 @srem_high_bits_know(i8 %xx, i8 %yy) {
 
 define i8 @srem_high_bits_know2(i8 %xx, i8 %yy) {
 ; CHECK-LABEL: @srem_high_bits_know2(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[XX:%.*]], 13
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], -4
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[REM]], 8
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = and i8 %xx, 13
   %y = or i8 %yy, -4
@@ -134,11 +126,7 @@ define i8 @srem_high_bits_know2(i8 %xx, i8 %yy) {
 
 define i8 @srem_high_bits_know3(i8 %xx, i8 %yy) {
 ; CHECK-LABEL: @srem_high_bits_know3(
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], -13
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY:%.*]], 4
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[REM]], 8
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 8
 ;
   %x = or i8 %xx, -13
   %y = and i8 %yy, 4

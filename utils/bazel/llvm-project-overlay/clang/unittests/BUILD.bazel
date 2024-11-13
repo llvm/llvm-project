@@ -67,6 +67,7 @@ cc_test(
         "//clang:ast",
         "//clang:ast_matchers",
         "//clang:frontend",
+        "//clang:testing",
         "//clang:tooling",
         "//llvm:Support",
         "//llvm:TargetParser",

@@ -2045,8 +2045,7 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AllocOp::verify() {
   auto memRefType = llvm::cast<MemRefType>(getMemref().getType());
 
-  if (static_cast<int64_t>(getDynamicSizes().size()) !=
-      memRefType.getNumDynamicDims())
+  if (getDynamicSizes().size() != memRefType.getNumDynamicDims())
     return emitOpError("dimension operand count does not equal memref "
                        "dynamic dimension count");
 

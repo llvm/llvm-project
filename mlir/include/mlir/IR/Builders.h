@@ -70,6 +70,7 @@ public:
   FloatType getFloat8E4M3FNUZType();
   FloatType getFloat8E4M3B11FNUZType();
   FloatType getFloat8E3M4Type();
+  FloatType getFloat8E8M0FNUType();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();
@@ -224,7 +225,7 @@ public:
   explicit OpBuilder(Region *region, Listener *listener = nullptr)
       : OpBuilder(region->getContext(), listener) {
     if (!region->empty())
-      setInsertionPoint(&region->front(), region->front().begin());
+      setInsertionPointToStart(&region->front());
   }
   explicit OpBuilder(Region &region, Listener *listener = nullptr)
       : OpBuilder(&region, listener) {}

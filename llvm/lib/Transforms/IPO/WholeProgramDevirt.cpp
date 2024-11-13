@@ -88,7 +88,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -167,6 +166,14 @@ static cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
+
+/// If explicitly specified, the devirt module pass will stop transformation
+/// once the total number of devirtualizations reach the cutoff value. Setting
+/// this option to 0 explicitly will do 0 devirtualization.
+static cl::opt<unsigned> WholeProgramDevirtCutoff(
+    "wholeprogramdevirt-cutoff",
+    cl::desc("Max number of devirtualizations for devirt module pass"),
+    cl::init(0));
 
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
@@ -315,6 +322,9 @@ VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
       WasDevirt(false) {}
 
 namespace {
+
+// Tracks the number of devirted calls in the IR transformation.
+static unsigned NumDevirtCalls = 0;
 
 // A slot in a set of virtual tables. The TypeID identifies the set of virtual
 // tables, and the ByteOffset is the offset in bytes from the address point to
@@ -851,12 +861,12 @@ void llvm::updateVCallVisibilityInModule(
 void llvm::updatePublicTypeTestCalls(Module &M,
                                      bool WholeProgramVisibilityEnabledInLTO) {
   Function *PublicTypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
     return;
   if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO)) {
     Function *TypeTestFunc =
-        Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
       auto *NewCI = CallInst::Create(
@@ -1169,10 +1179,16 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (!OptimizedCalls.insert(&VCallSite.CB).second)
         continue;
 
+      // Stop when the number of devirted calls reaches the cutoff.
+      if (WholeProgramDevirtCutoff.getNumOccurrences() > 0 &&
+          NumDevirtCalls >= WholeProgramDevirtCutoff)
+        return;
+
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       NumSingleImpl++;
+      NumDevirtCalls++;
       auto &CB = VCallSite.CB;
       assert(!CB.getCalledFunction() && "devirtualizing direct call?");
       IRBuilder<> Builder(&CB);
@@ -1187,7 +1203,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         Instruction *ThenTerm =
             SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
         Builder.SetInsertPoint(ThenTerm);
-        Function *TrapFn = Intrinsic::getDeclaration(&M, Intrinsic::debugtrap);
+        Function *TrapFn =
+            Intrinsic::getOrInsertDeclaration(&M, Intrinsic::debugtrap);
         auto *CallTrap = Builder.CreateCall(TrapFn);
         CallTrap->setDebugLoc(CB.getDebugLoc());
       }
@@ -1434,8 +1451,8 @@ void DevirtModule::tryICallBranchFunnel(
   }
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "", JT, nullptr);
-  Function *Intr =
-      Intrinsic::getDeclaration(&M, llvm::Intrinsic::icall_branch_funnel, {});
+  Function *Intr = Intrinsic::getOrInsertDeclaration(
+      &M, llvm::Intrinsic::icall_branch_funnel, {});
 
   auto *CI = CallInst::Create(Intr, JTArgs, "", BB);
   CI->setTailCallKind(CallInst::TCK_MustTail);
@@ -2026,7 +2043,8 @@ void DevirtModule::scanTypeTestUsers(
 }
 
 void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
-  Function *TypeTestFunc = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+  Function *TypeTestFunc =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::type_test);
 
   for (Use &U : llvm::make_early_inc_range(TypeCheckedLoadFunc->uses())) {
     auto *CI = dyn_cast<CallInst>(U.getUser());
@@ -2245,12 +2263,13 @@ bool DevirtModule::run() {
     return false;
 
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
-  Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      &M, Intrinsic::type_checked_load_relative);
+  Function *AssumeFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::assume);
 
   // Normally if there are no users of the devirtualization intrinsics in the
   // module, this pass has nothing to do. But if we are exporting, we also need

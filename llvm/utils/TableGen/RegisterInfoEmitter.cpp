@@ -33,6 +33,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 #include <cassert>
@@ -444,7 +445,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
     if (!V || !V->getValue())
       continue;
 
-    DefInit *DI = cast<DefInit>(V->getValue());
+    const DefInit *DI = cast<DefInit>(V->getValue());
     const Record *Alias = DI->getDef();
     const auto &AliasIter = llvm::lower_bound(
         DwarfRegNums, Alias, [](const DwarfRegNumsMapPair &A, const Record *B) {
@@ -1060,10 +1061,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   OS << "  0,\n";
   for (const auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
-    BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
+    const BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
     uint64_t Value = 0;
     for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
-      if (BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
+      if (const BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
         Value |= (uint64_t)B->getValue() << b;
     }
     OS << "  " << Value << ",\n";
@@ -1802,16 +1803,17 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
 }
 
 void RegisterInfoEmitter::run(raw_ostream &OS) {
-  Records.startTimer("Print enums");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Print enums");
   runEnums(OS);
 
-  Records.startTimer("Print MC registers");
+  Timer.startTimer("Print MC registers");
   runMCDesc(OS);
 
-  Records.startTimer("Print header fragment");
+  Timer.startTimer("Print header fragment");
   runTargetHeader(OS);
 
-  Records.startTimer("Print target registers");
+  Timer.startTimer("Print target registers");
   runTargetDesc(OS);
 
   if (RegisterInfoDebug)

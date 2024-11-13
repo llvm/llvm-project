@@ -498,7 +498,9 @@ public:
 
   void addBlockTypeOperand(OperandVector &Operands, SMLoc NameLoc,
                            WebAssembly::BlockType BT) {
-    if (BT != WebAssembly::BlockType::Void) {
+    if (BT == WebAssembly::BlockType::Void) {
+      TC.setLastSig(wasm::WasmSignature{});
+    } else {
       wasm::WasmSignature Sig({static_cast<wasm::ValType>(BT)}, {});
       TC.setLastSig(Sig);
       NestingStack.back().Sig = Sig;
@@ -1002,7 +1004,8 @@ public:
       auto *Signature = Ctx.createWasmSignature();
       if (parseSignature(Signature))
         return ParseStatus::Failure;
-      TC.funcDecl(*Signature);
+      if (CurrentState == FunctionStart)
+        TC.funcDecl(*Signature);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       TOut.emitFunctionType(WasmSym);
@@ -1154,8 +1157,8 @@ public:
           Inst.setOpcode(Opc64);
         }
       }
-      if (!SkipTypeCheck && TC.typeCheck(IDLoc, Inst, Operands))
-        return true;
+      if (!SkipTypeCheck)
+        TC.typeCheck(IDLoc, Inst, Operands);
       Out.emitInstruction(Inst, getSTI());
       if (CurrentState == EndFunction) {
         onEndOfFunction(IDLoc);

@@ -146,12 +146,13 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       }
       // Check if a definition in another namespace exists.
       const auto DeclName = CurDecl->getName();
-      if (!DeclNameToDefinitions.contains(DeclName)) {
+      auto It = DeclNameToDefinitions.find(DeclName);
+      if (It == DeclNameToDefinitions.end()) {
         continue; // No definition in this translation unit, we can skip it.
       }
       // Make a warning for each definition with the same name (in other
       // namespaces).
-      const auto &Definitions = DeclNameToDefinitions[DeclName];
+      const auto &Definitions = It->second;
       for (const auto *Def : Definitions) {
         diag(CurDecl->getLocation(),
              "no definition found for %0, but a definition with "

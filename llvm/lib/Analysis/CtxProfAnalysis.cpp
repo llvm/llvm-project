@@ -184,6 +184,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   // If we made it this far, the Result is valid - which we mark by setting
   // .Profiles.
   Result.Profiles = std::move(*MaybeCtx);
+  Result.initIndex();
   return Result;
 }
 
@@ -265,11 +266,9 @@ CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
 
 template <class ProfilesTy, class ProfTy>
 static void preorderVisit(ProfilesTy &Profiles,
-                          function_ref<void(ProfTy &)> Visitor,
-                          GlobalValue::GUID Match = 0) {
+                          function_ref<void(ProfTy &)> Visitor) {
   std::function<void(ProfTy &)> Traverser = [&](auto &Ctx) {
-    if (!Match || Ctx.guid() == Match)
-      Visitor(Ctx);
+    Visitor(Ctx);
     for (auto &[_, SubCtxSet] : Ctx.callsites())
       for (auto &[__, Subctx] : SubCtxSet)
         Traverser(Subctx);
@@ -278,16 +277,44 @@ static void preorderVisit(ProfilesTy &Profiles,
     Traverser(P);
 }
 
-void PGOContextualProfile::update(Visitor V, const Function *F) {
-  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
+void PGOContextualProfile::initIndex() {
+  // Initialize the head of the index list for each function. We don't need it
+  // after this point.
+  DenseMap<GlobalValue::GUID, PGOCtxProfContext *> InsertionPoints;
+  for (auto &[Guid, FI] : FuncInfo)
+    InsertionPoints[Guid] = &FI.Index;
   preorderVisit<PGOCtxProfContext::CallTargetMapTy, PGOCtxProfContext>(
-      *Profiles, V, G);
+      *Profiles, [&](PGOCtxProfContext &Ctx) {
+        auto InsertIt = InsertionPoints.find(Ctx.guid());
+        if (InsertIt == InsertionPoints.end())
+          return;
+        // Insert at the end of the list. Since we traverse in preorder, it
+        // means that when we iterate the list from the beginning, we'd
+        // encounter the contexts in the order we would have, should we have
+        // performed a full preorder traversal.
+        InsertIt->second->Next = &Ctx;
+        Ctx.Previous = InsertIt->second;
+        InsertIt->second = &Ctx;
+      });
+}
+
+void PGOContextualProfile::update(Visitor V, const Function &F) {
+  assert(isFunctionKnown(F));
+  GlobalValue::GUID G = getDefinedFunctionGUID(F);
+  for (auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
+       Node = Node->Next)
+    V(*reinterpret_cast<PGOCtxProfContext *>(Node));
 }
 
 void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
-  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
-  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
-                const PGOCtxProfContext>(*Profiles, V, G);
+  if (!F)
+    return preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                         const PGOCtxProfContext>(*Profiles, V);
+  assert(isFunctionKnown(*F));
+  GlobalValue::GUID G = getDefinedFunctionGUID(*F);
+  for (const auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
+       Node = Node->Next)
+    V(*reinterpret_cast<const PGOCtxProfContext *>(Node));
 }
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {

@@ -1646,7 +1646,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -2183,6 +2183,7 @@ public:
   void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *D);
+  void VisitOpenACCCombinedConstruct(const OpenACCCombinedConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2384,6 +2385,12 @@ void OMPClauseEnqueue::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
 
 void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
   for (auto E : C->getSizesRefs())
+    Visitor->AddStmt(E);
+}
+
+void OMPClauseEnqueue::VisitOMPPermutationClause(
+    const OMPPermutationClause *C) {
+  for (auto E : C->getArgsRefs())
     Visitor->AddStmt(E);
 }
 
@@ -2839,6 +2846,11 @@ void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
     Visitor.AddStmt(IE);
 }
 
+void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
+  for (Expr *IE : C.getSizeExprs())
+    Visitor.AddStmt(IE);
+}
+
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
 }
@@ -2877,6 +2889,17 @@ void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
   if (C.hasIntExpr())
     Visitor.AddStmt(C.getIntExpr());
 }
+
+void OpenACCClauseEnqueue::VisitWorkerClause(const OpenACCWorkerClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+
+void OpenACCClauseEnqueue::VisitVectorClause(const OpenACCVectorClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+
 void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
   if (const Expr *DevNumExpr = C.getDevNumExpr())
     Visitor.AddStmt(DevNumExpr);
@@ -2893,6 +2916,14 @@ void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
+void OpenACCClauseEnqueue::VisitCollapseClause(const OpenACCCollapseClause &C) {
+  Visitor.AddStmt(C.getLoopCount());
+}
+void OpenACCClauseEnqueue::VisitGangClause(const OpenACCGangClause &C) {
+  for (unsigned I = 0; I < C.getNumExprs(); ++I) {
+    Visitor.AddStmt(C.getExpr(I).second);
+  }
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
@@ -3544,6 +3575,13 @@ void EnqueueVisitor::VisitOpenACCComputeConstruct(
 }
 
 void EnqueueVisitor::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCCombinedConstruct(
+    const OpenACCCombinedConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
@@ -4208,8 +4246,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
-      unsaved_files);
+      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/{}, unsaved_files);
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,
@@ -6300,6 +6337,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCComputeConstruct");
   case CXCursor_OpenACCLoopConstruct:
     return cxstring::createRef("OpenACCLoopConstruct");
+  case CXCursor_OpenACCCombinedConstruct:
+    return cxstring::createRef("OpenACCCombinedConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

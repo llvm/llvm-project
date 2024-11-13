@@ -310,9 +310,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
-  FunctionSP func_sp =
-      std::make_shared<Function>(&comp_unit, pdb_func.getSymIndexId(),
-                                 func_type_uid, mangled, func_type, func_range);
+  FunctionSP func_sp = std::make_shared<Function>(
+      &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
+      AddressRanges{func_range});
 
   comp_unit.AddFunction(func_sp);
 
@@ -1295,12 +1295,11 @@ void SymbolFilePDB::CacheFunctionNames() {
         continue;
 
       if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
-        auto vm_addr = pub_sym_up->getVirtualAddress();
-
         // PDB public symbol has mangled name for its associated function.
-        if (vm_addr && addr_ids.find(vm_addr) != addr_ids.end()) {
-          // Cache mangled name.
-          m_func_full_names.Append(ConstString(name), addr_ids[vm_addr]);
+        if (auto vm_addr = pub_sym_up->getVirtualAddress()) {
+          if (auto it = addr_ids.find(vm_addr); it != addr_ids.end())
+            // Cache mangled name.
+            m_func_full_names.Append(ConstString(name), it->second);
         }
       }
     }

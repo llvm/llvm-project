@@ -88,7 +88,7 @@ def print_btf(filename):
             buf = file.read()
 
     fmt_cache = {}
-    endian_pfx = ""
+    endian_pfx = ">"  # big endian
     off = 0
 
     def unpack(fmt):
@@ -104,9 +104,9 @@ def print_btf(filename):
     # Use magic number at the header start to determine endianness
     (magic,) = unpack("H")
     if magic == 0xEB9F:
-        endian_pfx = "<"
+        endian_pfx = ">"  # big endian
     elif magic == 0x9FEB:
-        endian_pfx = ">"
+        endian_pfx = "<"  # little endian
     else:
         warn(f"Unexpected BTF magic: {magic:02x}")
         return
@@ -290,6 +290,6 @@ def print_btf(filename):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        warn("Usage: {sys.argv[0]} <btf_file>")
+        warn(f"Usage: {sys.argv[0]} <btf_file>")
         sys.exit(1)
     print_btf(sys.argv[1])

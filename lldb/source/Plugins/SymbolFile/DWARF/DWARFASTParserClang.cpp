@@ -2128,14 +2128,10 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   TypeSystemClang::BuildIndirectFields(clang_type);
   TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
 
-  if (type)
-    layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
-  if (layout_info.bit_size == 0)
-    layout_info.bit_size =
-        die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
-  if (layout_info.alignment == 0)
-    layout_info.alignment =
-        die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
+  layout_info.bit_size =
+      die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  layout_info.alignment =
+      die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
 
   clang::CXXRecordDecl *record_decl =
       m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
@@ -2344,12 +2340,9 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   return ConstString(sstr.GetString());
 }
 
-Function *
-DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
-                                            const DWARFDIE &die,
-                                            const AddressRange &func_range) {
-  assert(func_range.GetBaseAddress().IsValid());
-  DWARFRangeList func_ranges;
+Function *DWARFASTParserClang::ParseFunctionFromDWARF(
+    CompileUnit &comp_unit, const DWARFDIE &die, AddressRanges func_ranges) {
+  DWARFRangeList unused_func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
   std::optional<int> decl_file;
@@ -2365,9 +2358,9 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   if (tag != DW_TAG_subprogram)
     return nullptr;
 
-  if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
-                               decl_column, call_file, call_line, call_column,
-                               &frame_base)) {
+  if (die.GetDIENamesAndRanges(name, mangled, unused_func_ranges, decl_file,
+                               decl_line, decl_column, call_file, call_line,
+                               call_column, &frame_base)) {
     Mangled func_name;
     if (mangled)
       func_name.SetValue(ConstString(mangled));
@@ -2399,11 +2392,10 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
     assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
     const user_id_t func_user_id = die.GetID();
-    func_sp =
-        std::make_shared<Function>(&comp_unit,
-                                   func_user_id, // UserID is the DIE offset
-                                   func_user_id, func_name, func_type,
-                                   func_range); // first address range
+    func_sp = std::make_shared<Function>(
+        &comp_unit,
+        func_user_id, // UserID is the DIE offset
+        func_user_id, func_name, func_type, std::move(func_ranges));
 
     if (func_sp.get() != nullptr) {
       if (frame_base.IsValid())

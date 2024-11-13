@@ -267,11 +267,11 @@ void SjLjEHPrepareImpl::lowerIncomingArguments(Function &F) {
 
     Type *Ty = AI.getType();
 
-    // Use 'select i8 true, %arg, undef' to simulate a 'no-op' instruction.
+    // Use 'select i8 true, %arg, poison' to simulate a 'no-op' instruction.
     Value *TrueValue = ConstantInt::getTrue(F.getContext());
-    Value *UndefValue = UndefValue::get(Ty);
+    Value *PoisonValue = PoisonValue::get(Ty);
     Instruction *SI = SelectInst::Create(
-        TrueValue, &AI, UndefValue, AI.getName() + ".tmp", AfterAllocaInsPt);
+        TrueValue, &AI, PoisonValue, AI.getName() + ".tmp", AfterAllocaInsPt);
     AI.replaceAllUsesWith(SI);
 
     // Reset the operand, because it  was clobbered by the RAUW above.
@@ -508,17 +508,19 @@ bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
 
   PointerType *AllocaPtrTy = M.getDataLayout().getAllocaPtrType(M.getContext());
 
-  FrameAddrFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::frameaddress, {AllocaPtrTy});
-  StackAddrFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::stacksave, {AllocaPtrTy});
-  StackRestoreFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::stackrestore, {AllocaPtrTy});
+  FrameAddrFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::frameaddress,
+                                                  {AllocaPtrTy});
+  StackAddrFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::stacksave,
+                                                  {AllocaPtrTy});
+  StackRestoreFn = Intrinsic::getOrInsertDeclaration(
+      &M, Intrinsic::stackrestore, {AllocaPtrTy});
   BuiltinSetupDispatchFn =
-    Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
-  LSDAAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_lsda);
-  CallSiteFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_callsite);
-  FuncCtxFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
+  LSDAAddrFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_lsda);
+  CallSiteFn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_callsite);
+  FuncCtxFn =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
 
   bool Res = setupEntryBlockAndCallSites(F);
   return Res;

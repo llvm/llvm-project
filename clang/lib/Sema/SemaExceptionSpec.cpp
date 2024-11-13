@@ -1406,6 +1406,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Most statements can throw if any substatement can throw.
   case Stmt::OpenACCComputeConstructClass:
   case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
@@ -1592,6 +1593,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   }
 
   case Stmt::SYCLUniqueStableNameExprClass:
+    return CT_Cannot;
+  case Stmt::OpenACCAsteriskSizeExprClass:
     return CT_Cannot;
   case Stmt::NoStmtClass:
     llvm_unreachable("Invalid class for statement");

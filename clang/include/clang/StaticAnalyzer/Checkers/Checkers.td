@@ -118,8 +118,6 @@ def Debug : Package<"debug">, Hidden;
 
 def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 
-def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
-
 def Fuchsia : Package<"fuchsia">;
 def FuchsiaAlpha : Package<"fuchsia">, ParentPackage<Alpha>;
 
@@ -288,11 +286,6 @@ def FixedAddressChecker : Checker<"FixedAddr">,
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,
-  Documentation<HasDocumentation>;
-
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
   Documentation<HasDocumentation>;
 
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
@@ -1003,6 +996,11 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls with both writable and executable access">,
   Documentation<HasDocumentation>;
 
+def PointerSubChecker : Checker<"PointerSub">,
+  HelpText<"Check for pointer subtractions on two pointers pointing to "
+           "different memory chunks">,
+  Documentation<HasDocumentation>;
+
 def PutenvStackArray : Checker<"PutenvStackArray">,
   HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
            "an automatic (stack-allocated) array as the argument.">,
@@ -1703,23 +1701,13 @@ def TaintedAllocChecker: Checker<"TaintedAlloc">,
   Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
+def TaintedDivChecker: Checker<"TaintedDiv">,
+  HelpText<"Check for divisions where the denominator is tainted "
+           "(attacker controlled) and might be 0.">,
+  Dependencies<[TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end "optin.taint"
-
-//===----------------------------------------------------------------------===//
-// NonDeterminism checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = NonDeterminismAlpha in {
-
-def PointerIterationChecker : Checker<"PointerIteration">,
-  HelpText<"Checks for non-determinism caused by iteration of unordered containers of pointers">,
-  Documentation<HasDocumentation>;
-
-def PointerSortingChecker : Checker<"PointerSorting">,
-  HelpText<"Check for non-determinism caused by sorting of pointers">,
-  Documentation<HasDocumentation>;
-
-} // end alpha.nondeterminism
 
 //===----------------------------------------------------------------------===//
 // Fuchsia checkers.
@@ -1772,8 +1760,16 @@ def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,
   Documentation<HasDocumentation>;
 
+def UncheckedCallArgsChecker : Checker<"UncheckedCallArgsChecker">,
+  HelpText<"Check unchecked call arguments.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
+def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
+  HelpText<"Check unchecked local variables.">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

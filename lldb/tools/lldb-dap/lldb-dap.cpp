@@ -7,20 +7,53 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "FifoFiles.h"
+#include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "OutputRedirector.h"
+#include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
+#include "lldb/Host/Config.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Base64.h"
-
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <memory>
 #include <optional>
+#include <set>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <thread>
+#include <vector>
+
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
@@ -40,39 +73,6 @@
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
-
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <fstream>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <set>
-#include <sstream>
-#include <thread>
-#include <vector>
-
-#include "lldb/API/SBStream.h"
-#include "lldb/Host/Config.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Option/Arg.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
-#include "llvm/Option/Option.h"
-#include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
-#include "OutputRedirector.h"
 
 #if defined(_WIN32)
 #ifndef PATH_MAX
@@ -236,7 +236,7 @@ void SendTerminatedEvent() {
   llvm::call_once(g_dap.terminated_event_flag, [&] {
     g_dap.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject());
+    llvm::json::Object event(CreateTerminatedEventObject(g_dap.target));
     g_dap.SendJSON(llvm::json::Value(std::move(event)));
   });
 }
@@ -288,13 +288,13 @@ void SendThreadStoppedEvent() {
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
         g_dap.focus_tid = thread.GetThreadID();
-        g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+        g_dap.SendJSON(CreateThreadStopped(g_dap, thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
           lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
           g_dap.thread_ids.insert(thread.GetThreadID());
           if (ThreadHasStopReason(thread)) {
-            g_dap.SendJSON(CreateThreadStopped(thread, stop_id));
+            g_dap.SendJSON(CreateThreadStopped(g_dap, thread, stop_id));
           }
         }
       }
@@ -525,8 +525,8 @@ void EventThreadFunction() {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
-          auto bp =
-              Breakpoint(lldb::SBBreakpoint::GetBreakpointFromEvent(event));
+          auto bp = Breakpoint(
+              g_dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
           // If the breakpoint was originated from the IDE, it will have the
           // BreakpointBase::GetBreakpointLabel() label attached. Regardless
           // of wether the locations were added or removed, the breakpoint
@@ -610,25 +610,32 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
-  auto sourceMap = arguments.getArray("sourceMap");
-  if (sourceMap) {
-    for (const auto &value : *sourceMap) {
-      auto mapping = value.getAsArray();
+  constexpr llvm::StringRef sourceMapKey = "sourceMap";
+
+  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
+    for (const auto &value : *sourceMapArray) {
+      const auto *mapping = value.getAsArray();
       if (mapping == nullptr || mapping->size() != 2 ||
           (*mapping)[0].kind() != llvm::json::Value::String ||
           (*mapping)[1].kind() != llvm::json::Value::String) {
         g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
         return;
       }
-      auto mapFrom = GetAsString((*mapping)[0]);
-      auto mapTo = GetAsString((*mapping)[1]);
+      const auto mapFrom = GetAsString((*mapping)[0]);
+      const auto mapTo = GetAsString((*mapping)[1]);
       strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
     }
+  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
+    for (const auto &[key, value] : *sourceMapObj) {
+      if (value.kind() == llvm::json::Value::String) {
+        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
+      }
+    }
   } else {
-    if (ObjectContainsKey(arguments, "sourceMap")) {
+    if (ObjectContainsKey(arguments, sourceMapKey)) {
       g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
       return;
     }
@@ -681,7 +688,8 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
   for (int64_t i = start_frame;
        static_cast<int64_t>(stack_frames.size()) < levels; i++) {
     if (i == -1) {
-      stack_frames.emplace_back(CreateExtendedStackFrameLabel(thread));
+      stack_frames.emplace_back(
+          CreateExtendedStackFrameLabel(thread, g_dap.frame_format));
       continue;
     }
 
@@ -692,7 +700,7 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame));
+    stack_frames.emplace_back(CreateStackFrame(frame, g_dap.frame_format));
   }
 
   if (g_dap.display_extended_backtrace && reached_end_of_stack) {
@@ -1395,9 +1403,20 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (!text.empty() &&
-      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
-    text = text.substr(g_dap.command_escape_prefix.size());
+  bool had_escape_prefix =
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
+  ReplMode completion_mode = g_dap.DetectReplMode(frame, text, true);
+
+  // Handle the offset change introduced by stripping out the
+  // `command_escape_prefix`.
+  if (had_escape_prefix) {
+    if (offset < static_cast<int64_t>(g_dap.command_escape_prefix.size())) {
+      body.try_emplace("targets", std::move(targets));
+      response.try_emplace("body", std::move(body));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+    offset -= g_dap.command_escape_prefix.size();
   }
 
   // While the user is typing then we likely have an incomplete input and cannot
@@ -1409,7 +1428,7 @@ void request_completions(const llvm::json::Object &request) {
        std::make_tuple(ReplMode::Variable, expr_prefix + text,
                        offset + expr_prefix.size())}};
   for (const auto &[mode, line, cursor] : exprs) {
-    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+    if (completion_mode != ReplMode::Auto && completion_mode != mode)
       continue;
 
     lldb::SBStringList matches;
@@ -1542,6 +1561,19 @@ void request_completions(const llvm::json::Object &request) {
 //                              client can use this optional information to
 //                              present the variables in a paged UI and fetch
 //                              them in chunks."
+//            },
+//            "valueLocationReference": {
+//              "type": "integer",
+//              "description": "A reference that allows the client to request
+//                              the location where the returned value is
+//                              declared. For example, if a function pointer is
+//                              returned, the adapter may be able to look up the
+//                              function's location. This should be present only
+//                              if the adapter is likely to be able to resolve
+//                              the location.\n\nThis reference shares the same
+//                              lifetime as the `variablesReference`. See
+//                              'Lifetime of Object References' in the
+//              Overview section for details."
 //            }
 //            "memoryReference": {
 //               "type": "string",
@@ -1571,10 +1603,10 @@ void request_evaluate(const llvm::json::Object &request) {
   bool repeat_last_command =
       expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" && (repeat_last_command ||
-                            (!expression.empty() &&
-                             g_dap.DetectExpressionContext(frame, expression) ==
-                                 ExpressionContext::Command))) {
+  if (context == "repl" &&
+      (repeat_last_command ||
+       (!expression.empty() &&
+        g_dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
@@ -1583,8 +1615,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result =
-        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
+    auto result = RunLLDBCommandsVerbatim(g_dap.debugger, llvm::StringRef(),
+                                          {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1625,19 +1657,22 @@ void request_evaluate(const llvm::json::Object &request) {
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
-      VariableDescription desc(value);
+      VariableDescription desc(value, g_dap.enable_auto_variable_summaries);
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
-      if (value.MightHaveChildren()) {
-        auto variableReference = g_dap.variables.InsertVariable(
+      int64_t var_ref = 0;
+      if (value.MightHaveChildren() || ValuePointsToCode(value))
+        var_ref = g_dap.variables.InsertVariable(
             value, /*is_permanent=*/context == "repl");
-        body.try_emplace("variablesReference", variableReference);
-      } else {
+      if (value.MightHaveChildren())
+        body.try_emplace("variablesReference", var_ref);
+      else
         body.try_emplace("variablesReference", (int64_t)0);
-      }
       if (lldb::addr_t addr = value.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
+      if (ValuePointsToCode(value))
+        body.try_emplace("valueLocationReference", var_ref);
     }
   }
   response.try_emplace("body", std::move(body));
@@ -1741,7 +1776,7 @@ void request_modules(const llvm::json::Object &request) {
   llvm::json::Array modules;
   for (size_t i = 0; i < g_dap.target.GetNumModules(); i++) {
     lldb::SBModule module = g_dap.target.GetModuleAtIndex(i);
-    modules.emplace_back(CreateModule(module));
+    modules.emplace_back(CreateModule(g_dap.target, module));
   }
 
   llvm::json::Object body;
@@ -1854,13 +1889,15 @@ void request_initialize(const llvm::json::Object &request) {
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
     cmd.AddCommand(
-        "startDebugging", new StartDebuggingRequestHandler(),
+        "start-debugging", new StartDebuggingRequestHandler(),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
       "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("send-event", new SendEventRequestHandler(),
+                 "Sends an DAP event to the client.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
@@ -2058,9 +2095,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
-  auto envs = GetStrings(arguments, "env");
-  if (!envs.empty())
-    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+  const auto envs = GetEnvironmentFromArguments(*arguments);
+  launch_info.SetEnvironment(envs, true);
 
   auto flags = launch_info.GetLaunchFlags();
 
@@ -2653,10 +2689,10 @@ void request_setBreakpoints(const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  auto source = arguments->getObject("source");
+  const auto *arguments = request.getObject("arguments");
+  const auto *source = arguments->getObject("source");
   const auto path = GetString(source, "path");
-  auto breakpoints = arguments->getArray("breakpoints");
+  const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
 
   // Decode the source breakpoint infos for this "setBreakpoints" request
@@ -2665,28 +2701,19 @@ void request_setBreakpoints(const llvm::json::Object &request) {
   // to an empty array.
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
-      auto bp_obj = bp.getAsObject();
+      const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
-        SourceBreakpoint src_bp(*bp_obj);
-        request_bps[src_bp.line] = src_bp;
-
+        SourceBreakpoint src_bp(g_dap, *bp_obj);
+        request_bps.try_emplace(src_bp.line, src_bp);
+        const auto [iv, inserted] =
+            g_dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
         // We check if this breakpoint already exists to update it
-        auto existing_source_bps = g_dap.source_breakpoints.find(path);
-        if (existing_source_bps != g_dap.source_breakpoints.end()) {
-          const auto &existing_bp =
-              existing_source_bps->second.find(src_bp.line);
-          if (existing_bp != existing_source_bps->second.end()) {
-            existing_bp->second.UpdateBreakpoint(src_bp);
-            AppendBreakpoint(&existing_bp->second, response_breakpoints, path,
-                             src_bp.line);
-            continue;
-          }
-        }
-        // At this point the breakpoint is new
-        g_dap.source_breakpoints[path][src_bp.line] = src_bp;
-        SourceBreakpoint &new_bp = g_dap.source_breakpoints[path][src_bp.line];
-        new_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(&new_bp, response_breakpoints, path, new_bp.line);
+        if (inserted)
+          iv->getSecond().SetBreakpoint(path.data());
+        else
+          iv->getSecond().UpdateBreakpoint(src_bp);
+        AppendBreakpoint(&iv->getSecond(), response_breakpoints, path,
+                         src_bp.line);
       }
     }
   }
@@ -2763,8 +2790,8 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  auto filters = arguments->getArray("filters");
+  const auto *arguments = request.getObject("arguments");
+  const auto *filters = arguments->getArray("filters");
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
   std::set<std::string> unset_filters;
@@ -2773,14 +2800,14 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
 
   for (const auto &value : *filters) {
     const auto filter = GetAsString(value);
-    auto exc_bp = g_dap.GetExceptionBreakpoint(std::string(filter));
+    auto *exc_bp = g_dap.GetExceptionBreakpoint(std::string(filter));
     if (exc_bp) {
       exc_bp->SetBreakpoint();
       unset_filters.erase(std::string(filter));
     }
   }
   for (const auto &filter : unset_filters) {
-    auto exc_bp = g_dap.GetExceptionBreakpoint(filter);
+    auto *exc_bp = g_dap.GetExceptionBreakpoint(filter);
     if (exc_bp)
       exc_bp->ClearBreakpoint();
   }
@@ -2869,51 +2896,38 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
-  auto breakpoints = arguments->getArray("breakpoints");
-  FunctionBreakpointMap request_bps;
+  const auto *arguments = request.getObject("arguments");
+  const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
-  for (const auto &value : *breakpoints) {
-    auto bp_obj = value.getAsObject();
-    if (bp_obj == nullptr)
-      continue;
-    FunctionBreakpoint func_bp(*bp_obj);
-    request_bps[func_bp.functionName] = std::move(func_bp);
-  }
 
-  std::vector<llvm::StringRef> remove_names;
-  // Disable any function breakpoints that aren't in the request_bps.
+  // Disable any function breakpoints that aren't in this request.
   // There is no call to remove function breakpoints other than calling this
   // function with a smaller or empty "breakpoints" list.
-  for (auto &pair : g_dap.function_breakpoints) {
-    auto request_pos = request_bps.find(pair.first());
-    if (request_pos == request_bps.end()) {
-      // This function breakpoint no longer exists delete it from LLDB
-      g_dap.target.BreakpointDelete(pair.second.bp.GetID());
-      remove_names.push_back(pair.first());
-    } else {
-      // Update the existing breakpoint as any setting withing the function
-      // breakpoint might have changed.
-      pair.second.UpdateBreakpoint(request_pos->second);
-      // Remove this breakpoint from the request breakpoints since we have
-      // handled it here and we don't need to set a new breakpoint below.
-      request_bps.erase(request_pos);
-      // Add this breakpoint info to the response
-      AppendBreakpoint(&pair.second, response_breakpoints);
-    }
-  }
-  // Remove any breakpoints that are no longer in our list
-  for (const auto &name : remove_names)
-    g_dap.function_breakpoints.erase(name);
+  const auto name_iter = g_dap.function_breakpoints.keys();
+  llvm::DenseSet<llvm::StringRef> seen(name_iter.begin(), name_iter.end());
+  for (const auto &value : *breakpoints) {
+    const auto *bp_obj = value.getAsObject();
+    if (!bp_obj)
+      continue;
+    FunctionBreakpoint fn_bp(g_dap, *bp_obj);
+    const auto [it, inserted] = g_dap.function_breakpoints.try_emplace(
+        fn_bp.functionName, g_dap, *bp_obj);
+    if (inserted)
+      it->second.SetBreakpoint();
+    else
+      it->second.UpdateBreakpoint(fn_bp);
 
-  // Any breakpoints that are left in "request_bps" are breakpoints that
-  // need to be set.
-  for (auto &pair : request_bps) {
-    // Add this breakpoint info to the response
-    g_dap.function_breakpoints[pair.first()] = std::move(pair.second);
-    FunctionBreakpoint &new_bp = g_dap.function_breakpoints[pair.first()];
-    new_bp.SetBreakpoint();
-    AppendBreakpoint(&new_bp, response_breakpoints);
+    AppendBreakpoint(&it->second, response_breakpoints);
+    seen.erase(fn_bp.functionName);
+  }
+
+  // Remove any breakpoints that are no longer in our list
+  for (const auto &name : seen) {
+    auto fn_bp = g_dap.function_breakpoints.find(name);
+    if (fn_bp == g_dap.function_breakpoints.end())
+      continue;
+    g_dap.target.BreakpointDelete(fn_bp->second.bp.GetID());
+    g_dap.function_breakpoints.erase(name);
   }
 
   llvm::json::Object body;
@@ -3165,10 +3179,8 @@ void request_setDataBreakpoints(const llvm::json::Object &request) {
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
-      if (bp_obj) {
-        Watchpoint wp(*bp_obj);
-        watchpoints.push_back(wp);
-      }
+      if (bp_obj)
+        watchpoints.emplace_back(g_dap, *bp_obj);
     }
   }
   // If two watchpoints start at the same address, the latter overwrite the
@@ -3667,7 +3679,7 @@ void request_threads(const llvm::json::Object &request) {
   llvm::json::Array threads;
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    threads.emplace_back(CreateThread(thread));
+    threads.emplace_back(CreateThread(thread, g_dap.thread_format));
   }
   if (threads.size() == 0) {
     response["success"] = llvm::json::Value(false);
@@ -3752,6 +3764,17 @@ void request_threads(const llvm::json::Object &request) {
 //             "description": "The number of indexed child variables. The client
 //             can use this optional information to present the variables in a
 //             paged UI and fetch them in chunks."
+//           },
+//           "valueLocationReference": {
+//             "type": "integer",
+//             "description": "A reference that allows the client to request the
+//             location where the new value is declared. For example, if the new
+//             value is function pointer, the adapter may be able to look up the
+//             function's location. This should be present only if the adapter
+//             is likely to be able to resolve the location.\n\nThis reference
+//             shares the same lifetime as the `variablesReference`. See
+//             'Lifetime of Object References' in the Overview section for
+//             details."
 //           }
 //         },
 //         "required": [ "value" ]
@@ -3776,7 +3799,6 @@ void request_setVariable(const llvm::json::Object &request) {
   response.try_emplace("success", false);
 
   lldb::SBValue variable;
-  int64_t newVariablesReference = 0;
 
   // The "id" is the unique integer ID that is unique within the enclosing
   // variablesReference. It is optionally added to any "interface Variable"
@@ -3798,7 +3820,7 @@ void request_setVariable(const llvm::json::Object &request) {
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      VariableDescription desc(variable);
+      VariableDescription desc(variable, g_dap.enable_auto_variable_summaries);
       EmplaceSafeString(body, "result", desc.display_value);
       EmplaceSafeString(body, "type", desc.display_type_name);
 
@@ -3806,14 +3828,17 @@ void request_setVariable(const llvm::json::Object &request) {
       // so always insert a new one to get its variablesReference.
       // is_permanent is false because debug console does not support
       // setVariable request.
+      int64_t new_var_ref =
+          g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       if (variable.MightHaveChildren())
-        newVariablesReference =
-            g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
-      body.try_emplace("variablesReference", newVariablesReference);
-
+        body.try_emplace("variablesReference", new_var_ref);
+      else
+        body.try_emplace("variablesReference", 0);
       if (lldb::addr_t addr = variable.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
+      if (ValuePointsToCode(variable))
+        body.try_emplace("valueLocationReference", new_var_ref);
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
@@ -3903,13 +3928,13 @@ void request_variables(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array variables;
-  auto arguments = request.getObject("arguments");
+  const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   const int64_t start = GetSigned(arguments, "start", 0);
   const int64_t count = GetSigned(arguments, "count", 0);
   bool hex = false;
-  auto format = arguments->getObject("format");
+  const auto *format = arguments->getObject("format");
   if (format)
     hex = GetBoolean(format, "hex", false);
 
@@ -3985,7 +4010,8 @@ void request_variables(const llvm::json::Object &request) {
       int64_t var_ref =
           g_dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, hex,
+          variable, var_ref, hex, g_dap.enable_auto_variable_summaries,
+          g_dap.enable_synthetic_child_debugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
@@ -4001,7 +4027,9 @@ void request_variables(const llvm::json::Object &request) {
             g_dap.variables.IsPermanentVariableReference(variablesReference);
         int64_t var_ref = g_dap.variables.InsertVariable(child, is_permanent);
         variables.emplace_back(CreateVariable(
-            child, var_ref, hex, /*is_name_duplicated=*/false, custom_name));
+            child, var_ref, hex, g_dap.enable_auto_variable_summaries,
+            g_dap.enable_synthetic_child_debugging,
+            /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
       int64_t end_idx = start + ((count == 0) ? num_children : count);
@@ -4104,10 +4132,13 @@ void request_variables(const llvm::json::Object &request) {
 void request_locations(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  auto arguments = request.getObject("arguments");
+  auto *arguments = request.getObject("arguments");
 
-  uint64_t reference_id = GetUnsigned(arguments, "locationReference", 0);
-  lldb::SBValue variable = g_dap.variables.GetVariable(reference_id);
+  uint64_t location_id = GetUnsigned(arguments, "locationReference", 0);
+  // We use the lowest bit to distinguish between value location and declaration
+  // location
+  auto [var_ref, is_value_location] = UnpackLocation(location_id);
+  lldb::SBValue variable = g_dap.variables.GetVariable(var_ref);
   if (!variable.IsValid()) {
     response["success"] = false;
     response["message"] = "Invalid variable reference";
@@ -4115,21 +4146,50 @@ void request_locations(const llvm::json::Object &request) {
     return;
   }
 
-  // Get the declaration location
-  lldb::SBDeclaration decl = variable.GetDeclaration();
-  if (!decl.IsValid()) {
-    response["success"] = false;
-    response["message"] = "No declaration location available";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
   llvm::json::Object body;
-  body.try_emplace("source", CreateSource(decl.GetFileSpec()));
-  if (int line = decl.GetLine())
-    body.try_emplace("line", line);
-  if (int column = decl.GetColumn())
-    body.try_emplace("column", column);
+  if (is_value_location) {
+    // Get the value location
+    if (!variable.GetType().IsPointerType() &&
+        !variable.GetType().IsReferenceType()) {
+      response["success"] = false;
+      response["message"] =
+          "Value locations are only available for pointers and references";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    lldb::addr_t addr = variable.GetValueAsAddress();
+    lldb::SBLineEntry line_entry =
+        g_dap.target.ResolveLoadAddress(addr).GetLineEntry();
+
+    if (!line_entry.IsValid()) {
+      response["success"] = false;
+      response["message"] = "Failed to resolve line entry for location";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    body.try_emplace("source", CreateSource(line_entry.GetFileSpec()));
+    if (int line = line_entry.GetLine())
+      body.try_emplace("line", line);
+    if (int column = line_entry.GetColumn())
+      body.try_emplace("column", column);
+  } else {
+    // Get the declaration location
+    lldb::SBDeclaration decl = variable.GetDeclaration();
+    if (!decl.IsValid()) {
+      response["success"] = false;
+      response["message"] = "No declaration location available";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    body.try_emplace("source", CreateSource(decl.GetFileSpec()));
+    if (int line = decl.GetLine())
+      body.try_emplace("line", line);
+    if (int column = decl.GetColumn())
+      body.try_emplace("column", column);
+  }
 
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -4470,7 +4530,7 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; g_dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = Breakpoint(g_dap.target.GetBreakpointAtIndex(i));
+    auto bp = Breakpoint(g_dap, g_dap.target.GetBreakpointAtIndex(i));
     AppendBreakpoint(&bp, response_breakpoints);
   }
   llvm::json::Object body;
@@ -4479,10 +4539,11 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-// "SetInstructionBreakpointsRequest" : {
-//   "allOf" : [
-//     {"$ref" : "#/definitions/Request"}, {
-//       "type" : "object",
+// "SetInstructionBreakpointsRequest": {
+//   "allOf": [
+//     {"$ref": "#/definitions/Request"},
+//     {
+//       "type": "object",
 //       "description" :
 //           "Replaces all existing instruction breakpoints. Typically, "
 //           "instruction breakpoints would be set from a disassembly window. "
@@ -4491,235 +4552,218 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
 //           "(with reason `instruction breakpoint`) is generated.\nClients "
 //           "should only call this request if the corresponding capability "
 //           "`supportsInstructionBreakpoints` is true.",
-//       "properties" : {
-//         "command" : {"type" : "string", "enum" :
-//         ["setInstructionBreakpoints"]}, "arguments" :
-//             {"$ref" : "#/definitions/SetInstructionBreakpointsArguments"}
+//       "properties": {
+//         "command": { "type": "string", "enum": ["setInstructionBreakpoints"]
+//         }, "arguments": {"$ref":
+//         "#/definitions/SetInstructionBreakpointsArguments"}
 //       },
-//       "required" : [ "command", "arguments" ]
+//       "required": [ "command", "arguments" ]
 //     }
 //   ]
 // },
-//                                      "SetInstructionBreakpointsArguments"
-//     : {
-//       "type" : "object",
-//       "description" : "Arguments for `setInstructionBreakpoints` request",
-//       "properties" : {
-//         "breakpoints" : {
-//           "type" : "array",
-//           "items" : {"$ref" : "#/definitions/InstructionBreakpoint"},
-//           "description" : "The instruction references of the breakpoints"
-//         }
-//       },
-//       "required" : ["breakpoints"]
-//     },
-//       "SetInstructionBreakpointsResponse"
-//     : {
-//       "allOf" : [
-//         {"$ref" : "#/definitions/Response"}, {
-//           "type" : "object",
-//           "description" : "Response to `setInstructionBreakpoints` request",
-//           "properties" : {
-//             "body" : {
-//               "type" : "object",
-//               "properties" : {
-//                 "breakpoints" : {
-//                   "type" : "array",
-//                   "items" : {"$ref" : "#/definitions/Breakpoint"},
-//                   "description" :
-//                       "Information about the breakpoints. The array elements
-//                       " "correspond to the elements of the `breakpoints`
-//                       array."
-//                 }
-//               },
-//               "required" : ["breakpoints"]
+// "SetInstructionBreakpointsArguments": {
+//   "type": "object",
+//   "description": "Arguments for `setInstructionBreakpoints` request",
+//   "properties": {
+//     "breakpoints": {
+//       "type": "array",
+//       "items": {"$ref": "#/definitions/InstructionBreakpoint"},
+//       "description": "The instruction references of the breakpoints"
+//     }
+//   },
+//   "required": ["breakpoints"]
+// },
+// "SetInstructionBreakpointsResponse": {
+//   "allOf": [
+//     {"$ref": "#/definitions/Response"},
+//     {
+//       "type": "object",
+//       "description": "Response to `setInstructionBreakpoints` request",
+//       "properties": {
+//         "body": {
+//           "type": "object",
+//           "properties": {
+//             "breakpoints": {
+//               "type": "array",
+//               "items": {"$ref": "#/definitions/Breakpoint"},
+//               "description":
+//                   "Information about the breakpoints. The array elements
+//                   " "correspond to the elements of the `breakpoints`
+//                   array."
 //             }
 //           },
-//           "required" : ["body"]
+//           "required": ["breakpoints"]
 //         }
-//       ]
-//     },
-// "InstructionBreakpoint" : {
-//   "type" : "object",
-//   "description" : "Properties of a breakpoint passed to the "
+//       },
+//       "required": ["body"]
+//     }
+//   ]
+// },
+// "InstructionBreakpoint": {
+//   "type": "object",
+//   "description": "Properties of a breakpoint passed to the "
 //                   "`setInstructionBreakpoints` request",
-//   "properties" : {
-//     "instructionReference" : {
-//       "type" : "string",
+//   "properties": {
+//     "instructionReference": {
+//       "type": "string",
 //       "description" :
 //           "The instruction reference of the breakpoint.\nThis should be a "
 //           "memory or instruction pointer reference from an
 //           `EvaluateResponse`, "
 //           "`Variable`, `StackFrame`, `GotoTarget`, or `Breakpoint`."
 //     },
-//     "offset" : {
-//       "type" : "integer",
-//       "description" : "The offset from the instruction reference in "
+//     "offset": {
+//       "type": "integer",
+//       "description": "The offset from the instruction reference in "
 //                       "bytes.\nThis can be negative."
 //     },
-//     "condition" : {
-//       "type" : "string",
-//       "description" : "An expression for conditional breakpoints.\nIt is only
+//     "condition": {
+//       "type": "string",
+//       "description": "An expression for conditional breakpoints.\nIt is only
 //       "
 //                       "honored by a debug adapter if the corresponding "
 //                       "capability `supportsConditionalBreakpoints` is true."
 //     },
-//     "hitCondition" : {
-//       "type" : "string",
-//       "description" : "An expression that controls how many hits of the "
+//     "hitCondition": {
+//       "type": "string",
+//       "description": "An expression that controls how many hits of the "
 //                       "breakpoint are ignored.\nThe debug adapter is expected
 //                       " "to interpret the expression as needed.\nThe
 //                       attribute " "is only honored by a debug adapter if the
 //                       corresponding " "capability
 //                       `supportsHitConditionalBreakpoints` is true."
 //     },
-//     "mode" : {
-//       "type" : "string",
-//       "description" : "The mode of this breakpoint. If defined, this must be
+//     "mode": {
+//       "type": "string",
+//       "description": "The mode of this breakpoint. If defined, this must be
 //       "
 //                       "one of the `breakpointModes` the debug adapter "
 //                       "advertised in its `Capabilities`."
 //     }
 //   },
-//   "required" : ["instructionReference"]
+//   "required": ["instructionReference"]
 // },
-// "Breakpoint"
-//     : {
-//       "type" : "object",
+// "Breakpoint": {
+//   "type": "object",
+//   "description" :
+//       "Information about a breakpoint created in `setBreakpoints`, "
+//       "`setFunctionBreakpoints`, `setInstructionBreakpoints`, or "
+//       "`setDataBreakpoints` requests.",
+//   "properties": {
+//     "id": {
+//       "type": "integer",
 //       "description" :
-//           "Information about a breakpoint created in `setBreakpoints`, "
-//           "`setFunctionBreakpoints`, `setInstructionBreakpoints`, or "
-//           "`setDataBreakpoints` requests.",
-//       "properties" : {
-//         "id" : {
-//           "type" : "integer",
-//           "description" :
-//               "The identifier for the breakpoint. It is needed if breakpoint
-//               " "events are used to update or remove breakpoints."
-//         },
-//         "verified" : {
-//           "type" : "boolean",
-//           "description" : "If true, the breakpoint could be set (but not "
-//                           "necessarily at the desired location)."
-//         },
-//         "message" : {
-//           "type" : "string",
-//           "description" : "A message about the state of the breakpoint.\nThis
-//           "
-//                           "is shown to the user and can be used to explain
-//                           why " "a breakpoint could not be verified."
-//         },
-//         "source" : {
-//           "$ref" : "#/definitions/Source",
-//           "description" : "The source where the breakpoint is located."
-//         },
-//         "line" : {
-//           "type" : "integer",
-//           "description" :
-//               "The start line of the actual range covered by the breakpoint."
-//         },
-//         "column" : {
-//           "type" : "integer",
-//           "description" :
-//               "Start position of the source range covered by the breakpoint.
-//               " "It is measured in UTF-16 code units and the client
-//               capability "
-//               "`columnsStartAt1` determines whether it is 0- or 1-based."
-//         },
-//         "endLine" : {
-//           "type" : "integer",
-//           "description" :
-//               "The end line of the actual range covered by the breakpoint."
-//         },
-//         "endColumn" : {
-//           "type" : "integer",
-//           "description" :
-//               "End position of the source range covered by the breakpoint. It
-//               " "is measured in UTF-16 code units and the client capability "
-//               "`columnsStartAt1` determines whether it is 0- or 1-based.\nIf
-//               " "no end line is given, then the end column is assumed to be
-//               in " "the start line."
-//         },
-//         "instructionReference" : {
-//           "type" : "string",
-//           "description" : "A memory reference to where the breakpoint is
-//           set."
-//         },
-//         "offset" : {
-//           "type" : "integer",
-//           "description" : "The offset from the instruction reference.\nThis "
-//                           "can be negative."
-//         },
-//         "reason" : {
-//           "type" : "string",
-//           "description" :
-//               "A machine-readable explanation of why a breakpoint may not be
-//               " "verified. If a breakpoint is verified or a specific reason
-//               is " "not known, the adapter should omit this property.
-//               Possible " "values include:\n\n- `pending`: Indicates a
-//               breakpoint might be " "verified in the future, but the adapter
-//               cannot verify it in the " "current state.\n - `failed`:
-//               Indicates a breakpoint was not " "able to be verified, and the
-//               adapter does not believe it can be " "verified without
-//               intervention.",
-//           "enum" : [ "pending", "failed" ]
-//         }
-//       },
-//       "required" : ["verified"]
+//           "The identifier for the breakpoint. It is needed if breakpoint
+//           " "events are used to update or remove breakpoints."
 //     },
-
+//     "verified": {
+//       "type": "boolean",
+//       "description": "If true, the breakpoint could be set (but not "
+//                       "necessarily at the desired location)."
+//     },
+//     "message": {
+//       "type": "string",
+//       "description": "A message about the state of the breakpoint.\nThis
+//       "
+//                       "is shown to the user and can be used to explain
+//                       why " "a breakpoint could not be verified."
+//     },
+//     "source": {
+//       "$ref": "#/definitions/Source",
+//       "description": "The source where the breakpoint is located."
+//     },
+//     "line": {
+//       "type": "integer",
+//       "description" :
+//           "The start line of the actual range covered by the breakpoint."
+//     },
+//     "column": {
+//       "type": "integer",
+//       "description" :
+//           "Start position of the source range covered by the breakpoint.
+//           " "It is measured in UTF-16 code units and the client
+//           capability "
+//           "`columnsStartAt1` determines whether it is 0- or 1-based."
+//     },
+//     "endLine": {
+//       "type": "integer",
+//       "description" :
+//           "The end line of the actual range covered by the breakpoint."
+//     },
+//     "endColumn": {
+//       "type": "integer",
+//       "description" :
+//           "End position of the source range covered by the breakpoint. It
+//           " "is measured in UTF-16 code units and the client capability "
+//           "`columnsStartAt1` determines whether it is 0- or 1-based.\nIf
+//           " "no end line is given, then the end column is assumed to be
+//           in " "the start line."
+//     },
+//     "instructionReference": {
+//       "type": "string",
+//       "description": "A memory reference to where the breakpoint is
+//       set."
+//     },
+//     "offset": {
+//       "type": "integer",
+//       "description": "The offset from the instruction reference.\nThis "
+//                       "can be negative."
+//     },
+//     "reason": {
+//       "type": "string",
+//       "description" :
+//           "A machine-readable explanation of why a breakpoint may not be
+//           " "verified. If a breakpoint is verified or a specific reason
+//           is " "not known, the adapter should omit this property.
+//           Possible " "values include:\n\n- `pending`: Indicates a
+//           breakpoint might be " "verified in the future, but the adapter
+//           cannot verify it in the " "current state.\n - `failed`:
+//           Indicates a breakpoint was not " "able to be verified, and the
+//           adapter does not believe it can be " "verified without
+//           intervention.",
+//       "enum": [ "pending", "failed" ]
+//     }
+//   },
+//   "required": ["verified"]
+// },
 void request_setInstructionBreakpoints(const llvm::json::Object &request) {
   llvm::json::Object response;
   llvm::json::Array response_breakpoints;
   llvm::json::Object body;
   FillResponse(request, response);
 
-  auto arguments = request.getObject("arguments");
-  auto breakpoints = arguments->getArray("breakpoints");
+  const auto *arguments = request.getObject("arguments");
+  const auto *breakpoints = arguments->getArray("breakpoints");
 
-  // It holds active instruction breakpoint list received from DAP.
-  InstructionBreakpointMap request_ibp;
-  if (breakpoints) {
-    for (const auto &bp : *breakpoints) {
-      auto bp_obj = bp.getAsObject();
-      if (bp_obj) {
-        // Read instruction breakpoint request.
-        InstructionBreakpoint inst_bp(*bp_obj);
-        // Store them into map for reference.
-        request_ibp[inst_bp.instructionAddressReference] = std::move(inst_bp);
-      }
-    }
+  // Disable any instruction breakpoints that aren't in this request.
+  // There is no call to remove instruction breakpoints other than calling this
+  // function with a smaller or empty "breakpoints" list.
+  llvm::DenseSet<lldb::addr_t> seen;
+  for (const auto &addr : g_dap.instruction_breakpoints)
+    seen.insert(addr.first);
 
-    // Iterate previous active instruction breakpoint list.
-    for (auto &prev_ibp : g_dap.instruction_breakpoints) {
-      // Find previous instruction breakpoint reference address in newly
-      // received instruction breakpoint list.
-      auto inst_reference = request_ibp.find(prev_ibp.first);
-      // Request for remove and delete the breakpoint, if the prev instruction
-      // breakpoint ID is not available in active instrcation breakpoint list.
-      // Means delete removed breakpoint instance.
-      if (inst_reference == request_ibp.end()) {
-        g_dap.target.BreakpointDelete(prev_ibp.second.id);
-        // Update Prev instruction breakpoint list.
-        g_dap.instruction_breakpoints.erase(prev_ibp.first);
-      } else {
-        // Instead of recreating breakpoint instance, update the breakpoint if
-        // there are any conditional changes.
-        prev_ibp.second.UpdateBreakpoint(inst_reference->second);
-        request_ibp.erase(inst_reference);
-        response_breakpoints.emplace_back(
-            CreateInstructionBreakpoint(&prev_ibp.second));
-      }
-    }
+  for (const auto &bp : *breakpoints) {
+    const auto *bp_obj = bp.getAsObject();
+    if (!bp_obj)
+      continue;
+    // Read instruction breakpoint request.
+    InstructionBreakpoint inst_bp(g_dap, *bp_obj);
+    const auto [iv, inserted] = g_dap.instruction_breakpoints.try_emplace(
+        inst_bp.instructionAddressReference, g_dap, *bp_obj);
+    if (inserted)
+      iv->second.SetBreakpoint();
+    else
+      iv->second.UpdateBreakpoint(inst_bp);
+    AppendBreakpoint(&iv->second, response_breakpoints);
+    seen.erase(inst_bp.instructionAddressReference);
+  }
 
-    for (auto &req_bpi : request_ibp) {
-      // Add this breakpoint info to the response
-      g_dap.instruction_breakpoints[req_bpi.first] = std::move(req_bpi.second);
-      InstructionBreakpoint &new_bp =
-          g_dap.instruction_breakpoints[req_bpi.first];
-      new_bp.SetInstructionBreakpoint();
-      response_breakpoints.emplace_back(CreateInstructionBreakpoint(&new_bp));
-    }
+  for (const auto &addr : seen) {
+    auto inst_bp = g_dap.instruction_breakpoints.find(addr);
+    if (inst_bp == g_dap.instruction_breakpoints.end())
+      continue;
+    g_dap.target.BreakpointDelete(inst_bp->second.bp.GetID());
+    g_dap.instruction_breakpoints.erase(addr);
   }
 
   body.try_emplace("breakpoints", std::move(response_breakpoints));

@@ -102,6 +102,11 @@ public:
   bool isPPC() const { return isPPC_; }
   void set_isPPC(bool isPPC = false);
 
+  bool isOSWindows() const { return isOSWindows_; }
+  void set_isOSWindows(bool isOSWindows = false) {
+    isOSWindows_ = isOSWindows;
+  };
+
   IeeeFeatures &ieeeFeatures() { return ieeeFeatures_; }
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
@@ -111,6 +116,7 @@ private:
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind]{};
   bool isBigEndian_{false};
   bool isPPC_{false};
+  bool isOSWindows_{false};
   bool areSubnormalsFlushedToZero_{false};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};
