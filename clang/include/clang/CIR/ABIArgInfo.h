@@ -252,6 +252,8 @@ public:
   bool isExpand() const { return TheKind == Expand; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
 
+  bool isIgnore() const { return TheKind == Ignore; }
+
   bool isSignExt() const {
     assert(isExtend() && "Invalid kind!");
     return SignExt;

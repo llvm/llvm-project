@@ -25,6 +25,9 @@ bool classifyReturnType(const CIRCXXABI &CXXABI, LowerFunctionInfo &FI,
 
 bool isAggregateTypeForABI(mlir::Type T);
 
+mlir::Value emitRoundPointerUpToAlignment(cir::CIRBaseBuilderTy &builder,
+                                          mlir::Value ptr, unsigned alignment);
+
 /// Pass transparent unions as if they were the type of the first element. Sema
 /// should ensure that all elements of the union have the same "machine type".
 mlir::Type useFirstFieldIfTransparentUnion(mlir::Type Ty);

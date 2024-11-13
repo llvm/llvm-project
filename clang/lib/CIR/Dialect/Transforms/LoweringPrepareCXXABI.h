@@ -28,6 +28,7 @@ class LoweringPrepareCXXABI {
 public:
   static LoweringPrepareCXXABI *createItaniumABI();
   static LoweringPrepareCXXABI *createAArch64ABI(cir::AArch64ABIKind k);
+  static LoweringPrepareCXXABI *createX86ABI(bool is64Bit);
 
   virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder, cir::VAArgOp op,
                                  const cir::CIRDataLayout &datalayout) = 0;

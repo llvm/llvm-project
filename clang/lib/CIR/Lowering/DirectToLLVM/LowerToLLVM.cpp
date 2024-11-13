@@ -4306,6 +4306,37 @@ public:
   }
 };
 
+class CIRPtrMaskOpLowering : public mlir::OpConversionPattern<cir::PtrMaskOp> {
+public:
+  using OpConversionPattern<cir::PtrMaskOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::PtrMaskOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // FIXME: We'd better to lower to mlir::LLVM::PtrMaskOp if it exists.
+    // So we have to make it manually here by following:
+    // https://llvm.org/docs/LangRef.html#llvm-ptrmask-intrinsic
+    auto loc = op.getLoc();
+    auto mask = op.getMask();
+
+    auto moduleOp = op->getParentOfType<mlir::ModuleOp>();
+    mlir::DataLayout layout(moduleOp);
+    auto iPtrIdxValue = layout.getTypeSizeInBits(mask.getType());
+    auto iPtrIdx = mlir::IntegerType::get(moduleOp->getContext(), iPtrIdxValue);
+
+    auto intPtr = rewriter.create<mlir::LLVM::PtrToIntOp>(
+        loc, iPtrIdx, adaptor.getPtr()); // this may truncate
+    mlir::Value masked =
+        rewriter.create<mlir::LLVM::AndOp>(loc, intPtr, adaptor.getMask());
+    mlir::Value diff = rewriter.create<mlir::LLVM::SubOp>(loc, intPtr, masked);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, getTypeConverter()->convertType(op.getType()),
+        mlir::IntegerType::get(moduleOp->getContext(), 8), adaptor.getPtr(),
+        diff);
+    return mlir::success();
+  }
+};
+
 class CIRAbsOpLowering : public mlir::OpConversionPattern<cir::AbsOp> {
 public:
   using OpConversionPattern<cir::AbsOp>::OpConversionPattern;
@@ -4399,7 +4430,8 @@ void populateCIRToLLVMConversionPatterns(
       CIRAssumeLowering, CIRAssumeAlignedLowering, CIRAssumeSepStorageLowering,
       CIRBaseClassAddrOpLowering, CIRDerivedClassAddrOpLowering,
       CIRVTTAddrPointOpLowering, CIRIsFPClassOpLowering, CIRAbsOpLowering,
-      CIRMemMoveOpLowering, CIRMemsetOpLowering, CIRSignBitOpLowering
+      CIRMemMoveOpLowering, CIRMemsetOpLowering, CIRSignBitOpLowering,
+      CIRPtrMaskOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST

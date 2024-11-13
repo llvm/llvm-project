@@ -17,6 +17,7 @@ add_clang_library(TargetLowering
   Targets/X86.cpp
   Targets/LoweringPrepareAArch64CXXABI.cpp
   Targets/LoweringPrepareItaniumCXXABI.cpp
+  Targets/LoweringPrepareX86CXXABI.cpp
 
   DEPENDS
   clangBasic

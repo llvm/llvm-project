@@ -124,9 +124,16 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   void setASTContext(clang::ASTContext *c) {
     astCtx = c;
-    auto abiStr = c->getTargetInfo().getABI();
+    const clang::TargetInfo &target = c->getTargetInfo();
+    auto abiStr = target.getABI();
     switch (c->getCXXABIKind()) {
     case clang::TargetCXXABI::GenericItanium:
+      if (target.getTriple().getArch() == llvm::Triple::x86_64) {
+        cxxABI.reset(
+            cir::LoweringPrepareCXXABI::createX86ABI(/*is64bit=*/true));
+        break;
+      }
+
       cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
       break;
     case clang::TargetCXXABI::GenericAArch64:

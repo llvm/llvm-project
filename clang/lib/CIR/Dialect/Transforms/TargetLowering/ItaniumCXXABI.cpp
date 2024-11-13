@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../LoweringPrepareCXXABI.h"
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
 #include "llvm/Support/ErrorHandling.h"

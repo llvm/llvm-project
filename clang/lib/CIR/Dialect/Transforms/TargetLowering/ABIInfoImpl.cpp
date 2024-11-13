@@ -36,6 +36,18 @@ bool isAggregateTypeForABI(mlir::Type T) {
   return !LowerFunction::hasScalarEvaluationKind(T);
 }
 
+mlir::Value emitRoundPointerUpToAlignment(cir::CIRBaseBuilderTy &builder,
+                                          mlir::Value ptr, unsigned alignment) {
+  // OverflowArgArea = (OverflowArgArea + Align - 1) & -Align;
+  mlir::Location loc = ptr.getLoc();
+  mlir::Value roundUp = builder.createPtrStride(
+      loc, builder.createPtrBitcast(ptr, builder.getUIntNTy(8)),
+      builder.getUnsignedInt(loc, alignment - 1, /*width=*/32));
+  return builder.create<cir::PtrMaskOp>(
+      loc, roundUp.getType(), roundUp,
+      builder.getSignedInt(loc, -alignment, /*width=*/32));
+}
+
 mlir::Type useFirstFieldIfTransparentUnion(mlir::Type Ty) {
   if (auto RT = mlir::dyn_cast<StructType>(Ty)) {
     if (RT.isUnion())

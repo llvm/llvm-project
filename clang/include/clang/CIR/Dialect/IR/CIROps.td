@@ -4486,6 +4486,26 @@ def AssumeSepStorageOp : CIR_Op<"assume.separate_storage", [SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// PtrMask Operations
+//===----------------------------------------------------------------------===//
+
+def PtrMaskOp : CIR_Op<"ptr_mask", [AllTypesMatch<["ptr", "result"]>]> {
+  let summary = "Masks out bits of the pointer according to a mask";
+  let description = [{
+    The `cir.ptr_mask` operation takes a pointer and an interger `mask` as its
+    argument and return the masked pointer type according to the `mask`.
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr,
+                       CIR_IntType:$mask);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    `(` $ptr `,` $mask `:` type($mask) `)` `:` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//
 

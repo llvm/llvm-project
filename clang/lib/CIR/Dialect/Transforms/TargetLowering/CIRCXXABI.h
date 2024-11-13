@@ -66,23 +66,4 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &CGM);
 
 } // namespace cir
 
-// FIXME(cir): Merge this into the CIRCXXABI class above. To do so, this code
-// should be updated to follow some level of codegen parity.
-namespace cir {
-
-class LoweringPrepareCXXABI {
-public:
-  static LoweringPrepareCXXABI *createItaniumABI();
-  static LoweringPrepareCXXABI *createAArch64ABI(cir::AArch64ABIKind k);
-
-  virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder, cir::VAArgOp op,
-                                 const cir::CIRDataLayout &datalayout) = 0;
-  virtual ~LoweringPrepareCXXABI() {}
-
-  virtual mlir::Value lowerDynamicCast(CIRBaseBuilderTy &builder,
-                                       clang::ASTContext &astCtx,
-                                       cir::DynamicCastOp op) = 0;
-};
-} // namespace cir
-
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRCXXABI_H
