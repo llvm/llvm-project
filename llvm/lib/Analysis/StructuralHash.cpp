@@ -8,6 +8,11 @@
 //
 // This file defines the StructuralHashPrinterPass which is used to show
 // the structural hash of all functions in a module and the module itself.
+// This file defines the StructuralHashPrinterPass and the
+// PreservedFunctionHashAnalysis and PreservedModuleHashAnalysis keys.
+//
+// The StructuralHashPrinterPass is used to show the structural hash of all
+// functions in a module and the module itself.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +22,10 @@
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
+
+AnalysisKey PreservedFunctionHashAnalysis::Key;
+
+AnalysisKey PreservedModuleHashAnalysis::Key;
 
 PreservedAnalyses StructuralHashPrinterPass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
