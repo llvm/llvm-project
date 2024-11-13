@@ -379,7 +379,7 @@ struct TemplateParameterListBuilder {
     // to construct the ImplicitConceptSpecializationDecl
     TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
         Context,                          // AST context
-        Context.getTranslationUnitDecl(), // DeclContext
+        Builder.Record->getDeclContext(), // DeclContext
         SourceLocation(), SourceLocation(),
         /*depth=*/0,                // Depth in the template parameter list
         /*position=*/0,             // Position in the template parameter list
@@ -640,7 +640,7 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
 
   IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
   TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
-      Context, Context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
+      Context, NSD->getDeclContext(), DeclLoc, DeclLoc,
       /*depth=*/0,
       /*position=*/0,
       /*id=*/&ElementTypeII,
@@ -660,14 +660,14 @@ ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD) {
 
   // Create a ConceptDecl
   ConceptDecl *CD =
-      ConceptDecl::Create(Context, Context.getTranslationUnitDecl(), DeclLoc,
-                          DeclName, ConceptParams, ConstraintExpr);
+      ConceptDecl::Create(Context, NSD->getDeclContext(), DeclLoc, DeclName,
+                          ConceptParams, ConstraintExpr);
 
   // Attach the template parameter list to the ConceptDecl
   CD->setTemplateParameters(ConceptParams);
 
   // Add the concept declaration to the Translation Unit Decl
-  Context.getTranslationUnitDecl()->addDecl(CD);
+  NSD->getDeclContext()->addDecl(CD);
 
   return CD;
 }
