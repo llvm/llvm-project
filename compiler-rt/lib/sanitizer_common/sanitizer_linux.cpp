@@ -169,6 +169,7 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
 // Equivalently: newset[signum] = newset[signum] & oldset[signum]
 static void KeepUnblocked(__sanitizer_sigset_t &newset,
                           __sanitizer_sigset_t &oldset, int signum) {
+  // FIXME: this causes mysterious failures on Android
   if (SANITIZER_ANDROID || !internal_sigismember(&oldset, signum))
     internal_sigdelset(&newset, signum);
 }
