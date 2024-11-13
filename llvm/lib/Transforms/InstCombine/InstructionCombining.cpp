@@ -1692,7 +1692,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   Value *TV = SI->getTrueValue();
   Value *FV = SI->getFalseValue();
-  if ((Op.getOpcode() == Instruction::ExtractValue) &&
+  if (Op.getOpcode() == Instruction::ExtractValue &&
       (isa<InsertValueInst>(TV) || isa<InsertValueInst>(FV))) {
     // extract (select (cond, insert(agg, elem), FV))
     // -> select (cond, elem, extract(FV))
