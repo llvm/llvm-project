@@ -153,14 +153,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(1, sXLen, sXLen)
       .clampScalar(0, sXLen, sXLen);
 
-  auto &ExtActions =
-      getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-          .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                       typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
-  if (ST.is64Bit()) {
-    ExtActions.legalFor({{sXLen, s32}});
-  }
-  ExtActions.customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)))
+      .legalFor(ST.is64Bit(), {{sXLen, s32}})
+      .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
