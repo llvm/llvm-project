@@ -1631,7 +1631,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Allocated = nullptr;
     Metadata *Rank = nullptr;
     Metadata *Annotations = nullptr;
-    Metadata *SpecificationOf = nullptr;
+    Metadata *Specification = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported as
@@ -1681,14 +1681,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Annotations = getMDOrNull(Record[21]);
       }
       if (Record.size() > 23) {
-        SpecificationOf = getMDOrNull(Record[23]);
+        Specification = getMDOrNull(Record[23]);
       }
     }
     DICompositeType *CT = nullptr;
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
-          SizeInBits, AlignInBits, OffsetInBits, SpecificationOf,
+          SizeInBits, AlignInBits, OffsetInBits, Specification,
           NumExtraInhabitants, Flags, Elements, RuntimeLang, VTableHolder,
           TemplateParams, Discriminator, DataLocation, Associated, Allocated,
           Rank, Annotations);
@@ -1700,7 +1700,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
-                            Allocated, Rank, Annotations, SpecificationOf,
+                            Allocated, Rank, Annotations, Specification,
                             NumExtraInhabitants));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));

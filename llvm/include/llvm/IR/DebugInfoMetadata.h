@@ -1205,7 +1205,7 @@ class DICompositeType : public DIType {
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
-          uint32_t AlignInBits, uint64_t OffsetInBits, DIType *SpecificationOf,
+          uint32_t AlignInBits, uint64_t OffsetInBits, DIType *Specification,
           uint32_t NumExtraInhabitants, DIFlags Flags, DINodeArray Elements,
           unsigned RuntimeLang, DIType *VTableHolder,
           DITemplateParameterArray TemplateParams, StringRef Identifier,
@@ -1219,7 +1219,7 @@ class DICompositeType : public DIType {
                    TemplateParams.get(),
                    getCanonicalMDString(Context, Identifier), Discriminator,
                    DataLocation, Associated, Allocated, Rank, Annotations.get(),
-                   SpecificationOf, NumExtraInhabitants, Storage, ShouldCreate);
+                   Specification, NumExtraInhabitants, Storage, ShouldCreate);
   }
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -1229,7 +1229,7 @@ class DICompositeType : public DIType {
           Metadata *VTableHolder, Metadata *TemplateParams,
           MDString *Identifier, Metadata *Discriminator, Metadata *DataLocation,
           Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          Metadata *Annotations, Metadata *SpecificationOf,
+          Metadata *Annotations, Metadata *Specification,
           uint32_t NumExtraInhabitants, StorageType Storage,
           bool ShouldCreate = true);
 
@@ -1240,7 +1240,7 @@ class DICompositeType : public DIType {
         getFlags(), getElements(), getRuntimeLang(), getVTableHolder(),
         getTemplateParams(), getIdentifier(), getDiscriminator(),
         getRawDataLocation(), getRawAssociated(), getRawAllocated(),
-        getRawRank(), getAnnotations(), getSpecificationOf(),
+        getRawRank(), getAnnotations(), getSpecification(),
         getNumExtraInhabitants());
   }
 
@@ -1255,10 +1255,10 @@ public:
        StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
        Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
-       DINodeArray Annotations = nullptr, DIType *SpecificationOf = nullptr,
+       DINodeArray Annotations = nullptr, DIType *Specification = nullptr,
        uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, SpecificationOf, NumExtraInhabitants, Flags, Elements,
+       OffsetInBits, Specification, NumExtraInhabitants, Flags, Elements,
        RuntimeLang, VTableHolder, TemplateParams, Identifier, Discriminator,
        DataLocation, Associated, Allocated, Rank, Annotations))
   DEFINE_MDNODE_GET(
@@ -1271,11 +1271,11 @@ public:
        Metadata *Discriminator = nullptr, Metadata *DataLocation = nullptr,
        Metadata *Associated = nullptr, Metadata *Allocated = nullptr,
        Metadata *Rank = nullptr, Metadata *Annotations = nullptr,
-       Metadata *SpecificationOf = nullptr, uint32_t NumExtraInhabitants = 0),
+       Metadata *Specification = nullptr, uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
        Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations, SpecificationOf, NumExtraInhabitants))
+       Annotations, Specification, NumExtraInhabitants))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
@@ -1290,9 +1290,9 @@ public:
   getODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
              MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
              Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
-             uint64_t OffsetInBits, Metadata *SpecificationOf,
-             uint32_t NumExtraInhabitants,  DIFlags Flags,
-             Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
+             uint64_t OffsetInBits, Metadata *Specification,
+             uint32_t NumExtraInhabitants, DIFlags Flags, Metadata *Elements,
+             unsigned RuntimeLang, Metadata *VTableHolder,
              Metadata *TemplateParams, Metadata *Discriminator,
              Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
              Metadata *Rank, Metadata *Annotations);
@@ -1312,7 +1312,7 @@ public:
   buildODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
                MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
                Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
-               uint64_t OffsetInBits, Metadata *SpecificationOf,
+               uint64_t OffsetInBits, Metadata *Specification,
                uint32_t NumExtraInhabitants, DIFlags Flags, Metadata *Elements,
                unsigned RuntimeLang, Metadata *VTableHolder,
                Metadata *TemplateParams, Metadata *Discriminator,
@@ -1377,11 +1377,10 @@ public:
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
 
-  Metadata *getRawSpecificationOf() const { return getOperand(14); }
-  DIType *getSpecificationOf() const {
-    return cast_or_null<DIType>(getRawSpecificationOf());
+  Metadata *getRawSpecification() const { return getOperand(14); }
+  DIType *getSpecification() const {
+    return cast_or_null<DIType>(getRawSpecification());
   }
-
   /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision
