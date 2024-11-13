@@ -4268,10 +4268,10 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
 
   // SVE2 integer unary operations, zeroing predicate
-  def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
-  def URSQRTE_ZPzZ : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
-  defm SQABS_ZPzZ  : sve2_int_un_pred_arit_z<0b10, "sqabs">;
-  defm SQNEG_ZPzZ  : sve2_int_un_pred_arit_z<0b11, "sqneg">;
+  def URECPE_ZPzZ_S  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
+  def URSQRTE_ZPzZ_S : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
+  defm SQABS_ZPzZ    : sve2_int_un_pred_arit_z<0b10, "sqabs">;
+  defm SQNEG_ZPzZ    : sve2_int_un_pred_arit_z<0b11, "sqneg">;
 
   // Floating point round to integral fp value in integer size range
   // Merging
@@ -4619,3 +4619,35 @@ defm FRINTX : sve_fp_2op_p_zd_HSD_pat<AArch64frintx_mt>;
 defm FRINTI : sve_fp_2op_p_zd_HSD_pat<AArch64frinti_mt>;
 defm FRECPX : sve_fp_2op_p_zd_HSD_pat<AArch64frecpx_mt>;
 defm FSQRT  : sve_fp_2op_p_zd_HSD_pat<AArch64fsqrt_mt>;
+
+multiclass sve2_int_un_pred_arit_s_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2orSME, NotHasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_Undef_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Pseudo>(NAME # _ZPmZ_S_UNDEF)>;
+  }
+
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_UndefZero_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+  }
+}
+
+defm URECPE  : sve2_int_un_pred_arit_s_pat<int_aarch64_sve_urecpe>;
+defm URSQRTE : sve2_int_un_pred_arit_s_pat<int_aarch64_sve_ursqrte>;
+
+multiclass sve2_int_un_pred_arit_pat<SDPatternOperator op> {
+  let Predicates = [HasSVE2orSME, NotHasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_Undef_Pat<nxv16i8, op, nxv16i8, nxv16i1, nxv16i8, !cast<Pseudo>(NAME # _ZPmZ_B_UNDEF)>;
+    defm : SVE_3_Op_Undef_Pat<nxv8i16, op, nxv8i16, nxv8i1,  nxv8i16, !cast<Pseudo>(NAME # _ZPmZ_H_UNDEF)>;
+    defm : SVE_3_Op_Undef_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Pseudo>(NAME # _ZPmZ_S_UNDEF)>;
+    defm : SVE_3_Op_Undef_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Pseudo>(NAME # _ZPmZ_D_UNDEF)>;
+  }
+
+  let Predicates = [HasSVE2p2orSME2p2] in {
+    defm : SVE_3_Op_UndefZero_Pat<nxv16i8, op, nxv16i8, nxv16i1, nxv16i8, !cast<Instruction>(NAME # _ZPzZ_B)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv8i16, op, nxv8i16, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _ZPzZ_H)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _ZPzZ_S)>;
+    defm : SVE_3_Op_UndefZero_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _ZPzZ_D)>;
+  }
+}
+
+defm SQABS : sve2_int_un_pred_arit_pat<int_aarch64_sve_sqabs>;
+defm SQNEG : sve2_int_un_pred_arit_pat<int_aarch64_sve_sqneg>;
