@@ -2,31 +2,6 @@
 # RUN: llc -mtriple=riscv64 -run-pass=instruction-select %s -o - \
 # RUN: | FileCheck %s
 
---- |
-  define void @load_i8_i64(ptr %addr) { ret void }
-  define void @load_i16_i64(ptr %addr) { ret void }
-  define void @load_i32_i64(ptr %addr) { ret void }
-  define void @load_i64_i64(ptr %addr) { ret void }
-  define void @load_p0(ptr %addr) { ret void }
-  define void @zextload_i8_i64(ptr %addr) { ret void }
-  define void @zextload_i16_i64(ptr %addr) { ret void }
-  define void @zextload_i32_i64(ptr %addr) { ret void }
-  define void @sextload_i8_i64(ptr %addr) { ret void }
-  define void @sextload_i16_i64(ptr %addr) { ret void }
-  define void @sextload_i32_i64(ptr %addr) { ret void }
-  define void @load_i8_i32(ptr %addr) { ret void }
-  define void @load_i16_i32(ptr %addr) { ret void }
-  define void @load_i32_i32(ptr %addr) { ret void }
-  define void @load_fi_i64() {
-    %ptr0 = alloca i64
-    ret void
-  }
-  define void @load_fi_gep_i64_i64() {
-    %ptr0 = alloca [2 x i64]
-    ret void
-  }
-  define void @load_gep_i64_i64(ptr %addr) { ret void }
-...
 ---
 name:            load_i8_i64
 legalized:       true
@@ -342,15 +317,15 @@ regBankSelected: true
 tracksRegLiveness: true
 
 stack:
-  - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
+  - { id: 0, offset: 0, size: 8, alignment: 8 }
 
 body:            |
   bb.0:
     ; CHECK-LABEL: name: load_fi_i64
-    ; CHECK: [[LD:%[0-9]+]]:gpr = LD %stack.0.ptr0, 0 :: (load (s64))
+    ; CHECK: [[LD:%[0-9]+]]:gpr = LD %stack.0, 0 :: (load (s64))
     ; CHECK-NEXT: $x10 = COPY [[LD]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %0:gprb(p0) = G_FRAME_INDEX %stack.0
     %1:gprb(s64) = G_LOAD %0(p0) :: (load (s64))
     $x10 = COPY %1(s64)
     PseudoRET implicit $x10
@@ -363,15 +338,15 @@ regBankSelected: true
 tracksRegLiveness: true
 
 stack:
-  - { id: 0, name: ptr0, offset: 0, size: 16, alignment: 8 }
+  - { id: 0, offset: 0, size: 16, alignment: 8 }
 
 body:            |
   bb.0:
     ; CHECK-LABEL: name: load_fi_gep_i64_i64
-    ; CHECK: [[LD:%[0-9]+]]:gpr = LD %stack.0.ptr0, 8 :: (load (s64))
+    ; CHECK: [[LD:%[0-9]+]]:gpr = LD %stack.0, 8 :: (load (s64))
     ; CHECK-NEXT: $x10 = COPY [[LD]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %0:gprb(p0) = G_FRAME_INDEX %stack.0
     %1:gprb(s64) = G_CONSTANT i64 8
     %2:gprb(p0) = G_PTR_ADD %0(p0), %1(s64)
     %3:gprb(s64) = G_LOAD %2(p0) :: (load (s64))
