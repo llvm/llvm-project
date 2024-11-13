@@ -496,7 +496,7 @@ typedef bool bool32 __attribute__((ext_vector_type(32)));
 typedef bool bool128 __attribute__((ext_vector_type(128)));
 
 static_assert(bit_cast<unsigned char>(bool8{1,0,1,0,1,0,1,0}) == (LITTLE_END ? 0x55 : 0xAA), "");
-constexpr bool8 b8 = __builtin_bit_cast(bool8, 0x55); // both-error {{__builtin_bit_cast source type 'int' size (4 bytes) does not match destination type 'bool8' (vector of 8 'bool' values) size (1 byte)}}
+constexpr bool8 b8 = __builtin_bit_cast(bool8, 0x55); // both-error {{'__builtin_bit_cast' source type 'int' does not match destination type 'bool8' (vector of 8 'bool' values) (4 vs 1 bytes)}}
 #if 0
 static_assert(check_round_trip<bool8>(static_cast<unsigned char>(0)), "");
 static_assert(check_round_trip<bool8>(static_cast<unsigned char>(1)), "");
@@ -535,5 +535,5 @@ namespace test_complex {
   static_assert(TF.A == 1.0f && TF.B == 2.0f);
 
   constexpr double D = __builtin_bit_cast(double, test_float_complex);
-  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{__builtin_bit_cast source type 'const _Complex unsigned int' size (8 bytes) does not match destination type 'int' size (4 bytes)}}
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{size of '__builtin_bit_cast' source type 'const _Complex unsigned int' does not match destination type 'int' (8 vs 4 bytes)}}
 }
