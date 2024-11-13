@@ -104,20 +104,6 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
   // Get the current .loc info saved in the context.
   const MCDwarfLoc &DwarfLoc = MCOS->getContext().getCurrentDwarfLoc();
 
-  // If functions need offsets into the generated line table, then we need to
-  // create a label referencing where the line was generated in the output
-  // stream
-  if (MCOS->getGenerateFuncLineTableOffsets() &&
-      !MCOS->getCurrentFuncFirstLineStreamSym()) {
-    MCSymbol *LineStreamLabel = MCOS->getContext().createTempSymbol();
-    MCOS->emittedLineStreamSym(LineStreamLabel);
-    MCDwarfLineEntry LabelLineEntry(LineSym, DwarfLoc, LineStreamLabel);
-    MCOS->getContext()
-        .getMCDwarfLineTable(MCOS->getContext().getDwarfCompileUnitID())
-        .getMCLineSections()
-        .addLineEntry(LabelLineEntry, Section);
-  }
-
   // Create a (local) line entry with the symbol and the current .loc info.
   MCDwarfLineEntry LineEntry(LineSym, DwarfLoc);
 

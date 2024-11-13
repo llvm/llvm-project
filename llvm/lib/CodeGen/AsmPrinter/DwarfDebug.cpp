@@ -170,12 +170,6 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
 
-static cl::opt<bool> EmitFuncLineTableOffsetsOption(
-    "emit-func-debug-line-table-offsets", cl::Hidden,
-    cl::desc("Include line table offset in function's debug info and emit end "
-             "sequence after each function's line data."),
-    cl::init(false));
-
 static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
@@ -447,8 +441,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
                                                         : dwarf::DWARF32);
-  Asm->OutStreamer->setGenerateFuncLineTableOffsets(
-      EmitFuncLineTableOffsetsOption);
 }
 
 // Define out of line so we don't have to include DwarfUnit.h in DwarfDebug.h.
@@ -2230,11 +2222,10 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return;
 
-  // Notify the streamer that we are beginning a function - this will reset the
-  // label pointing to the currently generated function's first line entry
-  Asm->OutStreamer->beginFunction();
-
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  FunctionLineTableLabel = CU.emitFuncLineTableOffsets()
+                               ? Asm->OutStreamer->emitLineTableLabel()
+                               : nullptr;
 
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(
       getDwarfCompileUnitIDForLineTable(CU));
@@ -2346,11 +2337,14 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   }
 
   ProcessedSPNodes.insert(SP);
-  DIE &ScopeDIE = TheCU.constructSubprogramScopeDIE(SP, FnScope);
+  DIE &ScopeDIE =
+      TheCU.constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(SP, FnScope);
+      SkelCU->constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+
+  FunctionLineTableLabel = nullptr;
 
   // Construct call site entries.
   constructCallSiteEntryDIEs(*SP, TheCU, ScopeDIE, *MF);
