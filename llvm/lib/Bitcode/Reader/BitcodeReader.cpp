@@ -987,11 +987,6 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
-  // Saves the context total size information from the CONTEXT_SIZE_INFO record
-  // to consult when adding this from the lists in the alloc entries to the
-  // index.
-  std::vector<ContextTotalSize> ContextSizeInfos;
-
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -7608,6 +7603,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
   std::vector<CallsiteInfo> PendingCallsites;
   std::vector<AllocInfo> PendingAllocs;
+  std::vector<uint64_t> PendingContextIds;
 
   while (true) {
     Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
@@ -8002,14 +7998,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_CONTEXT_SIZE_INFO: { // [n x (fullstackid, totalsize)]
-      // Save context size infos in the reader to consult when adding them from
-      // the lists in the alloc node entries.
-      for (auto R = Record.begin(); R != Record.end(); R += 2)
-        ContextSizeInfos.push_back({*R, *(R + 1)});
-      break;
-    }
-
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
@@ -8044,6 +8032,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
+    case bitc::FS_ALLOC_CONTEXT_IDS: {
+      // This is an array of 32-bit fixed-width values, holding each 64-bit
+      // context id as a pair of adjacent (most significant first) 32-bit words.
+      assert(!(Record.size() % 2));
+      PendingContextIds.reserve(Record.size() / 2);
+      for (auto R = Record.begin(); R != Record.end(); R += 2)
+        PendingContextIds.push_back(*R << 32 | *(R + 1));
+      break;
+    }
+
     case bitc::FS_PERMODULE_ALLOC_INFO: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
@@ -8066,30 +8064,40 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       // We either have nothing left or at least NumMIBs context size info
-      // indices left.
+      // indices left (for the total sizes included when reporting of hinted
+      // bytes is enabled).
       assert(I == Record.size() || Record.size() - I >= NumMIBs);
-      std::vector<std::vector<unsigned>> AllContextSizeIndices;
+      std::vector<std::vector<ContextTotalSize>> AllContextSizes;
       if (I < Record.size()) {
+        assert(!PendingContextIds.empty() &&
+               "Missing context ids for alloc sizes");
+        unsigned ContextIdIndex = 0;
         MIBsRead = 0;
+        // The sizes are a linearized array of sizes, where for each MIB there
+        // is 1 or more sizes (due to context trimming, each MIB in the metadata
+        // and summarized here can correspond to more than one original context
+        // from the profile).
         while (MIBsRead++ < NumMIBs) {
+          // First read the number of contexts recorded for this MIB.
           unsigned NumContextSizeInfoEntries = Record[I++];
           assert(Record.size() - I >= NumContextSizeInfoEntries);
-          std::vector<unsigned> ContextSizeIndices;
-          ContextSizeIndices.reserve(NumContextSizeInfoEntries);
+          std::vector<ContextTotalSize> ContextSizes;
+          ContextSizes.reserve(NumContextSizeInfoEntries);
           for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
-            assert(Record[I] < ContextSizeInfos.size());
-            ContextSizeIndices.push_back(TheIndex.addOrGetContextSizeIndex(
-                ContextSizeInfos[Record[I++]]));
+            assert(ContextIdIndex < PendingContextIds.size());
+            // PendingContextIds read from the preceding FS_ALLOC_CONTEXT_IDS
+            // should be in the same order as the total sizes.
+            ContextSizes.push_back(
+                {PendingContextIds[ContextIdIndex++], Record[I++]});
           }
-          AllContextSizeIndices.push_back(std::move(ContextSizeIndices));
+          AllContextSizes.push_back(std::move(ContextSizes));
         }
+        PendingContextIds.clear();
       }
       PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
-      if (!AllContextSizeIndices.empty()) {
-        assert(PendingAllocs.back().MIBs.size() ==
-               AllContextSizeIndices.size());
-        PendingAllocs.back().ContextSizeInfoIndices =
-            std::move(AllContextSizeIndices);
+      if (!AllContextSizes.empty()) {
+        assert(PendingAllocs.back().MIBs.size() == AllContextSizes.size());
+        PendingAllocs.back().ContextSizeInfos = std::move(AllContextSizes);
       }
       break;
     }

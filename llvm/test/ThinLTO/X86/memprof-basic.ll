@@ -45,7 +45,7 @@
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:	-memprof-report-hinted-sizes \
 ; RUN:	-stats -pass-remarks=memprof-context-disambiguation -save-temps \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=DUMP-SIZES \
 ; RUN:	--check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS \
 ; RUN:  --check-prefix=SIZES
 
@@ -146,6 +146,9 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	Versions: 1 MIB:
 ; DUMP: 		AllocType 1 StackIds: 2, 3, 0
 ; DUMP: 		AllocType 2 StackIds: 2, 3, 1
+; DUMP-SIZES:	ContextSizeInfo per MIB:
+; DUMP-SIZES:		{ 123, 100 }
+; DUMP-SIZES:		{ 456, 200 }, { 789, 300 }
 ; DUMP: 	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2

@@ -308,7 +308,7 @@ enum GlobalValueSummarySymtabCodes {
   FS_PERMODULE_CALLSITE_INFO = 26,
   // Summary of per-module allocation memprof metadata.
   // [nummib, nummib x (alloc type, numstackids, numstackids x stackidindex),
-  // [nummib x (numcontext x contextsizeindex)]?]
+  // [nummib x (numcontext x total size)]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
   // [valueid, numstackindices, numver,
@@ -322,10 +322,15 @@ enum GlobalValueSummarySymtabCodes {
   // List of all stack ids referenced by index in the callsite and alloc infos.
   // [n x stack id]
   FS_STACK_IDS = 30,
-  // List of all (full stack id, total size) pairs optionally referenced by
-  // index from the alloc info records.
-  // [n x (full stack id, total size)]
-  FS_CONTEXT_SIZE_INFO = 31,
+  // List of all full stack id pairs corresponding to the total sizes recorded
+  // at the end of the alloc info when reporting of hinted bytes is enabled.
+  // We use a fixed-width array, which is more efficient as these ids typically
+  // are close to 64 bits in size. The max fixed width value supported is 32
+  // bits so each 64-bit context id hash is recorded as a pair (upper 32 bits
+  // first). This record must immediately precede the associated alloc info, and
+  // the entries must be in the exact same order as the corresponding sizes.
+  // [nummib x (numcontext x full stack id)]
+  FS_ALLOC_CONTEXT_IDS = 31,
 };
 
 enum MetadataCodes {

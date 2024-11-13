@@ -523,7 +523,7 @@ static void computeFunctionSummary(
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
         std::vector<uint64_t> TotalSizes;
-        std::vector<std::vector<unsigned>> ContextSizeInfoIndices;
+        std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
           MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -545,7 +545,7 @@ static void computeFunctionSummary(
           // the summary.
           assert(MIBMD->getNumOperands() > 2 || !MemProfReportHintedSizes);
           if (MIBMD->getNumOperands() > 2) {
-            std::vector<unsigned> ContextSizeIndices;
+            std::vector<ContextTotalSize> ContextSizes;
             for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
               MDNode *ContextSizePair = dyn_cast<MDNode>(MIBMD->getOperand(I));
               assert(ContextSizePair->getNumOperands() == 2);
@@ -555,20 +555,18 @@ static void computeFunctionSummary(
               uint64_t TS = mdconst::dyn_extract<ConstantInt>(
                                 ContextSizePair->getOperand(1))
                                 ->getZExtValue();
-              ContextSizeIndices.push_back(
-                  Index.addOrGetContextSizeIndex({FullStackId, TS}));
+              ContextSizes.push_back({FullStackId, TS});
             }
-            ContextSizeInfoIndices.push_back(std::move(ContextSizeIndices));
+            ContextSizeInfos.push_back(std::move(ContextSizes));
           }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
         }
         Allocs.push_back(AllocInfo(std::move(MIBs)));
-        assert(!ContextSizeInfoIndices.empty() || !MemProfReportHintedSizes);
-        if (!ContextSizeInfoIndices.empty()) {
-          assert(Allocs.back().MIBs.size() == ContextSizeInfoIndices.size());
-          Allocs.back().ContextSizeInfoIndices =
-              std::move(ContextSizeInfoIndices);
+        assert(!ContextSizeInfos.empty() || !MemProfReportHintedSizes);
+        if (!ContextSizeInfos.empty()) {
+          assert(Allocs.back().MIBs.size() == ContextSizeInfos.size());
+          Allocs.back().ContextSizeInfos = std::move(ContextSizeInfos);
         }
       } else if (!InstCallsite.empty()) {
         SmallVector<unsigned> StackIdIndices;

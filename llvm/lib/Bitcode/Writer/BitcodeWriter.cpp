@@ -230,7 +230,8 @@ private:
   void writePerModuleFunctionSummaryRecord(
       SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
       unsigned ValueID, unsigned FSCallsAbbrev, unsigned FSCallsProfileAbbrev,
-      unsigned CallsiteAbbrev, unsigned AllocAbbrev, const Function &F);
+      unsigned CallsiteAbbrev, unsigned AllocAbbrev, unsigned ContextIdAbbvId,
+      const Function &F);
   void writeModuleLevelReferences(const GlobalVariable &V,
                                   SmallVector<uint64_t, 64> &NameVals,
                                   unsigned FSModRefsAbbrev,
@@ -4193,7 +4194,7 @@ static void writeTypeIdCompatibleVtableSummaryRecord(
 
 static void writeFunctionHeapProfileRecords(
     BitstreamWriter &Stream, FunctionSummary *FS, unsigned CallsiteAbbrev,
-    unsigned AllocAbbrev, bool PerModule,
+    unsigned AllocAbbrev, unsigned ContextIdAbbvId, bool PerModule,
     std::function<unsigned(const ValueInfo &VI)> GetValueID,
     std::function<unsigned(unsigned)> GetStackIndex,
     bool WriteContextSizeInfoIndex) {
@@ -4238,14 +4239,34 @@ static void writeFunctionHeapProfileRecords(
       for (auto V : AI.Versions)
         Record.push_back(V);
     }
-    assert(AI.ContextSizeInfoIndices.empty() ||
-           AI.ContextSizeInfoIndices.size() == AI.MIBs.size());
-    if (WriteContextSizeInfoIndex && !AI.ContextSizeInfoIndices.empty()) {
-      for (auto &Indices : AI.ContextSizeInfoIndices) {
-        Record.push_back(Indices.size());
-        for (auto Id : Indices)
-          Record.push_back(Id);
+    assert(AI.ContextSizeInfos.empty() ||
+           AI.ContextSizeInfos.size() == AI.MIBs.size());
+    // Optionally emit the context size information if it exists.
+    if (WriteContextSizeInfoIndex && !AI.ContextSizeInfos.empty()) {
+      // The abbreviation id for the context ids record should have been created
+      // if we are emitting the per-module index, which is where we write this
+      // info.
+      assert(ContextIdAbbvId);
+      SmallVector<uint32_t> ContextIds;
+      // At least one context id per ContextSizeInfos entry (MIB), broken into 2
+      // halves.
+      ContextIds.reserve(AI.ContextSizeInfos.size() * 2);
+      for (auto &Infos : AI.ContextSizeInfos) {
+        Record.push_back(Infos.size());
+        for (auto [FullStackId, TotalSize] : Infos) {
+          // The context ids are emitted separately as a fixed width array,
+          // which is more efficient than a VBR given that these hashes are
+          // typically close to 64-bits. The max fixed width entry is 32 bits so
+          // it is split into 2.
+          ContextIds.push_back(static_cast<uint32_t>(FullStackId >> 32));
+          ContextIds.push_back(static_cast<uint32_t>(FullStackId));
+          Record.push_back(TotalSize);
+        }
       }
+      // The context ids are expected by the reader to immediately precede the
+      // associated alloc info record.
+      Stream.EmitRecord(bitc::FS_ALLOC_CONTEXT_IDS, ContextIds,
+                        ContextIdAbbvId);
     }
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
                                 : bitc::FS_COMBINED_ALLOC_INFO,
@@ -4258,7 +4279,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
     unsigned ValueID, unsigned FSCallsRelBFAbbrev,
     unsigned FSCallsProfileAbbrev, unsigned CallsiteAbbrev,
-    unsigned AllocAbbrev, const Function &F) {
+    unsigned AllocAbbrev, unsigned ContextIdAbbvId, const Function &F) {
   NameVals.push_back(ValueID);
 
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
@@ -4269,7 +4290,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       });
 
   writeFunctionHeapProfileRecords(
-      Stream, FS, CallsiteAbbrev, AllocAbbrev,
+      Stream, FS, CallsiteAbbrev, AllocAbbrev, ContextIdAbbvId,
       /*PerModule*/ true,
       /*GetValueId*/ [&](const ValueInfo &VI) { return getValueId(VI); },
       /*GetStackIndex*/ [&](unsigned I) { return I; },
@@ -4405,28 +4426,22 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     StackIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_STACK_IDS));
     // numids x stackid
     StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    // FIXME: The stack ids are hashes that are close to 64 bits in size, so
+    // emitting as a pair of 32-bit fixed-width values, as we do for context
+    // ids, would be more efficient.
     StackIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
     unsigned StackIdAbbvId = Stream.EmitAbbrev(std::move(StackIdAbbv));
     Stream.EmitRecord(bitc::FS_STACK_IDS, Index->stackIds(), StackIdAbbvId);
   }
 
-  SmallVector<uint64_t, 64> NameVals;
-  if (!Index->contextSizeInfos().empty()) {
-    auto ContextSizeInfoAbbv = std::make_shared<BitCodeAbbrev>();
-    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_SIZE_INFO));
-    // numids x (fullStackid, totalsize)
-    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    ContextSizeInfoAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-    unsigned ContextSizeInfoAbbvId =
-        Stream.EmitAbbrev(std::move(ContextSizeInfoAbbv));
-    for (const auto &[FullStackId, TotalSize] : Index->contextSizeInfos()) {
-      NameVals.push_back(FullStackId);
-      NameVals.push_back(TotalSize);
-    }
-    Stream.EmitRecord(bitc::FS_CONTEXT_SIZE_INFO, NameVals,
-                      ContextSizeInfoAbbvId);
-    NameVals.clear();
-  }
+  // n x context id
+  auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
+  ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
+  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  // The context ids are hashes that are close to 64 bits in size, so emitting
+  // as a pair of 32-bit fixed-width values is more efficient than a VBR.
+  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
 
   // Abbrev for FS_PERMODULE_PROFILE.
   Abbv = std::make_shared<BitCodeAbbrev>();
@@ -4508,11 +4523,12 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_ALLOC_INFO));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
   // n x (alloc type, numstackids, numstackids x stackidindex)
-  // optional: nummib x total size
+  // optional: nummib x (numcontext x total size)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
+  SmallVector<uint64_t, 64> NameVals;
   // Iterate over the list of functions instead of the Index to
   // ensure the ordering is stable.
   for (const Function &F : M) {
@@ -4531,7 +4547,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     auto *Summary = VI.getSummaryList()[0].get();
     writePerModuleFunctionSummaryRecord(
         NameVals, Summary, VE.getValueID(&F), FSCallsRelBFAbbrev,
-        FSCallsProfileAbbrev, CallsiteAbbrev, AllocAbbrev, F);
+        FSCallsProfileAbbrev, CallsiteAbbrev, AllocAbbrev, ContextIdAbbvId, F);
   }
 
   // Capture references from GlobalVariable initializers, which are outside
@@ -4760,7 +4776,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     getReferencedTypeIds(FS, ReferencedTypeIds);
 
     writeFunctionHeapProfileRecords(
-        Stream, FS, CallsiteAbbrev, AllocAbbrev,
+        Stream, FS, CallsiteAbbrev, AllocAbbrev, /*ContextIdAbbvId*/ 0,
         /*PerModule*/ false,
         /*GetValueId*/
         [&](const ValueInfo &VI) -> unsigned {

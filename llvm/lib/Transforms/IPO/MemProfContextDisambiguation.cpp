@@ -2056,17 +2056,15 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
               EmptyContext;
           unsigned I = 0;
           assert(!MemProfReportHintedSizes ||
-                 AN.ContextSizeInfoIndices.size() == AN.MIBs.size());
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
                 StackContext(&MIB);
             std::vector<ContextTotalSize> ContextSizeInfo;
             if (MemProfReportHintedSizes) {
-              for (auto Id : AN.ContextSizeInfoIndices[I]) {
-                auto Info = Index.getContextSizeInfoAtIndex(Id);
-                ContextSizeInfo.push_back({Info.FullStackId, Info.TotalSize});
-              }
+              for (auto [FullStackId, TotalSize] : AN.ContextSizeInfos[I])
+                ContextSizeInfo.push_back({FullStackId, TotalSize});
             }
             addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
                 AllocNode, StackContext, EmptyContext, MIB.AllocType,
