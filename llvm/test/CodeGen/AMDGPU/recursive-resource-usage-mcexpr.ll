@@ -34,9 +34,9 @@
 ; CHECK: .set bar.has_indirect_call, or(0, baz.has_indirect_call)
 
 ; CHECK-LABEL: {{^}}foo
-; CHECK: .set foo.num_vgpr, 42
-; CHECK: .set foo.num_agpr, 0
-; CHECK: .set foo.numbered_sgpr, 34
+; CHECK: .set foo.num_vgpr, max(42, amdgpu.max_num_vgpr)
+; CHECK: .set foo.num_agpr, max(0, amdgpu.max_num_agpr)
+; CHECK: .set foo.numbered_sgpr, max(34, amdgpu.max_num_sgpr)
 ; CHECK: .set foo.private_seg_size, 16
 ; CHECK: .set foo.uses_vcc, 1
 ; CHECK: .set foo.uses_flat_scratch, 0

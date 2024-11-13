@@ -114,10 +114,32 @@ void MCResourceInfo::assignResourceInfoExpr(
       MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
       MCSymbol *CalleeValSym =
           getSymbol(CalleeFnSym->getName(), RIK, OutContext);
+
+      // Avoid constructing recursive definitions by detecting whether `Sym` is
+      // found transitively within any of its `CalleeValSym`.
       if (!CalleeValSym->isVariable() ||
           !CalleeValSym->getVariableValue(/*isUsed=*/false)
                ->isSymbolUsedInExpression(Sym)) {
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+      } else {
+        // In case of recursion: make sure to use conservative register counts
+        // (i.e., specifically for VGPR/SGPR/AGPR).
+        switch (RIK) {
+        default:
+          break;
+        case RIK_NumVGPR:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxVGPRSymbol(OutContext), OutContext));
+          break;
+        case RIK_NumSGPR:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxSGPRSymbol(OutContext), OutContext));
+          break;
+        case RIK_NumAGPR:
+          ArgExprs.push_back(MCSymbolRefExpr::create(
+              getMaxAGPRSymbol(OutContext), OutContext));
+          break;
+        }
       }
     }
     if (ArgExprs.size() > 1)
@@ -181,6 +203,8 @@ void MCResourceInfo::gatherResourceInfo(
         MCSymbol *CalleeValSym =
             getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext);
 
+        // Avoid constructing recursive definitions by detecting whether `Sym`
+        // is found transitively within any of its `CalleeValSym`.
         if (!CalleeValSym->isVariable() ||
             !CalleeValSym->getVariableValue(/*isUsed=*/false)
                  ->isSymbolUsedInExpression(Sym)) {
