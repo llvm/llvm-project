@@ -3368,15 +3368,14 @@ struct FixedArray {
 
 namespace llvm {
 namespace yaml {
-  template <>
-  struct MappingTraits<FixedArray> {
-    static void mapping(IO &io, FixedArray& st) {
-      MutableArrayRef<int> array = st.values;
-      io.mapRequired("Values", array);
-    }
-  };
-}
-}
+template <> struct MappingTraits<FixedArray> {
+  static void mapping(IO &io, FixedArray &st) {
+    MutableArrayRef<int> array = st.values;
+    io.mapRequired("Values", array);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 TEST(YAMLIO, FixedSizeArray) {
   FixedArray faval;
@@ -3423,5 +3422,4 @@ TEST(YAMLIO, FixedSizeArrayMismatch) {
     // Error for too many elements.
     EXPECT_TRUE(!!yin.error());
   }
-
 }
