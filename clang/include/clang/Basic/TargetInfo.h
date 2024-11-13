@@ -1864,6 +1864,11 @@ private:
   void CheckFixedPointBits() const;
 };
 
+namespace targets {
+std::unique_ptr<clang::TargetInfo>
+AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
+} // namespace targets
+
 }  // end namespace clang
 
 #endif
