@@ -183,7 +183,7 @@ static cl::list<std::string>
 /// devirtualize target to conservatively keep the program behavior.
 ///
 /// TODO: Make a pure virtual class's deleting destructor precisely identifiable
-/// in LLVM for more devirtualization.
+/// in Clang's codegen for more devirtualization in LLVM.
 static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
     "wholeprogramdevirt-keep-unreachable-function",
     cl::desc("Regard unreachable functions as possible devirtualize targets."),
