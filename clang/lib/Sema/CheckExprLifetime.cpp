@@ -45,10 +45,14 @@ enum LifetimeKind {
   /// a default member initializer), the program is ill-formed.
   LK_MemInitializer,
 
-  /// The lifetime of a temporary bound to this entity probably ends too soon,
+  /// The lifetime of a temporary bound to this entity may end too soon,
   /// because the entity is a pointer and we assign the address of a temporary
   /// object to it.
   LK_Assignment,
+
+  /// The lifetime of a temporary bound to this entity may end too soon,
+  /// because the entity may capture the reference to a temporary object.
+  LK_LifetimeCapture,
 };
 using LifetimeResult =
     llvm::PointerIntPair<const InitializedEntity *, 3, LifetimeKind>;
@@ -193,6 +197,7 @@ struct IndirectLocalPathEntry {
     VarInit,
     LValToRVal,
     LifetimeBoundCall,
+    LifetimeCapture,
     TemporaryCopy,
     LambdaCaptureInit,
     GslReferenceInit,
@@ -249,9 +254,10 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   LocalVisitor Visit);
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
-  if (auto *RD = Type->getAsCXXRecordDecl())
-    return RD->hasAttr<T>();
-  return false;
+  CXXRecordDecl *RD = Type.getNonReferenceType()->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  return RD->hasAttr<T>();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
@@ -1049,6 +1055,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::AddressOf:
     case IndirectLocalPathEntry::LValToRVal:
     case IndirectLocalPathEntry::LifetimeBoundCall:
+    case IndirectLocalPathEntry::LifetimeCapture:
     case IndirectLocalPathEntry::TemporaryCopy:
     case IndirectLocalPathEntry::GslReferenceInit:
     case IndirectLocalPathEntry::GslPointerInit:
@@ -1082,6 +1089,7 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
     case IndirectLocalPathEntry::VarInit:
     case IndirectLocalPathEntry::AddressOf:
     case IndirectLocalPathEntry::LifetimeBoundCall:
+    case IndirectLocalPathEntry::LifetimeCapture:
       continue;
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslReferenceInit:
@@ -1110,12 +1118,13 @@ static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
            isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator)));
 }
 
-static void checkExprLifetimeImpl(Sema &SemaRef,
-                                  const InitializedEntity *InitEntity,
-                                  const InitializedEntity *ExtendingEntity,
-                                  LifetimeKind LK,
-                                  const AssignedEntity *AEntity, Expr *Init) {
+static void
+checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
+                      const InitializedEntity *ExtendingEntity, LifetimeKind LK,
+                      const AssignedEntity *AEntity,
+                      const CapturingEntity *CapEntity, Expr *Init) {
   assert((AEntity && LK == LK_Assignment) ||
+         (CapEntity && LK == LK_LifetimeCapture) ||
          (InitEntity && LK != LK_Assignment));
   // If this entity doesn't have an interesting lifetime, don't bother looking
   // for temporaries within its initializer.
@@ -1197,6 +1206,17 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         break;
       }
       break;
+    }
+
+    case LK_LifetimeCapture: {
+      if (!MTE)
+        return false;
+      assert(shouldLifetimeExtendThroughPath(Path) ==
+                 PathLifetimeKind::NoExtend &&
+             "No lifetime extension in function calls");
+      SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
+          << CapEntity->Entity << DiagRange;
+      return false;
     }
 
     case LK_Assignment: {
@@ -1359,6 +1379,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         break;
 
       case IndirectLocalPathEntry::LifetimeBoundCall:
+      case IndirectLocalPathEntry::LifetimeCapture:
       case IndirectLocalPathEntry::TemporaryCopy:
       case IndirectLocalPathEntry::GslPointerInit:
       case IndirectLocalPathEntry::GslReferenceInit:
@@ -1411,7 +1432,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     // warnings or errors on inner temporaries within this one's initializer.
     return false;
   };
-
+  bool HasReferenceBinding = Init->isGLValue();
   llvm::SmallVector<IndirectLocalPathEntry, 8> Path;
   if (LK == LK_Assignment &&
       shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity)) {
@@ -1420,9 +1441,18 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
              ? IndirectLocalPathEntry::LifetimeBoundCall
              : IndirectLocalPathEntry::GslPointerAssignment,
          Init});
+  } else if (LK == LK_LifetimeCapture) {
+    Path.push_back({IndirectLocalPathEntry::LifetimeCapture, Init});
+    if (isRecordWithAttr<PointerAttr>(Init->getType()))
+      HasReferenceBinding = false;
+    // Skip the top MTE if it is a temporary object of the pointer-like type
+    // itself.
+    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init);
+        MTE && isPointerLikeType(Init->getType()))
+      Init = MTE->getSubExpr();
   }
 
-  if (Init->isGLValue())
+  if (HasReferenceBinding)
     visitLocalsRetainedByReferenceBinding(Path, Init, RK_ReferenceBinding,
                                           TemporaryVisitor);
   else
@@ -1438,13 +1468,13 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
   LifetimeKind LK = LTResult.getInt();
   const InitializedEntity *ExtendingEntity = LTResult.getPointer();
   checkExprLifetimeImpl(SemaRef, &Entity, ExtendingEntity, LK,
-                        /*AEntity*/ nullptr, Init);
+                        /*AEntity*/ nullptr, /*CapEntity=*/nullptr, Init);
 }
 
 void checkExprLifetimeMustTailArg(Sema &SemaRef,
                                   const InitializedEntity &Entity, Expr *Init) {
   checkExprLifetimeImpl(SemaRef, &Entity, nullptr, LK_MustTail,
-                        /*AEntity*/ nullptr, Init);
+                        /*AEntity*/ nullptr, /*CapEntity=*/nullptr, Init);
 }
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
@@ -1460,7 +1490,15 @@ void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
 
   checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
                         /*ExtendingEntity=*/nullptr, LK_Assignment, &Entity,
-                        Init);
+                        /*CapEntity=*/nullptr, Init);
+}
+
+void checkExprLifetime(Sema &SemaRef, const CapturingEntity &Entity,
+                       Expr *Init) {
+  return checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
+                               /*ExtendingEntity=*/nullptr, LK_LifetimeCapture,
+                               /*AEntity=*/nullptr,
+                               /*CapEntity=*/&Entity, Init);
 }
 
 } // namespace clang::sema
