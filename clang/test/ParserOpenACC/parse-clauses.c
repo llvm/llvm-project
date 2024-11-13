@@ -58,21 +58,21 @@ void func() {
 #pragma acc loop seq independent, auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'independent' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'auto' not yet implemented, clause ignored}}
+  // expected-error@+3{{OpenACC clause 'independent' on 'kernels loop' construct conflicts with previous data dependence clause}}
+  // expected-error@+2{{OpenACC clause 'auto' on 'kernels loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1 2{{previous clause is here}}
 #pragma acc kernels loop seq independent auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'independent' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'auto' not yet implemented, clause ignored}}
+  // expected-error@+3{{OpenACC clause 'independent' on 'serial loop' construct conflicts with previous data dependence clause}}
+  // expected-error@+2{{OpenACC clause 'auto' on 'serial loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1 2{{previous clause is here}}
 #pragma acc serial loop seq, independent auto
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'independent' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'auto' not yet implemented, clause ignored}}
+  // expected-error@+3{{OpenACC clause 'independent' on 'parallel loop' construct conflicts with previous data dependence clause}}
+  // expected-error@+2{{OpenACC clause 'auto' on 'parallel loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1 2{{previous clause is here}}
 #pragma acc parallel loop seq independent, auto
   for(int i = 0; i < 5;++i) {}
 
@@ -270,8 +270,7 @@ void SelfClause() {
 #pragma acc serial loop self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+2{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc serial loop self, seq
   for(int i = 0; i < 5;++i) {}
 
@@ -310,19 +309,16 @@ void SelfClause() {
   for(int i = 0; i < 5;++i) {}
 
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial loop self(), seq
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{expected expression}}
   // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial loop self(,), seq
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{use of undeclared identifier 'invalid_expr'}}
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-error@+1{{use of undeclared identifier 'invalid_expr'}}
 #pragma acc serial loop self(invalid_expr), seq
   for(int i = 0; i < 5;++i) {}
 
