@@ -441,6 +441,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                ? CAZ->getElementValue(Elt)
                : nullptr;
 
+  if (const auto *CI = dyn_cast<ConstantInt>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantInt::get(getContext(), CI->getValue())
+               : nullptr;
+
   // FIXME: getNumElements() will fail for non-fixed vector types.
   if (isa<ScalableVectorType>(getType()))
     return nullptr;

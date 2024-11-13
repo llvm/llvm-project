@@ -134,7 +134,10 @@ static system_clock::time_point __libcpp_system_clock_now() {
 
 #endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
 const bool system_clock::is_steady;
+_LIBCPP_DIAGNOSTIC_POP
 
 system_clock::time_point system_clock::now() noexcept { return __libcpp_system_clock_now(); }
 
@@ -226,7 +229,10 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 #    error "Monotonic clock not implemented on this platform"
 #  endif
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
 const bool steady_clock::is_steady;
+_LIBCPP_DIAGNOSTIC_POP
 
 steady_clock::time_point steady_clock::now() noexcept { return __libcpp_steady_clock_now(); }
 

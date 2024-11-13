@@ -295,4 +295,36 @@ func.func @_QPscalar_to_array() {
 // CHECK-LABEL: func.func @_QPscalar_to_array()
 // CHECK: _FortranACUFDataTransferDescDescNoRealloc
 
+func.func @_QPtest_type() {
+  %0 = cuf.alloc !fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_typeEa"} -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_typeEa"} : (!fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>) -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  %2 = fir.alloca !fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}> {bindc_name = "b", uniq_name = "_QFtest_typeEb"}
+  %3 = fir.declare %2 {uniq_name = "_QFtest_typeEb"} : (!fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>) -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  cuf.data_transfer %3 to %1 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>, !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  cuf.free %1 : !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtest_type()
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %c12{{.*}}, %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+
+func.func @_QPtest_array_type() {
+  %c10 = arith.constant 10 : index
+  %0 = cuf.alloc !fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_array_typeEa"} -> !fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.declare %0(%1) {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_array_typeEa"} : (!fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>
+  %3 = fir.alloca !fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>> {bindc_name = "b", uniq_name = "_QFtest_array_typeEb"}
+  %4 = fir.declare %3(%1) {uniq_name = "_QFtest_array_typeEb"} : (!fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>
+  cuf.data_transfer %4 to %2 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>, !fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>>
+  cuf.free %2 : !fir.ref<!fir.array<10x!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtest_array_type()
+// CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c12 : index
+// CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c12{{.*}} : i64
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+
 } // end of module
