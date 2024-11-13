@@ -44,6 +44,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/Yk.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
@@ -269,10 +270,6 @@ static cl::opt<bool>
 static cl::opt<bool>
     YkBlockDisambiguate("yk-block-disambiguate", cl::init(false), cl::NotHidden,
                         cl::desc("Disambiguate blocks for yk"));
-
-static cl::opt<bool> YkPatchCtrlPoint("yk-patch-control-point", cl::init(false),
-                                      cl::NotHidden,
-                                      cl::desc("Patch yk_mt_control_point()"));
 
 static cl::opt<bool> YkLinkage("yk-linkage", cl::init(false),
                                       cl::NotHidden,

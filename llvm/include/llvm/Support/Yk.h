@@ -9,5 +9,6 @@ void initYkOptions(void);
 // of us randomly introducing `extern bool`s all over the place.
 extern bool YkOptNoneAfterIRPasses;
 extern bool YkDontOptFuncABI;
+extern bool YkPatchCtrlPoint;
 
 #endif

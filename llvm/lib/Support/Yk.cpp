@@ -110,6 +110,20 @@ struct CreateYkDontOptFuncABIParser {
 } // namespace
 static ManagedStatic<cl::opt<bool, true>, CreateYkDontOptFuncABIParser> YkDontOptFuncABIParser;
 
+bool YkPatchCtrlPoint;
+namespace {
+struct CreateYkPatchCtrlPointParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-patch-control-point",
+        cl::desc("Patch yk control points"),
+        cl::NotHidden, cl::location(YkPatchCtrlPoint));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>, CreateYkPatchCtrlPointParser> YkPatchCtrlPointParser;
+
+
 void llvm::initYkOptions() {
   *YkExtendedLLVMBBAddrMapSectionParser;
   *YkStackMapOffsetFixParser;
@@ -118,4 +132,5 @@ void llvm::initYkOptions() {
   *YkOptNoneAfterIRPassesParser;
   *YkEmbedIRParser;
   *YkDontOptFuncABIParser;
+  *YkPatchCtrlPointParser;
 }
