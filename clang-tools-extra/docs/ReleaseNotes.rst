@@ -244,7 +244,10 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-starts-ends-with
   <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two cases
-  that can be replaced with ``ends_with``
+  that can be replaced with ``ends_with`` and detect patterns using ``substr``
+  that can be replaced with ``starts_with``. Now handles cases like
+  ``str.substr(0, n) == "literal"``, with support for length determination through
+  integer literals, ``strlen()``, and ``size()``/``length()`` member functions.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing

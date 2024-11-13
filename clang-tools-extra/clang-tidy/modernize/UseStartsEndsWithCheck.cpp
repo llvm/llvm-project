@@ -30,6 +30,17 @@ struct NotLengthExprForStringNode {
                IntegerLiteralSizeNode->getValue().getZExtValue();
       }
 
+      if (const auto *DeclRefNode = Node.get<DeclRefExpr>()) {
+        if (const auto *VD = dyn_cast<VarDecl>(DeclRefNode->getDecl())) {
+          if (VD->hasInit() && VD->getType().isConstQualified()) {
+            if (const auto *Init = dyn_cast<IntegerLiteral>(VD->getInit())) {
+              return StringLiteralNode->getLength() !=
+                     Init->getValue().getZExtValue();
+            }
+          }
+        }
+      }
+
       if (const auto *StrlenNode = Node.get<CallExpr>()) {
         if (StrlenNode->getDirectCallee()->getName() != "strlen" ||
             StrlenNode->getNumArgs() != 1) {
@@ -171,10 +182,64 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
                              hasRHS(lengthExprForStringNode("needle")))))
           .bind("expr"),
       this);
+
+  Finder->addMatcher(
+      cxxOperatorCallExpr(
+          hasAnyOperatorName("==", "!="),
+          anyOf(
+              hasOperands(
+                  cxxMemberCallExpr(
+                      argumentCountIs(2), hasArgument(0, ZeroLiteral),
+                      hasArgument(1, lengthExprForStringNode("needle")),
+                      callee(
+                          cxxMethodDecl(hasName("substr"),
+                                        ofClass(OnClassWithStartsWithFunction))
+                              .bind("find_fun")))
+                      .bind("find_expr"),
+                  expr().bind("needle")),
+              hasOperands(expr().bind("needle"),
+                          cxxMemberCallExpr(
+                              argumentCountIs(2), hasArgument(0, ZeroLiteral),
+                              hasArgument(1, lengthExprForStringNode("needle")),
+                              callee(cxxMethodDecl(
+                                         hasName("substr"),
+                                         ofClass(OnClassWithStartsWithFunction))
+                                         .bind("find_fun")))
+                              .bind("find_expr"))))
+          .bind("expr"),
+      this);
+}
+
+bool UseStartsEndsWithCheck::isNegativeComparison(const Expr* ComparisonExpr) {
+  // Handle direct != operator
+  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(ComparisonExpr)) {
+    return BO->getOpcode() == BO_NE;
+  }
+  
+  // Handle operator!= call
+  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr)) {
+    return Op->getOperator() == OO_ExclaimEqual;
+  }
+  
+  // Handle rewritten !(expr == expr)
+  if (const auto *UO = llvm::dyn_cast<UnaryOperator>(ComparisonExpr)) {
+    if (UO->getOpcode() == UO_LNot) {
+      if (const auto *InnerBO = 
+          llvm::dyn_cast<BinaryOperator>(UO->getSubExpr()->IgnoreParens())) {
+        return InnerBO->getOpcode() == BO_EQ;
+      }
+      if (const auto *InnerOp = 
+          llvm::dyn_cast<CXXOperatorCallExpr>(UO->getSubExpr()->IgnoreParens())) {
+        return InnerOp->getOperator() == OO_EqualEqual;
+      }
+    }
+  }
+  
+  return false;
 }
 
 void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *ComparisonExpr = Result.Nodes.getNodeAs<BinaryOperator>("expr");
+  const auto *ComparisonExpr = Result.Nodes.getNodeAs<Expr>("expr");
   const auto *FindExpr = Result.Nodes.getNodeAs<CXXMemberCallExpr>("find_expr");
   const auto *FindFun = Result.Nodes.getNodeAs<CXXMethodDecl>("find_fun");
   const auto *SearchExpr = Result.Nodes.getNodeAs<Expr>("needle");
@@ -183,40 +248,43 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *EndsWithFunction =
       Result.Nodes.getNodeAs<CXXMethodDecl>("ends_with_fun");
   assert(bool(StartsWithFunction) != bool(EndsWithFunction));
+
   const CXXMethodDecl *ReplacementFunction =
       StartsWithFunction ? StartsWithFunction : EndsWithFunction;
 
   if (ComparisonExpr->getBeginLoc().isMacroID())
     return;
 
-  const bool Neg = ComparisonExpr->getOpcode() == BO_NE;
+  bool Neg = isNegativeComparison(ComparisonExpr);
 
-  auto Diagnostic =
-      diag(FindExpr->getExprLoc(), "use %0 instead of %1() %select{==|!=}2 0")
-      << ReplacementFunction->getName() << FindFun->getName() << Neg;
+  // Retrieve the source text of the search expression.
+  const auto SearchExprText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
+      *Result.SourceManager, Result.Context->getLangOpts());
 
-  // Remove possible arguments after search expression and ' [!=]= .+' suffix.
-  Diagnostic << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(
-          Lexer::getLocForEndOfToken(SearchExpr->getEndLoc(), 0,
-                                     *Result.SourceManager, getLangOpts()),
-          ComparisonExpr->getEndLoc()),
-      ")");
+  auto Diag = diag(ComparisonExpr->getBeginLoc(),
+                   "use %0 instead of %1 %select{==|!=}2 ")
+              << ReplacementFunction->getName() << FindFun->getNameAsString()
+              << Neg;
 
-  // Remove possible '.+ [!=]= ' prefix.
-  Diagnostic << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+  // Remove everything before the function call.
+  Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
       ComparisonExpr->getBeginLoc(), FindExpr->getBeginLoc()));
 
-  // Replace method name by '(starts|ends)_with'.
-  // Remove possible arguments before search expression.
-  Diagnostic << FixItHint::CreateReplacement(
-      CharSourceRange::getCharRange(FindExpr->getExprLoc(),
-                                    SearchExpr->getBeginLoc()),
-      (ReplacementFunction->getName() + "(").str());
+  // Rename the function to `starts_with` or `ends_with`.
+  Diag << FixItHint::CreateReplacement(FindExpr->getExprLoc(),
+                                       ReplacementFunction->getName());
 
-  // Add possible negation '!'.
-  if (Neg)
-    Diagnostic << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
+  // Replace arguments and everything after the function call.
+  Diag << FixItHint::CreateReplacement(
+      CharSourceRange::getTokenRange(FindExpr->getArg(0)->getBeginLoc(),
+                                     ComparisonExpr->getEndLoc()),
+      (SearchExprText + ")").str());
+
+  // Add negation if necessary.
+  if (Neg) {
+    Diag << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
+  }
 }
 
 } // namespace clang::tidy::modernize
