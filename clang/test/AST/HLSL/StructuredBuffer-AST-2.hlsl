@@ -1,4 +1,4 @@
-// RUN: %clang_dxc -T cs_6_6 %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.6-compute -S -finclude-default-header -o - %s | FileCheck %s
 
 // The purpose of this test is to ensure that the AST writer
 // only emits struct bodies when within the context of a 
