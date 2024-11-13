@@ -6,9 +6,7 @@
 define dso_local <vscale x 16 x i8> @mov_z_b(<vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: mov_z_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> %pg, i8 1)
   ret <vscale x 16 x i8> %r
@@ -17,9 +15,7 @@ define dso_local <vscale x 16 x i8> @mov_z_b(<vscale x 16 x i1> %pg) {
 define dso_local <vscale x 8 x i16> @mov_z_h(<vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: mov_z_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> %pg, i16 1)
   ret <vscale x 8 x i16> %r
@@ -28,9 +24,7 @@ define dso_local <vscale x 8 x i16> @mov_z_h(<vscale x 8 x i1> %pg) {
 define dso_local <vscale x 4 x i32> @mov_z_s(<vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: mov_z_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> %pg, i32 1)
   ret <vscale x 4 x i32> %r
@@ -39,9 +33,7 @@ define dso_local <vscale x 4 x i32> @mov_z_s(<vscale x 4 x i1> %pg) {
 define dso_local <vscale x 2 x i64> @mov_z_d(<vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: mov_z_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.d, p0/m, x8
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %pg, i64 1)
   ret <vscale x 2 x i64> %r
@@ -52,8 +44,7 @@ define dso_local <vscale x 2 x i64> @mov_z_d(<vscale x 2 x i1> %pg) {
 define dso_local <vscale x 16 x i8> @mov_m_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: mov_m_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    mov z0.b, p0/m, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i8 1)
   ret <vscale x 16 x i8> %r
@@ -62,8 +53,7 @@ define dso_local <vscale x 16 x i8> @mov_m_b(<vscale x 16 x i8> %zd, <vscale x 1
 define dso_local <vscale x 8 x i16> @mov_m_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: mov_m_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    mov z0.h, p0/m, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i16 1)
   ret <vscale x 8 x i16> %r
@@ -72,8 +62,7 @@ define dso_local <vscale x 8 x i16> @mov_m_h(<vscale x 8 x i16> %zd, <vscale x 8
 define dso_local <vscale x 4 x i32> @mov_m_s(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: mov_m_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    mov z0.s, p0/m, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 1)
   ret <vscale x 4 x i32> %r
@@ -82,8 +71,7 @@ define dso_local <vscale x 4 x i32> @mov_m_s(<vscale x 4 x i32> %zd, <vscale x 4
 define dso_local <vscale x 2 x i64> @mov_m_d(<vscale x 2 x i64> %zd, <vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: mov_m_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov z0.d, p0/m, x8
+; CHECK-NEXT:    mov z0.d, p0/m, #1 // =0x1
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> %zd, <vscale x 2 x i1> %pg, i64 1)
   ret <vscale x 2 x i64> %r
