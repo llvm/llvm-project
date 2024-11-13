@@ -169,9 +169,6 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
 // Equivalently: newset[signum] = newset[signum] & oldset[signum]
 static void KeepUnblocked(__sanitizer_sigset_t &newset,
                           __sanitizer_sigset_t &oldset, int signum) {
-  // FIXME: Figure out why Android tests fail with internal_sigismember
-  // See also: comment in BlockSignals().
-  // In the meantime, we prefer to sometimes incorrectly unblock signals.
   if (SANITIZER_ANDROID || !internal_sigismember(&oldset, signum))
     internal_sigdelset(&newset, signum);
 }
@@ -181,9 +178,7 @@ static void KeepUnblocked(__sanitizer_sigset_t &newset,
 void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t currentset;
 #  if !SANITIZER_ANDROID
-  // FIXME: SetSigProcMask and pthread_sigmask cause mysterious failures
-  // See also: comment in KeepUnblocked().
-  // In the meantime, we prefer to sometimes incorrectly unblock signals.
+  // FIXME: SetSigProcMask cause mysterious failures on Android
   SetSigProcMask(NULL, &currentset);
 #  endif
 
@@ -200,9 +195,12 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   KeepUnblocked(newset, currentset, 31);
+#  endif
 
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Don't block synchronous signals
   // but also don't unblock signals that the user had deliberately blocked.
+  // FIXME: this causes mysterious failures on Android
   KeepUnblocked(newset, currentset, SIGSEGV);
   KeepUnblocked(newset, currentset, SIGBUS);
   KeepUnblocked(newset, currentset, SIGILL);
