@@ -16733,6 +16733,7 @@ ExprResult Sema::ActOnSourceLocExpr(SourceLocIdentKind Kind,
   switch (Kind) {
   case SourceLocIdentKind::File:
   case SourceLocIdentKind::FileName:
+  case SourceLocIdentKind::VariableName:
   case SourceLocIdentKind::Function:
   case SourceLocIdentKind::FuncSig: {
     QualType ArrTy = Context.getStringLiteralArrayType(Context.CharTy, 0);
