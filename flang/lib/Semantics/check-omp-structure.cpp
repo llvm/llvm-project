@@ -405,7 +405,7 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
     } else {
       // `distribute` region has to be strictly nested inside `teams`
       if (!OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}
-               .test(GetContextParent().directive)) {
+              .test(GetContextParent().directive)) {
         violation = true;
       }
     }
@@ -517,8 +517,7 @@ void OmpStructureChecker::CheckHintClause(
                                const Fortran::parser::OmpClauseList>) {
         ompClause = &clause;
       }
-      if (const Fortran::parser::OmpClause::Hint *
-          hintClause{
+      if (const Fortran::parser::OmpClause::Hint *hintClause{
               std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)}) {
         std::optional<std::int64_t> hintValue = GetIntValue(hintClause->v);
         if (hintValue && *hintValue >= 0) {
@@ -2643,7 +2642,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     break;
   }
 
-  if (const parser::OmpObjectList * objList{GetOmpObjectList(x)}) {
+  if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[sym, source] : symbols) {
@@ -3228,7 +3227,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 void OmpStructureChecker::CheckIsLoopIvPartOfClause(
     llvmOmpClause clause, const parser::OmpObjectList &ompObjectList) {
   for (const auto &ompObject : ompObjectList.v) {
-    if (const parser::Name * name{parser::Unwrap<parser::Name>(ompObject)}) {
+    if (const parser::Name *name{parser::Unwrap<parser::Name>(ompObject)}) {
       if (name->symbol == GetContext().loopIV) {
         context_.Say(name->source,
             "DO iteration variable %s is not allowed in %s clause."_err_en_US,
@@ -4189,7 +4188,7 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
     auto enclosingClauseSet{dirIter->second.second};
     if (auto *enclosingContext{GetEnclosingContextWithDir(enclosingDir)}) {
       for (auto it{enclosingContext->clauseInfo.begin()};
-           it != enclosingContext->clauseInfo.end(); ++it) {
+          it != enclosingContext->clauseInfo.end(); ++it) {
         if (enclosingClauseSet.test(it->first)) {
           if (const auto *ompObjectList{GetOmpObjectList(*it->second)}) {
             GetSymbolsInObjectList(*ompObjectList, enclosingSymbols);
