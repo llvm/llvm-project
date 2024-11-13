@@ -167,13 +167,23 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
 
-/// A function is unreachable if its entry block ends with 'unreachable' IR
-/// instruction. In some cases, the program intends to run such functions and
-/// terminate, for instance, a unit test may run a death test. A non-test
-/// program might (or allowed to) invoke such functions to report failures
-/// (whether/when it's a good practice or not is a different topic). Regard
-/// unreachable function as possible devirtualize targets to keep the program
-/// behavior.
+/// With Clang, a pure virtual class's deleting destructor is emitted as a
+/// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the
+/// context of whole program devirtualization, the deleting destructor of a pure
+/// virtual class won't be invoked by the source code so safe to skip as a
+/// devirtualize target.
+///
+/// However, not all unreachable functions are safe to skip. In some cases, the
+/// program intends to run such functions and terminate, for instance, a unit
+/// test may run a death test. A non-test program might (or allowed to) invoke
+/// such functions to report failures (whether/when it's a good practice or not
+/// is a different topic).
+///
+/// This option is enabled to keep unreachable function as possible devirtualize
+/// targets to conservatively keep the program behavior.
+///
+/// TODO: Make a pure virtual class's deleting destructor precisely identifiable
+/// in LLVM for more devirtualization.
 static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
     "wholeprogramdevirt-keep-unreachable-function",
     cl::desc("Regard unreachable functions as possible devirtualize targets."),

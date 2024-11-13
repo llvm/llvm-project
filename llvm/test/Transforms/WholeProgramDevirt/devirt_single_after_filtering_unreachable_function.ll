@@ -4,7 +4,7 @@
 ; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s  --implicit-check-not="single-impl"
 
 ; Test that regular LTO will analyze IR, detect unreachable functions and discard unreachable functions
-; when finding virtual call targets.
+; when finding virtual call targets under `wholeprogramdevirt-keep-unreachable-function=false` option.
 ; In this test case, the unreachable function is the virtual deleting destructor of an abstract class.
 ; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-keep-unreachable-function=false %s 2>&1 | FileCheck %s --check-prefix=DEVIRT
 
