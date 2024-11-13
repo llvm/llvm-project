@@ -230,7 +230,7 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
   if (regionA != b->getParent()) {
     b = regionA ? regionA->findAncestorBlockInRegion(*b) : nullptr;
     // If we could not find a valid block b then it is a not a dominator.
-    if (b == nullptr)
+    if (!b)
       return false;
 
     // Check to see if the ancestor of `b` is the same block as `a`.  A properly
@@ -266,8 +266,8 @@ template class detail::DominanceInfoBase</*IsPostDom=*/false>;
 /// Return true if operation `a` properly dominates operation `b`.  The
 /// 'enclosingOpOk' flag says whether we should return true if the `b` op is
 /// enclosed by a region on 'a'.
-bool DominanceInfo::properlyDominatesImpl(Operation *a, Operation *b,
-                                          bool enclosingOpOk) const {
+bool DominanceInfo::properlyDominates(Operation *a, Operation *b,
+                                      bool enclosingOpOk) const {
   Block *aBlock = a->getBlock(), *bBlock = b->getBlock();
   assert(aBlock && bBlock && "operations must be in a block");
 
@@ -319,7 +319,7 @@ bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
 
   // `a` properlyDominates `b` if the operation defining `a` properlyDominates
   // `b`, but `a` does not itself enclose `b` in one of its regions.
-  return properlyDominatesImpl(a.getDefiningOp(), b, /*enclosingOpOk=*/false);
+  return properlyDominates(a.getDefiningOp(), b, /*enclosingOpOk=*/false);
 }
 
 //===----------------------------------------------------------------------===//
