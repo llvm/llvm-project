@@ -22,13 +22,10 @@ namespace orc {
 /// runtime.
 class RedirectionManager {
 public:
-  /// Symbol name to symbol definition map.
-  using SymbolAddrMap = DenseMap<SymbolStringPtr, ExecutorSymbolDef>;
-
   virtual ~RedirectionManager() = default;
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
-  virtual Error redirect(JITDylib &JD, const SymbolAddrMap &NewDests) = 0;
+  virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
 
   /// Change the redirection destination of given symbol to new destination
   /// symbol.

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_SYCLKERNELINFO_H
 #define LLVM_CLANG_AST_SYCLKERNELINFO_H
 
+#include "clang/AST/CanonicalType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 

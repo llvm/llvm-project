@@ -1547,7 +1547,8 @@ void ASTDeclReader::VisitFieldDecl(FieldDecl *FD) {
   else if (Bits & 1)
     FD->setBitWidth(Record.readExpr());
 
-  if (!FD->getDeclName()) {
+  if (!FD->getDeclName() ||
+      FD->isPlaceholderVar(Reader.getContext().getLangOpts())) {
     if (auto *Tmpl = readDeclAs<FieldDecl>())
       Reader.getContext().setInstantiatedFromUnnamedFieldDecl(FD, Tmpl);
   }
@@ -2424,13 +2425,11 @@ ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   // Make sure we've allocated the Common pointer first. We do this before
   // VisitTemplateDecl so that getCommonPtr() can be used during initialization.
   RedeclarableTemplateDecl *CanonD = D->getCanonicalDecl();
-  if (!CanonD->getCommonPtrInternal()) {
-    CanonD->setCommonPtr(CanonD->newCommon(Reader.getContext()));
+  if (!CanonD->Common) {
+    CanonD->Common = CanonD->newCommon(Reader.getContext());
     Reader.PendingDefinitions.insert(CanonD);
   }
-  D->setCommonPtr(CanonD->getCommonPtrInternal());
-  if (Record.readInt())
-    D->setMemberSpecialization();
+  D->Common = CanonD->Common;
 
   // If this is the first declaration of the template, fill in the information
   // for the 'common' pointer.
@@ -2439,6 +2438,8 @@ ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
       assert(RTD->getKind() == D->getKind() &&
              "InstantiatedFromMemberTemplate kind mismatch");
       D->setInstantiatedFromMemberTemplate(RTD);
+      if (Record.readInt())
+        D->setMemberSpecialization();
     }
   }
 
@@ -2570,12 +2571,12 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   D->TemplateParams = Params;
 
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
-  D->InstantiatedFromMember.setInt(Record.readInt());
 
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
         readDeclAs<ClassTemplatePartialSpecializationDecl>());
+    D->InstantiatedFromMember.setInt(Record.readInt());
   }
 }
 
@@ -2668,12 +2669,12 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
   D->TemplateParams = Params;
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
-  D->InstantiatedFromMember.setInt(Record.readInt());
 
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
         readDeclAs<VarTemplatePartialSpecializationDecl>());
+    D->InstantiatedFromMember.setInt(Record.readInt());
   }
 }
 
@@ -2896,7 +2897,7 @@ void ASTDeclReader::mergeRedeclarableTemplate(RedeclarableTemplateDecl *D,
   // If we merged the template with a prior declaration chain, merge the
   // common pointer.
   // FIXME: Actually merge here, don't just overwrite.
-  D->setCommonPtr(D->getCanonicalDecl()->getCommonPtrInternal());
+  D->Common = D->getCanonicalDecl()->Common;
 }
 
 /// "Cast" to type T, asserting if we don't have an implicit conversion.

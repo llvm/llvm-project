@@ -5,7 +5,7 @@
 define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i32 %src2) {
 ; GFX13-SDAG-LABEL: v_wave_match_sgpr:
 ; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_wave_match_b32 v1, s2, s3
@@ -14,7 +14,7 @@ define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i
 ;
 ; GFX13-GISEL-LABEL: v_wave_match_sgpr:
 ; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_wave_match_b32 v0, s2, s3
@@ -28,7 +28,7 @@ define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i
 define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
 ; GFX13-LABEL: v_wave_match_vgpr:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX13-NEXT:    v_bfe_u32 v0, v0, 10, 10
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -47,7 +47,7 @@ define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
 define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out) {
 ; GFX13-SDAG-LABEL: v_wave_match_constant:
 ; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-SDAG-NEXT:    v_wave_match_b32 v1, 7, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -56,7 +56,7 @@ define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out) {
 ;
 ; GFX13-GISEL-LABEL: v_wave_match_constant:
 ; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-GISEL-NEXT:    v_wave_match_b32 v0, 7, 5
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -70,7 +70,7 @@ define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out) {
 define amdgpu_kernel void @v_wave_match_undef(ptr addrspace(1) %out) {
 ; GFX13-SDAG-LABEL: v_wave_match_undef:
 ; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_wave_match_b32 v1, s0, s0
@@ -79,7 +79,7 @@ define amdgpu_kernel void @v_wave_match_undef(ptr addrspace(1) %out) {
 ;
 ; GFX13-GISEL-LABEL: v_wave_match_undef:
 ; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_wave_match_b32 v0, s0, s0

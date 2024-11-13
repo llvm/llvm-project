@@ -140,8 +140,8 @@ C++ Specific Potentially Breaking Changes
     unsigned operator""_udl_name(unsigned long long);
 
 - Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
-  applied on a parameter of a function that returns void. This was previously
-  ignored and had no effect. (#GH107556)
+  applied on a parameter or an implicit object parameter of a function that
+  returns void. This was previously ignored and had no effect. (#GH107556)
 
   .. code-block:: c++
 
@@ -274,10 +274,51 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Updated conformance for `N3298 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3298.htm>`_
+  which adds the ``i`` and ``j`` suffixes for the creation of a ``_Complex``
+  constant value. Clang has always supported these suffixes as a GNU extension,
+  so ``-Wgnu-imaginary-constant`` no longer has effect in C modes, as this is
+  now a C2y extension in C. ``-Wgnu-imaginary-constant`` still applies in C++
+  modes.
+
+- Clang updated conformance for `N3370 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3370.htm>`_
+  case range expressions. This feature was previously supported by Clang as a
+  GNU extension, so ``-Wgnu-case-range`` no longer has effect in C modes, as
+  this is now a C2y extension in C. ``-Wgnu-case-range`` still applies in C++
+  modes.
+
+- Clang implemented support for `N3344 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3344.pdf>`_
+  which disallows a ``void`` parameter from having a qualifier or storage class
+  specifier. Note that ``register void`` was previously accepted in all C
+  language modes but is now rejected (all of the other qualifiers and storage
+  class specifiers were previously rejected).
+
+- Updated conformance for `N3364 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3364.pdf>`_
+  on floating-point translation-time initialization with signaling NaN. This
+  paper adopts Clang's existing practice, so there were no changes to compiler
+  behavior.
+
+- Implemented support for `N3341 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3341.pdf>`_
+  which makes empty structure and union objects implementation-defined in C.
+  ``-Wgnu-empty-struct`` will be emitted in C23 and earlier modes because the
+  behavior is a conforming GNU extension in those modes, but will no longer
+  have an effect in C2y mode.
+
+- Updated conformance for `N3342 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3342.pdf>`_
+  which made qualified function types implementation-defined rather than
+  undefined. Clang has always accepted ``const`` and ``volatile`` qualified
+  function types by ignoring the qualifiers.
+
+- Updated conformance for `N3346 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3346.pdf>`_
+  which changes some undefined behavior around initialization to instead be
+  constraint violations. This paper adopts Clang's existing practice, so there
+  were no changes to compiler behavior.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
 - Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
+- Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -288,6 +329,29 @@ Non-comprehensive list of changes in this release
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
 - ``__builtin_abs`` function can now be used in constant expressions.
+
+- The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
+  programmer needs access to the ``counted_by`` attribute's field, but it's not
+  available --- e.g. in macros. For instace, it can be used to automatically
+  set the counter during allocation in the Linux kernel:
+
+  .. code-block:: c
+
+     /* A simplified version of Linux allocation macros */
+     #define alloc(PTR, FAM, COUNT) ({ \
+         sizeof_t __ignored_assignment;                             \
+         typeof(P) __p;                                             \
+         size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT;      \
+         __p = malloc(__size);                                      \
+         *_Generic(                                                 \
+           __builtin_counted_by_ref(__p->FAM),                      \
+             void *: &__ignored_assignment,                         \
+             default: __builtin_counted_by_ref(__p->FAM)) = COUNT;  \
+         __p;                                                       \
+     })
+
+  The flexible array member (FAM) can now be accessed immediately without causing
+  issues with the sanitizer because the counter is automatically set.
 
 New Compiler Flags
 ------------------
@@ -569,9 +633,6 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
-- Clang now uses the correct set of template argument lists when comparing the constraints of
-  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
-  a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047), (#GH49093)
@@ -591,6 +652,9 @@ Bug Fixes to C++ Support
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
 - Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
+- Name independent data members were not correctly initialized from default member initializers. (#GH114069)
+- Fixed expression transformation for ``[[assume(...)]]``, allowing using pack indexing expressions within the
+  assumption if they also occur inside of a dependent lambda. (#GH114787)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -598,6 +662,8 @@ Bug Fixes to AST Handling
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
 - Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
   sometimes incorrectly return null even if a comment was present. (#GH108145)
+- Clang now correctly parses the argument of the ``relates``, ``related``, ``relatesalso``,
+  and ``relatedalso`` comment commands.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -678,6 +744,9 @@ X86 Support
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
 - Support ISA of ``AMX-FP8``.
 - Support ISA of ``AMX-TRANSPOSE``.
+- Support ISA of ``AMX-MOVRS``.
+- Support ISA of ``AMX-AVX512``.
+- Support ISA of ``AMX-TF32``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -888,6 +957,7 @@ OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
+- Added support for allocator-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^

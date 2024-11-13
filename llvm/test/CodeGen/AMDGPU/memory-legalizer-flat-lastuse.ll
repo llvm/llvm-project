@@ -8,9 +8,8 @@
 define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ; GFX12-LABEL: flat_last_use_load_0:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s3
@@ -23,11 +22,9 @@ define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ;
 ; GFX1210-LABEL: flat_last_use_load_0:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_LU
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -36,9 +33,8 @@ define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ;
 ; GFX13-LABEL: flat_last_use_load_0:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU
@@ -55,8 +51,9 @@ entry:
 define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX12-LABEL: flat_last_use_load_1:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8
+; GFX12-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
 ; GFX12-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-NEXT:    s_mov_b32 s2, 2
@@ -87,12 +84,11 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ;
 ; GFX1210-LABEL: flat_last_use_load_1:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s4, 0x3ff
 ; GFX1210-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
@@ -103,9 +99,8 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ;
 ; GFX13-LABEL: flat_last_use_load_1:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_mov_b32 s4, 0x3ff
 ; GFX13-NEXT:    v_and_b32_e64 v0, v0, s4
 ; GFX13-NEXT:    s_mov_b32 s4, 2
@@ -133,9 +128,8 @@ entry:
 define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ; GFX12-LABEL: flat_last_use_and_volatile_load:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s3
@@ -151,11 +145,9 @@ define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ;
 ; GFX1210-LABEL: flat_last_use_and_volatile_load:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -164,9 +156,8 @@ define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ;
 ; GFX13-LABEL: flat_last_use_and_volatile_load:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_BYPASS scope:SCOPE_SYS
@@ -186,9 +177,8 @@ entry:
 define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out) {
 ; GFX12-LABEL: flat_last_use_and_nontemporal_load:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s3
@@ -201,11 +191,9 @@ define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out)
 ;
 ; GFX1210-LABEL: flat_last_use_and_nontemporal_load:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_LU
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -214,9 +202,8 @@ define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out)
 ;
 ; GFX13-LABEL: flat_last_use_and_nontemporal_load:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU

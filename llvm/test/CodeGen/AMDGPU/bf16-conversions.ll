@@ -244,7 +244,7 @@ define amdgpu_ps float @v_test_cvt_v2f64_v2bf16_v(<2 x double> %src) {
 ; GFX1210-NEXT:    s_or_b32 vcc_lo, vcc_lo, s1
 ; GFX1210-NEXT:    v_cndmask_b32_e32 v1, v1, v10, vcc_lo
 ; GFX1210-NEXT:    s_or_b32 vcc_lo, s0, s2
-; GFX1210-NEXT:    s_wait_alu 0xfffd
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_cndmask_b32_e32 v0, v0, v11, vcc_lo
 ; GFX1210-NEXT:    v_and_or_b32 v1, 0x80000000, v4, v1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)

@@ -11,7 +11,7 @@ target datalayout = "A5"
 define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr {
   ; CHECK-LABEL: name: _Z3foov
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 20
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 28

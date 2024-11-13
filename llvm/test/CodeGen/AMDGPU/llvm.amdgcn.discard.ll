@@ -122,7 +122,7 @@ entry:
 define amdgpu_kernel void @scratch_discard_b32_saddr(ptr addrspace(5) inreg %sbase, i32 %voffset) {
 ; GFX1300-SDAG-LABEL: scratch_discard_b32_saddr:
 ; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX1300-SDAG-NEXT:    scratch_discard_b32 off, s0 offset:128 th:TH_STORE_NT_HT scope:SCOPE_DEV
@@ -130,7 +130,7 @@ define amdgpu_kernel void @scratch_discard_b32_saddr(ptr addrspace(5) inreg %sba
 ;
 ; GFX1300-GISEL-LABEL: scratch_discard_b32_saddr:
 ; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_add_co_u32 s0, s0, s1
 ; GFX1300-GISEL-NEXT:    scratch_discard_b32 off, s0 offset:128 th:TH_STORE_NT_HT scope:SCOPE_DEV
@@ -157,7 +157,7 @@ entry:
 define amdgpu_kernel void @scratch_discard_b128_saddr(ptr addrspace(5) inreg %sbase, i32 %voffset) {
 ; GFX1300-SDAG-LABEL: scratch_discard_b128_saddr:
 ; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX1300-SDAG-NEXT:    scratch_discard_b128 off, s0 offset:-128
@@ -165,7 +165,7 @@ define amdgpu_kernel void @scratch_discard_b128_saddr(ptr addrspace(5) inreg %sb
 ;
 ; GFX1300-GISEL-LABEL: scratch_discard_b128_saddr:
 ; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_add_co_u32 s0, s0, s1
 ; GFX1300-GISEL-NEXT:    scratch_discard_b128 off, s0 offset:-128

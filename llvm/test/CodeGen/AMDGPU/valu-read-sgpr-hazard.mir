@@ -13,6 +13,7 @@
   define amdgpu_gs void @hazard_vcc1() { ret void }
   define amdgpu_gs void @hazard_vcc2() { ret void }
   define amdgpu_gs void @hazard_vcc3() { ret void }
+  define amdgpu_gs void @hazard_merge_vcc() { ret void }
   define amdgpu_gs void @hazard_addc1() { ret void }
   define amdgpu_gs void @hazard_addc2() { ret void }
   define amdgpu_gs void @hazard_addc3() { ret void }
@@ -148,7 +149,7 @@ body:            |
     ; GCN-LABEL: name: hazard_vcc2
     ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
     ; GCN-NEXT: $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65533
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
     ; GCN-NEXT: $sgpr4 = S_ADD_U32 $vcc_lo, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
@@ -164,11 +165,53 @@ body:            |
     ; GCN-LABEL: name: hazard_vcc3
     ; GCN: $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
     ; GCN-NEXT: $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65533
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
     ; GCN-NEXT: $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc_lo, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
+    $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            hazard_merge_vcc
+body:            |
+  ; GCN-LABEL: name: hazard_merge_vcc
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc_lo, implicit $exec
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $vcc_lo = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.3:
+  ; GCN-NEXT:   S_WAITCNT_DEPCTR 65532
+  ; GCN-NEXT:   $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc_lo, implicit $exec
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    $vgpr1 = V_CNDMASK_B32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
+    S_CBRANCH_SCC0 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1:
+    $vcc_lo = S_CSELECT_B32 -1, 0, implicit $scc
+    S_BRANCH %bb.3
+  bb.2:
+    $vcc_lo = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+  bb.3:
     $vgpr3 = V_CNDMASK_B32_e32 $vgpr4, $vgpr5, implicit $vcc, implicit $exec
     S_ENDPGM 0
 ...

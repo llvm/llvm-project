@@ -173,6 +173,20 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
 
 // -----
 
+// Ensure extract dense resource elements not crash.
+
+// CHECK-LABEL: func @extract_dense_resource_nofold
+func.func @extract_dense_resource_nofold() -> i64 {
+  // CHECK:      %[[EXT:.+]] = tensor.extract
+  // CHECK-NEXT:   return %[[EXT]]
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense_resource<__elided__> : tensor<1xi64>
+  %extracted = tensor.extract %cst[%c0] : tensor<1xi64>
+  return %extracted : i64
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_insert
 func.func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
   // Fold an insert into a splat.
@@ -2736,7 +2750,10 @@ func.func @fold_cast_multiple_results(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2x
 // CHECK-SAME:      %[[DEST:.*]]: tensor<1x1x8x1xi32>,
 // CHECK-SAME:      %[[SRC:.*]]: tensor<7x?xi32>,
 // CHECK-SAME:      %[[PAD:.*]]: i32) -> tensor<1x1x8x1xi32> {
-// CHECK:           %[[PACK:.*]] = tensor.pack %[[SRC]] padding_value(%[[PAD]] : i32) inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] : tensor<7x?xi32> -> tensor<1x1x8x1xi32>
+// CHECK:           %[[PACK:.*]] = tensor.pack %[[SRC]] padding_value(%[[PAD]] : i32)
+// CHECK-SAME:        inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]]
+// CHECK-SAME:        some_attr
+// CHECK-SAME:        : tensor<7x?xi32> -> tensor<1x1x8x1xi32>
 // CHECK:           return %[[PACK]] : tensor<1x1x8x1xi32>
 func.func @fold_cast_pack_dynamic_tile_size(
   %dest: tensor<1x1x8x1xi32>,
@@ -2745,7 +2762,10 @@ func.func @fold_cast_pack_dynamic_tile_size(
 
     %cast = tensor.cast %dest : tensor<1x1x8x1xi32> to tensor<1x1x?x1xi32>
     %c8 = arith.constant 8 : index
-    %pack = tensor.pack %src padding_value(%pad : i32) inner_dims_pos = [0, 1] inner_tiles = [%c8, 1] into %cast : tensor<7x?xi32> -> tensor<1x1x?x1xi32>
+    %pack = tensor.pack %src padding_value(%pad : i32)
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%c8, 1]
+      into %cast {some_attr} : tensor<7x?xi32> -> tensor<1x1x?x1xi32>
     %res = tensor.cast %pack : tensor<1x1x?x1xi32> to tensor<1x1x8x1xi32>
     return %res : tensor<1x1x8x1xi32>
 }

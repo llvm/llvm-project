@@ -349,9 +349,13 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; RV64-i64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-i64-NEXT:    vle64.v v8, (a0)
 ; RV64-i64-NEXT:    addi sp, s0, -128
+; RV64-i64-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-i64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-i64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-i64-NEXT:    .cfi_restore ra
+; RV64-i64-NEXT:    .cfi_restore s0
 ; RV64-i64-NEXT:    addi sp, sp, 128
+; RV64-i64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-i64-NEXT:    ret
   %a = call <8 x iXLen> @llvm.lrint.v8iXLen.v8f32(<8 x float> %x)
   ret <8 x iXLen> %a
@@ -434,9 +438,13 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -192
+; RV32-NEXT:    .cfi_def_cfa sp, 192
 ; RV32-NEXT:    lw ra, 188(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 184(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 192
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_v16f32:
@@ -514,9 +522,13 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; RV64-i32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-i32-NEXT:    vle32.v v8, (a0)
 ; RV64-i32-NEXT:    addi sp, s0, -192
+; RV64-i32-NEXT:    .cfi_def_cfa sp, 192
 ; RV64-i32-NEXT:    ld ra, 184(sp) # 8-byte Folded Reload
 ; RV64-i32-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
+; RV64-i32-NEXT:    .cfi_restore ra
+; RV64-i32-NEXT:    .cfi_restore s0
 ; RV64-i32-NEXT:    addi sp, sp, 192
+; RV64-i32-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_v16f32:
@@ -594,9 +606,13 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; RV64-i64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-i64-NEXT:    vle64.v v8, (a0)
 ; RV64-i64-NEXT:    addi sp, s0, -384
+; RV64-i64-NEXT:    .cfi_def_cfa sp, 384
 ; RV64-i64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; RV64-i64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64-i64-NEXT:    .cfi_restore ra
+; RV64-i64-NEXT:    .cfi_restore s0
 ; RV64-i64-NEXT:    addi sp, sp, 384
+; RV64-i64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-i64-NEXT:    ret
   %a = call <16 x iXLen> @llvm.lrint.v16iXLen.v16f32(<16 x float> %x)
   ret <16 x iXLen> %a
@@ -797,9 +813,13 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; RV32-NEXT:    fcvt.w.d a0, fa2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-NEXT:    addi sp, s0, -128
+; RV32-NEXT:    .cfi_def_cfa sp, 128
 ; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 128
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_v8f64:
@@ -847,9 +867,13 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; RV64-i32-NEXT:    fcvt.l.d a0, fa2
 ; RV64-i32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-i32-NEXT:    addi sp, s0, -128
+; RV64-i32-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-i32-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-i32-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-i32-NEXT:    .cfi_restore ra
+; RV64-i32-NEXT:    .cfi_restore s0
 ; RV64-i32-NEXT:    addi sp, sp, 128
+; RV64-i32-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_v8f64:
@@ -899,9 +923,13 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; RV64-i64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-i64-NEXT:    vle64.v v8, (a0)
 ; RV64-i64-NEXT:    addi sp, s0, -192
+; RV64-i64-NEXT:    .cfi_def_cfa sp, 192
 ; RV64-i64-NEXT:    ld ra, 184(sp) # 8-byte Folded Reload
 ; RV64-i64-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
+; RV64-i64-NEXT:    .cfi_restore ra
+; RV64-i64-NEXT:    .cfi_restore s0
 ; RV64-i64-NEXT:    addi sp, sp, 192
+; RV64-i64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-i64-NEXT:    ret
   %a = call <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double> %x)
   ret <8 x iXLen> %a

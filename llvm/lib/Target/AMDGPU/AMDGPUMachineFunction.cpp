@@ -105,6 +105,14 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (AMDGPU::isNamedBarrier(GV)) {
+      std::optional<unsigned> BarAddr = getLDSAbsoluteAddress(GV);
+      if (!BarAddr)
+        llvm_unreachable("named barrier should have an assigned address");
+      Entry.first->second = BarAddr.value();
+      return BarAddr.value();
+    }
+
     if (TargetExtType *TTy = AMDGPU::isLDSSemaphore(GV)) {
       unsigned OwningRank = TTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
       unsigned Num = ++NumSemaphores[OwningRank];

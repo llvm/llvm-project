@@ -8,9 +8,8 @@
 define amdgpu_kernel void @private_last_use_load_0(ptr addrspace(5) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: private_last_use_load_0:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_LU
@@ -20,10 +19,8 @@ define amdgpu_kernel void @private_last_use_load_0(ptr addrspace(5) %in, ptr add
 ;
 ; GFX1210-LABEL: private_last_use_load_0:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_LU
@@ -33,9 +30,8 @@ define amdgpu_kernel void @private_last_use_load_0(ptr addrspace(5) %in, ptr add
 ;
 ; GFX13-LABEL: private_last_use_load_0:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_LU
@@ -51,10 +47,9 @@ entry:
 define amdgpu_kernel void @private_last_use_load_1(ptr addrspace(5) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: private_last_use_load_1:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_mov_b32 s3, 0x3ff
 ; GFX12-NEXT:    v_and_b32_e64 v1, v1, s3
@@ -69,11 +64,9 @@ define amdgpu_kernel void @private_last_use_load_1(ptr addrspace(5) %in, ptr add
 ;
 ; GFX1210-LABEL: private_last_use_load_1:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_mov_b32 s3, 0x3ff
 ; GFX1210-NEXT:    v_and_b32_e64 v1, v1, s3
@@ -85,10 +78,9 @@ define amdgpu_kernel void @private_last_use_load_1(ptr addrspace(5) %in, ptr add
 ;
 ; GFX13-LABEL: private_last_use_load_1:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v0
-; GFX13-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_mov_b32 s3, 0x3ff
 ; GFX13-NEXT:    v_and_b32_e64 v1, v1, s3
@@ -108,9 +100,8 @@ entry:
 define amdgpu_kernel void @private_last_use_and_volatile_load(ptr addrspace(5) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: private_last_use_and_volatile_load:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_BYPASS scope:SCOPE_SYS
@@ -122,10 +113,8 @@ define amdgpu_kernel void @private_last_use_and_volatile_load(ptr addrspace(5) %
 ;
 ; GFX1210-LABEL: private_last_use_and_volatile_load:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_BYPASS scope:SCOPE_SYS
@@ -135,9 +124,8 @@ define amdgpu_kernel void @private_last_use_and_volatile_load(ptr addrspace(5) %
 ;
 ; GFX13-LABEL: private_last_use_and_volatile_load:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_BYPASS scope:SCOPE_SYS
@@ -155,9 +143,8 @@ entry:
 define amdgpu_kernel void @private_last_use_and_nontemporal_load(ptr addrspace(5) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: private_last_use_and_nontemporal_load:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_LU
@@ -167,10 +154,8 @@ define amdgpu_kernel void @private_last_use_and_nontemporal_load(ptr addrspace(5
 ;
 ; GFX1210-LABEL: private_last_use_and_nontemporal_load:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
-; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_LU
@@ -180,9 +165,8 @@ define amdgpu_kernel void @private_last_use_and_nontemporal_load(ptr addrspace(5
 ;
 ; GFX13-LABEL: private_last_use_and_nontemporal_load:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; GFX13-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX13-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    scratch_load_b32 v1, off, s2 th:TH_LOAD_LU

@@ -186,6 +186,7 @@ protected:
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
   bool HasDefaultComponentBroadcast = false;
+  bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -1406,6 +1407,9 @@ public:
     return getGeneration() == GFX12;
   }
 
+  /// \returns true if the target has instructions with xf32 format support.
+  bool hasXF32Insts() const { return HasXF32Insts; }
+
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
@@ -1793,7 +1797,7 @@ public:
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 
   unsigned getBarrierMemberCountShift() const {
-    return getGeneration() >= GFX13 ? 12 : 16;
+    return getGeneration() >= GFX13 ? 3 : 4;
   }
 
   /// \returns true if the operand of s_barrier_init can be an immediate.

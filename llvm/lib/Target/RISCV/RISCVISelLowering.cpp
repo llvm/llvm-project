@@ -18,7 +18,6 @@
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSubtarget.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -1339,11 +1338,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
-        // FIXME: mload, mstore, mgather, mscatter, vp_gather/scatter can be
-        // hoisted to here.
-        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
-        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
-                            ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+        setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                            ISD::MGATHER, ISD::MSCATTER},
+                           VT, Custom);
+        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER,
+                            ISD::VP_SCATTER, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
                             ISD::EXPERIMENTAL_VP_STRIDED_STORE},
                            VT, Custom);
 
@@ -1407,11 +1406,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::BUILD_VECTOR, ISD::SCALAR_TO_VECTOR}, VT,
                            Custom);
-
-        setOperationAction(
-            {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
-
-        setOperationAction({ISD::VP_GATHER, ISD::VP_SCATTER}, VT, Custom);
 
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
@@ -2521,7 +2515,9 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   case MVT::i64:
     return Subtarget.hasVInstructionsI64();
   case MVT::f16:
-    return Subtarget.hasVInstructionsF16();
+    return Subtarget.hasVInstructionsF16Minimal();
+  case MVT::bf16:
+    return Subtarget.hasVInstructionsBF16Minimal();
   case MVT::f32:
     return Subtarget.hasVInstructionsF32();
   case MVT::f64:
@@ -4431,48 +4427,58 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
 }
 
 // Is this a shuffle extracts either the even or odd elements of a vector?
-// That is, specifically, either (a) or (b) below.
-// t34: v8i8 = extract_subvector t11, Constant:i64<0>
-// t33: v8i8 = extract_subvector t11, Constant:i64<8>
-// a) t35: v8i8 = vector_shuffle<0,2,4,6,8,10,12,14> t34, t33
-// b) t35: v8i8 = vector_shuffle<1,3,5,7,9,11,13,15> t34, t33
-// Returns {Src Vector, Even Elements} on success
-static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
-                                  SDValue V2, ArrayRef<int> Mask,
-                                  const RISCVSubtarget &Subtarget) {
+// That is, specifically, either (a) or (b) in the options below.
+// Single operand shuffle is easy:
+//   a) t35: v8i8 = vector_shuffle<0,2,4,6,u,u,u,u> t34, undef
+//   b) t35: v8i8 = vector_shuffle<1,3,5,7,u,u,u,u> t34, undef
+// Double operand shuffle:
+//   t34: v8i8 = extract_subvector t11, Constant:i64<0>
+//   t33: v8i8 = extract_subvector t11, Constant:i64<8>
+//   a) t35: v8i8 = vector_shuffle<0,2,4,6,8,10,12,14> t34, t33
+//   b) t35: v8i8 = vector_shuffle<1,3,5,7,9,11,13,15> t34, t33
+static SDValue isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
+                                     SDValue V2, ArrayRef<int> Mask,
+                                     const RISCVSubtarget &Subtarget) {
   // Need to be able to widen the vector.
   if (VT.getScalarSizeInBits() >= Subtarget.getELen())
-    return false;
+    return SDValue();
+
+  // First index must be the first even or odd element from V1.
+  if (Mask[0] != 0 && Mask[0] != 1)
+    return SDValue();
+
+  // The others must increase by 2 each time.
+  for (unsigned i = 1; i != Mask.size(); ++i)
+    if (Mask[i] != -1 && Mask[i] != Mask[0] + (int)i * 2)
+      return SDValue();
+
+  if (1 == count_if(Mask, [](int Idx) { return Idx != -1; }))
+    return SDValue();
+
+  if (V2.isUndef() &&
+      RISCVTargetLowering::getLMUL(ContainerVT) != RISCVII::VLMUL::LMUL_8)
+    return V1;
 
   // Both input must be extracts.
   if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
       V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return false;
+    return SDValue();
 
   // Extracting from the same source.
   SDValue Src = V1.getOperand(0);
   if (Src != V2.getOperand(0))
-    return false;
+    return SDValue();
 
   // Src needs to have twice the number of elements.
   if (Src.getValueType().getVectorNumElements() != (Mask.size() * 2))
-    return false;
+    return SDValue();
 
   // The extracts must extract the two halves of the source.
   if (V1.getConstantOperandVal(1) != 0 ||
       V2.getConstantOperandVal(1) != Mask.size())
-    return false;
+    return SDValue();
 
-  // First index must be the first even or odd element from V1.
-  if (Mask[0] != 0 && Mask[0] != 1)
-    return false;
-
-  // The others must increase by 2 each time (or be undef).
-  for (unsigned i = 1; i != Mask.size(); ++i)
-    if (Mask[i] != -1 && Mask[i] != Mask[0] + (int)i * 2)
-      return false;
-
-  return true;
+  return Src;
 }
 
 /// Is this shuffle interleaving contiguous elements from one vector into the
@@ -4602,7 +4608,8 @@ static SDValue getDeinterleaveViaVNSRL(const SDLoc &DL, MVT VT, SDValue Src,
     assert(Src.getSimpleValueType().isFixedLengthVector());
     ContainerVT = getContainerForFixedLengthVector(DAG, ContainerVT, Subtarget);
 
-    // The source is a vector of type <m x n*2 x ty>
+    // The source is a vector of type <m x n*2 x ty> (For the single source
+    // case, the high half is undefined)
     MVT SrcContainerVT =
         MVT::getVectorVT(ContainerVT.getVectorElementType(),
                          ContainerVT.getVectorElementCount() * 2);
@@ -5305,10 +5312,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   // If this is a deinterleave and we can widen the vector, then we can use
   // vnsrl to deinterleave.
-  if (isDeinterleaveShuffle(VT, ContainerVT, V1, V2, Mask, Subtarget)) {
-    return getDeinterleaveViaVNSRL(DL, VT, V1.getOperand(0), Mask[0] == 0,
-                                   Subtarget, DAG);
-  }
+  if (SDValue Src =
+          isDeinterleaveShuffle(VT, ContainerVT, V1, V2, Mask, Subtarget))
+    return getDeinterleaveViaVNSRL(DL, VT, Src, Mask[0] == 0, Subtarget, DAG);
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -9384,8 +9390,6 @@ static inline void promoteVCIXScalar(const SDValue &Op,
         isa<ConstantSDNode>(ScalarOp) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
     ScalarOp = DAG.getNode(ExtOpc, DL, XLenVT, ScalarOp);
   }
-
-  return;
 }
 
 static void processVCIXOperands(SDValue &OrigOp,
@@ -17080,7 +17084,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
     // fold (bitconvert (fabs x)) -> (and (bitconvert x), (not signbit))
     if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
-        !Op0.getNode()->hasOneUse())
+        !Op0.getNode()->hasOneUse() || Subtarget.hasStdExtZdinx())
       break;
     SDValue NewSplitF64 =
         DAG.getNode(RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32),
@@ -21585,6 +21589,8 @@ static const Intrinsic::ID FixedVlsegIntrIds[] = {
 bool RISCVTargetLowering::lowerInterleavedLoad(
     LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
+  assert(Indices.size() == Shuffles.size());
+
   IRBuilder<> Builder(LI);
 
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
@@ -21594,6 +21600,27 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     return false;
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+
+  // If the segment load is going to be performed segment at a time anyways
+  // and there's only one element used, use a strided load instead.  This
+  // will be equally fast, and create less vector register pressure.
+  if (Indices.size() == 1 && !Subtarget.hasOptimizedSegmentLoadStore(Factor)) {
+    unsigned ScalarSizeInBytes = VTy->getScalarSizeInBits() / 8;
+    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
+    Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
+    Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
+    Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
+    Value *VL = Builder.getInt32(VTy->getNumElements());
+
+    CallInst *CI =
+        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                {VTy, BasePtr->getType(), Stride->getType()},
+                                {BasePtr, Stride, Mask, VL});
+    CI->addParamAttr(
+        0, Attribute::getWithAlignment(CI->getContext(), LI->getAlign()));
+    Shuffles[0]->replaceAllUsesWith(CI);
+    return true;
+  };
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
 

@@ -13,7 +13,7 @@ target datalayout = "A5"
 define dso_local amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v() local_unnamed_addr {
   ; CHECK-LABEL: name: _Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
@@ -38,7 +38,7 @@ define dso_local amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v()
   ;
   ; VIDX-LABEL: name: _Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v
   ; VIDX: bb.1.entry:
-  ; VIDX-NEXT:   liveins: $sgpr2_sgpr3
+  ; VIDX-NEXT:   liveins: $sgpr4_sgpr5
   ; VIDX-NEXT: {{  $}}
   ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; VIDX-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3

@@ -41,6 +41,7 @@ BENCHMARK(BM_Basic<uint64_t>);
 BENCHMARK(BM_Basic<int64_t>);
 
 // Ideally the low values of a 128-bit value are all dispatched to a 64-bit routine.
+#ifndef TEST_HAS_NO_INT128
 template <class T>
 static void BM_BasicLow(benchmark::State& state) {
   using U = std::conditional_t<std::is_signed_v<T>, int64_t, uint64_t>;
@@ -52,7 +53,6 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-#ifndef TEST_HAS_NO_INT128
 BENCHMARK(BM_BasicLow<__uint128_t>);
 BENCHMARK(BM_BasicLow<__int128_t>);
 

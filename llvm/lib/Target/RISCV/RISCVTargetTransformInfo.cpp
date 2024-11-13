@@ -716,28 +716,6 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
-static bool hasOptimizedSegmentLoadStore(unsigned NF,
-                                         const RISCVSubtarget *ST) {
-  switch (NF) {
-  case 2:
-    return ST->hasOptimizedNF2SegmentLoadStore();
-  case 3:
-    return ST->hasOptimizedNF3SegmentLoadStore();
-  case 4:
-    return ST->hasOptimizedNF4SegmentLoadStore();
-  case 5:
-    return ST->hasOptimizedNF5SegmentLoadStore();
-  case 6:
-    return ST->hasOptimizedNF6SegmentLoadStore();
-  case 7:
-    return ST->hasOptimizedNF7SegmentLoadStore();
-  case 8:
-    return ST->hasOptimizedNF8SegmentLoadStore();
-  default:
-    llvm_unreachable("Unexpected NF");
-  }
-}
-
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -761,7 +739,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
         // Some processors optimize segment loads/stores as one wide memory op +
         // Factor * LMUL shuffle ops.
-        if (hasOptimizedSegmentLoadStore(Factor, ST)) {
+        if (ST->hasOptimizedSegmentLoadStore(Factor)) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
@@ -1213,6 +1191,37 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
                               ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
                               CostKind);
+  case Intrinsic::vp_reduce_add:
+  case Intrinsic::vp_reduce_fadd:
+  case Intrinsic::vp_reduce_mul:
+  case Intrinsic::vp_reduce_fmul:
+  case Intrinsic::vp_reduce_and:
+  case Intrinsic::vp_reduce_or:
+  case Intrinsic::vp_reduce_xor: {
+    std::optional<Intrinsic::ID> RedID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+    assert(RedID.has_value());
+    unsigned RedOp = getArithmeticReductionInstruction(*RedID);
+    return getArithmeticReductionCost(RedOp,
+                                      cast<VectorType>(ICA.getArgTypes()[1]),
+                                      ICA.getFlags(), CostKind);
+  }
+  case Intrinsic::vp_reduce_smax:
+  case Intrinsic::vp_reduce_smin:
+  case Intrinsic::vp_reduce_umax:
+  case Intrinsic::vp_reduce_umin:
+  case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmaximum:
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fminimum: {
+    std::optional<Intrinsic::ID> RedID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+    assert(RedID.has_value());
+    Intrinsic::ID MinMaxID = getMinMaxReductionIntrinsicOp(*RedID);
+    return getMinMaxReductionCost(MinMaxID,
+                                  cast<VectorType>(ICA.getArgTypes()[1]),
+                                  ICA.getFlags(), CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -2529,4 +2538,23 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&OpIdx.value());
   }
   return true;
+}
+
+RISCVTTIImpl::TTI::MemCmpExpansionOptions
+RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  // TODO: Enable expansion when unaligned access is not supported after we fix
+  // issues in ExpandMemcmp.
+  if (!(ST->enableUnalignedScalarMem() &&
+        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+    return Options;
+
+  Options.AllowOverlappingLoads = true;
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  if (ST->is64Bit())
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
+  return Options;
 }

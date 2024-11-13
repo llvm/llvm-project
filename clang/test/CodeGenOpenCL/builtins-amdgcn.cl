@@ -639,7 +639,7 @@ void test_get_workgroup_size(int d, global int *out)
 // CHECK-LABEL: @test_get_grid_size(
 // CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 %{{.+}}
-// CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
+// CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !range [[$GRID_RANGE:![0-9]+]], !invariant.load
 void test_get_grid_size(int d, global int *out)
 {
 	switch (d) {
@@ -896,5 +896,6 @@ void test_set_fpenv(unsigned long env) {
   __builtin_amdgcn_set_fpenv(env);
 }
 
+// CHECK-DAG: [[$GRID_RANGE]] = !{i32 1, i32 0}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }
