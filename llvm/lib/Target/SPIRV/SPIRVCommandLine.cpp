@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-static const std::map<std::string, SPIRV::Extension::Extension>
+static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
     SPIRVExtensionMap = {
         {"SPV_EXT_shader_atomic_float_add",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_add},
@@ -98,7 +98,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
       return O.error("Invalid extension list format: " + Token.str());
 
     llvm::StringRef ExtensionName = Token.substr(1);
-    auto NameValuePair = SPIRVExtensionMap.find(ExtensionName.str());
+    auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
       return O.error("Unknown SPIR-V extension: " + Token.str());

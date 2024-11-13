@@ -40,7 +40,6 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -50,7 +49,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -77,7 +75,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -2042,8 +2039,13 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i64 && VT != MVT::nxv4i32 && VT != MVT::nxv2i64 &&
-         VT != MVT::v4i64 && VT != MVT::v4i32 && VT != MVT::v2i32;
+  auto Op1 = I->getOperand(1);
+  EVT Op1VT = EVT::getEVT(Op1->getType());
+  if (Op1VT.getVectorElementType() == VT.getVectorElementType() &&
+      (VT.getVectorElementCount() * 4 == Op1VT.getVectorElementCount() ||
+       VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount()))
+    return false;
+  return true;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -21787,6 +21789,55 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 }
 
+SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
+                                          const AArch64Subtarget *Subtarget,
+                                          SelectionDAG &DAG) {
+
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+         getIntrinsicID(N) ==
+             Intrinsic::experimental_vector_partial_reduce_add &&
+         "Expected a partial reduction node");
+
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
+
+  SDLoc DL(N);
+
+  auto Acc = N->getOperand(1);
+  auto ExtInput = N->getOperand(2);
+
+  EVT AccVT = Acc.getValueType();
+  EVT AccElemVT = AccVT.getVectorElementType();
+
+  if (ExtInput.getValueType().getVectorElementType() != AccElemVT)
+    return SDValue();
+
+  unsigned ExtInputOpcode = ExtInput->getOpcode();
+  if (!ISD::isExtOpcode(ExtInputOpcode))
+    return SDValue();
+
+  auto Input = ExtInput->getOperand(0);
+  EVT InputVT = Input.getValueType();
+
+  if (!(InputVT == MVT::nxv4i32 && AccVT == MVT::nxv2i64) &&
+      !(InputVT == MVT::nxv8i16 && AccVT == MVT::nxv4i32) &&
+      !(InputVT == MVT::nxv16i8 && AccVT == MVT::nxv8i16))
+    return SDValue();
+
+  bool InputIsSigned = ExtInputOpcode == ISD::SIGN_EXTEND;
+  auto BottomIntrinsic = InputIsSigned ? Intrinsic::aarch64_sve_saddwb
+                                       : Intrinsic::aarch64_sve_uaddwb;
+  auto TopIntrinsic = InputIsSigned ? Intrinsic::aarch64_sve_saddwt
+                                    : Intrinsic::aarch64_sve_uaddwt;
+
+  auto BottomID = DAG.getTargetConstant(BottomIntrinsic, DL, AccElemVT);
+  auto BottomNode =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccVT, BottomID, Acc, Input);
+  auto TopID = DAG.getTargetConstant(TopIntrinsic, DL, AccElemVT);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccVT, TopID, BottomNode,
+                     Input);
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -21798,6 +21849,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::experimental_vector_partial_reduce_add: {
     if (auto Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
       return Dot;
+    if (auto WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
+      return WideAdd;
     return DAG.getPartialReduceAdd(SDLoc(N), N->getValueType(0),
                                    N->getOperand(1), N->getOperand(2));
   }

@@ -38,10 +38,10 @@ define void @loop_or(ptr noalias %pIn, ptr noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[WIDE_LOAD4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <4 x i32> [[TMP2]], <i32 65793, i32 65793, i32 65793, i32 65793>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <4 x i32> [[TMP3]], <i32 65793, i32 65793, i32 65793, i32 65793>
-; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint <4 x i32> [[TMP4]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
-; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP5]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <4 x i32> [[TMP2]], splat (i32 65793)
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <4 x i32> [[TMP3]], splat (i32 65793)
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint <4 x i32> [[TMP4]], splat (i32 -16777216)
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP5]], splat (i32 -16777216)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[POUT:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4

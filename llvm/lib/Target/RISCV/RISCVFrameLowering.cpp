@@ -67,10 +67,14 @@ static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
 static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
-  if (!MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
+                          STI.hasStdExtZicfiss();
+  bool HasSWShadowStack =
+      MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
+  if (!HasHWShadowStack && !HasSWShadowStack)
     return;
 
-  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const llvm::RISCVRegisterInfo *TRI = STI.getRegisterInfo();
   Register RAReg = TRI->getRARegister();
 
@@ -82,7 +86,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
+  if (HasHWShadowStack) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     return;
   }
@@ -129,10 +133,14 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
-  if (!MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
+                          STI.hasStdExtZicfiss();
+  bool HasSWShadowStack =
+      MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
+  if (!HasHWShadowStack && !HasSWShadowStack)
     return;
 
-  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   Register RAReg = STI.getRegisterInfo()->getRARegister();
 
   // See emitSCSPrologue() above.
@@ -142,7 +150,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (!STI.hasForcedSWShadowStack() && STI.hasStdExtZicfiss()) {
+  if (HasHWShadowStack) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
     return;
   }
@@ -872,9 +880,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t StackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
                                            : getStackSizeWithRVVPadding(MF) -
                                                  RVFI->getReservedSpillsSize();
-  uint64_t FPOffset = FirstSPAdjustAmount ? FirstSPAdjustAmount
-                                          : getStackSizeWithRVVPadding(MF) -
-                                                RVFI->getVarArgsSaveSize();
+  uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
   bool RestoreSPFromFP = RI->hasStackRealignment(MF) ||

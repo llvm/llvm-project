@@ -17,7 +17,6 @@
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -35,7 +34,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
@@ -52,6 +50,13 @@ static cl::opt<bool> EnableRedundantCopyElimination(
 static cl::opt<cl::boolOrDefault>
     EnableGlobalMerge("riscv-enable-global-merge", cl::Hidden,
                       cl::desc("Enable the global merge pass"));
+
+static cl::opt<bool> ForceEnableGlobalMergeExternalGlobals(
+    "riscv-force-enable-global-merge-external-globals", cl::Hidden,
+    cl::init(false),
+    cl::desc(
+        "If the global merge pass is enabled, force enable global merging of "
+        "external globals (overriding any logic that might disable it)"));
 
 static cl::opt<bool>
     EnableMachineCombiner("riscv-enable-machine-combiner",
@@ -97,6 +102,11 @@ static cl::opt<bool>
 static cl::opt<bool> EnableMISchedLoadStoreClustering(
     "riscv-misched-load-store-clustering", cl::Hidden,
     cl::desc("Enable load and store clustering in the machine scheduler"),
+    cl::init(true));
+
+static cl::opt<bool> EnablePostMISchedLoadStoreClustering(
+    "riscv-postmisched-load-store-clustering", cl::Hidden,
+    cl::desc("Enable PostRA load and store clustering in the machine scheduler"),
     cl::init(true));
 
 static cl::opt<bool>
@@ -360,6 +370,19 @@ public:
     return DAG;
   }
 
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override {
+    ScheduleDAGMI *DAG = nullptr;
+    if (EnablePostMISchedLoadStoreClustering) {
+      DAG = createGenericSchedPostRA(C);
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+      DAG->addMutation(createStoreClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+    }
+    return DAG;
+  }
+  
   void addIRPasses() override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;
@@ -454,7 +477,8 @@ bool RISCVPassConfig::addPreISel() {
   if (EnableGlobalMerge == cl::BOU_TRUE) {
     addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
                                   /* OnlyOptimizeForSize */ false,
-                                  /* MergeExternalByDefault */ true));
+                                  /* MergeExternalByDefault */
+                                  ForceEnableGlobalMergeExternalGlobals));
   }
 
   return false;

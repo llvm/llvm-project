@@ -249,6 +249,10 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
 def tcGPRx17 : RegisterClass<"AArch64", [i64], 64, (add X17)>;
 def tcGPRx16x17 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
 def tcGPRnotx16 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16)>;
+// LR checking code expects either x16 or x17 to be available as a scratch
+// register - for that reason restrict one of two register operands of
+// AUTH_TCRETURN* pseudos.
+def tcGPRnotx16x17 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16, X17)>;
 
 // Register set that excludes registers that are reserved for procedure calls.
 // This is used for pseudo-instructions that are actually implemented using a

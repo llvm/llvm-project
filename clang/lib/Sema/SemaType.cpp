@@ -1500,16 +1500,19 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // C99 6.7.3p8:
     //   If the specification of a function type includes any type qualifiers,
     //   the behavior is undefined.
+    // C2y changed this behavior to be implementation-defined. Clang defines
+    // the behavior in all cases to ignore the qualifier, as in C++.
     // C++11 [dcl.fct]p7:
     //   The effect of a cv-qualifier-seq in a function declarator is not the
     //   same as adding cv-qualification on top of the function type. In the
     //   latter case, the cv-qualifiers are ignored.
     if (Result->isFunctionType()) {
+      unsigned DiagId = diag::warn_typecheck_function_qualifiers_ignored;
+      if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().C2y)
+        DiagId = diag::ext_typecheck_function_qualifiers_unspecified;
       diagnoseAndRemoveTypeQualifiers(
           S, DS, TypeQuals, Result, DeclSpec::TQ_const | DeclSpec::TQ_volatile,
-          S.getLangOpts().CPlusPlus
-              ? diag::warn_typecheck_function_qualifiers_ignored
-              : diag::warn_typecheck_function_qualifiers_unspecified);
+          DiagId);
       // No diagnostic for 'restrict' or '_Atomic' applied to a
       // function type; we'll diagnose those later, in BuildQualifiedType.
     }

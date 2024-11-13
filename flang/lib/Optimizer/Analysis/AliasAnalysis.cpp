@@ -130,11 +130,19 @@ bool AliasAnalysis::Source::mayBeActualArgWithPtr(
 }
 
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
+  // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+  // mlir::Value rhs) This allows a user to provide Source that may be obtained
+  // through other dialects
+  auto lhsSrc = getSource(lhs);
+  auto rhsSrc = getSource(rhs);
+  return alias(lhsSrc, rhsSrc, lhs, rhs);
+}
+
+AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                                 mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
-  auto lhsSrc = getSource(lhs);
-  auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
@@ -385,6 +393,10 @@ static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
           SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
               op, cast<SymbolRefAttr>(opSym));
       privateOp.walk([&](omp::YieldOp yieldOp) {
+        // TODO Extend alias analysis if omp.yield points to
+        // block argument value
+        if (!yieldOp.getResults()[0].getDefiningOp())
+          return;
         llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
             .template Case<fir::DeclareOp, hlfir::DeclareOp>(
                 [&](auto declOp) { privateArg = declOp.getMemref(); });

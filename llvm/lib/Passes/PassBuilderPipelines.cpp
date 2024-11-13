@@ -984,8 +984,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
-    MainCGPipeline.addPass(
-        createCGSCCToFunctionPassAdaptor(CoroAnnotationElidePass()));
+    MainCGPipeline.addPass(CoroAnnotationElidePass());
   }
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
@@ -1036,7 +1035,8 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink) {
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
-    MPM.addPass(createModuleToFunctionPassAdaptor(CoroAnnotationElidePass()));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(CoroAnnotationElidePass()));
   }
 
   return MPM;
@@ -1859,6 +1859,15 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
+    // Promoting by-reference arguments to by-value exposes more constants to
+    // IPSCCP.
+    CGSCCPassManager CGPM;
+    CGPM.addPass(PostOrderFunctionAttrsPass());
+    CGPM.addPass(ArgumentPromotionPass());
+    CGPM.addPass(
+        createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
@@ -1870,10 +1879,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // they may target at run-time. This should follow IPSCCP.
     MPM.addPass(CalledValuePropagationPass());
   }
-
-  // Now deduce any function attributes based in the current code.
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
 
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
@@ -2156,6 +2161,19 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
+
+  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
+    // Explicitly disable sample loader inlining and use flattened profile in O0
+    // pipeline.
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
+                                        PGOOpt->ProfileRemappingFile,
+                                        ThinOrFullLTOPhase::None, nullptr,
+                                        /*DisableSampleProfileInlining=*/true,
+                                        /*UseFlattenedProfile=*/true));
+    // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
+    // RequireAnalysisPass for PSI before subsequent non-module passes.
+    MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  }
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 

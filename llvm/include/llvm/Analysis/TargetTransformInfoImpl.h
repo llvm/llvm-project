@@ -174,6 +174,7 @@ public:
         Name == "asin"  || Name == "asinf"  || Name == "asinl" ||
         Name == "acos"  || Name == "acosf"  || Name == "acosl" ||
         Name == "atan"  || Name == "atanf"  || Name == "atanl" ||
+        Name == "atan2" || Name == "atan2f" || Name == "atan2l"||
         Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" ||
         Name == "cosh"  || Name == "coshf"  || Name == "coshl" ||
         Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" ||

@@ -4511,10 +4511,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   adjustDeclContextForDeclaratorDecl(New, Old);
 
   // Ensure the template parameters are compatible.
-  if (NewTemplate && !TemplateParameterListsAreEqual(
-                         NewTemplate, NewTemplate->getTemplateParameters(),
-                         OldTemplate, OldTemplate->getTemplateParameters(),
-                         /*Complain=*/true, TPL_TemplateMatch))
+  if (NewTemplate &&
+      !TemplateParameterListsAreEqual(NewTemplate->getTemplateParameters(),
+                                      OldTemplate->getTemplateParameters(),
+                                      /*Complain=*/true, TPL_TemplateMatch))
     return New->setInvalidDecl();
 
   // C++ [class.mem]p1:
@@ -4694,10 +4694,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   // Keep a chain of previous declarations.
   New->setPreviousDecl(Old);
-  if (NewTemplate) {
-    NewTemplate->mergePrevDecl(OldTemplate);
+  if (NewTemplate)
     NewTemplate->setPreviousDecl(OldTemplate);
-  }
 
   // Inherit access appropriately.
   New->setAccess(Old->getAccess());
@@ -6967,6 +6965,11 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
         } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_ctor_dtor)
               << isa<CXXDestructorDecl>(MD) << A->getRange();
+        } else if (MD->getReturnType()->isVoidType()) {
+          S.Diag(
+              MD->getLocation(),
+              diag::
+                  err_lifetimebound_implicit_object_parameter_void_return_type);
         }
       }
     }
@@ -6978,7 +6981,8 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
       // only if the function returns a value.
       if (auto *A = P->getAttr<LifetimeBoundAttr>()) {
         if (!isa<CXXConstructorDecl>(FD) && FD->getReturnType()->isVoidType()) {
-          S.Diag(A->getLocation(), diag::err_lifetimebound_void_return_type);
+          S.Diag(A->getLocation(),
+                 diag::err_lifetimebound_parameter_void_return_type);
         }
       }
     }
@@ -7678,7 +7682,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               : SourceLocation();
       DeclResult Res = ActOnVarTemplateSpecialization(
           S, D, TInfo, Previous, TemplateKWLoc, TemplateParams, SC,
-          IsPartialSpecialization, IsMemberSpecialization);
+          IsPartialSpecialization);
       if (Res.isInvalid())
         return nullptr;
       NewVD = cast<VarDecl>(Res.get());
@@ -7697,10 +7701,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           VarTemplateDecl::Create(Context, DC, D.getIdentifierLoc(), Name,
                                   TemplateParams, NewVD);
       NewVD->setDescribedVarTemplate(NewTemplate);
-      // If we are providing an explicit specialization of a static variable
-      // template, make a note of that.
-      if (IsMemberSpecialization)
-        NewTemplate->setMemberSpecialization();
     }
 
     // If this decl has an auto type in need of deduction, make a note of the
@@ -8081,6 +8081,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                   ? TPC_ClassTemplateMember
                   : TPC_VarTemplate))
         NewVD->setInvalidDecl();
+
+      // If we are providing an explicit specialization of a static variable
+      // template, make a note of that.
+      if (PrevVarTemplate &&
+          PrevVarTemplate->getInstantiatedFromMemberTemplate())
+        PrevVarTemplate->setMemberSpecialization();
     }
   }
 
@@ -9887,8 +9893,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                         NewFD);
         FunctionTemplate->setLexicalDeclContext(CurContext);
         NewFD->setDescribedFunctionTemplate(FunctionTemplate);
-        if (isMemberSpecialization)
-          FunctionTemplate->setMemberSpecialization();
 
         // For source fidelity, store the other template param lists.
         if (TemplateParamLists.size() > 1) {
@@ -12046,7 +12050,10 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
       // If this is an explicit specialization of a member that is a function
       // template, mark it as a member specialization.
-      if (IsMemberSpecialization) {
+      if (IsMemberSpecialization &&
+          NewTemplateDecl->getInstantiatedFromMemberTemplate()) {
+        NewTemplateDecl->setMemberSpecialization();
+        assert(OldTemplateDecl->isMemberSpecialization());
         // Explicit specializations of a member template do not inherit deleted
         // status from the parent member template that they are specializing.
         if (OldFD->isDeleted()) {
@@ -14995,6 +15002,12 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   const DeclSpec &DS = D.getDeclSpec();
 
   // Verify C99 6.7.5.3p2: The only SCS allowed is 'register'.
+  // C2y 6.7.7.4p4: A parameter declaration shall not specify a void type,
+  // except for the special case of a single unnamed parameter of type void
+  // with no storage class specifier, no type qualifier, and no following
+  // ellipsis terminator.
+  // Clang applies the C2y rules for 'register void' in all C language modes,
+  // same as GCC, because it's questionable what that could possibly mean.
 
   // C++03 [dcl.stc]p2 also permits 'auto'.
   StorageClass SC = SC_None;
@@ -15003,10 +15016,17 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
     // In C++11, the 'register' storage class specifier is deprecated.
     // In C++17, it is not allowed, but we tolerate it as an extension.
     if (getLangOpts().CPlusPlus11) {
+      Diag(DS.getStorageClassSpecLoc(), getLangOpts().CPlusPlus17
+                                            ? diag::ext_register_storage_class
+                                            : diag::warn_deprecated_register)
+          << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
+    } else if (!getLangOpts().CPlusPlus &&
+               DS.getTypeSpecType() == DeclSpec::TST_void &&
+               D.getNumTypeObjects() == 0) {
       Diag(DS.getStorageClassSpecLoc(),
-           getLangOpts().CPlusPlus17 ? diag::ext_register_storage_class
-                                     : diag::warn_deprecated_register)
-        << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
+           diag::err_invalid_storage_class_in_func_decl)
+          << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
+      D.getMutableDeclSpec().ClearStorageClassSpecs();
     }
   } else if (getLangOpts().CPlusPlus &&
              DS.getStorageClassSpec() == DeclSpec::SCS_auto) {
@@ -17120,8 +17140,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         DeclResult Result = CheckClassTemplate(
             S, TagSpec, TUK, KWLoc, SS, Name, NameLoc, Attrs, TemplateParams,
             AS, ModulePrivateLoc,
-            /*FriendLoc*/ SourceLocation(), TemplateParameterLists.drop_back(),
-            isMemberSpecialization, SkipBody);
+            /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
+            TemplateParameterLists.data(), SkipBody);
         return Result.get();
       } else {
         // The "template<>" header is extraneous.
@@ -19345,11 +19365,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       }
 
       // Structs without named members are extension in C (C99 6.7.2.1p7),
-      // but are accepted by GCC.
-      if (NonBitFields == 0 && !getLangOpts().CPlusPlus) {
-        Diag(RecLoc, IsEmpty ? diag::ext_empty_struct_union :
-                               diag::ext_no_named_members_in_struct_union)
-          << Record->isUnion();
+      // but are accepted by GCC. In C2y, this became implementation-defined
+      // (C2y 6.7.3.2p10).
+      if (NonBitFields == 0 && !getLangOpts().CPlusPlus && !getLangOpts().C2y) {
+        Diag(RecLoc, IsEmpty ? diag::ext_empty_struct_union
+                             : diag::ext_no_named_members_in_struct_union)
+            << Record->isUnion();
       }
     }
   } else {

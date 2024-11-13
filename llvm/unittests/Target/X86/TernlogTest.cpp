@@ -155,6 +155,7 @@ struct TernTester {
     Function *F = M->getFunction("foo");
     ASSERT_TRUE(F);
     ASSERT_EQ(F->getInstructionCount(), 2u);
+    FAM.clear();
     FPM.run(*F, FAM);
     ASSERT_EQ(F->getInstructionCount(), 1u);
     ASSERT_EQ(F->size(), 1u);

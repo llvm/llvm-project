@@ -3305,6 +3305,10 @@ public:
                                         const FieldDecl *FAMDecl,
                                         uint64_t &Offset);
 
+  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
+
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
                                         const FieldDecl *FAMDecl,
@@ -4077,6 +4081,13 @@ public:
   }
 
   void EmitOpenACCLoopConstruct(const OpenACCLoopConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its loop, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getLoop());
+  }
+
+  void EmitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its loop, but in the future we will implement
     // some sort of IR.
