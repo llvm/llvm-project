@@ -10,12 +10,17 @@
 #define _LIBCPP___RANDOM_POISSON_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/exponential_functions.h>
+#include <__math/logarithms.h>
+#include <__math/roots.h>
+#include <__math/rounding_functions.h>
+#include <__math/traits.h>
 #include <__random/clamp_to_integral.h>
 #include <__random/exponential_distribution.h>
 #include <__random/is_valid.h>
 #include <__random/normal_distribution.h>
 #include <__random/uniform_real_distribution.h>
-#include <cmath>
+#include <cstdlib>
 #include <iosfwd>
 #include <limits>
 
@@ -107,11 +112,11 @@ poisson_distribution<_IntType>::param_type::param_type(double __mean)
     // According to the standard `inf` is a valid input, but it causes the
     // distribution to hang, so we replace it with the maximum representable
     // mean.
-    : __mean_(isinf(__mean) ? numeric_limits<double>::max() : __mean) {
+    : __mean_(__math::isinf(__mean) ? numeric_limits<double>::max() : __mean) {
   if (__mean_ < 10) {
     __s_     = 0;
     __d_     = 0;
-    __l_     = std::exp(-__mean_);
+    __l_     = __math::exp(-__mean_);
     __omega_ = 0;
     __c3_    = 0;
     __c2_    = 0;
@@ -119,9 +124,9 @@ poisson_distribution<_IntType>::param_type::param_type(double __mean)
     __c0_    = 0;
     __c_     = 0;
   } else {
-    __s_        = std::sqrt(__mean_);
+    __s_        = __math::sqrt(__mean_);
     __d_        = 6 * __mean_ * __mean_;
-    __l_        = std::trunc(__mean_ - 1.1484);
+    __l_        = __math::trunc(__mean_ - 1.1484);
     __omega_    = .3989423 / __s_;
     double __b1 = .4166667E-1 / __mean_;
     double __b2 = .3 * __b1 * __b1;
@@ -148,7 +153,7 @@ _IntType poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_t
     double __g = __pr.__mean_ + __pr.__s_ * normal_distribution<double>()(__urng);
     double __u;
     if (__g > 0) {
-      __tx = std::trunc(__g);
+      __tx = __math::trunc(__g);
       if (__tx >= __pr.__l_)
         return std::__clamp_to_integral<result_type>(__tx);
       __difmuk = __pr.__mean_ - __tx;
@@ -167,7 +172,7 @@ _IntType poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_t
           __u += __u - 1;
           __t = 1.8 + (__u < 0 ? -__e : __e);
         } while (__t <= -.6744);
-        __tx             = std::trunc(__pr.__mean_ + __pr.__s_ * __t);
+        __tx             = __math::trunc(__pr.__mean_ + __pr.__s_ * __t);
         __difmuk         = __pr.__mean_ - __tx;
         __using_exp_dist = true;
       }
@@ -176,13 +181,13 @@ _IntType poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_t
       if (__tx < 10 && __tx >= 0) {
         const double __fac[] = {1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880};
         __px                 = -__pr.__mean_;
-        __py                 = std::pow(__pr.__mean_, (double)__tx) / __fac[static_cast<int>(__tx)];
+        __py                 = __math::pow(__pr.__mean_, (double)__tx) / __fac[static_cast<int>(__tx)];
       } else {
         double __del = .8333333E-1 / __tx;
         __del -= 4.8 * __del * __del * __del;
         double __v = __difmuk / __tx;
         if (std::abs(__v) > 0.25)
-          __px = __tx * std::log(1 + __v) - __difmuk - __del;
+          __px = __tx * __math::log(1 + __v) - __difmuk - __del;
         else
           __px = __tx * __v * __v *
                      (((((((.1250060 * __v + -.1384794) * __v + .1421878) * __v + -.1661269) * __v + .2000118) * __v +
@@ -192,17 +197,17 @@ _IntType poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_t
                           __v +
                       -.5) -
                  __del;
-        __py = .3989423 / std::sqrt(__tx);
+        __py = .3989423 / __math::sqrt(__tx);
       }
       double __r  = (0.5 - __difmuk) / __pr.__s_;
       double __r2 = __r * __r;
       double __fx = -0.5 * __r2;
       double __fy = __pr.__omega_ * (((__pr.__c3_ * __r2 + __pr.__c2_) * __r2 + __pr.__c1_) * __r2 + __pr.__c0_);
       if (__using_exp_dist) {
-        if (__pr.__c_ * std::abs(__u) <= __py * std::exp(__px + __e) - __fy * std::exp(__fx + __e))
+        if (__pr.__c_ * std::abs(__u) <= __py * __math::exp(__px + __e) - __fy * __math::exp(__fx + __e))
           break;
       } else {
-        if (__fy - __u * __fy <= __py * std::exp(__px - __fx))
+        if (__fy - __u * __fy <= __py * __math::exp(__px - __fx))
           break;
       }
     }

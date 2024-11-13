@@ -49,7 +49,6 @@
 #  include <__format/write_escaped.h>
 #  include <__memory/addressof.h>
 #  include <__type_traits/is_specialization.h>
-#  include <cmath>
 #  include <ctime>
 #  include <limits>
 #  include <locale>
