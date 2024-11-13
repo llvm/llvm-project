@@ -1618,13 +1618,14 @@ public:
     return Action;
   }
 
-  /// Return true if the specified condition code is legal on this target.
+  /// Return true if the specified condition code is legal for a comparison of
+  /// the specified types on this target.
   bool isCondCodeLegal(ISD::CondCode CC, MVT VT) const {
     return getCondCodeAction(CC, VT) == Legal;
   }
 
-  /// Return true if the specified condition code is legal or custom on this
-  /// target.
+  /// Return true if the specified condition code is legal or custom for a
+  /// comparison of the specified types on this target.
   bool isCondCodeLegalOrCustom(ISD::CondCode CC, MVT VT) const {
     return getCondCodeAction(CC, VT) == Legal ||
            getCondCodeAction(CC, VT) == Custom;
