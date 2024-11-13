@@ -207,14 +207,14 @@ bool LoopVersioningLICM::legalLoopStructure() {
   }
   // Loop depth more then LoopDepthThreshold are not allowed
   if (CurLoop->getLoopDepth() > LoopDepthThreshold) {
-    LLVM_DEBUG(dbgs() << "    loop depth is more then threshold\n");
+    LLVM_DEBUG(dbgs() << "    loop depth is more than threshold\n");
     return false;
   }
   // We need to be able to compute the loop trip count in order
   // to generate the bound checks.
   const SCEV *ExitCount = SE->getBackedgeTakenCount(CurLoop);
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
-    LLVM_DEBUG(dbgs() << "    loop does not has trip count\n");
+    LLVM_DEBUG(dbgs() << "    loop does not have trip count\n");
     return false;
   }
   return true;
