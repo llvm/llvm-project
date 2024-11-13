@@ -169,7 +169,7 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
 // Equivalently: newset[signum] = newset[signum] & oldset[signum]
 static void KeepUnblocked(__sanitizer_sigset_t &newset,
                           __sanitizer_sigset_t &oldset, int signum) {
-  // FIXME: this causes mysterious failures on Android
+  // FIXME: https://github.com/google/sanitizers/issues/1816
   if (SANITIZER_ANDROID || !internal_sigismember(&oldset, signum))
     internal_sigdelset(&newset, signum);
 }
@@ -179,7 +179,7 @@ static void KeepUnblocked(__sanitizer_sigset_t &newset,
 void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t currentset;
 #  if !SANITIZER_ANDROID
-  // FIXME: SetSigProcMask cause mysterious failures on Android
+  // FIXME: https://github.com/google/sanitizers/issues/1816
   SetSigProcMask(NULL, &currentset);
 #  endif
 
@@ -201,7 +201,7 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Don't block synchronous signals
   // but also don't unblock signals that the user had deliberately blocked.
-  // FIXME: this causes mysterious failures on Android
+  // FIXME: https://github.com/google/sanitizers/issues/1816
   KeepUnblocked(newset, currentset, SIGSEGV);
   KeepUnblocked(newset, currentset, SIGBUS);
   KeepUnblocked(newset, currentset, SIGILL);
