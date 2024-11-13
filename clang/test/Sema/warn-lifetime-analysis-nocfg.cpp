@@ -808,38 +808,38 @@ void test13() {
 } // namespace GH100526
 
 namespace lifetime_capture_by {
-struct S {
+struct X {
   const int *x;
-  void captureInt(const int&x [[clang::lifetime_capture_by(this)]]) { this->x = &x; }
+  void captureInt(const int& x [[clang::lifetime_capture_by(this)]]) { this->x = &x; }
   void captureSV(std::string_view sv [[clang::lifetime_capture_by(this)]]);
 };
 ///////////////////////////
 // Detect dangling cases.
 ///////////////////////////
-void captureInt(const int&x [[clang::lifetime_capture_by(s)]], S&s);
-void captureRValInt(int&&x [[clang::lifetime_capture_by(s)]], S&s);
-void noCaptureInt(int x [[clang::lifetime_capture_by(s)]], S&s);
+void captureInt(const int& i [[clang::lifetime_capture_by(x)]], X& x);
+void captureRValInt(int&& i [[clang::lifetime_capture_by(x)]], X& x);
+void noCaptureInt(int i [[clang::lifetime_capture_by(x)]], X& x);
 
 std::string_view substr(const std::string& s [[clang::lifetimebound]]);
 std::string_view strcopy(const std::string& s);
 
-void captureSV(std::string_view x [[clang::lifetime_capture_by(s)]], S&s);
-void captureRValSV(std::string_view&& x [[clang::lifetime_capture_by(s)]], S&s);
-void noCaptureSV(std::string_view x, S&s);
-void captureS(const std::string& x [[clang::lifetime_capture_by(s)]], S&s);
-void captureRValS(std::string&& x [[clang::lifetime_capture_by(s)]], S&s);
+void captureSV(std::string_view s [[clang::lifetime_capture_by(x)]], X& x);
+void captureRValSV(std::string_view&& sv [[clang::lifetime_capture_by(x)]], X& x);
+void noCaptureSV(std::string_view sv, X& x);
+void captureS(const std::string& s [[clang::lifetime_capture_by(x)]], X& x);
+void captureRValS(std::string&& s [[clang::lifetime_capture_by(x)]], X& x);
 
 const std::string& getLB(const std::string& s[[clang::lifetimebound]]);
 const std::string& getLB(std::string_view sv[[clang::lifetimebound]]);
 const std::string* getPointerLB(const std::string& s[[clang::lifetimebound]]);
 const std::string* getPointerNoLB(const std::string& s);
 
-void capturePointer(const std::string* x [[clang::lifetime_capture_by(s)]], S&s);
+void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X& x);
 
 struct ThisIsCaptured {
-  void capture(S& s) [[clang::lifetime_capture_by(s)]];
-  void bar(S& s) [[clang::lifetime_capture_by(abcd)]]; // expected-error {{'lifetime_capture_by' attribute argument 'abcd' is not a known function parameter}}
-  void baz(S& s) [[clang::lifetime_capture_by(this)]]; // expected-error {{'lifetime_capture_by' argument references itself}}
+  void capture(X& x) [[clang::lifetime_capture_by(x)]];
+  void bar(X& x) [[clang::lifetime_capture_by(abcd)]]; // expected-error {{'lifetime_capture_by' attribute argument 'abcd' is not a known function parameter}}
+  void baz(X& x) [[clang::lifetime_capture_by(this)]]; // expected-error {{'lifetime_capture_by' argument references itself}}
 };
 
 void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(global)]]);
@@ -848,63 +848,63 @@ void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]
 void use() {
   std::string_view local_sv;
   std::string local_s;
-  S s;
+  X x;
   // Capture an 'int'.
   int local;
-  captureInt(1, // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
-            s);
-  captureRValInt(1, s); // expected-warning {{object whose reference is captured by 's'}}
-  captureInt(local, s);
-  noCaptureInt(1, s);
-  noCaptureInt(local, s);
+  captureInt(1, // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+            x);
+  captureRValInt(1, x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureInt(local, x);
+  noCaptureInt(1, x);
+  noCaptureInt(local, x);
 
   // Capture using std::string_view.
-  captureSV(local_sv, s);
-  captureSV(std::string(), // expected-warning {{object whose reference is captured by 's'}}
-            s);
+  captureSV(local_sv, x);
+  captureSV(std::string(), // expected-warning {{object whose reference is captured by 'x'}}
+            x);
   captureSV(substr(
-      std::string() // expected-warning {{object whose reference is captured by 's'}}
-      ), s);
-  captureSV(substr(local_s), s);
-  captureSV(strcopy(std::string()), s);
-  captureRValSV(std::move(local_sv), s);
-  captureRValSV(std::string(), s); // expected-warning {{object whose reference is captured by 's'}}
-  captureRValSV(std::string_view{"abcd"}, s);
-  captureRValSV(substr(local_s), s);
-  captureRValSV(substr(std::string()), s); // expected-warning {{object whose reference is captured by 's'}}
-  captureRValSV(strcopy(std::string()), s);
-  noCaptureSV(local_sv, s);
-  noCaptureSV(std::string(), s);
-  noCaptureSV(substr(std::string()), s);
+      std::string() // expected-warning {{object whose reference is captured by 'x'}}
+      ), x);
+  captureSV(substr(local_s), x);
+  captureSV(strcopy(std::string()), x);
+  captureRValSV(std::move(local_sv), x);
+  captureRValSV(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValSV(std::string_view{"abcd"}, x);
+  captureRValSV(substr(local_s), x);
+  captureRValSV(substr(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureRValSV(strcopy(std::string()), x);
+  noCaptureSV(local_sv, x);
+  noCaptureSV(std::string(), x);
+  noCaptureSV(substr(std::string()), x);
 
   // Capture using std::string.
-  captureS(std::string(), s); // expected-warning {{object whose reference is captured by 's'}}
-  captureS(local_s, s);
-  captureRValS(std::move(local_s), s);
-  captureRValS(std::string(), s); // expected-warning {{object whose reference is captured by 's'}}
+  captureS(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureS(local_s, x);
+  captureRValS(std::move(local_s), x);
+  captureRValS(std::string(), x); // expected-warning {{object whose reference is captured by 'x'}}
 
   // Capture with lifetimebound.
-  captureSV(getLB(std::string()), s); // expected-warning {{object whose reference is captured by 's'}}
-  captureSV(getLB(substr(std::string())), s); // expected-warning {{object whose reference is captured by 's'}}
+  captureSV(getLB(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
+  captureSV(getLB(substr(std::string())), x); // expected-warning {{object whose reference is captured by 'x'}}
   captureSV(getLB(getLB(
-    std::string()  // expected-warning {{object whose reference is captured by 's'}}
-    )), s);
-  capturePointer(getPointerLB(std::string()), s); // expected-warning {{object whose reference is captured by 's'}}
+    std::string()  // expected-warning {{object whose reference is captured by 'x'}}
+    )), x);
+  capturePointer(getPointerLB(std::string()), x); // expected-warning {{object whose reference is captured by 'x'}}
   capturePointer(getPointerLB(*getPointerLB(
-    std::string()  // expected-warning {{object whose reference is captured by 's'}}
-    )), s);
-  capturePointer(getPointerNoLB(std::string()), s);
+    std::string()  // expected-warning {{object whose reference is captured by 'x'}}
+    )), x);
+  capturePointer(getPointerNoLB(std::string()), x);
 
   // Member functions.
-  s.captureInt(1); // expected-warning {{object whose reference is captured by 's'}}
-  s.captureSV(std::string()); // expected-warning {{object whose reference is captured by 's'}}
-  s.captureSV(substr(std::string())); // expected-warning {{object whose reference is captured by 's'}}
-  s.captureSV(strcopy(std::string()));
+  x.captureInt(1); // expected-warning {{object whose reference is captured by 'x'}}
+  x.captureSV(std::string()); // expected-warning {{object whose reference is captured by 'x'}}
+  x.captureSV(substr(std::string())); // expected-warning {{object whose reference is captured by 'x'}}
+  x.captureSV(strcopy(std::string()));
 
   // 'this' is captured.
-  ThisIsCaptured{}.capture(s); // expected-warning {{object whose reference is captured by 's'}}
+  ThisIsCaptured{}.capture(x); // expected-warning {{object whose reference is captured by 'x'}}
   ThisIsCaptured TIS;
-  TIS.capture(s);
+  TIS.capture(x);
 
   // capture by global.
   captureByGlobal(std::string()); // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}

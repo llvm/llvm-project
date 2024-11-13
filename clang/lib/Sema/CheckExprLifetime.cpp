@@ -1208,17 +1208,19 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     }
 
     case LK_LifetimeCapture: {
+      // The captured entity has lifetime beyond the full-expression,
+      // and the capturing entity does too, so don't warn.
       if (!MTE)
         return false;
       assert(shouldLifetimeExtendThroughPath(Path) ==
                  PathLifetimeKind::NoExtend &&
              "No lifetime extension in function calls");
-      if (CapEntity->Entity != nullptr)
+      if (CapEntity->Entity)
         SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
-            << true << CapEntity->Entity << DiagRange;
+            << CapEntity->Entity << DiagRange;
       else
-        SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured)
-            << false << "<ignore>" << DiagRange;
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_reference_captured_by_unknown)
+            << DiagRange;
       return false;
     }
 
@@ -1471,13 +1473,13 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
   LifetimeKind LK = LTResult.getInt();
   const InitializedEntity *ExtendingEntity = LTResult.getPointer();
   checkExprLifetimeImpl(SemaRef, &Entity, ExtendingEntity, LK,
-                        /*AEntity*/ nullptr, /*CapEntity=*/nullptr, Init);
+                        /*AEntity=*/nullptr, /*CapEntity=*/nullptr, Init);
 }
 
 void checkExprLifetimeMustTailArg(Sema &SemaRef,
                                   const InitializedEntity &Entity, Expr *Init) {
   checkExprLifetimeImpl(SemaRef, &Entity, nullptr, LK_MustTail,
-                        /*AEntity*/ nullptr, /*CapEntity=*/nullptr, Init);
+                        /*AEntity=*/nullptr, /*CapEntity=*/nullptr, Init);
 }
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
