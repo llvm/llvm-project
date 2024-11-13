@@ -28,4 +28,4 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 !10 = !DICompositeType(tag: DW_TAG_structure_type, name: "BaseType", file: !3, size: 64, identifier: "BaseType")
 
-!11 = !DICompositeType(tag: DW_TAG_structure_type, name: "SpecificationType", file: !3, size: 64, identifier: "SpecificationType", specification_of: !10)
+!11 = !DICompositeType(tag: DW_TAG_structure_type, name: "SpecificationType", file: !3, size: 64, identifier: "SpecificationType", specification: !10)

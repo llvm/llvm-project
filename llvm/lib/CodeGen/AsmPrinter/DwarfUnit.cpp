@@ -1045,7 +1045,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
                 CC);
     }
 
-    if (auto *SpecifiedFrom = CTy->getSpecificationOf())
+    if (auto *SpecifiedFrom = CTy->getSpecification())
       addDIEEntry(Buffer, dwarf::DW_AT_specification,
                   *getOrCreateContextDIE(SpecifiedFrom));
 
