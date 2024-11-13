@@ -4365,8 +4365,11 @@ public:
     if (auto longDoubleType =
             mlir::dyn_cast<cir::LongDoubleType>(op.getInput().getType())) {
       if (mlir::isa<cir::FP80Type>(longDoubleType.getUnderlying())) {
-        // see https://github.com/llvm/clangir/issues/1057
-        llvm_unreachable("NYI");
+        // If the underlying type of LongDouble is FP80Type,
+        // DataLayout::getTypeSizeInBits returns 128.
+        // See https://github.com/llvm/clangir/issues/1057.
+        // Set the width to 80 manually.
+        width = 80;
       }
     }
     auto intTy = mlir::IntegerType::get(rewriter.getContext(), width);
