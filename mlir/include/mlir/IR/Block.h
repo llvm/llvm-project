@@ -273,6 +273,10 @@ public:
   ///
   /// Note: This function performs a block graph traversal and its complexity
   /// linear in the number of blocks in the parent region.
+  ///
+  /// Note: Reachability is a necessary but insufficient condition for
+  /// dominance. Do not use this function in places where you need to check for
+  /// dominance.
   bool isReachable(Block *other, SmallPtrSet<Block *, 16> &&except = {});
 
   //===--------------------------------------------------------------------===//
