@@ -40,7 +40,8 @@ struct DXILIntrinsicSelect {
 static StringRef StripIntrinArgSelectTypePrefix(StringRef Type) {
   StringRef Prefix = "IntrinArgSelect_";
   if (!Type.starts_with(Prefix)) {
-    PrintFatalError("IntrinArgSelectType definintion must be prefixed with 'IntrinArgSelect_'");
+    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
+                    "'IntrinArgSelect_'");
   }
   return Type.substr(Prefix.size());
 }
@@ -421,11 +422,12 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
       OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
          << ", Intrinsic::" << MappedIntr.Intrinsic << ", ";
       for (const Record *ArgSelect : MappedIntr.ArgSelectRecords) {
-        std::string Type = ArgSelect->getValueAsDef("type")->getNameInitAsString();
+        std::string Type =
+            ArgSelect->getValueAsDef("type")->getNameInitAsString();
         int Value = ArgSelect->getValueAsInt("value");
         OS << "(IntrinArgSelect{"
-          << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type) << ","
-          << Value << "}), ";
+           << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type)
+           << "," << Value << "}), ";
       }
       OS << ")\n";
     }
@@ -435,11 +437,14 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
   OS << "#endif\n\n";
 }
 
-static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records, raw_ostream &OS) {
+/// Emit the IntrinArgSelect type for DirectX intrinsic to DXIL Op lowering
+static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
+                                            raw_ostream &OS) {
   OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPES\n";
   OS << "struct IntrinArgSelect {\n";
   OS << "  enum class Type {\n";
-  for (const Record *Records : Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
+  for (const Record *Records :
+       Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
     StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
     OS << "    " << StrippedName << ",\n";
   }

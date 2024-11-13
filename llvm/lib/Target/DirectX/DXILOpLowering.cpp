@@ -109,8 +109,9 @@ public:
 #define DXIL_OP_INTRINSIC_ARG_SELECT_TYPES
 #include "DXILOperation.inc"
 
-  [[nodiscard]] bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
-                                           ArrayRef<IntrinArgSelect> ArgSelects) {
+  [[nodiscard]] bool
+  replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                        ArrayRef<IntrinArgSelect> ArgSelects) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
@@ -660,8 +661,8 @@ public:
         continue;
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |=                                                               \
-        replaceFunctionWithOp(F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});    \
+    HasErrors |= replaceFunctionWithOp(                                        \
+        F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
