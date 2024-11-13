@@ -548,8 +548,7 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
       llvm::errs(), DiagOpts.get(), false);
   DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
-  auto VFS = llvm::vfs::getRealFileSystem();
-  ProcessWarningOptions(Diags, *DiagOpts, *VFS);
+  ProcessWarningOptions(Diags, *DiagOpts);
   if (Diags.hasErrorOccurred())
     return 1;
 

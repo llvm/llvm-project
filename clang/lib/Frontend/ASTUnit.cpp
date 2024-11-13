@@ -1367,7 +1367,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       // after parsing the preamble.
       getDiagnostics().Reset();
       ProcessWarningOptions(getDiagnostics(),
-                            PreambleInvocationIn.getDiagnosticOpts(), *VFS);
+                            PreambleInvocationIn.getDiagnosticOpts());
       getDiagnostics().setNumWarnings(NumWarningsInPreamble);
 
       PreambleRebuildCountdown = 1;
@@ -1593,8 +1593,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   // We'll manage file buffers ourselves.
   CI->getPreprocessorOpts().RetainRemappedFileBuffers = true;
   CI->getFrontendOpts().DisableFree = false;
-  ProcessWarningOptions(AST->getDiagnostics(), CI->getDiagnosticOpts(),
-                        AST->getFileManager().getVirtualFileSystem());
+  ProcessWarningOptions(AST->getDiagnostics(), CI->getDiagnosticOpts());
 
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
@@ -1702,8 +1701,7 @@ bool ASTUnit::LoadFromCompilerInvocation(
   Invocation->getPreprocessorOpts().RetainRemappedFileBuffers = true;
   Invocation->getFrontendOpts().DisableFree = false;
   getDiagnostics().Reset();
-  ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
-                        *VFS);
+  ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts());
 
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (PrecompilePreambleAfterNParses > 0) {
@@ -1711,8 +1709,7 @@ bool ASTUnit::LoadFromCompilerInvocation(
     OverrideMainBuffer =
         getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation, VFS);
     getDiagnostics().Reset();
-    ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
-                          *VFS);
+    ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts());
   }
 
   SimpleTimer ParsingTimer(WantTiming);
@@ -1908,8 +1905,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // Clear out the diagnostics state.
   FileMgr.reset();
   getDiagnostics().Reset();
-  ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
-                        *VFS);
+  ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts());
   if (OverrideMainBuffer)
     getDiagnostics().setNumWarnings(NumWarningsInPreamble);
 
@@ -2248,8 +2244,7 @@ void ASTUnit::CodeComplete(
   CaptureDroppedDiagnostics Capture(CaptureDiagsKind::All,
                                     Clang->getDiagnostics(),
                                     &StoredDiagnostics, nullptr);
-  ProcessWarningOptions(Diag, Inv.getDiagnosticOpts(),
-                        FileMgr.getVirtualFileSystem());
+  ProcessWarningOptions(Diag, Inv.getDiagnosticOpts());
 
   // Create the target instance.
   if (!Clang->createTarget()) {

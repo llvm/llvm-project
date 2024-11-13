@@ -213,8 +213,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
       new DiagnosticsEngine(new DiagnosticIDs(), DiagOpts));
   DiagnosticsEngine &Diags = *DiagsPtr;
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
-  auto VFS = llvm::vfs::getRealFileSystem();
-  ProcessWarningOptions(Diags, *DiagOpts, *VFS);
+  ProcessWarningOptions(Diags, *DiagOpts);
   if (Diags.hasErrorOccurred())
     return 1;
 
