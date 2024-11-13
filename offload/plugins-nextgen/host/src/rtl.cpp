@@ -440,6 +440,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #else
     return llvm::Triple::ppc64;
 #endif
+#elif defined(__riscv) && (__riscv_xlen == 64)
+    return llvm::Triple::riscv64;
 #else
     return llvm::Triple::UnknownArch;
 #endif

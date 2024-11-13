@@ -209,6 +209,11 @@ def : ProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
   FeatureISAVersion9_Generic.Features
 >;
 
+// [gfx940, gfx941, gfx942]
+def : ProcessorModel<"gfx9-4-generic", SIDPGFX940FullSpeedModel,
+  FeatureISAVersion9_4_Generic.Features
+>;
+
 //===----------------------------------------------------------------------===//
 // GCN GFX10.
 //===----------------------------------------------------------------------===//
