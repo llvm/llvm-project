@@ -374,6 +374,22 @@ bb:
   // Expect just one vector of store seeds
   EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   ExpectThatElementsAre(SB, {St0, St1, St2, St3});
+  // Check that the EraseInstr callback works.
+
+  // TODO: Range_size counts fully used-bundles even though the iterator skips
+  // them. Further, iterating over anything other than the Bundles in a
+  // SeedContainer includes used seeds. So for now just check that removing all
+  // the seeds from a bundle also empties the bundle.
+  St0->eraseFromParent();
+  St1->eraseFromParent();
+  St2->eraseFromParent();
+  St3->eraseFromParent();
+  size_t nonEmptyBundleCount = 0;
+  for (auto &B : SC.getStoreSeeds()) {
+    (void)B;
+    nonEmptyBundleCount++;
+  }
+  EXPECT_EQ(nonEmptyBundleCount, 0u);
 }
 
 TEST_F(SeedBundleTest, VectorStores) {
