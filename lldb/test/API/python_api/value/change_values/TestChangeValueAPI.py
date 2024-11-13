@@ -111,17 +111,27 @@ class ChangeValueAPITestCase(TestBase):
         )
 
         ptr_fourth_value = ptr_value.GetChildMemberWithName("fourth_val")
-        self.assertTrue(ptr_fourth_value.IsValid(), "Got fourth_value from ptr")
+        self.assertTrue(ptr_fourth_value.IsValid(), "Got fourth_val from ptr")
         fourth_actual_value = ptr_fourth_value.GetValueAsUnsigned(error, 1)
-        self.assertTrue(error.Success(), "Got an unsigned value for ptr->second_val")
+        self.assertTrue(error.Success(), "Got an unsigned value for ptr->fourth_val")
         self.assertEqual(fourth_actual_value, 0)
 
         result = ptr_fourth_value.SetValueFromCString("true")
-        self.assertTrue(result, "Success setting ptr->fourth_value.")
+        self.assertTrue(result, "Success setting ptr->fourth_val.")
         fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
-        self.assertTrue(error.Success(), "Got a changed value from ptr->second_val")
+        self.assertTrue(error.Success(), "Got a changed value from ptr->fourth_val")
         self.assertEqual(
             fourth_actual_value, 1, "Got the right changed value from ptr->fourth_val"
+        )
+
+        result = ptr_fourth_value.SetValueFromCString("NO")
+        self.assertFalse(result, "Failed setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got the original value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value,
+            1,
+            "Got the original changed value from ptr->fourth_val",
         )
 
         # gcc may set multiple locations for breakpoint
