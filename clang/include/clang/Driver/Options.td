@@ -965,6 +965,10 @@ def V : JoinedOrSeparate<["-"], "V">, Flags<[NoXarchOption, Unsupported]>;
 def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   HelpText<"Pass the comma separated arguments in <arg> to the assembler">,
   MetaVarName<"<arg>">;
+def warning_suppression_mappings_EQ : Joined<["--"],
+  "warning-suppression-mappings=">, Group<Diag_Group>,
+  HelpText<"File containing diagnostic suppresion mappings. See user manual "
+  "for file format.">, Visibility<[ClangOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
