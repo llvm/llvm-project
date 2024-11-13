@@ -1381,7 +1381,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool vector<_Tp, _Allocator>::__invariants() const
 #if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool __format::__enable_insertable<vector<char>> = true;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #  endif

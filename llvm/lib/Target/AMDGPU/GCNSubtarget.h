@@ -1786,7 +1786,7 @@ public:
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 
   unsigned getBarrierMemberCountShift() const {
-    return getGeneration() >= GFX13 ? 12 : 16;
+    return getGeneration() >= GFX13 ? 3 : 4;
   }
 
   /// \returns true if the operand of s_barrier_init can be an immediate.

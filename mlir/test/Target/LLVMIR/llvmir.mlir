@@ -95,31 +95,31 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
 // CHECK{LITERAL}: @dense_float_vector = internal global <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 llvm.mlir.global internal @dense_float_vector(dense<[1.0, 2.0, 3.0]> : vector<3xf32>) : vector<3xf32>
 
-// CHECK{LITERAL}: @splat_float_vector = internal global <3 x float> <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
+// CHECK{LITERAL}: @splat_float_vector = internal global <3 x float> splat (float 4.200000e+01)
 llvm.mlir.global internal @splat_float_vector(dense<42.0> : vector<3xf32>) : vector<3xf32>
 
 // CHECK{LITERAL}: @dense_double_vector = internal global <3 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>
 llvm.mlir.global internal @dense_double_vector(dense<[1.0, 2.0, 3.0]> : vector<3xf64>) : vector<3xf64>
 
-// CHECK{LITERAL}: @splat_double_vector = internal global <3 x double> <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
+// CHECK{LITERAL}: @splat_double_vector = internal global <3 x double> splat (double 4.200000e+01)
 llvm.mlir.global internal @splat_double_vector(dense<42.0> : vector<3xf64>) : vector<3xf64>
 
 // CHECK{LITERAL}: @dense_i64_vector = internal global <3 x i64> <i64 1, i64 2, i64 3>
 llvm.mlir.global internal @dense_i64_vector(dense<[1, 2, 3]> : vector<3xi64>) : vector<3xi64>
 
-// CHECK{LITERAL}: @splat_i64_vector = internal global <3 x i64> <i64 42, i64 42, i64 42>
+// CHECK{LITERAL}: @splat_i64_vector = internal global <3 x i64> splat (i64 42)
 llvm.mlir.global internal @splat_i64_vector(dense<42> : vector<3xi64>) : vector<3xi64>
 
 // CHECK{LITERAL}: @dense_float_vector_2d = internal global [2 x <2 x float>] [<2 x float> <float 1.000000e+00, float 2.000000e+00>, <2 x float> <float 3.000000e+00, float 4.000000e+00>]
 llvm.mlir.global internal @dense_float_vector_2d(dense<[[1.0, 2.0], [3.0, 4.0]]> : vector<2x2xf32>) : !llvm.array<2 x vector<2xf32>>
 
-// CHECK{LITERAL}: @splat_float_vector_2d = internal global [2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>]
+// CHECK{LITERAL}: @splat_float_vector_2d = internal global [2 x <2 x float>] [<2 x float> splat (float 4.200000e+01), <2 x float> splat (float 4.200000e+01)]
 llvm.mlir.global internal @splat_float_vector_2d(dense<42.0> : vector<2x2xf32>) : !llvm.array<2 x vector<2xf32>>
 
 // CHECK{LITERAL}: @dense_float_vector_3d = internal global [2 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float 1.000000e+00, float 2.000000e+00>, <2 x float> <float 3.000000e+00, float 4.000000e+00>], [2 x <2 x float>] [<2 x float> <float 5.000000e+00, float 6.000000e+00>, <2 x float> <float 7.000000e+00, float 8.000000e+00>]]
 llvm.mlir.global internal @dense_float_vector_3d(dense<[[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]> : vector<2x2x2xf32>) : !llvm.array<2 x !llvm.array<2 x vector<2xf32>>>
 
-// CHECK{LITERAL}: @splat_float_vector_3d = internal global [2 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>], [2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>]]
+// CHECK{LITERAL}: @splat_float_vector_3d = internal global [2 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> splat (float 4.200000e+01), <2 x float> splat (float 4.200000e+01)], [2 x <2 x float>] [<2 x float> splat (float 4.200000e+01), <2 x float> splat (float 4.200000e+01)]]
 llvm.mlir.global internal @splat_float_vector_3d(dense<42.0> : vector<2x2x2xf32>) : !llvm.array<2 x !llvm.array<2 x vector<2xf32>>>
 
 //
@@ -929,7 +929,7 @@ llvm.func @multireturn_caller() {
 // CHECK-LABEL: define <4 x float> @vector_ops(<4 x float> {{%.*}}, <4 x i1> {{%.*}}, <4 x i64> {{%.*}})
 llvm.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>) -> vector<4xf32> {
   %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : vector<4xf32>
-// CHECK-NEXT: %4 = fadd <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
+// CHECK-NEXT: %4 = fadd <4 x float> %0, splat (float 4.200000e+01)
   %1 = llvm.fadd %arg0, %0 : vector<4xf32>
 // CHECK-NEXT: %5 = select <4 x i1> %1, <4 x float> %4, <4 x float> %0
   %2 = llvm.select %arg1, %1, %arg0 : vector<4xi1>, vector<4xf32>
@@ -941,9 +941,9 @@ llvm.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %5 = llvm.srem %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %9 = urem <4 x i64> %2, %2
   %6 = llvm.urem %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT: %10 = fdiv <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
+// CHECK-NEXT: %10 = fdiv <4 x float> %0, splat (float 4.200000e+01)
   %7 = llvm.fdiv %arg0, %0 : vector<4xf32>
-// CHECK-NEXT: %11 = frem <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
+// CHECK-NEXT: %11 = frem <4 x float> %0, splat (float 4.200000e+01)
   %8 = llvm.frem %arg0, %0 : vector<4xf32>
 // CHECK-NEXT: %12 = and <4 x i64> %2, %2
   %9 = llvm.and %arg2, %arg2 : vector<4xi64>
@@ -991,7 +991,7 @@ llvm.func @vector_splat_3d() -> !llvm.array<4 x array<16 x vector<4 x f32>>> {
 
 // CHECK-LABEL: @vector_splat_nonzero
 llvm.func @vector_splat_nonzero() -> vector<4xf32> {
-  // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK: ret <4 x float> splat (float 1.000000e+00)
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
   llvm.return %0 : vector<4xf32>
 }
@@ -1336,7 +1336,7 @@ llvm.func @structconstant() -> !llvm.struct<(i32, f32)> {
 // CHECK-LABEL: @indexconstantsplat
 llvm.func @indexconstantsplat() -> vector<3xi32> {
   %1 = llvm.mlir.constant(dense<42> : vector<3xindex>) : vector<3xi32>
-  // CHECK: ret <3 x i32> <i32 42, i32 42, i32 42>
+  // CHECK: ret <3 x i32> splat (i32 42)
   llvm.return %1 : vector<3xi32>
 }
 

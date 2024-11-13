@@ -890,7 +890,15 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     SourceLocation DotDotDotLoc;
     ExprResult RHS;
     if (TryConsumeToken(tok::ellipsis, DotDotDotLoc)) {
-      Diag(DotDotDotLoc, diag::ext_gnu_case_range);
+      // In C++, this is a GNU extension. In C, it's a C2y extension.
+      unsigned DiagId;
+      if (getLangOpts().CPlusPlus)
+        DiagId = diag::ext_gnu_case_range;
+      else if (getLangOpts().C2y)
+        DiagId = diag::warn_c23_compat_case_range;
+      else
+        DiagId = diag::ext_c2y_case_range;
+      Diag(DotDotDotLoc, DiagId);
       RHS = ParseCaseExpression(CaseLoc);
       if (RHS.isInvalid()) {
         if (!SkipUntil(tok::colon, tok::r_brace, StopAtSemi | StopBeforeMatch))

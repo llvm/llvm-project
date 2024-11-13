@@ -144,9 +144,9 @@ static RT_API_ATTRS bool MayAlias(const Descriptor &x, const Descriptor &y) {
     return false; // not both allocated
   }
   const char *xDesc{reinterpret_cast<const char *>(&x)};
-  const char *xDescLast{xDesc + x.SizeInBytes()};
+  const char *xDescLast{xDesc + x.SizeInBytes() - 1};
   const char *yDesc{reinterpret_cast<const char *>(&y)};
-  const char *yDescLast{yDesc + y.SizeInBytes()};
+  const char *yDescLast{yDesc + y.SizeInBytes() - 1};
   std::int64_t xLeast, xMost, yLeast, yMost;
   MaximalByteOffsetRange(x, xLeast, xMost);
   MaximalByteOffsetRange(y, yLeast, yMost);
@@ -307,10 +307,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
     if (mustDeallocateLHS) {
       if (deferDeallocation) {
         if ((flags & NeedFinalization) && toDerived) {
-          Finalize(to, *toDerived, &terminator);
+          Finalize(*deferDeallocation, *toDerived, &terminator);
           flags &= ~NeedFinalization;
-        } else if (toDerived && !toDerived->noDestructionNeeded()) {
-          Destroy(to, /*finalize=*/false, *toDerived, &terminator);
         }
       } else {
         to.Destroy((flags & NeedFinalization) != 0, /*destroyPointers=*/false,

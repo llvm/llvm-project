@@ -231,7 +231,8 @@ DEFAULT_FEATURES = [
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
         name="win32-broken-utf8-wchar-ctype",
-        when=lambda cfg: not "_LIBCPP_HAS_NO_LOCALIZATION" in compilerMacros(cfg)
+        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
+        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
         and "_WIN32" in compilerMacros(cfg)
         and not programSucceeds(
             cfg,
@@ -287,7 +288,8 @@ DEFAULT_FEATURES = [
     # mon_decimal_point == ".", which our tests don't handle.
     Feature(
         name="glibc-old-ru_RU-decimal-point",
-        when=lambda cfg: not "_LIBCPP_HAS_NO_LOCALIZATION" in compilerMacros(cfg)
+        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
+        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
         and not programSucceeds(
             cfg,
             """
@@ -365,10 +367,6 @@ DEFAULT_FEATURES = [
 # Note that features that are more strongly tied to libc++ are named libcpp-foo,
 # while features that are more general in nature are not prefixed with 'libcpp-'.
 macros = {
-    "_LIBCPP_HAS_NO_MONOTONIC_CLOCK": "no-monotonic-clock",
-    "_LIBCPP_HAS_NO_THREADS": "no-threads",
-    "_LIBCPP_HAS_THREAD_API_EXTERNAL": "libcpp-has-thread-api-external",
-    "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
@@ -378,14 +376,6 @@ macros = {
     "_LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE": "libcpp-has-abi-fix-unordered-container-size-type",
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
-    "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
-    "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
-    "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
-    "_LIBCPP_HAS_NO_TERMINAL": "no-terminal",
-    "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
-    "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
-    "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
 }
 for macro, feature in macros.items():
@@ -396,6 +386,39 @@ for macro, feature in macros.items():
         )
     )
 
+true_false_macros = {
+    "_LIBCPP_HAS_THREAD_API_EXTERNAL": "libcpp-has-thread-api-external",
+    "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
+}
+for macro, feature in true_false_macros.items():
+    DEFAULT_FEATURES.append(
+        Feature(
+            name=feature,
+            when=lambda cfg, m=macro: m in compilerMacros(cfg)
+            and compilerMacros(cfg)[m] == "1",
+        )
+    )
+
+inverted_macros = {
+    "_LIBCPP_HAS_TIME_ZONE_DATABASE": "no-tzdb",
+    "_LIBCPP_HAS_FILESYSTEM": "no-filesystem",
+    "_LIBCPP_HAS_LOCALIZATION": "no-localization",
+    "_LIBCPP_HAS_THREADS": "no-threads",
+    "_LIBCPP_HAS_MONOTONIC_CLOCK": "no-monotonic-clock",
+    "_LIBCPP_HAS_WIDE_CHARACTERS": "no-wide-characters",
+    "_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
+    "_LIBCPP_HAS_RANDOM_DEVICE": "no-random-device",
+    "_LIBCPP_HAS_UNICODE": "libcpp-has-no-unicode",
+    "_LIBCPP_HAS_TERMINAL": "no-terminal",
+}
+for macro, feature in inverted_macros.items():
+    DEFAULT_FEATURES.append(
+        Feature(
+            name=feature,
+            when=lambda cfg, m=macro: m in compilerMacros(cfg)
+            and compilerMacros(cfg)[m] == "0",
+        )
+    )
 
 # Mapping from canonical locale names (used in the tests) to possible locale
 # names on various systems. Each locale is considered supported if any of the

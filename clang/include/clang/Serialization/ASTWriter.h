@@ -548,11 +548,10 @@ private:
   void WriteSubStmt(Stmt *S);
 
   void WriteBlockInfoBlock();
-  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot);
+  void WriteControlBlock(Preprocessor &PP, StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
-  void writeUnhashedControlBlock(Preprocessor &PP, ASTContext &Context);
+  void writeUnhashedControlBlock(Preprocessor &PP);
   ASTFileSignature backpatchSignature();
 
   /// Calculate hash of the pcm content.
@@ -560,8 +559,7 @@ private:
   ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
-  void WriteSourceManagerBlock(SourceManager &SourceMgr,
-                               const Preprocessor &PP);
+  void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec,

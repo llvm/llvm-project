@@ -1571,7 +1571,9 @@ define double @maximumnum_double(double %x, double %y) {
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    call fmaximum_num
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: maximumnum_double:
@@ -1582,7 +1584,9 @@ define double @maximumnum_double(double %x, double %y) {
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    call fmaximum_num
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
   %z = call double @llvm.maximumnum.f64(double %x, double %y)
   ret double %z
@@ -1614,7 +1618,9 @@ define double @minimumnum_double(double %x, double %y) {
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    call fminimum_num
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: minimumnum_double:
@@ -1625,7 +1631,9 @@ define double @minimumnum_double(double %x, double %y) {
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    call fminimum_num
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
   %z = call double @llvm.minimumnum.f64(double %x, double %y)
   ret double %z

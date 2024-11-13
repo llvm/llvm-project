@@ -2670,6 +2670,57 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 // CHECK: define internal void @[[parallel_outlined_fn]]
 // -----
 
+llvm.func @foo(!llvm.ptr) -> ()
+llvm.func @destroy(!llvm.ptr) -> ()
+
+omp.private {type = firstprivate} @privatizer : !llvm.ptr alloc {
+^bb0(%arg0 : !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+} dealloc {
+^bb0(%arg0 : !llvm.ptr):
+  llvm.call @destroy(%arg0) : (!llvm.ptr) -> ()
+  omp.yield
+}
+
+llvm.func @task(%arg0 : !llvm.ptr) {
+  omp.task private(@privatizer %arg0 -> %arg1 : !llvm.ptr) {
+    llvm.call @foo(%arg1) : (!llvm.ptr) -> ()
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: @task..omp_par
+// CHECK:       task.alloca:
+// CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_12:.*]], align 8
+// CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
+// CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
+// CHECK:         %[[VAL_15:.*]] = alloca i32, i64 1, align 4
+// CHECK:         br label %omp.private.latealloc
+// CHECK:       omp.private.latealloc:                            ; preds = %task.alloca
+// CHECK:         br label %omp.private.copy
+// CHECK:       omp.private.copy:                                 ; preds = %omp.private.latealloc
+// CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
+// CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
+// CHECK:         br label %[[VAL_20:.*]]
+// CHECK:       task.body:                                        ; preds = %omp.private.copy
+// CHECK:         br label %omp.task.region
+// CHECK:       omp.task.region:                                  ; preds = %task.body
+// CHECK:         call void @foo(ptr %[[VAL_15]])
+// CHECK:         br label %omp.region.cont
+// CHECK:       omp.region.cont:                                  ; preds = %omp.task.region
+// CHECK:         call void @destroy(ptr %[[VAL_15]])
+// CHECK:         br label %task.exit.exitStub
+// CHECK:       task.exit.exitStub:                               ; preds = %omp.region.cont
+// CHECK:         ret void
+// -----
+
 llvm.func @foo() -> ()
 
 llvm.func @omp_taskgroup(%x: i32, %y: i32, %zaddr: !llvm.ptr) {

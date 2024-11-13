@@ -10103,9 +10103,12 @@ def err_lifetimebound_no_object_param : Error<
 def err_lifetimebound_ctor_dtor : Error<
   "'lifetimebound' attribute cannot be applied to a "
   "%select{constructor|destructor}0">;
-def err_lifetimebound_void_return_type : Error<
+def err_lifetimebound_parameter_void_return_type : Error<
   "'lifetimebound' attribute cannot be applied to a parameter of a function "
   "that returns void">;
+def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
+  "'lifetimebound' attribute cannot be applied to an implicit object "
+  "parameter of a function that returns void">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<

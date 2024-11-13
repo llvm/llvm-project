@@ -131,11 +131,11 @@ void OutputSection::commitSection(InputSection *isec) {
         // https://github.com/ClangBuiltLinux/linux/issues/1597) rely on the
         // behavior. Other types get an error.
         if (type != SHT_NOBITS) {
-          errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
-                      toString(isec) + ": " +
-                      getELFSectionTypeName(ctx.arg.emachine, isec->type) +
-                      "\n>>> output section " + name + ": " +
-                      getELFSectionTypeName(ctx.arg.emachine, type));
+          Err(ctx) << "section type mismatch for " << isec->name << "\n>>> "
+                   << isec << ": "
+                   << getELFSectionTypeName(ctx.arg.emachine, isec->type)
+                   << "\n>>> output section " << name << ": "
+                   << getELFSectionTypeName(ctx.arg.emachine, type);
         }
       }
       if (!typeIsSet)
@@ -151,9 +151,10 @@ void OutputSection::commitSection(InputSection *isec) {
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
-      error("incompatible section flags for " + name + "\n>>> " +
-            toString(isec) + ": 0x" + utohexstr(isec->flags) +
-            "\n>>> output section " + name + ": 0x" + utohexstr(flags));
+      ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
+                     << isec << ": 0x" << utohexstr(isec->flags)
+                     << "\n>>> output section " << name << ": 0x"
+                     << utohexstr(flags);
   }
 
   isec->parent = this;
@@ -314,7 +315,7 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
   z_stream s = {};
   auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
   if (res != 0) {
-    errorOrWarn("--compress-sections: deflateInit2 returned " + Twine(res));
+    Err(ctx) << "--compress-sections: deflateInit2 returned " << Twine(res);
     return {};
   }
   s.next_in = const_cast<uint8_t *>(in.data());
@@ -361,8 +362,8 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   if (ctype == DebugCompressionType::None)
     return;
   if (flags & SHF_ALLOC) {
-    errorOrWarn("--compress-sections: section '" + name +
-                "' with the SHF_ALLOC flag cannot be compressed");
+    Err(ctx) << "--compress-sections: section '" << name
+             << "' with the SHF_ALLOC flag cannot be compressed";
     return;
   }
 
@@ -662,7 +663,7 @@ static size_t relToCrel(Ctx &ctx, raw_svector_ostream &os,
   const auto &file = *cast<ELFFileBase>(relSec->file);
   if (relSec->type == SHT_REL) {
     // REL conversion is complex and unsupported yet.
-    errorOrWarn(toString(relSec) + ": REL cannot be converted to CREL");
+    Err(ctx) << relSec << ": REL cannot be converted to CREL";
     return 0;
   }
   auto rels = relSec->getDataAs<typename ELFT::Rela>();

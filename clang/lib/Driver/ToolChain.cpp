@@ -230,6 +230,20 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
+  }
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
+  }
+
   const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
   if (ABIArg) {
     Result.push_back(ABIArg->getAsString(Args));
@@ -286,6 +300,20 @@ static void getARMMultilibFlags(const Driver &D,
       Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
   if (BranchProtectionArg) {
     Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
+  }
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
   }
 }
 

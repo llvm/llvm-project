@@ -657,7 +657,9 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    li a1, 84
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: load_factor6_too_big:
@@ -1092,7 +1094,9 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    slli a1, a0, 6
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %interleaved.vec = load <48 x i64>, ptr %ptr
   %v0 = shufflevector <48 x i64> %interleaved.vec, <48 x i64> poison, <8 x i32> <i32 0, i32 6, i32 12, i32 18, i32 24, i32 30, i32 36, i32 42>
@@ -1198,8 +1202,9 @@ define <4 x i32> @load_factor2_one_active(ptr %ptr) {
 define <4 x i32> @load_factor3_one_active(ptr %ptr) {
 ; CHECK-LABEL: load_factor3_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v8, (a0)
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <12 x i32>, ptr %ptr
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
@@ -1209,8 +1214,9 @@ define <4 x i32> @load_factor3_one_active(ptr %ptr) {
 define <4 x i32> @load_factor4_one_active(ptr %ptr) {
 ; CHECK-LABEL: load_factor4_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v8, (a0)
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <16 x i32>, ptr %ptr
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -1220,8 +1226,9 @@ define <4 x i32> @load_factor4_one_active(ptr %ptr) {
 define <4 x i32> @load_factor5_one_active(ptr %ptr) {
 ; CHECK-LABEL: load_factor5_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 20
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg5e32.v v8, (a0)
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <20 x i32>, ptr %ptr
   %v0 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
@@ -1231,30 +1238,35 @@ define <4 x i32> @load_factor5_one_active(ptr %ptr) {
 define <2 x i16> @load_factor6_one_active(ptr %ptr) {
 ; CHECK-LABEL: load_factor6_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 10
+; CHECK-NEXT:    li a1, 12
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v8, (a0)
+; CHECK-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <12 x i16>, ptr %ptr
-  %v0 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 0, i32 6>
+  %v0 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 5, i32 11>
   ret <2 x i16> %v0
 }
 
 define <4 x i8> @load_factor7_one_active(ptr %ptr) vscale_range(8,1024) {
 ; CHECK-LABEL: load_factor7_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a1, 7
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v8, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <32 x i8>, ptr %ptr
-  %v0 = shufflevector <32 x i8> %interleaved.vec, <32 x i8> poison, <4 x i32> <i32 0, i32 7, i32 14, i32 21>
+  %v0 = shufflevector <32 x i8> %interleaved.vec, <32 x i8> poison, <4 x i32> <i32 1, i32 8, i32 15, i32 22>
   ret <4 x i8> %v0
 }
 
 define <4 x i8> @load_factor8_one_active(ptr %ptr) vscale_range(8,1024) {
 ; CHECK-LABEL: load_factor8_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v8, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <32 x i8>, ptr %ptr
   %v0 = shufflevector <32 x i8> %interleaved.vec, <32 x i8> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
