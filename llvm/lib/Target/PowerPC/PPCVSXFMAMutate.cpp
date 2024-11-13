@@ -293,21 +293,11 @@ protected:
           UseMO.substVirtReg(KilledProdReg, KilledProdSubReg, *TRI);
         }
 
-        // Extend the live intervals of the killed product operand to hold the
-        // fma result.
+        // Recalculate the live intervals of the killed product operand.
+        LIS->removeInterval(KilledProdReg);
+        LiveInterval &NewFMAInt =
+            LIS->createAndComputeVirtRegInterval(KilledProdReg);
 
-        LiveInterval &NewFMAInt = LIS->getInterval(KilledProdReg);
-        for (auto &AI : FMAInt) {
-          // Don't add the segment that corresponds to the original copy.
-          if (AI.valno == AddendValNo)
-            continue;
-
-          VNInfo *NewFMAValNo =
-              NewFMAInt.getNextValue(AI.start, LIS->getVNInfoAllocator());
-
-          NewFMAInt.addSegment(
-              LiveInterval::Segment(AI.start, AI.end, NewFMAValNo));
-        }
         LLVM_DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
 
         // Extend the live interval of the addend source (it might end at the
